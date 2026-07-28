@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
 
-import requests
 from TIPCommon.base.interfaces import Apiable
 
 from . import api_utils, auth_manager, constants, data_parser, datamodels, exceptions, query_builder
@@ -24,6 +23,7 @@ from . import api_utils, auth_manager, constants, data_parser, datamodels, excep
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    import requests
     from TIPCommon.base.interfaces.logger import ScriptLogger
 
 
@@ -71,6 +71,7 @@ class WizApiClient(Apiable):
 
         Returns:
             datamodels.Issue: An Issue object containing the details of the issue.
+
         """
         issue_query_builder: query_builder.IssueQueryBuilder = query_builder.IssueQueryBuilder(issue_id=issue_id)
 
@@ -100,6 +101,7 @@ class WizApiClient(Apiable):
         Returns:
             datamodels.IssueComment: An issue object containing details of the commented
             issue.
+
         """
         mutation_query: query_builder.AddCommentThreadMutationBuilder = query_builder.AddCommentThreadMutationBuilder(
             issue_id=issue_id,
@@ -126,6 +128,7 @@ class WizApiClient(Apiable):
         Returns:
             datamodels.Issue: An Issue object containing the details of the reopened
             issue.
+
         """
         mutation_query: query_builder.UpdateIssueMutationBuilder = query_builder.UpdateIssueMutationBuilder(
             issue_id=issue_id,
@@ -161,6 +164,7 @@ class WizApiClient(Apiable):
         Returns:
             datamodels.Issue: An Issue object containing the details of the rejected
             issue.
+
         """
         mutation_query: query_builder.UpdateIssueMutationBuilder = query_builder.UpdateIssueMutationBuilder(
             issue_id=issue_id,
@@ -198,6 +202,7 @@ class WizApiClient(Apiable):
         Returns:
             datamodels.Issue: An Issue object containing the details of the resolved
             issue.
+
         """
         mutation_query: query_builder.UpdateIssueMutationBuilder = query_builder.UpdateIssueMutationBuilder(
             issue_id=issue_id,
@@ -220,9 +225,10 @@ class WizApiClient(Apiable):
 
         return data_parser.build_update_issue_object(response.json())
 
-    def get_resource_vulnerability_findings(
+    def get_resource_vulnerability_findings(  # ruff:ignore[too-many-arguments]
         self,
         resource_name: str,
+        *,
         severity: list[str] | None = None,
         has_fix: bool | None = None,
         has_exploit: bool | None = None,
@@ -241,6 +247,7 @@ class WizApiClient(Apiable):
 
         Returns:
             A list of VulnerabilityFinding objects.
+
         """
         api_first = first
         if cve_ids and len(cve_ids) > 1:
@@ -285,6 +292,7 @@ class WizApiClient(Apiable):
 
         Raises:
             IssueNotFoundError: If the threat with specified ID is not found.
+
         """
         threat_analysis_query_builder: query_builder.ThreatAIAnalysisQueryBuilder = (
             query_builder.ThreatAIAnalysisQueryBuilder(issue_id=issue_id)
@@ -302,9 +310,12 @@ class WizApiClient(Apiable):
 
         response_json = response.json()
         if (response_json.get("data") or {}).get("issue") is None:
-            raise exceptions.IssueNotFoundError(
+            msg = (
                 f"Threat with ID {issue_id} wasn't found"
                 f" in {constants.INTEGRATION_NAME}."
+            )
+            raise exceptions.IssueNotFoundError(
+                msg
             )
 
         return data_parser.build_threat_ai_analysis_object(response_json)

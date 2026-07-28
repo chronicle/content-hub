@@ -28,7 +28,18 @@ if TYPE_CHECKING:
     from TIPcommon.types import SingleJson
 
 
-def get_full_url(api_root: str, url_id: str, **kwargs) -> str:
+def get_full_url(api_root: str, url_id: str, **kwargs: object) -> str:
+    """Get the full URL for an API endpoint.
+
+    Args:
+        api_root: The API root URL.
+        url_id: The ID of the endpoint in ENDPOINTS.
+        **kwargs: Additional key-value pairs for formatting the URL.
+
+    Returns:
+        The formatted full URL string.
+
+    """
     return urljoin(api_root, ENDPOINTS[url_id].format(**kwargs))
 
 
@@ -36,29 +47,34 @@ def validate_response(
     response: requests.Response,
     error_msg: str = "An error occurred",
 ) -> None:
-    """
-    Validate a GraphQL HTTP response.
+    """Validate a GraphQL HTTP response.
 
     Raises:
         requests.HTTPError: For non-200 HTTP responses.
         WizManagerError: For unexpected response formats or GraphQL errors.
+        InvalidCredsError: If credentials provided are invalid (401).
+        IssueNotFoundError: If the requested issue wasn't found.
+
     """
     try:
         response.raise_for_status()
 
     except requests.exceptions.HTTPError as http_error:
         if response.status_code == UNAUTHORIZED_STATUS_CODE:
+            msg = "Invalid credentials provided. Please check the integration configuration."
             raise InvalidCredsError(
-                "Invalid credentials provided. Please check the integration configuration."
+                msg
             ) from http_error
 
-        raise requests.HTTPError(f"{error_msg}: {http_error}") from http_error
+        msg = f"{error_msg}: {http_error}"
+        raise requests.HTTPError(msg) from http_error
 
     try:
         response_json = response.json()
 
     except ValueError as json_error:
-        raise WizManagerError(f"{error_msg}: Response is not valid JSON.") from json_error
+        msg = f"{error_msg}: Response is not valid JSON."
+        raise WizManagerError(msg) from json_error
 
     if "errors" in response_json:
         graphql_errors: Sequence[SingleJson] = response_json["errors"]
@@ -66,4 +82,5 @@ def validate_response(
         if error_detail.lower() in ISSUE_NOT_FOUND_ERRORS:
             raise IssueNotFoundError(error_detail)
 
-        raise WizManagerError(f"{error_msg}: {error_detail}")
+        msg = f"{error_msg}: {error_detail}"
+        raise WizManagerError(msg)

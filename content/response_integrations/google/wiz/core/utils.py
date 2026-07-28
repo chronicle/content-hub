@@ -33,6 +33,7 @@ def get_integration_parameters(chronicle_soar: ChronicleSOAR) -> IntegrationPara
 
     Returns:
         IntegrationParameters: IntegrationParameters object.
+
     """
     api_root = extract_configuration_param(
         chronicle_soar,

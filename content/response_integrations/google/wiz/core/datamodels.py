@@ -36,7 +36,12 @@ class BaseModel:
     raw_data: SingleJson
 
     def to_json(self) -> SingleJson:
-        """Convert the model to a JSON serializable format."""
+        """Convert the model to a JSON serializable format.
+
+        Returns:
+            The raw JSON data.
+
+        """
         return self.raw_data
 
 
@@ -46,7 +51,12 @@ class Issue(BaseModel):
 
     @classmethod
     def from_json(cls, json_data: SingleJson) -> Issue:
-        """Create an Issue instance from JSON data."""
+        """Create an Issue instance from JSON data.
+
+        Returns:
+            An Issue instance.
+
+        """
         return cls(raw_data=json_data, issue_id=json_data["id"])
 
 
@@ -56,7 +66,12 @@ class IssueComment(BaseModel):
 
     @classmethod
     def from_json(cls, json_data: SingleJson) -> IssueComment:
-        """Create an IssueComment instance from JSON data."""
+        """Create an IssueComment instance from JSON data.
+
+        Returns:
+            An IssueComment instance.
+
+        """
         return cls(raw_data=json_data, comment_id=json_data["id"])
 
 
@@ -68,7 +83,12 @@ class VulnerabilityFinding(BaseModel):
 
     @classmethod
     def from_json(cls, json_data: SingleJson) -> VulnerabilityFinding:
-        """Create a VulnerabilityFinding instance from JSON data."""
+        """Create a VulnerabilityFinding instance from JSON data.
+
+        Returns:
+            A VulnerabilityFinding instance.
+
+        """
         return cls(
             raw_data=json_data,
             finding_id=json_data["id"],
@@ -93,7 +113,12 @@ class ThreatAIAnalysis(BaseModel):
         raw_data: SingleJson,
         json_data: SingleJson | None
     ) -> ThreatAIAnalysis | None:
-        """Create a ThreatAIAnalysis instance from JSON data."""
+        """Create a ThreatAIAnalysis instance from JSON data.
+
+        Returns:
+            A ThreatAIAnalysis instance, or None if json_data is empty.
+
+        """
         if not json_data:
             return None
 

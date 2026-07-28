@@ -17,10 +17,7 @@ from __future__ import annotations
 import copy
 from typing import TYPE_CHECKING
 
-from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
-from tests.core.product import Wiz
-from tests.core.session import WizSession
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionJsonOutput, ActionOutput
 
@@ -31,6 +28,10 @@ from .. import common
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from integration_testing.platform.script_output import MockActionOutput
+    from tests.core.product import Wiz
+    from tests.core.session import WizSession
 
     from wiz.core import datamodels
 

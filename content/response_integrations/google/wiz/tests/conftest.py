@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from integration_testing.common import use_live_api
 from integration_testing.logger import Logger
-from integration_testing.request import MockRequest
-from integration_testing.requests.response import MockResponse
 from TIPCommon.base.utils import CreateSession
 
 from wiz.core.api_client import ApiParameters, WizApiClient
@@ -27,12 +27,16 @@ from .common import CONFIG
 from .core.product import Wiz
 from .core.session import WizSession
 
+if TYPE_CHECKING:
+    from integration_testing.request import MockRequest
+    from integration_testing.requests.response import MockResponse
+
 pytest_plugins = ("integration_testing.conftest",)
 
 
 @pytest.fixture(name="wiz")
 def wiz_product() -> Wiz:
-    yield Wiz()
+    return Wiz()
 
 
 @pytest.fixture(name="script_session", autouse=True)
@@ -45,7 +49,7 @@ def wiz_script_session(
     if not use_live_api():
         monkeypatch.setattr(CreateSession, "create_session", lambda *_: session)
 
-    yield session
+    return session
 
 
 @pytest.fixture(name="manager")
@@ -56,4 +60,4 @@ def wiz_manager(script_session: WizSession) -> WizApiClient:
     logger = Logger()
     api_params: ApiParameters = ApiParameters(api_root)
 
-    yield WizApiClient(script_session, api_params, logger)
+    return WizApiClient(script_session, api_params, logger)

@@ -41,11 +41,12 @@ class Ping(Action):
     def _init_api_clients(self) -> api_client.WizApiClient:
         return action_init.create_api_client(self.soar_action)
 
-    def _perform_action(self, _) -> None:
+    def _perform_action(self, _: object) -> None:
         self.api_client.test_connectivity()
 
 
 def main() -> NoReturn:
+    """Run the action."""
     Ping().run()
 
 

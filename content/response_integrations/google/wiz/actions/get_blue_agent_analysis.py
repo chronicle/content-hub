@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
 
 from TIPCommon.base.action import Action
 from TIPCommon.base.action.data_models import ExecutionState
@@ -23,9 +22,6 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.smp_time import is_approaching_action_timeout
 
 from ..core import action_init, api_client, constants, exceptions
-
-if TYPE_CHECKING:
-    from typing import Any
 
 
 class GetBlueAgentAnalysis(Action):
@@ -36,7 +32,8 @@ class GetBlueAgentAnalysis(Action):
         )
 
     @Action.result_value.setter
-    def result_value(self, value: Any) -> None:
+    def result_value(self, value: object) -> None:
+        """Set the result value of the action."""
         self._result_value = value
 
     def _extract_action_parameters(self) -> None:
@@ -51,26 +48,30 @@ class GetBlueAgentAnalysis(Action):
         return action_init.create_api_client(self.soar_action)
 
     def _is_approaching_async_timeout(self) -> bool:
-        """Determine whether the action approaches asynchronous timeout."""
+
         return is_approaching_action_timeout(
             self.soar_action.async_total_duration_deadline,
         )
 
-    def _perform_action(self, _: Any) -> None:
+    def _perform_action(self, _: object) -> None:
         if self._is_approaching_async_timeout():
             self.logger.info(
                 "Action is approaching async timeout, and will exit gracefully."
             )
-            raise TimeoutError("Action ran into a timeout during execution.")
+            msg = "Action ran into a timeout during execution."
+            raise TimeoutError(msg)
 
         try:
             analysis = self.api_client.get_threat_ai_analysis(
                 issue_id=self.params.threat_id
             )
         except exceptions.IssueNotFoundError as e:
-            raise exceptions.IssueNotFoundError(
+            msg = (
                 f"Threat with ID {self.params.threat_id} wasn't found in "
                 f"{constants.INTEGRATION_NAME}."
+            )
+            raise exceptions.IssueNotFoundError(
+                msg
             ) from e
 
         if analysis is None:
@@ -90,7 +91,7 @@ class GetBlueAgentAnalysis(Action):
             )
             self.result_value = True
             self.execution_state = ExecutionState.COMPLETED
-        elif analysis.status in ("IN_PROGRESS", "QUEUED"):
+        elif analysis.status in {"IN_PROGRESS", "QUEUED"}:
             self.logger.info(
                 f"Analysis status is {analysis.status}. Execution state set to"
                 " IN_PROGRESS."
@@ -115,6 +116,7 @@ class GetBlueAgentAnalysis(Action):
 
 
 def main() -> None:
+    """Run the action."""
     GetBlueAgentAnalysis().run()
 
 

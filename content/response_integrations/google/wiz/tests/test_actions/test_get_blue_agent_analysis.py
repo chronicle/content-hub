@@ -18,10 +18,7 @@ import datetime
 import json
 from typing import TYPE_CHECKING
 
-from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
-from tests.core.product import Wiz
-from tests.core.session import WizSession
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionJsonOutput, ActionOutput
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
@@ -34,12 +31,15 @@ from .. import common
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from integration_testing.platform.script_output import MockActionOutput
+    from tests.core.product import Wiz
+    from tests.core.session import WizSession
     from TIPCommon.types import SingleJson
 
 
 THREAT_ID: str = "786ec97b-51e9-428a-b237-03452ef17de4"
 SCRIPT_DEADLINE_TIME: datetime.datetime = (
-    datetime.datetime.now() + datetime.timedelta(minutes=10)
+    datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=10)
 )
 
 ANALYSIS_COMPLETED: SingleJson = {

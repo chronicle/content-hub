@@ -67,7 +67,7 @@ class IgnoreIssue(Action):
     def _init_api_clients(self) -> api_client.WizApiClient:
         return action_init.create_api_client(self.soar_action)
 
-    def _perform_action(self, _) -> None:
+    def _perform_action(self, _: object) -> None:
         self.json_results: SingleJson = self._ignore_issue().to_json()
         self.output_message: str = (
             "Successfully ignored issue with ID "
@@ -83,13 +83,17 @@ class IgnoreIssue(Action):
             )
 
         except exceptions.IssueNotFoundError as e:
-            raise exceptions.IssueNotFoundError(
+            msg = (
                 f"Issue with ID {self.params.issue_id} wasn't found in "
                 f"{constants.INTEGRATION_NAME}."
+            )
+            raise exceptions.IssueNotFoundError(
+                msg
             ) from e
 
 
 def main() -> NoReturn:
+    """Run the action."""
     IgnoreIssue().run()
 
 

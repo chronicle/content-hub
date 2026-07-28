@@ -44,7 +44,7 @@ class GetIssueDetails(Action):
     def _init_api_clients(self) -> api_client.WizApiClient:
         return action_init.create_api_client(self.soar_action)
 
-    def _perform_action(self, _) -> None:
+    def _perform_action(self, _: object) -> None:
         self.json_results: SingleJson = self._get_issue_details().to_json()
         self.output_message: str = (
             "Successfully returned information about the issue "
@@ -56,13 +56,17 @@ class GetIssueDetails(Action):
             return self.api_client.get_issue_details(issue_id=self.params.issue_id)
 
         except exceptions.IssueNotFoundError as e:
-            raise exceptions.IssueNotFoundError(
+            msg = (
                 f"Issue with ID {self.params.issue_id} wasn't found in "
                 f"{constants.INTEGRATION_NAME}."
+            )
+            raise exceptions.IssueNotFoundError(
+                msg
             ) from e
 
 
 def main() -> NoReturn:
+    """Run the action."""
     GetIssueDetails().run()
 
 

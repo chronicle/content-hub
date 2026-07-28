@@ -78,7 +78,7 @@ class TestApiManager:
         """
         wiz.cleanup_issues()
         issue: Issue = copy.deepcopy(ISSUE)
-        issue.issue_id: str = common.INVALID_TOKEN_ID
+        issue.issue_id = common.INVALID_TOKEN_ID
         wiz.add_issue(issue)
 
         expected_error_message_regex = (
@@ -137,7 +137,7 @@ class TestApiManager:
         """
         wiz.cleanup_issues()
         issue: Issue = copy.deepcopy(ISSUE)
-        issue.issue_id: str = common.INVALID_ISSUE_ID
+        issue.issue_id = common.INVALID_ISSUE_ID
         wiz.add_issue(issue)
         expected_error_message_regex = r"id must be a valid service issue id"
 

@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from integration_testing import router
@@ -28,6 +27,8 @@ from wiz.core import constants
 from .. import common
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from TIPCommon.types import SingleJson
 
     from wiz.core import datamodels
@@ -38,7 +39,7 @@ class WizSession(MockSession[MockRequest, MockResponse, Wiz]):
         return [self.graphql_query, get_oauth_token]
 
     @router.post(r".*/graphql")
-    def graphql_query(self, request: MockRequest) -> MockResponse:
+    def graphql_query(self, request: MockRequest) -> MockResponse:  # ruff: ignore[too-many-return-statements]
         """Handle GET .*/1.0/alerts/ requests"""
         query: SingleJson = request.kwargs["json"]["query"]
         status: str = (
@@ -49,9 +50,9 @@ class WizSession(MockSession[MockRequest, MockResponse, Wiz]):
         if common.ADD_COMMENT_QUERY_NAME in query:
             return self._add_comment_to_issue()
         if common.UPDATE_ISSUE_QUERY_NAME in query:
-            if constants.STATUS_REOPEN == status:
+            if status == constants.STATUS_REOPEN:
                 return self._reopen_issue()
-            if constants.STATUS_REJECTED == status:
+            if status == constants.STATUS_REJECTED:
                 return self._ignore_issue()
 
             return self._resolve_issue()
@@ -166,7 +167,7 @@ def get_oauth_token(request: MockRequest) -> MockResponse:
     return MockResponse(common.VALID_TOKEN, status_code=200)
 
 
-def handle_invalid_response(issue_id) -> MockResponse | None:
+def handle_invalid_response(issue_id: str) -> MockResponse | None:
     """Handle invalid response."""
     match issue_id:
         case str(common.INVALID_ISSUE_ID):

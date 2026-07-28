@@ -31,8 +31,14 @@ class IssueQueryBuilder:
     operation_name: str = "GetIssue"
     query_name: str = "issue"
 
-    def build_fields(self) -> list[str]:
-        """Build the fields required in the issue query."""
+    @staticmethod
+    def build_fields() -> list[str]:
+        """Build the fields required in the issue query.
+
+        Returns:
+            The list of fields.
+
+        """
         return [
             "id",
             "createdAt",
@@ -58,7 +64,12 @@ class IssueQueryBuilder:
         ]
 
     def build_query(self) -> SingleJson:
-        """Build the GraphQL query and variables payload."""
+        """Build the GraphQL query and variables payload.
+
+        Returns:
+            The query payload dict.
+
+        """
         variable = Variable(name=self.variable_name, type=self.variable_type)
 
         query = Query(
@@ -90,7 +101,12 @@ class AddCommentThreadMutationBuilder:
     input_variable_type: str = "CreateIssueNoteInput!"
 
     def build_mutation(self) -> SingleJson:
-        """Builds the GraphQL mutation payload for adding a comment to an issue."""
+        """Build the GraphQL mutation payload for adding a comment to an issue.
+
+        Returns:
+            The mutation payload dict.
+
+        """
         variable = Variable(
             name=self.input_variable_name,
             type=self.input_variable_type,
@@ -127,6 +143,7 @@ class UpdateIssuePatch:
 
         Returns:
             SingleJson: Dictionary with mapped keys and non-None values.
+
         """
         field_map = {
             "resolution_reason": "resolutionReason",
@@ -149,7 +166,12 @@ class UpdateIssueMutationBuilder:
     return_note_field: str | None = None
 
     def build_mutation(self) -> SingleJson:
-        """Builds the GraphQL mutation payload for updating an issue."""
+        """Build the GraphQL mutation payload for updating an issue.
+
+        Returns:
+            The mutation payload dict.
+
+        """
         issue_id_var = Variable(name=self.variable_name_issue_id, type="ID!")
         patch_var = Variable(name=self.variable_name_patch, type="UpdateIssuePatch")
         variables = [issue_id_var, patch_var]
@@ -201,8 +223,14 @@ class VulnerabilityFindingsQueryBuilder:
 
     first: int = 100
 
-    def build_fields(self) -> list[Field]:
-        """Build the fields required in the vulnerability findings query."""
+    @staticmethod
+    def build_fields() -> list[Field]:
+        """Build the fields required in the vulnerability findings query.
+
+        Returns:
+            The list of fields.
+
+        """
         return [
             Field(
                 name="nodes",
@@ -226,7 +254,12 @@ class VulnerabilityFindingsQueryBuilder:
         ]
 
     def build_query(self) -> SingleJson:
-        """Builds the GraphQL query payload for listing vulnerability findings."""
+        """Build the GraphQL query payload for listing vulnerability findings.
+
+        Returns:
+            The query payload dict.
+
+        """
         filter_var = Variable(name="filterBy", type="VulnerabilityFindingFilters")
         first_var = Variable(name="first", type="Int")
 
@@ -275,7 +308,14 @@ class ThreatAIAnalysisQueryBuilder:
     operation_name: str = "threatAIAnalysis"
     query_name: str = "issue"
 
-    def build_fields(self) -> list[Field]:
+    @staticmethod
+    def build_fields() -> list[Field]:
+        """Build the fields required in the threat AI analysis query.
+
+        Returns:
+            The list of fields.
+
+        """
         return [
             Field(
                 name="threatDetectionDetails",
@@ -297,7 +337,12 @@ class ThreatAIAnalysisQueryBuilder:
         ]
 
     def build_query(self) -> SingleJson:
-        """Build the GraphQL query and variables payload."""
+        """Build the GraphQL query and variables payload.
+
+        Returns:
+            The query payload dict.
+
+        """
         variable = Variable(name=self.variable_name, type=self.variable_type)
 
         query = Query(

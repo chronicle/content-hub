@@ -18,12 +18,13 @@ from typing import TYPE_CHECKING
 
 from . import api_client
 from .auth_manager import AuthenticateSession, SessionAuthenticationParameters
-from .datamodels import IntegrationParameters
 from .utils import get_integration_parameters
 
 if TYPE_CHECKING:
     import requests
     from TIPCommon.types import ChronicleSOAR
+
+    from .datamodels import IntegrationParameters
 
 
 def create_api_client(soar_action: ChronicleSOAR) -> api_client.WizApiClient:
@@ -34,6 +35,7 @@ def create_api_client(soar_action: ChronicleSOAR) -> api_client.WizApiClient:
 
     Returns:
         api_client.WizApiClient: WizApiClient object.
+
     """
     params: IntegrationParameters = get_integration_parameters(soar_action)
     authenticator: AuthenticateSession = AuthenticateSession()

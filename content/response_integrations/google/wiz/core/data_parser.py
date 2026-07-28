@@ -30,6 +30,7 @@ def build_issue_object(issue_json: SingleJson) -> datamodels.Issue:
 
     Returns:
         An Issue object containing the details of the issue.
+
     """
     return datamodels.Issue.from_json(issue_json.get("data", {}).get("issue", {}))
 
@@ -42,6 +43,7 @@ def build_update_issue_object(issue_json: SingleJson) -> datamodels.Issue:
 
     Returns:
         An Issue object containing the details of the updated issue.
+
     """
     return datamodels.Issue.from_json(issue_json.get("data", {}).get("updateIssue", {}).get("issue", {}))
 
@@ -54,6 +56,7 @@ def build_issue_comment_object(issue_json: SingleJson) -> datamodels.IssueCommen
 
     Returns:
         The commented issue details.
+
     """
     return datamodels.IssueComment.from_json(issue_json.get("data", {}).get("createIssueNote", {}).get("issueNote", {}))
 
@@ -68,6 +71,7 @@ def build_vulnerability_finding_object(
 
     Returns:
         A VulnerabilityFinding object.
+
     """
     return datamodels.VulnerabilityFinding.from_json(finding_json)
 
@@ -82,6 +86,7 @@ def build_threat_ai_analysis_object(
 
     Returns:
         A ThreatAIAnalysis object or None if aiAnalysis is not present.
+
     """
     issue_data = (response_json.get("data") or {}).get("issue")
 

@@ -42,7 +42,7 @@ INVALID_TOKEN: SingleJson = MOCK_DATA["invalid_token"]
 INVALID_ALERT: SingleJson = MOCK_DATA["invalid_alert"]
 INVALID_ISSUE: SingleJson = MOCK_DATA["invalid_issue"]
 INVALID_ISSUE_ID: str = "99999999"
-INVALID_TOKEN_ID: str = "invalid_token"
+INVALID_TOKEN_ID: str = "invalid_token"  # ruff: ignore[hardcoded-password-string]
 
 GET_ISSUE_QUERY_NAME: str = "GetIssue"
 ADD_COMMENT_QUERY_NAME: str = "CreateIssueComment"

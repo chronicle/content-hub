@@ -38,6 +38,12 @@ class SessionAuthenticationParameters:
 
 class AuthenticateSession(Authable):
     def authenticate_session(self, params: SessionAuthenticationParameters) -> None:
+        """Authenticate the session.
+
+        Args:
+            params: The session authentication parameters.
+
+        """
         self.session = get_authenticated_session(session_parameters=params)
 
 
@@ -51,6 +57,7 @@ def get_authenticated_session(
 
     Returns:
         requests.Session: Authenticated session object.
+
     """
     session: requests.Session = CreateSession.create_session()
     _authenticate_session(session, session_parameters=session_parameters)
@@ -74,9 +81,7 @@ def _generate_token(
     session: requests.Session,
     session_parameters: SessionAuthenticationParameters,
 ) -> str:
-    """
-    Generate a new access token and refresh token using the provided session and
-    parameters.
+    """Generate a new access token and refresh token using the provided session and parameters.
 
     Args:
         session (requests.Session): The HTTP session object.
@@ -85,6 +90,7 @@ def _generate_token(
 
     Returns:
         str: access token.
+
     """
     auth_payload: Mapping[str, str] = {
         "client_id": session_parameters.client_id,

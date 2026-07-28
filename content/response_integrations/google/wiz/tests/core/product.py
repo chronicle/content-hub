@@ -16,14 +16,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import common
-
 if TYPE_CHECKING:
     from collections.abc import Iterable, MutableMapping
 
     from TIPCommon.types import SingleJson
 
     from wiz.core.datamodels import Issue
+
+    from .. import common
 
 
 class Wiz:
@@ -70,4 +70,3 @@ class Wiz:
 
     def cleanup_threat_ai_analyses(self) -> None:
         self._threat_ai_analyses = {}
-
