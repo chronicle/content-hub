@@ -384,6 +384,32 @@ def flatten_udm_event_for_alert(udm_event: dict[str, Any]) -> dict[str, Any]:
             or additional.get("has_plaintext_password")
         ),
 
+        # Sensitive breach values. Only populated when the connector's "Include
+        # Plaintext Secrets" option is enabled; otherwise the converter never puts
+        # these into the UDM extensions and each resolves to an empty string.
+        "spycloud_password": extensions.get("password"),
+        "spycloud_password_plaintext": extensions.get("password_plaintext"),
+        "spycloud_password_value": extensions.get("password_value"),
+        "spycloud_password_raw": extensions.get("password_raw"),
+        "spycloud_new_password": extensions.get("new_password"),
+        "spycloud_old_password": extensions.get("old_password"),
+        "spycloud_account_password": extensions.get("account_password"),
+        "spycloud_credentials": extensions.get("credentials"),
+        "spycloud_private_key_password": extensions.get("private_key_password"),
+        "spycloud_account_secret": extensions.get("account_secret"),
+        "spycloud_account_secret_question": extensions.get("account_secret_question"),
+        "spycloud_api_token": extensions.get("api_token"),
+        "spycloud_api_token_secret": extensions.get("api_token_secret"),
+        "spycloud_cookies": extensions.get("cookies"),
+        "spycloud_cookie_data": extensions.get("cookie_data"),
+        "spycloud_form_cookies_data": extensions.get("form_cookies_data"),
+        "spycloud_form_post_data": extensions.get("form_post_data"),
+        "spycloud_cc_number": extensions.get("cc_number"),
+        "spycloud_cc_code": extensions.get("cc_code"),
+        "spycloud_bank_number": extensions.get("bank_number"),
+        "spycloud_bank_routing_number": extensions.get("bank_routing_number"),
+        "spycloud_taxid": extensions.get("taxid"),
+
         "spycloud_log_id": extensions.get("log_id"),
         "spycloud_infected_machine_id": extensions.get("infected_machine_id"),
         "spycloud_infected_time": extensions.get("infected_time"),

@@ -68,6 +68,8 @@ class SpyCloudUdmConverter:
         "source_id",
         "severity",
         "password_type",
+        "email",
+        "username",
         "email_domain",
         "domain",
         "subdomain",
@@ -126,12 +128,17 @@ class SpyCloudUdmConverter:
         vendor_name: str | None = None,
         product_name: str | None = None,
         log_type: str | None = None,
+        include_secrets: bool = False,
     ) -> None:
         self.event_type_exposure = event_type_exposure or self.DEFAULT_EXPOSURE_EVENT_TYPE
         self.event_type_malware = event_type_malware or self.DEFAULT_MALWARE_EVENT_TYPE
         self.vendor_name = vendor_name or self.VENDOR_NAME
         self.product_name = product_name or self.PRODUCT_NAME
         self.log_type = log_type or self.LOG_TYPE
+        # When True, sensitive fields (plaintext passwords, cookies, tokens, ...) are
+        # kept on the record and carried into the UDM extensions so they persist onto
+        # the case event. Defaults to False so secrets are stripped as before.
+        self.include_secrets = include_secrets
 
     def convert_records(
         self,
@@ -315,7 +322,9 @@ class SpyCloudUdmConverter:
     def sanitize_sensitive_fields(self, record: dict[str, Any]) -> dict[str, Any]:
         clean = {}
         for key, value in record.items():
-            if key in self.SENSITIVE_DROP_FIELDS:
+            # When secret retention is enabled, keep sensitive fields on the record
+            # so they flow into the UDM extensions; otherwise drop them.
+            if key in self.SENSITIVE_DROP_FIELDS and not self.include_secrets:
                 continue
             clean[key] = value
 
@@ -468,7 +477,12 @@ class SpyCloudUdmConverter:
 
     def build_extensions(self, record: dict[str, Any]) -> dict[str, Any]:
         extensions: dict[str, Any] = {}
-        for key in self.EXTENSION_ALLOWLIST:
+        allowlist = self.EXTENSION_ALLOWLIST
+        if self.include_secrets:
+            # Carry the sensitive fields through so the parser can flatten them onto
+            # the case event. Only reachable when secret retention is enabled.
+            allowlist = allowlist | self.SENSITIVE_DROP_FIELDS
+        for key in allowlist:
             value = record.get(key)
             if value in (None, "", [], {}):
                 continue
