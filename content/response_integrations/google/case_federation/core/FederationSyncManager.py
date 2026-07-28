@@ -36,6 +36,7 @@ from .constants import SUCCESS_STATUS_CODE
 @dataclasses.dataclass
 class ApiClientParameters:
     sync_api_root: str
+    verify_ssl: bool
 
 
 @dataclasses.dataclass
@@ -65,9 +66,9 @@ class FederationSyncManager:
         self.chronicle_soar = chronicle_soar
         self.http_client = None
         self._get_credentials_using_p4sa(
-            verify_ssl=True
+            verify_ssl=api_client_parameters.verify_ssl
         )
-        self._prepare_http_client()
+        self._prepare_http_client(api_client_parameters.verify_ssl)
 
     def sync_cases_from(self, continuation_token: str | None) -> FederationSyncResult:
         """Sync cases that were created or modified since the last sync execution.
@@ -156,25 +157,24 @@ class FederationSyncManager:
         )
         return response
 
-    def _get_credentials_using_p4sa(self, verify_ssl: bool
-    ) -> None:
+    def _get_credentials_using_p4sa(self) -> None:
         project_id = os.getenv("GCP_PROJECT_ID")
 
         self.creds = get_secops_siem_tenant_credentials(
             chronicle_soar=self.chronicle_soar,
             target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
             quota_project_id=project_id,
-            fallback_to_env_email=True
+            fallback_to_env_email=True,
         )
 
-
-    def _prepare_http_client(self) -> None:
+    def _prepare_http_client(self, verify_ssl: bool
+    ) -> None:
         """
         Prepare http client
         """
         auth_session = CreateSession.create_session()
-        auth_session.verify = True
+        auth_session.verify = verify_ssl
         self.http_client = AuthorizedSession(
             self.creds, auth_request=Request(session=auth_session)
         )
-        self.http_client.verify = True
+        self.http_client.verify = verify_ssl
