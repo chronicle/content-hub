@@ -54,9 +54,7 @@ class CaseFederationSyncJob(Job):
             self.logger,
             ApiClientParameters(
                 sync_api_root=self.params.target_platform,
-                verify_ssl=extract_job_param(
-                    self.soar_job, param_name="verify_ssl", default_value=True, input_type=bool
-                ),
+                verify_ssl=self.params.verify_ssl,
             ),
             chronicle_soar=self.soar_job,
         )
