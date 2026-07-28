@@ -87,6 +87,9 @@ def test_sync_success_sends_cases_and_saves_execution_data(
         "executionMessage": "Synced up to case 1",
     }
     mock_http_client.response.status_code = 200
+    job_context.clear()
+    job_context["CaseFederationSyncJob"]["continuation_token"] = "token-123"
+    job_context["CaseFederationSyncJob"]["executionMessage"] = "Synced up to case 1"
 
     # Act
     FederationSyncJob.main()
