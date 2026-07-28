@@ -66,7 +66,7 @@ class FederationSyncManager:
         self.chronicle_soar = chronicle_soar
         self.http_client = None
         self._get_credentials_using_p4sa()
-        self._prepare_http_client(api_client_parameters.verify_ssl)
+        self._prepare_http_client(verify_ssl=api_client_parameters.verify_ssl)
 
     def sync_cases_from(self, continuation_token: str | None) -> FederationSyncResult:
         """Sync cases that were created or modified since the last sync execution.
