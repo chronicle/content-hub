@@ -65,9 +65,7 @@ class FederationSyncManager:
         self.sync_endpoint = api_client_parameters.sync_api_root
         self.chronicle_soar = chronicle_soar
         self.http_client = None
-        self._get_credentials_using_p4sa(
-            verify_ssl=api_client_parameters.verify_ssl
-        )
+        self._get_credentials_using_p4sa()
         self._prepare_http_client(api_client_parameters.verify_ssl)
 
     def sync_cases_from(self, continuation_token: str | None) -> FederationSyncResult:
