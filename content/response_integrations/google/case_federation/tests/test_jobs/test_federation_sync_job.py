@@ -83,13 +83,14 @@ def test_sync_success_sends_cases_and_saves_execution_data(
                 "caseSla": {"expirationStatus": "alreadyExpired"},
             },
         ],
-        "continuationToken": "token-123",
-        "executionMessage": "Synced up to case 1",
+        "continuation_token": "token-123",
+        "execution_message": "Synced up to case 1",
     }
     mock_http_client.response.status_code = 200
-    job_context.clear()
-    job_context["CaseFederationSyncJob"]["continuation_token"] = "token-123"
-    job_context["CaseFederationSyncJob"]["executionMessage"] = "Synced up to case 1"
+    mock_http_client.response.json.return_value = {
+        "continuationToken": "token-123",
+        "executionMessage": "Synced up to case 1"
+    }
 
     # Act
     FederationSyncJob.main()
