@@ -18,6 +18,7 @@ import dataclasses
 import json
 
 from TIPCommon.base.job import Job
+from TIPCommon.extraction import extract_job_param
 
 from ..core.constants import FEDERATION_SYNC_JOB_SCRIPT_NAME, SUCCESS_STATUS_CODE
 from ..core.exceptions import MissingParameterError
@@ -53,7 +54,9 @@ class CaseFederationSyncJob(Job):
             self.logger,
             ApiClientParameters(
                 sync_api_root=self.params.target_platform,
-                verify_ssl=self.params.verify_ssl,
+                verify_ssl=extract_job_param(
+                    self.soar_job, param_name="verify_ssl", default_value=True
+                ),
             ),
             chronicle_soar=self.soar_job,
         )
