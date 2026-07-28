@@ -25,12 +25,12 @@ from ...jobs import FederationSyncJob
 from ..common import CONFIG_PATH
 from ..core.mocks import GetFederationCasesStub, MockHttpClient
 
-TARGET_PLATFORM: str = "primary.example.com"
+TARGET_PLATFORM: str = "https://primary.example.com"
 DEFAULT_PARAMETERS: dict[str, str] = (
     {"Target Platform": TARGET_PLATFORM, "Verify SSL": "True"}
 )
 SYNC_URL: str = (
-    f"https://{TARGET_PLATFORM}/legacyFederatedCases:legacyBatchPatchFederatedCases"
+    f"{TARGET_PLATFORM}/legacyFederatedCases:legacyBatchPatchFederatedCases"
 )
 
 
