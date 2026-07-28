@@ -35,12 +35,12 @@ def mock_manager_auth(
     monkeypatch.setattr(
         manager_module.FederationSyncManager,
         "_get_credentials_using_p4sa",
-        lambda self, verify_ssl: None,
+        lambda self: None,
     )
     monkeypatch.setattr(
         manager_module.FederationSyncManager,
         "_prepare_http_client",
-        lambda self: setattr(self, "http_client", mock_http_client),
+        lambda self, verify_ssl: setattr(self, "http_client", mock_http_client),
     )
 
 
