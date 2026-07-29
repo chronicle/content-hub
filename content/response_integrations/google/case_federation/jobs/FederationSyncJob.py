@@ -18,14 +18,13 @@ import dataclasses
 import json
 
 from TIPCommon.base.job import Job
-from TIPCommon.extraction import extract_job_param
 
 from ..core.constants import FEDERATION_SYNC_JOB_SCRIPT_NAME, SUCCESS_STATUS_CODE
 from ..core.exceptions import MissingParameterError
 from ..core.FederationSyncManager import (
-    FederationSyncManager,
     ApiClientParameters,
     FederationSyncExecutionData,
+    FederationSyncManager,
 )
 
 LAST_EXECUTION_DATA_KEY = "lastExecutionData"
@@ -34,13 +33,11 @@ LAST_EXECUTION_DATA_KEY = "lastExecutionData"
 class CaseFederationSyncJob(Job):
     def _validate_params(self) -> None:
         """Validate job params"""
-
         if not self.params.target_platform:
             raise MissingParameterError("Target Platform must be provided")
 
     def _init_api_clients(self) -> FederationSyncManager:
-        """
-        Create a federation synchronization manager instance, that will sync the cases.
+        """Create a federation synchronization manager instance, that will sync the cases.
 
         """
         session = self.soar_job.session
@@ -89,6 +86,7 @@ class CaseFederationSyncJob(Job):
 
         Returns:
             The previous execution data.
+
         """
         previous_execution_data_json = self.soar_job.get_job_context_property(
             identifier=self.name_id, property_key=LAST_EXECUTION_DATA_KEY
@@ -112,6 +110,7 @@ class CaseFederationSyncJob(Job):
 
         Args:
             execution_data: Data to save about the current sync execution.
+
         """
         self.soar_job.set_job_context_property(
             identifier=self.name_id,
