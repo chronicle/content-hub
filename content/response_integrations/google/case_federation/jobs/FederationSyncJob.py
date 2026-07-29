@@ -28,6 +28,7 @@ from ..core.FederationSyncManager import (
 )
 
 LAST_EXECUTION_DATA_KEY = "lastExecutionData"
+TARGET_PALTFORM_NOT_PROVIDED_ERROR_MESSAGE = "Target Platform must be provided"
 
 
 class CaseFederationSyncJob(Job):
@@ -39,7 +40,7 @@ class CaseFederationSyncJob(Job):
 
         """
         if not self.params.target_platform:
-            raise MissingParameterError("Target Platform must be provided")
+            raise MissingParameterError(TARGET_PALTFORM_NOT_PROVIDED_ERROR_MESSAGE)
 
     def _init_api_clients(self) -> FederationSyncManager:
         """Create a federation synchronization manager instance, that will sync the cases.
@@ -61,7 +62,7 @@ class CaseFederationSyncJob(Job):
         )
 
     def _perform_job(self) -> None:
-        """Perform the main flow of job"""
+        """Perform the main flow of job."""
         previous_execution_data = self._fetch_previous_execution_data()
         self.logger.info(f"Previous execution details: {previous_execution_data.execution_message}")
 
@@ -128,6 +129,7 @@ class CaseFederationSyncJob(Job):
 
 
 def main() -> None:
+    """Main function to run the job."""
     CaseFederationSyncJob(FEDERATION_SYNC_JOB_SCRIPT_NAME).start()
 
 

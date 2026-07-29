@@ -60,10 +60,10 @@ def job_context() -> dict:
 
 @pytest.fixture(autouse=True)
 def mock_job_context(monkeypatch: pytest.MonkeyPatch, job_context: dict) -> None:
-    def get_property(identifier, property_key):
+    def get_property(identifier: str, property_key: str) -> str | None:
         return job_context.get((identifier, property_key))
 
-    def set_property(identifier, property_key, property_value):
+    def set_property(identifier: str, property_key: str, property_value: str) -> None:
         job_context[identifier, property_key] = property_value
 
     monkeypatch.setattr(SiemplifyJob, "get_job_context_property", get_property)

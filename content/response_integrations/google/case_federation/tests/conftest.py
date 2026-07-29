@@ -20,7 +20,7 @@ pytest_plugins = ("integration_testing.conftest",)
 
 
 @pytest.fixture(autouse=True)
-def script_session(monkeypatch):
+def script_session(monkeypatch: pytest.MonkeyPatch) -> requests.Session:
     session = requests.Session()
     monkeypatch.setattr(CreateSession, "create_session", lambda *args, **kwargs: session)
     return session
