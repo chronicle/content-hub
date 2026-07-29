@@ -32,15 +32,11 @@ LAST_EXECUTION_DATA_KEY = "lastExecutionData"
 
 
 class CaseFederationSyncJob(Job):
-
     def _validate_params(self) -> None:
         """Validate job params"""
 
         if not self.params.target_platform:
-            raise MissingParameterError(
-                "Target Platform must be provided"
-            )
-
+            raise MissingParameterError("Target Platform must be provided")
 
     def _init_api_clients(self) -> FederationSyncManager:
         """
@@ -62,13 +58,9 @@ class CaseFederationSyncJob(Job):
     def _perform_job(self) -> None:
         """Perform the main flow of job"""
         previous_execution_data = self._fetch_previous_execution_data()
-        self.logger.info(
-            f"Previous execution details: {previous_execution_data.execution_message}"
-        )
+        self.logger.info(f"Previous execution details: {previous_execution_data.execution_message}")
 
-        sync_result = self.api_client.sync_cases_from(
-            previous_execution_data.continuation_token
-        )
+        sync_result = self.api_client.sync_cases_from(previous_execution_data.continuation_token)
 
         if sync_result.status_code == SUCCESS_STATUS_CODE:
             new_execution_data = sync_result.execution_data
@@ -82,8 +74,7 @@ class CaseFederationSyncJob(Job):
             else:
                 self._save_next_execution_data(new_execution_data)
                 self.logger.info(
-                    f"Sync finished successfully, execution details: "
-                    f"{new_execution_data.execution_message}"
+                    f"Sync finished successfully, execution details: {new_execution_data.execution_message}"
                 )
 
         else:
@@ -107,9 +98,7 @@ class CaseFederationSyncJob(Job):
             # This is the first run, provide default first values to sync all items
             return FederationSyncExecutionData(
                 continuation_token=None,
-                execution_message=(
-                    "This is the first execution, starting sync of all relevant cases."
-                ),
+                execution_message=("This is the first execution, starting sync of all relevant cases."),
             )
 
         previous_execution_data = json.loads(previous_execution_data_json)
@@ -118,9 +107,7 @@ class CaseFederationSyncJob(Job):
             execution_message=previous_execution_data["execution_message"],
         )
 
-    def _save_next_execution_data(
-        self, execution_data: FederationSyncExecutionData
-    ) -> None:
+    def _save_next_execution_data(self, execution_data: FederationSyncExecutionData) -> None:
         """Save the current execution data of the job, with its unique id.
 
         Args:

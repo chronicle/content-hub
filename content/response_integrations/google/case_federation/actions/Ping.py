@@ -21,7 +21,6 @@ from ..core.constants import PING_SCRIPT_NAME
 
 
 class Ping(Action):
-
     def _extract_parameters(self) -> None:
         pass
 
