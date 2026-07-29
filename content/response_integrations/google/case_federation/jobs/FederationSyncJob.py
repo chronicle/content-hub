@@ -32,12 +32,20 @@ LAST_EXECUTION_DATA_KEY = "lastExecutionData"
 
 class CaseFederationSyncJob(Job):
     def _validate_params(self) -> None:
-        """Validate job params"""
+        """Validate job params.
+
+        Raises:
+            MissingParameterError: If the target platform is not provided.
+
+        """
         if not self.params.target_platform:
             raise MissingParameterError("Target Platform must be provided")
 
     def _init_api_clients(self) -> FederationSyncManager:
         """Create a federation synchronization manager instance, that will sync the cases.
+
+        Returns:
+             FederationSyncManager: The initialized federation synchronization manager.
 
         """
         session = self.soar_job.session
