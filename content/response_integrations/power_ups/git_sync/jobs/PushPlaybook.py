@@ -60,19 +60,24 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
         installed_playbooks = gitsync.api.get_playbooks(chronicle_soar=siemplify)
+        pushed_playbooks = set()
 
         for playbook in installed_playbooks:
             if (
                 playbook.get("name") in playbooks_allowlist
                 or playbook.get("categoryName") in folders_allowlist
             ):
+                playbook_id = playbook.get("identifier")
+                if playbook_id in pushed_playbooks:
+                    continue
+
                 siemplify.LOGGER.info(f"Pushing Playbook {playbook['name']}")
 
-                playbook = gitsync.api.get_playbook(
+                playbook_data = gitsync.api.get_playbook(
                     chronicle_soar=siemplify,
-                    identifier=playbook.get("identifier"),
+                    identifier=playbook_id,
                 )
-                workflow = Workflow(playbook)
+                workflow = Workflow(playbook_data)
                 workflow.update_instance_name_in_steps(gitsync.api, siemplify)
 
                 if readme_addon:
@@ -93,6 +98,7 @@ def main():
                     gitsync.content.push_block(workflow)
                 else:
                     gitsync.content.push_playbook(workflow)
+                pushed_playbooks.add(playbook_id)
 
                 if include_blocks:
                     for block_step in workflow.get_involved_blocks():
@@ -111,10 +117,13 @@ def main():
                                 "found in installed playbooks. Skipping."
                             )
                             continue
+                        block_id = installed_block.get("identifier")
+                        if block_id in pushed_playbooks:
+                            continue
 
                         block_definition = gitsync.api.get_playbook(
                             chronicle_soar=siemplify,
-                            identifier=installed_block.get("identifier"),
+                            identifier=block_id,
                         )
 
                         if block_definition:
@@ -123,6 +132,7 @@ def main():
                             gitsync.content.push_block(
                                 block, category=workflow.category
                             )
+                            pushed_playbooks.add(block_id)
             else:
                 siemplify.LOGGER.warn(
                     f"Playbook {playbook.get('name')} not found, Skipping",
