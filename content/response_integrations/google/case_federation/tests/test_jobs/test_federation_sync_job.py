@@ -28,6 +28,7 @@ from ..core.mocks import GetFederationCasesStub, MockHttpClient
 TARGET_PLATFORM: str = "https://primary.example.com"
 DEFAULT_PARAMETERS: dict[str, str] = {"Target Platform": TARGET_PLATFORM, "Verify SSL": "True"}
 SYNC_URL: str = f"{TARGET_PLATFORM}/legacyFederatedCases:legacyBatchPatchFederatedCases"
+CONTINUATION_TOKEN: str = "token-123"
 
 
 @set_metadata(
@@ -81,17 +82,17 @@ def test_sync_success_sends_cases_and_saves_execution_data(
                 "caseSla": {"expirationStatus": "alreadyExpired"},
             },
         ],
-        "continuation_token": "token-123",
+        "continuation_token": CONTINUATION_TOKEN,
         "execution_message": "Synced up to case 1",
     }
     mock_http_client.response.status_code = 200
     mock_http_client.response.json.return_value = {
-        "continuation_token": "token-123",
+        "continuation_token": CONTINUATION_TOKEN,
         "execution_message": "Synced up to case 1",
     }
     job_context.clear()
     job_context["CaseFederationSyncJob"] = json.dumps({
-        "continuation_token": "token-123",
+        "continuation_token": CONTINUATION_TOKEN,
         "execution_message": "Synced up to case 1",
     })
 
@@ -112,7 +113,7 @@ def test_sync_success_sends_cases_and_saves_execution_data(
     # Assert - execution data was saved
     saved_values = [json.loads(value) for value in job_context.values()]
     assert len(saved_values) == 1
-    assert saved_values[0]["continuation_token"] == "token-123"
+    assert saved_values[0]["continuation_token"] == CONTINUATION_TOKEN
     assert saved_values[0]["execution_message"] == "Synced up to case 1"
 
 
@@ -125,7 +126,7 @@ def test_sync_failure_does_not_save_execution_data(
     # Arrange
     federation_cases.response.json.return_value = {
         "cases": [{"id": 1}],
-        "continuationToken": "token-123",
+        "continuationToken": CONTINUATION_TOKEN,
     }
     mock_http_client.response.status_code = 500
 
@@ -145,7 +146,7 @@ def test_continuation_token_is_reused_on_next_run(
     # Arrange - first run returns a case and a continuation token
     federation_cases.response.json.return_value = {
         "cases": [{"id": 1}],
-        "continuationToken": "token-123",
+        "continuationToken": CONTINUATION_TOKEN,
     }
     mock_http_client.response.status_code = 200
 
@@ -156,4 +157,4 @@ def test_continuation_token_is_reused_on_next_run(
     # Assert - the second run fetched with the saved continuation token
     assert len(federation_cases.calls) == 2
     assert federation_cases.calls[0]["continuation_token"] is None
-    assert federation_cases.calls[1]["continuation_token"] == "token-123"
+    assert federation_cases.calls[1]["continuation_token"] == CONTINUATION_TOKEN

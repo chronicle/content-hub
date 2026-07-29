@@ -94,12 +94,10 @@ class FederationSyncManager:
 
         if len(updated_cases) > 0:
             for case in updated_cases:
-                if alerts_sla := case.get("alertsSla"):
-                    if expiration_status := alerts_sla.get("expirationStatus"):
-                        alerts_sla["expirationStatus"] = camel_to_snake_case(expiration_status)
-                if case_sla := case.get("caseSla"):
-                    if expiration_status := case_sla.get("expirationStatus"):
-                        case_sla["expirationStatus"] = camel_to_snake_case(expiration_status)
+                if (alerts_sla := case.get("alertsSla")) and (expiration_status := alerts_sla.get("expirationStatus")):
+                    alerts_sla["expirationStatus"] = camel_to_snake_case(expiration_status)
+                if (case_sla := case.get("caseSla")) and (expiration_status := case_sla.get("expirationStatus")):
+                    case_sla["expirationStatus"] = camel_to_snake_case(expiration_status)
             sync_result = self._sync(cases_payload=updated_cases)
             self.logger.info(f"Response status code: {sync_result.status_code}")
 
@@ -111,8 +109,7 @@ class FederationSyncManager:
         self,
         continuation_token: str | None,
     ) -> TIPCommon.types.SingleJson:
-        """Retrieve list of cases that have been created or modified since the
-        last sync execution.
+        """Retrieve list of cases that have been created or modified since the last sync execution.
 
         Args:
             continuation_token: Token received from the server for fetching the next
@@ -142,8 +139,7 @@ class FederationSyncManager:
         url = self.sync_endpoint + "/legacyFederatedCases:legacyBatchPatchFederatedCases"
         payload = json.dumps({"cases": cases_payload})
         header = {"CLIENT-ADDRESS": os.getenv("CLIENT_ADDRESS")}
-        response = self.http_client.request("POST", url, data=payload, headers=header)
-        return response
+        return self.http_client.request("POST", url, data=payload, headers=header)
 
     def _get_credentials_using_p4sa(self) -> None:
         project_id = os.getenv("GCP_PROJECT_ID")
@@ -156,8 +152,6 @@ class FederationSyncManager:
         )
 
     def _prepare_http_client(self, verify_ssl: bool) -> None:
-        """Prepare http client
-        """
         auth_session = CreateSession.create_session()
         auth_session.verify = verify_ssl
         self.http_client = AuthorizedSession(self.creds, auth_request=Request(session=auth_session))
