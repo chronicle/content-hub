@@ -3,32 +3,32 @@ Ping:
     ### General Description
 
     Tests connectivity to the Sumo Logic platform to ensure that the integration is
-    configured correctly and can communicate with the Sumo Logic API.
+    configured correctly and can communicate with the API.
 
 
     ### Flow Description
 
-    1. Retrieves the integration configuration parameters (API Root, Access ID, Access
+    1. Extracts the integration configuration parameters (API Root, Access ID, Access
     Key, Verify SSL).
 
     2. Initializes the Sumo Logic manager with the provided credentials.
 
-    3. Executes a test search query (`| count _sourceCategory`) by making a POST request
-    to the Sumo Logic search jobs API.
+    3. Executes a test search query (`| count _sourceCategory`) via the Sumo Logic
+    API to verify authentication and connectivity.
 
-    4. Deletes the test search job by making a DELETE request to the Sumo Logic API.
+    4. Deletes the test search job immediately after creation.
 
-    5. Returns a success message if the connection and test query are successful,
-    or a failure message if an error occurs.
+    5. Returns a success message if the connection is established, otherwise returns
+    an error.
 
 
     ### Additional Notes
 
-    This action is typically used during the initial setup of the integration or for
-    troubleshooting connectivity issues. It does not require any action-specific parameters.
+    This action does not require any specific input parameters as it relies entirely
+    on the integration-level configuration.
   ai_short_description: >-
-    Tests connectivity to the Sumo Logic platform by executing and deleting a test
-    search job.
+    Tests connectivity to the Sumo Logic platform by executing a test search query
+    and verifying the response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,9 +40,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action tests connectivity by creating and deleting a test search job. It
-      does not fetch contextual data for alerts, mutate persistent external business
-      data, update internal entities, or create insights.
+      The action only tests connectivity by creating and deleting a test search job.
+      It does not fetch contextual data for alerts, mutate external business data,
+      mutate internal data, update entities, create insights, modify alert data, or
+      create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -94,8 +95,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process, iterate over, or filter any entities. It solely
-      tests connectivity to the external system.
+      The action does not process any entities. It does not iterate over target_entities
+      or accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -111,9 +112,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or containing
-      hosts.
+      The action is a simple connectivity test (Ping). It does not enrich data, mutate
+      alerts, interact with tickets, block/allow IOCs, manage identities, or perform
+      any of the specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -133,35 +134,40 @@ Search:
   ai_description: >-
     ### General Description
 
-    Executes a search query in Sumo Logic to retrieve log messages and telemetry data
-    matching specific criteria.
+    Executes a search query in Sumologic to retrieve log data and telemetry based
+    on specified timeframes. This asynchronous action creates a search job, waits
+    for its completion, and retrieves the resulting messages.
 
 
     ### Flow Description
 
-    1. Initiates a search job in Sumo Logic using the provided query, start time,
-    and end time via a POST request to the `api/v1/search/jobs` endpoint.
+    1. Initializes the Sumologic manager with the provided API credentials.
 
-    2. Polls the job status asynchronously until completion via a GET request to the
-    `api/v1/search/jobs/{job_id}` endpoint.
+    2. On the first run, initiates a search job in Sumologic using the provided `Query`,
+    `Since`, and `To` parameters via a POST request to the Sumologic API.
 
-    3. Once completed, retrieves the search results up to the specified limit via
-    a GET request to the `api/v1/search/jobs/{job_id}/messages` endpoint.
+    3. Returns an in-progress state to allow the search job time to complete.
 
-    4. Optionally deletes the search job from Sumo Logic if configured to do so via
-    a DELETE request to the `api/v1/search/jobs/{job_id}` endpoint.
+    4. On subsequent runs, checks the status of the search job via a GET request.
 
-    5. Returns the search results as a JSON object and populates a data table in the
-    SecOps platform.
+    5. Once the job is completed, retrieves the search results up to the specified
+    `Limit`.
+
+    6. If the `Delete Search Job` parameter is set to true, sends a DELETE request
+    to remove the search job from Sumologic.
+
+    7. Outputs the retrieved search messages as a JSON array and attaches them to
+    the action results as a data table.
 
 
     ### Additional Notes
 
-    The action runs asynchronously. Time parameters can be provided in ISO-8601 format
-    or Unix timestamp (milliseconds).
+    This is an asynchronous action that will run multiple times until the search job
+    completes or fails. Ensure that the query is in a valid JSON format and certain
+    characters are properly escaped if necessary.
   ai_short_description: >-
-    Executes a search query in Sumo Logic to retrieve log messages and telemetry data
-    matching specific criteria.
+    Executes a search query in Sumologic to retrieve log data and telemetry based
+    on specified timeframes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -170,14 +176,14 @@ Search:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a search job in Sumo Logic and optionally deletes it after completion.
+      Creates a search job and optionally deletes it upon completion in Sumologic.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by retrieving search results from Sumo Logic. It mutates
-      external data by creating a search job (POST) and optionally deleting it (DELETE).
-      It does not mutate internal data, update entities, create insights, modify alert
-      data, or create case comments.
+      The action fetches data by retrieving search results from Sumologic. It mutates
+      external data by creating a search job (POST) and optionally deleting it (DELETE)
+      in the Sumologic platform. It does not mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -229,8 +235,9 @@ Search:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It operates solely on the provided query and time parameters.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on the provided
+      search query.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -246,8 +253,8 @@ Search:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a query to retrieve log messages and telemetry data from
-      Sumo Logic, which directly aligns with the 'Search Events' expected outcome.
+      The action executes a query to retrieve historical logs and telemetry data from
+      Sumologic, which directly aligns with the 'Search Events' outcome category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -2,30 +2,26 @@ Add Comment To Issue:
   ai_description: >-
     ### General Description
 
-    Adds a comment to a specified issue in Wiz. This action initiates a state change
-    on the external Wiz platform by appending the provided text as a note to the target
-    issue's timeline.
+    Adds a comment to a specified issue in Wiz.
 
 
     ### Flow Description
 
-    1. Extracts the `Issue ID` and `Comment` parameters from the action configuration.
+    1. Extracts the `Issue ID` and `Comment` from the action parameters.
 
-    2. Initializes the Wiz API client using the provided integration credentials.
+    2. Constructs a GraphQL mutation (`CreateIssueComment`) to add the comment to
+    the specified issue.
 
-    3. Executes a GraphQL mutation (`createIssueNote`) via a POST request to the Wiz
-    API to append the comment to the specified issue.
+    3. Sends a POST request to the Wiz API to execute the mutation.
 
-    4. Returns the JSON result containing the created comment details and an output
-    message confirming the successful execution.
+    4. Returns the updated issue details as JSON.
 
 
     ### Additional Notes
 
-    Ensure the provided Issue ID is valid and accessible by the configured Wiz API
-    credentials. If the issue is not found, the action will raise an `IssueNotFoundError`.
+    None.
   ai_short_description: >-
-    Adds a comment to a specified issue in the Wiz platform via a GraphQL mutation.
+    Adds a comment to a specified issue in Wiz.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -34,13 +30,13 @@ Add Comment To Issue:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a comment to a specified issue in the external Wiz platform.
+      Adds a comment to a specified issue in Wiz.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request (GraphQL mutation) to the Wiz API to add
-      a comment to an issue. This mutates external data. It does not fetch contextual
-      data for enrichment, nor does it update internal entities, alerts, or insights.
+      The action executes a GraphQL mutation to add a comment to an issue in Wiz,
+      which mutates external data. It does not fetch contextual data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -92,9 +88,8 @@ Add Comment To Issue:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process, iterate over, or filter any entities from the SecOps
-      platform. It relies entirely on the explicitly provided 'Issue ID' and 'Comment'
-      parameters to perform its task.
+      The action does not iterate over target entities or accept any entity-related
+      parameters. It operates solely on the provided Issue ID.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -110,10 +105,9 @@ Add Comment To Issue:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds a comment to an issue in Wiz (a cloud security platform). This
-      does not strictly align with updating an ITSM ticket (Update Ticket), adding
-      an internal alert comment (Add Alert Comment), or any other predefined outcome
-      category. Therefore, all outcome category flags are set to false.
+      The action adds a comment to an issue in Wiz. This does not strictly align with
+      updating an internal alert, adding an internal alert comment, or updating an
+      ITSM ticket. Therefore, it does not match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -136,33 +130,38 @@ Add Comment To Issue:
     | Issue ID | String | Yes | The unique identifier of the issue in Wiz. |
 
     | Comment | String | Yes | The text of the comment to add to the issue. |
-Get Issue Details:
+Get Blue Agent Analysis:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed information about a specific issue from Wiz. This action queries
-    the Wiz API to fetch the current status, severity, description, and other metadata
-    associated with the provided issue identifier.
+    Retrieves analysis details from the Wiz Blue Agent for a specified threat ID.
+    This action queries the Wiz platform to obtain AI-driven threat analysis, including
+    verdicts, severity, and conclusions.
 
 
     ### Flow Description
 
-    1. Extracts the `Issue ID` parameter provided by the user or playbook.
+    1. Extracts the `Threat ID` parameter provided by the user or playbook.
 
-    2. Initializes the Wiz API client with the configured credentials.
+    2. Executes a GraphQL query (`get_threat_ai_analysis`) to the Wiz API to fetch
+    the Threat AI Analysis for the given issue/threat ID.
 
-    3. Executes a GraphQL query (`GetIssue`) against the Wiz API to fetch the issue
-    details.
+    3. Evaluates the status of the analysis. If the status is `COMPLETED`, the action
+    finishes and returns the analysis details as JSON.
 
-    4. Returns the retrieved issue information as a JSON result.
+    4. If the status is `IN_PROGRESS` or `QUEUED`, the action enters an asynchronous
+    waiting state and will retry until completion or timeout.
+
+    5. If the analysis fails or is unavailable, the action exits with a failure status.
 
 
     ### Additional Notes
 
-    Ensure that the provided `Issue ID` is a valid service issue ID in Wiz.
+    This is an asynchronous action that will periodically poll the Wiz API until the
+    Blue Agent analysis is completed or the action's timeout is reached.
   ai_short_description: >-
-    Retrieves detailed information about a specific issue from Wiz using its unique
-    identifier.
+    Retrieves AI-driven analysis details from the Wiz Blue Agent for a specified threat
+    ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -174,9 +173,9 @@ Get Issue Details:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GraphQL query to the Wiz API to fetch issue details (fetches_data=true).
-      It does not mutate external data, update internal entities, create insights,
-      or modify alert data.
+      The action makes a GraphQL query to the Wiz API to fetch threat AI analysis
+      data. It does not perform any state-changing operations on external systems,
+      nor does it update entities, create insights, or modify internal alert data.
   entity_usage:
     entity_types:
       address: false
@@ -228,8 +227,9 @@ Get Issue Details:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on or filter any entities. It relies solely on the
-      explicitly provided 'Issue ID' parameter to fetch data.
+      The action does not iterate over `target_entities` and does not accept any entity
+      identifiers as input parameters. It solely relies on the provided `Threat ID`
+      parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -245,10 +245,139 @@ Get Issue Details:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action fetches details about a specific issue (which represents an alert
-      or finding) from Wiz. This directly aligns with the 'Get Alert Information'
-      category. It does not enrich IOCs or assets, nor does it perform any state-changing
-      operations.
+      The action fetches threat analysis details from Wiz for a specific threat ID.
+      This aligns with the 'Get Alert Information' category, as it retrieves information
+      about a threat/alert from a 3rd party product. It does not enrich specific IOCs
+      or assets, nor does it mutate external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threat ID | String | Yes | The unique identifier of the Wiz threat ID. |
+Get Issue Details:
+  ai_description: >-
+    ### General Description
+
+    The Get Issue Details action retrieves detailed information about a specific issue
+    from Wiz using its unique identifier.
+
+
+    ### Flow Description
+
+    1. Extracts the `Issue ID` parameter provided by the user.
+
+    2. Constructs a GraphQL query to fetch the issue details.
+
+    3. Makes an API call to the Wiz GraphQL endpoint to retrieve the issue information.
+
+    4. Returns the issue details as a JSON result.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Retrieves detailed information about a specific issue from Wiz using its unique
+    identifier.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GraphQL query to fetch issue details from Wiz. It does not
+      mutate external data, mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities and does not accept any input
+      parameters representing entities. It solely operates on the provided Issue ID.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches information about a specific issue (which acts as an alert/finding)
+      from Wiz. This matches the 'Get Alert Information' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -274,9 +403,10 @@ Ignore Issue:
   ai_description: >-
     ### General Description
 
-    The Ignore Issue action is used to ignore a specified issue in Wiz. It updates
-    the issue's status to REJECTED with a specified resolution reason and note. Note:
-    This action only works on Graph Control or Cloud Configuration issues.
+    The "Ignore Issue" action is used to ignore a specified issue in Wiz by updating
+    its status to "REJECTED". It allows the user to provide a resolution reason and
+    an accompanying note for context. Note: This action only works on Graph Control
+    or Cloud Configuration issues.
 
 
     ### Flow Description
@@ -284,22 +414,22 @@ Ignore Issue:
     1. Extracts the `Issue ID`, `Resolution Reason`, and `Resolution Note` from the
     action parameters.
 
-    2. Validates the `Resolution Reason` against allowed values (False Positive, Exception,
-    Won't Fix).
+    2. Validates the `Resolution Reason` against the allowed values (False Positive,
+    Exception, Won't Fix).
 
     3. Initializes the Wiz API client.
 
-    4. Executes a GraphQL mutation (`updateIssue`) via the Wiz API to update the issue
-    status to `REJECTED` and appends the resolution reason and note.
+    4. Calls the Wiz GraphQL API with a mutation to update the specified issue's status
+    to "REJECTED", applying the provided resolution reason and note.
 
-    5. Returns the updated issue details as a JSON result.
+    5. Returns the updated issue details as a JSON result and outputs a success message.
 
 
     ### Additional Notes
 
-    This action only works on Graph Control or Cloud Configuration issues.
+    This action only works on Graph Control or Cloud Configuration issues in Wiz.
   ai_short_description: >-
-    Ignores a specified issue in Wiz by updating its status to REJECTED with a given
+    Ignores a specified issue in Wiz by updating its status to rejected with a resolution
     reason and note.
   capabilities:
     can_create_case_comments: false
@@ -309,14 +439,14 @@ Ignore Issue:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of a specified issue in Wiz to REJECTED, along with a resolution
+      Updates the status of a specified issue in Wiz to 'REJECTED' and adds a resolution
       reason and note.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a GraphQL mutation to update the status of an issue in Wiz
-      to REJECTED. It does not fetch data, mutate internal SecOps data, update entities,
-      or create insights.
+      The action makes a POST request (GraphQL mutation) to the Wiz API to update
+      the status of an issue to 'REJECTED'. This mutates external data. It does not
+      fetch data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -368,8 +498,8 @@ Ignore Issue:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target_entities or use entity-specific identifiers.
-      It relies entirely on the provided Issue ID parameter.
+      The action does not process any entities. It relies solely on the provided Issue
+      ID parameter to perform its operation.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -385,9 +515,11 @@ Ignore Issue:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates an issue in Wiz (a 3rd party cloud security tool). This does
-      not match any of the specific outcome categories such as Update Alert (which
-      refers to SecOps platform alerts) or Update Ticket (which refers to ITSM systems).
+      The action updates the status of an issue in Wiz to 'REJECTED'. This does not
+      match 'Update Alert' as it modifies data in a 3rd party product, not within
+      the SecOps platform. It does not match 'Update Ticket' as Wiz is a cloud security
+      tool, not an ITSM. Therefore, it does not match any of the available outcome
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -409,7 +541,7 @@ Ignore Issue:
 
     | Issue ID | String | Yes | The unique identifier of the issue in Wiz. |
 
-    | Resolution Reason | DropDown | No | The reason for the resolution of the issue.
+    | Resolution Reason | Drop-down | No | The reason for the resolution of the issue.
     |
 
     | Resolution Note | String | Yes | A note that gives additional context for the
@@ -418,27 +550,30 @@ List Resource Vulnerability Findings:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of vulnerability findings associated with specific resources
-    in Wiz.
+    The "List Resource Vulnerability Findings" action retrieves a list of vulnerability
+    findings associated with specific resources in Wiz. It allows users to filter
+    the findings based on severity, availability of a fix, existence of a public exploit,
+    and specific CVE IDs.
 
 
     ### Flow Description
 
     1. Extracts the provided resource names and filtering criteria (Severity, Has
-    Fix, Has Public Exploit, CVE IDs, Max Findings).
+    Fix, Has Public Exploit, CVE IDs, and Max Findings To Return).
 
-    2. Iterates over the provided resource names.
+    2. Iterates through the list of provided resource names.
 
-    3. For each resource, executes a GraphQL query to the Wiz API to fetch vulnerability
+    3. For each resource, makes a GraphQL API query to Wiz to fetch the vulnerability
     findings that match the specified filters.
 
-    4. Aggregates the retrieved findings and returns them as a JSON result.
+    4. Aggregates the findings and returns them as a JSON result.
 
 
     ### Additional Notes
 
     The action will only return findings associated with projects to which the API
-    key has access.
+    key has access. The maximum number of findings that can be returned per resource
+    is 500.
   ai_short_description: >-
     Retrieves a list of vulnerability findings associated with specific resources
     in Wiz based on provided filtering criteria.
@@ -453,10 +588,9 @@ List Resource Vulnerability Findings:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a GraphQL query to fetch vulnerability findings from Wiz.
-      It does not mutate external data (the POST request is for a GraphQL query, not
-      a mutation), nor does it update internal entities, create insights, or modify
-      alert data.
+      The action makes a GraphQL query to Wiz to fetch vulnerability findings (fetches_data=true).
+      It does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -508,9 +642,9 @@ List Resource Vulnerability Findings:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the 'Resource Name' action parameter to determine which resources
-      to query. Therefore, it does not run on entities.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters that represent standard entity types. It operates solely
+      on the provided 'Resource Name' string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -526,9 +660,10 @@ List Resource Vulnerability Findings:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches vulnerability findings for specific resources from Wiz. It
-      does not enrich SOAR entities, mutate external state, or match any of the specific
-      expected outcomes defined in the outcome categories.
+      The action fetches vulnerability findings for a specific resource from Wiz.
+      This does not strictly align with enriching an IOC or an Asset (which typically
+      returns contextual metadata like OS version or owner), nor does it match any
+      other specific outcome category such as searching events or getting alert information.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -555,12 +690,12 @@ List Resource Vulnerability Findings:
     | Severity | Multi-Choice | No | The technical severity levels of the vulnerability
     findings to return. |
 
-    | Has Fix | Drop-Down | No | The criteria used to filter the vulnerability findings
+    | Has Fix | Dropdown | No | The criteria used to filter the vulnerability findings
     to return based on whether a fix or patch is available. Select One: Returns all
     findings. Yes: Only returns findings with an available fix. No: Only returns findings
     without an available fix. |
 
-    | Has Public Exploit | Drop-Down | No | The criteria used to filter the vulnerability
+    | Has Public Exploit | Dropdown | No | The criteria used to filter the vulnerability
     findings to return based on whether a known public exploit exists. Select One:
     Returns all vulnerability findings. Yes: Only returns findings with a known public
     exploit. No: Only returns findings without a known public exploit. |
@@ -574,27 +709,26 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity to the Wiz server using the provided integration configuration
-    parameters.
+    Tests connectivity to the Wiz server to ensure the integration is configured correctly.
 
 
     ### Flow Description
 
-    1. Initializes the Wiz API client using the configured credentials.
+    1. Initializes the Wiz API client using the provided integration configuration.
 
-    2. Executes a lightweight GraphQL query to the Wiz API to retrieve a single issue.
+    2. Sends a GraphQL query to the Wiz API to fetch a single issue as a connectivity
+    test.
 
-    3. Validates the HTTP response to confirm successful authentication and network
-    connectivity.
+    3. Validates the response and returns a success message if the connection is successful,
+    or an error message otherwise.
 
 
     ### Additional Notes
 
-    This action is primarily used to verify that the integration is configured correctly
-    and can communicate with the Wiz platform.
+    This action does not require any parameters and does not interact with entities
+    or alerts.
   ai_short_description: >-
-    Tests the connectivity to the Wiz server to verify that the integration is configured
-    correctly and can successfully authenticate.
+    Tests connectivity to the Wiz server to ensure valid configuration and credentials.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -606,9 +740,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a basic GraphQL query to verify API connectivity. It does
-      not fetch contextual data for entities or alerts, nor does it mutate any external
-      or internal data, update entities, create insights, or add case comments.
+      The action only performs a basic API request to test connectivity. It does not
+      fetch contextual data for alerts/entities, nor does it mutate external or internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -660,8 +794,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely performs
-      a connectivity check to the Wiz API.
+      The action does not process any entities. It simply tests connectivity to the
+      Wiz API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -677,9 +811,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a basic connectivity test to the Wiz API. It does not enrich
-      indicators, modify alerts, interact with tickets, or perform any containment
-      or remediation actions, thus it does not match any of the expected outcome categories.
+      The action is a simple connectivity test (ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -699,29 +833,28 @@ Reopen Issue:
   ai_description: >-
     ### General Description
 
-    Reopens a specified issue in Wiz. This action modifies the state of an issue in
-    the external Wiz platform by changing its status to 'OPEN'.
+    The Reopen Issue action is used to reopen a specified issue in Wiz by updating
+    its status to 'OPEN'.
 
 
     ### Flow Description
 
-    1. Extracts the `Issue ID` parameter provided by the user.
+    1. Extracts the `Issue ID` parameter provided in the action configuration.
 
-    2. Constructs a GraphQL mutation payload to update the issue's status to 'OPEN'.
+    2. Initializes the Wiz API client with the integration credentials.
 
-    3. Executes a POST request to the Wiz GraphQL API endpoint with the mutation payload.
+    3. Sends a GraphQL mutation request to the Wiz API to update the status of the
+    specified issue to 'OPEN'.
 
     4. Retrieves the updated issue details and returns them as a JSON result.
 
 
     ### Additional Notes
 
-    This action directly mutates data within the Wiz platform. Ensure that the provided
-    Issue ID is valid and that the configured API credentials have the necessary permissions
-    to modify issues.
+    - If the specified issue ID is not found, the action will raise an `IssueNotFoundError`.
   ai_short_description: >-
-    Reopens a specified issue in Wiz by updating its status to 'OPEN' via the GraphQL
-    API.
+    Reopens a specific issue in Wiz by updating its status to 'OPEN' via a GraphQL
+    mutation.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -734,10 +867,9 @@ Reopen Issue:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a GraphQL mutation (POST request) to change the status of
-      an issue in Wiz to 'OPEN'. This constitutes mutating external data. It does
-      not fetch contextual enrichment data, nor does it mutate internal SOAR data,
-      update entities, or create insights.
+      The action makes a POST request with a GraphQL mutation to update the status
+      of an issue in Wiz (can_mutate_external_data=true). It does not fetch contextual
+      data, mutate internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -789,8 +921,9 @@ Reopen Issue:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It relies solely on the 'Issue ID'
-      parameter provided by the user to target and reopen the specific issue in Wiz.
+      The action does not process any entities from `siemplify.target_entities` and
+      does not accept any entity-related parameters. It operates solely on the provided
+      Issue ID.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -806,10 +939,9 @@ Reopen Issue:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the status of an issue in Wiz to 'OPEN'. This aligns with
-      the 'Update Ticket' category, as it synchronizes a status change to an external
-      tracking system (Wiz issues). It does not enrich IOCs, contain hosts, or perform
-      other categorized operations.
+      The action updates the status of an issue in Wiz to 'OPEN'. This does not match
+      any of the available outcome categories, such as updating an alert within the
+      SecOps platform or updating a ticket in an ITSM.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -823,7 +955,7 @@ Reopen Issue:
     update_alert: false
     update_email: false
     update_identity: false
-    update_ticket: true
+    update_ticket: false
   parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
@@ -835,9 +967,9 @@ Resolve Issue:
   ai_description: >-
     ### General Description
 
-    Resolves a specified Threat Detection issue in Wiz. This action initiates a state
-    change in the external Wiz platform, updating the issue's status to resolved and
-    appending relevant resolution context.
+    Resolves a specified issue in Wiz. This action is specifically designed to work
+    on Threat Detection issues, updating their status to resolved with a specified
+    reason and optional note.
 
 
     ### Flow Description
@@ -845,24 +977,23 @@ Resolve Issue:
     1. Extracts the `Issue ID`, `Resolution Reason`, and `Resolution Note` from the
     action parameters.
 
-    2. Validates the provided `Resolution Reason` against the supported Wiz resolution
-    reasons (e.g., Malicious Threat, Not Malicious Threat).
+    2. Validates the `Resolution Reason` against the allowed dropdown values.
 
-    3. Makes a POST request to the Wiz GraphQL API executing the `UpdateIssue` mutation
-    to change the issue's status to `RESOLVED` and apply the resolution reason and
-    note.
+    3. Initializes the Wiz API client.
 
-    4. Returns the updated issue details as a JSON result and outputs a success message
-    to the SecOps platform.
+    4. Sends a GraphQL mutation request to the Wiz API to update the issue's status
+    to `RESOLVED`, applying the provided resolution reason and note.
+
+    5. Returns a JSON result containing the updated issue details and outputs a success
+    message.
 
 
     ### Additional Notes
 
-    This action only works on Threat Detection issues within Wiz. Ensure the provided
-    Issue ID corresponds to a valid Threat Detection issue.
+    This action only works on Threat Detection issues in Wiz.
   ai_short_description: >-
     Resolves a specified Threat Detection issue in Wiz by updating its status and
-    appending a resolution reason and note via the Wiz GraphQL API.
+    applying a resolution reason.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -871,15 +1002,13 @@ Resolve Issue:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of a specific issue in Wiz to 'RESOLVED' and appends a resolution
-      reason and note via a GraphQL mutation.
+      Updates the status of a specified issue in Wiz to RESOLVED.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a GraphQL mutation to update the status of an issue in the
-      external Wiz platform (can_mutate_external_data = true). It does not fetch contextual
-      data for enrichment, nor does it mutate internal SecOps data, update entities,
-      create insights, modify alert data, or create case comments.
+      The action executes a GraphQL mutation to update the status of an issue in Wiz
+      to RESOLVED. It mutates external data but does not fetch contextual data, mutate
+      internal SecOps data, update entities, create insights, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -931,9 +1060,9 @@ Resolve Issue:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on or iterate through any entities (e.g., `siemplify.target_entities`).
-      It relies entirely on the explicitly provided 'Issue ID' parameter to perform
-      its execution. Therefore, all entity types and filter flags are set to false.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on the provided
+      Wiz Issue ID.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -949,12 +1078,10 @@ Resolve Issue:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action resolves an issue in the external Wiz platform. It does not match
-      'Update Alert' because that category strictly applies to changing alert status
-      within the SecOps platform itself. It does not match 'Update Ticket' because
-      Wiz is a cloud security platform, not an external ITSM ticketing system. It
-      does not enrich data, contain hosts, or block IOCs. Therefore, it does not match
-      any of the predefined outcome categories.
+      The action resolves an issue in a 3rd party security product (Wiz). It does
+      not update an alert within the SecOps platform, nor does it update a ticket
+      in an ITSM system. Therefore, it does not match any of the specific outcome
+      categories provided.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -977,7 +1104,7 @@ Resolve Issue:
     | Issue ID | String | Yes | The unique identifier of the issue in Wiz. |
 
     | Resolution Reason | Dropdown | No | The reason for the resolution of the issue.
-    Default is 'Not Malicious Threat'. |
+    |
 
     | Resolution Note | String | No | A note that gives additional context about the
-    resolution. |
+    resolution |

@@ -2,36 +2,33 @@ Add IP To Rule List:
   ai_description: >-
     ### General Description
 
-    Adds IP Address entities to a specified rule list in Cloudflare. This action allows
-    security teams to dynamically update Cloudflare rule lists with new IP addresses,
-    which can then be used in firewall rules to block, challenge, or allow traffic.
+    Adds IP address entities to a specified rule list in Cloudflare. This action modifies
+    the configuration of a Cloudflare account by appending new IP items to an existing
+    rule list, which can then be referenced by firewall rules to control network traffic.
 
 
     ### Flow Description
 
-    1. Extracts the necessary configuration and action parameters.
+    1. Retrieves the specified rule list from Cloudflare using a GET request to verify
+    it exists and is of type 'ip', and to obtain its internal ID.
 
-    2. Makes a GET request to the Cloudflare API to retrieve the specified rule list
-    and verifies that its kind is 'ip'.
+    2. Iterates through the target entities, filtering specifically for IP Address
+    entities.
 
-    3. Filters the target entities to include only IP Addresses.
+    3. For each suitable entity, makes a POST request to the Cloudflare API (`/client/v4/accounts/{account_id}/rules/lists/{rule_id}/items`)
+    to add the IP address and an optional description to the rule list.
 
-    4. Iterates through the suitable entities and makes a POST request to the Cloudflare
-    API to add each IP address to the rule list.
-
-    5. Collects the results and returns a summary message indicating successful and
-    failed additions.
+    4. Collects the results and returns a JSON object containing the details of the
+    added items.
 
 
     ### Additional Notes
 
-    - The target rule list in Cloudflare must be of type 'ip'.
-
-    - The action will fail for a specific entity if the IP is already in the list
-    or if the API request encounters an error, but it will continue processing other
-    entities.
+    The target rule list must already exist in Cloudflare and must be configured as
+    an 'ip' list type. The action's effect on traffic (e.g., blocking or allowing)
+    depends on the firewall rules that reference the specified rule list.
   ai_short_description: >-
-    Adds IP Address entities to a specified rule list in Cloudflare.
+    Adds IP address entities to a specified rule list in Cloudflare.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,14 +37,13 @@ Add IP To Rule List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds IP addresses to a specified rule list in Cloudflare.
+      Adds the specified IP address entities to a rule list in Cloudflare.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Cloudflare API to add an IP address to
       a rule list, which mutates external data. It does not fetch contextual enrichment
-      data for the entities, nor does it mutate internal SOAR data, update entities,
-      or create insights.
+      data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -100,8 +96,9 @@ Add IP To Rule List:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` is `[EntityTypes.ADDRESS]`.
-      Therefore, it targets ADDRESS entities and filters by entity_type.
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` is defined as `[EntityTypes.ADDRESS]`.
+      This means the action specifically targets Address entities and filters them
+      by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: true
@@ -117,10 +114,10 @@ Add IP To Rule List:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds an IP address to a Cloudflare rule list. Since rule lists in
-      Cloudflare are utilized within firewall rules to either block or allow traffic,
-      this action functionally supports both 'Add IOC To Blocklist' and 'Add IOC To
-      Allowlist' depending on the associated firewall rule's configuration.
+      The action adds an IP address to a Cloudflare rule list. Because rule lists
+      are utilized by Cloudflare firewall rules to enforce security policies (such
+      as blocking or allowing traffic), this action aligns with the expected outcomes
+      of adding an IOC to a blocklist or an allowlist.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -149,38 +146,36 @@ Add URL To Rule List:
   ai_description: >-
     ### General Description
 
-    This action adds URL entities to a specified rule list in Cloudflare. It is specifically
-    designed to work with rule lists of type "redirect", treating the URL entities
-    as "Source URLs" and redirecting them to a specified "Target URL".
+    Adds URL entities to a specified rule list in Cloudflare. The action specifically
+    targets rule lists of type "redirect" and configures how the source URL (represented
+    by the URL entity) should be redirected to a target URL.
 
 
     ### Flow Description
 
-    1. The action retrieves configuration and action parameters, including the target
-    rule list name and redirect settings.
+    1. Retrieves configuration and action parameters.
 
-    2. It validates the parameters, ensuring that "Subpath Matching" is enabled if
-    "Preserve Path Suffix" is selected.
+    2. Validates that if "Preserve Path Suffix" is enabled, "Subpath Matching" is
+    also enabled.
 
-    3. It queries the Cloudflare API to retrieve the specified rule list and verifies
-    that its kind is "redirect".
+    3. Fetches the specified rule list from Cloudflare and verifies it is of type
+    "redirect".
 
-    4. The action iterates over the target entities, filtering for those of type URL.
+    4. Iterates through the target entities, filtering for URL entities.
 
-    5. For each URL entity, it makes a POST request to the Cloudflare API (`/client/v4/accounts/{account_id}/rules/lists/{rule_id}/items`)
-    to add the URL as a rule list item with the configured redirect settings.
+    5. For each URL entity, makes a POST request to the Cloudflare API to add the
+    URL as a source URL to the rule list, along with the specified target URL and
+    redirect configurations.
 
-    6. The action collects the results and returns a JSON object containing the details
-    of the successfully added rule list items.
+    6. Returns a JSON result containing the details of the added rule list items.
 
 
     ### Additional Notes
 
-    URL entities are treated as "Source URLs". The target rule list must be of type
-    "redirect".
+    Only URL entities are supported. The URL entities are treated as "Source URLs"
+    for the redirect rule.
   ai_short_description: >-
-    Adds URL entities to a specified redirect rule list in Cloudflare, configuring
-    them as source URLs to be redirected to a target URL.
+    Adds URL entities to a specified redirect rule list in Cloudflare.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -189,12 +184,12 @@ Add URL To Rule List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds URL entities to a specified rule list in Cloudflare via a POST request.
+      Adds a URL to a specified redirect rule list in Cloudflare.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Cloudflare API to add a URL to a rule
-      list, which mutates external data. It does not fetch contextual data for entities,
+      list, which mutates external data. It does not fetch contextual data for enrichment,
       nor does it mutate internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
@@ -247,9 +242,9 @@ Add URL To Rule List:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `if entity.entity_type == EntityTypes.URL:`. Therefore, it targets URL entities
-      and filters by entity type.
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.URL`. Therefore, it targets URL entities and filters by entity
+      type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -266,8 +261,9 @@ Add URL To Rule List:
     get_alert_information: false
     reasoning: >-
       The action adds a URL to a redirect rule list in Cloudflare. This does not strictly
-      match any of the predefined outcome categories such as blocking an IOC, enriching
-      an IOC, or updating an alert.
+      match the 'Add IOC To Blocklist' category, as it configures a redirect rather
+      than blocking access. It does not enrich entities, update alerts, or perform
+      any other categorized outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -295,7 +291,7 @@ Add URL To Rule List:
     | Description | String | No | Specify a description for the newly added rule list
     item. |
 
-    | Status Code | DDL | No | Specify the status for the rule list item. |
+    | Status Code | Dropdown | No | Specify the status for the rule list item. |
 
     | Preserve Query String | Boolean | No | If enabled, the rule list item will preserve
     the query string. |
@@ -307,38 +303,44 @@ Add URL To Rule List:
     the subpath. |
 
     | Preserve Path Suffix | Boolean | No | If enabled, the rule list item will preserve
-    the path suffix. Parameter Notes: You need to enable "Subpath Matching" if "Preserve
-    Path Suffix" is enabled. |
+    the path suffix. Note: "Subpath Matching" must be enabled if this is enabled.
+    |
 Create Firewall Rule:
   ai_description: >-
     ### General Description
 
-    Creates a new firewall rule in a specified Cloudflare zone.
+    Creates a new firewall rule in a specified Cloudflare zone. This action allows
+    users to define custom firewall rules using expressions and specific actions (e.g.,
+    Block, Allow, Bypass) to manage traffic to their Cloudflare-protected resources.
 
 
     ### Flow Description
 
-    1. Extracts the provided parameters including Zone Name, Action, Expression, and
-    other optional settings.
+    1. Retrieves the zone ID for the provided `Zone Name` by making a GET request
+    to the Cloudflare API.
 
-    2. Validates the input parameters such as Products, Priority, and Reference Tag
-    length.
+    2. Validates the provided input parameters, ensuring that `Products` are specified
+    if the `Action` is set to 'Bypass', and checks character limits for the `Reference
+    Tag`.
 
-    3. Retrieves the Zone ID from Cloudflare using the provided Zone Name.
+    3. Makes a POST request to the Cloudflare API (`/client/v4/zones/{zone_id}/firewall/rules`)
+    to create the firewall rule with the specified expression, action, and other configurations.
 
-    4. Sends a POST request to the Cloudflare API to create the firewall rule with
-    the specified configuration.
-
-    5. Returns the JSON representation of the created rule and attaches it to the
-    action results.
+    4. Returns the JSON representation of the newly created firewall rule as the action
+    result.
 
 
     ### Additional Notes
 
-    If the 'Bypass' action is selected, the 'Products' parameter becomes mandatory.
+    - If "Bypass" is selected for the `Action` parameter, the `Products` parameter
+    must be provided.
+
+    - The `Reference Tag` can only be up to 50 characters long.
+
+    - The `Priority` must be a positive number.
   ai_short_description: >-
-    Creates a new firewall rule in a specified Cloudflare zone based on the provided
-    expression and action.
+    Creates a new firewall rule in a specified Cloudflare zone using a defined expression
+    and action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -347,13 +349,13 @@ Create Firewall Rule:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new firewall rule in the specified Cloudflare zone.
+      Creates a new firewall rule in a specified Cloudflare zone.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Cloudflare API to create a new firewall
-      rule, which mutates external data. It does not fetch contextual data for enrichment,
-      nor does it mutate internal SecOps data like entities, insights, or case comments.
+      rule, which mutates external data. It does not fetch data for enrichment purposes,
+      mutate internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -405,8 +407,9 @@ Create Firewall Rule:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use entity-specific identifiers.
-      It operates purely on the provided action parameters to create a firewall rule.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates purely on configuration
+      parameters like Zone Name and Expression. Therefore, it does not run on entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -422,9 +425,11 @@ Create Firewall Rule:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a generic firewall rule based on an expression rather than
-      specifically targeting an IOC or asset for blocking/allowing. Therefore, it
-      does not strictly match any of the predefined outcome categories.
+      The action creates a generic firewall rule based on a custom expression. It
+      does not directly take an IOC or asset to enrich, block, or contain. While it
+      configures a firewall, it does not specifically target an IOC for blocking as
+      defined in the 'Add IOC To Blocklist' category. Therefore, it does not match
+      any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -449,7 +454,7 @@ Create Firewall Rule:
 
     | Name | String | No | Specify the name for the firewall rule. |
 
-    | Action | Drop-down | No | Specify the action for the firewall rule. If "Bypass"
+    | Action | Dropdown | No | Specify the action for the firewall rule. If "Bypass"
     is selected, you need to provide values in the "Products" parameter. |
 
     | Expression | String | Yes | Specify the expression for the firewall rule. |
@@ -467,26 +472,25 @@ Create Rule List:
   ai_description: >-
     ### General Description
 
-    Creates a new rule list in Cloudflare. This action allows users to define a custom
-    list (such as an IP Address or Redirect list) that can later be used in Cloudflare
-    firewall rules.
+    Creates a new rule list in Cloudflare.
 
 
     ### Flow Description
 
-    1. Extracts the action parameters including the rule list Name, Type, and Description.
+    1. Extracts action parameters: Name, Type, and Description.
 
-    2. Maps the selected Type to the corresponding Cloudflare API value.
+    2. Maps the provided Type to the corresponding Cloudflare kind (e.g., 'ip' or
+    'redirect').
 
     3. Makes a POST request to the Cloudflare API (`/client/v4/accounts/{account_id}/rules/lists`)
-    to create the new rule list.
+    to create the rule list.
 
-    4. Returns the created rule list details as a JSON result.
+    4. Returns the created rule list object as a JSON result.
 
 
     ### Additional Notes
 
-    There are no additional notes for this action.
+    None.
   ai_short_description: Creates a new rule list in Cloudflare.
   capabilities:
     can_create_case_comments: false
@@ -499,10 +503,9 @@ Create Rule List:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Cloudflare API to create a new rule list,
-      which mutates external data. It does not fetch contextual data for enrichment,
-      nor does it mutate internal SecOps data, update entities, create insights, modify
-      alerts, or create case comments.
+      The action makes a POST request to Cloudflare to create a rule list, mutating
+      external data. It does not fetch data, mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -554,9 +557,8 @@ Create Rule List:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It operates independently
-      of the case entities to create a configuration object (rule list) in Cloudflare.
-      Therefore, all entity-related flags are set to false.
+      The action does not process any entities from the case or accept any entity-related
+      parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -572,9 +574,8 @@ Create Rule List:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a rule list in Cloudflare. It does not directly enrich IOCs,
-      block/allow IOCs, manage tickets, or perform any of the other specific expected
-      outcomes defined in the categories. Thus, no outcome categories apply.
+      The action creates a rule list in Cloudflare. It does not match any of the specific
+      expected outcomes like enriching IOCs, blocking IOCs, or creating tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -596,42 +597,39 @@ Create Rule List:
 
     | Name | String | Yes | Specify the name for the rule list. |
 
-    | Type | Dropdown | No | Specify the type for the rule list. |
+    | Type | String | No | Specify the type for the rule list. Possible values: IP
+    Address, Redirect. |
 
     | Description | String | No | Specify the description for the rule list. |
 List Firewall Rules:
   ai_description: >-
     ### General Description
 
-    Lists available firewall rules in Cloudflare for a specified zone. The action
-    allows filtering the retrieved rules based on specific keys and logic, and limits
-    the number of returned records.
+    Lists available firewall rules in Cloudflare for a specified zone.
 
 
     ### Flow Description
 
-    1. Initializes the Cloudflare API client using the provided integration configuration.
+    1. Retrieves the zone ID from Cloudflare using the provided `Zone Name`.
 
-    2. Makes a GET request to the Cloudflare API (`/client/v4/zones`) to retrieve
-    the zone ID associated with the provided `Zone Name`.
+    2. Fetches the firewall rules for the identified zone via the Cloudflare API.
 
-    3. Makes a GET request to the Cloudflare API (`/client/v4/zones/{zone_id}/firewall/rules`)
-    to fetch the firewall rules for the identified zone.
+    3. Applies filtering logic (Equal or Contains) based on the `Filter Key` and `Filter
+    Value` parameters.
 
-    4. Applies filtering logic (e.g., 'Equal', 'Contains') based on the `Filter Key`
-    and `Filter Value` parameters.
+    4. Limits the number of returned records based on the `Max Records To Return`
+    parameter.
 
-    5. Limits the results to the number specified in `Max Records To Return`.
-
-    6. Outputs the retrieved rules as a data table and JSON result in the SecOps platform.
+    5. Returns the filtered firewall rules as a JSON result and a CSV table to the
+    SecOps platform.
 
 
     ### Additional Notes
 
-    This action is purely for data retrieval and does not modify any configurations
-    or rules within Cloudflare.
+    Filtering logic is applied based on the value provided in the `Filter Key` parameter.
+    If no `Filter Value` is provided, the filter will not be applied.
   ai_short_description: >-
-    Lists available firewall rules in Cloudflare for a specific zone, with optional
+    Lists available firewall rules in Cloudflare for a specified zone, with optional
     filtering capabilities.
   capabilities:
     can_create_case_comments: false
@@ -644,10 +642,9 @@ List Firewall Rules:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from Cloudflare (zone details and firewall rules) using
-      GET requests. It does not perform any POST/PUT/DELETE operations to mutate external
-      data, nor does it update internal entities, create insights, or modify alert
-      data.
+      The action makes GET requests to the Cloudflare API to fetch zone information
+      and firewall rules. It does not mutate external data, update internal entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -699,9 +696,8 @@ List Firewall Rules:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the provided action parameters to fetch firewall rules. Therefore,
-      all entity type and filter flags are set to false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. It operates solely on the provided Zone Name.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -718,9 +714,8 @@ List Firewall Rules:
     get_alert_information: false
     reasoning: >-
       The action retrieves a list of firewall rules from Cloudflare. It does not enrich
-      specific IOCs or assets, nor does it mutate external systems, manage tickets,
-      or handle emails. Therefore, it does not match any of the predefined outcome
-      categories.
+      specific IOCs or assets, nor does it mutate any external or internal state.
+      Therefore, it does not match any of the specified outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -743,12 +738,11 @@ List Firewall Rules:
     | Zone Name | String | Yes | Specify the name of the zone, which will contain
     the firewall rule. |
 
-    | Filter Key | Dropdown | No | Specify the key that needs to be used to filter
-    results. |
-
-    | Filter Logic | Dropdown | No | Specify what filter logic should be applied.
-    Filtering logic is working based on the value provided in the "Filter Key" parameter.
+    | Filter Key | String | No | Specify the key that needs to be used to filter results.
     |
+
+    | Filter Logic | String | No | Specify what filter logic should be applied. Filtering
+    logic is working based on the value provided in the "Filter Key" parameter. |
 
     | Filter Value | String | No | Specify what value should be used in the filter.
     If "Equal" is selected, action will try to find the exact match among results
@@ -763,32 +757,27 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Cloudflare service using the provided integration configuration
-    parameters. This action ensures that the API credentials and network settings
-    are correctly configured to communicate with the Cloudflare API.
+    Tests connectivity to the Cloudflare API using the provided integration configuration
+    parameters.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters including API Root, API Token,
-    Account Name, and Verify SSL.
+    1. Initializes the Cloudflare manager with the provided API credentials.
 
-    2. Initializes the Cloudflare API client.
+    2. Makes a GET request to the Cloudflare accounts endpoint (`/client/v4/accounts`)
+    to verify the account name and API token.
 
-    3. Makes a GET request to the Cloudflare `/client/v4/accounts` endpoint to verify
-    the credentials and connectivity.
-
-    4. Returns a success message if the connection is established and the account
-    is found, otherwise returns an error.
+    3. Returns a success message if the connection is established, otherwise returns
+    an error.
 
 
     ### Additional Notes
 
-    This action does not require any action-specific parameters as it relies entirely
-    on the integration-level configuration.
+    This action is typically used to verify that the integration is configured correctly
+    and does not perform any operational tasks on alerts or entities.
   ai_short_description: >-
-    Tests connectivity to the Cloudflare service using the provided integration configuration
-    parameters.
+    Tests connectivity to the Cloudflare API to verify integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -801,8 +790,8 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Cloudflare API to test connectivity. It
-      does not fetch contextual data for entities, mutate external data, mutate internal
-      data, update entities, create insights, modify alert data, or create case comments.
+      does not fetch contextual data for alerts, mutate external data, update internal
+      entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -854,9 +843,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It solely tests connectivity to the external service. Therefore,
-      all entity type flags and filter flags are set to false.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely tests connectivity to the Cloudflare API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -872,9 +860,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) to verify integration credentials.
-      It does not enrich IOCs, mutate alerts, interact with tickets, block/allowlist
-      items, or perform any other specific outcome category operations.
+      The action is a simple connectivity test (ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -894,37 +882,42 @@ Update Firewall Rule:
   ai_description: >-
     ### General Description
 
-    Updates an existing firewall rule in Cloudflare. This action modifies the configuration
-    of a specified firewall rule, including its action, products, priority, reference
-    tag, and filter expression.
+    Updates an existing firewall rule in a specific Cloudflare zone. This action allows
+    modifying the rule's action, expression, products, priority, and reference tag.
 
 
     ### Flow Description
 
-    1. Validates the provided parameters, ensuring that "Products" are specified if
-    the "Bypass" action is selected, and checks the length of the "Reference Tag".
+    1. Extracts the provided parameters including Rule Name, Zone Name, Action, Expression,
+    Products, Priority, and Reference Tag.
 
-    2. Retrieves the Zone ID from Cloudflare using the provided Zone Name.
+    2. Validates the input parameters, ensuring correct product values for the "Bypass"
+    action and valid lengths/values for tags and priority.
 
-    3. Searches for the specified firewall rule by its Rule Name within the zone.
+    3. Makes an API call to Cloudflare to retrieve the zone ID based on the provided
+    Zone Name.
 
-    4. Updates the firewall rule in Cloudflare with the new action, products, priority,
-    and reference tag.
+    4. Makes an API call to list firewall rules in the zone and finds the rule matching
+    the provided Rule Name.
 
-    5. If an Expression is provided, updates the associated firewall filter with the
-    new expression.
+    5. Makes an API call (PUT) to update the firewall rule with the new action, products,
+    priority, and reference tag.
 
-    6. Retrieves the updated firewall rule data from Cloudflare.
+    6. If an expression is provided, makes an API call (PUT) to update the firewall
+    filter associated with the rule.
 
-    7. Returns the updated rule details as a JSON result.
+    7. Makes an API call to retrieve the updated firewall rule data.
+
+    8. Returns the updated rule data as a JSON result.
 
 
     ### Additional Notes
 
-    This action does not operate on entities.
+    The "Products" parameter is mandatory if the "Bypass" action is selected. The
+    "Reference Tag" can only be up to 50 characters long.
   ai_short_description: >-
-    Updates the configuration of a specific firewall rule and its associated filter
-    expression in Cloudflare.
+    Updates an existing firewall rule and its associated filter in a specific Cloudflare
+    zone.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -933,15 +926,15 @@ Update Firewall Rule:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the configuration of a specific firewall rule and its filter expression
-      in Cloudflare.
-    fetches_data: false
+      Updates an existing firewall rule and its associated filter in Cloudflare.
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes PUT requests to Cloudflare to update a firewall rule and its
-      filter expression, which mutates external data. It does not fetch contextual
-      data for enrichment, nor does it mutate internal SecOps data like entities,
-      insights, or case comments.
+      The action fetches data by retrieving the zone ID, listing firewall rules, and
+      getting the updated rule (fetches_data=true). It mutates external data by sending
+      PUT requests to update the firewall rule and its associated filter in Cloudflare
+      (can_mutate_external_data=true). It does not mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -993,8 +986,9 @@ Update Firewall Rule:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided action parameters.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates on Cloudflare firewall
+      rules based on rule names and zone names. Therefore, it does not use any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1010,10 +1004,10 @@ Update Firewall Rule:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates a firewall rule configuration in Cloudflare. It does not
-      directly enrich IOCs/assets, update alerts, manage tickets, or perform specific
-      containment/blocklist operations on individual IOCs or hosts. Therefore, it
-      does not match any of the predefined outcome categories.
+      The action updates a firewall rule in Cloudflare. It does not directly enrich
+      IOCs or assets, update alerts, manage tickets, or perform specific containment/blocking
+      actions on individual IOCs. Therefore, it does not match any of the predefined
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1039,7 +1033,7 @@ Update Firewall Rule:
     | Zone Name | String | Yes | Specify the name of the zone, which will contain
     the firewall rule. |
 
-    | Action | Dropdown | No | Specify the action for the firewall rule. If "Bypass"
+    | Action | String | No | Specify the action for the firewall rule. If "Bypass"
     is selected, you need to provide values in the "Products" parameter. |
 
     | Expression | String | No | Specify the expression for the firewall rule. |

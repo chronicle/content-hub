@@ -2,36 +2,30 @@ Execute Script:
   ai_description: >-
     ### General Description
 
-    This action executes a specified script on hosts associated with IP address entities
-    via Zabbix. It identifies the relevant hosts in Zabbix using the IP addresses
-    and triggers the execution of the designated script on each identified host.
+    Executes a specific script on Zabbix hosts associated with the provided IP address
+    entities. This action allows analysts to run predefined Zabbix scripts on remote
+    hosts directly from the SOAR platform.
 
 
     ### Flow Description
 
-    1. Connects to the Zabbix API using the provided integration credentials.
+    1. Retrieves the script details from Zabbix using the provided script name.
 
-    2. Retrieves the script details from Zabbix based on the provided `Script Name`
-    parameter.
+    2. Iterates through the target entities, filtering for IP Address entities.
 
-    3. Iterates through the target entities, filtering specifically for IP Address
-    entities.
+    3. For each IP address, queries Zabbix to find associated hosts.
 
-    4. For each IP address, queries Zabbix to find associated hosts via the API.
+    4. Executes the specified script on each identified host via the Zabbix API (`script.execute`).
 
-    5. If hosts are found, executes the script on each host using the Zabbix API (`zabbix.script.execute`).
-
-    6. Collects the execution results (success or failure) and outputs them as JSON
-    results.
+    5. Collects the execution results and attaches them to the action's JSON results.
 
 
     ### Additional Notes
 
-    Ensure that the script name provided exactly matches a script available in Zabbix
-    and that the Zabbix user has the necessary permissions to execute scripts on the
-    target hosts.
+    The action requires the script to be predefined in Zabbix.
   ai_short_description: >-
-    Executes a specified script on hosts associated with IP address entities via Zabbix.
+    Executes a specific script on Zabbix hosts associated with the provided IP address
+    entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,13 +34,15 @@ Execute Script:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes a specified script on remote hosts via Zabbix.
-    fetches_data: false
+      Executes a script on a remote host via Zabbix, which can change the state of
+      the host depending on the script's logic.
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a script on external hosts via Zabbix, which mutates external
-      data (can_mutate_external_data=true). It does not fetch enrichment data, update
-      internal entities, create insights, modify alerts, or create case comments.
+      The action fetches script and host details from Zabbix (fetches_data=true).
+      It then executes a script on the remote host via Zabbix, which mutates external
+      state (can_mutate_external_data=true). It does not update internal entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: true
@@ -98,9 +94,9 @@ Execute Script:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and checks `if entity.entity_type
-      == EntityTypes.ADDRESS:`. Therefore, it targets ADDRESS entities and filters
-      by entity_type.
+      The code iterates over `siemplify.target_entities` and explicitly filters for
+      entities where `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it targets
+      Address entities and filters by the `entity_type` attribute.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -116,9 +112,9 @@ Execute Script:
     execute_command_on_the_host: true
     get_alert_information: false
     reasoning: >-
-      The action executes a script on a remote host via Zabbix, which aligns with
-      the 'Execute Command on the Host' category. It does not enrich IOCs, update
-      alerts, or perform other categorized actions.
+      The action executes a predefined script on a remote host via Zabbix and retrieves
+      the execution output. This directly aligns with the 'Execute Command on the
+      Host' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -143,8 +139,8 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Zabbix instance to verify that the integration is configured
-    correctly and authentication is successful.
+    Tests connectivity to the Zabbix instance by attempting to authenticate using
+    the provided integration configuration credentials.
 
 
     ### Flow Description
@@ -152,20 +148,20 @@ Ping:
     1. Retrieves the Zabbix integration configuration parameters (API Root, Username,
     Password, Verify SSL).
 
-    2. Initializes the `ZabbixManager` which attempts to authenticate to the Zabbix
-    API.
+    2. Initializes the `ZabbixManager`, which makes an API call to the Zabbix server
+    to establish a session and log in (`zabbix.login`).
 
-    3. If the connection and authentication are successful without any exceptions,
-    it returns a success message.
+    3. If the connection and authentication are successful, the action completes and
+    returns a success message.
 
 
     ### Additional Notes
 
-    This action is typically used as a diagnostic tool to verify integration settings
-    and does not process any entities, alerts, or perform any data enrichment or mutation.
+    This action is typically used as a diagnostic tool to verify that the integration
+    is configured correctly and can successfully communicate with the Zabbix server.
   ai_short_description: >-
-    Tests connectivity to the Zabbix instance to verify integration configuration
-    and authentication.
+    Tests connectivity to the Zabbix instance by attempting to authenticate using
+    the provided integration credentials.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -177,9 +173,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only authenticates to the Zabbix API to test connectivity. It does
-      not fetch contextual data, mutate external or internal data, update entities,
-      or create insights/comments.
+      The action only initializes a connection to the Zabbix API to verify credentials.
+      It does not fetch contextual data, mutate external or internal data, update
+      entities, create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -231,8 +227,9 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It solely relies on integration configuration to test connectivity.
+      The action does not process any entities. It solely tests connectivity to the
+      Zabbix server using integration configurations, without iterating over target
+      entities or accepting entity-based parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -248,9 +245,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping). It does not enrich IOCs, update
-      alerts, mutate external systems, or perform any operations that match the defined
-      outcome categories.
+      The action is a simple ping/connectivity test to verify integration credentials.
+      It does not perform enrichment, containment, ticketing, alert manipulation,
+      or any other operations that match the available outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

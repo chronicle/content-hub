@@ -2,31 +2,29 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the PassiveTotal service to ensure the integration is configured
-    correctly.
+    Tests connectivity to the PassiveTotal API by attempting to fetch a WHOIS report
+    for a test domain.
 
 
     ### Flow Description
 
-    1. Initializes the PassiveTotal manager using the integration's configured Username
-    and API Key.
+    1. Initializes the PassiveTotal manager using the provided integration configuration
+    (Username and API Key).
 
-    2. Makes an API call to the PassiveTotal service to retrieve a WHOIS report for
-    a hardcoded test domain (`google.com`).
+    2. Makes an API call to retrieve a WHOIS report for a hardcoded domain ("google.com").
 
-    3. Evaluates the API response to check for any error messages.
+    3. Evaluates the response to determine if the connection was successful.
 
-    4. Returns a successful result and a "Connection Established" message if the request
-    succeeds, or a failure result if it does not.
+    4. Returns a success or failure message based on the API response.
 
 
     ### Additional Notes
 
-    This action does not process any case entities or alerts. It is solely used as
-    a diagnostic tool to verify API credentials and network connectivity to PassiveTotal.
+    This action is typically used to verify that the integration is configured correctly
+    and can communicate with the PassiveTotal service.
   ai_short_description: >-
-    Tests connectivity to the PassiveTotal service by attempting to fetch a WHOIS
-    report for a test domain.
+    Tests connectivity to the PassiveTotal API by attempting to fetch a WHOIS report
+    for a test domain.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -39,9 +37,9 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the PassiveTotal API to test connectivity
-      using a hardcoded domain. It does not fetch contextual data for entities, mutate
-      external or internal data, update entities, create insights, modify alerts,
-      or create case comments.
+      using a hardcoded domain. Although it fetches data, it does not fetch contextual
+      data for alerts or entities. It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -93,8 +91,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It performs a static
-      connectivity test using a hardcoded domain.
+      The action does not process any entities or accept any entity-related parameters.
+      It simply tests connectivity using a hardcoded domain.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -132,40 +130,38 @@ WhoIs Address Reputation:
   ai_description: >-
     ### General Description
 
-    Enriches external IP Address entities by retrieving passive DNS reports and reputation
-    data from RiskIQ (PassiveTotal). This action provides threat intelligence context
-    by appending DNS resolution history directly to the entity's properties.
+    Requests address reputation and DNS reports from RiskIQ (PassiveTotal) to enrich
+    external IP address entities. This action retrieves passive DNS data and updates
+    the entities within Google SecOps with the resolution history.
 
 
     ### Flow Description
 
-    1. Filters the target entities to include only IP addresses (`ADDRESS`) that are
-    marked as external (`not is_internal`).
+    1. Filters the target entities to include only external IP addresses (`ADDRESS`
+    entity type where `is_internal` is false).
 
     2. Iterates through the filtered entities and makes an API call to RiskIQ (PassiveTotal)
-    to fetch the passive DNS report for each IP address.
+    to fetch the DNS report for each IP address.
 
     3. Parses the retrieved DNS report into dictionary and CSV formats.
 
     4. Enriches the entity's `additional_properties` with the parsed dictionary data.
 
-    5. Attaches the CSV data as an entity table to the action results for analyst
-    review.
+    5. Attaches the CSV data as an entity table in the action results.
 
-    6. Updates the entities within the SecOps platform to save the enriched properties.
+    6. Updates the entities within Google SecOps with the new properties.
 
     7. Returns the raw JSON results and a summary message indicating which entities
-    were successfully enriched.
+    were enriched.
 
 
     ### Additional Notes
 
-    This action requires valid RiskIQ (PassiveTotal) credentials configured at the
-    integration level. It will skip any entities that are not IP addresses or are
-    marked as internal.
+    - This action requires valid RiskIQ (PassiveTotal) credentials configured in the
+    integration settings.
   ai_short_description: >-
-    Enriches external IP Address entities by retrieving passive DNS reports and reputation
-    data from RiskIQ (PassiveTotal).
+    Requests address reputation and DNS reports from RiskIQ (PassiveTotal) to enrich
+    external IP address entities with DNS resolution data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -177,9 +173,9 @@ WhoIs Address Reputation:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making an API request to RiskIQ to retrieve DNS reports.
-      It does not mutate external data or internal platform data. It updates entities
-      using `siemplify.update_entities` to save the enriched properties, but it does
+      The action makes a GET request to the RiskIQ (PassiveTotal) API to fetch DNS
+      reports for IP addresses. It does not mutate external data. It updates the internal
+      entities with the fetched data by calling `siemplify.update_entities`. It does
       not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -233,8 +229,8 @@ WhoIs Address Reputation:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using the
-      condition `entity.entity_type == ADDRESS and not entity.is_internal`. Therefore,
-      it specifically targets ADDRESS entities and filters them by their `entity_type`
+      condition `entity.entity_type == ADDRESS and not entity.is_internal`. This means
+      it specifically targets Address entities and filters them based on their `entity_type`
       and `is_internal` attributes.
   outcome_categories:
     add_alert_comment: false
@@ -251,10 +247,10 @@ WhoIs Address Reputation:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches passive DNS reports for IP addresses from RiskIQ, which provides
-      threat intelligence and reputation data. This aligns directly with the 'Enrich
-      IOC' expected outcome. It does not perform any state-changing operations on
-      external systems or update alerts.
+      The action fetches DNS reports and reputation data for IP addresses from RiskIQ
+      (PassiveTotal) and enriches the entities with this information. This matches
+      the 'Enrich IOC' expected outcome. It does not mutate external state, modify
+      alerts, or perform other categorized actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -274,39 +270,37 @@ WhoIs Scan Address:
   ai_description: >-
     ### General Description
 
-    Enriches IP Address entities by querying WHOIS information from RiskIQ (PassiveTotal).
-    This action retrieves registration and location details for external IP addresses
-    and updates the entities with the gathered intelligence.
+    Performs a WHOIS query on external IP address entities using RiskIQ (PassiveTotal)
+    to retrieve registration and location details, enriching the entities with the
+    gathered intelligence.
 
 
     ### Flow Description
 
-    1. Filters the target entities to include only external IP addresses (`ADDRESS`
-    entity type where `is_internal` is false).
+    1. Filters the target entities to include only external IP addresses (`ADDRESS`).
 
-    2. Iterates through the filtered entities and queries the PassiveTotal API for
-    WHOIS reports using the entity identifier.
+    2. Iterates over the filtered entities and queries the PassiveTotal API for WHOIS
+    reports.
 
     3. Parses the WHOIS report into dictionary and CSV formats.
 
-    4. Updates the entity's `additional_properties` with the WHOIS data, specifically
-    extracting and mapping country and city information.
+    4. Enriches the entity's additional properties with the WHOIS data, specifically
+    mapping country and city fields.
 
-    5. Attaches the CSV formatted WHOIS data as an entity table.
+    5. Attaches the CSV data as an entity table.
 
-    6. Updates the enriched entities within the Google SecOps platform.
+    6. Updates the enriched entities within the SecOps platform.
 
-    7. Returns a JSON result containing the raw WHOIS reports for each processed entity.
+    7. Returns the raw JSON results of the WHOIS queries.
 
 
     ### Additional Notes
 
-    This action relies on the PassiveTotal integration configuration for authentication
-    (Username and API Key). It only processes entities that are explicitly marked
-    as external.
+    None.
   ai_short_description: >-
-    Enriches external IP Address entities by retrieving WHOIS registration and location
-    data from RiskIQ (PassiveTotal) and updating the entities' properties.
+    Performs a WHOIS query on external IP address entities using RiskIQ (PassiveTotal)
+    to retrieve registration and location details, enriching the entities with the
+    results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -318,9 +312,9 @@ WhoIs Scan Address:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the PassiveTotal API to fetch WHOIS reports
-      (fetches_data=true). It does not mutate external data. It updates the entities'
-      additional properties and calls `siemplify.update_entities` (can_update_entities=true).
+      The action fetches WHOIS data from the PassiveTotal API (fetches_data=true).
+      It does not mutate external data or internal platform data outside of entities.
+      It updates the entities with the retrieved WHOIS information (can_update_entities=true).
       It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -373,10 +367,10 @@ WhoIs Scan Address:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using the
-      condition `entity.entity_type == ADDRESS and not entity.is_internal`. This means
-      it specifically targets ADDRESS entities and filters them based on their entity
-      type and whether they are internal.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == ADDRESS and not entity.is_internal`. This means it specifically
+      targets ADDRESS entities and filters them by their entity type and internal
+      status.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -392,10 +386,9 @@ WhoIs Scan Address:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches WHOIS data for IP addresses from RiskIQ (PassiveTotal) and
-      updates the entities with this information. This aligns with the 'Enrich IOC'
-      expected outcome as it returns threat intelligence and contextual data for an
-      indicator.
+      The action fetches WHOIS data for IP addresses from PassiveTotal and enriches
+      the entities with this information. This aligns with the 'Enrich IOC' expected
+      outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -415,38 +408,35 @@ WhoIs Scan Domain:
   ai_description: >-
     ### General Description
 
-    Enriches external Hostname entities by retrieving WHOIS information from RiskIQ
-    PassiveTotal. It fetches registration details, location data, and administrative
-    contacts, appending this contextual information directly to the entity's properties
-    within the platform.
+    Enriches Hostname entities by performing a WHOIS query using RiskIQ (PassiveTotal).
+    This action retrieves registration and administrative details for domains and
+    updates the entities with the gathered intelligence.
 
 
     ### Flow Description
 
-    1. Filters the target entities to include only external Hostnames (`is_internal`
-    is false).
+    1. Filters the target entities to identify Hostnames that are not marked as internal.
 
-    2. Iterates through the filtered entities and makes an API call to RiskIQ PassiveTotal
-    to fetch the WHOIS report for each hostname.
+    2. Iterates through the filtered entities and makes an API call to RiskIQ (PassiveTotal)
+    to retrieve WHOIS details for each hostname.
 
-    3. Parses the retrieved WHOIS report into dictionary and CSV formats.
+    3. Parses the WHOIS report and updates the entity's additional properties with
+    the retrieved data, specifically extracting location fields like Country and City
+    if available.
 
-    4. Updates the entity's additional properties with the WHOIS data, specifically
-    extracting and mapping 'Country' and 'City' fields if available.
+    4. Attaches the WHOIS data as an entity table and raw JSON result to the action's
+    output.
 
-    5. Attaches the CSV data as an entity table and updates the entities within the
-    platform.
-
-    6. Returns the raw WHOIS data as a JSON result for further playbook usage.
+    5. Updates the enriched entities within the Google SecOps platform.
 
 
     ### Additional Notes
 
-    Requires valid RiskIQ PassiveTotal API credentials configured at the integration
-    level.
+    This action only processes entities that are of type Hostname and have the `is_internal`
+    flag set to false.
   ai_short_description: >-
     Enriches external Hostname entities by retrieving WHOIS information from RiskIQ
-    PassiveTotal.
+    (PassiveTotal) and updating the entities with the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -458,152 +448,12 @@ WhoIs Scan Domain:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an external API request to RiskIQ PassiveTotal to fetch WHOIS
-      data (fetches_data=true). It does not mutate any external data. Internally,
-      it updates the entities with the retrieved WHOIS information by calling `siemplify.update_entities`
-      (can_update_entities=true). It does not create insights, modify alert data,
-      or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: true
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using the
-      condition `entity.entity_type == HOSTNAME and not entity.is_internal`. Therefore,
-      it targets Hostname entities and filters them by their `entity_type` and `is_internal`
-      attributes.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches WHOIS data (registration, location, administrative contacts)
-      for external hostnames from RiskIQ PassiveTotal. This provides threat intelligence
-      and context for an indicator, which directly aligns with the 'Enrich IOC' expected
-      outcome.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Whois Host Reputation:
-  ai_description: >-
-    ### General Description
-
-    Enriches external Hostname entities by retrieving DNS resolution reports from
-    RiskIQ PassiveTotal. This action fetches passive DNS data to provide threat intelligence
-    and historical resolution context for the specified hostnames.
-
-
-    ### Flow Description
-
-    1. Filters the target entities to include only Hostname entities where `is_internal`
-    is false.
-
-    2. Iterates over the filtered entities and queries the RiskIQ PassiveTotal API
-    for a DNS report using the entity's identifier.
-
-    3. If a report is found, converts the results into a dictionary and a CSV format.
-
-    4. Updates the entity's `additional_properties` with the parsed DNS resolution
-    data.
-
-    5. Attaches an entity-specific table containing the CSV data to the action results.
-
-    6. Updates the entities within the platform to save the enriched properties.
-
-    7. Returns the raw DNS report data as a JSON result.
-
-
-    ### Additional Notes
-
-    This action requires valid RiskIQ PassiveTotal credentials configured at the integration
-    level.
-  ai_short_description: >-
-    Enriches external Hostname entities by retrieving passive DNS resolution reports
-    from RiskIQ PassiveTotal, updating entity properties with the findings.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data from the RiskIQ PassiveTotal API (fetches_data=true).
-      It does not mutate any external data (can_mutate_external_data=false) or internal
-      platform data outside of entities (can_mutate_internal_data=false). It updates
-      the entities with the fetched data using `siemplify.update_entities` (can_update_entities=true).
-      It does not create insights, modify alert data, or create case comments.
+      The action makes an API request to RiskIQ (PassiveTotal) to fetch WHOIS data,
+      meaning it fetches data. It does not perform any state-changing operations on
+      external systems, so it does not mutate external data. It updates the internal
+      entities with the fetched data by calling `siemplify.update_entities`, but does
+      not mutate other internal data, create insights, modify alert data, or create
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -657,8 +507,8 @@ Whois Host Reputation:
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
       the condition `entity.entity_type == HOSTNAME and not entity.is_internal`. Therefore,
-      it specifically targets Hostname entities and filters them by their entity type
-      and internal status.
+      it specifically targets Hostname entities and filters them based on their entity
+      type and the `is_internal` attribute.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -674,10 +524,150 @@ Whois Host Reputation:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches passive DNS reports from RiskIQ PassiveTotal for external
-      hostnames, which provides threat intelligence and historical resolution data.
-      This aligns with the 'Enrich IOC' category. It does not mutate external state
-      or perform other operations.
+      The action fetches WHOIS data for Hostname entities from RiskIQ, providing threat
+      intelligence and context (such as registrant and location details) for the indicator.
+      This directly matches the 'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Whois Host Reputation:
+  ai_description: >-
+    ### General Description
+
+    Retrieves host reputation and passive DNS information from RiskIQ (PassiveTotal)
+    for Hostname entities. The action fetches DNS resolution history and enriches
+    the entities within the platform with the findings.
+
+
+    ### Flow Description
+
+    1. Filters the target entities to include only those of type Hostname that are
+    marked as external (`is_internal` is false).
+
+    2. Iterates through the filtered entities and makes an API call to RiskIQ (PassiveTotal)
+    via `get_dns_report` to fetch the passive DNS report for each hostname.
+
+    3. Parses the retrieved DNS report into dictionary and CSV formats.
+
+    4. Enriches the entity's `additional_properties` with the parsed DNS dictionary
+    data.
+
+    5. Attaches the CSV data as an entity table in the action results.
+
+    6. Updates the enriched entities within the Google SecOps platform.
+
+    7. Returns the raw JSON results and a summary message indicating which entities
+    were enriched.
+
+
+    ### Additional Notes
+
+    This action only processes entities of type HOSTNAME that are not internal. Internal
+    hostnames are skipped.
+  ai_short_description: >-
+    Retrieves host reputation and passive DNS information from RiskIQ (PassiveTotal)
+    for external Hostname entities, enriching their properties with the findings.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the RiskIQ API via `get_dns_report`. It does not
+      mutate external data. It updates internal entities by calling `siemplify.update_entities`
+      to save the enriched `additional_properties`. It does not create insights, modify
+      alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and filters them using
+      the condition `entity.entity_type == HOSTNAME and not entity.is_internal`. Therefore,
+      it targets Hostname entities and explicitly filters them by their `entity_type`
+      and `is_internal` attributes.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches passive DNS and reputation data for Hostname entities from
+      RiskIQ (PassiveTotal) to enrich the indicator. This directly aligns with the
+      'Enrich IOC' category. It does not modify external systems, update alerts, or
+      perform containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

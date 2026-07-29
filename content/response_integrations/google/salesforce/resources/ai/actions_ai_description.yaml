@@ -2,30 +2,30 @@ Add Comment:
   ai_description: >-
     ### General Description
 
-    Adds a comment to a specific case in Salesforce. This action interacts with the
-    Salesforce API to append a new comment containing a title and body to an existing
-    case record.
+    Adds a comment to a specific case in Salesforce. This action allows analysts to
+    append notes or updates to an existing Salesforce case directly from the SOAR
+    platform.
 
 
     ### Flow Description
 
-    1. Retrieves the Salesforce case details by querying the provided `Case Number`.
+    1. Retrieves the Case Number, Title, and Body from the action parameters.
 
-    2. Extracts the internal Salesforce Case ID from the retrieved record.
+    2. Queries Salesforce via API to retrieve the internal Case ID associated with
+    the provided Case Number.
 
-    3. Makes a POST API call to Salesforce to create a new `CaseComment` associated
-    with the Case ID, combining the provided `Title` and `Body`.
+    3. Makes a POST API call to Salesforce to create a new `CaseComment` linked to
+    the retrieved Case ID, combining the title and body.
 
-    4. Returns a success message to the SecOps platform upon successful creation.
+    4. Returns a success message upon completion.
 
 
     ### Additional Notes
 
-    This action modifies data in an external system (Salesforce) and does not operate
-    on Google SecOps entities.
+    Requires valid Salesforce credentials and permissions to read cases and create
+    case comments.
   ai_short_description: >-
-    Adds a comment to a specific case in Salesforce using the provided case number,
-    title, and body.
+    Adds a comment to a specific case in Salesforce.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -34,14 +34,13 @@ Add Comment:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new CaseComment on a specific case record in Salesforce.
+      Creates a new comment on a specific case in Salesforce.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to Salesforce to create a CaseComment, which
-      mutates external data. It does not fetch contextual enrichment data for entities,
-      nor does it mutate internal SecOps data, update entities, or create internal
-      insights/case comments.
+      The action makes a POST request to Salesforce to create a CaseComment, mutating
+      external data. It does not fetch contextual data for enrichment, nor does it
+      mutate internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -93,9 +92,8 @@ Add Comment:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates entirely based on the provided action parameters (Case
-      Number). Therefore, all entity type and filter flags are false.
+      The action does not process any entities. It relies solely on the provided Case
+      Number parameter to interact with Salesforce.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -111,9 +109,8 @@ Add Comment:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds a comment to a case in Salesforce, which acts as an external
-      ticketing/CRM system. This aligns with the 'Update Ticket' category, as it synchronizes
-      field changes (adding a comment) from SecOps to the external system.
+      The action adds a comment to an existing case in Salesforce, which is an external
+      ticketing/CRM system. This aligns with the 'Update Ticket' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -142,25 +139,24 @@ Close Case:
   ai_description: >-
     ### General Description
 
-    Closes a specific case in Salesforce by updating its status to 'Closed'.
+    Closes a specific case in Salesforce based on the provided case number.
 
 
     ### Flow Description
 
-    1. Retrieves the target case number from the action parameters.
+    1. Initializes the Salesforce integration using the provided configuration.
 
-    2. Queries the Salesforce API to resolve the case number to its corresponding
-    internal Salesforce Case ID.
+    2. Retrieves the case details from Salesforce using the provided case number via
+    a SOQL query.
 
-    3. Sends an update request to the Salesforce API to change the case status to
-    'Closed'.
+    3. Updates the case status to 'Closed' in Salesforce via an API call.
 
-    4. Returns a success message to the SOAR platform upon successful closure.
+    4. Returns a success message indicating the case was closed.
 
 
     ### Additional Notes
 
-    Requires valid Salesforce credentials and an existing case number to execute successfully.
+    None.
   ai_short_description: >-
     Closes a specific case in Salesforce by updating its status to 'Closed'.
   capabilities:
@@ -175,10 +171,9 @@ Close Case:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an API call to Salesforce to update the status of a case to
-      'Closed' (can_mutate_external_data=true). It does not fetch contextual data
-      for enrichment, nor does it mutate internal SOAR data, update entities, or create
-      insights.
+      The action mutates external data by updating the status of a case in Salesforce
+      to 'Closed'. It does not fetch data for enrichment, mutate internal data, update
+      entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -230,8 +225,8 @@ Close Case:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on or iterate through any entities. It relies solely
-      on the 'Case Number' parameter provided in the action configuration.
+      The action does not process any entities. It relies solely on the 'Case Number'
+      parameter to identify the case to close in Salesforce.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -247,9 +242,8 @@ Close Case:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the status of a case (ticket) in Salesforce to 'Closed'.
-      This directly aligns with the 'Update Ticket' category, which involves synchronizing
-      status or field changes to an external ticketing system.
+      The action updates a case (ticket) in Salesforce by changing its status to 'Closed'.
+      This aligns with the 'Update Ticket' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -275,25 +269,33 @@ Create Case:
     ### General Description
 
     Creates a new case in Salesforce using the provided details such as subject, status,
-    description, origin, priority, and type.
+    description, origin, priority, and type. This action initiates a state change
+    on the external Salesforce platform by generating a new record and returns the
+    resulting case number.
 
 
     ### Flow Description
 
-    1. Retrieves integration configuration and initializes the Salesforce manager.
+    1. Retrieves integration configuration parameters (API Root, Username, Password,
+    Token, Verify SSL) to initialize the `SalesforceManager`.
 
-    2. Extracts case details from the action parameters.
+    2. Extracts action-specific parameters including Subject, Status, Description,
+    Origin, Priority, and Type.
 
-    3. Makes an API call to Salesforce to create a new case record.
+    3. Makes an API call to Salesforce to create a new case with the specified attributes.
 
-    4. Returns the newly created Case Number to the SecOps platform.
+    4. Retrieves the newly created case details from Salesforce using its ID.
+
+    5. Returns the `CaseNumber` as the result and outputs a success message.
 
 
     ### Additional Notes
 
-    This action does not operate on entities.
+    Ensure that the provided values for Status, Origin, Priority, and Type match the
+    valid picklist values configured in your Salesforce instance to avoid API errors.
   ai_short_description: >-
-    Creates a new case record in Salesforce and returns the generated Case Number.
+    Creates a new case in Salesforce with the specified attributes and returns the
+    case number.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -301,13 +303,14 @@ Create Case:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: Creates a new case record in Salesforce.
+    external_data_mutation_explanation: >-
+      Creates a new case record in the external Salesforce platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to Salesforce to create a new case record, which
-      mutates external data. It does not fetch contextual data for enrichment, nor
-      does it update internal entities, insights, or case comments.
+      The action makes an API request to Salesforce to create a new case, which mutates
+      external data. It does not fetch contextual data for enrichment, nor does it
+      mutate internal SecOps data such as entities, insights, or case comments.
   entity_usage:
     entity_types:
       address: false
@@ -359,9 +362,9 @@ Create Case:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided action parameters to create
-      a case in Salesforce.
+      The action does not process any entities. It relies solely on the provided input
+      parameters to create a case in Salesforce, without iterating over target_entities
+      or accepting entity-based parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -417,29 +420,29 @@ Get Case:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed information about a specific case from Salesforce. This action
-    queries the Salesforce platform to fetch the properties of a case based on its
-    unique case number.
+    Retrieves the details of a specific case from Salesforce based on the provided
+    case number. This action queries the Salesforce API to fetch comprehensive information
+    about a case and returns it as a JSON object.
 
 
     ### Flow Description
 
-    1. Initializes the Salesforce connection using the provided integration credentials.
+    1. Initializes the Salesforce connection using the provided integration configurations.
 
-    2. Retrieves the `Case Number` from the action parameters.
+    2. Retrieves the `Case Number` parameter provided by the user or playbook.
 
-    3. Executes a SOQL query via the Salesforce API to fetch the case details matching
+    3. Executes a query against the Salesforce API to fetch the case details matching
     the provided case number.
 
-    4. Returns the retrieved case information as a JSON object in the action results.
+    4. Returns the case details as a JSON object and attaches it to the action's result.
 
 
     ### Additional Notes
 
-    This action does not operate on SecOps entities. It relies exclusively on the
-    provided case number parameter to locate and fetch the case data.
+    Ensure that the provided case number exists in Salesforce and that the integration
+    user has the necessary permissions to view it.
   ai_short_description: >-
-    Retrieves detailed information about a specific case from Salesforce using the
+    Retrieves the details of a specific case from Salesforce based on the provided
     case number.
   capabilities:
     can_create_case_comments: false
@@ -452,9 +455,10 @@ Get Case:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET/SELECT request to the Salesforce API to fetch case data
-      (fetches_data=true). It does not mutate external data, update internal entities,
-      create insights, or modify alert data.
+      The action makes a query to the Salesforce API to fetch case data (fetches_data=true).
+      It does not perform any state-changing operations on external systems, nor does
+      it mutate internal SecOps data, update entities, create insights, modify alert
+      data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -506,10 +510,9 @@ Get Case:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the 'Case Number' parameter provided in the action configuration.
-      Therefore, it does not run on any entities and all entity-related flags are
-      false.
+      The action does not process any entities from the case, nor does it accept any
+      entity-related parameters. It relies solely on the 'Case Number' parameter to
+      fetch data from Salesforce.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -525,11 +528,9 @@ Get Case:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches case details from Salesforce based on a case number. While
-      it retrieves information from a 3rd party system, Salesforce cases are typically
-      considered tickets rather than security alerts, and there is no specific 'Get
-      Ticket Information' category. Therefore, it does not strictly match any of the
-      provided outcome categories.
+      The action fetches a case (ticket) from Salesforce. This does not match any
+      of the predefined outcome categories such as Enrich IOC, Create Ticket, or Get
+      Alert Information.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -554,32 +555,33 @@ List Cases:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of all existing cases from Salesforce. This action queries the
-    Salesforce instance for all case records and returns their details, including
-    properties like CaseNumber, Subject, Status, and Priority.
+    Retrieves a list of all existing cases from Salesforce. This action connects to
+    the Salesforce instance and fetches case records along with their standard properties,
+    returning the information for use within the SOAR platform.
 
 
     ### Flow Description
 
-    1. Initializes the Salesforce integration using the provided configuration credentials.
+    1. Initializes the connection to the Salesforce API using the provided integration
+    configuration credentials.
 
-    2. Makes an API call to Salesforce to execute a SOQL query against the `Case`
-    object, fetching predefined case properties.
+    2. Executes a SOQL query to fetch all available cases and their associated properties
+    (e.g., ID, CaseNumber, Subject, Description, Status, Priority).
 
-    3. Formats the retrieved case records into a CSV structure and attaches it to
-    the action's results as a data table.
+    3. Formats the retrieved case data into a CSV structure and attaches it to the
+    action's results as a data table.
 
-    4. Returns the raw case data as a JSON result for further use in the playbook.
+    4. Returns the raw case data as a JSON object and completes the action execution.
 
 
     ### Additional Notes
 
-    This action does not require any input parameters and will return all cases available
-    to the configured Salesforce user. Depending on the volume of cases in the Salesforce
-    instance, this query might return a large dataset.
+    This action does not require any specific input parameters and will return all
+    cases accessible by the configured Salesforce user account. Depending on the volume
+    of cases in the Salesforce instance, the returned dataset could be large.
   ai_short_description: >-
-    Retrieves a list of all existing cases from Salesforce and returns the data as
-    a table and JSON result.
+    Retrieves a comprehensive list of all existing cases from Salesforce and returns
+    the data as a JSON result and a CSV data table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -591,8 +593,271 @@ List Cases:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by querying Salesforce for existing cases. It does not
-      mutate external data, mutate internal data, update entities, create insights,
+      The action executes a SOQL query to fetch case data from Salesforce (fetches_data=true).
+      It does not perform any state-changing operations on Salesforce (can_mutate_external_data=false)
+      and does not modify any internal SecOps data such as entities, alerts, or insights
+      (can_mutate_internal_data=false).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` nor does it accept
+      any input parameters that represent entities. It simply fetches a list of cases
+      from Salesforce without any entity-based filtering or context.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a list of cases (tickets) from Salesforce. It does not enrich
+      specific IOCs or assets, nor does it create or update tickets, alerts, or identities.
+      It does not match any of the specific expected outcomes defined in the outcome
+      categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Salesforce instance to ensure that the provided integration
+    credentials and network configurations are valid.
+
+
+    ### Flow Description
+
+    1. Retrieves the integration configuration parameters (API Root, Username, Password,
+    Token).
+
+    2. Initializes the Salesforce manager.
+
+    3. Executes a test connectivity API call (fetching a list of cases) to verify
+    access.
+
+    4. Returns a success message if the connection is established.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup of the integration to validate
+    authentication.
+  ai_short_description: >-
+    Tests connectivity to the Salesforce instance by verifying credentials and network
+    access.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action simply initializes the SalesforceManager and calls test_connectivity(),
+      which performs a basic query to verify credentials. It does not fetch contextual
+      data for the case, mutate external data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities. It does not iterate over target_entities
+      nor does it accept any entity-related input parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a basic connectivity test (Ping). It does not match any of the
+      specific expected outcomes such as enriching IOCs, managing tickets, or modifying
+      alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Search Records:
+  ai_description: >-
+    ### General Description
+
+    This action searches Salesforce for all records that contain values matching a
+    specified pattern. It queries across multiple Salesforce objects, including Cases,
+    Contacts, Leads, Tasks, and Users, to find relevant information.
+
+
+    ### Flow Description
+
+    1. Retrieves the search query from the action parameters.
+
+    2. Connects to the Salesforce API using the provided integration credentials.
+
+    3. Executes a SOSL search query to find records matching the specified pattern.
+
+    4. Retrieves detailed information for the matched records using SOQL queries.
+
+    5. Groups the results by record type (e.g., Cases, Contacts) and constructs CSV
+    data tables for each group.
+
+    6. Attaches the data tables and the raw JSON results to the action output.
+
+
+    ### Additional Notes
+
+    The action requires a valid Salesforce API connection and appropriate permissions
+    to search across the targeted objects.
+  ai_short_description: >-
+    Searches Salesforce for records matching a specific query pattern and returns
+    the results grouped by record type.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Salesforce by executing a search query. It does
+      not mutate external data, mutate internal data, update entities, create insights,
       modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -645,8 +910,8 @@ List Cases:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or filter any entities. It simply retrieves a list
-      of cases from Salesforce without relying on entity data or iterating over `siemplify.target_entities`.
+      The action does not iterate over target entities or accept any entity-related
+      parameters. It solely relies on the 'Query' parameter to search Salesforce records.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -662,266 +927,9 @@ List Cases:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of cases from Salesforce. It does not enrich IOCs
-      or assets, mutate tickets, or perform any containment or remediation actions.
-      Therefore, it does not match any of the predefined outcome categories.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Ping:
-  ai_description: >-
-    ### General Description
-
-    Tests connectivity to the Salesforce instance to ensure the integration is configured
-    correctly.
-
-
-    ### Flow Description
-
-    1. Initializes the Salesforce manager using the provided integration configuration
-    credentials.
-
-    2. Executes a test connectivity request by attempting to fetch cases from Salesforce.
-
-    3. Returns a success message if the connection is established and the query succeeds.
-
-
-    ### Additional Notes
-
-    This action does not require any entities or action-specific parameters to run.
-  ai_short_description: >-
-    Tests connectivity to the Salesforce instance to ensure the integration is configured
-    correctly.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action only tests connectivity to Salesforce. It does not fetch contextual
-      data for entities, mutate external data, mutate internal data, update entities,
-      create insights, modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not process or iterate over any entities. It simply tests connectivity
-      to the external service.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching data, updating alerts, or creating
-      tickets.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Search Records:
-  ai_description: >-
-    ### General Description
-
-    Searches all records in Salesforce that contain values matching a given pattern.
-    This action queries multiple Salesforce record types, including Cases, Contacts,
-    Leads, Tasks, and Users, to find matches for the specified search term.
-
-
-    ### Flow Description
-
-    1. Retrieves the search query from the action parameters.
-
-    2. Connects to the Salesforce API using the provided integration credentials.
-
-    3. Executes a global search query across Salesforce records to identify matching
-    items.
-
-    4. Retrieves detailed properties for the matched records by executing specific
-    SOQL queries for each record type (Cases, Contacts, Leads, Tasks, Users).
-
-    5. Formats the retrieved records into CSV data tables and attaches them to the
-    action results, along with the raw JSON data.
-
-
-    ### Additional Notes
-
-    The action returns separate data tables for each Salesforce record type that contains
-    matching results.
-  ai_short_description: >-
-    Searches all records in Salesforce that contain values matching a given pattern
-    and returns the results as data tables and JSON.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a search request to the Salesforce API to fetch records matching
-      a query. It does not mutate external data, update internal entities, modify
-      alert data, or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not operate on entities. It uses a standalone query parameter
-      to search for records in Salesforce, without referencing or iterating over `siemplify.target_entities`.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action searches for records in Salesforce (CRM/ITSM) based on a query string.
-      This does not match any of the specific outcome categories such as Enrich IOC,
-      Create Ticket, or Search Events (which is specifically for logs/telemetry).
-      Therefore, no outcome categories apply.
+      The action searches for records in Salesforce (Cases, Contacts, Leads, Tasks,
+      Users). This does not match any of the specific outcome categories such as Enrich
+      IOC, Create Ticket, or Search Events (which is for historical logs/telemetry).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -941,37 +949,39 @@ Search Records:
 
     | --- | --- | --- | --- |
 
-    | Query | String | Yes | Query |
+    | Query | String | Yes | The pattern or search term to query across Salesforce
+    records. |
 Update Case:
   ai_description: >-
     ### General Description
 
-    Updates an existing case in Salesforce using the provided case number. This action
-    allows users to modify various case attributes such as subject, status, description,
-    origin, priority, and type directly from the SOAR platform.
+    Updates an existing case in Salesforce with new details such as subject, status,
+    description, origin, priority, and type. This action modifies the state of a record
+    in the external Salesforce system.
 
 
     ### Flow Description
 
-    1. Retrieves the target Case Number and any optional update parameters (Subject,
-    Status, Description, Origin, Priority, Type) from the action configuration.
+    1. Initializes the Salesforce integration using the provided credentials.
 
-    2. Queries the Salesforce API to retrieve the internal Case ID associated with
-    the provided Case Number.
+    2. Retrieves the action parameters including the Case Number and the fields to
+    update.
 
-    3. Sends an update request to the Salesforce API to modify the specified fields
-    of the case.
+    3. Makes an API call to Salesforce to retrieve the internal Case ID associated
+    with the provided Case Number.
 
-    4. Returns a success message to the SOAR platform upon successful update.
+    4. Makes an API call to Salesforce to update the case with the new field values.
+
+    5. Returns a success message upon completion.
 
 
     ### Additional Notes
 
-    Ensure that the provided Case Number exists in Salesforce, otherwise the action
-    will fail to retrieve the internal Case ID required for the update.
+    Ensure that the provided Case Number exists in Salesforce before running this
+    action.
   ai_short_description: >-
-    Updates an existing case in Salesforce with new attribute values such as status,
-    priority, and description.
+    Updates an existing case in Salesforce with new details such as subject, status,
+    description, origin, priority, and type.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -980,14 +990,13 @@ Update Case:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the attributes (e.g., status, priority, description) of a specific case
-      in Salesforce.
+      Updates the properties of a specific case in Salesforce.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a state-changing operation (update) on an external system
-      (Salesforce) by modifying an existing case. It does not fetch contextual enrichment
-      data, nor does it update internal SecOps entities, alerts, or insights.
+      The action makes an API call to Salesforce to update a case, which mutates external
+      data. It does not fetch contextual data for enrichment, nor does it mutate internal
+      SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -1039,8 +1048,9 @@ Update Case:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or filter any entities. It relies entirely on the
-      provided 'Case Number' parameter to identify the Salesforce case to update.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. It operates solely on a Salesforce Case Number.
+      Therefore, all entity flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1056,9 +1066,9 @@ Update Case:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies the state, priority, or other fields of an existing case
-      in Salesforce, which aligns with the 'Update Ticket' category. It does not enrich
-      IOCs/assets, modify SecOps alerts, or perform containment/remediation.
+      The action updates a case in Salesforce, which acts as a ticketing or CRM system.
+      This aligns with the 'Update Ticket' expected outcome, as it synchronizes field
+      changes from SecOps to the external ticketing system.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

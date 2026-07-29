@@ -2,34 +2,31 @@ Get System Info:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed information about a specific Virtual Machine (VM) from VMware
-    vSphere. This action fetches contextual metadata such as the VM's power state,
-    IP address, UUIDs, and guest OS details based on the provided VM name.
+    Retrieves detailed configuration and runtime information about a specific Virtual
+    Machine (VM) from VMware vSphere.
 
 
     ### Flow Description
 
-    1. Establishes a connection to the vSphere server using the integration's configured
-    credentials.
+    1. Connects to the VMware vSphere server using the provided integration credentials.
 
-    2. Searches the vSphere environment for the target VM using the provided `Vm Name`
-    parameter.
+    2. Searches for the target Virtual Machine by its name via the vSphere API.
 
-    3. Retrieves detailed information about the VM via the vSphere API.
+    3. Retrieves detailed configuration and runtime information for the specified
+    VM, including its IP address, power state, guest OS, and UUIDs.
 
-    4. Formats the retrieved data into a CSV table and attaches it to the action's
-    results.
+    4. Formats the retrieved data into a CSV table and a JSON object.
 
-    5. Returns the VM information as a JSON object for further use in the playbook.
+    5. Returns the information to the SecOps platform as action results.
 
 
     ### Additional Notes
 
-    This action does not operate on SecOps entities; it relies entirely on the explicit
-    VM name provided in the action parameters.
+    The action requires the exact VM name as it appears in vCenter to successfully
+    locate and retrieve the VM's information.
   ai_short_description: >-
-    Retrieves detailed information about a specific Virtual Machine (VM) from VMware
-    vSphere based on the provided VM name.
+    Retrieves detailed configuration and runtime information about a specific Virtual
+    Machine from VMware vSphere.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -41,10 +38,9 @@ Get System Info:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes API calls to vSphere to fetch VM information (fetches_data=true).
-      It does not perform any state-changing operations on vSphere (can_mutate_external_data=false).
-      It does not update entities, create insights, modify alerts, or add case comments
-      within Google SecOps.
+      The action fetches data from vSphere (VM information) using a read-only API
+      call. It does not mutate external data, mutate internal data, update entities,
+      create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -66,7 +62,7 @@ Get System Info:
       file_hash: false
       file_name: false
       generic: false
-      host_name: false
+      host_name: true
       ip_set: false
       mac_address: false
       parent_hash: false
@@ -96,10 +92,10 @@ Get System Info:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers. It relies solely on the `Vm Name` parameter provided in the action
-      configuration. Therefore, it does not run on entities and all entity-related
-      flags are false.
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      a 'Vm Name' parameter which represents a Host Name (or generic asset) entity
+      identifier. Therefore, it operates on a Host Name entity provided via input
+      parameters. It does not filter entities by any internal SecOps attributes.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -110,15 +106,15 @@ Get System Info:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: false
+    enrich_asset: true
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches information about a specific VM from vSphere based on a provided
-      string parameter. It does not enrich SecOps entities, mutate external state,
-      or match any of the specific expected outcomes like Contain Host, Blocklist,
-      or Ticket management.
+      The action fetches contextual metadata (such as IP address, OS/Guest info, and
+      power state) for a specific VM (an internal resource/asset). This aligns with
+      the 'Enrich Asset' category. It does not modify external state, so it does not
+      fall under containment or blocklist categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,38 +140,35 @@ Get Vm By Ip:
     ### General Description
 
     Retrieves Virtual Machine (VM) information from VMware vSphere based on IP address
-    entities. This action queries the vCenter server to find a VM associated with
-    a specific IP address and returns contextual metadata about the VM, such as its
-    name, state, guest OS, and UUIDs.
+    entities. This action helps analysts identify the specific virtual infrastructure
+    associated with an IP address.
 
 
     ### Flow Description
 
-    1. Initializes the connection to the vSphere server using the provided integration
-    configuration.
+    1. Initializes the connection to the vSphere server using the integration configuration.
 
-    2. Iterates through the target entities, specifically filtering for IP Address
-    entities.
+    2. Iterates through the target entities provided in the case.
 
-    3. For each valid IP address, queries vSphere using the `FindAllByIp` method to
-    locate the corresponding VM.
+    3. Filters the entities to process only those of type `ADDRESS` (IP addresses).
 
-    4. Retrieves detailed information about the found VM (e.g., Name, Template, Path,
-    Guest, Instance UUID, Bios UUID, State, VMware Tools status, and IP Address).
+    4. For each valid IP address, makes an API call to vSphere to search for the corresponding
+    VM (`FindAllByIp`).
 
-    5. Aggregates the retrieved VM information and attaches it to the action's JSON
+    5. If a VM is found, retrieves detailed information about it, including Name,
+    Template, Path, Guest OS, UUIDs, Power State, and VMware Tools status.
+
+    6. Aggregates the retrieved VM information and attaches it to the action's JSON
     result.
 
 
     ### Additional Notes
 
-    - This action only processes IP Address entities.
-
-    - If multiple VMs share the same IP address, the action will return information
-    for the first VM found by the vSphere search index.
+    If multiple VMs are found with the same IP address, the action will return information
+    for the first VM returned by vSphere.
   ai_short_description: >-
-    Retrieves detailed Virtual Machine (VM) information from VMware vSphere for provided
-    IP address entities.
+    Retrieves Virtual Machine (VM) information from VMware vSphere based on IP address
+    entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -187,9 +180,9 @@ Get Vm By Ip:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from vSphere using a search query (`FindAllByIp`). It
-      does not mutate external data, nor does it update internal entities, create
-      insights, or modify case data.
+      The action fetches data from vSphere (VM information) using a read-only API
+      call. It does not mutate external data, nor does it update internal entities,
+      create insights, or modify alert data. It only populates the action's JSON result.
   entity_usage:
     entity_types:
       address: true
@@ -241,9 +234,9 @@ Get Vm By Ip:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and explicitly filters them
-      using the condition `if entity.entity_type == EntityTypes.ADDRESS:`. Therefore,
-      it targets ADDRESS entities and filters by the entity_type attribute.
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it targets
+      ADDRESS entities and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -259,13 +252,14 @@ Get Vm By Ip:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches contextual metadata (VM details like name, state, guest OS,
-      and UUIDs) for an IP address from vSphere. This aligns with the 'Enrich Asset'
-      category, as it provides resource context for the given IP.
+      The action fetches contextual metadata (VM details) for an internal resource
+      (IP address) from vSphere, which aligns with the 'Enrich Asset' category. It
+      also searches for the asset within the vSphere product based on the IP, aligning
+      with 'Search Asset'. It does not perform any state-changing operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: false
+    search_asset: true
     search_email: false
     search_events: false
     send_email: false
@@ -281,34 +275,29 @@ List Vms:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of all registered Virtual Machines (VMs) from the configured
-    VMware vSphere environment. This action is useful for gaining visibility into
-    the available infrastructure and extracting detailed information about each VM,
-    such as its power state, IP address, and UUIDs.
+    Retrieves a comprehensive list of all registered Virtual Machines (VMs) from the
+    connected VMware vSphere environment.
 
 
     ### Flow Description
 
-    1. Establishes a connection to the vSphere server using the integration's configuration
-    parameters.
+    1. Connects to the vSphere server using the provided integration credentials.
 
-    2. Makes an API call to the vSphere environment via the pyVmomi library to fetch
-    all registered Virtual Machine objects.
+    2. Executes an API call to retrieve all registered Virtual Machines.
 
-    3. Iterates through the retrieved VMs, extracting their names and detailed configuration
-    information (e.g., Template, Path, Guest OS, Instance UUID, Bios UUID, Power State,
-    VMware Tools status, and IP Address).
+    3. Extracts detailed information for each VM, including name, template, path,
+    guest OS, UUIDs, power state, VMware tools status, and IP address.
 
-    4. Formats the extracted information into a CSV structure and a JSON object.
+    4. Formats the extracted data into a CSV table and a JSON object.
 
-    5. Outputs the results to the SecOps platform as a data table, a JSON result,
-    and a list of VM names.
+    5. Returns the VM names as the script result and attaches the detailed information
+    to the action's results.
 
 
     ### Additional Notes
 
-    This action does not require any specific entities to run and will return all
-    VMs accessible by the configured vSphere user account.
+    This action does not require any specific input parameters as it fetches all available
+    VMs globally from the vSphere environment.
   ai_short_description: >-
     Retrieves a comprehensive list of all registered Virtual Machines (VMs) and their
     associated details from the VMware vSphere environment.
@@ -324,8 +313,9 @@ List Vms:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action connects to the vSphere environment and fetches a list of all registered
-      Virtual Machines. It does not mutate any external or internal data, nor does
-      it update entities, create insights, or modify alerts.
+      VMs, so it fetches data. It does not perform any state-changing operations on
+      the external system, nor does it mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -377,9 +367,9 @@ List Vms:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It simply retrieves a global list
-      of all registered VMs from the vSphere environment without using `siemplify.target_entities`
-      or any entity-specific identifiers.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters representing entities. It operates globally to fetch all
+      VMs, so it does not use any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -395,10 +385,11 @@ List Vms:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of all VMs from vSphere. It does not enrich specific
-      IOCs or assets, mutate external state (like blocking or containing), manage
-      tickets, or perform any of the other specific expected outcomes defined in the
-      categories.
+      The action retrieves a list of all registered VMs from the vSphere environment.
+      It does not enrich specific IOCs or assets, update alerts, manage tickets, modify
+      blocklists/allowlists, manage identities, contain hosts, search events, execute
+      commands, manage emails, submit files, send messages, or fetch alert information.
+      Therefore, it does not match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -418,29 +409,28 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the VSphere server. This action verifies that the integration
-    is configured correctly and can successfully authenticate and communicate with
-    the VSphere instance.
+    Tests connectivity to the VSphere server to ensure the integration is configured
+    correctly and can communicate with the target instance.
 
 
     ### Flow Description
 
-    1. Extracts the integration configuration parameters (Server Address, Username,
-    Password, Port).
+    1. Retrieves the VSphere server configuration, including the server address, username,
+    password, and port.
 
     2. Attempts to establish a connection to the VSphere server using the provided
-    credentials.
+    credentials via the `VSphereManager`.
 
-    3. Returns a success message if the connection is established without errors.
+    3. Returns a success message if the connection is established without any exceptions.
 
 
     ### Additional Notes
 
-    This action does not require any specific input parameters or entities to run.
-    It relies solely on the integration-level configuration.
+    This action is primarily used as a diagnostic tool to verify integration settings
+    and network connectivity.
   ai_short_description: >-
     Tests connectivity to the VSphere server to ensure the integration is configured
-    correctly and can successfully authenticate.
+    correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -452,8 +442,8 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only attempts to establish a connection to the VSphere server using
-      the integration configuration. It does not fetch data, mutate external or internal
+      The action only attempts to authenticate and connect to the VSphere server to
+      verify connectivity. It does not fetch contextual data, mutate external or internal
       data, update entities, or create insights.
   entity_usage:
     entity_types:
@@ -506,8 +496,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or interact with any entities. It only uses integration
-      configuration parameters to test connectivity.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely relies on integration configuration to test connectivity.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -523,9 +513,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      The action is a simple connectivity test (Ping) and does not align with any
+      of the specific outcome categories such as enrichment, containment, ticketing,
+      or alert manipulation.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -545,32 +535,30 @@ Power Off:
   ai_description: >-
     ### General Description
 
-    Powers off a specific Virtual Machine (VM) in a VMware vSphere environment. This
-    action initiates a state change on the external vCenter/ESXi server to completely
-    shut down the target VM.
+    Powers off a specified Virtual Machine (VM) in VSphere. This action initiates
+    a state change on the external hypervisor to shut down the target VM.
 
 
     ### Flow Description
 
-    1. Establishes a connection to the vSphere server using the integration's configured
-    credentials.
+    1. Establishes a connection to the VSphere server using the configured credentials.
 
-    2. Searches for and retrieves the target Virtual Machine object using the provided
+    2. Searches for and retrieves the Virtual Machine object matching the provided
     `Vm Name` parameter.
 
-    3. Executes a power-off task on the retrieved Virtual Machine via the vSphere
+    3. Executes a power-off command on the retrieved Virtual Machine via the VSphere
     API.
 
-    4. Waits for the task to complete and returns a success message to the SOAR platform.
+    4. Returns a success message once the power-off task is completed.
 
 
     ### Additional Notes
 
-    This action directly affects the operational state of the target VM, resulting
-    in immediate downtime for the system. Ensure the correct VM name is provided to
-    avoid unintended service disruptions.
+    This action directly affects the operational state of the target VM and will result
+    in immediate downtime for any services hosted on it.
   ai_short_description: >-
-    Powers off a specified Virtual Machine within a VMware vSphere environment.
+    Powers off a specified Virtual Machine in VSphere by executing a power-off command
+    via the VSphere API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -579,13 +567,13 @@ Power Off:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Powers off the specified Virtual Machine in the external VMware vSphere environment.
+      Powers off a specified Virtual Machine in VSphere.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a state-changing command (PowerOff) on an external vSphere
-      environment, meaning it mutates external data. It does not fetch contextual
-      enrichment data, mutate internal SOAR data, update entities, or create insights/comments.
+      The action connects to VSphere and executes a power-off command on a specific
+      VM, which mutates external data. It does not fetch enrichment data, update internal
+      entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -637,9 +625,9 @@ Power Off:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      relies entirely on the explicitly provided 'Vm Name' parameter to identify the
-      target system. Therefore, all entity type and filter flags are set to false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. It operates solely based on the provided VM name
+      parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -655,11 +643,9 @@ Power Off:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action powers off a Virtual Machine in vSphere. While this is a remediation
-      or containment action, it does not strictly match the 'Contain Host' category
-      definition which specifies isolating an endpoint from the network via EDR. It
-      also does not match any other specific outcome categories like blocklisting,
-      ticketing, or enrichment.
+      The action powers off a Virtual Machine in VSphere. This does not match any
+      of the specific expected outcomes such as network containment via EDR, ticket
+      creation, or enrichment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -684,28 +670,30 @@ Power On:
   ai_description: >-
     ### General Description
 
-    Powers on a specific virtual machine in a VMware vSphere environment.
+    Powers on a specific Virtual Machine (VM) in VMware vSphere.
 
 
     ### Flow Description
 
-    1. Retrieves the target VM name from the action parameters.
+    1. Retrieves the configuration for the VSphere integration (Server Address, Username,
+    Password, Port).
 
-    2. Connects to the vSphere server using the provided integration credentials.
+    2. Retrieves the `Vm Name` parameter.
 
-    3. Searches for the virtual machine object by its name.
+    3. Connects to the VSphere server using the `VSphereManager`.
 
-    4. Executes a power-on command on the located virtual machine via the vSphere
-    API.
+    4. Retrieves the VM object by its name.
 
-    5. Waits for the power-on task to complete and returns a success message.
+    5. Calls the `power_on_vm` method to power on the VM.
+
+    6. Returns a success message.
 
 
     ### Additional Notes
 
-    This action requires the exact name of the virtual machine as it appears in vCenter.
+    None.
   ai_short_description: >-
-    Powers on a specified virtual machine in a VMware vSphere environment.
+    Powers on a specific Virtual Machine (VM) in VMware vSphere.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -714,13 +702,13 @@ Power On:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Powers on a specified virtual machine in the vSphere environment.
+      Powers on a Virtual Machine in the VMware vSphere environment.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action connects to the vSphere API and issues a command to power on a virtual
-      machine, which mutates the state of an external system (can_mutate_external_data=true).
-      It does not fetch enrichment data, update internal entities, or create insights.
+      The action connects to vSphere and executes a power-on command for a specific
+      VM, which mutates the state of an external system. It does not fetch contextual
+      data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -772,8 +760,8 @@ Power On:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It relies solely on the 'Vm Name' parameter
-      provided in the action configuration.
+      The action does not iterate over `target_entities` or accept any entity identifiers
+      as input parameters. It only accepts a VM name as a string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -789,9 +777,9 @@ Power On:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action powers on a virtual machine in vSphere. This is an infrastructure
-      management operation and does not align with any of the predefined security
-      outcome categories such as containment, enrichment, or ticketing.
+      The action powers on a virtual machine in vSphere. This does not match any of
+      the predefined outcome categories such as enriching IOCs, containing hosts,
+      or executing commands on a host.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -816,33 +804,32 @@ Reset:
   ai_description: >-
     ### General Description
 
-    Hard resets a specific Virtual Machine (VM) in VMware vSphere. This action initiates
-    a state change on the external vSphere environment to forcefully restart the specified
-    VM.
+    Performs a hard reset on a specified Virtual Machine (VM) within VMware vSphere.
+    This action directly interacts with the vCenter server to initiate a reset task
+    for the target VM.
 
 
     ### Flow Description
 
-    1. Establishes a connection to the VMware vSphere server using the provided integration
+    1. Establishes a connection to the vSphere server using the provided integration
     credentials.
 
-    2. Retrieves the target Virtual Machine object by its name using the vSphere API.
+    2. Queries the vSphere environment to retrieve the Virtual Machine object that
+    matches the provided `Vm Name`.
 
-    3. Executes a hard reset command (`ResetVM_Task`) on the target VM.
+    3. Executes the `ResetVM_Task` API call to perform a hard reset on the identified
+    Virtual Machine.
 
-    4. Waits for the reset task to complete successfully.
-
-    5. Returns a success message to the SecOps platform.
+    4. Waits for the task to complete and returns a success message.
 
 
     ### Additional Notes
 
-    This action performs a hard reset, which is equivalent to forcefully restarting
-    the machine without a graceful OS shutdown. Ensure that the target VM name exactly
-    matches the name in vSphere.
+    This action directly affects the power state of the VM in the hypervisor. It does
+    not operate on Google SecOps entities and relies entirely on the provided VM name
+    parameter.
   ai_short_description: >-
-    Hard resets a specific Virtual Machine (VM) in VMware vSphere by executing a forceful
-    restart command.
+    Performs a hard reset on a specified Virtual Machine within VMware vSphere.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -851,14 +838,14 @@ Reset:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes a hard reset command on a specific Virtual Machine in VMware vSphere.
+      Initiates a hard reset task on a specified Virtual Machine in the vSphere environment.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an API call to VMware vSphere to execute a hard reset on a
-      Virtual Machine, which mutates external data (can_mutate_external_data=true).
-      It does not fetch enrichment data, update internal entities, create insights,
-      modify alert data, or create case comments.
+      The action connects to vSphere and executes a state-changing API call (`ResetVM_Task`)
+      to hard reset a virtual machine, which mutates external data. It does not fetch
+      data for enrichment, nor does it update internal SecOps data such as entities,
+      insights, or case comments.
   entity_usage:
     entity_types:
       address: false
@@ -910,10 +897,9 @@ Reset:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies solely on the `Vm Name` parameter provided by the user.
-      Therefore, it does not run on entities, and all entity type and filter flags
-      are set to false.
+      The action does not iterate over `target_entities` and does not accept standard
+      entity types as input parameters. It relies solely on a string parameter (`Vm
+      Name`) to identify the target in vSphere.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -929,10 +915,9 @@ Reset:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a hard reset on a Virtual Machine in VMware vSphere. This
-      operation does not match any of the predefined expected outcomes such as enriching
-      IOCs/assets, containing hosts, managing tickets, or modifying blocklists. Therefore,
-      all outcome category flags are set to false.
+      The action performs a hard reset on a virtual machine in vSphere. This is an
+      infrastructure management operation and does not align with any of the predefined
+      security outcome categories such as containment, enrichment, ticketing, or blocklisting.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -957,29 +942,29 @@ Revert To Snapshot:
   ai_description: >-
     ### General Description
 
-    Reverts a specific virtual machine to a designated snapshot within VMware vSphere.
-    This action initiates a state change on the external vSphere environment to restore
-    the VM to a previous state.
+    Reverts a specific virtual machine to a designated snapshot within the VSphere
+    environment.
 
 
     ### Flow Description
 
-    1. Connects to the vSphere server using the provided integration credentials.
+    1. Establishes a connection to the VSphere server using the provided integration
+    credentials.
 
     2. Retrieves the virtual machine object based on the provided `Vm Name` parameter.
 
     3. Reverts the virtual machine to the snapshot specified by the `Snapshot Name`
     parameter.
 
-    4. Returns a success message upon successful completion of the task.
+    4. Returns a success message upon successful completion of the operation.
 
 
     ### Additional Notes
 
-    Ensure that the specified snapshot exists for the target VM before executing this
-    action.
+    None.
   ai_short_description: >-
-    Reverts a specific virtual machine to a designated snapshot within VMware vSphere.
+    Reverts a specific virtual machine to a designated snapshot within the VSphere
+    environment.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -988,13 +973,13 @@ Revert To Snapshot:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Reverts a virtual machine in vSphere to a specified snapshot.
+      Reverts a virtual machine to a specified snapshot in the VSphere environment.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action connects to vSphere and reverts a VM to a snapshot, which mutates
-      external data. It does not fetch enrichment data, update internal entities,
-      or create insights.
+      The action connects to VSphere and executes a state-changing operation (reverting
+      a VM to a snapshot). It does not fetch data for enrichment, nor does it update
+      internal SecOps data like entities, insights, or alerts.
   entity_usage:
     entity_types:
       address: false
@@ -1046,9 +1031,9 @@ Revert To Snapshot:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It relies entirely on the provided
-      action parameters (Vm Name and Snapshot Name) to identify the target and perform
-      the operation.
+      The action does not process any entities from the case, nor does it accept any
+      entity identifiers as parameters. It operates solely on the provided VM name
+      and snapshot name.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1064,9 +1049,9 @@ Revert To Snapshot:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action reverts a virtual machine to a snapshot in vSphere. This operation
-      does not align with any of the predefined outcome categories such as containment,
-      enrichment, or ticketing.
+      The action reverts a virtual machine to a snapshot in VSphere. This is an infrastructure
+      management operation and does not match any of the predefined security outcome
+      categories such as containment, enrichment, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1094,8 +1079,8 @@ Suspend:
     ### General Description
 
     Suspends a specific Virtual Machine (VM) in a VMware vSphere environment. This
-    action initiates a state change on the external vSphere server to pause the execution
-    of the target VM.
+    action initiates a state change on the hypervisor to pause the execution of the
+    target VM.
 
 
     ### Flow Description
@@ -1103,18 +1088,18 @@ Suspend:
     1. Establishes a connection to the vSphere server using the provided integration
     credentials.
 
-    2. Retrieves the target Virtual Machine object by querying the vSphere API with
+    2. Queries the vCenter inventory to retrieve the Virtual Machine object matching
     the provided `Vm Name`.
 
-    3. Executes the `SuspendVM_Task` command on the retrieved VM object to suspend
-    its operations.
+    3. Issues an API command to suspend the Virtual Machine.
 
-    4. Waits for the task to complete and returns a success message to the SOAR platform.
+    4. Waits for the suspend task to complete and returns a success message.
 
 
     ### Additional Notes
 
-    This action requires the exact name of the VM as it appears in the vSphere inventory.
+    Ensure that the provided VM name exactly matches the name as it appears in the
+    vSphere inventory.
   ai_short_description: >-
     Suspends a specific Virtual Machine (VM) in a VMware vSphere environment.
   capabilities:
@@ -1125,14 +1110,14 @@ Suspend:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Suspends a Virtual Machine in the external VMware vSphere environment.
+      Suspends the execution state of a Virtual Machine in the vSphere environment.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a state-changing command (`SuspendVM_Task`) on an external
-      vSphere server to suspend a VM, meaning it mutates external data. It does not
-      fetch contextual enrichment data, mutate internal SOAR data, update entities,
-      create insights, or add case comments.
+      The action connects to the vSphere server and executes a command to suspend
+      a Virtual Machine. This mutates external data (the execution state of the VM).
+      It does not fetch data for enrichment, nor does it mutate internal SecOps data
+      like entities, alerts, or insights.
   entity_usage:
     entity_types:
       address: false
@@ -1184,9 +1169,9 @@ Suspend:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the `Vm Name` parameter provided in the action
-      configuration. Therefore, all entity type and filter flags are set to false.
+      The action does not iterate over `target_entities` and does not accept any standard
+      entity identifiers as input parameters. It operates solely on the provided 'Vm
+      Name' string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1202,10 +1187,9 @@ Suspend:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action suspends a Virtual Machine in vSphere. While this affects a host,
-      it does not isolate an endpoint from the network via EDR (Contain Host), nor
-      does it match any other specific outcome category like enriching an IOC, updating
-      an alert, or blocking an IP.
+      The action suspends a Virtual Machine in vSphere. While this is a form of containment
+      or isolation, it does not strictly match the 'Contain Host' category which specifically
+      refers to network isolation via EDR. It does not match any other outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1230,29 +1214,31 @@ Take Snapshot:
   ai_description: >-
     ### General Description
 
-    Takes a snapshot of a specified Virtual Machine (VM) in VMware vSphere. This action
-    connects to the vSphere server, locates the VM by its name, and initiates a snapshot
-    creation task with the provided snapshot name and description.
+    Takes a snapshot of a specific Virtual Machine (VM) in vSphere. This action interacts
+    with the vSphere environment to capture the current state, data, and hardware
+    configuration of the target VM.
 
 
     ### Flow Description
 
-    1. Connects to the vSphere server using the provided integration credentials.
+    1. Connects to the vSphere server using the configured credentials.
 
-    2. Retrieves the target Virtual Machine object using the provided `Vm Name`.
+    2. Retrieves the target Virtual Machine object using the provided `Vm Name` parameter.
 
-    3. Initiates a `CreateSnapshot` API call to the vSphere server to take a snapshot
-    of the VM.
+    3. Initiates a `CreateSnapshot` API call to the vSphere server with the specified
+    `Snapshot Name` and `Snapshot Description`.
 
-    4. Waits for the snapshot task to complete and returns a success message.
+    4. Waits for the snapshot task to complete successfully on the vSphere server.
+
+    5. Returns a success message upon completion.
 
 
     ### Additional Notes
 
-    This action operates synchronously and will wait for the vSphere snapshot task
-    to complete before finishing the execution.
+    Ensure the provided VM name exactly matches the name of the virtual machine as
+    it appears in the vSphere environment.
   ai_short_description: >-
-    Takes a snapshot of a specified Virtual Machine (VM) in VMware vSphere.
+    Takes a snapshot of a specific Virtual Machine (VM) in vSphere.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1261,13 +1247,13 @@ Take Snapshot:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new snapshot for the specified Virtual Machine in vSphere.
+      Creates a new snapshot for the specified Virtual Machine in the vSphere environment.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an API call to vSphere to create a snapshot of a VM, which
-      mutates external data. It does not fetch contextual data for enrichment, nor
-      does it mutate internal SecOps data, update entities, or create insights.
+      The action connects to the vSphere API and executes a 'CreateSnapshot' command
+      on a specific VM, which mutates external data. It does not fetch enrichment
+      data, update internal entities, create insights, or modify case data.
   entity_usage:
     entity_types:
       address: false
@@ -1319,9 +1305,9 @@ Take Snapshot:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses explicitly provided parameters
-      (VM Name) to target the specific Virtual Machine rather than iterating over
-      case entities.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      standard entity types as input parameters. It operates strictly on the provided
+      'Vm Name' string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1338,8 +1324,8 @@ Take Snapshot:
     get_alert_information: false
     reasoning: >-
       The action creates a snapshot of a Virtual Machine in vSphere. This is an infrastructure
-      management operation and does not align with any of the predefined security
-      outcome categories such as containment, enrichment, or ticketing.
+      management operation and does not match any of the predefined security outcome
+      categories such as containment, enrichment, or blocklisting.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

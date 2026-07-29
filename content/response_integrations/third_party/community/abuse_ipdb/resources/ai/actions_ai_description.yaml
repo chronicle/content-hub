@@ -2,38 +2,40 @@ Check IP Reputation:
   ai_description: >-
     ### General Description
 
-    Checks the reputation of IP address entities using AbuseIPDB. It retrieves threat
-    intelligence data such as abuse confidence score, country code, ISP, and usage
-    type to evaluate the risk of the IP address.
+    Checks the reputation of IP address entities associated with an alert using AbuseIPDB.
+    It retrieves threat intelligence data, updates the entity's suspicious status
+    based on a threshold, and optionally creates an insight. It can exclude internal
+    addresses to save API allowance.
 
 
     ### Flow Description
 
     1. Extracts configuration and action parameters.
 
-    2. Filters target entities to include only IP addresses (and optionally excludes
-    internal addresses).
+    2. Filters target entities to find ADDRESS entities, optionally excluding internal
+    ones.
 
-    3. Iterates through the filtered entities and makes a GET request to the AbuseIPDB
-    API (`/api/v2/check`) for each IP address.
+    3. Iterates over the filtered entities and makes a GET request to the AbuseIPDB
+    API to fetch IP reputation data.
 
-    4. Evaluates the returned abuse confidence score against the configured suspicious
-    threshold, marking the entity as suspicious if the threshold is met or exceeded.
+    4. Enriches the entity's `additional_properties` with the retrieved data.
 
-    5. Enriches the entity's additional properties with the retrieved data.
+    5. Evaluates the `abuseConfidenceScore` against the `Suspicious Threshold` and
+    marks the entity as suspicious if it meets or exceeds it.
 
-    6. Optionally creates an insight for the entity containing the reputation details.
+    6. Optionally creates an insight for the entity with the AbuseIPDB report details.
 
-    7. Updates the entities in the Google SecOps platform and attaches the JSON results.
+    7. Marks the entity as enriched and updates it in the platform.
+
+    8. Adds the JSON results to the action's output.
 
 
     ### Additional Notes
 
-    The action can be configured to skip internal IP addresses to save API quota.
+    Ensure that the AbuseIPDB API key is configured correctly in the integration settings.
   ai_short_description: >-
-    Checks the reputation of IP address entities using AbuseIPDB to retrieve threat
-    intelligence, update entity properties, and optionally create insights based on
-    abuse confidence scores.
+    Checks the reputation of IP address entities associated with an alert using AbuseIPDB,
+    enriches the entities, and optionally creates insights.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -45,9 +47,10 @@ Check IP Reputation:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the AbuseIPDB API to fetch IP reputation data.
-      It does not mutate external data but updates internal entities and creates insights
-      based on the retrieved data.
+      The action makes a GET request to the AbuseIPDB API to fetch IP reputation data
+      (fetches_data=true). It does not mutate external data or internal system data
+      outside of entities. It updates entities with the fetched data (can_update_entities=true)
+      and creates insights (can_create_insight=true).
   entity_usage:
     entity_types:
       address: true
@@ -100,7 +103,7 @@ Check IP Reputation:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == EntityTypes.ADDRESS`. If the `Exclude Internal Addresses` parameter is true,
+      == EntityTypes.ADDRESS`. If the 'Exclude Internal Addresses' parameter is true,
       it also filters by `not entity.is_internal`. Therefore, it targets ADDRESS entities
       and filters by entity_type and is_internal.
   outcome_categories:
@@ -118,10 +121,9 @@ Check IP Reputation:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches reputation data (abuse confidence score, ISP, domain, etc.)
-      for IP addresses from AbuseIPDB. This directly aligns with the 'Enrich IOC'
-      expected outcome. It does not mutate external state, so it is not a blocklist
-      or containment action.
+      The action fetches IP reputation data from AbuseIPDB, returning threat intelligence
+      and evaluating risk. This matches the 'Enrich IOC' expected outcome. It does
+      not mutate data on external systems or perform other categorized actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -155,30 +157,28 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the AbuseIPDB service to verify that the integration is
-    configured correctly.
+    Tests connectivity to the AbuseIPDB API to ensure the integration is configured
+    correctly.
 
 
     ### Flow Description
 
-    1. Extracts the API key and SSL verification settings from the integration configuration.
+    1. Initializes the AbuseIPDB manager with the provided API key.
 
-    2. Initializes the AbuseIPDB manager.
+    2. Makes a GET request to the AbuseIPDB API (`https://api.abuseipdb.com/api/v2/check`)
+    using a dummy IP address (1.1.1.1) to verify authentication and connectivity.
 
-    3. Executes a test API call (GET request to the `/api/v2/check` endpoint) using
-    a dummy IP address (1.1.1.1) to verify authentication and reachability.
-
-    4. Evaluates the response and returns a success status if the connection is established,
-    or an error if the API key is invalid or the service is unreachable.
+    3. Returns a success message if the connection is established, or an error if
+    the API key is invalid or unreachable.
 
 
     ### Additional Notes
 
-    This action does not process any case entities or modify any data. It is strictly
-    used for health checks and configuration validation.
+    This action is typically used for diagnostic purposes and does not process any
+    case entities or alerts.
   ai_short_description: >-
-    Tests connectivity to the AbuseIPDB service to ensure the integration is configured
-    correctly with a valid API key.
+    Tests connectivity to the AbuseIPDB API to verify that the integration is configured
+    correctly and the API key is valid.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -190,9 +190,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only performs a test API call to verify connectivity. It does not
-      fetch contextual data for alerts/entities, mutate external data, mutate internal
-      data, update entities, create insights, modify alert data, or create case comments.
+      The action is a Ping test that makes a GET request to the AbuseIPDB API using
+      a dummy IP to verify connectivity. It does not fetch contextual data for alerts
+      or entities, does not mutate external or internal data, and does not interact
+      with entities, insights, alerts, or case comments.
   entity_usage:
     entity_types:
       address: false
@@ -244,8 +245,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It only uses a hardcoded
-      dummy IP address to test API connectivity.
+      The action does not process any entities. It does not iterate over target_entities
+      or accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -261,9 +262,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      This is a simple Ping action used to test connectivity to the AbuseIPDB API.
-      It does not enrich IOCs, update alerts, mutate external systems, or perform
-      any operations that match the defined outcome categories.
+      The action is a simple connectivity test (Ping) and does not match any of the
+      expected outcome categories such as enriching IOCs, updating alerts, or modifying
+      external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -2,34 +2,36 @@ Add Entity To Detector URL List:
   ai_description: >-
     ### General Description
 
-    The Add Entity To Detector URL List action adds specific URLs and Domains to a
-    Google Cloud Identity Policy detection list. It can process both manually provided
-    indicators and target entities from the case.
+    This action adds specified URLs and domains, as well as URL and Hostname entities
+    from the case, to an existing Cloud Identity URL list detector policy.
 
 
     ### Flow Description
 
-    1. Extracts the `Detector Policy ID`, `URL`, and `Domain` parameters.
+    1. Extracts the 'Detector Policy ID', 'URL', and 'Domain' parameters.
 
-    2. Combines the manually provided URLs and Domains with the identifiers of any
-    target entities of type URL or HOSTNAME.
+    2. Combines the provided URLs and domains with the identifiers of any URL or Hostname
+    entities in the case.
 
-    3. If no indicators are found to process, the action stops and returns a failure.
+    3. If no URLs or domains are provided or found, the action finishes without making
+    changes.
 
-    4. Calls the Google Cloud Identity API to fetch the existing policy, appends the
-    new indicators, and sends a PATCH request to update the URL list detector policy.
+    4. Calls the Google Cloud Identity API to fetch the specified policy.
 
-    5. Returns the updated policy details as a JSON result.
+    5. Verifies the policy is of type `URL_LIST_DETECTOR` and appends the new URLs
+    to the existing list.
+
+    6. Makes a PATCH request to the Google Cloud Identity API to update the policy.
+
+    7. Returns the updated policy as JSON results.
 
 
     ### Additional Notes
 
-    - Supported entity types are URL and Domain (HOSTNAME).
-
-    - The action requires a valid Detector Policy ID to function.
+    Supported entities are URL and Hostname.
   ai_short_description: >-
-    Adds specific URLs and Domains, including those extracted from target entities,
-    to a Google Cloud Identity Policy detection list.
+    Adds specified URLs, domains, and relevant case entities to an existing Cloud
+    Identity URL list detector policy to track or block URL navigation.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -38,15 +40,15 @@ Add Entity To Detector URL List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates a URL list detector policy in Google Cloud Identity by adding new URLs
-      and domains to it.
+      Updates a Cloud Identity URL list detector policy by appending new URLs and
+      domains.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a PATCH request to the Google Cloud Identity API to update
-      a URL list detector policy, mutating external data. It does not fetch contextual
-      data for enrichment, update internal entities, create insights, or modify alert
-      data.
+      a URL list detector policy, which mutates external data. It does not fetch contextual
+      data for entities, nor does it mutate internal SOAR data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -98,10 +100,10 @@ Add Entity To Detector URL List:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `self.soar_action.target_entities` and filters them using
-      `entity.entity_type in [EntityTypes.URL, EntityTypes.HOSTNAME]`. Therefore,
-      it targets URL and HOSTNAME (Domain) entities, filtering strictly by entity
-      type.
+      The action iterates over `self.soar_action.target_entities` and filters them
+      using `entity.entity_type in [EntityTypes.URL, EntityTypes.HOSTNAME]`. It also
+      accepts 'URL' and 'Domain' as input parameters. Therefore, the URL, Host Name,
+      and Domain entity types are marked as true, and it filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -117,9 +119,10 @@ Add Entity To Detector URL List:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds URLs and domains to a Cloud Identity detector policy, which
-      the code explicitly refers to as 'urls_to_block' and outputs 'Successfully blocked
-      the following URLs'. This aligns with the 'Add IOC To Blocklist' category.
+      The action updates a Cloud Identity policy to add URLs and domains to a detector
+      list, which is used for blocking or tracking. This aligns with the 'Add IOC
+      To Blocklist' expected outcome, as it updates security controls to prevent interaction
+      with the IOC.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -151,31 +154,31 @@ Create Policy:
   ai_description: >-
     ### General Description
 
-    Use the "Create Policy" action to create a new policy entry within Google Cloud
-    Identity.
+    The "Create Policy" action creates a new policy entry within Google Cloud Identity.
+    It allows administrators to programmatically define and enforce policies, such
+    as Data Loss Prevention (DLP) rules or detector lists, across their organization.
 
 
     ### Flow Description
 
-    1. Extracts the `Policy Entry` parameter containing the JSON configuration of
-    the policy.
+    1. Extracts the `Policy Entry` parameter, which contains the JSON configuration
+    for the new policy.
 
     2. Validates that the provided input is a valid JSON dictionary.
 
-    3. Constructs a policy data model from the parsed JSON.
+    3. Makes a POST request to the Google Cloud Identity API (`/v1beta1/policies`)
+    to create the policy.
 
-    4. Makes a POST request to the Google Cloud Identity API to create the new policy.
-
-    5. Returns the created policy details as a JSON result.
+    4. Retrieves the created policy details and outputs them as JSON results.
 
 
     ### Additional Notes
 
-    - The `Policy Entry` parameter must be a properly formatted JSON string representing
-    the policy configuration.
+    - The `Policy Entry` parameter must strictly follow the Google Cloud Identity
+    Policy JSON schema.
   ai_short_description: >-
-    Creates a new policy entry within Google Cloud Identity using a provided JSON
-    configuration.
+    Creates a new policy entry within Google Cloud Identity by sending a provided
+    JSON configuration to the Cloud Identity API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -243,8 +246,8 @@ Create Policy:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It operates solely on the provided JSON configuration parameter.
+      The action does not iterate over target entities or accept any entity-related
+      input parameters. It operates solely on the provided JSON policy configuration.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -260,9 +263,9 @@ Create Policy:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a new policy in Google Cloud Identity. This does not match
-      any of the predefined outcome categories such as enriching IOCs/assets, updating
-      alerts/tickets, modifying blocklists/allowlists, or managing identities.
+      The action creates a policy configuration in Google Cloud Identity. This does
+      not match any of the specific expected outcomes such as enriching IOCs, updating
+      alerts, creating tickets, or modifying identities directly.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -288,37 +291,36 @@ List Policies:
   ai_description: >-
     ### General Description
 
-    The "List Policies" action is used to retrieve a list of Cloud Identity policies
-    associated with a specific organizational unit. It allows filtering the results
-    based on policy type, setting type, and display names, returning the matching
-    policies as JSON data.
+    The "List Policies" action retrieves a list of Cloud Identity policies based on
+    specified criteria such as Organization Unit Name, Policy Type, Setting Type,
+    and Settings Display Name.
 
 
     ### Flow Description
 
-    1. Extracts and validates the input parameters, including the organizational unit
-    name, policy type filter, setting type filter, display names filter, and the maximum
-    number of results to return.
+    1. Extracts the provided parameters including Organization Unit Name, Policy Type
+    Filter, Setting Type Filter, Settings Display Name Filter, and Max Results To
+    Return.
 
-    2. Queries the Google Cloud Identity API to fetch the organizational unit ID corresponding
-    to the provided organizational unit name.
+    2. Validates that the Max Results To Return parameter is within the allowed range
+    (1-100).
 
-    3. Calls the Cloud Identity API to list policies that match the organizational
-    unit ID and the specified filters.
+    3. Makes an API call to Google Cloud Identity to fetch the Organization Unit ID
+    corresponding to the provided Organization Unit Name.
 
-    4. Limits the retrieved policies to the specified maximum number.
+    4. Makes an API call to Google Cloud Identity to list policies matching the Organization
+    Unit ID and the provided filters.
 
-    5. Returns the retrieved policies as JSON results and outputs a success or failure
-    message.
+    5. Returns the retrieved policies as JSON results.
 
 
     ### Additional Notes
 
     This action requires appropriate permissions to read organizational units and
-    policies in Google Cloud Identity.
+    policies within Google Cloud Identity.
   ai_short_description: >-
-    Retrieves a list of Cloud Identity policies for a specific organizational unit
-    based on various filters.
+    Retrieves a list of Cloud Identity policies based on specified criteria such as
+    Organization Unit Name, Policy Type, Setting Type, and Settings Display Name.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -330,9 +332,10 @@ List Policies:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (policies) from the Google Cloud Identity API using
-      a GET request. It does not mutate external data, mutate internal data, update
-      entities, create insights, modify alert data, or create case comments.
+      The action fetches data (policies and organizational unit details) from the
+      Google Cloud Identity API using GET requests. It does not mutate external data,
+      mutate internal data, update entities, create insights, modify alert data, or
+      create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -384,8 +387,8 @@ List Policies:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided input parameters.
+      The action does not iterate over target entities or accept any entity-based
+      input parameters. It operates solely on the provided configuration parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -401,10 +404,10 @@ List Policies:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of policies from Cloud Identity. This does not match
-      any of the predefined outcome categories such as enriching IOCs/assets, updating
-      alerts, managing tickets, modifying blocklists/allowlists, managing identities,
-      or searching events/emails.
+      The action lists policies from Google Cloud Identity. It does not enrich IOCs
+      or assets, update alerts, manage tickets, modify blocklists/allowlists, manage
+      identities, or perform any other operations that match the predefined outcome
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -427,8 +430,8 @@ List Policies:
     | Organization Unit Name | String | Yes | The name of the organizational unit
     from which to list policies. |
 
-    | Policy Type Filter | DDL | No | Type of the policy used to filter the list.
-    |
+    | Policy Type Filter | String | No | Type of the policy used to filter the list
+    (Both, Admin, System). |
 
     | Setting Type Filter | String | No | The regular expression pattern used to filter
     policies by their settings type. This filter is applied directly to the API request.
@@ -443,26 +446,29 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Cloud Identity integration to ensure that the provided
-    credentials and configuration are valid.
+    Tests the connectivity to the Google Cloud Identity API. This action verifies
+    that the integration is configured correctly and can successfully communicate
+    with the external service.
 
 
     ### Flow Description
 
-    1. Initializes the Cloud Identity API client using the provided integration parameters.
+    1. Initializes the Google Cloud Identity API client using the provided integration
+    configuration.
 
-    2. Makes a test GET request to the Cloud Identity Policies API to retrieve a single
+    2. Makes a GET request to the Google Cloud Identity Policies API to fetch a single
     policy.
 
-    3. Validates the response to confirm successful authentication and network connectivity.
+    3. Validates the response to ensure successful authentication and connectivity.
 
 
     ### Additional Notes
 
-    This action does not modify any data or interact with specific entities. It is
-    primarily used for setup and troubleshooting purposes.
+    This action is typically used during the initial setup or troubleshooting of the
+    integration to verify that the credentials and network settings are valid.
   ai_short_description: >-
-    Tests connectivity to the Cloud Identity integration by making a test API call.
+    Tests the connectivity to the Google Cloud Identity API by attempting to fetch
+    a single policy.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -474,9 +480,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to test connectivity but does not fetch contextual
-      data for alerts or entities. It does not mutate external data, update internal
-      entities, create insights, or modify alert data.
+      The action makes a GET request to the Google Cloud Identity API to test connectivity.
+      It does not fetch contextual data for entities, mutate external or internal
+      data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -528,8 +534,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It simply tests connectivity
-      to the external service.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely tests connectivity to the external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -545,9 +551,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action only tests connectivity to the Cloud Identity API. It does not enrich
-      data, mutate external systems, or update internal case data, so it does not
-      match any of the specific outcome categories.
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, mutating external data,
+      or updating alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

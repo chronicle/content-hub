@@ -2,37 +2,35 @@ Get User Activities:
   ai_description: >-
     ### General Description
 
-    Fetches user investigation logs and activities from Elastica Cloud SOC for specific
-    User entities within a defined timeframe.
+    Fetches user activities and investigation logs from Elastica Cloud SOC for specified
+    User entities. This action retrieves historical event data for users within a
+    specified timeframe and attaches the results to the case.
 
 
     ### Flow Description
 
-    1. Initializes the Elastica Cloud SOC manager with the provided API credentials.
+    1. Filters the target entities to include only those of type `User`.
 
-    2. Calculates the start time for fetching logs based on the `Minutes Back` parameter.
+    2. Calculates the start time for the log search based on the `Minutes Back` parameter.
 
-    3. Filters the target entities to include only User entities.
+    3. Iterates through the filtered User entities, extracting the `OriginalIdentifier`
+    from each entity's additional properties to use as the case-sensitive username.
 
-    4. Iterates through each User entity, extracting the `OriginalIdentifier` from
-    its additional properties.
+    4. Makes a GET request to the Elastica Cloud SOC API to retrieve investigation
+    logs for each user since the calculated start time.
 
-    5. Makes a GET request to the Elastica Cloud SOC API (`api/admin/v1/logs/get/`)
-    to retrieve investigation logs for the user since the calculated start time.
-
-    6. Formats the retrieved logs into a CSV table and attaches it to the respective
-    entity.
-
-    7. Aggregates all results and adds them to the action's JSON result.
+    5. If logs are found, attaches them as an entity table to the respective user
+    and aggregates the data into a JSON result.
 
 
     ### Additional Notes
 
-    The action relies on the `OriginalIdentifier` property of the User entity to query
-    the Elastica Cloud SOC API, as the username is case-sensitive.
+    The action relies on the `OriginalIdentifier` from the entity's additional properties
+    to perform a case-sensitive search in Elastica Cloud SOC. If this property is
+    missing or incorrect, the search may not return the expected logs.
   ai_short_description: >-
-    Fetches user investigation logs and activities from Elastica Cloud SOC for specific
-    User entities within a defined timeframe.
+    Fetches user activities and investigation logs from Elastica Cloud SOC for specified
+    User entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -45,9 +43,10 @@ Get User Activities:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Elastica Cloud SOC API to fetch user investigation
-      logs. It does not mutate external data, nor does it mutate internal data such
-      as updating entities, creating insights, or adding case comments. It only attaches
-      a data table and JSON results to the action output.
+      logs (fetches_data=true). It does not perform any state-changing operations
+      on external systems (can_mutate_external_data=false). It does not mutate internal
+      case data, update entities, create insights, modify alert data, or create case
+      comments.
   entity_usage:
     entity_types:
       address: false
@@ -99,10 +98,9 @@ Get User Activities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == EntityTypes.USER`. It does not filter by any other attributes, though it
-      accesses the `OriginalIdentifier` from `additional_properties` during execution.
-      Therefore, it targets USER entities and filters strictly by entity type.
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == EntityTypes.USER`. Therefore, it targets User
+      entities and filters strictly by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -118,10 +116,10 @@ Get User Activities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches historical investigation logs and activities for a specific
-      user from Elastica Cloud SOC. This directly aligns with the 'Search Events'
-      category, which involves returning a collection of historical logs or telemetry
-      data matching specific search parameters.
+      The action retrieves historical investigation logs and activities for specific
+      users from Elastica Cloud SOC. This aligns with the 'Search Events' category,
+      as it returns a collection of historical logs or telemetry data matching specific
+      search parameters (the user and time range).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -141,35 +139,31 @@ Get User Activities:
 
     | --- | --- | --- | --- |
 
-    | Minutes Back | String | No | Fetch logs since 'x' minutes backwards. e.g. 5.
-    Defaults to 60 if not provided. |
+    | Minutes Back | string | No | Fetch logs since 'x' minutes backwards. e.g. 5
+    |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Elastica CloudSOC platform to verify that the integration
-    is configured correctly with valid credentials.
+    Tests connectivity to the Elastica CloudSOC platform.
 
 
     ### Flow Description
 
-    1. Initializes the Elastica CloudSOC manager using the provided integration configurations
-    (API Root, Key ID, Key Secret).
+    1. Initializes the Elastica CloudSOC manager using the provided integration configurations.
 
-    2. Makes an HTTP GET request to the `audit/v2/datasources/` endpoint to verify
+    2. Sends an HTTP GET request to the `/audit/v2/datasources/` endpoint to verify
     API access.
 
-    3. Returns a success message if the connection is established, or a failure message
-    otherwise.
+    3. Returns a success message if the connection is established.
 
 
     ### Additional Notes
 
-    This action does not interact with any entities or alerts and is solely used for
-    diagnostic and configuration verification purposes.
+    This action is typically used to verify that the integration is configured correctly
+    and the API credentials are valid.
   ai_short_description: >-
-    Tests connectivity to the Elastica CloudSOC platform to verify API access and
-    credentials.
+    Tests connectivity to the Elastica CloudSOC platform by verifying API access.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -181,10 +175,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to a ping endpoint to verify connectivity. It
-      does not fetch contextual data for alerts/entities, mutate external data, mutate
-      internal data, update entities, create insights, modify alert data, or create
-      case comments.
+      The action makes a GET request to the ping endpoint to test connectivity. It
+      does not fetch contextual data for entities, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -236,8 +229,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It only tests connectivity to the external API.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely tests connectivity to the external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -253,9 +246,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
+      The action is a simple connectivity test (ping) and does not match any of the
       specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      external state.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

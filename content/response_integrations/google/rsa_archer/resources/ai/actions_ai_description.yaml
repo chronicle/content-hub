@@ -7,25 +7,27 @@ Add Incident Journal Entry:
 
     ### Flow Description
 
-    1. Initializes the RSA Archer client with the provided credentials.
+    1. Extracts the necessary configuration and action parameters, including the Destination
+    Content ID and the Text for the journal entry.
 
-    2. Retrieves the application ID for the Incident Journal.
+    2. Initializes the RSA Archer manager to handle API communications.
 
-    3. Retrieves the necessary security incident ID and level details required to
-    construct the request.
+    3. Retrieves the necessary internal application IDs, security incident IDs, and
+    level IDs from RSA Archer.
 
-    4. Verifies the existence of the target Security Incident using the provided Destination
-    Content ID.
+    4. Verifies that the specified Security Incident (Destination Content ID) exists.
 
-    5. Sends a POST request to RSA Archer to append the specified text as a new journal
+    5. Makes an API call to RSA Archer to append the provided text as a new journal
     entry to the incident.
 
-    6. Returns the JSON result of the operation.
+    6. Returns the API response as a JSON result and outputs a success or error message
+    based on the execution status.
 
 
     ### Additional Notes
 
-    None
+    Ensure that the provided Destination Content ID corresponds to a valid and existing
+    Security Incident in RSA Archer.
   ai_short_description: >-
     Adds a new journal entry to a specific Security Incident in RSA Archer.
   capabilities:
@@ -40,9 +42,10 @@ Add Incident Journal Entry:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to RSA Archer to add a journal entry, which
-      mutates external data. It does not fetch enrichment data, update internal entities,
-      or create insights.
+      The action makes a POST request to RSA Archer to add a journal entry to a Security
+      Incident, which mutates external data. It does not fetch contextual data for
+      enrichment, nor does it mutate internal SecOps data, update entities, or create
+      insights.
   entity_usage:
     entity_types:
       address: false
@@ -94,9 +97,9 @@ Add Incident Journal Entry:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or filter any entities. It relies entirely on the
-      explicitly provided Destination Content ID parameter to target the specific
-      incident.
+      The action does not iterate over target entities and does not accept any input
+      parameters representing entities. It operates solely on the provided Destination
+      Content ID.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -112,9 +115,9 @@ Add Incident Journal Entry:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds a journal entry to a Security Incident in RSA Archer, which
-      acts as an external incident management system. This aligns with the 'Update
-      Ticket' category as it modifies the external record by appending notes.
+      The action adds a journal entry to an existing Security Incident in RSA Archer.
+      This modifies an external ticket/incident record, aligning with the 'Update
+      Ticket' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -142,31 +145,31 @@ Create Incident:
   ai_description: >-
     ### General Description
 
-    Creates a new incident in RSA Archer using the provided details such as summary,
+    Creates a new incident in RSA Archer based on the provided details such as summary,
     description, owner, status, priority, and category.
 
 
     ### Flow Description
 
-    1. Extracts configuration and action parameters.
+    1. Initializes the RSA Archer manager with the provided credentials.
 
-    2. Initializes the RSA Archer API client.
+    2. Parses custom fields and mapping files if provided.
 
-    3. Parses custom fields and mapping files if provided.
+    3. Makes a POST request to the RSA Archer API to create a new incident.
 
-    4. Makes a POST API call to RSA Archer to create a new incident with the specified
-    parameters.
+    4. Makes a GET request to retrieve the details of the newly created incident.
 
-    5. Retrieves the newly created incident details via a GET API call.
-
-    6. Returns the incident ID and attaches the incident details as a JSON result.
+    5. Returns the incident ID and adds the incident details to the JSON result.
 
 
     ### Additional Notes
 
     Custom fields can be provided as a JSON object. A custom mapping file can be used
-    to map fields.
-  ai_short_description: Creates a new incident in RSA Archer.
+    to map fields. If 'Remote File' is enabled, the mapping file path is treated as
+    a URL.
+  ai_short_description: >-
+    Creates a new incident in RSA Archer and returns the newly created incident ID
+    and details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -178,8 +181,9 @@ Create Incident:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to RSA Archer to create a new incident (can_mutate_external_data=true).
-      It does not fetch contextual data for entities or update internal case data.
+      The action makes a POST request to RSA Archer to create a new incident, mutating
+      external data. It does not fetch contextual data for entities, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -231,8 +235,8 @@ Create Incident:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It creates a new incident in an external
-      system using the provided parameters without referencing specific entities.
+      The action does not process any entities. It does not iterate over target_entities
+      or accept any entity-related parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -248,8 +252,8 @@ Create Incident:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a new incident in RSA Archer, which acts as an external ticketing/incident
-      management system. This aligns with the 'Create Ticket' category.
+      The action creates a new incident in RSA Archer, which acts as an external ITSM/ticketing
+      system. This aligns with the 'Create Ticket' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -264,47 +268,61 @@ Create Incident:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
-    \ --- | --- | --- |\n| Incident Summary | String | No | The summary of the new\
-    \ incident. |\n| Application Name | String | No | Specify an application name\
-    \ for the incident. Default: Incidents. |\n| Incident Details | String | No |\
-    \ The details (description) of the new incident. |\n| Incident Owner | String\
-    \ | No | The owner of the new incident. |\n| Incident Status | String | No | The\
-    \ status of the new incident. |\n| Priority | String | No | The priority of the\
-    \ new incident. |\n| Category | String | No | The category of the new incident.\
-    \ |\n| Custom Fields | String | No | Specify a JSON object of fields that need\
-    \ to be used, when creating an incident . Example: {\u201CCategory\u201D:\u201C\
-    Malware\u201D}. |\n| Custom Mapping File | String | No | Specify an absolute path\
-    \ to the file that contains all of the required mapping. If \u201CRemote File\u201C\
-    \ is enabled, then provide a URL that contains the mapping file. Please refer\
-    \ to action documentation for the additional information. |\n| Remote File | Boolean\
-    \ | No | If enabled, action will treat value provided in \u201CCustom Mapping\
-    \ File\u201C as a URL and try to fetch a file from it. |"
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident Summary | String | No | The summary of the new incident. |
+
+    | Application Name | String | No | Specify an application name for the incident.
+    Default: Incidents. |
+
+    | Incident Details | String | No | The details (description) of the new incident.
+    |
+
+    | Incident Owner | String | No | The owner of the new incident. |
+
+    | Incident Status | String | No | The status of the new incident. |
+
+    | Priority | String | No | The priority of the new incident. |
+
+    | Category | String | No | The category of the new incident. |
+
+    | Custom Fields | String | No | Specify a JSON object of fields that need to be
+    used, when creating an incident . Example: {"Category":"Malware"}. |
+
+    | Custom Mapping File | String | No | Specify an absolute path to the file that
+    contains all of the required mapping. If "Remote File" is enabled, then provide
+    a URL that contains the mapping file. Please refer to action documentation for
+    the additional information. |
+
+    | Remote File | Boolean | No | If enabled, action will treat value provided in
+    "Custom Mapping File" as a URL and try to fetch a file from it. |
 Get Incident Details:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed information about a specific incident from RSA Archer using
-    the provided Content ID and Application Name. The action fetches the incident
-    data and attaches it to the action's JSON result for further use in the playbook.
+    Retrieves detailed information about a specific incident from RSA Archer based
+    on the provided Content ID and Application Name.
 
 
     ### Flow Description
 
-    1. Initializes the RSA Archer manager with the provided integration credentials.
+    1. Authenticates with the RSA Archer API using the provided integration credentials.
 
-    2. Fetches the application details by name to retrieve the application alias.
+    2. Retrieves the application details based on the provided `Application Name`.
 
-    3. Makes an API call (GET request) to RSA Archer to retrieve the incident details
-    using the Content ID and application alias.
+    3. Makes a GET request to the RSA Archer API to fetch the incident details using
+    the `Content ID` and application alias.
 
-    4. Returns the incident details as a JSON result.
+    4. Returns the incident details as a JSON object attached to the action's results.
 
 
     ### Additional Notes
 
-    If the specified application name is not found, the action will fail gracefully
-    and return an appropriate error message.
+    The action requires a valid Content ID. If the application name is not provided,
+    it defaults to "Incidents".
   ai_short_description: >-
     Retrieves detailed information about a specific incident from RSA Archer.
   capabilities:
@@ -318,9 +336,9 @@ Get Incident Details:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to RSA Archer to fetch incident details (fetches_data=true).
-      It does not perform any state-changing operations on external systems (can_mutate_external_data=false)
-      and does not update internal entities, insights, or case comments (can_mutate_internal_data=false).
+      The action fetches data from RSA Archer via a GET request to retrieve incident
+      details. It does not mutate external data, mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -372,10 +390,9 @@ Get Incident Details:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the provided action parameters (Content ID and Application
-      Name) to fetch data. Therefore, it does not run on entities and all entity-related
-      flags are false.
+      The action does not process `siemplify.target_entities` and does not accept
+      any input parameters that represent entities. Therefore, it does not run on
+      entities and all entity-related flags are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -391,9 +408,10 @@ Get Incident Details:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action fetches information about an incident (alert) from RSA Archer. This
-      directly aligns with the 'Get Alert Information' expected outcome. It does not
-      enrich IOCs or assets, nor does it mutate any external or internal data.
+      The action fetches details about an incident (which can be considered an alert
+      or case in the 3rd party system) from RSA Archer. This aligns with the 'Get
+      Alert Information' category. It does not enrich IOCs/assets, mutate data, or
+      perform other categorized actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -427,20 +445,23 @@ Ping:
 
     ### Flow Description
 
-    1. Retrieves integration configuration parameters.
+    1. Retrieves the integration configuration parameters (API Root, Username, Password,
+    Instance Name).
 
-    2. Initializes the `RSAArcherManager` which makes an API call to authenticate
-    and retrieve a session token.
+    2. Initializes the `RSAArcherManager`, which attempts to authenticate and retrieve
+    a session token via a POST request to the `/api/core/security/login` endpoint.
 
-    3. Returns a success message if the connection is established.
+    3. If the authentication is successful, the action completes and returns a success
+    message.
 
 
     ### Additional Notes
 
-    This action is used to verify that the integration is configured correctly and
-    can communicate with the RSA Archer API.
+    This action is typically used to verify that the integration is configured correctly
+    and can communicate with the RSA Archer API.
   ai_short_description: >-
-    Tests connectivity to the RSA Archer instance.
+    Tests connectivity to the RSA Archer instance by attempting to authenticate and
+    retrieve a session token.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -452,9 +473,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only authenticates to the RSA Archer API to verify connectivity.
-      It does not fetch contextual data, mutate external or internal data, update
-      entities, create insights, modify alerts, or create case comments.
+      The action only initializes the RSAArcherManager which performs a login request
+      to verify connectivity. It does not fetch contextual data, mutate external or
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -506,8 +528,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It only tests connectivity
-      to the external system.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely relies on integration configuration to test connectivity.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -523,9 +545,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      The action is a simple connectivity test (Ping) that authenticates to the RSA
+      Archer API. It does not match any of the expected outcome categories such as
+      enriching IOCs, updating alerts, creating tickets, or modifying external state.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -545,32 +567,29 @@ Update Incident:
   ai_description: >-
     ### General Description
 
-    Updates an existing incident in RSA Archer. This action allows users to modify
-    various fields of an incident, including its summary, details, owner, status,
-    priority, category, and custom fields, based on the provided Content ID.
+    Updates an existing incident in RSA Archer with new details such as summary, status,
+    priority, owner, and custom fields.
 
 
     ### Flow Description
 
-    1. Initializes the RSA Archer client with the provided credentials.
+    1. Extracts configuration and action parameters.
 
-    2. Parses the provided custom fields JSON object.
+    2. Initializes the RSA Archer manager.
 
-    3. Sends a PUT request to the RSA Archer API to update the specified incident
-    with the new values.
+    3. Calls the RSA Archer API to update the incident specified by the Content ID.
 
-    4. Sends a GET request to retrieve the updated incident details.
+    4. Retrieves the updated incident details from RSA Archer.
 
-    5. Attaches the updated incident details to the action's JSON result.
+    5. Returns the updated incident details as a JSON result.
 
 
     ### Additional Notes
 
-    Custom fields must be provided as a valid JSON object. If a custom mapping file
-    is used, it can be fetched remotely if the 'Remote File' parameter is enabled.
+    Custom fields can be updated using a JSON object and a custom mapping file. If
+    'Remote File' is enabled, the mapping file can be fetched from a URL.
   ai_short_description: >-
-    Updates an existing incident in RSA Archer with new details, status, priority,
-    or custom fields.
+    Updates an existing incident in RSA Archer and returns the updated incident details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -579,15 +598,15 @@ Update Incident:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates an existing incident's fields (such as status, priority, owner, etc.)
+      Updates the details, status, priority, owner, or custom fields of an incident
       in RSA Archer.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a PUT request to the RSA Archer API to update an incident's
-      fields, mutating external data. It then makes a GET request to fetch the updated
-      incident details, fetching data. It does not interact with internal entities
-      or alerts.
+      The action mutates external data by updating an incident in RSA Archer via a
+      PUT request. It also fetches the updated incident details. It does not mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -639,8 +658,9 @@ Update Incident:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It operates solely
-      on the provided Content ID parameter.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on the provided
+      Content ID.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -656,9 +676,8 @@ Update Incident:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates an incident (ticket) in an external system (RSA Archer) by
-      modifying its status, priority, or other fields. This aligns with the 'Update
-      Ticket' category.
+      The action updates an incident in RSA Archer, which acts as an external ticketing/incident
+      management system. This aligns with the 'Update Ticket' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

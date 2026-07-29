@@ -2,35 +2,29 @@ Create Entity Insight From Enrichment:
   ai_description: >-
     ### General Description
 
-    Creates an entity insight by parsing a formatted message template and replacing
-    placeholders with values from the entity's additional properties. This action
-    is typically used after an enrichment action to surface specific data points directly
-    on the entity's insight tab.
+    Creates an entity insight based on a formatted message string that incorporates
+    data from the entity's additional properties (usually populated by a previous
+    enrichment action).
 
 
     ### Flow Description
 
-    1. Retrieves the `Message` template and `Triggered By` parameters.
+    1. Iterates through all target entities in the case.
 
-    2. Iterates through all target entities provided to the action.
+    2. Parses the provided message template, replacing placeholders with corresponding
+    values from the entity's `additional_properties`.
 
-    3. For each entity, parses the `Message` template and replaces placeholders with
-    corresponding values extracted from the entity's `additional_properties`.
-
-    4. If a valid message is generated, attaches an insight to the entity containing
-    the formatted text.
+    3. If a valid message is generated, attaches it as an insight to the entity within
+    the SecOps platform.
 
 
     ### Additional Notes
 
-    - Placeholders in the `Message` parameter should match the keys present in the
-    entity's `additional_properties` dictionary.
-
-    - The action does not make any external API calls; it solely operates on data
-    already present within the SecOps platform.
+    This action does not interact with external APIs. It relies on data already present
+    in the entity's additional properties.
   ai_short_description: >-
-    Creates an entity insight by formatting a message template with data extracted
-    from the entity's additional properties.
+    Creates an entity insight by formatting a provided message template with data
+    extracted from the entity's additional properties.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -41,12 +35,10 @@ Create Entity Insight From Enrichment:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Creates entity insights based on a formatted message template and entity properties.
+      Creates and attaches insights to entities within Google SecOps.
     reasoning: >-
-      The action does not fetch external data or mutate external systems. It mutates
-      internal data by creating insights on entities using `siemplify.add_entity_insight`.
-      It does not update the entities themselves, modify alert data, or create case
-      comments.
+      The action does not fetch data from or mutate data in external systems. It mutates
+      internal data by creating insights and attaching them to entities using `siemplify.add_entity_insight`.
   entity_usage:
     entity_types:
       address: true
@@ -98,9 +90,8 @@ Create Entity Insight From Enrichment:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` without filtering by `entity_type`
-      or any other specific attribute. Therefore, it applies to all supported entity
-      types.
+      The action iterates over `siemplify.target_entities` without applying any type-based
+      filtering, meaning it processes all available entity types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -116,10 +107,10 @@ Create Entity Insight From Enrichment:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action formats existing entity data into an insight within the SecOps platform.
-      It does not fetch new threat intelligence, mutate external systems, or interact
-      with alerts/tickets directly. Therefore, it does not match any of the predefined
-      outcome categories.
+      The action only creates internal insights based on existing entity properties.
+      It does not interact with external systems, fetch new threat intelligence, modify
+      alerts, or perform any containment/remediation actions, so it does not match
+      any of the specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -143,39 +134,44 @@ Create Entity Insight From Enrichment:
     For example: Hi {AD_name}, please review. |
 
     | Triggered By | String | No | What integration should be associated with the
-    insight. Default is 'Siemplify'. |
+    insight |
 Create Entity Insight From JSON:
   ai_description: >-
     ### General Description
 
-    Creates an entity insight by parsing a provided JSON string and matching it against
-    target entities. This action allows for dynamic generation of insights based on
-    structured data passed from previous steps in a playbook.
+    Creates an entity insight by parsing a provided JSON string and matching its contents
+    with target entities. The action extracts data from the JSON based on a specified
+    key path, formats a custom message using placeholders, and attaches the resulting
+    message as an insight to the corresponding entities.
 
 
     ### Flow Description
 
     1. Parses the provided JSON string from the action parameters.
 
-    2. Iterates through all target entities in the case.
+    2. Iterates through all target entities within the case.
 
-    3. For each entity, searches the JSON data using the specified `Identifier KeyPath`
-    to find a matching identifier.
+    3. For each entity, searches the JSON data for a matching identifier using the
+    provided `Identifier KeyPath`.
 
-    4. If a match is found, formats the provided `Message` string by replacing placeholders
-    with corresponding values from the JSON.
+    4. If a match is found, formats the `Message` string by replacing placeholders
+    with corresponding values from the matched JSON object.
 
-    5. Attaches the formatted message as an insight to the matched entity.
+    5. Attaches the formatted message as an insight to the entity using the specified
+    `Triggered By` integration name.
 
 
     ### Additional Notes
 
-    This is a utility action used to dynamically generate insights from structured
-    JSON data. It does not fetch data from external sources but relies on the data
-    provided in the `JSON` parameter.
+    - The action supports custom pipe functions within the message placeholders (e.g.,
+    `default`, `str`, `join`, `count`, `to_str`) to manipulate the JSON data before
+    inserting it into the message.
+
+    - Entities that do not have a matching identifier in the provided JSON will be
+    skipped without generating an insight.
   ai_short_description: >-
-    Creates an entity insight by parsing a provided JSON string, matching it against
-    target entities, and formatting a message with the JSON data.
+    Creates an entity insight by matching target entities with data from a provided
+    JSON string and formatting a custom message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -187,10 +183,9 @@ Create Entity Insight From JSON:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action parses a provided JSON string and creates an insight for matching
-      entities using `siemplify.add_entity_insight`. It does not fetch data from external
-      sources, mutate external or internal data, update entities, modify alerts, or
-      create case comments.
+      The action parses a provided JSON string and does not fetch data from external
+      sources. It does not mutate external data. It calls `siemplify.add_entity_insight`
+      to attach the formatted message to the entities, which creates insights.
   entity_usage:
     entity_types:
       address: true
@@ -233,7 +228,7 @@ Create Entity Insight From JSON:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: false
-    filters_by_identifier: true
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -242,9 +237,9 @@ Create Entity Insight From JSON:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` without filtering by entity
-      type, meaning it applies to all entity types. It matches the entities based
-      on their identifier against the parsed JSON data, so it filters by identifier.
+      The action iterates over `siemplify.target_entities` without applying any type-based
+      filtering, meaning it can process and attach insights to all supported entity
+      types. It does not filter the entities by any specific attributes before processing.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -260,9 +255,10 @@ Create Entity Insight From JSON:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      This is a utility action that creates an insight from a provided JSON string.
-      It does not interact with external systems to fetch threat intelligence, mutate
-      data, or perform any of the specific expected outcomes defined in the categories.
+      The action solely processes a provided JSON string to create entity insights
+      within the SOAR platform. It does not interact with external systems to fetch
+      threat intelligence, modify tickets, block indicators, or perform any other
+      operations that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -297,60 +293,58 @@ Create Entity Insight From JSON:
   ai_description: >-
     ### General Description
 
-    Creates entity insights by parsing and extracting specific fields from multiple
-    provided JSON strings. This action allows users to consolidate data from various
-    JSON sources into structured HTML tables and attach them as insights to the relevant
-    entities within the case.
+    The action creates an entity insight by parsing and extracting specific fields
+    from multiple provided JSON strings. It allows users to consolidate data from
+    various JSON sources into a single, formatted HTML table attached to the relevant
+    entities.
 
 
     ### Flow Description
 
-    1. Retrieves up to seven sets of Title, Fields, and JSON string parameters (as
-    defined in the action configuration).
+    1. Retrieves up to seven sets of Title, Fields, and JSON string parameters (though
+    the configuration defines up to five).
 
-    2. Iterates through all target entities in the case.
+    2. Parses the field definitions to determine the display names and JSON key paths,
+    using the specified placeholder separator.
 
-    3. For each entity, searches the provided JSON strings for a matching entity identifier.
+    3. Iterates through all target entities in the case.
 
-    4. If a match is found, extracts the specified fields based on the provided key
-    paths and placeholder separator.
+    4. For each entity, searches the provided JSON strings for data matching the entity's
+    identifier.
 
-    5. Formats the extracted data into an HTML table.
+    5. Extracts the specified values from the JSON data using the provided key paths.
 
-    6. Attaches the formatted table as an insight to the entity using the SecOps platform's
-    insight creation functionality.
+    6. Formats the extracted data into an HTML table and attaches it as an insight
+    to the respective entity.
 
 
     ### Additional Notes
 
-    - The action expects the provided JSON strings to contain a list of objects, where
-    each object has an `Entity` field matching the entity identifier and an `EntityResult`
-    field containing the data to be parsed (e.g., `[{"Entity": "1.1.1.1", "EntityResult":
-    {"key": "value"}}]`).
+    - The action expects the JSON data to contain an "Entity" field to match against
+    the target entity's identifier, and an "EntityResult" field containing the actual
+    data to be parsed.
 
-    - The `Fields` parameter should be formatted as a string of display names and
-    key paths separated by the `Placeholder Separator` (e.g., `Display Name:path.to.key,
-    Another Field:path.to.another.key`).
+    - If a field definition lacks a display name, it will not be included in the table
+    but will be appended as text.
   ai_short_description: >-
-    Creates entity insights by parsing and extracting specific fields from multiple
-    provided JSON strings, formatting the data into HTML tables, and attaching them
-    to the relevant entities.
+    Creates an entity insight by parsing and extracting specific fields from multiple
+    provided JSON strings.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: false
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Creates entity insights based on the parsed JSON data.
     reasoning: >-
-      The action does not fetch data from external sources (`fetches_data` is false).
-      It does not mutate external data (`can_mutate_external_data` is false) or internal
-      data (`can_mutate_internal_data` is false). It does not update entities (`can_update_entities`
-      is false). It creates insights by calling `siemplify.add_entity_insight` (`can_create_insight`
-      is true). It does not modify alert data or create case comments.
+      The action does not fetch data from external sources or mutate external data.
+      It mutates internal data by creating entity insights (`siemplify.add_entity_insight`)
+      based on the parsed JSON strings. It does not update entities, modify alert
+      data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -402,11 +396,9 @@ Create Entity Insight From JSON:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` without filtering by `entity_type`
-      or any other specific property. Therefore, it runs on all entity types. It does
-      not filter the entities it runs on by identifier, creation time, or any other
-      attribute, although it uses the entity identifier to match and extract data
-      from the provided JSON strings.
+      The action iterates over `siemplify.target_entities` without applying any filters
+      based on entity type or other properties. Therefore, it runs on all available
+      entity types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -422,10 +414,10 @@ Create Entity Insight From JSON:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action parses provided JSON strings to create entity insights. It does not
-      fetch data from external sources, mutate external systems, update alerts, or
-      perform any other operations that match the expected outcomes of the available
-      categories.
+      The action processes provided JSON strings to create entity insights within
+      the SecOps platform. It does not fetch external threat intelligence, mutate
+      external systems, or interact with alerts, tickets, or emails. Thus, it does
+      not match any of the specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -486,7 +478,7 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Checks connectivity to the Insights integration.
+    Checks connectivity for the Insights integration.
 
 
     ### Flow Description
@@ -498,10 +490,9 @@ Ping:
 
     ### Additional Notes
 
-    This action is typically used to verify that the integration is configured correctly
-    and can communicate with the platform.
+    This is a simple ping action used to verify the integration is functioning correctly.
   ai_short_description: >-
-    Checks connectivity to the Insights integration.
+    Checks connectivity for the Insights integration by returning a success message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -513,9 +504,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action simply returns a success message to indicate connectivity. It does
-      not fetch data, mutate external or internal data, update entities, create insights,
-      modify alerts, or create case comments.
+      The action does not fetch data, mutate external or internal data, update entities,
+      create insights, modify alert data, or create case comments. It only returns
+      a static success message.
   entity_usage:
     entity_types:
       address: false
@@ -567,8 +558,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It only performs a basic connectivity check.
+      The action does not process any entities or accept any entity-related parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -584,9 +574,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple ping/connectivity check. It does not enrich data, mutate
-      external systems, update alerts, or perform any operations that match the defined
-      outcome categories.
+      The action simply checks connectivity and returns a success message. It does
+      not match any of the specific outcome categories such as enriching IOCs, updating
+      alerts, or mutating external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

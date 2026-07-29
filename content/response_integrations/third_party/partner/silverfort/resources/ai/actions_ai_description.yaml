@@ -9,19 +9,20 @@ Change Policy State:
 
     ### Flow Description
 
-    1. Extracts the `Policy ID` and `Enable Policy` parameters from the action configuration.
+    1. Extracts the `Policy ID` and the desired state (`Enable Policy`) from the action
+    parameters.
 
-    2. Initiates a POST request to the Silverfort API (`/v1/public/changePolicyState`)
-    to update the state of the specified policy.
+    2. Initializes the Silverfort Policy API client.
 
-    3. Returns a success message and populates the JSON results with the policy ID,
-    the requested state, and the final status.
+    3. Makes a POST request to the `/v1/public/changePolicyState` endpoint in the
+    Silverfort API to update the policy's state.
+
+    4. Returns a success message and the updated status in the JSON results.
 
 
     ### Additional Notes
 
-    This action requires the Policies API credentials to be configured in the integration
-    settings.
+    Ensure that the provided Policy ID is valid and exists within the Silverfort environment.
   ai_short_description: >-
     Enables or disables an authentication policy in Silverfort.
   capabilities:
@@ -37,8 +38,9 @@ Change Policy State:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Silverfort API to change the state of
-      a policy, which mutates external data. It does not fetch data, mutate internal
-      data, update entities, create insights, modify alert data, or create case comments.
+      a policy, which mutates external data. It does not fetch contextual data, mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -90,8 +92,8 @@ Change Policy State:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It operates solely
-      based on the provided Policy ID parameter.
+      The action does not process any target entities or accept any entity-related
+      input parameters. It operates solely on a Policy ID provided as a parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -107,9 +109,9 @@ Change Policy State:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies the state of a policy in Silverfort. It does not match any
-      of the specific expected outcomes such as enriching IOCs, updating alerts, creating
-      tickets, or modifying identities.
+      The action modifies the state of an authentication policy in Silverfort. This
+      does not align with any of the predefined outcome categories such as enriching
+      IOCs, updating alerts, or containing hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -138,8 +140,8 @@ Get Entity Risk:
     ### General Description
 
     Retrieves risk information for a specific user or resource from Silverfort. This
-    action fetches the current risk score, severity, and risk factors associated with
-    the provided identity or asset, returning the data as a JSON result.
+    action fetches the current risk score, severity, and associated risk factors for
+    the provided entity.
 
 
     ### Flow Description
@@ -148,16 +150,15 @@ Get Entity Risk:
 
     2. Validates that at least one of the parameters is provided.
 
-    3. Makes an HTTP GET request to the Silverfort Risk API to fetch the entity's
-    risk details.
+    3. Makes a GET request to the Silverfort Risk API to fetch the entity's risk data.
 
     4. Returns the retrieved risk information as a JSON result.
 
 
     ### Additional Notes
 
-    This action does not operate on case entities directly; it relies entirely on
-    the provided action parameters to identify the target user or resource.
+    Either the `User Principal Name` or `Resource Name` must be provided for the action
+    to execute successfully.
   ai_short_description: >-
     Retrieves risk information, including risk score, severity, and risk factors,
     for a specific user or resource from Silverfort.
@@ -172,10 +173,9 @@ Get Entity Risk:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the Silverfort API to fetch risk data
-      for a user or resource (fetches_data=true). It does not perform any state-changing
-      operations on external systems (can_mutate_external_data=false). It also does
-      not update internal entities, create insights, modify alerts, or add case comments.
+      The action makes a GET request to the Silverfort API to fetch entity risk data.
+      It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -196,7 +196,7 @@ Get Entity Risk:
       event: false
       file_hash: false
       file_name: false
-      generic: false
+      generic: true
       host_name: false
       ip_set: false
       mac_address: false
@@ -212,7 +212,7 @@ Get Entity Risk:
       threat_signature: false
       url: false
       usb: false
-      user: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -227,10 +227,9 @@ Get Entity Risk:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or interact with `siemplify.target_entities`.
-      It relies exclusively on the explicitly provided action parameters ('User Principal
-      Name' and 'Resource Name') to fetch data. Therefore, all entity types and filter
-      flags are false.
+      The action accepts 'User Principal Name' and 'Resource Name' as input parameters,
+      which represent User and Generic/Host entities respectively. It does not iterate
+      over target_entities or filter by entity attributes.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -246,11 +245,9 @@ Get Entity Risk:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches risk information (score, severity, factors) for a user or
-      resource (asset) from Silverfort. This aligns with the 'Enrich Asset' expected
-      outcome, as it returns contextual metadata and risk posture for a user or resource.
-      It does not mutate external data, so it does not match categories like Update
-      Identity or Disable Identity.
+      The action fetches risk information (score, severity, risk factors) for a user
+      or resource from Silverfort. This aligns with the 'Enrich Asset' expected outcome,
+      which involves returning contextual metadata for a user or resource.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -275,6 +272,11 @@ Get Entity Risk:
 
     | Resource Name | String | No | The resource name for non-user entities. Either
     this or User Principal Name must be provided. |
+
+
+    **Parameter Notes:**
+
+    Either 'User Principal Name' or 'Resource Name' must be configured.
 Get Policy:
   ai_description: >-
     ### General Description
@@ -286,11 +288,11 @@ Get Policy:
 
     ### Flow Description
 
-    1. Extracts the `Policy ID` parameter provided by the user.
+    1. Extracts the `Policy ID` parameter from the action configuration.
 
-    2. Initializes the Silverfort Policy API client.
+    2. Initializes the Silverfort Policy API client with the provided credentials.
 
-    3. Makes an HTTP GET request to the Silverfort API (`/v2/public/policies/{policy_id}`)
+    3. Makes a GET request to the Silverfort API (`/v2/public/policies/{policy_id}`)
     to fetch the policy details.
 
     4. Parses the response and sets the policy configuration as the action's JSON
@@ -299,7 +301,8 @@ Get Policy:
 
     ### Additional Notes
 
-    None.
+    - Ensure that the Policies API credentials are appropriately configured in the
+    integration settings to use this action.
   ai_short_description: >-
     Retrieves detailed information about a specific authentication policy from Silverfort
     by its ID.
@@ -314,9 +317,9 @@ Get Policy:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the Silverfort API to fetch policy details
-      (fetches_data=true). It does not perform any state-changing operations on external
-      systems, nor does it mutate internal data, update entities, or create insights.
+      The action fetches policy data from the Silverfort API via a GET request. It
+      does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -368,8 +371,8 @@ Get Policy:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided `Policy ID` parameter.
+      The action does not iterate over target entities and does not accept any entity-related
+      input parameters. It solely operates on a provided Policy ID.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -385,9 +388,9 @@ Get Policy:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches policy configuration details from Silverfort. This does not
-      match any of the predefined outcome categories such as enriching IOCs/assets,
-      updating alerts, or modifying external state.
+      The action retrieves configuration details for a specific authentication policy
+      from Silverfort. This does not align with any of the predefined outcome categories
+      such as enriching IOCs/assets, updating alerts, or modifying external state.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -413,27 +416,29 @@ Get Service Account:
     ### General Description
 
     Retrieves detailed information about a specific service account from Silverfort
-    using its GUID. This action fetches attributes such as risk level, predictability,
-    and protection status.
+    using its GUID. This action returns the service account's attributes, including
+    risk, predictability, protection status, and other relevant metadata.
 
 
     ### Flow Description
 
-    1. Extracts the `Service Account GUID` parameter from the action configuration.
+    1. Extracts the `Service Account GUID` from the action parameters.
 
-    2. Initiates an HTTP GET request to the Silverfort Service Accounts API (`/v1/public/serviceAccounts/{guid}`)
-    to fetch the account details.
+    2. Authenticates and initializes the Silverfort Service Account API client.
 
-    3. Parses the response and returns the service account attributes as a JSON result.
+    3. Makes a GET request to the Silverfort API (`/v1/public/serviceAccounts/{guid}`)
+    to fetch the service account details.
+
+    4. Returns the retrieved service account information as a JSON result and outputs
+    a success message.
 
 
     ### Additional Notes
 
-    This action does not operate on SOAR entities; it relies entirely on the provided
-    GUID parameter to fetch the relevant data.
+    None.
   ai_short_description: >-
-    Retrieves detailed attributes and status information for a specific service account
-    from Silverfort using its GUID.
+    Retrieves detailed information about a specific service account from Silverfort
+    using its GUID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -446,8 +451,9 @@ Get Service Account:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Silverfort API to fetch service account
-      details based on a provided GUID. It does not mutate external data, nor does
-      it update internal SOAR entities, alerts, or case comments.
+      data (fetches_data=true). It does not perform any state-changing operations
+      on external systems (can_mutate_external_data=false) and does not update internal
+      SOAR entities, insights, or case data (can_mutate_internal_data=false).
   entity_usage:
     entity_types:
       address: false
@@ -499,9 +505,9 @@ Get Service Account:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies solely on the explicitly provided `Service Account GUID`
-      parameter. Therefore, all entity type and filter flags must be false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters that represent standard SOAR entities. It operates solely
+      on a provided Service Account GUID string.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -512,15 +518,15 @@ Get Service Account:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: true
+    enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches contextual metadata about a specific service account (an
-      internal resource/identity) from Silverfort. This aligns with the 'Enrich Asset'
-      category, as it returns attributes like risk, predictability, and protection
-      status for a resource. It does not modify alerts, tickets, blocklists, or identities.
+      The action fetches information about a service account from Silverfort based
+      on a GUID. It does not enrich SOAR entities, mutate external state, or interact
+      with alerts/cases. Therefore, it does not match any of the specified outcome
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -546,30 +552,27 @@ List Policies:
   ai_description: >-
     ### General Description
 
-    This action retrieves a list of all authentication policies from Silverfort, returning
-    their configurations. It allows optional field filtering to customize the returned
-    data.
+    Lists all authentication policies from Silverfort, optionally filtering the returned
+    fields.
 
 
     ### Flow Description
 
-    1. Extracts the optional `Fields` parameter.
+    1. Extracts the 'Fields' parameter.
 
-    2. Validates the provided fields against the allowed policy index fields, ignoring
-    any invalid ones.
+    2. Validates the provided fields against the allowed policy index fields.
 
-    3. Makes a POST request to the Silverfort API to fetch the list of policies.
+    3. Makes an API call to Silverfort to retrieve the list of policies.
 
-    4. Returns the retrieved policies as a JSON result and outputs a success message
-    with the count of policies.
+    4. Returns the policies as a JSON result and outputs a success message with the
+    count of retrieved policies.
 
 
     ### Additional Notes
 
-    If no fields are specified, all available fields are returned.
+    If invalid fields are provided, they are ignored and only valid fields are used.
   ai_short_description: >-
-    Retrieves a list of all authentication policies from Silverfort with optional
-    field filtering.
+    Lists all authentication policies from Silverfort with optional field filtering.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -581,9 +584,9 @@ List Policies:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a POST request to the Silverfort API to list
-      policies. It does not mutate external data, mutate internal data, update entities,
-      create insights, modify alert data, or create case comments.
+      The action fetches data (a list of policies) from Silverfort. It does not mutate
+      external data, mutate internal data, update entities, create insights, modify
+      alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -635,8 +638,8 @@ List Policies:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It retrieves a global list of policies
-      from the Silverfort platform without referencing specific target entities.
+      The action does not iterate over target entities and does not accept any entity-related
+      parameters. It operates independently of entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -652,9 +655,9 @@ List Policies:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of policies from Silverfort. This does not match
-      any of the predefined outcome categories such as enriching IOCs/assets, updating
-      alerts, or modifying identities.
+      The action retrieves a list of authentication policies from Silverfort. This
+      does not match any of the predefined outcome categories such as enriching IOCs/assets,
+      updating alerts, or mutating external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -682,27 +685,31 @@ List Service Accounts:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of service accounts from Silverfort with optional pagination
-    and field filtering.
+    Retrieves a list of service accounts from Silverfort. This action allows for pagination
+    and specific field filtering to customize the returned data.
 
 
     ### Flow Description
 
-    1. Extracts the `Page Size`, `Page Number`, and `Fields` parameters.
+    1. Extracts the `Page Size`, `Page Number`, and `Fields` parameters from the action
+    configuration.
 
-    2. Validates the requested fields against the allowed list of service account
-    index fields.
+    2. Parses and validates the requested fields against the allowed Silverfort service
+    account index fields, ignoring any invalid fields.
 
-    3. Makes a POST request to the Silverfort API to list the service accounts based
-    on the provided pagination and field filters.
+    3. Makes a POST request to the Silverfort API (`/v1/public/serviceAccounts/index`)
+    to fetch the list of service accounts based on the provided pagination and field
+    criteria.
 
-    4. Returns the retrieved service accounts as a JSON result.
+    4. Returns the retrieved service accounts as a JSON result and outputs a success
+    message with the count of retrieved accounts.
 
 
     ### Additional Notes
 
-    If invalid fields are specified, they will be ignored and only valid fields will
-    be used.
+    If invalid fields are specified in the `Fields` parameter, they will be ignored
+    and a warning will be logged, but the action will still proceed with the valid
+    fields.
   ai_short_description: >-
     Retrieves a list of service accounts from Silverfort with optional pagination
     and field filtering.
@@ -717,9 +724,9 @@ List Service Accounts:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making an API call to Silverfort to list service
-      accounts. It does not mutate external data, mutate internal data, update entities,
-      create insights, modify alert data, or create case comments.
+      The action fetches data (a list of service accounts) from the Silverfort API.
+      It does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -771,8 +778,9 @@ List Service Accounts:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any target entities. It simply lists
-      service accounts from the external system.
+      The action does not iterate over target entities and does not accept any entity-related
+      input parameters. It simply retrieves a list of service accounts from the external
+      system.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -789,8 +797,9 @@ List Service Accounts:
     get_alert_information: false
     reasoning: >-
       The action retrieves a list of service accounts from Silverfort. It does not
-      enrich specific IOCs or assets, update alerts, or perform any other operations
-      that match the predefined outcome categories.
+      enrich specific IOCs or assets, update alerts, create tickets, or perform any
+      containment/remediation actions. Therefore, it does not match any of the predefined
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -823,32 +832,36 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Silverfort API. This action validates that the External
-    API Key is working and tests connectivity for each configured API (Risk, Service
-    Accounts, Policies) using their respective credentials.
+    The Ping action is used to test connectivity to the Silverfort API. It validates
+    that the External API Key is working and tests connectivity for each configured
+    API (Risk, Service Accounts, Policies) using their respective credentials.
 
 
     ### Flow Description
 
-    1. Retrieves the configured integration parameters and identifies which API credentials
-    (Risk, Service Accounts, Policies) are provided.
+    1. Retrieves the configured API credentials from the integration settings.
 
-    2. Iterates through each configured API type.
+    2. Determines which APIs (Risk, Service Accounts, Policies) have been configured.
 
-    3. Executes a lightweight API request (e.g., `get_entity_risk`, `list_service_accounts`,
-    or `get_rules_names_and_ids`) to verify authentication and connectivity.
+    3. Iterates through the configured APIs and calls their respective `test_connectivity`
+    endpoints (e.g., making a GET request to `/v1/public/getEntityRisk` for Risk,
+    a POST request to `/v1/public/serviceAccounts/index` for Service Accounts, and
+    a GET request to `/v1/public/getRulesNamesAndIds` for Policies).
 
-    4. Aggregates the results and returns a success, partial success, or failure message
-    based on which APIs successfully connected.
+    4. Collects the results of the connectivity tests.
+
+    5. Returns a success message if connectivity is established for the configured
+    APIs, or a partial success/error message detailing which APIs failed to connect.
 
 
     ### Additional Notes
 
-    This action does not require any input parameters or entities to run. It relies
-    entirely on the integration-level configuration.
+    This action does not require any action-specific parameters as it relies entirely
+    on the integration-level configuration. It is primarily used during setup or troubleshooting
+    to ensure the integration can successfully communicate with the Silverfort platform.
   ai_short_description: >-
-    Tests connectivity to the Silverfort API by validating the External API Key and
-    testing access to the Risk, Service Accounts, and Policies APIs.
+    Tests connectivity to the Silverfort API by validating the configured credentials
+    for the Risk, Service Accounts, and Policies APIs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -860,10 +873,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only makes test requests to the Silverfort API to verify connectivity.
-      It does not fetch contextual data for alerts/entities, mutate external data,
-      mutate internal data, update entities, create insights, modify alert data, or
-      create case comments.
+      The action makes HTTP requests to test connectivity but does not fetch contextual
+      data for alerts/entities, nor does it mutate any external or internal data,
+      update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -915,8 +927,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It only tests API
-      connectivity using integration-level credentials.
+      The action does not process or iterate over any entities. It solely relies on
+      integration configuration parameters to test API connectivity.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -932,9 +944,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple ping/connectivity test. It does not enrich IOCs/assets,
-      update alerts, create tickets, block/allow IOCs, disable/enable identities,
-      contain hosts, search events, or perform any other specific outcome category.
+      The action is a simple connectivity test (ping) to verify API credentials. It
+      does not enrich IOCs/assets, update alerts, mutate external systems, or perform
+      any operations that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -954,31 +966,32 @@ Update Entity Risk:
   ai_description: >-
     ### General Description
 
-    Updates the risk information for a specific user in Silverfort. This action allows
-    setting a specific risk level (such as activity risk, malware risk, or data breach
-    risk) for a user based on external threat intelligence or security events.
+    Updates risk information for a user in Silverfort. This action allows you to set
+    a specific risk level for a user based on external threat intelligence or security
+    events.
 
 
     ### Flow Description
 
-    1. Extracts the user principal name, risk type, severity, validity period, and
-    description from the action parameters.
+    1. Extracts the provided parameters including the User Principal Name, Risk Type,
+    Severity, Valid For Hours, and Description.
 
-    2. Validates the provided parameters to ensure they match supported Silverfort
-    values.
+    2. Validates the provided risk type, severity, and validity duration.
 
-    3. Makes a POST request to the Silverfort API (`/v1/public/updateEntityRisk`)
-    to update the entity risk for the specified user.
+    3. Initializes the Silverfort Risk API client.
 
-    4. Returns a JSON result containing the updated risk details and status.
+    4. Makes a POST request to the Silverfort API to update the entity risk for the
+    specified user.
+
+    5. Returns a JSON result containing the updated risk details and a success message.
 
 
     ### Additional Notes
 
-    This action requires the Risk API credentials to be configured in the integration
-    settings.
+    None.
   ai_short_description: >-
-    Updates the risk information and severity level for a specific user in Silverfort.
+    Updates risk information for a user in Silverfort based on external threat intelligence
+    or security events.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -987,12 +1000,327 @@ Update Entity Risk:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the risk level and details for a specific user in Silverfort.
+      Updates the risk level and severity for a specific user principal name in Silverfort.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Silverfort API to update the risk level
-      of a user, which mutates external data. It does not fetch contextual data, update
+      The action makes a POST request to the Silverfort API to update the risk information
+      for a user, which mutates external data. It does not fetch data for enrichment,
+      nor does it mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      a 'User Principal Name' parameter, which represents a User entity. Therefore,
+      the 'user' entity type flag is set to true. Since it does not process the target
+      entities list, all filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the risk level and severity of a user identity in Silverfort.
+      This aligns with modifying account metadata and security posture, which falls
+      under the 'Update Identity' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | User Principal Name | String | Yes | The user principal name (e.g., user@domain.com)
+    to update risk for. |
+
+    | Risk Type | Dropdown | Yes | The type of risk to update. |
+
+    | Severity | Dropdown | Yes | The severity level of the risk. |
+
+    | Valid For Hours | String | Yes | How long (in hours) the risk indicator should
+    be valid. |
+
+    | Description | String | Yes | Description of the risk indicator. |
+Update Policy:
+  ai_description: >-
+    ### General Description
+
+    Updates an authentication policy in Silverfort. This action allows modifying the
+    policy's enabled state and adding or removing users, groups, sources, and destinations.
+
+
+    ### Flow Description
+
+    1. Extracts the Policy ID and other optional configuration parameters (Enabled
+    state, users/groups, sources, destinations).
+
+    2. Parses the provided JSON strings into appropriate data models.
+
+    3. Makes a PATCH request to the Silverfort API to update the specified policy.
+
+    4. Returns a success message and the updated policy status in the JSON results.
+
+
+    ### Additional Notes
+
+    The parameters for adding/removing users, groups, sources, and destinations must
+    be provided as valid JSON arrays of objects.
+  ai_short_description: >-
+    Updates an authentication policy in Silverfort by modifying its enabled state
+    or its associated users, groups, sources, and destinations.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates an authentication policy in Silverfort, modifying its enabled state
+      or adding/removing users, groups, sources, and destinations.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a PATCH request to the Silverfort API to update an authentication
+      policy, which mutates external data (can_mutate_external_data=true). It does
+      not fetch contextual data for enrichment, nor does it mutate internal SOAR data,
+      update entities, create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates strictly on Silverfort
+      policy IDs and JSON configuration strings. Therefore, it does not run on entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates an authentication policy in Silverfort. This does not match
+      any of the predefined outcome categories such as Enrich IOC, Update Alert, Disable
+      Identity, or Contain Host, as it manages policy configurations rather than specific
+      alerts, indicators, or individual identity states.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Policy ID | String | Yes | The ID of the policy to update. |
+
+    | Enabled | Boolean | No | Enable or disable the policy. |
+
+    | Add Users and Groups | String | No | JSON array of users/groups to add to the
+    policy. Format: `[{"identifierType": "upn", "identifier": "user@domain.com", "displayName":
+    "User Name", "domain": "domain.com"}]` |
+
+    | Remove Users and Groups | String | No | JSON array of users/groups to remove
+    from the policy. Format: `[{"identifierType": "upn", "identifier": "user@domain.com",
+    "displayName": "User Name", "domain": "domain.com"}]` |
+
+    | Add Sources | String | No | JSON array of sources to add to the policy. Format:
+    `[{"identifierType": "ip", "identifier": "10.0.0.1", "displayName": "Server"}]`
+    |
+
+    | Remove Sources | String | No | JSON array of sources to remove from the policy.
+    Format: `[{"identifierType": "ip", "identifier": "10.0.0.1", "displayName": "Server"}]`
+    |
+
+    | Add Destinations | String | No | JSON array of destinations to add to the policy.
+    Format: `[{"identifierType": "hostname", "identifier": "server.domain.com", "displayName":
+    "Server", "domain": "domain.com", "services": ["rdp"]}]` |
+
+    | Remove Destinations | String | No | JSON array of destinations to remove from
+    the policy. Format: `[{"identifierType": "hostname", "identifier": "server.domain.com",
+    "displayName": "Server", "domain": "domain.com", "services": ["rdp"]}]` |
+Update SA Policy:
+  ai_description: >-
+    ### General Description
+
+    Updates the protection policy for a service account in Silverfort. This action
+    allows configuring various security controls such as blocking, SIEM logging, risk
+    level thresholds, allowed protocols, and specific source/destination allowlists.
+
+
+    ### Flow Description
+
+    1. Extracts the Service Account GUID and policy configuration parameters from
+    the action inputs.
+
+    2. Validates the provided risk level and protocols against supported values.
+
+    3. Parses the JSON strings for adding or removing allowed sources and destinations.
+
+    4. Makes a POST request to the Silverfort API to update the service account policy.
+
+    5. Returns a success message and the updated status in the JSON results.
+
+
+    ### Additional Notes
+
+    - The allowed sources and destinations must be provided as valid JSON arrays of
+    objects containing `key` and `key_type` fields.
+
+    - If `Allow All Sources` or `Allow All Destinations` is set to true, the specific
+    allowlists for those respective endpoints will be ignored by the policy.
+  ai_short_description: >-
+    Updates the protection policy for a specific service account in Silverfort, configuring
+    settings such as blocking, SIEM logging, risk levels, and allowed endpoints.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the protection policy for a service account in Silverfort.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Silverfort API to update a service account
+      policy, mutating external data. It does not fetch data for enrichment, update
       internal entities, or create insights.
   entity_usage:
     entity_types:
@@ -1045,10 +1373,9 @@ Update Entity Risk:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers from the SOAR platform. It relies entirely on the 'User Principal
-      Name' parameter provided in the action configuration. Therefore, it does not
-      run on entities.
+      The action does not iterate over target entities or accept any entity-representing
+      parameters. It operates solely on a Service Account GUID provided as a string
+      parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1064,317 +1391,9 @@ Update Entity Risk:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the risk score and severity for a user identity in Silverfort.
-      This aligns with the 'Update Identity' category, as it modifies the account's
-      security metadata and posture within the external system.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: true
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | User Principal Name | String | Yes | The user principal name (e.g., user@domain.com)
-    to update risk for. |
-
-    | Risk Type | DropDown | Yes | The type of risk to update. |
-
-    | Severity | DropDown | Yes | The severity level of the risk. |
-
-    | Valid For Hours | String | Yes | How long (in hours) the risk indicator should
-    be valid. |
-
-    | Description | String | Yes | Description of the risk indicator. |
-Update Policy:
-  ai_description: >-
-    ### General Description
-
-    Updates an authentication policy in Silverfort. This action allows modifying the
-    policy's enabled state and adding or removing users, groups, sources, and destinations.
-
-
-    ### Flow Description
-
-    1. Extracts the policy ID and other optional parameters (enabled state, users/groups,
-    sources, destinations).
-
-    2. Parses the provided JSON strings for identifiers and destinations.
-
-    3. Makes a PATCH request to the Silverfort API to update the specified policy.
-
-    4. Returns a JSON result containing the policy ID and update status.
-
-
-    ### Additional Notes
-
-    The parameters for adding/removing users, groups, sources, and destinations must
-    be provided as valid JSON arrays of objects according to the specified formats.
-  ai_short_description: >-
-    Updates an authentication policy in Silverfort, modifying its enabled state or
-    adding/removing users, groups, sources, and destinations.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Updates an authentication policy in Silverfort, modifying its enabled state
-      or adding/removing users, groups, sources, and destinations.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a PATCH request to the Silverfort API to update an authentication
-      policy, which mutates external data. It does not fetch data for enrichment,
-      nor does it update internal entities, create insights, or modify alert data.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      operates solely based on the provided input parameters.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action updates an authentication policy in Silverfort. This does not directly
-      match any of the predefined outcome categories such as updating an identity,
-      blocking an IOC, or enriching an asset.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Policy ID | String | Yes | The ID of the policy to update. |
-
-    | Enabled | Boolean | No | Enable or disable the policy. |
-
-    | Add Users and Groups | String | No | JSON array of users/groups to add to the
-    policy. Format: `[{"identifierType": "upn", "identifier": "user@domain.com", "displayName":
-    "User Name", "domain": "domain.com"}]` |
-
-    | Remove Users and Groups | String | No | JSON array of users/groups to remove
-    from the policy. Format: `[{"identifierType": "upn", "identifier": "user@domain.com",
-    "displayName": "User Name", "domain": "domain.com"}]` |
-
-    | Add Sources | String | No | JSON array of sources to add to the policy. Format:
-    `[{"identifierType": "ip", "identifier": "10.0.0.1", "displayName": "Server"}]`
-    |
-
-    | Remove Sources | String | No | JSON array of sources to remove from the policy.
-    Format: `[{"identifierType": "ip", "identifier": "10.0.0.1", "displayName": "Server"}]`
-    |
-
-    | Add Destinations | String | No | JSON array of destinations to add to the policy.
-    Format: `[{"identifierType": "hostname", "identifier": "server.domain.com", "displayName":
-    "Server", "domain": "domain.com", "services": ["rdp"]}]` |
-
-    | Remove Destinations | String | No | JSON array of destinations to remove from
-    the policy. Format: `[{"identifierType": "hostname", "identifier": "server.domain.com",
-    "displayName": "Server", "domain": "domain.com", "services": ["rdp"]}]` |
-Update SA Policy:
-  ai_description: >-
-    ### General Description
-
-    Updates the protection policy for a specific service account in Silverfort. This
-    action allows configuring various policy settings such as blocking, SIEM logging,
-    risk level thresholds, allowed protocols, and specific allowed sources or destinations.
-
-
-    ### Flow Description
-
-    1. Extracts the Service Account GUID and policy configuration parameters (e.g.,
-    block, send to SIEM, risk level, allowed sources/destinations).
-
-    2. Validates the provided risk level, protocols, and endpoint JSON structures.
-
-    3. Makes a POST request to the Silverfort API to update the service account policy.
-
-    4. Returns a success message and the updated status in the JSON results.
-
-
-    ### Additional Notes
-
-    The action requires the Service Account GUID. Endpoints for allowed sources and
-    destinations must be provided as valid JSON arrays containing 'key' and 'key_type'
-    fields.
-  ai_short_description: >-
-    Updates the protection policy for a specific service account in Silverfort, allowing
-    configuration of blocking, SIEM logging, risk levels, and allowed sources or destinations.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Updates the protection policy for a specific service account in Silverfort.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a POST request to the Silverfort API to update a service account
-      policy, which mutates external data. It does not fetch contextual data for enrichment,
-      nor does it mutate internal SOAR data, update entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers. It operates based on the explicitly provided 'Service Account GUID'
-      parameter. Therefore, it does not run on entities and all entity type flags
-      are false.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action updates the protection policy for a service account in Silverfort,
-      which modifies the account's permissions and access controls. This aligns with
-      the 'Update Identity' expected outcome. It does not match other categories as
-      it does not enrich IOCs, update alerts, or manage tickets.
+      The action updates the protection policy of a service account in Silverfort,
+      which modifies its permissions and security controls (e.g., allowed sources,
+      destinations, and protocols). This aligns with the 'Update Identity' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1403,7 +1422,7 @@ Update SA Policy:
 
     | Send to SIEM | Boolean | No | Enable or disable SIEM logging. |
 
-    | Risk Level | Dropdown | No | Risk level threshold for the policy. |
+    | Risk Level | String | No | Risk level threshold for the policy. |
 
     | Allow All Sources | Boolean | No | Allow all sources (if true, ignores specific
     allowed sources list). |

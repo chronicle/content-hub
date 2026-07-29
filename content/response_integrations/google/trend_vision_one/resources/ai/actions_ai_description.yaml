@@ -2,36 +2,36 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches Hostname and IP Address entities, as well as provided Agent UUIDs, using
-    endpoint information from Trend Vision One. This action retrieves contextual metadata
-    about the endpoints and updates the entities within the SecOps platform.
+    Enriches Hostname and IP Address entities using information from Trend Vision
+    One. This action retrieves endpoint details such as OS description, login accounts,
+    and installed products to provide additional context for the targeted assets.
 
 
     ### Flow Description
 
-    1. Initializes the Trend Vision One manager and tests connectivity.
+    1. Extracts the provided `Agent UUID` parameter and filters the target entities
+    for supported types (Hostname and IP Address).
 
-    2. Filters the target entities to include only Hostname and IP Address types.
+    2. Iterates through the suitable entities and makes a GET request to the Trend
+    Vision One API to search for the corresponding endpoint.
 
-    3. Iterates through the filtered entities and queries Trend Vision One for endpoint
-    details using the entity's original identifier (IP or Hostname).
+    3. If an endpoint is found, it extracts the endpoint details, updates the entity's
+    additional properties, and marks the entity as enriched.
 
-    4. If an endpoint is found, the action enriches the entity's additional properties,
-    marks it as enriched, and attaches an entity table with the endpoint data.
+    4. Processes any provided Agent UUIDs by searching for them in the API and retrieving
+    their endpoint details.
 
-    5. Processes any provided Agent UUIDs by querying Trend Vision One and appending
-    the successful results.
-
-    6. Updates the successfully enriched entities in the SecOps platform and attaches
-    the raw JSON results to the action.
+    5. Updates the enriched entities in the Google SecOps platform and attaches the
+    results as JSON and entity tables.
 
 
     ### Additional Notes
 
-    None.
+    The action requires valid API credentials and network access to the Trend Vision
+    One instance. Entities that cannot be found in Trend Vision One will be skipped.
   ai_short_description: >-
-    Enriches Hostname and IP Address entities, along with optional Agent UUIDs, by
-    retrieving endpoint details from Trend Vision One.
+    Enriches Hostname and IP Address entities by retrieving endpoint details from
+    Trend Vision One.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -43,9 +43,10 @@ Enrich Entities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to Trend Vision One API to fetch endpoint data.
-      It does not mutate external data but updates internal entities with the fetched
-      enrichment data.
+      The action fetches data by making a GET request to the Trend Vision One API
+      to search for endpoints. It does not mutate external data. It updates internal
+      entities with the fetched enrichment data using `siemplify.update_entities`.
+      It does not create insights or case comments.
   entity_usage:
     entity_types:
       address: true
@@ -98,8 +99,9 @@ Enrich Entities:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES` (which includes ADDRESS and HOSTNAME). Therefore,
-      it targets ADDRESS and HOSTNAME entities, filtering strictly by entity_type.
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities,
+      filtering strictly by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -111,14 +113,14 @@ Enrich Entities:
     download_file: false
     enable_identity: false
     enrich_asset: true
-    enrich_ioc: true
+    enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches endpoint data from Trend Vision One for IP addresses and
-      Hostnames. This matches the 'Enrich IOC' expected outcome for IPs and the 'Enrich
-      Asset' expected outcome for Hostnames and Agent UUIDs. It does not mutate data
-      on external systems.
+      The action fetches endpoint details (OS, login account, installed products)
+      for IP addresses and hostnames from Trend Vision One. This matches the 'Enrich
+      Asset' expected outcome as it returns contextual metadata for a resource. It
+      does not return threat intelligence, so it is not 'Enrich IOC'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,36 +146,32 @@ Execute Custom Script:
   ai_description: >-
     ### General Description
 
-    Executes a custom script on specified endpoints in Trend Vision One. This action
-    targets endpoints identified by Hostname or IP Address entities, as well as explicitly
-    provided Agent UUIDs, and initiates the execution of a predefined script on them.
+    Executes a custom script on specified endpoints in Trend Vision One. The action
+    targets Hostname and IP Address entities, as well as explicitly provided Agent
+    UUIDs, to run predefined scripts and retrieve their execution status.
 
 
     ### Flow Description
 
-    1. Extracts the script name, script parameters, and agent UUIDs from the action
-    configuration.
+    1. Iterates over target entities (Hostname, IP Address) and searches for the corresponding
+    endpoint in Trend Vision One using the `search_endpoint` API.
 
-    2. Iterates over the provided Hostname and IP Address entities, querying Trend
-    Vision One to find their corresponding endpoint GUIDs.
+    2. For each found endpoint and any provided Agent UUIDs, initiates the execution
+    of the specified custom script using the `run_script` API.
 
-    3. Initiates the execution of the specified script on the identified endpoints
-    and any explicitly provided agent UUIDs via a POST request to the Trend Vision
-    One API.
+    3. Asynchronously monitors the execution status of the script tasks using the
+    `get_task` API.
 
-    4. Monitors the execution tasks asynchronously, periodically checking their status
-    until completion or timeout.
-
-    5. Returns the execution results, including task IDs and statuses, as a JSON object.
+    4. Returns the execution results and task details as JSON.
 
 
     ### Additional Notes
 
     This is an asynchronous action. Ensure the script timeout value in the Chronicle
-    SOAR IDE is adjusted as needed to accommodate long-running scripts.
+    SOAR IDE is adjusted as needed to allow the script execution to complete.
   ai_short_description: >-
-    Executes a custom script on specified endpoints (identified by Hostname, IP Address,
-    or Agent UUID) within Trend Vision One and returns the execution status.
+    Executes a custom script on specified endpoints (via Hostname, IP Address, or
+    Agent UUID) in Trend Vision One and asynchronously retrieves the execution results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -182,13 +180,14 @@ Execute Custom Script:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes a custom script on the target endpoint in Trend Vision One.
-    fetches_data: false
+      Executes a custom script on the specified endpoints in Trend Vision One.
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Trend Vision One API to run a script
-      on an endpoint, which mutates external data. It does not fetch contextual enrichment
-      data, update internal entities, or create insights.
+      The action fetches endpoint details and task status from Trend Vision One (fetches_data=true).
+      It makes a POST request to execute a script on the endpoint (can_mutate_external_data=true).
+      It does not mutate internal data, update entities, create insights, modify alerts,
+      or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -231,7 +230,7 @@ Execute Custom Script:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: true
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -241,9 +240,9 @@ Execute Custom Script:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS
-      and HOSTNAME. It also uses the entity's original identifier to search for the
-      endpoint in Trend Vision One.
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets
+      Address and Hostname entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -259,9 +258,8 @@ Execute Custom Script:
     execute_command_on_the_host: true
     get_alert_information: false
     reasoning: >-
-      The action executes a custom script on a remote endpoint via the Trend Vision
-      One API, which directly aligns with the 'Execute Command on the Host' outcome
-      category.
+      The action executes a custom script on a remote endpoint in Trend Vision One.
+      This directly aligns with the 'Execute Command on the Host' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -292,33 +290,32 @@ Execute Email:
   ai_description: >-
     ### General Description
 
-    Executes a specified action (Delete, Quarantine, or Restore) on an email message
-    in Trend Vision One. This action initiates a state change on the external system
-    to manage potentially malicious or misclassified emails.
+    Executes an action (Delete, Quarantine, or Restore) on a specific email message
+    in Trend Vision One.
 
 
     ### Flow Description
 
-    1. Retrieves the specified action, message ID, mailbox, and description from the
-    action parameters.
+    1. The action retrieves the provided Message ID, Mailbox, and the desired Action
+    (Delete, Quarantine, Restore).
 
-    2. Initiates an asynchronous request to the Trend Vision One API (`POST /v3.0/response/emails/{email_action}`)
-    to execute the action on the email.
+    2. It initiates an asynchronous POST request to the Trend Vision One API (`/v3.0/response/emails/{email_action}`)
+    to perform the specified action on the email.
 
-    3. Polls the API (`GET /v3.0/response/tasks/{task_id}`) to check the status of
-    the execution task.
+    3. The action polls the task status using a GET request to the API until the task
+    completes, fails, or times out.
 
-    4. Once completed, returns the execution results and attaches them as JSON to
-    the action result.
+    4. Upon completion, it returns the execution results and attaches the JSON response
+    to the case.
 
 
     ### Additional Notes
 
     This is an asynchronous action. Ensure the script timeout value in the IDE is
-    adjusted appropriately.
+    adjusted as needed.
   ai_short_description: >-
-    Executes a specified action (Delete, Quarantine, or Restore) on an email message
-    in Trend Vision One.
+    Executes an action such as Delete, Quarantine, or Restore on a specific email
+    message in Trend Vision One.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -332,9 +329,8 @@ Execute Email:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Trend Vision One API to execute an action
-      (Delete, Quarantine, Restore) on an email, which mutates external data. It does
-      not fetch contextual data for enrichment, nor does it update internal entities
+      The action makes a POST request to Trend Vision One to execute an action on
+      an email, which mutates external data. It does not update internal entities
       or create insights.
   entity_usage:
     entity_types:
@@ -387,8 +383,9 @@ Execute Email:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers. It operates purely on the provided Message ID and Mailbox parameters.
+      The action does not process any entities. It relies entirely on the provided
+      Message ID and Mailbox parameters to target the email. Therefore, all entity
+      flags are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -404,10 +401,9 @@ Execute Email:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action can delete, quarantine, or restore an email message in Trend Vision
-      One. This matches both the 'Delete Email' (removing a specific email) and 'Update
-      Email' (modifying the state of an email, such as moving it to quarantine) expected
-      outcomes.
+      The action performs an operation on an email (Delete, Quarantine, Restore) in
+      Trend Vision One. This matches the 'Update Email' category (for Quarantine/Restore)
+      and 'Delete Email' category (for Delete).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -427,8 +423,7 @@ Execute Email:
 
     | --- | --- | --- | --- |
 
-    | Action | Dropdown | No | Specify the action for the email (Delete, Quarantine,
-    Restore). |
+    | Action | Dropdown | No | Specify the action for the email. |
 
     | Message ID | String | Yes | Specify the ID of the message that needs to be used
     in the action. |
@@ -441,37 +436,38 @@ Isolate Endpoint:
   ai_description: >-
     ### General Description
 
-    Isolates specific endpoints in Trend Vision One based on IP addresses, hostnames,
-    or provided Agent UUIDs. This action initiates a state change on the external
-    device to prevent network traffic to or from the specified entity.
+    Isolates endpoints in Trend Vision One based on IP Address, Hostname, or Agent
+    UUIDs. This action initiates a state change on the external device to prevent
+    network traffic to or from the specified entities.
 
 
     ### Flow Description
 
-    1. Iterates over target entities of type IP Address and Hostname.
+    1. Extracts the provided parameters and filters the target entities for IP Addresses
+    and Hostnames.
 
-    2. Searches for the corresponding endpoint in Trend Vision One using the entity's
-    identifier to retrieve its GUID.
+    2. For each suitable entity, searches for the corresponding endpoint in Trend
+    Vision One using the `search_endpoint` API.
 
-    3. If found, initiates an isolation task via the Trend Vision One API using the
-    GUID.
+    3. If an endpoint is found, initiates an isolation task using the `isolate_endpoint`
+    API.
 
-    4. Processes any manually provided Agent UUIDs and initiates isolation tasks for
-    them.
+    4. Processes any explicitly provided Agent UUIDs, searching for them and initiating
+    isolation tasks.
 
-    5. Monitors the status of the isolation tasks asynchronously until completion
-    or timeout.
+    5. Monitors the status of the isolation tasks asynchronously using the `get_task`
+    API.
 
-    6. Returns the task details and status as JSON results.
+    6. Returns the task IDs and statuses as JSON results.
 
 
     ### Additional Notes
 
-    This is an asynchronous action. Ensure the script timeout value in the Chronicle
+    The action runs asynchronously. Ensure the script timeout value in the Chronicle
     SOAR IDE is adjusted as needed.
   ai_short_description: >-
-    Isolates specific endpoints in Trend Vision One based on IP addresses, hostnames,
-    or provided Agent UUIDs.
+    Isolates endpoints in Trend Vision One based on IP Address, Hostname, or Agent
+    UUIDs to prevent network communication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -480,15 +476,13 @@ Isolate Endpoint:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Isolates the specified endpoints in Trend Vision One, restricting their network
-      communication.
-    fetches_data: true
+      Isolates the specified endpoints in Trend Vision One.
+    fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches endpoint details to resolve GUIDs and checks task statuses
-      (fetches_data=true). It makes a POST request to isolate endpoints in Trend Vision
-      One, mutating external data (can_mutate_external_data=true). It does not update
-      internal entities, create insights, modify alert data, or create case comments.
+      The action makes POST requests to the Trend Vision One API to isolate endpoints
+      (can_mutate_external_data=true). It does not fetch contextual data for enrichment,
+      nor does it update internal entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: true
@@ -541,9 +535,9 @@ Isolate Endpoint:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are `EntityTypes.ADDRESS`
-      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities,
-      filtering strictly by entity type.
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS
+      and HOSTNAME. It targets Address and Hostname entities, filtering strictly by
+      entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -559,9 +553,9 @@ Isolate Endpoint:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a POST request to the Trend Vision One API to isolate an
-      endpoint. This directly aligns with the 'Contain Host' expected outcome, which
-      isolates an endpoint from the network.
+      The action performs a POST request to Trend Vision One to isolate endpoints
+      based on IP, Hostname, or Agent UUID. This directly aligns with the 'Contain
+      Host' expected outcome of isolating an endpoint from the network.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -590,31 +584,31 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Trend Vision One server to ensure the integration is
-    configured correctly.
+    Tests connectivity to the Trend Vision One platform to ensure that the integration
+    is configured correctly and can communicate with the API.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters (API Root, API Token, Verify
-    SSL).
+    1. Extracts the integration-level configuration parameters (API Root, API Token,
+    Verify SSL).
 
-    2. Initializes the `TrendVisionOneManager` with the provided credentials.
+    2. Makes an HTTP GET request to the Trend Vision One `/v3.0/healthcheck/connectivity`
+    endpoint.
 
-    3. Makes an HTTP GET request to the `/v3.0/healthcheck/connectivity` endpoint
-    to verify connectivity.
+    3. Validates the HTTP response to confirm successful authentication and network
+    connectivity.
 
-    4. Returns a success message if the connection is established, otherwise returns
-    an error message.
+    4. Returns a success or failure message based on the API response.
 
 
     ### Additional Notes
 
-    This action does not interact with any entities or alerts and is solely used for
-    verifying the integration's connection settings.
+    This action does not interact with any specific entities or alerts and is solely
+    used for diagnostic and verification purposes.
   ai_short_description: >-
-    Tests connectivity to the Trend Vision One server to ensure the integration is
-    configured correctly.
+    Tests connectivity to the Trend Vision One platform by making a healthcheck API
+    call.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -627,9 +621,9 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action only makes a GET request to a healthcheck endpoint to verify connectivity.
-      It does not fetch contextual data for entities, mutate external data, mutate
-      internal data, update entities, create insights, modify alert data, or create
-      case comments.
+      It does not fetch contextual data for alerts/entities, mutate external data,
+      mutate internal data, update entities, create insights, modify alert data, or
+      create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -681,8 +675,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It only tests connectivity
-      to the external service.
+      The action does not process any entities. It does not iterate over target_entities
+      or accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -720,41 +714,39 @@ Submit File:
   ai_description: >-
     ### General Description
 
-    This action submits one or more files from the local filesystem to the Trend Vision
-    One sandbox for analysis. It operates asynchronously, periodically checking the
-    status of the submission tasks and retrieving the analysis results once completed.
+    Submits files to the Trend Vision One sandbox for analysis and retrieves the analysis
+    results. This action allows analysts to upload local files (including password-protected
+    archives or documents) to the external sandbox to determine their behavior and
+    threat level.
 
 
     ### Flow Description
 
-    1. Extracts the provided file paths, archive password, document password, and
-    arguments from the action parameters.
+    1. Extracts the provided file paths, optional passwords, and arguments from the
+    action parameters.
 
     2. Verifies that the specified files exist and are accessible on the local filesystem.
 
-    3. Initiates a POST request to the Trend Vision One API (`/v3.0/sandbox/files/analyze`)
-    for each file to submit it for analysis.
+    3. Makes a POST request to the Trend Vision One API (`/v3.0/sandbox/files/analyze`)
+    to submit each file for analysis.
 
-    4. Asynchronously polls the Trend Vision One API (`/v3.0/sandbox/tasks/{task_id}`)
-    to check the status of each submission task.
+    4. Since the action is asynchronous, it periodically queries the task status via
+    a GET request to `/v3.0/sandbox/tasks/{task_id}`.
 
-    5. Once a task completes successfully, retrieves the analysis results via a GET
+    5. Once a task completes successfully, it fetches the analysis results via a GET
     request to `/v3.0/sandbox/analysisResults/{task_id}`.
 
-    6. Aggregates the results and attaches them as JSON to the action's output.
+    6. Attaches the retrieved analysis results as JSON to the action output.
 
 
     ### Additional Notes
 
-    - This action runs asynchronously. Ensure the script timeout value in the Chronicle
+    This action runs asynchronously. Ensure that the script timeout value in the Chronicle
     SOAR IDE is adjusted appropriately to allow sufficient time for the sandbox analysis
     to complete.
-
-    - The action requires the files to be present on the local filesystem where the
-    SOAR agent or connector is running.
   ai_short_description: >-
-    Submits files to the Trend Vision One sandbox for analysis and asynchronously
-    retrieves the analysis results.
+    Submits local files to the Trend Vision One sandbox for analysis and retrieves
+    the resulting behavior reports.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -763,13 +755,15 @@ Submit File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits a file to the Trend Vision One sandbox for analysis.
+      Uploads a file to the Trend Vision One sandbox, initiating an analysis task
+      on the external system.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to submit a file to Trend Vision One (can_mutate_external_data=true).
-      It also fetches the analysis results via GET requests (fetches_data=true). It
-      does not update internal entities, create insights, or modify alert data.
+      The action fetches data by querying the task status and analysis results from
+      the Trend Vision One API. It mutates external data by submitting a file to the
+      sandbox (creating an analysis task). It does not mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -821,10 +815,9 @@ Submit File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers. It relies entirely on the 'File Paths' parameter provided by the
-      user. Therefore, it does not run on entities and all entity-related flags are
-      false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      entity identifiers as input parameters. It operates on local file paths provided
+      as a string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -841,7 +834,7 @@ Submit File:
     get_alert_information: false
     reasoning: >-
       The action uploads a file to the Trend Vision One sandbox for analysis and retrieves
-      the analysis results. This directly aligns with the 'Submit File' expected outcome.
+      the analysis results. This directly matches the 'Submit File' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -873,25 +866,25 @@ Submit URL:
   ai_description: >-
     ### General Description
 
-    Submits URL entities to the Trend Vision One sandbox for analysis. This asynchronous
-    action initiates a sandbox analysis task for each provided URL, monitors the task
-    status, and retrieves the analysis results once completed.
+    Submits URL entities to Trend Vision One for sandbox analysis. This action initiates
+    an asynchronous analysis of the provided URLs and retrieves the resulting behavior
+    reports or threat scores once the analysis is complete.
 
 
     ### Flow Description
 
-    1. Iterates through the provided URL entities.
+    1. Filters the target entities to include only URL entities.
 
-    2. Submits the URLs to the Trend Vision One sandbox using a POST request to the
-    `/v3.0/sandbox/urls/analyze` endpoint.
+    2. Submits the URLs to Trend Vision One for analysis via a POST request to the
+    `/v3.0/sandbox/urls/analyze` API endpoint.
 
     3. Monitors the status of the analysis tasks asynchronously by making GET requests
-    to the `/v3.0/sandbox/tasks/{task_id}` endpoint.
+    to the `/v3.0/sandbox/tasks/{task_id}` API endpoint.
 
-    4. Once a task is completed successfully, retrieves the analysis results via a
-    GET request to the `/v3.0/sandbox/analysisResults/{task_id}` endpoint.
+    4. Once a task is completed, retrieves the analysis results via a GET request
+    to the `/v3.0/sandbox/analysisResults/{task_id}` API endpoint.
 
-    5. Attaches the retrieved analysis results as JSON data to the action's results.
+    5. Attaches the retrieved analysis results as JSON to the action's output.
 
 
     ### Additional Notes
@@ -901,7 +894,7 @@ Submit URL:
     to complete.
   ai_short_description: >-
     Submits URL entities to the Trend Vision One sandbox for analysis and retrieves
-    the resulting behavior report.
+    the analysis results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -910,16 +903,14 @@ Submit URL:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits URLs to the Trend Vision One sandbox, creating a new analysis task in
-      the external system.
+      Submits URLs to the Trend Vision One sandbox for analysis.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches task details and analysis results from Trend Vision One (fetches_data=true).
-      It mutates external data by submitting URLs to the sandbox via a POST request,
-      which creates a new analysis task (can_mutate_external_data=true). It does not
-      mutate internal data, update entities, create insights, modify alert data, or
-      create case comments.
+      The action mutates external data by submitting URLs to the Trend Vision One
+      sandbox for analysis (POST request). It also fetches data by retrieving the
+      task status and analysis results (GET requests). It does not update entities,
+      create insights, or modify internal case data.
   entity_usage:
     entity_types:
       address: false
@@ -972,9 +963,9 @@ Submit URL:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
-      is `[EntityTypes.URL]`. Therefore, it targets URL entities and filters by entity
-      type.
+      the condition `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      is defined as `[EntityTypes.URL]`. Therefore, it strictly processes URL entities
+      and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -990,9 +981,10 @@ Submit URL:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action submits a URL sample to the Trend Vision One sandbox for analysis
-      and retrieves the analysis results. This aligns with the 'Submit File' expected
-      outcome, which covers uploading a file or sample to a sandbox or analysis engine.
+      The action submits URL samples to the Trend Vision One sandbox for analysis
+      and retrieves the resulting behavior reports. This aligns with the 'Submit File'
+      category, which encompasses uploading files or samples to a sandbox or analysis
+      engine.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1012,38 +1004,35 @@ Unisolate Endpoint:
   ai_description: >-
     ### General Description
 
-    Unisolates specific endpoints in Trend Vision One. This action initiates a state
-    change on the external device to restore network connectivity for the specified
-    entities or agent UUIDs.
+    Unisolates endpoints in Trend Vision One, restoring their network connectivity.
+    The action can target endpoints based on IP Address and Hostname entities, as
+    well as explicitly provided Agent UUIDs.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities, filtering for IP Address and Hostname entity
-    types.
+    1. Iterates over the provided target entities, filtering for supported types (IP
+    Address and Hostname).
 
-    2. For each suitable entity, searches Trend Vision One to retrieve the corresponding
-    endpoint's Agent GUID.
+    2. Queries the Trend Vision One API to find the corresponding endpoint GUID for
+    each valid entity.
 
     3. Processes any explicitly provided Agent UUIDs from the action parameters.
 
-    4. Makes a POST request to the Trend Vision One API to initiate an unisolation
-    (restore) task for each identified Agent GUID.
+    4. Initiates an unisolation request (POST `/v3.0/response/endpoints/restore`)
+    for each identified endpoint GUID.
 
-    5. Asynchronously polls the Trend Vision One API to check the status of the unisolation
-    tasks until they succeed, fail, or time out.
-
-    6. Returns the task statuses and outputs a summary message.
+    5. Asynchronously monitors the status of the unisolation tasks until they succeed,
+    fail, or time out.
 
 
     ### Additional Notes
 
-    This action runs asynchronously. Ensure the script timeout value in the Chronicle
-    SOAR IDE is adjusted as needed to accommodate the polling duration.
+    This is an asynchronous action. Ensure the script timeout value in the Chronicle
+    SOAR IDE is adjusted appropriately to allow for task completion.
   ai_short_description: >-
-    Unisolates specific endpoints in Trend Vision One to restore their network connectivity,
-    targeting IP Address and Hostname entities as well as explicitly provided Agent
-    UUIDs.
+    Unisolates endpoints in Trend Vision One based on IP addresses, hostnames, or
+    Agent UUIDs, restoring their network connectivity.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1052,13 +1041,14 @@ Unisolate Endpoint:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates an unisolation (restore) task for endpoints in Trend Vision One.
+      Initiates an unisolation request on Trend Vision One to restore network connectivity
+      for specified endpoints.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Trend Vision One API to unisolate endpoints,
-      which mutates external data. It does not fetch contextual enrichment data, update
-      internal entities, create insights, modify alert data, or create case comments.
+      The action makes POST requests to the Trend Vision One API to unisolate endpoints,
+      which mutates external data. It does not update internal entities, create insights,
+      or modify alert data.
   entity_usage:
     entity_types:
       address: true
@@ -1111,9 +1101,9 @@ Unisolate Endpoint:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS and HOSTNAME.
-      Therefore, it targets IP Address and Hostname entities and filters strictly
-      by entity type.
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities
+      and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1129,9 +1119,8 @@ Unisolate Endpoint:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action makes a POST request to the Trend Vision One API to unisolate (restore)
-      endpoints, removing network isolation. This directly aligns with the 'Uncontain
-      Host' expected outcome.
+      The action unisolates endpoints in Trend Vision One, restoring their network
+      connectivity. This directly aligns with the 'Uncontain Host' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1158,31 +1147,30 @@ Unisolate Endpoint:
     these UUIDs along with their related entities. |
 Update Workbench Alert:
   ai_description: >-
-    ### General Description
+    **General Description**
 
     Updates the investigation status of a specific workbench alert in Trend Vision
     One.
 
 
-    ### Flow Description
+    **Flow Description**
 
-    1. Retrieves the `Alert ID` and `Status` parameters provided by the user.
+    1. Extracts the `Alert ID` and the new `Status` from the action parameters.
 
-    2. Validates that a valid status has been selected.
+    2. Validates that a valid status is selected (not 'Select One').
 
-    3. Initiates a PATCH request to the Trend Vision One API to update the specified
-    alert's investigation status.
+    3. Calls the Trend Vision One API (PATCH request) to update the alert's investigation
+    status.
 
-    4. Initiates a GET request to the Trend Vision One API to fetch the updated alert
+    4. Calls the Trend Vision One API (GET request) to retrieve the updated alert
     details.
 
     5. Returns the updated alert data as a JSON result.
 
 
-    ### Additional Notes
+    **Additional Notes**
 
-    Ensure that the provided Alert ID exists in Trend Vision One and that the API
-    token has the necessary permissions to modify alerts.
+    The action requires a valid Alert ID and a status other than 'Select One'.
   ai_short_description: >-
     Updates the investigation status of a specific workbench alert in Trend Vision
     One and retrieves the updated alert details.
@@ -1194,15 +1182,14 @@ Update Workbench Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the investigation status of a specific workbench alert in Trend Vision
-      One.
+      Updates the investigation status of a workbench alert in Trend Vision One.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action mutates external data by sending a PATCH request to Trend Vision
-      One to update an alert's status. It also fetches data by sending a GET request
-      to retrieve the updated alert details. It does not mutate internal SecOps data,
-      update entities, or create insights.
+      The action makes a PATCH request to Trend Vision One to update the status of
+      a workbench alert (can_mutate_external_data=true). It then makes a GET request
+      to fetch the updated alert details (fetches_data=true). It does not mutate internal
+      SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -1254,8 +1241,9 @@ Update Workbench Alert:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It relies entirely on the explicitly
-      provided 'Alert ID' parameter to perform its tasks.
+      The action does not operate on entities. It uses the 'Alert ID' provided as
+      a string input parameter to update the alert in Trend Vision One, and does not
+      iterate over or filter `siemplify.target_entities`.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1271,11 +1259,10 @@ Update Workbench Alert:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action updates an alert in a 3rd party product (Trend Vision One) and then
-      fetches the updated alert information. It does not update the alert within the
-      SecOps platform itself, so 'update_alert' is false. However, it does fetch the
-      alert information from the 3rd party product to return as a JSON result, which
-      aligns with 'get_alert_information'.
+      The action updates an alert in Trend Vision One, which is an external system,
+      so it does not match 'Update Alert' (which is strictly for internal SecOps alerts).
+      However, it does fetch the updated alert details from the 3rd party product,
+      matching the 'Get Alert Information' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

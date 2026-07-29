@@ -2,45 +2,44 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches IP Address and Hostname entities using information from Outpost24. It
-    retrieves device details and optionally fetches associated findings based on risk
-    level and type filters, providing valuable context for security investigations.
+    Enriches IP Address and Hostname entities using information from Outpost24. This
+    action retrieves device details and vulnerability findings associated with the
+    target entities to provide security context.
 
 
     ### Flow Description
 
-    1. Extracts configuration and action parameters.
+    1. Extracts action parameters including risk level filters, finding types, and
+    limits.
 
-    2. Initializes the Outpost24 API client and tests connectivity.
+    2. Iterates through the target entities, filtering specifically for IP Addresses
+    and Hostnames.
 
-    3. Filters target entities to process only IP Addresses and Hostnames.
+    3. Makes a GET request to the Outpost24 API (`/opi/rest/outscan/targets`) to fetch
+    device information for each valid entity.
 
-    4. For each suitable entity, makes a GET request to the Outpost24 API to retrieve
-    device information.
+    4. If 'Return Finding Information' is enabled, makes a subsequent GET request
+    to the Outpost24 API (`/opi/rest/outscan/findings`) to retrieve associated vulnerability
+    and information findings based on the provided risk level and type filters.
 
-    5. If the 'Return Finding Information' parameter is enabled, makes additional
-    GET requests to fetch findings associated with the device, applying the specified
-    risk level and type filters.
+    5. Updates the entity's additional properties with the retrieved data and marks
+    the entity as enriched.
 
-    6. Updates the entity's additional properties with the retrieved data and marks
-    it as enriched.
+    6. Creates an insight for the entity containing the device and findings summary
+    if the 'Create Insight' parameter is enabled.
 
-    7. Adds data tables containing device details and findings to the action results.
-
-    8. Optionally creates an insight for the entity with the retrieved information.
-
-    9. Updates the entities in the SecOps platform.
+    7. Updates the entities in the SecOps platform and returns the structured JSON
+    results.
 
 
     ### Additional Notes
 
-    The action handles pagination when fetching findings and limits the results based
-    on the 'Max Findings To Return' parameter. For IP addresses, it fetches all devices
-    and filters locally, whereas for hostnames, it applies the filter directly in
-    the API request.
+    The action supports filtering findings by risk level (e.g., Low, Medium, High,
+    Critical) and type (Vulnerability, Information), and allows limiting the maximum
+    number of findings returned per entity to prevent data overload.
   ai_short_description: >-
     Enriches IP Address and Hostname entities by retrieving device information and
-    associated findings from Outpost24.
+    vulnerability findings from Outpost24.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -52,11 +51,10 @@ Enrich Entities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches device information and findings from Outpost24 via GET requests
-      (`fetches_data` is true). It does not mutate external data. It updates internal
-      entities using `siemplify.update_entities` (`can_update_entities` is true) and
-      creates insights using `siemplify.add_entity_insight` (`can_create_insight`
-      is true).
+      The action fetches data from the Outpost24 API (GET requests to targets and
+      findings endpoints). It does not mutate external data. It updates internal entities
+      (`siemplify.update_entities`) and creates insights (`siemplify.add_entity_insight`).
+      It does not modify alert data or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -108,10 +106,10 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS,
-      EntityTypes.HOSTNAME]`. Therefore, it targets Address and Hostname entities
-      and filters by entity type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where SUPPORTED_ENTITY_TYPES
+      includes EntityTypes.ADDRESS and EntityTypes.HOSTNAME. Therefore, it targets
+      Address and Hostname entities and filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -127,10 +125,10 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata and threat intelligence for IP addresses
-      and hostnames from Outpost24, matching the 'Enrich IOC' (for IP) and 'Enrich
-      Asset' (for Hostname) expected outcomes. It does not perform any containment,
-      ticketing, or alert modification actions.
+      The action fetches device information and vulnerability findings for IP addresses
+      and hostnames. This aligns with 'Enrich Asset' (fetching contextual metadata
+      and vulnerabilities for a resource) and 'Enrich IOC' (fetching threat intelligence/vulnerabilities
+      for an IP address). It does not mutate external state or perform containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -161,7 +159,7 @@ Enrich Entities:
     | Return Finding Information | Boolean | No | If enabled, action will also retrieve
     information about findings that were found on the endpoint. |
 
-    | Finding Type | DropDown | No | Specify what kind of findings should be returned.
+    | Finding Type | Dropdown | No | Specify what kind of findings should be returned.
     |
 
     | Create Insight | Boolean | No | If enabled, action will create an insight containing
@@ -171,9 +169,7 @@ Ping:
     ### General Description
 
     Tests connectivity to the Outpost24 server using the provided integration configuration
-    parameters. This action ensures that the API credentials and network settings
-    are correct and that the platform can successfully communicate with the Outpost24
-    service.
+    parameters.
 
 
     ### Flow Description
@@ -181,21 +177,21 @@ Ping:
     1. Extracts integration configuration parameters (API Root, Username, Password,
     Verify SSL).
 
-    2. Initializes the Outpost24Manager with the provided credentials.
+    2. Initializes the Outpost24Manager.
 
-    3. Makes an API GET request to the Outpost24 findings endpoint (`/opi/rest/outscan/findings?limit=1`)
+    3. Sends a GET request to the Outpost24 API (`/opi/rest/outscan/findings?limit=1`)
     to verify connectivity.
 
-    4. Returns a success message if the connection is established, or an error message
-    if it fails.
+    4. Returns a success or failure message based on the HTTP response.
 
 
     ### Additional Notes
 
-    This action does not require any entities or action-specific parameters to run.
+    This action does not require any action-specific parameters as it relies entirely
+    on the integration-level configuration.
   ai_short_description: >-
-    Tests connectivity to the Outpost24 server to ensure the integration is configured
-    correctly.
+    Tests connectivity to the Outpost24 server using the provided integration configuration
+    parameters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -207,9 +203,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to test connectivity but does not fetch contextual
-      data for alerts/entities, nor does it mutate any external or internal data,
-      update entities, or create insights.
+      The action makes a GET request to the Outpost24 API to test connectivity. It
+      does not fetch contextual data for entities or alerts, does not mutate external
+      or internal data, and does not update entities, create insights, modify alert
+      data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -261,8 +258,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It only tests connectivity
-      to the external service.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -278,9 +275,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple ping/connectivity test. It does not enrich data, mutate
-      external systems, or interact with alerts/cases in a way that matches any of
-      the predefined outcome categories.
+      The action is a simple connectivity test (ping) to the Outpost24 server. It
+      does not enrich data, mutate external systems, or interact with alerts, tickets,
+      or identities. Therefore, it does not match any of the expected outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

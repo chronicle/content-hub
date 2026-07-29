@@ -7,17 +7,17 @@ Add Deceptive Server:
 
     ### Flow Description
 
-    1. Extracts configuration and action parameters.
+    1. Initializes the Illusive Networks manager with the provided API credentials.
 
-    2. Initializes the Illusive Networks manager.
-
-    3. Checks if a deceptive server with the specified name already exists via an
+    2. Checks if a deceptive server with the specified name already exists via an
     API GET request.
 
-    4. If the server does not exist, makes a POST request to the Illusive Networks
-    API to add the new deceptive server with the specified service types and policies.
+    3. If the server already exists, the action halts and raises an error.
 
-    5. Returns a success message upon completion.
+    4. If the server does not exist, makes an API POST request to create the new deceptive
+    server with the specified service types and policies.
+
+    5. Returns a success message upon successful creation.
 
 
     ### Additional Notes
@@ -33,13 +33,14 @@ Add Deceptive Server:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a new deceptive server in Illusive Networks.
+      Creates a new deceptive server in Illusive Networks.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to Illusive Networks to add a deceptive server,
-      which mutates external data. It does not fetch contextual data for alerts/entities,
-      nor does it mutate internal data, update entities, or create insights.
+      The action makes a POST request to Illusive Networks to create a new deceptive
+      server, which mutates external data. It does not fetch contextual data for enrichment,
+      nor does it mutate internal SecOps data, update entities, create insights, modify
+      alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -91,8 +92,9 @@ Add Deceptive Server:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on action parameters to execute its logic.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on the provided
+      action parameters (Server Name, Service Types, Policy Names).
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -110,7 +112,8 @@ Add Deceptive Server:
     reasoning: >-
       The action creates a deceptive server in Illusive Networks. This does not align
       with any of the predefined outcome categories such as enriching IOCs/assets,
-      updating alerts, creating tickets, or modifying blocklists.
+      updating alerts, managing tickets, modifying blocklists/allowlists, or managing
+      identities.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -143,31 +146,29 @@ Add Deceptive User:
   ai_description: >-
     ### General Description
 
-    Adds a new deceptive user in Illusive Networks. This action creates a honeypot
-    user account to help detect unauthorized access or lateral movement within the
-    network.
+    Adds a new deceptive user in Illusive Networks. This action creates a new deceptive
+    user entity in the external system with the specified credentials, domain, and
+    policies.
 
 
     ### Flow Description
 
-    1. Extracts the provided username, password, DNS domain, and policy names from
-    the action parameters.
+    1. Initializes the Illusive Networks manager with API credentials.
 
-    2. Queries the Illusive Networks API to check if a deceptive user with the specified
-    username already exists.
+    2. Checks if the specified deceptive user already exists via a GET request to
+    the Illusive Networks API.
 
-    3. If the user already exists, the action halts and raises an exception.
+    3. If the user does not exist, makes a POST request to the Illusive Networks API
+    to create the new deceptive user with the provided username, password, DNS domain,
+    and policy names.
 
-    4. If the user does not exist, a POST request is sent to the Illusive Networks
-    API to create the new deceptive user with the provided details.
-
-    5. Returns a success message upon successful creation.
+    4. Returns a success message upon completion or an error if the user already exists
+    or the API call fails.
 
 
     ### Additional Notes
 
-    - If no policy names are provided, the action will apply all default policies
-    to the new deceptive user.
+    None.
   ai_short_description: >-
     Adds a new deceptive user in Illusive Networks.
   capabilities:
@@ -183,9 +184,9 @@ Add Deceptive User:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Illusive Networks API to create a new
-      deceptive user, which mutates external data. It does not fetch contextual enrichment
-      data, nor does it mutate internal SecOps data like entities, insights, or case
-      comments.
+      deceptive user, which mutates external data. It does not fetch enrichment data
+      for the platform, update internal entities, create insights, or modify alert
+      data.
   entity_usage:
     entity_types:
       address: false
@@ -237,9 +238,9 @@ Add Deceptive User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any SOAR entities. It relies entirely on explicitly
-      provided action parameters (Username, Password, etc.) to create the deceptive
-      user.
+      The action does not operate on case entities. It uses input parameters to define
+      the properties of a new deceptive user to be created in the external system,
+      rather than processing existing entities from the alert or case.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -255,9 +256,9 @@ Add Deceptive User:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a deceptive user (honeypot) in Illusive Networks. This does
-      not align with any of the predefined outcome categories such as enriching IOCs,
-      updating alerts, or modifying real user identities.
+      The action creates a new deceptive user (honeypot) in Illusive Networks. This
+      specific operation does not match any of the predefined outcome categories such
+      as updating an identity, enriching an asset, or modifying an alert.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -292,32 +293,31 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches Hostname entities using information from Illusive Networks. This action
-    retrieves detailed host information such as machine name, health status, operating
-    system, and logged-in user to provide additional context for the asset.
+    Enriches Hostname entities using Illusive Networks. This action retrieves detailed
+    host information such as machine name, health status, OS details, and logged-in
+    user, and attaches this data to the entity within the platform.
 
 
     ### Flow Description
 
-    1. Initializes the Illusive Networks manager and tests connectivity.
+    1. Filters the target entities to include only those of type Hostname.
 
-    2. Iterates over the target entities, filtering for Hostname entities.
+    2. Iterates through the filtered entities and makes a GET request to the Illusive
+    Networks API (`/api/v2/monitoring/hosts`) to fetch host details.
 
-    3. For each valid entity, makes a GET request to the Illusive Networks API (`/api/v2/monitoring/hosts`)
-    to fetch host details.
+    3. If host data is found, updates the entity's `additional_properties` with the
+    retrieved information and marks the entity as enriched.
 
-    4. If data is found, updates the entity's `additional_properties` with the enrichment
-    data and sets `is_enriched` to True.
+    4. Attaches a CSV table containing the host details to the action results for
+    each successfully enriched entity.
 
-    5. Adds a table with the host details to the action results.
-
-    6. Updates the entities in the platform and provides a JSON result containing
-    the raw data.
+    5. Updates the modified entities in the Google SecOps platform.
 
 
     ### Additional Notes
 
-    - Supported entity types: Hostname.
+    Entities that do not return data from Illusive Networks will be skipped and reported
+    as failed in the action output.
   ai_short_description: >-
     Enriches Hostname entities by retrieving detailed host information from Illusive
     Networks.
@@ -326,18 +326,16 @@ Enrich Entities:
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates the additional_properties and is_enriched fields of the target entities.
+    internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Illusive Networks API to fetch host data
-      (fetches_data=true). It does not mutate external data. It updates internal entities
-      by adding enrichment data to their additional_properties and setting is_enriched
-      to True (can_update_entities=true, can_mutate_internal_data=true). It does not
-      create insights, modify alert data, or create case comments.
+      (fetches_data=true). It does not mutate external data or internal system data
+      outside of entities. It updates the entities with the fetched data (can_update_entities=true)
+      but does not create insights or case comments.
   entity_usage:
     entity_types:
       address: false
@@ -389,9 +387,9 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == EntityTypes.HOSTNAME`. Therefore, it targets Hostname entities and filters
-      strictly by entity type.
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == EntityTypes.HOSTNAME`. Therefore, it targets
+      Hostname entities and filters strictly by the `entity_type` attribute.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -407,9 +405,9 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches contextual metadata (e.g., OS version, logged-in user, machine
-      name) for a hostname from Illusive Networks. This matches the 'Enrich Asset'
-      expected outcome. It does not mutate external data or perform other actions.
+      The action fetches host details from Illusive Networks for Hostname entities.
+      This directly aligns with the 'Enrich Asset' expected outcome, as it returns
+      contextual metadata for an internal resource.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -435,24 +433,25 @@ List Deceptive Items:
 
     ### Flow Description
 
-    1. Extracts the action parameters: `Deceptive Type`, `Deceptive State`, and `Max
-    Items To Return`.
+    1. Extracts the action parameters: Deceptive Type, Deceptive State, and Max Items
+    To Return.
 
-    2. If the deceptive type includes users, makes a GET request to the Illusive Networks
-    API to fetch deceptive users matching the state.
+    2. Initializes the Illusive Networks API client.
 
-    3. If the deceptive type includes servers, makes a GET request to the Illusive
-    Networks API to fetch deceptive servers matching the state.
+    3. Depending on the 'Deceptive Type' parameter, makes GET requests to the Illusive
+    Networks API to fetch deceptive users (`/api/v1/deceptive-entities/users`) and/or
+    deceptive servers (`/api/v1/deceptive-entities/servers`).
 
-    4. Formats the retrieved data into CSV tables and JSON results.
+    4. Filters the retrieved items based on the 'Deceptive State' parameter and limits
+    the number of results based on the 'Max Items To Return' parameter.
 
-    5. Returns the results to the SecOps platform.
+    5. Formats the retrieved deceptive items into data tables and attaches them to
+    the action result, along with the raw JSON data.
 
 
     ### Additional Notes
 
-    This action does not operate on entities and simply retrieves configuration data
-    from the Illusive Networks platform.
+    None.
   ai_short_description: >-
     Lists available deceptive items (users and/or servers) in Illusive Networks based
     on specified criteria.
@@ -467,9 +466,9 @@ List Deceptive Items:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes GET requests to the Illusive Networks API to fetch deceptive
-      users and servers. It does not mutate external data, update internal entities,
-      create insights, modify alerts, or create case comments.
+      The action fetches data from Illusive Networks via GET requests to list deceptive
+      users and servers. It does not mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -521,9 +520,8 @@ List Deceptive Items:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates independently of entities to fetch deceptive items
-      from the external system.
+      The action does not iterate over target entities and does not accept any entity
+      identifiers as input parameters. It operates independently of case entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -540,9 +538,9 @@ List Deceptive Items:
     get_alert_information: false
     reasoning: >-
       The action retrieves a list of deceptive items (users/servers) from Illusive
-      Networks. It does not enrich specific IOCs or assets, nor does it mutate any
-      external or internal state. Therefore, it does not match any of the predefined
-      outcome categories.
+      Networks. It does not enrich specific IOCs or assets, nor does it perform any
+      containment, ticketing, or alert modification operations. Therefore, it does
+      not match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -568,35 +566,35 @@ List Deceptive Items:
     | Deceptive State | String | Yes | Specify what kind of deceptive items should
     be returned based on state (All, Only Approved, Only Suggested). |
 
-    | Max Items To Return | String | No | Specify how many items to return. Default:
+    | Max Items To Return | Integer | No | Specify how many items to return. Default:
     50. If nothing is specified, action will return all items. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Illusive Networks instance to ensure proper configuration
-    and communication.
+    Tests connectivity to the Illusive Networks server using the provided integration
+    configuration parameters.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters.
+    1. Extracts integration configuration parameters (API Root, API Key, etc.).
 
     2. Initializes the Illusive Networks manager.
 
-    3. Sends a GET request to the Illusive Networks API (`/api/v1/incidents`) to verify
-    connectivity.
+    3. Makes an API call (GET request to `/api/v1/incidents?limit=1`) to test connectivity.
 
-    4. Returns a success or failure message based on the HTTP response.
+    4. Returns a success message if the connection is established, otherwise returns
+    an error.
 
 
     ### Additional Notes
 
-    This action is typically used during the initial setup of the integration to verify
-    that the provided credentials and network settings are correct.
+    This action is typically used to verify that the integration is configured correctly
+    and can communicate with the Illusive Networks API.
   ai_short_description: >-
-    Tests connectivity to the Illusive Networks instance to ensure proper configuration
-    and communication.
+    Tests connectivity to the Illusive Networks server using the provided integration
+    configuration parameters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -608,9 +606,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only performs a GET request to a test endpoint to verify connectivity.
-      It does not fetch contextual data for entities, mutate external data, or modify
-      internal SOAR data.
+      The action only makes a GET request to test connectivity. It does not fetch
+      contextual data for entities, mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -662,8 +660,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or interact with any entities. It only tests connectivity
-      to the external service.
+      The action does not process any entities. It does not iterate over target_entities
+      or accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -679,9 +677,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not align with any
-      of the specific outcome categories such as enriching IOCs, updating alerts,
-      or mutating external systems.
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -701,18 +698,26 @@ Remove Deceptive Server:
   ai_description: >-
     ### General Description
 
-    Removes a specific deceptive server from Illusive Networks.
+    Removes a deceptive server from Illusive Networks based on the provided server
+    name. This action initiates a state change on the external system to delete the
+    specified deceptive server configuration.
 
 
     ### Flow Description
 
-    1. Retrieves the deceptive server details from Illusive Networks using the provided
-    server name via a GET request.
+    1. Extracts the necessary configuration and action parameters, including the target
+    server name.
 
-    2. Initiates a DELETE request to the Illusive Networks API to remove the identified
-    deceptive server.
+    2. Initializes the Illusive Networks API manager.
 
-    3. Returns a success message upon successful removal.
+    3. Queries the Illusive Networks API to retrieve the deceptive server details
+    and verify its existence.
+
+    4. Sends a DELETE request to the Illusive Networks API to remove the deceptive
+    server using its domain.
+
+    5. Returns a success message if the server is removed, or an error message if
+    the server is not found or the operation fails.
 
 
     ### Additional Notes
@@ -728,14 +733,13 @@ Remove Deceptive Server:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a deceptive server from the Illusive Networks platform.
+      Removes a deceptive server configuration from Illusive Networks.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a DELETE request to the Illusive Networks API to remove a deceptive
-      server, which mutates external data. It does not fetch contextual data for enrichment,
-      nor does it update internal entities, create insights, modify alerts, or create
-      case comments.
+      server, which mutates external data. It does not fetch contextual data for alerts/entities,
+      nor does it mutate internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -787,9 +791,9 @@ Remove Deceptive Server:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies solely on the 'Server Name' input parameter. Therefore, it does not run
-      on entities.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters representing entities. It operates solely on the provided
+      'Server Name' string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -805,9 +809,10 @@ Remove Deceptive Server:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes a deceptive server from the Illusive Networks platform. This
-      does not align with any of the predefined outcome categories such as enriching
-      IOCs, updating alerts, containing hosts, or modifying identities.
+      The action removes a deceptive server configuration from Illusive Networks.
+      This does not align with any of the predefined outcome categories such as enriching
+      IOCs/assets, updating alerts, managing blocklists/allowlists, or containing
+      hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -838,21 +843,20 @@ Remove Deceptive User:
 
     ### Flow Description
 
-    1. Retrieves the specified username from the action parameters.
+    1. Initializes the Illusive Networks manager with API credentials.
 
-    2. Makes a GET API call to Illusive Networks to verify the existence of the deceptive
-    user.
+    2. Retrieves the deceptive user details using the provided username.
 
-    3. Makes a DELETE API call to Illusive Networks to remove the deceptive user.
+    3. Calls the Illusive Networks API to remove the deceptive user.
 
-    4. Returns a success message if the user is removed successfully.
+    4. Returns a success or failure message based on the execution result.
 
 
     ### Additional Notes
 
-    - This action manages deceptive (decoy) users used for honeypot infrastructure.
+    None.
   ai_short_description: >-
-    Removes a specific deceptive user from Illusive Networks.
+    Removes a deceptive user from Illusive Networks.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -861,13 +865,13 @@ Remove Deceptive User:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a deceptive user from Illusive Networks.
+      Removes a deceptive user from the Illusive Networks platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a DELETE request to Illusive Networks to remove a deceptive
-      user, mutating external data. It does not fetch enrichment data, update internal
-      entities, or create insights.
+      The action makes a DELETE request to the Illusive Networks API to remove a deceptive
+      user. Therefore, it mutates external data. It does not fetch enrichment data,
+      update internal entities, create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -904,7 +908,7 @@ Remove Deceptive User:
       threat_signature: false
       url: false
       usb: false
-      user: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -919,8 +923,9 @@ Remove Deceptive User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses a specific 'Username' parameter
-      provided by the user to identify the deceptive user to remove.
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      a `Username` parameter which represents a User entity. Therefore, the `user`
+      entity type flag is set to true. It does not filter entities by any attributes.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -936,10 +941,9 @@ Remove Deceptive User:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes a deceptive (decoy) user from Illusive Networks. This does
-      not align with disabling a real identity or any other standard outcome category,
-      as it manages honeypot infrastructure rather than responding to a compromised
-      real user or IOC.
+      The action removes a deceptive user (honeypot) from Illusive Networks. This
+      does not align with standard identity management outcomes like Disable Identity
+      or Update Identity, nor does it match any other available outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -965,54 +969,54 @@ Run Forensic Scan:
   ai_description: >-
     ### General Description
 
-    Initiates a forensic scan on endpoint entities (IP Address and Hostname) using
+    Initiates a forensic scan on endpoint entities (Hostname and IP Address) using
     Illusive Networks and retrieves the scan results. The action can fetch various
-    forensic artifacts such as system information, prefetch files, installed programs,
+    forensic details such as system information, prefetch files, installed programs,
     startup processes, running processes, user-assist programs, and PowerShell history.
 
 
     ### Flow Description
 
-    1. Filters the target entities to include only Hostname and IP Address entity
-    types.
+    1. Filters target entities to include only Hostname and IP Address entities.
 
     2. Initiates a forensic scan request for each valid entity via the Illusive Networks
-    API (`POST /api/v1/event/create-external-event`).
+    API.
 
-    3. Periodically checks the status of the scan to see if the incident data is ready
-    (`GET /api/v1/incidents/id`).
+    3. Periodically checks the status of the forensic scan (asynchronous execution).
 
-    4. Once the scan is complete, retrieves the requested forensic data based on the
-    action parameters (`GET /api/v1/forensics`).
+    4. Once the scan is ready, fetches the requested forensic data based on the action's
+    input parameters.
 
-    5. Enriches the entities with host information and attaches the forensic data
-    as JSON results and data tables.
+    5. Enriches the entities with the retrieved host information and updates them
+    in the platform.
+
+    6. Attaches the forensic data as data tables and JSON results to the action output.
 
 
     ### Additional Notes
 
-    This is an asynchronous action that will continue to poll the Illusive Networks
-    platform until the forensic scan is completed or a timeout is reached.
+    This is an asynchronous action. It will continue to run in the background until
+    the forensic scan is completed on the Illusive Networks side or until it times
+    out.
   ai_short_description: >-
-    Initiates a forensic scan on endpoint entities using Illusive Networks and retrieves
-    the scan results including system information, running processes, and prefetch
-    files.
+    Initiates a forensic scan on Hostname and IP Address entities using Illusive Networks,
+    retrieves the requested forensic data, and enriches the entities with the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: true
-    external_data_mutation_explanation: >-
-      Initiates a new forensic scan event on the Illusive Networks platform.
+    external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches forensic data from Illusive Networks. It mutates external
-      data by initiating a new forensic scan event via a POST request. It updates
-      internal entities with the retrieved host information but does not create insights
-      or modify alert data.
+      The action fetches forensic data from Illusive Networks via GET requests (after
+      initiating a scan via POST). It does not mutate external data in a way that
+      changes system state (like blocking or containing), it just triggers a read-only
+      scan. It updates internal entities with the fetched data (`siemplify.update_entities`).
+      It does not create insights or case comments.
   entity_usage:
     entity_types:
       address: true
@@ -1066,8 +1070,8 @@ Run Forensic Scan:
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
       `entity.entity_type == EntityTypes.HOSTNAME or entity.entity_type == EntityTypes.ADDRESS`.
-      Therefore, it targets Hostname and IP Address entities and filters by entity
-      type.
+      Therefore, it targets Hostname and Address entities and filters them by their
+      entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1083,9 +1087,9 @@ Run Forensic Scan:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata and forensic artifacts (e.g., OS version,
-      running processes, installed programs) for a host resource, which aligns with
-      the 'Enrich Asset' expected outcome.
+      The action fetches contextual metadata and forensic information for a host or
+      IP address (e.g., OS version, running processes, prefetch files) and enriches
+      the asset. This aligns with the 'Enrich Asset' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1117,7 +1121,7 @@ Run Forensic Scan:
     | Include Startup Processes Information | Boolean | Yes | If enabled, action will
     return information about startup processes. |
 
-    | Include Running Processes Information | Boolean | Yes | If enabled, action will
+    | Include Running Processes Information | Boolean | No | If enabled, action will
     return information about running processes. |
 
     | Include User-Assist Programs Information | Boolean | Yes | If enabled, action
@@ -1126,5 +1130,5 @@ Run Forensic Scan:
     | Include Powershell History Information | Boolean | Yes | If enabled, action
     will return information about powershell history. |
 
-    | Max Items To Return | Integer | No | Specify how many items to return. If nothing
+    | Max Items To Return | String | No | Specify how many items to return. If nothing
     is provided, action will return everything. |

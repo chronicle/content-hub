@@ -2,36 +2,39 @@ Get Domain Information:
   ai_description: >-
     ### General Description
 
-    Fetches domain information for Hostname entities using the IPInfo API. This action
-    retrieves contextual data about the domain associated with the hostname and enriches
-    the entity within the Google SecOps platform.
+    Fetches domain information for Hostname entities using IPInfo. This action retrieves
+    domain details from the IPInfo API, enriches the targeted entities with this data,
+    and provides the results in both JSON format and entity tables.
 
 
     ### Flow Description
 
-    1. Filters the target entities to include only those of type Hostname.
+    1. Filters the target entities to include only Hostname entities.
 
     2. Iterates through the filtered entities and extracts the domain name from the
-    hostname identifier.
+    entity identifier.
 
-    3. Makes an HTTP GET request to the IPInfo API (`/domains/{domain_name}`) to retrieve
-    domain information.
+    3. Makes a GET request to the IPInfo API (`/domains/{domain_name}`) to fetch domain
+    information.
 
-    4. If data is successfully retrieved, it updates the entity's `additional_properties`
-    with the flattened domain information, marks the entity as enriched (`is_enriched
-    = True`), and attaches a CSV table of the data to the entity.
+    4. Enriches the entity's additional properties with the retrieved data and marks
+    the entity as enriched.
 
-    5. Updates the modified entities in the platform and returns the raw domain information
-    as a JSON result.
+    5. Attaches the domain information as an entity table and updates the entities
+    in Google SecOps.
+
+    6. Returns a JSON object containing the domain information for all successfully
+    processed entities.
 
 
     ### Additional Notes
 
-    This action only processes Hostname entities. Any other entity types provided
-    in the scope will be ignored.
+    - The action specifically targets Hostname entities.
+
+    - Ensure that the IPInfo integration is properly configured with a valid API token.
   ai_short_description: >-
-    Fetches domain information for Hostname entities using the IPInfo API and enriches
-    the entities with the retrieved data.
+    Fetches domain information for Hostname entities using IPInfo and enriches the
+    entities with the retrieved data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -43,11 +46,12 @@ Get Domain Information:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the IPInfo API to fetch domain information,
-      meaning it fetches data. It does not perform any state-changing operations on
-      external systems (no POST/PUT/DELETE). It updates internal entities by modifying
-      their additional properties and calling `siemplify.update_entities`. It does
-      not create insights, modify alert data, or create case comments.
+      The action makes a GET request to the IPInfo API to fetch domain information
+      (fetches_data=true). It does not perform any state-changing operations on external
+      systems (can_mutate_external_data=false). It updates the entities within Google
+      SecOps by appending additional properties and marking them as enriched via `siemplify.update_entities`
+      (can_update_entities=true). It does not create insights, modify alert data,
+      or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -99,9 +103,9 @@ Get Domain Information:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The script iterates over `siemplify.target_entities` and explicitly filters
-      them using the condition `entity.entity_type == EntityTypes.HOSTNAME`. Therefore,
-      it targets Hostname entities and filters them by their entity type.
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == EntityTypes.HOSTNAME`. Therefore, it targets
+      Host Name entities and filters them strictly by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -117,9 +121,9 @@ Get Domain Information:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches domain information for a given hostname, which aligns with
-      the 'Enrich IOC' category as it retrieves contextual intelligence for a domain
-      indicator. It does not mutate external state or perform containment actions.
+      The action fetches domain information from the IPInfo API to enrich Hostname
+      entities. This aligns with the 'Enrich IOC' expected outcome, as it retrieves
+      external intelligence and contextual data for a domain indicator.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -139,55 +143,56 @@ Get IP Information:
   ai_description: >-
     ### General Description
 
-    Fetches detailed IP information (such as ASN, geo-location, and domain data) for
-    IP address entities using the IPInfo service. The action supports both legacy
-    per-IP queries and batch queries depending on the selected dataset bundle, enriching
-    the entities with the retrieved data.
+    Enriches IP Address entities by fetching detailed IP information from IPInfo.
+    This action retrieves contextual data for IP addresses and updates the entities
+    within the platform.
 
 
     ### Flow Description
 
     1. Extracts target entities from the case that are of type `ADDRESS`.
 
-    2. Checks the selected `IPinfo Bundle` parameter to determine the query method.
+    2. Retrieves the configured `IPinfo Bundle` parameter to determine the API endpoint
+    and response shape.
 
-    3. If the bundle is set to 'Legacy', the action iterates through the entities
-    and makes individual GET requests to the IPInfo API (`/ip_address`) for each IP.
+    3. Depending on the bundle, makes either individual GET requests (Legacy) or chunked
+    POST requests (Batch) to the IPInfo API to retrieve IP data.
 
-    4. If a batch bundle (Lite, Core, Plus, Max) is selected, the action chunks the
-    IPs and makes POST requests to the IPInfo batch API (`/batch`).
+    4. Normalizes the response data and updates each successful entity's `additional_properties`.
 
-    5. Normalizes the response data to ensure a consistent JSON schema.
+    5. Marks the successfully processed entities as enriched (`is_enriched = True`).
 
-    6. Updates the entities' `additional_properties` with the fetched data and sets
-    their `is_enriched` flag to True.
+    6. Attaches the results as entity tables and JSON results to the action.
 
-    7. Attaches the results as JSON and adds entity tables to the case.
+    7. Calls `siemplify.update_entities` to save the changes to the entities within
+    the Google SecOps platform.
 
 
     ### Additional Notes
 
-    This action only performs read operations against the IPInfo API and does not
-    mutate any external data. It updates internal entity properties within Google
-    SecOps.
+    The batch endpoint allows querying up to 1000 IPs at once, improving performance
+    for large sets of entities. Even though the batch endpoint uses a POST request,
+    it is strictly used for querying data and does not mutate external state.
   ai_short_description: >-
-    Fetches detailed IP information for IP address entities using the IPInfo service
-    and enriches the entities with the retrieved data.
+    Enriches IP Address entities by fetching detailed IP information from IPInfo and
+    updating the entities with the retrieved data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates the additional_properties of Address entities and sets their is_enriched
+      flag to True.
     reasoning: >-
-      The action makes GET or POST requests to the IPInfo API to fetch IP data (fetches_data=true).
-      It does not mutate external data (can_mutate_external_data=false). It updates
-      internal entities by calling `siemplify.update_entities` (can_update_entities=true)
-      but does not create insights, modify alert data, or create case comments.
+      The action fetches IP data from the IPInfo API (either via GET for legacy or
+      POST for batch, but both are for data retrieval). It does not mutate external
+      data. It mutates internal data by updating entities with the fetched data via
+      `siemplify.update_entities`.
   entity_usage:
     entity_types:
       address: true
@@ -241,7 +246,7 @@ Get IP Information:
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using the
       condition `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it targets
-      ADDRESS entities and filters strictly by entity_type.
+      ADDRESS entities and filters them by their entity_type attribute.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -257,9 +262,8 @@ Get IP Information:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches contextual data and threat intelligence (such as ASN and
-      geo-location) for IP addresses from IPInfo. This directly aligns with the 'Enrich
-      IOC' expected outcome.
+      The action fetches IP information from IPInfo for Address entities. This matches
+      the 'Enrich IOC' expected outcome as it returns contextual data for an indicator.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -279,40 +283,34 @@ Get IP Information:
 
     | --- | --- | --- | --- |
 
-    | IPinfo Bundle | String (Drop-down) | Yes | IPInfo dataset bundle to query. Legacy
-    keeps the existing per-IP API behaviour using the configured API Root. Lite/Core/Plus/Max
+    | IPinfo Bundle | ddl | Yes | IPInfo dataset bundle to query. Legacy keeps the
+    existing per-IP API behaviour using the configured API Root. Lite/Core/Plus/Max
     use the IPInfo batch endpoint and return their respective response shapes; the
     tier is gated by the token. |
 Ping:
   ai_description: >-
     ### General Description
 
-    This action verifies the connectivity and authentication credentials for the IPInfo
-    integration by checking the validity of the API token.
+    Tests the connectivity and validates the API token for the IPInfo integration.
 
 
     ### Flow Description
 
-    1. Retrieves the integration configuration parameters (API Root, Token, Verify
-    SSL).
+    1. Initializes the IPInfo integration using the configured API root and token.
 
-    2. Initializes the IPInfo API client.
+    2. Makes a test API call (GET request) to a known IP address (8.8.8.8) to verify
+    that the credentials are valid and the service is reachable.
 
-    3. Executes a GET request to the IPInfo API using a predefined test IP address
-    (8.8.8.8).
-
-    4. Validates the HTTP response to confirm successful authentication and connectivity.
-
-    5. Returns a success message if the connection is established.
+    3. Returns a success message if the connection is established.
 
 
     ### Additional Notes
 
-    This action is typically used during integration setup or troubleshooting to ensure
-    that the provided credentials are correct and the external service is reachable.
+    This action is typically used for diagnostic purposes to ensure the integration
+    is configured correctly.
   ai_short_description: >-
-    Verifies the connectivity and authentication credentials for the IPInfo integration
-    by making a test request to the API.
+    Tests the connectivity and validates the API token for the IPInfo integration
+    by making a test request.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -324,10 +322,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a simple GET request to a test IP address to verify API
-      connectivity and token validity. It does not fetch contextual data for alerts
-      or entities, nor does it mutate any external or internal data, update entities,
-      or create insights.
+      The action makes a simple GET request to test API connectivity but does not
+      fetch contextual data for alerts/entities, mutate external or internal data,
+      update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -379,9 +376,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely relies on
-      integration configuration parameters to perform a connectivity check. Therefore,
-      all entity-related flags are false.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely tests the integration's connection.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -397,10 +393,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a basic connectivity check (ping) and does not align with any
-      of the specific expected outcomes such as enriching IOCs, modifying alerts,
-      managing tickets, or interacting with endpoints. Therefore, all outcome category
-      flags are false.
+      The action is a diagnostic ping to test API connectivity and does not match
+      any of the specific outcome categories such as enriching IOCs, modifying alerts,
+      or interacting with external systems for containment or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -2,10 +2,10 @@ Add Analyst Note:
   ai_description: >-
     ### General Description
 
-    Adds an analyst note to specified entities in Recorded Future. If an entity does
-    not already contain a Recorded Future ID, the action will first retrieve its threat
-    intelligence data from Recorded Future to ensure it can be properly associated
-    with the note.
+    Adds an analyst note to previously enriched entities in Recorded Future. If an
+    entity does not contain a Recorded Future ID, the action will first perform an
+    enrichment operation to retrieve the necessary ID and optionally update the entity
+    with the enrichment data before publishing the note.
 
 
     ### Flow Description
@@ -16,26 +16,24 @@ Add Analyst Note:
     2. Checks if the entities already have a Recorded Future ID in their additional
     properties.
 
-    3. For entities without an ID, fetches IOC-related entity objects from Recorded
-    Future.
+    3. For entities missing the ID, makes a POST request to the Recorded Future API
+    (`/v2/soar/enrichment`) to fetch IOC related entity objects and optionally enriches
+    the entities.
 
-    4. Optionally enriches these entities with the retrieved threat intelligence data
-    based on the `Enrich Entity?` parameter.
+    4. Makes a POST request to the Recorded Future API (`/v2/analystnote/publish`)
+    to publish the analyst note for the successful entities.
 
-    5. Publishes the analyst note to Recorded Future for all successfully identified
-    entities.
-
-    6. Updates the entities in Google SecOps with the new analyst note document ID
-    and any retrieved enrichment data.
+    5. Updates the entities in Google SecOps with the document ID and any retrieved
+    enrichment data.
 
 
     ### Additional Notes
 
     The action requires a Note Title, Note Text, and Note Source. The Note Source
-    must be a valid Recorded Future ID accessible to the user whose API token is configured.
+    must be a valid Recorded Future ID accessible to the user whose API token is enabled.
   ai_short_description: >-
-    Publishes an analyst note to Recorded Future for specified entities, optionally
-    enriching them with threat intelligence data if they are not already identified.
+    Adds an analyst note to entities in Recorded Future, optionally enriching them
+    first if they lack a Recorded Future ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -48,12 +46,11 @@ Add Analyst Note:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches IOC data from Recorded Future using a POST request to `/v2/soar/enrichment`
-      (fetches_data=true). It mutates external data by publishing an analyst note
-      to Recorded Future using a POST request to `/v2/analystnote/publish` (can_mutate_external_data=true).
-      It updates entities in Google SecOps with the enrichment data and document ID
-      (can_update_entities=true). It does not create insights, modify alert data,
-      or create case comments.
+      The action fetches IOC related entity objects from Recorded Future if the entity
+      lacks an ID (fetches_data=true). It makes a POST request to publish an analyst
+      note in Recorded Future (can_mutate_external_data=true). It updates the entities
+      in Google SecOps with the document ID and enrichment data (can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -96,7 +93,7 @@ Add Analyst Note:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: true
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -105,11 +102,10 @@ Add Analyst Note:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUITABLE_ENTITY_TYPES` (HOSTNAME, CVE, FILEHASH, ADDRESS, URL). It also checks
-      `entity.additional_properties` via `get_recorded_future_id(entity)` to determine
-      if the entity needs enrichment. It uses `get_entity_original_identifier(entity)`
-      to match entities with the API response.
+      The action iterates over `siemplify.target_entities` and filters them by `entity_type`
+      (HOSTNAME, CVE, FILEHASH, ADDRESS, URL). It also filters entities based on whether
+      they have a Recorded Future ID in their `additional_properties` to determine
+      if they need to be enriched first.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -125,10 +121,11 @@ Add Analyst Note:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches threat intelligence data for IOCs if they are not already
-      enriched, matching the 'Enrich IOC' category. It also publishes an analyst note
-      to Recorded Future, which is an external mutation but does not map to a specific
-      outcome category like updating a ticket or alert.
+      The action publishes an analyst note to Recorded Future. While there is no specific
+      category for adding threat intel notes, the action also performs an 'Enrich
+      IOC' operation as a fallback to retrieve the Recorded Future ID and optionally
+      updates the entity with threat intelligence data, matching the 'Enrich IOC'
+      category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -149,7 +146,7 @@ Add Analyst Note:
     \ | String | Yes | Specify the RF ID for note source; the API explorer shows what\
     \ the RF IDs are accessible to the user whose API token is enabled. For example,\
     \ VWKdVr is the RF ID for an analyst note and is only available to user in the\
-    \ same enterprise account in Recorded Future. |\n| Topic | String | No | Specify\
+    \ same enterprise account in Recorded Future. |\n| Topic | Dropdown | No | Specify\
     \ the relevant Note topic from the list, if needed. |\n| Enrich Entity? | Boolean\
     \ | Yes | Specify whether the action should enrich the entity with the \u201C\
     Enrich IOC\u201D output. |"
@@ -157,34 +154,320 @@ Enrich CVE:
   ai_description: >-
     ### General Description
 
-    Enriches CVE entities using Recorded Future. This action retrieves threat intelligence,
-    risk scores, and related entities for the specified CVEs. It evaluates the risk
-    score against a provided threshold, updates the entity's suspicious status, and
-    generates an insight with the analysis results.
+    Enriches CVE entities using Recorded Future. This action retrieves threat intelligence
+    including risk scores, triggered rules, and related entities for the specified
+    CVEs. It evaluates the risk based on a configured threshold, updates the entity's
+    suspicious status, and generates an insight with the analysis results.
 
 
     ### Flow Description
 
     1. Iterates over the target entities and filters for CVE entities.
 
-    2. Makes a GET request to the Recorded Future API (`/v2/vulnerability/{entity}`)
-    to fetch reputation and related entities data.
+    2. Makes a GET request to the Recorded Future API (`v2/vulnerability/{entity}`)
+    to fetch reputation and optionally related entity data.
 
     3. Evaluates the retrieved risk score against the configured `Risk Score Threshold`.
 
     4. If the score exceeds the threshold, marks the entity as suspicious and creates
     a case insight.
 
-    5. Enriches the entity with the retrieved data and updates it within the platform.
+    5. Updates the entity with the enrichment data and marks it as enriched.
+
+
+    ### Additional Notes
+
+    The action can optionally include related entities in the enrichment data if the
+    `Include Related Entities` parameter is enabled.
+  ai_short_description: >-
+    Enriches CVE entities using Recorded Future to retrieve threat intelligence, risk
+    scores, and related entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Recorded Future API to fetch CVE data.
+      It does not mutate external data but updates internal entities and creates insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: true
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      in entity_types` where `entity_types` is `[EntityTypes.CVE]`. This means it
+      targets CVE entities, filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches vulnerability data from Recorded Future, returning threat
+      intelligence and evaluating risk for CVE entities. This matches the 'Enrich
+      IOC' expected outcome. It does not mutate data on external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
+    score for a CVE to be marked malicious. Has a range of 0-99. Has the following
+    levels: <br> Very Critical: 90-99 <br> Critical: 80-89 <br> High: 65-79 <br> Medium:
+    25-64 <br> Low: 5-24 <br> None: 0 |
+
+    | Include Related Entities | Boolean | No | If enabled, action will get information
+    about related entities. |
+Enrich Hash:
+  ai_description: >-
+    ### General Description
+
+    Enriches File Hash entities using Recorded Future. This action retrieves threat
+    intelligence including risk scores, triggered rules, and related entities to provide
+    additional context for the hash.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities and filters for File Hash entities.
+
+    2. Makes a GET request to the Recorded Future API (`/v2/hash/{entity}`) to fetch
+    reputation data for each hash.
+
+    3. Evaluates the retrieved risk score against the provided `Risk Score Threshold`.
+
+    4. If the score exceeds the threshold, marks the entity as suspicious and creates
+    a case insight.
+
+    5. Updates the entity with enrichment data and attaches a data table and JSON
+    result to the case.
 
 
     ### Additional Notes
 
     None.
   ai_short_description: >-
-    Enriches CVE entities using Recorded Future to retrieve threat intelligence, risk
-    scores, and related entities, updating the entity and creating insights if risk
-    thresholds are met.
+    Enriches File Hash entities using Recorded Future to retrieve threat intelligence,
+    evaluate risk scores, and update the entities with relevant insights and data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Recorded Future API to fetch hash data.
+      It does not mutate external data but updates internal entities and creates insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      in [EntityTypes.FILEHASH]`. This means it targets FILEHASH entities, filtering
+      strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches hash reputation data from Recorded Future, returning threat
+      intelligence and evaluating risk. This matches the 'Enrich IOC' expected outcome.
+      It does not mutate data on external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
+    score for a Hash to be marked malicious. Has a range of 0-89. Has the bands levels:
+    <br> No Suspicious/Malicious content: 0 <br> Unusual: 5-24 <br> Suspicious: 25-64
+    <br> Malicious: 65-89 |
+
+    | Include Related Entities | Boolean | No | If enabled, action will get information
+    about related entities. |
+Enrich Host:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname entities using Recorded Future to retrieve threat intelligence,
+    risk scores, and optionally related entities. It evaluates the retrieved risk
+    score against a specified threshold to determine if the host is malicious, updating
+    the entity's properties and generating insights accordingly.
+
+
+    ### Flow Description
+
+    1. Iterates over all target entities and filters for those of type `HOSTNAME`.
+
+    2. For each valid entity, makes a GET request to the Recorded Future API (`/v2/domain/{entity}`)
+    to fetch reputation and threat intelligence data.
+
+    3. Evaluates the returned risk score against the `Risk Score Threshold` parameter.
+
+    4. If the score exceeds the threshold, marks the entity as suspicious and creates
+    a case insight with the threat details.
+
+    5. Updates the entity's additional properties with the enrichment data, marks
+    it as enriched, and saves the changes to the case.
+
+
+    ### Additional Notes
+
+    If the `Include Related Entities` parameter is enabled, the action will also fetch
+    and attach information about entities related to the host.
+  ai_short_description: >-
+    Enriches Hostname entities by querying Recorded Future for threat intelligence,
+    risk scores, and related entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -195,12 +478,748 @@ Enrich CVE:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates CVE entities with enrichment data and creates case insights if the risk
+      Updates entity properties with enrichment data, marks entities as suspicious
+      if the risk score exceeds the threshold, and creates case insights.
+    reasoning: >-
+      The action fetches data from the Recorded Future API via a GET request to retrieve
+      host reputation. It does not mutate external data. It mutates internal data
+      by updating entity properties, marking entities as suspicious, and creating
+      case insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in entity_types`, where `entity_types` is explicitly passed
+      as `[EntityTypes.HOSTNAME]`. Therefore, it targets Host Name entities and filters
+      strictly by the entity_type attribute.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence, risk scores, and reputation data for
+      Hostname entities (which Recorded Future treats as domains). This aligns with
+      the 'Enrich IOC' expected outcome. It does not retrieve internal asset context,
+      so it does not match 'Enrich Asset'. It does not mutate external systems or
+      perform containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
+    score for a Host to be marked malicious. Has a range of 0-99. Below is the band
+    levels: <br> Very Malicious: 90-99 <br> Malicious: 65-89 <br> Suspicious: 25-64
+    <br> Unusual: 5-24 <br> No Malicious content: 0 |
+
+    | Include Related Entities | Boolean | No | If enabled, action will get information
+    about related entities. |
+Enrich IOC:
+  ai_description: >-
+    ### General Description
+
+    Enriches multiple Indicator of Compromise (IOC) entities (Hostname, CVE, FileHash,
+    Address, URL) using Recorded Future. It retrieves threat intelligence and risk
+    scores for the provided entities in a single bulk request, updating the entities
+    with the gathered context and evaluating their risk.
+
+
+    ### Flow Description
+
+    1. Filters the target entities to include only supported types (Hostname, CVE,
+    FileHash, Address, URL).
+
+    2. Constructs a payload grouping the entities by their respective types.
+
+    3. Makes a POST request to the Recorded Future `/v2/soar/enrichment` API endpoint
+    to fetch bulk enrichment data.
+
+    4. Iterates through the results and updates each entity's additional properties
+    with the retrieved threat intelligence.
+
+    5. Evaluates the risk score against the provided `Risk Score Threshold` parameter;
+    if the score exceeds the threshold, the entity is marked as suspicious.
+
+    6. Marks the entities as enriched and saves the updates to the platform.
+
+    7. Returns the enrichment data as a JSON result.
+
+
+    ### Additional Notes
+
+    This action is recommended as a first step for bulk enrichment before using specific
+    entity enrichment actions for deeper context.
+  ai_short_description: >-
+    Enriches multiple Indicator of Compromise (IOC) entities in bulk using Recorded
+    Future, updating their properties with threat intelligence and marking them as
+    suspicious if their risk score exceeds a specified threshold.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entities with enrichment data and sets them as suspicious if the risk
       score exceeds the threshold.
     reasoning: >-
-      The action makes a GET request to the Recorded Future API to fetch CVE data.
-      It does not mutate external data but updates internal entities and creates case
-      insights.
+      The action fetches enrichment data from Recorded Future via a POST request (used
+      for bulk querying, not mutating external state). It updates internal entities
+      with the retrieved data and marks them as suspicious if they exceed a risk threshold.
+      It does not create insights or case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: true
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITIES`, where supported entities are HOSTNAME,
+      CVE, FILEHASH, ADDRESS, and URL. Therefore, it targets these specific entity
+      types and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence and risk scores for various IOCs (IPs,
+      URLs, Hashes, Hostnames, CVEs) from Recorded Future. This aligns with the 'Enrich
+      IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
+    score for each entity to be marked is suspicious. |
+Enrich IP:
+  ai_description: >-
+    ### General Description
+
+    Enriches IP Address entities by querying Recorded Future for threat intelligence
+    and reputation data. This action retrieves risk scores, triggered rules, and optionally
+    related entities, using this data to update the entity within the SecOps platform.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities and filters for IP Address entities.
+
+    2. Makes a GET request to the Recorded Future API (`/v2/ip/{entity}`) to fetch
+    reputation and threat intelligence data for each IP address.
+
+    3. Optionally fetches related entities if the `Include Related Entities` parameter
+    is enabled.
+
+    4. Evaluates the retrieved risk score against the configured `Risk Score Threshold`.
+
+    5. If the risk score exceeds the threshold, the entity is marked as suspicious
+    and a case insight is created with the analysis results.
+
+    6. Updates the entity's additional properties with the enrichment data and marks
+    the entity as enriched.
+
+
+    ### Additional Notes
+
+    Ensure that the Recorded Future API key and URL are properly configured in the
+    integration settings. The risk score threshold determines when an entity is flagged
+    as risky, which can affect subsequent playbook execution.
+  ai_short_description: >-
+    Enriches IP Address entities by querying Recorded Future for threat intelligence
+    and reputation data, updating entity properties and creating insights based on
+    risk thresholds.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity properties with enrichment data, marks entities as suspicious
+      if the risk score exceeds the threshold, and creates case insights.
+    reasoning: >-
+      The action fetches data from the Recorded Future API via a GET request (fetches_data=true).
+      It does not mutate external data. It mutates internal data by updating entity
+      properties, setting the suspicious flag, and creating case insights (can_mutate_internal_data=true,
+      can_update_entities=true, can_create_insight=true).
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `[EntityTypes.ADDRESS]`. Therefore, it targets
+      ADDRESS entities and filters strictly by the `entity_type` attribute.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches reputation and threat intelligence data for IP addresses
+      from Recorded Future. This directly matches the 'Enrich IOC' expected outcome.
+      It does not perform any external state changes or match other categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
+    score for an IP to be marked malicious. Has a range of 0-99. Below is the band
+    levels: <br> Very Malicious: 90-99 <br> Malicious: 65-89 <br> Suspicious: 25-64
+    <br> Unusual: 5-24 <br> No Malicious content: 0 |
+
+    | Include Related Entities | Boolean | No | If enabled, action will get information
+    about related entities. |
+Enrich URL:
+  ai_description: >-
+    ### General Description
+
+    Enriches URL entities using Recorded Future. This action retrieves threat intelligence,
+    including risk scores, triggered rules, and optionally related entities for the
+    specified URL. It evaluates the risk score against a provided threshold to determine
+    if the entity is suspicious.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities and filters for URL entities.
+
+    2. Makes a GET request to the Recorded Future API (`v2/url/{entity}`) to fetch
+    reputation and threat intelligence data for each URL.
+
+    3. Evaluates the retrieved risk score against the configured `Risk Score Threshold`.
+
+    4. If the score exceeds the threshold, marks the entity as suspicious and creates
+    a case insight with the analysis results.
+
+    5. Updates the entity's additional properties with the enrichment data and marks
+    the entity as enriched.
+
+
+    ### Additional Notes
+
+    If the `Include Related Entities` parameter is enabled, the action will also fetch
+    and attach information about related entities to the enrichment data.
+  ai_short_description: >-
+    Enriches URL entities by querying Recorded Future for threat intelligence, risk
+    scores, and related entities, updating the entity and creating insights if risk
+    thresholds are met.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Recorded Future API to fetch URL reputation
+      data (fetches_data=true). It does not mutate external data. It updates the entities
+      with the fetched data (can_update_entities=true) and creates case insights if
+      the risk score exceeds the threshold (can_create_insight=true).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in entity_types`, where `entity_types` is passed as `[EntityTypes.URL]`.
+      Therefore, it targets URL entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence and reputation data for URL entities
+      from Recorded Future, which directly aligns with the 'Enrich IOC' expected outcome.
+      It does not perform any state-changing operations on external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
+    score for a URL to be marked malicious. Has a range of 0-99. Below is the band
+    levels: \n Very Malicious: 90-99 \n Malicious: 65-89 \n Suspicious: 25-64 \n Unusual:
+    5-24 \n No Malicious content: 0 |
+
+    | Include Related Entities | Boolean | No | If enabled, action will get information
+    about related entities. |
+Get Alert Details:
+  ai_description: >-
+    ### General Description
+
+    Fetches detailed information about a specific alert from Recorded Future and returns
+    the results to the case. This action is used to retrieve additional context regarding
+    Recorded Future alerts, such as documents, related entities, and evidence.
+
+
+    ### Flow Description
+
+    1. Retrieves the `Alert ID` from the action parameters.
+
+    2. Makes an HTTP GET request to the Recorded Future API (`/v2/alert/{alert_id}`)
+    to fetch the alert details.
+
+    3. Parses the response and attaches the alert information as a JSON result to
+    the action.
+
+    4. Adds a web report link to the action results for quick access to the alert
+    in Recorded Future.
+
+
+    ### Additional Notes
+
+    This action does not modify any data in Recorded Future or Google SecOps; it only
+    retrieves and displays information.
+  ai_short_description: >-
+    Fetches detailed information about a specific alert from Recorded Future and returns
+    the results to the case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to Recorded Future to fetch alert details (fetches_data=true).
+      It does not mutate external data, update internal entities, create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: true
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      an 'Alert ID' as an input parameter, which represents an Alert entity. Therefore,
+      the 'alert' entity type flag is set to true. No other entity types or filters
+      are used.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches information about a specific alert from Recorded Future using
+      its ID. This directly aligns with the 'Get Alert Information' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | String | Yes | Specify the ID of the alert for which you would like
+    to fetch details |
+Get CVE Related Entities:
+  ai_description: >-
+    ### General Description
+
+    Queries Recorded Future to retrieve related entities and threat intelligence context
+    for CVE entities. This action helps analysts understand the broader context of
+    a vulnerability by identifying associated malware, threat actors, or other related
+    indicators.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities provided to the action and filters for CVE
+    entities.
+
+    2. For each CVE entity, makes a GET request to the Recorded Future API (`/v2/vulnerability/{entity}`)
+    to fetch related entities and the Intel Card link.
+
+    3. Parses the response and attaches the related entities data as a JSON result
+    to the action.
+
+    4. Adds a web link to the Recorded Future Intel Card for the CVE.
+
+    5. Updates the successfully processed entities within the Google SecOps platform.
+
+
+    ### Additional Notes
+
+    This action specifically targets CVE entities. Other entity types will be ignored
+    during execution.
+  ai_short_description: >-
+    Queries Recorded Future to retrieve related entities and threat intelligence context
+    for CVE entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to the Recorded Future API to
+      retrieve related entities. It does not mutate external data or internal data
+      outside of standard entity updates. It updates entities by calling `siemplify.update_entities`.
+      It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -253,1038 +1272,9 @@ Enrich CVE:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in entity_types`, where `entity_types` is `[EntityTypes.CVE]`.
-      Therefore, it targets CVE entities and filters by `entity_type`.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches reputation and threat intelligence data for CVE entities
-      from Recorded Future. This aligns with the 'Enrich IOC' category.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Risk Score Threshold | Integer | Yes | Represents the minimum malicious risk
-    score for a CVE to be marked malicious. Has a range of 0-99. Has the following
-    levels: Very Critical: 90-99, Critical: 80-89, High: 65-79, Medium: 25-64, Low:
-    5-24, None: 0. |
-
-    | Include Related Entities | Boolean | No | If enabled, action will get information
-    about related entities. |
-Enrich Hash:
-  ai_description: >-
-    ### General Description
-
-    Enriches File Hash entities using Recorded Future. This action retrieves threat
-    intelligence including risk scores, triggered rules, and related entities. It
-    evaluates the risk based on a specified threshold, updates the entity's suspicious
-    status, and generates an insight with the analysis results.
-
-
-    ### Flow Description
-
-    1. Extracts the necessary configuration and action parameters, including the Risk
-    Score Threshold and whether to include related entities.
-
-    2. Initializes the Recorded Future API client and verifies connectivity.
-
-    3. Iterates through the target entities, filtering for File Hash entities.
-
-    4. For each File Hash, makes a GET request to the Recorded Future API (`/v2/hash/{entity}`)
-    to fetch reputation data and optionally related entities.
-
-    5. Evaluates the retrieved risk score against the provided threshold. If the score
-    exceeds the threshold, the entity is marked as suspicious and an insight is created.
-
-    6. Enriches the entity with the retrieved threat intelligence data (e.g., risk
-    string, rules, criticality, hash algorithm).
-
-    7. Updates the entities in the Google SecOps platform and returns the results
-    in JSON format.
-
-
-    ### Additional Notes
-
-    - The action will only process entities of type `FILEHASH`.
-
-    - If the `Include Related Entities` parameter is enabled, the action will fetch
-    and display related entities in the action results.
-  ai_short_description: >-
-    Enriches File Hash entities using Recorded Future by retrieving threat intelligence,
-    evaluating risk scores against a threshold, and updating the entities with the
-    gathered context and insights.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity properties with enrichment data and creates case insights if
-      the risk score exceeds the threshold.
-    reasoning: >-
-      The action makes a GET request to Recorded Future API to fetch hash data. It
-      does not mutate external data but updates internal entities and creates insights
-      based on the retrieved risk score.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: true
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      in entity_types` where `entity_types` is `[EntityTypes.FILEHASH]`. This means
-      it targets FILEHASH entities, filtering by entity_type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches hash data from Recorded Future, returning threat intelligence
-      and evaluating risk. This matches the 'Enrich IOC' expected outcome. It does
-      not mutate data on external systems.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
-    score for a Hash to be marked malicious. Has a range of 0-89. Has the bands levels:
-    \n No Suspicious/Malicious content: 0 \n Unusual: 5-24 \n Suspicious: 25-64 \n
-    Malicious: 65-89 |
-
-    | Include Related Entities | Boolean | No | If enabled, action will get information
-    about related entities. |
-Enrich Host:
-  ai_description: >-
-    ### General Description
-
-    Enriches Hostname entities using Recorded Future. This action retrieves threat
-    intelligence including risk scores, triggered rules, and related entities for
-    the specified hosts. It evaluates the risk based on a configured threshold and
-    updates the entity's suspicious status accordingly.
-
-
-    ### Flow Description
-
-    1. Iterates over the target entities and filters for Hostname entities.
-
-    2. Makes a GET request to the Recorded Future API (`/v2/domain/{entity}`) to fetch
-    reputation data for each host.
-
-    3. Optionally retrieves related entities if the `Include Related Entities` parameter
-    is enabled.
-
-    4. Evaluates the retrieved risk score against the configured `Risk Score Threshold`.
-
-    5. If the score exceeds the threshold, marks the entity as suspicious and creates
-    a case insight.
-
-    6. Updates the entity with the enrichment data and attaches a JSON result and
-    data tables to the action results.
-
-
-    ### Additional Notes
-
-    The action treats Hostname entities as domains when querying the Recorded Future
-    API.
-  ai_short_description: >-
-    Enriches Hostname entities using Recorded Future to retrieve threat intelligence,
-    risk scores, and related entities.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entities with enrichment data and creates case insights if the risk
-      score exceeds the threshold.
-    reasoning: >-
-      The action makes a GET request to the Recorded Future API to fetch domain/host
-      reputation data. It does not mutate external data but updates internal entities
-      with enrichment data and creates case insights if the risk score exceeds the
-      threshold.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      in entity_types` where `entity_types` is `[EntityTypes.HOSTNAME]`. This means
-      it targets HOSTNAME entities, filtering strictly by entity_type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches reputation and threat intelligence data for Hostname entities
-      (treated as domains) from Recorded Future. This matches the 'Enrich IOC' expected
-      outcome. It does not mutate data on external systems or fetch internal asset
-      context.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
-    score for a Host to be marked malicious. Has a range of 0-99. Below is the band
-    levels: \n Very Malicious: 90-99 \n Malicious: 65-89 \n Suspicious: 25-64 \n Unusual:
-    5-24 \n No Malicious content: 0 |
-
-    | Include Related Entities | Boolean | No | If enabled, action will get information
-    about related entities. |
-Enrich IOC:
-  ai_description: >-
-    ### General Description
-
-    Enriches multiple entities (Hostname, CVE, FileHash, Address, URL) using Recorded
-    Future. It retrieves threat intelligence and risk scores for the provided indicators
-    to provide context and evaluate their maliciousness.
-
-
-    ### Flow Description
-
-    1. Extracts the `Risk Score Threshold` parameter.
-
-    2. Filters target entities to include only supported types (Hostname, CVE, FileHash,
-    Address, URL).
-
-    3. Calls the Recorded Future API (`/v2/soar/enrichment`) via a POST request to
-    fetch threat intelligence data for all filtered entities in a single batch.
-
-    4. Iterates over the entities and updates their additional properties with the
-    retrieved enrichment data.
-
-    5. Evaluates the risk score against the threshold; if it exceeds the threshold,
-    the entity is marked as suspicious.
-
-    6. Marks the entities as enriched and updates them in the SecOps platform.
-
-    7. Returns a JSON result containing the enrichment details.
-
-
-    ### Additional Notes
-
-    This action is recommended as a first step for enrichment before using other specific
-    enrich methods.
-  ai_short_description: >-
-    Enriches multiple entities (Hostname, CVE, FileHash, Address, URL) using Recorded
-    Future by retrieving threat intelligence and risk scores, and updates the entities'
-    suspicious status based on a defined threshold.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a POST request to the Recorded Future API to fetch enrichment
-      data for entities. It does not mutate external data. It updates internal entities
-      with the fetched data and marks them as suspicious if they exceed a threshold,
-      but it does not create insights, modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: true
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: true
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: true
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes HOSTNAME, CVE, FILEHASH,
-      ADDRESS, and URL. Therefore, it targets these specific entity types and filters
-      by `entity_type`.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches threat intelligence and risk scores for various IOCs (IP,
-      Hash, URL, Domain, CVE) from Recorded Future. This directly aligns with the
-      'Enrich IOC' expected outcome. It does not mutate external data or perform other
-      operations.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
-    score for each entity to be marked is suspicious. |
-Enrich IP:
-  ai_description: >-
-    ### General Description
-
-    Enriches IP address entities using Recorded Future. This action retrieves threat
-    intelligence including risk score, triggered rules, and related entities. It evaluates
-    risk based on a configured threshold, updates the entity's suspicious status,
-    and generates an insight with the analysis results.
-
-
-    ### Flow Description
-
-    1. Extracts the action parameters: Risk Score Threshold and Include Related Entities.
-
-    2. Iterates over the target entities, filtering for IP addresses (`EntityTypes.ADDRESS`).
-
-    3. For each IP address, makes a GET request to the Recorded Future API (`/v2/ip/{entity}`)
-    to fetch reputation data and optionally related entities.
-
-    4. Parses the response into an IP data model and adds a data table to the action
-    result with the report details.
-
-    5. If the risk score exceeds the configured threshold, marks the entity as suspicious
-    and creates a case insight.
-
-    6. Updates the entity's additional properties with the enrichment data.
-
-
-    ### Additional Notes
-
-    The action updates the entity's `is_enriched` and `is_risky` flags based on the
-    results.
-  ai_short_description: >-
-    Enriches IP address entities using Recorded Future to retrieve threat intelligence,
-    evaluate risk scores, and update entity properties.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a GET request to the Recorded Future API to fetch IP reputation
-      data. It does not mutate external data but updates internal entities with enrichment
-      data and creates case insights if the risk score exceeds the threshold.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      in entity_types` where `entity_types` is passed as `[EntityTypes.ADDRESS]`.
-      This means it targets ADDRESS entities, filtering strictly by entity_type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches IP data from Recorded Future, returning threat intelligence
-      and evaluating risk. This matches the 'Enrich IOC' expected outcome. It does
-      not mutate data on external systems or perform other categorized actions.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
-    \ --- | --- | --- |\n| Risk Score Threshold | String | Yes | Represents the minimum\
-    \ malicious risk score for an IP to be marked malicious. Has a range of 0-99.\
-    \ Below is the band levels: \n Very Malicious: 90-99 \n Malicious: 65-89 \n Suspicious:\
-    \ 25-64 \n Unusual: 5-24 \n No Malicious content: 0 |\n| Include Related Entities\
-    \ | Boolean | No | If enabled, action will get information about related entities.\
-    \ |"
-Enrich URL:
-  ai_description: >-
-    ### General Description
-
-    Enriches URL entities using Recorded Future to retrieve reputation, risk scores,
-    and threat intelligence.
-
-
-    ### Flow Description
-
-    1. Iterates over the target entities and filters for URL entities.
-
-    2. For each URL entity, makes a GET request to the Recorded Future API (`/v2/url/{entity}`)
-    to fetch reputation data.
-
-    3. If the `Include Related Entities` parameter is enabled, fetches related entities
-    information as part of the API request.
-
-    4. Evaluates the retrieved risk score against the `Risk Score Threshold`. If the
-    score is higher than the threshold, marks the entity as suspicious and creates
-    a case insight.
-
-    5. Enriches the entity with the retrieved data (e.g., risk string, rules, criticality
-    score) and updates the entity in the platform.
-
-    6. Returns a JSON result with the enrichment data and populates data tables with
-    the report details.
-
-
-    ### Additional Notes
-
-    None.
-  ai_short_description: >-
-    Enriches URL entities by querying Recorded Future for reputation, risk scores,
-    and threat intelligence, optionally retrieving related entities and updating the
-    entity's suspicious status based on a risk threshold.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a GET request to the Recorded Future API to fetch URL reputation
-      data (`fetches_data` is true). It does not mutate external data. It updates
-      internal entities (`can_update_entities` is true) and creates insights (`can_create_insight`
-      is true).
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: true
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      in entity_types`, where `entity_types` is passed as `[EntityTypes.URL]`. Thus,
-      it targets URL entities and filters by `entity_type`.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches reputation and threat intelligence for URL entities from
-      Recorded Future. This matches the 'Enrich IOC' expected outcome.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Risk Score Threshold | String | Yes | Represents the minimum malicious risk
-    score for a URL to be marked malicious. Has a range of 0-99. Below is the band
-    levels: <br> Very Malicious: 90-99 <br> Malicious: 65-89 <br> Suspicious: 25-64
-    <br> Unusual: 5-24 <br> No Malicious content: 0 |
-
-    | Include Related Entities | Boolean | No | If enabled, action will get information
-    about related entities. |
-Get Alert Details:
-  ai_description: >-
-    ### General Description
-
-    This action fetches detailed information about a specific alert from Recorded
-    Future and returns the results to the case. It can be used to retrieve additional
-    context regarding Recorded Future alerts, such as documents, related entities,
-    and evidence.
-
-
-    ### Flow Description
-
-    1. Extracts the provided `Alert ID` parameter.
-
-    2. Initializes the Recorded Future API client.
-
-    3. Makes a GET request to the Recorded Future API (`/v2/alert/{alert_id}`) to
-    retrieve the alert details.
-
-    4. Attaches the retrieved alert information as a JSON result to the action.
-
-    5. Adds a web report link to the action results.
-
-
-    ### Additional Notes
-
-    This action does not operate on entities. It requires a valid Recorded Future
-    Alert ID to function correctly.
-  ai_short_description: >-
-    Fetches detailed information about a specific alert from Recorded Future and returns
-    the results to the case.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data from the Recorded Future API (fetches_data=true). It
-      does not perform any state-changing operations on external systems (can_mutate_external_data=false).
-      It does not update entities, create insights, modify alert data, or create case
-      comments. It only adds JSON results and a link to the action output.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not use or iterate over `siemplify.target_entities`. It relies
-      entirely on the `Alert ID` parameter provided by the user. Therefore, all entity
-      types and filter flags are set to false.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: true
-    reasoning: >-
-      The action makes a GET request to Recorded Future to fetch details about a specific
-      alert using its ID. This directly aligns with the 'Get Alert Information' expected
-      outcome. It does not modify the alert, enrich IOCs, or perform any other categorized
-      actions.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Alert ID | String | Yes | Specify the ID of the alert for which you would like
-    to fetch details |
-Get CVE Related Entities:
-  ai_description: >-
-    ### General Description
-
-    Queries Recorded Future to retrieve related entities for CVE entities. This action
-    fetches threat intelligence context by identifying other entities associated with
-    the specified vulnerability.
-
-
-    ### Flow Description
-
-    1. Iterates over the target entities provided in the case and filters for CVE
-    entities.
-
-    2. For each CVE entity, makes a GET request to the Recorded Future API (`/v2/vulnerability/{entity}`)
-    to fetch related entities and intel card information.
-
-    3. Parses the response and adds the related entities report as a JSON result to
-    the action output.
-
-    4. Updates the successfully processed entities within the SecOps platform.
-
-
-    ### Additional Notes
-
-    This action only retrieves data and does not perform any state-changing operations
-    on external systems.
-  ai_short_description: >-
-    Queries Recorded Future to retrieve related entities and threat intelligence context
-    for CVE entities.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates the processed entities within the SecOps platform.
-    reasoning: >-
-      The action makes a GET request to the Recorded Future API to fetch related entities
-      for CVEs (fetches_data=true). It does not mutate external data. It updates the
-      internal entities by calling `siemplify.update_entities` (can_update_entities=true,
-      can_mutate_internal_data=true). It does not create insights, modify alert data,
-      or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: true
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in entity_types`, where `entity_types` is explicitly passed as `[EntityTypes.CVE]`.
-      Therefore, it targets CVE entities and filters by the entity_type attribute.
+      `entity.entity_type in entity_types`, where `entity_types` is explicitly passed
+      as `[EntityTypes.CVE]`. Therefore, it targets CVE entities and filters by entity
+      type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1301,8 +1291,9 @@ Get CVE Related Entities:
     get_alert_information: false
     reasoning: >-
       The action fetches related entities and threat intelligence context for a CVE
-      from Recorded Future. This aligns with the 'Enrich IOC' expected outcome. It
-      does not modify external state or perform other categorized actions.
+      from Recorded Future. This aligns with the 'Enrich IOC' category, as it returns
+      threat intelligence for an indicator (CVE). It does not mutate external state
+      or perform other categorized actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1322,30 +1313,29 @@ Get Hash Related Entities:
   ai_description: >-
     ### General Description
 
-    Queries Recorded Future to retrieve related entities for a given File Hash entity.
+    Queries Recorded Future to retrieve related entities for File Hash entities.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities provided in the case.
+    1. Iterates over the target entities and filters for File Hash entities.
 
-    2. Filters the entities to process only those of type File Hash.
+    2. Makes a GET request to the Recorded Future API (`/v2/hash/{entity}`) to fetch
+    related entities for each valid hash.
 
-    3. For each File Hash entity, makes an API call to Recorded Future (`GET /v2/hash/{entity}`)
-    to fetch related entities.
+    3. Attaches the retrieved related entities as JSON to the action results.
 
-    4. Adds the related entities report as a JSON result to the action.
+    4. Adds a web report link to the action results.
 
-    5. Attaches a web report link to the action results.
-
-    6. Updates the successful entities in the platform.
+    5. Updates the successfully processed entities in the platform.
 
 
     ### Additional Notes
 
-    There are no action-specific parameters for this action.
+    There are no specific action parameters required for this action to execute, as
+    it relies on the integration-level configuration.
   ai_short_description: >-
-    Queries Recorded Future to retrieve related entities for a given File Hash entity.
+    Queries Recorded Future to retrieve related entities for File Hash entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1357,10 +1347,9 @@ Get Hash Related Entities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from Recorded Future via a GET request. It does not
-      mutate external data or internal data. It updates the entities in the platform
-      by calling `siemplify.update_entities`. It does not create insights, modify
-      alert data, or create case comments.
+      The action makes a GET request to the Recorded Future API to fetch related entities
+      for hashes. It does not mutate external data. It updates the internal entities
+      with the successful processing status but does not create insights or case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1413,9 +1402,8 @@ Get Hash Related Entities:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them based
-      on `entity.entity_type in entity_types`, where `entity_types` is explicitly
-      passed as `[EntityTypes.FILEHASH]`. Thus, it filters by entity type and targets
-      File Hash entities.
+      on `entity.entity_type in [EntityTypes.FILEHASH]`. Therefore, it targets File
+      Hash entities and filters strictly by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1431,9 +1419,9 @@ Get Hash Related Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches related entities for a File Hash from Recorded Future, providing
-      threat intelligence context. This matches the 'Enrich IOC' expected outcome.
-      It does not mutate external data or perform other categorized actions.
+      The action fetches related entities for File Hash entities from Recorded Future,
+      which provides threat intelligence and context. This aligns with the 'Enrich
+      IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1453,33 +1441,32 @@ Get Host Related Entities:
   ai_description: >-
     ### General Description
 
-    Queries Recorded Future to retrieve related entities for Hostname entities. This
-    action fetches threat intelligence context by identifying other entities (such
-    as IPs, hashes, or vulnerabilities) that are associated with the target hostname.
+    Queries Recorded Future to retrieve related entities and threat intelligence context
+    for Hostname entities.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities and filters for Hostname entities.
+    1. Iterates over the target entities provided in the case and filters for Hostname
+    entities.
 
-    2. For each valid entity, makes an API call to Recorded Future (`GET /v2/domain/{entity}`)
-    to fetch related entities.
+    2. For each valid Hostname entity, makes a GET request to the Recorded Future
+    API (`/v2/domain/{entity}`) to fetch related entities and the Intel Card link.
 
-    3. Parses the API response and builds a related entities report.
+    3. Parses the response and adds the related entities as a JSON result to the action.
 
-    4. Attaches the related entities report as a JSON result to the action.
+    4. Attaches a link to the Recorded Future web report for the entity.
 
-    5. Adds a link to the Recorded Future web report for the entity.
-
-    6. Updates the successfully processed entities in the case.
+    5. Updates the successfully processed entities within the Google SecOps platform.
 
 
     ### Additional Notes
 
-    This action specifically targets Hostname entities. Other entity types will be
-    ignored.
+    This action specifically targets Hostname entities and will skip other entity
+    types.
   ai_short_description: >-
-    Queries Recorded Future to retrieve related entities for Hostname entities.
+    Queries Recorded Future to retrieve related entities and threat intelligence context
+    for Hostname entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1491,9 +1478,9 @@ Get Host Related Entities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from Recorded Future via a GET request. It does not
-      mutate external data or internal SecOps data. It updates entities by calling
-      `siemplify.update_entities` but does not create insights or case comments.
+      The action fetches data from the Recorded Future API (GET request). It does
+      not mutate external data or internal data outside of entities. It updates entities
+      via `siemplify.update_entities`. It does not create insights or case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1546,8 +1533,9 @@ Get Host Related Entities:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in entity_types`, where `entity_types` is provided as `[EntityTypes.HOSTNAME]`.
-      Therefore, it explicitly targets Hostname entities and filters by entity type.
+      `entity.entity_type in entity_types`, where `entity_types` is explicitly passed
+      as `[EntityTypes.HOSTNAME]`. Therefore, it targets Host Name entities and filters
+      by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1563,9 +1551,9 @@ Get Host Related Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches threat intelligence (related entities) for a Hostname from
-      Recorded Future. This aligns with the 'Enrich IOC' category, as it retrieves
-      threat intelligence context for an indicator.
+      The action fetches related entities and threat intelligence context for Hostname
+      indicators from Recorded Future, which aligns with the 'Enrich IOC' expected
+      outcome. It does not mutate external state or perform other categorized actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1586,33 +1574,33 @@ Get Ip Related Entities:
     ### General Description
 
     Queries Recorded Future to retrieve related entities for IP address entities.
-    This action fetches threat intelligence context, such as associated domains, hashes,
-    or vulnerabilities, and attaches the findings to the action results.
+    This action fetches contextual threat intelligence data associated with the IP
+    address to aid in investigation.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities provided to the action and filters for IP
-    Address entities.
+    1. Iterates over the target entities provided to the action.
 
-    2. For each valid IP address, makes a GET request to the Recorded Future API (`/v2/ip/{entity}`)
-    to fetch related entities and the Intel Card web link.
+    2. Filters the entities to process only those of type `ADDRESS`.
 
-    3. Parses the API response to build a structured JSON report of the related entities.
+    3. For each valid IP address, makes a GET request to the Recorded Future API (`/v2/ip/{entity}`)
+    to fetch related entities and the Intel Card link.
 
-    4. Attaches the JSON report and the Intel Card web link to the action's results
-    for analyst review.
+    4. Parses the API response to build a related entities report.
 
-    5. Updates the successfully processed entities within the SecOps platform.
+    5. Attaches the related entities report as a JSON result and adds a link to the
+    Recorded Future web report.
+
+    6. Updates the processed entities in the platform.
 
 
     ### Additional Notes
 
-    This action requires valid Recorded Future API credentials configured at the integration
-    level. It only processes entities of type ADDRESS.
+    None.
   ai_short_description: >-
-    Queries Recorded Future to retrieve and attach related entities and threat intelligence
-    links for IP address entities.
+    Queries Recorded Future to retrieve related entities and contextual threat intelligence
+    for IP address entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1625,9 +1613,8 @@ Get Ip Related Entities:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action fetches data from the Recorded Future API (GET request). It does
-      not mutate external data or internal case data. It updates entities by calling
-      `siemplify.update_entities(successful_entities)`. It does not create insights
-      or case comments in this specific logic flow.
+      not mutate external data. It updates internal entities by calling `siemplify.update_entities`
+      but does not create insights or modify alert data.
   entity_usage:
     entity_types:
       address: true
@@ -1698,9 +1685,8 @@ Get Ip Related Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches related entities for an IP address from Recorded Future,
-      which provides threat intelligence and contextual data for the indicator. This
-      aligns with the 'Enrich IOC' expected outcome.
+      The action fetches related entities and threat intelligence context for an IP
+      address from Recorded Future. This aligns with the 'Enrich IOC' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1720,31 +1706,31 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Recorded Future API. This action verifies that the integration
-    is configured correctly and can successfully communicate with the Recorded Future
-    service.
+    Tests connectivity to the Recorded Future API to ensure the integration is configured
+    correctly.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters (API URL, API Key, Verify SSL).
+    1. Extracts the integration configuration parameters (API URL, API Key, Verify
+    SSL).
 
     2. Initializes the Recorded Future manager.
 
-    3. Makes a test API call (fetching reputation for a dummy IP '8.8.8.8') to verify
-    the connection.
+    3. Executes a test connectivity request by attempting to fetch the IP reputation
+    for a dummy IP address (8.8.8.8).
 
-    4. Returns a successful result if the connection is established, or an error message
-    if it fails.
+    4. Returns a success message if the connection is established, or an error message
+    if the connection fails.
 
 
     ### Additional Notes
 
-    This action is typically used during integration setup or troubleshooting to ensure
-    network access and valid credentials.
+    This action does not process any case entities or modify any data. It is solely
+    used for diagnostic purposes.
   ai_short_description: >-
-    Tests connectivity to the Recorded Future API by making a test request to verify
-    the provided credentials and network access.
+    Tests connectivity to the Recorded Future API by making a test request to the
+    IP reputation endpoint.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1756,8 +1742,8 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only tests connectivity by making a dummy API call. It does not fetch
-      contextual data for the case, mutate external or internal data, update entities,
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for the case. It does not mutate external or internal data, update entities,
       create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
@@ -1810,8 +1796,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities. It only tests connectivity to the
-      external API using a hardcoded dummy IP address.
+      The action does not process any entities. It only uses a hardcoded dummy IP
+      address to test connectivity.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1849,34 +1835,34 @@ Update Alert:
   ai_description: >-
     ### General Description
 
-    Updates an existing alert in Recorded Future. This action allows analysts to modify
-    the status, assignee, and add notes to a specific alert directly within the Recorded
-    Future platform.
+    Updates an existing alert in Recorded Future by modifying its status, assignee,
+    or appending a note. This action initiates a state change on the external Recorded
+    Future platform to keep alert management synchronized.
 
 
     ### Flow Description
 
-    1. Extracts the provided parameters: Alert ID, Assign To, Note, and Status.
+    1. Extracts the `Alert ID` and the optional update parameters (`Assign To`, `Note`,
+    `Status`).
 
-    2. Validates that at least one update parameter (Status, Assign To, or Note) has
-    been provided.
+    2. Validates that at least one of the optional update parameters is provided;
+    otherwise, the action fails.
 
-    3. Initiates a POST request to the Recorded Future API (`/v2/alert/update`) with
-    the specified alert ID and the fields to be updated.
+    3. Maps the provided status to the corresponding Recorded Future API value.
 
-    4. Retrieves the response and attaches the updated alert data as a JSON result
+    4. Makes a POST request to the Recorded Future API (`/v2/alert/update`) with the
+    specified changes.
+
+    5. Retrieves the response and attaches the updated alert details as a JSON result
     to the action.
 
 
     ### Additional Notes
 
-    - The `Status` parameter maps to specific Recorded Future statuses (e.g., 'Resolved'
-    maps to 'actionable', 'Dismissed' maps to 'dismiss').
-
-    - If the action fails due to unauthorized access, it will explicitly prompt the
-    user to check their API token.
+    While `Assign To`, `Note`, and `Status` are individually marked as optional, at
+    least one of them must be populated for the action to execute successfully.
   ai_short_description: >-
-    Updates the status, assignee, or notes of a specific alert in Recorded Future.
+    Updates the status, assignee, or note of a specific alert in Recorded Future.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1885,8 +1871,8 @@ Update Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status, assignee, or note of a specific alert in the Recorded Future
-      platform.
+      Updates the status, assignee, or note of a specific alert in the external Recorded
+      Future platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
@@ -1945,12 +1931,11 @@ Update Alert:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      relies entirely on the explicitly provided 'Alert ID' parameter to perform its
-      operation. Therefore, it does not run on entities and all entity-related flags
-      are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-representing input parameters. It operates strictly on an external
+      'Alert ID' provided as a string parameter. Therefore, all entity flags are false.
   outcome_categories:
-    add_alert_comment: false
+    add_alert_comment: true
     add_ioc_to_allowlist: false
     add_ioc_to_blocklist: false
     contain_host: false
@@ -1964,10 +1949,11 @@ Update Alert:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the status, assignee, and notes of an alert in Recorded Future.
-      While the strict definition mentions 'within the SecOps platform', in the context
-      of integrations, this action functionally serves to update an alert in the external
-      source system, aligning with the 'Update Alert' category.
+      The action makes a POST request to Recorded Future to update an alert's status,
+      assignee, and/or note. This directly aligns with the 'Update Alert' expected
+      outcome (changing status/assignee of an alert) and the 'Add Alert Comment' expected
+      outcome (appending analyst notes to the alert). It does not enrich IOCs, manage
+      tickets, or interact with blocklists.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1995,6 +1981,8 @@ Update Alert:
 
     | Note | String | No | Specify a note that should be updated on the alert. |
 
-    | Status | Dropdown | Yes | Specify the new status for the alert. Optional values:
-    Select One, New, Assigned, Unassigned, Pending, Dismissed, Resolved, Flag for
-    Tuning. |
+    | Status | Drop-down | Yes | Specify the new status for the alert. Optional values
+    include: Select One, New, Assigned, Unassigned, Pending, Dismissed, Resolved,
+    Flag for Tuning. Note: While marked as mandatory in the schema, 'Select One' acts
+    as a null value. At least one of Assign To, Note, or a valid Status must be provided.
+    |

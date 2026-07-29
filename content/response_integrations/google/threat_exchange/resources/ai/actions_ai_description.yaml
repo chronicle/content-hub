@@ -2,38 +2,39 @@ Get Reputations:
   ai_description: >-
     ### General Description
 
-    Enriches File Hash, Hostname, IP Address, and URL entities by retrieving their
-    reputation from ThreatExchange. The action evaluates the returned threat intelligence
-    and updates the entity's suspicious status if malicious indicators are found.
+    Retrieves reputation data for File Hash, Hostname, IP Address, and URL entities
+    using the ThreatExchange API. This action evaluates the threat intelligence associated
+    with these indicators and updates their suspicious status within the platform
+    if malicious indicators are found.
 
 
     ### Flow Description
 
-    1. Initializes the ThreatExchange API client using the integration configuration.
+    1. Iterates through the target entities provided in the case.
 
-    2. Iterates through the target entities provided in the case.
+    2. Filters entities to process only those of type File Hash, Hostname, IP Address,
+    or URL.
 
-    3. Checks if the entity type is File Hash, Hostname, IP Address, or URL.
+    3. Makes a GET request to the ThreatExchange API (`/malware_analyses` for hashes,
+    `/threat_descriptors` for others) to fetch reputation data for each valid entity.
 
-    4. Makes a GET request to the ThreatExchange API to fetch the reputation data
-    for the specific entity.
+    4. If reputation data is found, it is formatted and attached to the entity as
+    a data table.
 
-    5. If reputation data is found, it is formatted as a CSV and attached to the entity
-    as an entity table.
+    5. Evaluates the reputation's status and severity; if it matches predefined suspicious
+    or malicious criteria, the entity's `is_suspicious` flag is set to True.
 
-    6. Evaluates the reputation status and severity; if deemed suspicious or malicious,
-    the entity's `is_suspicious` flag is set to True.
-
-    7. Updates the modified entities in the Google SecOps platform.
+    6. Updates the modified entities in the Google SecOps platform.
 
 
     ### Additional Notes
 
-    This action relies on the ThreatExchange API and requires valid credentials configured
-    at the integration level.
+    This action relies on the ThreatExchange integration configurations for authentication
+    and API routing.
   ai_short_description: >-
     Retrieves reputation data for File Hash, Hostname, IP Address, and URL entities
-    from ThreatExchange and updates their suspicious status based on the results.
+    using the ThreatExchange API, attaching the results as entity tables and updating
+    the entity's suspicious status if malicious indicators are found.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -46,10 +47,9 @@ Get Reputations:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action fetches data from the ThreatExchange API via GET requests (fetches_data=true).
-      It does not mutate external data. It updates entities internally by setting
-      their `is_suspicious` flag and calling `siemplify.update_entities` (can_update_entities=true).
-      It attaches an entity table but does not create insights, modify alert data,
-      or create case comments.
+      It does not mutate external data or internal data outside of entities. It updates
+      entities using `siemplify.update_entities` (can_update_entities=true). It attaches
+      data as entity tables but does not create insights or case comments.
   entity_usage:
     entity_types:
       address: true
@@ -104,7 +104,7 @@ Get Reputations:
       The action iterates over `siemplify.target_entities` and explicitly checks `entity.entity_type`
       against `EntityTypes.FILEHASH`, `EntityTypes.HOSTNAME`, `EntityTypes.ADDRESS`,
       and `EntityTypes.URL`. Therefore, it targets these specific entity types and
-      filters by `entity_type`.
+      filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -120,9 +120,9 @@ Get Reputations:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches reputation data for IOCs (File Hash, Hostname, IP Address,
-      URL) from ThreatExchange, which directly matches the 'Enrich IOC' expected outcome.
-      It does not perform any state-changing operations on external systems.
+      The action fetches reputation data for IOCs (File Hashes, Hostnames, IP Addresses,
+      URLs) from ThreatExchange, which directly aligns with the 'Enrich IOC' expected
+      outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -142,19 +142,19 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the ThreatExchange integration to ensure that the provided
-    credentials and network settings are valid.
+    Tests connectivity to the ThreatExchange API to ensure the integration is configured
+    correctly and can communicate with the service.
 
 
     ### Flow Description
 
-    1. Retrieves integration configuration parameters (API Root, App ID, App Secret,
-    API Version, Use SSL).
+    1. Retrieves the integration configuration parameters (API Root, App ID, App Secret,
+    etc.).
 
-    2. Initializes the ThreatExchangeManager with the retrieved settings.
+    2. Initializes the ThreatExchange API client.
 
-    3. Executes the `test_connectivity` method, which makes a test GET request to
-    the ThreatExchange API to fetch the reputation of a hardcoded test hash.
+    3. Makes a test GET request to the ThreatExchange API (`/malware_analyses` endpoint)
+    using a hardcoded test hash to verify connectivity.
 
     4. Returns a success message if the connection is established and the API responds
     without errors.
@@ -162,11 +162,11 @@ Ping:
 
     ### Additional Notes
 
-    This action is typically used during the initial setup or troubleshooting of the
-    integration to verify that Google SecOps can successfully communicate with the
-    ThreatExchange service.
+    This action does not process any case entities or alerts. It is strictly used
+    for diagnostic and configuration verification purposes.
   ai_short_description: >-
-    Tests connectivity to the ThreatExchange integration by making a test API call.
+    Tests connectivity to the ThreatExchange API by making a test request to verify
+    configuration settings.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -178,10 +178,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the ThreatExchange API to test connectivity.
-      It does not fetch contextual data for alerts/entities, mutate external data,
-      update internal entities, create insights, modify alert data, or create case
-      comments.
+      The action makes a GET request to test connectivity, but it does not fetch contextual
+      data for alerts or entities. It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -233,9 +232,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      uses a hardcoded test hash to verify connectivity, meaning it does not operate
-      on any specific entity types or apply any entity filters.
+      The action does not iterate over target entities or accept any entity-related
+      input parameters. It only uses a hardcoded test hash to verify API connectivity.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -251,10 +249,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is designed solely to test connectivity to the ThreatExchange API
-      using a hardcoded test hash. It does not perform actual enrichment on case entities,
-      mutate external systems, or interact with internal SecOps data in a way that
-      matches any of the expected outcome categories.
+      The action is a simple connectivity test (Ping). It does not enrich IOCs, update
+      alerts, mutate external systems, or perform any of the operations defined in
+      the outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

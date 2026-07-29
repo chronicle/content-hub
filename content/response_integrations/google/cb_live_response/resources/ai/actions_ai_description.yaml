@@ -2,43 +2,36 @@ Create Memdump:
   ai_description: >-
     ### General Description
 
-    Creates a memory dump on a host running VMware CB Cloud Agent based on the provided
-    Hostname or IP Address entities. The action interacts with the VMware Carbon Black
-    Cloud API to initiate a Live Response session and execute the memory dump command
-    on the remote endpoint.
+    Creates a memory dump on a host running the VMware Carbon Black Cloud Agent based
+    on Hostname or IP Address entities.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities and filters for supported types (Hostname,
-    IP Address) and optionally File Name entities if the `File Name` parameter is
-    not provided.
+    1. Filters target entities to identify valid Hostname and IP Address entities,
+    as well as File Name entities if the file name parameter is not provided.
 
-    2. Queries the VMware Carbon Black Cloud API to retrieve the corresponding device
-    ID for each target entity.
+    2. Queries the VMware Carbon Black Cloud API to retrieve the device ID associated
+    with each endpoint.
 
-    3. Initiates a Live Response session on the target device via the API.
+    3. Initiates a Live Response session for each identified device via the API.
 
-    4. Polls the session status up to the configured number of times until the session
-    becomes active.
+    4. Polls the API to verify the Live Response session is active.
 
-    5. Executes a command via the Live Response session to create a memory dump at
-    the specified remote directory path.
+    5. Sends a command via the API to create a memory dump on the remote host at the
+    specified directory path.
 
-    6. Polls the command status until it completes or fails, and collects the execution
-    results.
+    6. Polls the API to check the command status and collects the JSON results upon
+    completion.
 
 
     ### Additional Notes
 
-    The file name for the memdump can be provided either as a Siemplify File entity
-    (artifact) or as an action input parameter. If provided as both, the input parameter
-    takes precedence. The file name can also be specified as a full path, in which
-    case the `Remote Directory Path` parameter is ignored.
+    The file name for the memdump can be provided as a File Name entity or as an input
+    parameter. If both are provided, the input parameter takes precedence.
   ai_short_description: >-
-    Creates a memory dump on a remote host running VMware CB Cloud Agent by initiating
-    a Live Response session and executing a memdump command based on Hostname or IP
-    Address entities.
+    Creates a memory dump on a remote host running the VMware Carbon Black Cloud Agent
+    using Live Response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -48,16 +41,14 @@ Create Memdump:
     can_update_entities: false
     external_data_mutation_explanation: >-
       Initiates a Live Response session and executes a command to create a memory
-      dump on the remote endpoint.
-    fetches_data: true
+      dump on the remote host.
+    fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches device information and session/command statuses from the
-      VMware Carbon Black Cloud API (fetches_data=true). It mutates external data
-      by initiating a Live Response session and executing a command to create a memory
-      dump on the remote endpoint (can_mutate_external_data=true). It does not mutate
-      internal data, update entities, create insights, modify alerts, or create case
-      comments.
+      The action does not fetch contextual data for enrichment. It mutates external
+      data by initiating a Live Response session and executing a command to create
+      a memory dump on the remote host. It does not mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -109,11 +100,10 @@ Create Memdump:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES` (which includes ADDRESS and HOSTNAME).
-      It also explicitly checks for `entity.entity_type == EntityTypes.FILENAME` to
-      extract filenames if the 'File Name' parameter is not provided. Therefore, it
-      filters by entity_type for ADDRESS, HOSTNAME, and FILENAME.
+      The action iterates over `siemplify.target_entities` and filters them by `entity_type`.
+      It targets `ADDRESS` and `HOSTNAME` entities to identify the endpoints. It also
+      targets `FILENAME` entities to determine the memdump file name if not provided
+      via parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -130,8 +120,8 @@ Create Memdump:
     get_alert_information: false
     reasoning: >-
       The action initiates a Live Response session and executes a command on the remote
-      endpoint to create a memory dump. This aligns with the 'Execute Command on the
-      Host' expected outcome, as it runs a system command on a remote endpoint.
+      host to create a memory dump. This aligns with the 'Execute Command on the Host'
+      category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -166,34 +156,31 @@ Delete File:
     ### General Description
 
     Deletes a specified file from a remote host running the VMware Carbon Black Cloud
-    Agent. The action targets Hostname and IP Address entities to identify the remote
-    host, and uses File Name entities or input parameters to specify the file to delete.
+    Agent. The action targets Hostname or IP Address entities to identify the endpoint
+    and can accept the file name either as an action parameter or from a File Name
+    entity.
 
 
     ### Flow Description
 
-    1. Extracts the target file names and remote directory paths from the action parameters
-    or File Name entities.
+    1. Retrieves the target device ID from VMware Carbon Black Cloud using the provided
+    Hostname or IP Address entity.
 
-    2. Iterates over the target Hostname and IP Address entities and makes an API
-    call to Carbon Black Cloud to find the corresponding device ID.
+    2. Initiates a Live Response session on the target device.
 
-    3. Initiates a Live Response session on the identified device via an API call.
+    3. Checks the session status periodically until it becomes active.
 
-    4. Periodically checks the status of the Live Response session via API calls until
-    it becomes active.
+    4. Executes a 'delete file' command via the Live Response session for the specified
+    file path.
 
-    5. Sends a command to the Carbon Black Cloud API to delete the specified file
-    on the remote host.
-
-    6. Monitors the command status via API calls until completion and collects the
-    results.
+    5. Monitors the command status until completion and returns the execution results.
 
 
     ### Additional Notes
 
-    The file name can be provided as a Siemplify File entity or as an action input
-    parameter. If provided as both, the input parameter takes precedence.
+    The file name is case-insensitive and will be appended to the Remote Directory
+    Path to form the full path. If the file name is provided as a full path, the Remote
+    Directory Path parameter is ignored.
   ai_short_description: >-
     Deletes a specified file from a remote host running the VMware Carbon Black Cloud
     Agent using Live Response.
@@ -205,482 +192,15 @@ Delete File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes a specified file on a remote host via the VMware Carbon Black Cloud
-      Live Response API.
+      Deletes a specified file from a remote host via VMware Carbon Black Cloud Live
+      Response.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action uses the Carbon Black Cloud Live Response API to issue a 'delete
-      file' command on a remote host, which mutates external data by removing a file.
-      It does not update internal entities, create insights, or modify alert data.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: true
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES` (which includes ADDRESS and HOSTNAME)
-      to find the target hosts. It also filters by `entity.entity_type == EntityTypes.FILENAME`
-      to extract file names to delete if they are not provided via parameters.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action deletes a file on a remote host. This does not align with any of
-      the available outcome categories such as Execute Command on the Host (which
-      expects STDOUT from a general script/command), Contain Host, or Enrich IOC.
-      Therefore, no outcome categories are matched.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Remote Directory Path | String | No | Specify the remote directory path to file
-    to delete. Example: C:\TMP\ |
-
-    | File Name | String | No | Specify the file name to delete. File name is case
-    insensitive. File Name can be specified as a "full path" having both path and
-    a file name, in that case Remote Directory Path parameter will not be used. |
-
-    | Check for active session x times | String | Yes | How many attempts action should
-    make to get active session for the entity. Check is made every 2 seconds. |
-Delete File from Cloud Storage:
-  ai_description: >-
-    ### General Description
-
-    Deletes a file from the VMware Carbon Black Cloud file storage for an existing
-    live response session based on the Siemplify Hostname or IP Address entity.
-
-
-    ### Flow Description
-
-    1. Extracts configuration and action parameters.
-
-    2. Identifies target entities (Hostname, IP Address) and the file name to delete
-    (either from parameters or File Name entities).
-
-    3. Retrieves the corresponding CB Cloud Device ID for each entity.
-
-    4. Starts a Live Response session for the device.
-
-    5. Checks the session status until it becomes active.
-
-    6. Retrieves the list of files in the cloud storage for the session.
-
-    7. Deletes the specified file(s) from the cloud storage.
-
-    8. Returns the results and updates the JSON result.
-
-
-    ### Additional Notes
-
-    This action is not supported in Carbon Black Live Response API v3; API v6 must
-    be used. The file name can be provided either as a Siemplify File entity (artifact)
-    or as an action input parameter. If both are provided, the action will execute
-    using the input parameter. The file name is case insensitive.
-  ai_short_description: >-
-    Deletes a file from the VMware Carbon Black Cloud file storage for an existing
-    live response session based on the Siemplify Hostname or IP Address entity.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Deletes a specified file from the VMware Carbon Black Cloud file storage for
-      a Live Response session.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches device info, session status, and storage files from Carbon
-      Black Cloud (fetches_data=true). It mutates external data by deleting a file
-      from the cloud storage (can_mutate_external_data=true). It does not mutate internal
-      data, update entities, create insights, modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: true
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES` (which includes ADDRESS and HOSTNAME) and `entity.entity_type
-      == EntityTypes.FILENAME`. This means it targets ADDRESS, HOSTNAME, and FILENAME
-      entities, filtering strictly by entity_type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action deletes a file from the VMware Carbon Black Cloud file storage. This
-      does not match any of the available outcome categories such as Execute Command
-      on the Host, Download File, or Contain Host.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | File Name | String | No | Specify the file name to delete. File name is case
-    insensitive. |
-
-    | Check for active session x times | String | Yes | How many attempts action should
-    make to get active session for the entity. Check is made every 2 seconds. |
-Download File:
-  ai_description: >-
-    ### General Description
-
-    Downloads a file from a host running VMware CB Cloud Agent based on the Siemplify
-    Hostname or IP Address entity. The file name can be provided either as a Siemplify
-    File entity (artifact) or as an action input parameter.
-
-
-    ### Flow Description
-
-    1. Retrieves the corresponding CB Cloud Device ID for the provided Hostname or
-    IP Address entities.
-
-    2. Initiates a Live Response session on the target device.
-
-    3. Polls the session status until it becomes active.
-
-    4. If a remote directory path is provided without specific filenames, it executes
-    a command to list the directory contents.
-
-    5. Initiates a command to retrieve the specified file(s) from the remote host.
-
-    6. Polls the command status until it completes successfully.
-
-    7. Downloads the file content and saves it to the specified local directory path.
-
-
-    ### Additional Notes
-
-    - If the File name is passed to the action both as an entity and an input parameter,
-    the action will be executed using the input parameter.
-
-    - The file name is case-insensitive.
-
-    - If the action is executed against multiple Host or IP entities, the downloaded
-    file name is appended with the Hostname or IP address to prevent overwriting (e.g.,
-    `hostname_filename`).
-
-    - The File Name can also be specified as a full path, in which case the Remote
-    Directory Path parameter is ignored.
-  ai_short_description: >-
-    Downloads a specified file from a remote host running VMware CB Cloud Agent using
-    Live Response.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches file content from an external system (VMware CB Cloud). It
-      does not mutate external data (only reads files), nor does it mutate internal
-      data, update entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: true
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`. It also
-      extracts filenames using `entity.entity_type == EntityTypes.FILENAME`. Therefore,
-      it targets Address, Hostname, and File Name entities, filtering by entity type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: true
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves a specific file from a remote host via VMware CB Cloud
-      Live Response and saves it locally. This directly matches the 'Download File'
-      expected outcome.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | File Name | String | No | Specify the file name to download. File name is case
-    insensitive. File Name can be specified as a "full path" having both path and
-    a file name, in that case Remote Directory Path parameter will not be used. |
-
-    | Remote Directory Path | String | No | Specify the remote directory path action
-    should take to download the file. Example: C:\TMP\ |
-
-    | Local Directory Path | String | Yes | Specify the local directory path action
-    should save the file to. Example: /tmp/ |
-
-    | Check for active session x times | String | Yes | How many attempts action should
-    make to get active session for the entity. Check is made every 2 seconds. |
-Execute File:
-  ai_description: >-
-    ### General Description
-
-    Executes a file on a host running VMware CB Cloud Agent based on the Siemplify
-    Hostname or IP Address entity.
-
-
-    ### Flow Description
-
-    1. Extracts configuration and action parameters.
-
-    2. Identifies target entities (ADDRESS, HOSTNAME) and filenames (from parameters
-    or FILENAME entities).
-
-    3. Initializes the Carbon Black Live Response Manager.
-
-    4. Executes a series of asynchronous steps:
-       - Initial step: Prepares entities and filenames.
-       - Get Corresponding CB Cloud Device: Finds the device ID for the entity.
-       - Session Start: Starts a Live Response session on the device.
-       - Session Check: Waits for the session to become active.
-       - Command Start: Initiates the command to execute the file on the remote host
-    via the `create_command` API endpoint.
-       - Command Check: Waits for the command to complete and collects the results
-    via the `get_command` API endpoint.
-    5. Returns the execution results and outputs a JSON result.
-
-
-    ### Additional Notes
-
-    The file name can be provided as a Siemplify File entity or as an action input
-    parameter. If both are provided, the input parameter takes precedence.
-  ai_short_description: >-
-    Executes a specified file on a host running VMware CB Cloud Agent using Carbon
-    Black Live Response.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Starts a Live Response session and executes a file/command on the remote endpoint
-      via Carbon Black Cloud.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches device info, session status, and command status. It mutates
-      external data by starting a Live Response session and executing a file/command
-      on the remote endpoint via Carbon Black Cloud. It does not mutate internal data,
-      update entities, create insights, modify alert data, or create case comments.
+      The action initiates a Live Response session and sends a command to delete a
+      file on a remote endpoint, which mutates external data (can_mutate_external_data=true).
+      It does not fetch contextual enrichment data, update internal entities, create
+      insights, or add case comments.
   entity_usage:
     entity_types:
       address: true
@@ -733,8 +253,10 @@ Execute File:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them by `entity.entity_type
-      in [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`. It also extracts `EntityTypes.FILENAME`
-      entities if the `File Name` parameter is not provided.
+      in SUPPORTED_ENTITY_TYPES` (which includes ADDRESS and HOSTNAME). It also extracts
+      file names by filtering entities where `entity.entity_type == EntityTypes.FILENAME`.
+      Therefore, it uses Address, Hostname, and File Name entities, filtering strictly
+      by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -747,11 +269,13 @@ Execute File:
     enable_identity: false
     enrich_asset: false
     enrich_ioc: false
-    execute_command_on_the_host: true
+    execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a file/command on a remote host via Carbon Black Live Response.
-      This matches the 'Execute Command on the Host' category.
+      The action deletes a file on a remote host via VMware Carbon Black Cloud Live
+      Response. It does not execute a general script returning STDOUT, nor does it
+      match any other specific outcome category such as Contain Host or Add IOC to
+      Blocklist. Therefore, it does not align with any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -771,65 +295,53 @@ Execute File:
 
     | --- | --- | --- | --- |
 
-    | File Name | String | No | Specify the file name to execute. File name is case
+    | Remote Directory Path | String | No | Specify the remote directory path to file
+    to delete. Example: C:\TMP\ |
+
+    | File Name | String | No | Specify the file name to delete. File name is case
     insensitive. File Name can be specified as a "full path" having both path and
     a file name, in that case Remote Directory Path parameter will not be used. |
 
-    | Remote Directory Path | String | No | Specify the remote directory path for
-    the file to execute. Example: C:\TMP\ |
-
-    | Output Log File on Remote Host | String | No | Specify the output log file action
-    should save the redirected output to. Example: C:\TMP\cmdoutput.log |
-
-    | Command Arguments to Pass to File | String | No | Specify the command arguments
-    to pass for executing the file. Example, here we specify "/C whoami" to execute
-    whoami command with cmd: C:\Windows\system32\cmd.exe /C whoami |
-
-    | Wait for the Result | Boolean | No | If enabled, action will wait for the command
-    to complete. |
-
     | Check for active session x times | String | Yes | How many attempts action should
     make to get active session for the entity. Check is made every 2 seconds. |
-Kill Process:
+Delete File from Cloud Storage:
   ai_description: >-
     ### General Description
 
-    Kills a specific process on a target host using VMware Carbon Black Cloud Live
-    Response. The action identifies the target host using Hostname or IP Address entities
-    and determines the process to kill based on an input parameter or a Process entity.
+    Deletes a specified file from the VMware Carbon Black Cloud file storage associated
+    with an active Live Response session for a given Hostname or IP Address entity.
 
 
     ### Flow Description
 
-    1. Extracts the process name from the action parameters. If not provided, it searches
-    the target entities for a Process entity to use as the process name.
+    1. Extracts the file name to delete from the action parameters. If not provided,
+    it extracts the file name from target File Name entities.
 
-    2. Iterates over the target Hostname and IP Address entities.
+    2. Retrieves the corresponding Carbon Black Cloud device ID for each target Hostname
+    or IP Address entity.
 
-    3. Queries Carbon Black Cloud to retrieve the corresponding device ID for each
-    entity.
+    3. Initiates a Live Response session for the identified devices.
 
-    4. Initiates a Live Response session on the target device and waits for the session
-    to become active.
+    4. Polls the session status up to a configured number of times until the session
+    becomes active.
 
-    5. Executes a command to list running processes on the device and retrieves the
-    PID of the target process.
+    5. Retrieves the list of files currently in the cloud storage for the active session.
 
-    6. Executes a kill command using the identified PID to terminate the process.
+    6. Makes a DELETE request to the Carbon Black Cloud API to remove the specified
+    file from the cloud storage.
 
-    7. Monitors the status of the kill command and returns the execution results as
-    JSON.
+    7. Returns a JSON result containing the execution details and status for each
+    processed entity.
 
 
     ### Additional Notes
 
-    This action runs asynchronously. If multiple devices match a single entity, the
-    action will target the device with the most recent contact time. If the process
-    name is provided both as a parameter and as an entity, the parameter value takes
-    precedence.
+    This action requires Carbon Black Live Response API v6 and will fail if v3 is
+    used. If the file name is provided both as an input parameter and as an entity,
+    the input parameter takes precedence. The file name matching is case-insensitive.
   ai_short_description: >-
-    Terminates a specific process on a target host via VMware Carbon Black Cloud Live
-    Response based on Hostname or IP Address entities.
+    Deletes a specified file from the VMware Carbon Black Cloud file storage for an
+    active Live Response session based on Hostname or IP Address entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -838,13 +350,15 @@ Kill Process:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Terminates a running process on a remote endpoint via Carbon Black Cloud Live
-      Response.
-    fetches_data: false
+      Deletes a specified file from the VMware Carbon Black Cloud file storage for
+      an active Live Response session.
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action mutates external data by terminating a process on a remote host via
-      Carbon Black Cloud Live Response. It does not update internal entities, create
+      The action fetches device and session information, as well as the list of files
+      in the cloud storage (fetches_data=true). It then makes a DELETE request to
+      the Carbon Black Cloud API to remove the specified file from the cloud storage
+      (can_mutate_external_data=true). It does not update internal entities, create
       insights, or modify alert data.
   entity_usage:
     entity_types:
@@ -865,7 +379,7 @@ Kill Process:
       email_message: false
       event: false
       file_hash: false
-      file_name: false
+      file_name: true
       generic: false
       host_name: true
       ip_set: false
@@ -874,7 +388,7 @@ Kill Process:
       parent_process: false
       phone_number: false
       pod: false
-      process: true
+      process: false
       service: false
       source_domain: false
       threat_actor: false
@@ -897,10 +411,11 @@ Kill Process:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them by `EntityTypes.ADDRESS`
-      and `EntityTypes.HOSTNAME` to find the target hosts. Additionally, if the 'Process
-      Name' parameter is not provided, it filters for `EntityTypes.PROCESS` to extract
-      the process name to kill. Therefore, it filters by entity type.
+      The script iterates over `siemplify.target_entities` and filters them by `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` (which includes ADDRESS and HOSTNAME) to determine
+      the target devices. It also filters by `entity.entity_type == EntityTypes.FILENAME`
+      to extract file names if the 'File Name' parameter is not provided. Therefore,
+      it uses Address, Hostname, and File Name entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -913,12 +428,14 @@ Kill Process:
     enable_identity: false
     enrich_asset: false
     enrich_ioc: false
-    execute_command_on_the_host: true
+    execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a command on a remote endpoint (via CB Live Response) to
-      terminate a running process. This aligns with the 'Execute Command on the Host'
-      category as it interacts with the host's operating system to run a system command.
+      The action deletes a file from the Carbon Black Cloud file storage associated
+      with a Live Response session. This does not align with any of the predefined
+      outcome categories such as containing a host, enriching an IOC, or executing
+      a command on the host (since it deletes from cloud storage, not the endpoint
+      itself). Therefore, all outcome category flags are set to false.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -938,44 +455,55 @@ Kill Process:
 
     | --- | --- | --- | --- |
 
-    | Process Name | String | No | Process name to search PID for. If not provided,
-    the action will look for a Process entity in the case. |
+    | File Name | String | No | Specify the file name to delete. File name is case
+    insensitive. |
 
     | Check for active session x times | String | Yes | How many attempts action should
     make to get active session for the entity. Check is made every 2 seconds. |
-List Files:
+Download File:
   ai_description: >-
     ### General Description
 
-    Lists files in a specified directory on a host running the VMware Carbon Black
-    Cloud Agent based on Hostname or IP Address entities.
+    Downloads a specified file from a host running VMware Carbon Black Cloud Agent
+    based on the provided Hostname or IP Address entities.
 
 
     ### Flow Description
 
-    1. Filters the target entities to include only Hostname and IP Address types.
+    1. Retrieves configuration and action parameters, including the file name, remote
+    directory path, and local directory path.
 
-    2. Queries the VMware Carbon Black Cloud API to retrieve the corresponding device
-    ID for each valid entity.
+    2. Identifies target Hostname and IP Address entities, as well as File Name entities
+    if the file name parameter is not explicitly provided.
 
-    3. Initiates a Live Response session on the target device.
+    3. Queries the VMware Carbon Black Cloud API to find the corresponding device
+    ID for each target entity.
 
-    4. Polls the session status until it becomes active.
+    4. Initiates a Live Response session on the identified devices.
 
-    5. Executes a `directory list` command via the Live Response session for the specified
-    remote directory path.
+    5. Polls the session status until it becomes active.
 
-    6. Retrieves the command results and adds the list of files to the action's JSON
-    result and case wall data tables.
+    6. If a remote directory path is provided without a specific file name, it executes
+    a command to list the directory contents.
+
+    7. Initiates a command to retrieve the specified file from the remote host.
+
+    8. Polls the command status until completion.
+
+    9. Downloads the file content and saves it to the specified local directory path.
+
+    10. Returns the execution results and file details in JSON format.
 
 
     ### Additional Notes
 
-    This is an asynchronous action that will periodically check the status of the
-    Live Response session and command execution until completion or timeout.
+    The file name can be provided as an action parameter or as a File entity. If both
+    are present, the action parameter takes precedence. If executed against multiple
+    entities, the downloaded file name is prefixed with the hostname or IP address
+    to prevent overwriting.
   ai_short_description: >-
-    Lists files in a specified directory on a host running the VMware Carbon Black
-    Cloud Agent based on Hostname or IP Address entities.
+    Downloads a specified file from a remote host running VMware Carbon Black Cloud
+    Agent based on Hostname or IP Address entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -987,10 +515,9 @@ List Files:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (a list of files) from the Carbon Black Cloud API. It
-      does not mutate external data (it only reads the directory contents). It does
-      not mutate internal data, update entities, create insights, modify alert data,
-      or create case comments (it only adds a data table to the action results).
+      The action fetches data (file content) from an external system (VMware Carbon
+      Black Cloud) via API requests. It does not mutate external data (it only reads/downloads
+      a file), nor does it mutate internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -1010,7 +537,7 @@ List Files:
       email_message: false
       event: false
       file_hash: false
-      file_name: false
+      file_name: true
       generic: false
       host_name: true
       ip_set: false
@@ -1042,10 +569,11 @@ List Files:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
-      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets
-      IP Address and Hostname entities and filters by entity type.
+      The action iterates over `siemplify.target_entities` and filters them based
+      on `entity.entity_type in SUPPORTED_ENTITY_TYPES` (which includes ADDRESS and
+      HOSTNAME). It also extracts identifiers from entities where `entity.entity_type
+      == EntityTypes.FILENAME` to use as the file names to download. Therefore, it
+      uses Address, Hostname, and File Name entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1054,18 +582,16 @@ List Files:
     create_ticket: false
     delete_email: false
     disable_identity: false
-    download_file: false
+    download_file: true
     enable_identity: false
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of files from a remote host via a Live Response
-      session. While it executes a specific built-in command to list files, it does
-      not run a generic script or system command returning STDOUT, nor does it match
-      the other specific outcome categories like downloading a file or enriching an
-      asset.
+      The action initiates a Live Response session on a remote endpoint and executes
+      a command to retrieve a specific file, saving it locally. This directly aligns
+      with the 'Download File' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1085,504 +611,53 @@ List Files:
 
     | --- | --- | --- | --- |
 
-    | Remote Directory Path | String | Yes | Specify the target directory path action
-    should list. Example: C:\TMP\ or /tmp/ |
+    | File Name | String | No | Specify the file name to download. File name is case
+    insensitive. File Name can be specified as a "full path" having both path and
+    a file name, in that case Remote Directory Path parameter will not be used. |
 
-    | Max Rows to Return | String | No | Specify how many rows action should return.
-    |
+    | Remote Directory Path | String | No | Specify the remote directory path action
+    should take to download the file. Example: C:\TMP\ |
 
-    | Start from Row | String | No | Specify from which row action should start to
-    return data. |
-
-    | Check for active session x times | String | Yes | How many attempts action should
-    make to get active session for the entity. Check is made every 2 seconds. |
-List Files in Cloud Storage:
-  ai_description: >-
-    ### General Description
-
-    Lists files in the VMware Carbon Black Cloud file storage for an existing live
-    response session based on the Siemplify Host or IP entity.
-
-
-    ### Flow Description
-
-    1. Filters the target entities to include only Hostname and IP Address types.
-
-    2. Retrieves the corresponding Carbon Black Cloud device ID for each entity.
-
-    3. Initiates a Live Response session for the identified device via the Carbon
-    Black Cloud API.
-
-    4. Checks the status of the session periodically until it becomes active.
-
-    5. Retrieves the list of files from the cloud storage associated with the active
-    session.
-
-    6. Adds the retrieved file information to the case wall as a data table and returns
-    it as a JSON result.
-
-
-    ### Additional Notes
-
-    - The action supports Hostname and IP Address entities.
-
-    - It creates a Live Response session on the target device, which initiates a state
-    change on the external system.
-  ai_short_description: >-
-    Lists files in the VMware Carbon Black Cloud file storage for an existing live
-    response session associated with a specific Hostname or IP Address entity.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Initiates a Live Response session on the VMware Carbon Black Cloud for the target
-      device.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data by retrieving the list of files from the VMware Carbon
-      Black Cloud storage using a GET request. It mutates external data by initiating
-      a Live Response session on the target device via a POST request. It does not
-      update internal entities, create insights, modify alert data, or create case
-      comments.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`. Therefore,
-      it targets IP Address and Hostname entities and filters strictly by entity type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves a list of files from the cloud storage for a Live Response
-      session. It does not enrich IOCs or assets, update alerts, manage tickets, modify
-      blocklists/allowlists, manage identities, contain hosts, search events, execute
-      commands on the host, or perform any other operations that match the available
-      outcome categories.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Max Rows to Return | String | No | Specify how many rows action should return.
-    |
-
-    | Start from Row | String | No | Specify from which row action should start to
-    return data. |
+    | Local Directory Path | String | Yes | Specify the local directory path action
+    should save the file to. Example: /tmp/ |
 
     | Check for active session x times | String | Yes | How many attempts action should
     make to get active session for the entity. Check is made every 2 seconds. |
-List Processes:
+Execute File:
   ai_description: >-
     ### General Description
 
-    Lists processes running on an endpoint based on the provided Hostname or IP Address
-    entities using VMware Carbon Black Cloud Live Response. This action establishes
-    a Live Response session with the target device and executes a command to retrieve
-    the list of active processes, which can be optionally filtered by process name.
+    Executes a specified file on a remote host running the VMware CB Cloud Agent,
+    targeting Hostname or IP Address entities. This action uses the Live Response
+    API to create a process on the endpoint and can optionally wait for the execution
+    to complete and return the output.
 
 
     ### Flow Description
 
-    1. Filters the target entities to include only Hostname and IP Address entity
-    types.
-
-    2. Queries the Carbon Black Cloud API to find the corresponding device ID for
-    each valid entity.
-
-    3. Initiates a Live Response session on the target device via a POST request.
-
-    4. Polls the session status until it becomes active.
-
-    5. Starts a command to list processes on the endpoint.
-
-    6. Polls the command status until completion and retrieves the process list.
-
-    7. Adds the retrieved process list to the case wall as a data table and returns
-    the results as a JSON object.
-
-
-    ### Additional Notes
-
-    This is an asynchronous action that will poll the Carbon Black Cloud API for session
-    and command completion. The number of polling attempts for the session can be
-    configured via the action parameters.
-  ai_short_description: >-
-    Lists processes running on an endpoint associated with Hostname or IP Address
-    entities using VMware Carbon Black Cloud Live Response.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches a list of running processes from the endpoint via Carbon
-      Black Live Response. It does not mutate external data in a state-changing manner
-      (it only queries processes), nor does it update internal entities, create insights,
-      or modify alert data. It adds a data table to the case wall but does not create
-      case comments.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS
-      and HOSTNAME. Therefore, it targets Address and Hostname entities and filters
-      by entity type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: true
-    get_alert_information: false
-    reasoning: >-
-      The action initiates a Live Response session and executes a command to list
-      processes on the remote endpoint, returning the results. This aligns with the
-      'Execute Command on the Host' category.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Process Name | String | No | Process name to search for on the host. |
-
-    | How Many Records To Return | String | No | How many records per entity action
-    should return. |
-
-    | Check for active session x times | String | Yes | How many attempts action should
-    make to get active session for the entity. Check is made every 2 seconds. |
-Ping:
-  ai_description: >-
-    ### General Description
-
-    Tests connectivity to the VMware Carbon Black Endpoint Standard Live Response
-    API using the credentials provided in the integration configuration.
-
-
-    ### Flow Description
-
-    1. Extracts the integration configuration parameters (API Root, Organization Key,
-    API IDs, and Secret Keys).
-
-    2. Initializes the Carbon Black Live Response Manager (either V3 or V6 based on
-    configuration).
-
-    3. Makes a test API call (POST to `appservice_search` and `service_session` for
-    V3, or GET to `sessions` for V6) to verify the provided credentials and network
-    connectivity.
-
-    4. Returns a success message if the connection is established, or a failure message
-    if an error occurs.
-
-
-    ### Additional Notes
-
-    This action does not require any specific entities or action parameters to run.
-  ai_short_description: >-
-    Tests connectivity to the VMware Carbon Black Endpoint Standard Live Response
-    API.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action only performs a test API call to verify connectivity. It does not
-      fetch contextual data for entities, mutate external data, mutate internal data,
-      update entities, create insights, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It solely tests the integration's connectivity.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Put File:
-  ai_description: >-
-    ### General Description
-
-    Puts a file on a remote host running the VMware Carbon Black Cloud Agent based
-    on the provided Siemplify Hostname or IP Address entities. The file name to be
-    uploaded can be provided either as a Siemplify File entity or as an action input
-    parameter. The action establishes a Live Response session with the target device,
-    uploads the file to the session, and then executes a command to place the file
-    in the specified destination directory on the remote host.
-
-
-    ### Flow Description
-
-    1. Retrieves the corresponding Carbon Black Cloud device for the provided Hostname
-    or IP Address entities.
+    1. Retrieves the corresponding VMware CB Cloud device for the target Hostname
+    or IP Address entity.
 
     2. Initiates a Live Response session on the target device.
 
     3. Polls the session status until it becomes active.
 
-    4. Uploads the specified file from the local SOAR environment to the Live Response
-    session.
+    4. Sends a command to execute the specified file with provided arguments on the
+    remote host.
 
-    5. Initiates a 'put file' command to move the uploaded file to the specified destination
-    directory path on the remote host.
+    5. Polls the command status until execution completes or fails.
 
-    6. Polls the command status until it completes successfully.
-
-    7. Returns a JSON result containing the details of the uploaded file and command
-    execution.
+    6. Returns the execution results and output.
 
 
     ### Additional Notes
 
-    - The File Name parameter is case-insensitive.
-
-    - If the File Name is passed to the action both as an entity and an input parameter,
-    the action will execute using the input parameter.
-
-    - The File Name will be appended to both the Source Directory Path and Destination
-    Directory Path to construct the resulting file paths accepted by the Carbon Black
-    Cloud API.
-
-    - The File Name can also be specified as a 'full path' containing both the path
-    and the file name, in which case the Source Directory Path parameter will not
-    be used.
+    The file name can be provided as a File entity or as an action input parameter.
+    If both are provided, the input parameter takes precedence. The file name is appended
+    to the Remote Directory Path to form the full path.
   ai_short_description: >-
-    Uploads a file to a remote host running the VMware Carbon Black Cloud Agent using
-    a Live Response session.
+    Executes a specified file on a remote host running the VMware CB Cloud Agent using
+    Live Response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1591,13 +666,13 @@ Put File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Uploads a file to a remote host via a Carbon Black Live Response session.
+      Executes a file or command on the remote host via the VMware CB Cloud Agent.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action mutates external data by uploading a file to a remote host via Carbon
-      Black Live Response. It does not fetch contextual data for enrichment, nor does
-      it mutate internal data, update entities, or create insights.
+      The action executes a file on a remote host via the VMware CB Cloud API, which
+      mutates external state by creating a process. It does not update internal entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: true
@@ -1652,8 +727,328 @@ Put File:
       The action iterates over `siemplify.target_entities` and filters them by `entity.entity_type
       in SUPPORTED_ENTITY_TYPES` (which includes ADDRESS and HOSTNAME). It also extracts
       filenames from entities where `entity.entity_type == EntityTypes.FILENAME`.
-      Therefore, it targets Address, Hostname, and File Name entities, filtering strictly
+      Therefore, it filters by entity type and supports Address, Hostname, and File
+      Name entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a Live Response session and executes a file/command on
+      the remote host. This directly aligns with the 'Execute Command on the Host'
+      category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Name | String | No | Specify the file name to execute. File name is case
+    insensitive. File Name can be specified as a "full path" having both path and
+    a file name, in that case Remote Directory Path parameter will not be used. |
+
+    | Remote Directory Path | String | No | Specify the remote directory path for
+    the file to execute. Example: C:\TMP\ |
+
+    | Output Log File on Remote Host | String | No | Specify the output log file action
+    should save the redirected output to. Example: C:\TMP\cmdoutput.log |
+
+    | Command Arguments to Pass to File | String | No | Specify the command arguments
+    to pass for executing the file. Example, here we specify "/C whoami" to execute
+    whoami command with cmd: C:\Windows\system32\cmd.exe /C whoami |
+
+    | Wait for the Result | Boolean | No | If enabled, action will wait for the command
+    to complete. |
+
+    | Check for active session x times | String | Yes | How many attempts action should
+    make to get active session for the entity. Check is made every 2 seconds. |
+Kill Process:
+  ai_description: >-
+    ### General Description
+
+    Kills a specific process on a host based on the Siemplify Hostname or IP Address
+    entity using VMware Carbon Black Cloud Live Response. The process name can be
+    provided either as a Siemplify Process entity or as an action input parameter.
+
+
+    ### Flow Description
+
+    1. Extracts configuration and action parameters.
+
+    2. Identifies the process name to kill, either from the `Process Name` parameter
+    or by finding a Process entity in the case.
+
+    3. Filters target entities for Hostname and IP Address types.
+
+    4. For each suitable entity, retrieves the corresponding device ID from Carbon
+    Black Cloud.
+
+    5. Initiates a Live Response session on the target device.
+
+    6. Polls the session status until it becomes active.
+
+    7. Executes a command to list running processes on the device.
+
+    8. Parses the process list to find the Process ID (PID) matching the specified
+    process name.
+
+    9. Executes a kill command using the identified PID.
+
+    10. Checks the status of the kill command and collects the execution results.
+
+
+    ### Additional Notes
+
+    - The action is executed asynchronously.
+
+    - If the process name is passed both as an entity and an input parameter, the
+    action will use the input parameter.
+  ai_short_description: >-
+    Kills a specific process on a target endpoint via VMware Carbon Black Cloud Live
+    Response based on Hostname or IP Address entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Terminates a specific process on the target endpoint via Carbon Black Live Response.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches device information and process lists from Carbon Black Cloud
+      (fetches_data=true). It mutates external data by terminating a process on the
+      remote endpoint via Live Response (can_mutate_external_data=true). It does not
+      mutate internal data, update entities, create insights, modify alerts, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: true
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. It also searches
+      for `EntityTypes.PROCESS` to use as the process name if the parameter is not
+      provided. Therefore, it uses Address, Hostname, and Process entities, filtering
       by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action executes commands (list processes, kill process) on a remote endpoint
+      via Carbon Black Live Response. This aligns with the 'Execute Command on the
+      Host' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Process Name | String | No | Process name to search PID for. If not provided,
+    the action will look for a Process entity. |
+
+    | Check for active session x times | String | Yes | How many attempts action should
+    make to get active session for the entity. Check is made every 2 seconds. |
+List Files:
+  ai_description: >-
+    ### General Description
+
+    Lists files in a specified directory on a host running the VMware Carbon Black
+    Cloud Agent. The action targets Hostname and IP Address entities to retrieve the
+    directory contents via a Live Response session.
+
+
+    ### Flow Description
+
+    1. Filters target entities to include only Hostname and IP Address entities.
+
+    2. Retrieves the corresponding Carbon Black Cloud device ID for each valid entity.
+
+    3. Initiates a Live Response session on the target device.
+
+    4. Checks the session status repeatedly until it becomes active.
+
+    5. Executes a "directory list" command on the host via the Live Response session
+    to retrieve files from the specified remote directory path.
+
+    6. Retrieves the command results and adds the file list to the action's data table.
+
+    7. Returns the file details as a JSON result.
+
+
+    ### Additional Notes
+
+    The action handles multiple entities asynchronously and will attempt to match
+    IP addresses and hostnames to the correct Carbon Black Cloud agent.
+  ai_short_description: >-
+    Lists files in a specified directory on a remote host via VMware Carbon Black
+    Cloud Live Response for Hostname and IP Address entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches a list of files from a remote directory using the Carbon
+      Black Cloud Live Response API. It does not mutate external data, update entities,
+      create insights, modify alert data, or create case comments. It only retrieves
+      data and adds it to the action's results.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets
+      Address and Hostname entities and filters strictly by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1669,11 +1064,608 @@ Put File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action uploads a file to a remote host via a Live Response session. This
-      does not perfectly align with 'Execute Command on the Host' because it does
-      not run a script or system command returning STDOUT, nor does it match 'Submit
-      File' which is for sandboxing. It does not match any of the predefined outcome
-      categories.
+      The action retrieves a list of files from a remote directory. This does not
+      match any of the specific expected outcomes such as enriching an IOC/asset,
+      executing an arbitrary command, downloading a file, or containing a host. Therefore,
+      no outcome categories apply.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Remote Directory Path | String | Yes | Specify the target directory path action
+    should list. Example: C:\TMP\ or /tmp/ |
+
+    | Max Rows to Return | String | No | Specify how many rows action should return.
+    |
+
+    | Start from Row | String | No | Specify from which row action should start to
+    return data. |
+
+    | Check for active session x times | String | Yes | How many attempts action should
+    make to get active session for the entity. Check is made every 2 seconds. |
+List Files in Cloud Storage:
+  ai_description: >-
+    ### General Description
+
+    Lists files stored in the VMware Carbon Black Cloud file storage for an active
+    Live Response session associated with a specific Hostname or IP Address entity.
+
+
+    ### Flow Description
+
+    1. Filters the target entities to include only Hostname and IP Address types.
+
+    2. Queries VMware Carbon Black Cloud to retrieve the corresponding device ID for
+    each valid entity.
+
+    3. Initiates a Live Response session for the identified device.
+
+    4. Polls the session status until it becomes active, up to a configured number
+    of retries.
+
+    5. Retrieves the list of files from the cloud storage associated with the active
+    session.
+
+    6. Outputs the file list to the case wall as a data table and returns the data
+    as a JSON result.
+
+
+    ### Additional Notes
+
+    - The action requires the device to be online and accessible to establish a Live
+    Response session.
+
+    - If multiple devices match an entity, the action selects the agent with the most
+    recent contact time.
+  ai_short_description: >-
+    Lists files stored in the VMware Carbon Black Cloud file storage for an active
+    Live Response session associated with a specific Hostname or IP Address entity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a new Live Response session on the VMware Carbon Black Cloud for the
+      target device.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving the list of files from cloud storage.
+      It mutates external data by initiating a new Live Response session on the VMware
+      Carbon Black Cloud via a POST request. It does not mutate internal data, update
+      entities, create insights, modify alerts, or create case comments (it only adds
+      a data table to the case wall).
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets
+      Address and Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of files from the VMware Carbon Black Cloud file
+      storage for a Live Response session. This does not directly align with standard
+      enrichment (which focuses on reputation or asset metadata), nor does it execute
+      a command on the host directly (it queries the cloud storage API). It does not
+      match any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Rows to Return | String | No | Specify how many rows action should return.
+    |
+
+    | Start from Row | String | No | Specify from which row action should start to
+    return data. |
+
+    | Check for active session x times | String | Yes | How many attempts action should
+    make to get active session for the entity. Check is made every 2 seconds. |
+List Processes:
+  ai_description: >-
+    ### General Description
+
+    Lists processes running on an endpoint based on the provided Hostname or IP Address
+    entities using VMware Carbon Black Cloud Live Response.
+
+
+    ### Flow Description
+
+    1. Filters target entities to include only Hostname and IP Address types.
+
+    2. Queries the Carbon Black Cloud API to retrieve the corresponding Device ID
+    for each valid entity.
+
+    3. Initiates a Live Response session on the target device.
+
+    4. Polls the session status until it becomes active (based on the configured retry
+    parameter).
+
+    5. Executes a command via the Live Response API to list running processes on the
+    endpoint.
+
+    6. Polls the command status until completion.
+
+    7. Retrieves the process list and filters it by the provided `Process Name` if
+    specified.
+
+    8. Adds the resulting process list to the case wall as a data table and attaches
+    it to the action's JSON result.
+
+
+    ### Additional Notes
+
+    This is an asynchronous action. It supports both V3 and V6 of the Carbon Black
+    Cloud API depending on the integration configuration.
+  ai_short_description: >-
+    Lists processes running on an endpoint based on the provided Hostname or IP Address
+    entities using VMware Carbon Black Cloud Live Response.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (process list) from an external system (Carbon Black
+      Cloud) via API requests. It does not mutate external data (it only reads/lists
+      processes), nor does it mutate internal case data, update entities, create insights,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets
+      Address and Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a Live Response session and executes a command to list
+      processes on a remote endpoint. This directly aligns with the 'Execute Command
+      on the Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Process Name | String | No | Process name to search for on the host. |
+
+    | How Many Records To Return | String | No | How many records per entity action
+    should return. |
+
+    | Check for active session x times | String | Yes | How many attempts action should
+    make to get active session for the entity. Check is made every 2 seconds. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the VMware Carbon Black Endpoint Standard Live Response
+    service. This action verifies that the integration is configured correctly and
+    can successfully authenticate and communicate with the Carbon Black Cloud API.
+
+
+    ### Flow Description
+
+    1. Extracts the integration configuration parameters (e.g., API credentials, Organization
+    Key).
+
+    2. Initializes the Carbon Black Live Response Manager.
+
+    3. Executes a connectivity test by making a test API call to the Carbon Black
+    Cloud (either a device search or a session check, depending on the API version).
+
+    4. Returns a success message if the connection is established and authenticated,
+    otherwise returns an error.
+
+
+    ### Additional Notes
+
+    This action does not require any input parameters and does not interact with any
+    entities or alerts. It is solely used for diagnostic purposes to ensure the integration
+    is functional.
+  ai_short_description: >-
+    Tests connectivity to the VMware Carbon Black Endpoint Standard Live Response
+    service to verify integration configuration and authentication.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only makes a test API call to verify connectivity. It does not fetch
+      contextual data for use in the platform, nor does it mutate any external or
+      internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities. It does not iterate over target_entities
+      or accept any entity-related input parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping). It does not enrich data, mutate
+      alerts, interact with tickets, modify blocklists, or perform any other operations
+      that match the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Put File:
+  ai_description: >-
+    ### General Description
+
+    Puts a file on a host running VMware CB Cloud Agent based on the target Hostname
+    or IP Address entities.
+
+
+    ### Flow Description
+
+    1. Validates the provided file name, source directory path, and destination directory
+    path.
+
+    2. Retrieves the corresponding CB Cloud Device ID for the target Hostname or IP
+    Address entities via the Carbon Black Cloud API.
+
+    3. Initiates a Live Response session on the target device.
+
+    4. Checks the session status until it becomes active.
+
+    5. Uploads the specified file to the Live Response session.
+
+    6. Executes a `put file` command to move the uploaded file to the destination
+    directory path on the remote host.
+
+    7. Monitors the command status until completion and returns the results.
+
+
+    ### Additional Notes
+
+    The file name can be provided either as a Siemplify File entity (artifact) or
+    as an action input parameter. If provided as both, the input parameter takes precedence.
+    The action is executed asynchronously.
+  ai_short_description: >-
+    Uploads a file to a remote host running VMware CB Cloud Agent based on the target
+    Hostname or IP Address entities using Carbon Black Live Response.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Uploads a file to a remote host via VMware Carbon Black Cloud Live Response.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action mutates external data by uploading a file to a remote host via Carbon
+      Black Live Response. It does not fetch contextual data for enrichment, nor does
+      it mutate internal data, update entities, create insights, modify alert data,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: true
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` (which includes ADDRESS and HOSTNAME). It also extracts
+      file names from entities where `entity.entity_type == EntityTypes.FILENAME`.
+      Therefore, it uses Address, Host Name, and File Name entities and filters by
+      entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action uploads a file to a remote host via Carbon Black Live Response. This
+      does not match any of the specific expected outcomes such as 'Download File'
+      (which retrieves a file) or 'Execute Command on the Host' (which runs a script
+      and returns STDOUT). Therefore, no outcome categories are selected.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -3,9 +3,9 @@ Enrich Entities from List with Field:
     ### General Description
 
     This action enriches a specified list of entities within a case by adding a custom
-    field and value to their additional properties. It allows users to dynamically
-    update entity metadata based on a provided delimited list of entity identifiers
-    and a specified entity type.
+    field and value to their additional properties. It allows analysts to dynamically
+    tag or append information to entities of a specific type based on a delimited
+    input list.
 
 
     ### Flow Description
@@ -13,23 +13,23 @@ Enrich Entities from List with Field:
     1. Retrieves the list of target entities, entity type, delimiter, enrichment field,
     and enrichment value from the action parameters.
 
-    2. Parses the delimited list of target entities into a list of identifiers.
+    2. Parses the delimited list of entities into individual identifiers.
 
-    3. Iterates through all entities associated with the alerts in the current case.
+    3. Retrieves all entities associated with the alerts in the current case.
 
-    4. Matches each case entity against the parsed list of target identifiers and
-    the specified entity type.
+    4. Matches the parsed identifiers against the case entities, filtering by the
+    specified entity type.
 
-    5. For each matching entity, adds the specified enrichment field and value to
-    its `additional_properties` dictionary.
+    5. Appends the provided enrichment field and value to the `additional_properties`
+    dictionary of each matched entity.
 
     6. Updates the modified entities within the Google SecOps platform.
 
 
     ### Additional Notes
 
-    This action does not interact with external systems. It only modifies internal
-    case data.
+    This is a utility action that modifies internal case data and does not interact
+    with external third-party services.
   ai_short_description: >-
     Enriches a specified list of entities within a case by adding a custom field and
     value to their additional properties.
@@ -43,12 +43,13 @@ Enrich Entities from List with Field:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the additional properties of specified entities within the case.
+      Updates the additional_properties dictionary of matched entities within the
+      case.
     reasoning: >-
       The action does not fetch data from external sources or mutate external data.
-      It mutates internal data by updating the `additional_properties` of entities
-      and calls `siemplify.update_entities`. It does not create insights, modify alert
-      data, or create case comments.
+      It mutates internal data by updating the 'additional_properties' of entities
+      and saves these changes using 'siemplify.update_entities'. It does not create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -100,10 +101,10 @@ Enrich Entities from List with Field:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates through all entities in the case's alerts and filters them
-      based on the `entity.identifier` matching the provided list and `entity.entity_type`
-      matching the provided parameter. Since the entity type is parameterized, it
-      can run on any entity type.
+      The action retrieves all entities from the case alerts and filters them dynamically
+      based on the 'Entity Type' parameter and their identifier. Since the entity
+      type is provided as a parameter and not hardcoded, the action supports all entity
+      types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -119,10 +120,10 @@ Enrich Entities from List with Field:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds a custom field and value to the additional properties of specified
-      entities. It does not fetch external threat intelligence, modify alerts, interact
-      with external systems, or perform any of the specific expected outcomes defined
-      in the categories.
+      The action updates internal entity properties but does not fetch external threat
+      intelligence, modify alerts, interact with external ticketing systems, or perform
+      containment/remediation actions. Therefore, it does not match any of the specific
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -159,32 +160,38 @@ Enrich Entity From Event Field:
   ai_description: >-
     ### General Description
 
-    The action extracts specified fields from the security event associated with an
-    alert and adds them to the entities' additional properties.
+    Enriches entities by extracting specific fields from their associated security
+    events and adding them to the entities' properties. This action operates entirely
+    within the Google SecOps platform, utilizing existing event data to provide additional
+    context to entities without requiring external API calls.
 
 
     ### Flow Description
 
-    1. Retrieves the execution scope (Alert or Case).
+    1. Determines the execution scope (Alert or Case).
 
-    2. Identifies the target alerts based on the scope.
+    2. Iterates through the target alerts based on the execution scope.
 
-    3. For each alert, extracts the requested fields from the alert's security event's
-    additional properties.
+    3. For each alert, retrieves the first associated security event.
 
-    4. Retrieves the entities associated with the alert.
+    4. Extracts the requested fields from the event's additional properties.
 
-    5. Updates the entities' additional properties with the extracted fields.
+    5. Identifies the entities associated with the alert.
 
-    6. Saves the updated entities back to the platform.
+    6. Updates the `additional_properties` of these entities with the extracted fields.
+
+    7. Saves the updated entities back to the platform using `siemplify.update_entities`.
+
+    8. Returns a JSON result containing the enriched fields.
 
 
     ### Additional Notes
 
-    - Supports a comma-separated list of fields to extract.
+    This action does not interact with external services. It relies on the data already
+    present in the security events attached to the alerts.
   ai_short_description: >-
-    Extracts specified fields from the security event associated with an alert and
-    adds them to the entities' additional properties.
+    Extracts specified fields from security events and appends them to the properties
+    of associated entities within Google SecOps.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -195,12 +202,13 @@ Enrich Entity From Event Field:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the entities' additional properties with fields extracted from the alert's
-      security event.
+      Updates the additional properties of entities with fields extracted from the
+      alert's security events.
     reasoning: >-
-      The action reads fields from the alert's security event and updates the entities'
-      additional properties. It does not fetch data from external sources or mutate
-      external data. It mutates internal data by updating entities via `siemplify.update_entities`.
+      The action does not fetch data from external sources or mutate external systems.
+      It mutates internal data by updating the `additional_properties` of entities
+      using `siemplify.update_entities`. It does not create insights, modify alert
+      data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -252,10 +260,10 @@ Enrich Entity From Event Field:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities`. It does not filter by
-      entity type, meaning it applies to all entity types. When running in Case scope,
-      it filters entities by `alert_identifier` to match them with the current alert
-      being processed.
+      The action iterates over `siemplify.target_entities` without filtering by specific
+      entity types, meaning it applies to all entity types. When running in the Case
+      execution scope, it filters the target entities by their `alert_identifier`
+      to match them with the currently processed alert.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -271,10 +279,10 @@ Enrich Entity From Event Field:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action copies data from an event to an entity's additional properties. It
-      does not interact with external systems to fetch threat intelligence, asset
-      context, or perform any containment/remediation actions. Therefore, it does
-      not match any of the specific outcome categories.
+      The action extracts fields from internal security events and updates entity
+      properties. It does not fetch external threat intelligence, modify alerts, interact
+      with ticketing systems, or perform any containment/remediation actions. Therefore,
+      it does not match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -300,41 +308,34 @@ Enrich Entity From JSON:
   ai_description: >-
     ### General Description
 
-    Extracts specific fields from a provided JSON string and appends them to the target
-    entities' additional properties. This action allows users to dynamically enrich
-    entities using custom JSON data by mapping and extracting specific JSON paths.
+    Enriches entities by extracting fields from a provided JSON string and adding
+    them to the entities' additional properties.
 
 
     ### Flow Description
 
-    1. Parses the provided JSON string parameter (expected to be a list of JSON objects).
+    1. Parses the provided JSON string (expected to be a list of JSON objects).
 
     2. Iterates through all target entities in the case.
 
-    3. For each entity, searches the parsed JSON for a matching key path using the
-    specified `Identifier KeyPath`.
+    3. For each entity, it searches the JSON objects for a specific key path.
 
-    4. If the key path is found, extracts the relevant data using the optional `Enrichment
-    JSONPath` or takes the entire JSON object.
+    4. If the key path is found, it extracts the JSON data (optionally using a JSONPath
+    expression), flattens the dictionary, and optionally adds a prefix.
 
-    5. Flattens the extracted JSON data into key-value pairs.
+    5. Updates the entity's additional properties with the extracted data.
 
-    6. Appends the flattened data to the entity's `additional_properties`, optionally
-    adding a custom prefix.
-
-    7. Updates the entities within the Google SecOps platform.
+    6. Saves the updated entities back to the case.
 
 
     ### Additional Notes
 
-    The action expects the input JSON to be a list of dictionaries. If multiple values
-    are found for a key path, it may return a concatenated string or a specific error
-    string. Note that the script logic applies the extracted JSON data to the entity
-    if the key path exists in the JSON, without explicitly matching the extracted
-    value to the entity's identifier.
+    The action processes all entity types. Note that the current implementation does
+    not explicitly match the extracted JSON identifier with the entity's identifier;
+    it enriches the entity as long as the key path exists in the JSON.
   ai_short_description: >-
-    Extracts fields from a provided JSON string and appends them to the target entities'
-    additional properties.
+    Extracts fields from a provided JSON string and appends them to the additional
+    properties of target entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -346,11 +347,10 @@ Enrich Entity From JSON:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action reads a JSON string from its parameters and updates the `additional_properties`
-      of the target entities. It does not fetch data from external APIs (fetches_data=false).
-      It does not mutate external systems (can_mutate_external_data=false). It updates
-      entities internally by calling `siemplify.update_entities` (can_update_entities=true).
-      It does not create insights, modify alert data, or create case comments.
+      The action parses a provided JSON string and updates the `additional_properties`
+      of the target entities. It does not fetch data from external sources, mutate
+      external data, or create insights/comments. It calls `siemplify.update_entities`
+      to save the changes.
   entity_usage:
     entity_types:
       address: true
@@ -402,10 +402,9 @@ Enrich Entity From JSON:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` using a list comprehension
-      (`[entity for entity in siemplify.target_entities]`) without applying any filtering
-      conditions based on `entity_type`, `identifier`, or other attributes. Therefore,
-      it operates on all available entity types, and all filter flags are false.
+      The action iterates over `siemplify.target_entities` without any filtering by
+      `entity_type`. Therefore, it applies to all entity types. It does not filter
+      entities by identifier, creation time, or any other property.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -421,11 +420,11 @@ Enrich Entity From JSON:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action parses a provided JSON string parameter and appends the extracted
-      data to the entities' additional properties. It does not interact with external
-      systems to fetch threat intelligence, modify alerts, contain hosts, or perform
-      any of the specific expected outcomes defined in the categories. Therefore,
-      all outcome categories are false.
+      The action is a utility that parses a JSON string provided as an input parameter
+      to update entity properties. It does not interact with external threat intelligence
+      services, ITSM tools, or security controls, and therefore does not match any
+      of the specific outcome categories like Enrich IOC, Create Ticket, or Add IOC
+      To Blocklist.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -463,33 +462,36 @@ Enrich Entity With Field:
   ai_description: >-
     ### General Description
 
-    Enriches target entities by appending a specified list of key-value pairs to their
-    additional properties. This action allows users to statically assign multiple
-    custom fields to entities within a case.
+    This action enriches target entities within Google SecOps by appending static
+    key-value pairs to their additional properties. It allows analysts to manually
+    or automatically tag entities with custom fields based on a provided JSON input,
+    without needing to query an external service.
 
 
     ### Flow Description
 
-    1. Retrieves the JSON-formatted list of key-value pairs from the `Fields to enrich`
+    1. Retrieves the JSON string containing key-value pairs from the `Fields to enrich`
     parameter.
 
-    2. Iterates through all target entities associated with the action.
+    2. Iterates through all target entities in the current scope.
 
-    3. Appends the specified key-value pairs to the `additional_properties` dictionary
-    of each entity.
+    3. Appends each key-value pair to the `additional_properties` dictionary of the
+    entity.
 
-    4. Updates the modified entities within the Google SecOps platform.
+    4. Updates the modified entities within the Google SecOps platform using the `update_entities`
+    method.
 
-    5. Attaches the applied enrichment fields as JSON results for each updated entity.
+    5. Returns a JSON result containing the applied fields for each updated entity.
 
 
     ### Additional Notes
 
-    The `Fields to enrich` parameter must be a valid JSON array of objects containing
-    `entity_field_name` and `entity_field_value` keys.
+    The input for the `Fields to enrich` parameter must be a valid JSON array of objects,
+    where each object contains `entity_field_name` and `entity_field_value` keys (e.g.,
+    `[{"entity_field_name": "Title", "entity_field_value": "SalesManager"}]`).
   ai_short_description: >-
-    Enriches target entities by appending a specified list of static key-value pairs
-    to their additional properties.
+    Enriches target entities by appending static, user-defined key-value pairs to
+    their additional properties.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -500,13 +502,14 @@ Enrich Entity With Field:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the additional_properties dictionary of target entities within the platform.
+      Updates the `additional_properties` of the target entities with the provided
+      key-value pairs.
     reasoning: >-
-      The action reads a static JSON parameter and updates the `additional_properties`
-      of target entities. It does not fetch data from external sources, nor does it
-      mutate external systems. It mutates internal data by calling `siemplify.update_entities`
-      to save the modified entities back to the platform. It does not create insights,
-      modify alert data, or create case comments.
+      The action reads a parameter containing JSON data and iterates over `siemplify.target_entities`.
+      For each entity, it updates its `additional_properties` with the provided key-value
+      pairs. It then calls `siemplify.update_entities` to save these changes. It does
+      not fetch data from external sources, mutate external data, create insights,
+      modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -558,10 +561,9 @@ Enrich Entity With Field:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The script iterates over `siemplify.target_entities` without applying any filters
-      based on `entity_type` or other attributes. Therefore, it operates on all supported
-      entity types (unfiltered global scope). It does not filter entities by identifier,
-      creation time, or any other specific property.
+      The script iterates over `siemplify.target_entities` and processes every entity
+      without applying any filters based on entity type, identifier, or other attributes.
+      Therefore, it supports all entity types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -578,11 +580,9 @@ Enrich Entity With Field:
     get_alert_information: false
     reasoning: >-
       The action modifies internal entity properties with static data provided via
-      parameters. It does not fetch external threat intelligence (Enrich IOC), nor
-      does it fetch contextual metadata from an external asset database (Enrich Asset).
-      It does not interact with alerts, tickets, blocklists, identities, hosts, events,
-      files, or emails in the context of the defined outcome categories. Therefore,
-      it does not match any of the specific expected outcomes listed.
+      parameters. It does not interact with external systems to fetch threat intelligence,
+      asset context, or perform any containment, ticketing, or communication tasks.
+      Thus, it does not match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -603,46 +603,44 @@ Enrich Entity With Field:
     | --- | --- | --- | --- |
 
     | Fields to enrich | String | Yes | Takes a list of key/value pairs and enriches
-    the entity with that data. Can be used to add multiple static values easily. |
+    the entity with that data. Can be used to add multiple static values easily. Expected
+    format is a JSON array of objects with `entity_field_name` and `entity_field_value`.
+    |
 Enrich Entity from Explorer Attributes:
   ai_description: >-
     ### General Description
 
     Enriches entities with historic enrichment data using the Google SecOps Entity
-    Explorer. This action retrieves previously recorded fields for each entity and
-    applies them to the current entity's properties or additional properties based
-    on a specified allowlist or denylist.
+    Explorer. This action retrieves previously recorded fields for the target entities
+    and updates their current properties or additional properties based on a specified
+    allowlist or denylist.
 
 
     ### Flow Description
 
-    1. Extracts the `Field Name` and `Use Field Name as Whitelist` parameters to determine
-    which fields should be included or excluded.
+    1. Retrieves the list of target entities from the case.
 
-    2. Iterates over all target entities provided in the case.
+    2. For each entity, makes an API call to the Google SecOps API (`get_entity_data`)
+    to fetch its historic data from the Entity Explorer.
 
-    3. Makes an internal API call (`get_entity_data`) to the SOAR Entity Explorer
-    to fetch historic enrichment data for each entity.
+    3. Filters the retrieved fields based on the `Field Name` and `Use Field Name
+    as Whitelist` parameters.
 
-    4. Filters the retrieved fields based on the provided allowlist or denylist configuration.
+    4. Updates the entity's properties or `additional_properties` with the filtered
+    fields, excluding predefined system fields.
 
-    5. Updates the entity's properties or `additional_properties` with the filtered
-    fields, skipping predefined system fields.
+    5. Saves the updated entities back to the platform using `siemplify.update_entities`.
 
-    6. Saves the updated entities back to the platform and outputs the modified fields
-    as a JSON result.
+    6. Returns a JSON result containing the updated fields for each entity.
 
 
     ### Additional Notes
 
-    - Predefined system fields (e.g., `Type`, `Environment`, `IsInternalAsset`) are
-    automatically excluded from being overwritten.
-
-    - If `Field Name` is left empty, all available non-system fields from the Entity
-    Explorer will be added to the entity.
+    - System fields (e.g., `Type`, `Environment`, `IsInternalAsset`) are automatically
+    excluded from being updated to prevent overwriting critical entity metadata.
   ai_short_description: >-
-    Enriches entities with historic enrichment data by fetching previously recorded
-    fields from the Entity Explorer and applying them to the current entities.
+    Enriches entities with historic enrichment data using the Google SecOps Entity
+    Explorer.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -653,161 +651,13 @@ Enrich Entity from Explorer Attributes:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity properties and additional properties with historic enrichment
-      data retrieved from the Entity Explorer.
+      Updates entity properties and additional properties with historic data retrieved
+      from the Entity Explorer.
     reasoning: >-
-      The action fetches data using the internal SOAR API (`get_entity_data`) to retrieve
-      historic entity fields. It does not mutate external data. It mutates internal
-      data by updating the properties of the entities within the platform and explicitly
-      calls `siemplify.update_entities`. It does not create insights, modify alert
+      The action fetches data from the internal SOAR API (Entity Explorer). It does
+      not mutate external data. It mutates internal data by updating entity properties
+      and calls `siemplify.update_entities`. It does not create insights, modify alert
       data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: true
-      application: true
-      child_hash: true
-      child_process: true
-      cluster: true
-      container: true
-      credit_card: true
-      cve: true
-      cve_id: true
-      database: true
-      deployment: true
-      destination_domain: true
-      domain: true
-      email_message: true
-      event: true
-      file_hash: true
-      file_name: true
-      generic: true
-      host_name: true
-      ip_set: true
-      mac_address: true
-      parent_hash: true
-      parent_process: true
-      phone_number: true
-      pod: true
-      process: true
-      service: true
-      source_domain: true
-      threat_actor: true
-      threat_campaign: true
-      threat_signature: true
-      url: true
-      usb: true
-      user: true
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` without applying any filtering
-      based on entity type or other entity attributes. Therefore, it supports and
-      processes all available entity types.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves historic data from the internal Entity Explorer rather
-      than querying an external threat intelligence or asset management system. It
-      does not strictly match the expected outcomes for 'Enrich IOC' or 'Enrich Asset'
-      which typically involve external reputation or contextual metadata retrieval.
-      It also does not perform any external mutations, ticketing, or containment operations.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Field Name | String | No | The field(s) from the Entity Explorer that will be
-    used to enrich the entity. When null all fields will be enriched. Supports comma
-    delimited string. |
-
-    | Use Field Name as Whitelist | Boolean | No | When true, entities will be enriched
-    with fields from 'Field Name' param. When False, the list will be used as a denylist
-    and all other fields added. |
-Enrich FileName Entity with Path:
-  ai_description: >-
-    ### General Description
-
-    This action parses the path, file name, and extension from an entity's identifier
-    and enriches the entity's additional properties with these extracted details.
-
-
-    ### Flow Description
-
-    1. Iterates through all target entities provided to the action.
-
-    2. Evaluates each entity's identifier to determine if it is a Windows or Unix-style
-    file path.
-
-    3. Extracts the file path, full file name, and file extension from the identifier.
-
-    4. Updates the entity's `additional_properties` dictionary with the extracted
-    `file_name`, `file_path`, and `file_extension`.
-
-    5. Saves the updated entities back to the platform and returns a JSON result containing
-    the parsed details.
-
-
-    ### Additional Notes
-
-    This action operates locally and does not make any external API calls. It processes
-    all entity types without filtering, assuming the identifier contains a valid file
-    path.
-  ai_short_description: >-
-    Parses file path, name, and extension from entity identifiers and enriches the
-    entities' additional properties with the extracted details.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action processes entity identifiers locally to extract file path components.
-      It does not fetch data from external sources or mutate external systems. It
-      updates internal data by modifying the `additional_properties` of the entities
-      and calling `siemplify.update_entities`.
   entity_usage:
     entity_types:
       address: true
@@ -860,8 +710,8 @@ Enrich FileName Entity with Path:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` without applying any filters
-      based on entity type or other properties. It attempts to parse the identifier
-      of every entity provided to the action. Therefore, it supports all entity types.
+      based on entity type or other attributes. Therefore, it supports all entity
+      types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -877,10 +727,158 @@ Enrich FileName Entity with Path:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a local utility that parses file paths from entity identifiers
-      and updates the entities' additional properties. It does not interact with external
-      systems, fetch threat intelligence, or perform any operations that match the
-      predefined outcome categories.
+      The action fetches historic data from the internal Entity Explorer to update
+      entity properties. It does not fetch external threat intelligence, mutate external
+      systems, or perform any of the specific expected outcomes listed in the categories.
+      Therefore, no outcome categories apply.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Field Name | String | No | The field(s) from the Entity Explorer that will be
+    used to enrich the entity. When null all fields will be enriched. Supports comma
+    delimited string. |
+
+    | Use Field Name as Whitelist | Boolean | No | When true, entities will be enriched
+    with fields from 'Field Name' param. When False, the list will be used as a denylist
+    and all other fields added. |
+Enrich FileName Entity with Path:
+  ai_description: >-
+    ### General Description
+
+    Parses the path, file name, and extension from an entity's identifier and enriches
+    the entity's additional properties with these extracted details. This is a utility
+    action that performs local string manipulation to structure file-related data.
+
+
+    ### Flow Description
+
+    1. Iterates through all target entities provided to the action.
+
+    2. Evaluates each entity's identifier to determine if it represents a Windows
+    or Unix-style file path.
+
+    3. Extracts the directory path, full file name, and file extension using standard
+    path parsing libraries.
+
+    4. Updates the entity's `additional_properties` dictionary with the extracted
+    `file_name`, `file_path`, and `file_extension`.
+
+    5. Saves the updated entities back to the platform and returns a JSON result containing
+    the parsed details for each processed entity.
+
+
+    ### Additional Notes
+
+    This action operates locally on the entity identifier string and does not make
+    any external API calls. It processes all entity types without filtering, assuming
+    the identifier contains a valid file path.
+  ai_short_description: >-
+    Parses file path, name, and extension from entity identifiers and updates the
+    entities' additional properties with the extracted details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action parses entity identifiers locally without fetching data from external
+      sources and does not mutate external data. It updates the internal entities
+      with the parsed file details by calling `siemplify.update_entities`. It does
+      not create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and processes each entity's
+      identifier without applying any filters based on `entity_type` or other entity
+      properties. Therefore, it is capable of running on all supported entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs local string manipulation to extract file paths and extensions
+      from entity identifiers. It does not interact with external systems, fetch threat
+      intelligence, or modify alerts, meaning it does not match any of the predefined
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -900,42 +898,41 @@ Enrich Source and Destinations:
   ai_description: >-
     ### General Description
 
-    This action enriches Address and Hostname entities by identifying whether they
-    act as a source or destination within the context of an alert. It retrieves alert
-    data from the Chronicle SOAR API and updates the entities' additional properties
-    accordingly.
+    This action enriches Address and Hostname entities by identifying and tagging
+    them as sources or destinations based on the alert data. It retrieves the alert's
+    investigator data, extracts source and destination identifiers, and updates the
+    corresponding entities' additional properties.
 
 
     ### Flow Description
 
-    1. Determines the execution scope (Alert or Case).
+    1. Determines the execution scope (Alert or Case) to identify the target alerts.
 
-    2. Iterates over the target alerts within the determined scope.
+    2. Retrieves the investigator data for the target alerts using the internal SOAR
+    API.
 
-    3. Makes an API call to the Chronicle SOAR API to retrieve investigator data for
-    each alert.
-
-    4. Extracts source and destination identifiers from the alert's security event
+    3. Extracts source and destination identifiers from the alert's security event
     cards or fields.
 
-    5. Iterates over the target entities, filtering for Address and Hostname types.
+    4. Iterates over the target entities associated with the alert.
+
+    5. Filters entities to process only Address and Hostname types.
 
     6. Compares entity identifiers against the extracted sources and destinations.
 
     7. Updates the `additional_properties` of matching entities with `isSource: "true"`
     or `isDest: "true"`.
 
-    8. Saves the updated entities back to the case.
+    8. Saves the updated entities back to the platform.
 
 
     ### Additional Notes
 
-    - The action relies on the Chronicle SOAR API to fetch alert details.
-
-    - Only entities of type Address and Hostname are processed.
+    This action modifies internal entity properties and does not interact with external
+    third-party systems.
   ai_short_description: >-
     Enriches Address and Hostname entities by identifying and tagging them as sources
-    or destinations based on alert data retrieved from the Chronicle SOAR API.
+    or destinations based on the alert data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -944,15 +941,16 @@ Enrich Source and Destinations:
     can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates entities by adding 'isSource' and 'isDest' to their additional properties.
+      Updates the additional_properties of Address and Hostname entities with isSource
+      and isDest flags.
     reasoning: >-
-      The action fetches alert data from the Chronicle SOAR API using `get_investigator_data`,
-      so it fetches data. It does not interact with external systems to mutate data.
-      It mutates internal data by adding 'isSource' and 'isDest' to the `additional_properties`
-      of entities and saves these changes using `siemplify.update_entities`. It does
-      not create insights, modify alert data, or create case comments.
+      The action retrieves internal alert data using the SOAR API but does not fetch
+      data from external sources. It mutates internal data by updating the `additional_properties`
+      of entities and calls `siemplify.update_entities` to save these changes. It
+      does not mutate external data, create insights, modify alert data, or create
+      case comments.
   entity_usage:
     entity_types:
       address: true
@@ -1004,11 +1002,10 @@ Enrich Source and Destinations:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities`. It filters entities by
-      `alert_identifier` when the execution scope is Case. It then filters entities
-      by `entity_type`, specifically targeting 'ADDRESS' and 'HOSTNAME'. Finally,
-      it filters entities by their `identifier` to check if they match the extracted
-      source or destination lists.
+      The action iterates over `siemplify.target_entities` and filters them by `alert_identifier`
+      (when running in Case scope). It explicitly filters by `entity_type` to only
+      process 'ADDRESS' and 'HOSTNAME' entities. Finally, it filters by `identifier`
+      to check if the entity matches the extracted source or destination lists.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1024,11 +1021,10 @@ Enrich Source and Destinations:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves internal alert data and updates internal entities with
-      source and destination tags. It does not interact with external third-party
-      products to fetch threat intelligence, asset context, or alert information.
-      It does not perform any containment, ticketing, or messaging operations. Therefore,
-      it does not match any of the predefined outcome categories.
+      The action processes internal alert data to tag entities as sources or destinations.
+      It does not interact with external systems to fetch threat intelligence, modify
+      external state, or retrieve third-party alert information. Therefore, it does
+      not match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1048,27 +1044,28 @@ Mark Entity as Suspicious:
   ai_description: >-
     ### General Description
 
-    Marks all target entities in the scope as suspicious within Google SecOps. This
-    action is used to flag entities for further investigation or to trigger subsequent
-    automated workflows based on their suspicious status.
+    Marks all target entities in the current scope as suspicious within the Google
+    SecOps platform. This action is used to flag entities for further investigation
+    or to trigger subsequent automated response playbooks.
 
 
     ### Flow Description
 
-    1. Iterates through all target entities provided in the scope.
+    1. Iterates through all target entities provided in the action's scope.
 
-    2. Updates the `is_suspicious` property of each entity to `True`.
+    2. Updates the internal `is_suspicious` flag to `True` for each entity.
 
-    3. Saves the updated entities back to the Google SecOps platform using the `update_entities`
+    3. Saves the modified entities back to the platform using the `update_entities`
     method.
 
 
     ### Additional Notes
 
-    This action does not interact with any external systems or APIs. It solely modifies
-    internal entity metadata.
+    This action operates entirely within the Google SecOps platform and does not make
+    any external API calls or interact with third-party services.
   ai_short_description: >-
-    Marks all target entities in the scope as suspicious within Google SecOps.
+    Marks all target entities in the current scope as suspicious within the Google
+    SecOps platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1079,11 +1076,12 @@ Mark Entity as Suspicious:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the `is_suspicious` property of target entities to True within the platform.
+      Updates the 'is_suspicious' property of target entities to True.
     reasoning: >-
-      The action iterates over target entities and sets their is_suspicious flag to
-      True, then calls siemplify.update_entities. It does not fetch external data,
-      mutate external data, create insights, modify alerts, or create case comments.
+      The action does not fetch data or mutate external systems. It mutates internal
+      data by setting the 'is_suspicious' flag on target entities to True and explicitly
+      calls 'siemplify.update_entities' to save these changes. It does not create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -1135,9 +1133,9 @@ Mark Entity as Suspicious:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` without applying any filtering
-      conditions (e.g., by entity_type, is_internal, etc.). Therefore, it operates
-      on all available entity types in the scope.
+      The script iterates over `siemplify.target_entities` and processes every entity
+      without applying any type-based or property-based filtering. Therefore, it supports
+      all entity types and does not filter by any specific attributes.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1153,9 +1151,10 @@ Mark Entity as Suspicious:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action only modifies internal entity metadata (setting is_suspicious to
-      True) and does not interact with external systems, enrich data with threat intelligence,
-      or match any of the specific expected outcomes defined in the categories.
+      The action solely modifies the internal 'is_suspicious' property of entities
+      within Google SecOps. It does not fetch external threat intelligence, update
+      alerts, interact with ticketing systems, or modify external security controls.
+      Therefore, it does not match any of the predefined external outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1182,15 +1181,14 @@ Ping:
 
     1. Initializes the Siemplify action.
 
-    2. Returns a successful connection message indicating that Siemplify is connected.
+    2. Returns a success message indicating that Siemplify is connected.
 
 
     ### Additional Notes
 
     This action is typically used to verify that the integration is configured correctly
-    and can execute basic commands.
-  ai_short_description: >-
-    Checks connectivity to the integration by returning a successful connection message.
+    and can communicate with the platform. It does not perform any external API calls.
+  ai_short_description: Checks connectivity to the integration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1202,9 +1200,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action does not fetch data, mutate external data, mutate internal data,
-      update entities, create insights, modify alert data, or create case comments.
-      It simply returns a success message.
+      The action simply returns a static success message. It does not fetch data,
+      mutate external or internal data, update entities, create insights, modify alerts,
+      or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1256,8 +1254,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code does not access `siemplify.target_entities` or perform any entity-specific
-      operations. It simply returns a static success message.
+      The action does not process any entities or accept any entity-related parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1273,8 +1270,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action only checks connectivity and does not interact with external systems,
-      enrich data, update alerts, or perform any other specific outcome category.
+      The action is a simple connectivity check that does not interact with external
+      systems, enrich data, or modify any internal platform records. Therefore, it
+      does not match any of the outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1294,39 +1292,48 @@ Whois:
   ai_description: >-
     ### General Description
 
-    Queries WHOIS servers and IP location services to retrieve registration and geographical
-    information for various entities such as IP addresses, URLs, emails, and domains.
+    The Whois action queries WHOIS and RDAP servers to retrieve domain and IP registration
+    information. It supports enriching IP Addresses, URLs, Email addresses, and Domains.
+    Additionally, the action can create new DOMAIN entities linked to the target entity
+    and evaluate the domain's age against a specified threshold to automatically mark
+    newly registered domains as suspicious.
 
 
     ### Flow Description
 
-    1. Iterates through all target entities provided in the case.
+    1. The action iterates through all target entities provided in the case.
 
-    2. If the entity is an IP address, it queries RDAP via `IPWhois` and fetches geolocation
-    data via `DbIpCity` (which makes an API call to `api.db-ip.com` and OpenStreetMap).
+    2. If the entity is an IP Address, it performs an RDAP lookup and a geolocation
+    lookup using the db-ip.com API and OpenStreetMap.
 
-    3. For other entity types, it extracts the registered domain and queries WHOIS
-    data using `whois_alt`.
+    3. For all other entity types, it attempts to extract a valid domain from the
+    entity identifier.
 
-    4. Calculates the domain age in days based on the WHOIS creation date.
+    4. If a domain is found, it performs a WHOIS lookup to retrieve registration details
+    and calculates the domain's age in days.
 
     5. If the `Create Entities` parameter is enabled, it creates a new DOMAIN entity
-    linked to the original entity via the SecOps API.
+    in the case and links it to the original entity.
 
-    6. Updates the original entities with the retrieved WHOIS and geolocation data
-    in their additional properties.
+    6. The retrieved WHOIS/RDAP data is appended to the entity's `additional_properties`.
 
-    7. Marks entities as suspicious if their domain age is below the configured `Domain
-    Age Threshold`.
+    7. If the calculated domain age is less than the `Domain Age Threshold`, the entity
+    is marked as suspicious.
+
+    8. The entity is marked as enriched, and the updates are saved back to the platform.
+
+    9. The raw WHOIS and geolocation data is added to the action's JSON result.
 
 
     ### Additional Notes
 
-    Supports creating linked domain entities and evaluating domain age for risk assessment.
+    This action relies on external services such as `api.db-ip.com` and OpenStreetMap
+    (via the `geocoder` library) for IP geolocation, as well as standard WHOIS/RDAP
+    protocols. Ensure that the environment allows outbound connections to these services.
   ai_short_description: >-
-    Queries WHOIS servers and IP location services to retrieve registration and geographical
-    information for entities, optionally creating linked domain entities and marking
-    newly registered domains as suspicious.
+    Queries WHOIS and RDAP servers to retrieve domain and IP registration information,
+    enriches entities, and optionally creates linked domain entities or marks them
+    as suspicious based on domain age.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1337,14 +1344,14 @@ Whois:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Creates new DOMAIN entities linked to the target entity if the 'Create Entities'
+      Creates new DOMAIN entities linked to the original entity if the 'Create Entities'
       parameter is enabled.
     reasoning: >-
-      The action fetches WHOIS and IP location data from external services (fetches_data=true).
-      It does not mutate external data. It creates new DOMAIN entities in the case
-      (can_mutate_internal_data=true) and updates existing entities with the enriched
-      data and suspicious status (can_update_entities=true). It does not create insights,
-      modify alert data, or create case comments.
+      The action fetches data from WHOIS/RDAP servers and geolocation APIs (fetches_data=true).
+      It does not mutate external data. It can mutate internal data by creating new
+      DOMAIN entities if the 'Create Entities' parameter is enabled (can_mutate_internal_data=true).
+      It updates entities with the retrieved information (can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -1386,7 +1393,7 @@ Whois:
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
-    filters_by_entity_type: true
+    filters_by_entity_type: false
     filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
@@ -1396,11 +1403,11 @@ Whois:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over all `siemplify.target_entities` without pre-filtering,
-      meaning it runs on all entity types. Inside the loop, it uses `if entity.entity_type
-      == 'ADDRESS'` to apply specific logic for IP addresses, and an `else` block
-      for all other types to extract domains. Therefore, it runs on all entity types
-      and filters execution paths by `entity_type`.
+      The action iterates over `siemplify.target_entities` without filtering out any
+      specific entity types beforehand. It uses an if/else statement to branch logic
+      for 'ADDRESS' entities versus all other entity types (where it attempts to extract
+      a domain). Because it processes the entire `target_entities` list, it runs on
+      all supported entity types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1416,9 +1423,9 @@ Whois:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves WHOIS registration details and IP geolocation data for
-      the target entities. This directly aligns with the 'Enrich IOC' expected outcome.
-      It does not perform any asset enrichment, containment, or ticketing operations.
+      The action fetches WHOIS, RDAP, and geolocation data for IPs and domains, which
+      aligns with the 'Enrich IOC' expected outcome. It does not mutate external systems,
+      update alerts, or perform other categorized actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
