@@ -114,9 +114,7 @@ def test_sync_posts_cases_and_normalizes_sla_statuses(
     assert len(mock_http_client.requests) == 1
     request = mock_http_client.requests[0]
     assert request["method"] == "POST"
-    assert request["url"] == (
-        f"{SYNC_API_ROOT}/legacyFederatedCases:legacyBatchPatchFederatedCases"
-    )
+    assert request["url"] == (f"{SYNC_API_ROOT}/legacyFederatedCases:legacyBatchPatchFederatedCases")
     payload = json.loads(request["data"])
     assert payload["cases"][0]["alertsSla"]["expirationStatus"] == "not_expired"
     assert payload["cases"][0]["caseSla"]["expirationStatus"] == "already_expired"

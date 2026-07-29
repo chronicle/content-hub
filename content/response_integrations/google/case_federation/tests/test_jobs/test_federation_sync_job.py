@@ -26,12 +26,8 @@ from ..common import CONFIG_PATH
 from ..core.mocks import GetFederationCasesStub, MockHttpClient
 
 TARGET_PLATFORM: str = "https://primary.example.com"
-DEFAULT_PARAMETERS: dict[str, str] = (
-    {"Target Platform": TARGET_PLATFORM, "Verify SSL": "True"}
-)
-SYNC_URL: str = (
-    f"{TARGET_PLATFORM}/legacyFederatedCases:legacyBatchPatchFederatedCases"
-)
+DEFAULT_PARAMETERS: dict[str, str] = {"Target Platform": TARGET_PLATFORM, "Verify SSL": "True"}
+SYNC_URL: str = f"{TARGET_PLATFORM}/legacyFederatedCases:legacyBatchPatchFederatedCases"
 
 
 @set_metadata(
@@ -91,10 +87,13 @@ def test_sync_success_sends_cases_and_saves_execution_data(
     mock_http_client.response.status_code = 200
     mock_http_client.response.json.return_value = {
         "continuation_token": "token-123",
-        "execution_message": "Synced up to case 1"
+        "execution_message": "Synced up to case 1",
     }
     job_context.clear()
-    job_context["CaseFederationSyncJob"] = json.dumps({"continuation_token": "token-123", "execution_message": "Synced up to case 1"})
+    job_context["CaseFederationSyncJob"] = json.dumps({
+        "continuation_token": "token-123",
+        "execution_message": "Synced up to case 1",
+    })
 
     # Act
     FederationSyncJob.main()
