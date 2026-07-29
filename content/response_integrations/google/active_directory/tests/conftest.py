@@ -3,7 +3,7 @@ import os
 import site
 import sys
 
-# Ensure soar_sdk directory is in sys.path for SiemplifyUtils imports
+
 site_packages = site.getsitepackages()
 for sp in site_packages:
     soar_sdk_dir = os.path.join(sp, "soar_sdk")
