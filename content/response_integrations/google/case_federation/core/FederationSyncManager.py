@@ -52,7 +52,6 @@ class FederationSyncExecutionData:
 
 
 class FederationSyncManager:
-
     def __init__(
         self,
         session: requests.Session,
@@ -88,10 +87,7 @@ class FederationSyncManager:
                 "continuationToken",
                 fetch_body.get("nextPageToken"),
             ),
-            execution_message=fetch_body.get(
-                "executionMessage",
-                "No additional execution details available."
-            ),
+            execution_message=fetch_body.get("executionMessage", "No additional execution details available."),
         )
         case_ids = convert_list_to_comma_string([case["id"] for case in updated_cases])
         self.logger.info(f"Modified cases IDs: {case_ids}")
@@ -108,13 +104,9 @@ class FederationSyncManager:
             sync_result = self._sync(cases_payload=updated_cases)
             self.logger.info(f"Response status code: {sync_result.status_code}")
 
-            return FederationSyncResult(
-                status_code=sync_result.status_code, execution_data=execution_data
-            )
+            return FederationSyncResult(status_code=sync_result.status_code, execution_data=execution_data)
 
-        return FederationSyncResult(
-            status_code=SUCCESS_STATUS_CODE, execution_data=execution_data
-        )
+        return FederationSyncResult(status_code=SUCCESS_STATUS_CODE, execution_data=execution_data)
 
     def _get_cases_to_sync(
         self,
@@ -146,13 +138,10 @@ class FederationSyncManager:
         Returns:
             The response of the sync.
         """
-        url = (self.sync_endpoint +
-               "/legacyFederatedCases:legacyBatchPatchFederatedCases")
-        payload = json.dumps({"cases":cases_payload})
+        url = self.sync_endpoint + "/legacyFederatedCases:legacyBatchPatchFederatedCases"
+        payload = json.dumps({"cases": cases_payload})
         header = {"CLIENT-ADDRESS": os.getenv("CLIENT_ADDRESS")}
-        response = (
-            self.http_client.request("POST", url, data=payload, headers=header)
-        )
+        response = self.http_client.request("POST", url, data=payload, headers=header)
         return response
 
     def _get_credentials_using_p4sa(self) -> None:
@@ -165,14 +154,11 @@ class FederationSyncManager:
             fallback_to_env_email=True,
         )
 
-    def _prepare_http_client(self, verify_ssl: bool
-    ) -> None:
+    def _prepare_http_client(self, verify_ssl: bool) -> None:
         """
         Prepare http client
         """
         auth_session = CreateSession.create_session()
         auth_session.verify = verify_ssl
-        self.http_client = AuthorizedSession(
-            self.creds, auth_request=Request(session=auth_session)
-        )
+        self.http_client = AuthorizedSession(self.creds, auth_request=Request(session=auth_session))
         self.http_client.verify = verify_ssl

@@ -13,6 +13,8 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+
 class CaseFederationError(Exception):
     """Base Exception for custom exceptions of the integration."""
 
