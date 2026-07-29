@@ -64,7 +64,7 @@ def mock_job_context(monkeypatch: pytest.MonkeyPatch, job_context: dict) -> None
         return job_context.get((identifier, property_key))
 
     def set_property(self, identifier, property_key, property_value):
-        job_context[(identifier, property_key)] = property_value
+        job_context[identifier, property_key] = property_value
 
     monkeypatch.setattr(SiemplifyJob, "get_job_context_property", get_property)
     monkeypatch.setattr(SiemplifyJob, "set_job_context_property", set_property)

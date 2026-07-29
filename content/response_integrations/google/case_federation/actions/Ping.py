@@ -13,11 +13,17 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from typing import NoReturn
 
 from TIPCommon.base.action import Action
 
 from ..core.constants import PING_SCRIPT_NAME
+
+SUCCESS_MESSAGE: str = (
+    "Successfully connected to the API Service server with the provided connection parameters!"
+)
+ERROR_MESSAGE: str = "Failed to connect to the API Service server!"
 
 
 class Ping(Action):
