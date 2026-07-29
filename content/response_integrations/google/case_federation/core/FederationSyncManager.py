@@ -17,11 +17,9 @@ from __future__ import annotations
 import dataclasses
 import json
 import os
+from typing import TYPE_CHECKING
 
-import requests
-import TIPCommon.types
 from google.auth.transport.requests import AuthorizedSession, Request
-from soar_sdk.SiemplifyLogger import SiemplifyLogger
 from TIPCommon.base.utils import CreateSession
 from TIPCommon.rest.auth import get_secops_siem_tenant_credentials
 from TIPCommon.rest.soar_api import get_federation_cases
@@ -29,6 +27,11 @@ from TIPCommon.transformation import convert_list_to_comma_string
 from TIPCommon.utils import camel_to_snake_case
 
 from .constants import SUCCESS_STATUS_CODE
+
+if TYPE_CHECKING:
+    import requests
+    import TIPCommon.types
+    from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
 
 @dataclasses.dataclass
