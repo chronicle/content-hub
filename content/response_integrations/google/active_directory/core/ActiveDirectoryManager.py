@@ -181,7 +181,6 @@ class ActiveDirectoryManager:
         self.tls = None
         self._verify_certificate_file(ca_certificate_file)
 
-        # Safely convert timeouts to integers, fallback to defaults to prevent hangs
         try:
             self.connection_timeout = int(connection_timeout)
         except (ValueError, TypeError):
