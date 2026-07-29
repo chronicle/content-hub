@@ -15,20 +15,18 @@
 from __future__ import annotations
 
 import dataclasses
-import requests
 import json
 import os
 
-from soar_sdk.SiemplifyLogger import SiemplifyLogger
-
+import requests
+import TIPCommon.types
 from google.auth.transport.requests import AuthorizedSession, Request
-
+from soar_sdk.SiemplifyLogger import SiemplifyLogger
 from TIPCommon.base.utils import CreateSession
-from TIPCommon.rest.soar_api import get_federation_cases
 from TIPCommon.rest.auth import get_secops_siem_tenant_credentials
+from TIPCommon.rest.soar_api import get_federation_cases
 from TIPCommon.transformation import convert_list_to_comma_string
 from TIPCommon.utils import camel_to_snake_case
-import TIPCommon.types
 
 from .constants import SUCCESS_STATUS_CODE
 
@@ -76,6 +74,7 @@ class FederationSyncManager:
 
         Returns:
             The result of syncing cases.
+
         """
         fetch_body = self._get_cases_to_sync(continuation_token)
         updated_cases = fetch_body.get(
@@ -121,6 +120,7 @@ class FederationSyncManager:
 
         Returns:
             The response body of fetching the cases which should be synced.
+
         """
         fetch_result = get_federation_cases(
             chronicle_soar=self.chronicle_soar,
@@ -137,6 +137,7 @@ class FederationSyncManager:
 
         Returns:
             The response of the sync.
+
         """
         url = self.sync_endpoint + "/legacyFederatedCases:legacyBatchPatchFederatedCases"
         payload = json.dumps({"cases": cases_payload})
@@ -155,8 +156,7 @@ class FederationSyncManager:
         )
 
     def _prepare_http_client(self, verify_ssl: bool) -> None:
-        """
-        Prepare http client
+        """Prepare http client
         """
         auth_session = CreateSession.create_session()
         auth_session.verify = verify_ssl
