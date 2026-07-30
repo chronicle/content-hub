@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from pathlib import Path
 
 from rich.console import Console
@@ -132,7 +133,7 @@ async def run_describe_generation(  # ruff:ignore[too-many-arguments]
             await DescribeJob(int_name, target_jobs, src=src, dst=int_dst, override=gen_override).describe(sem=sem)
 
 
-def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure]
+def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure,too-many-locals]
     content_type: str,
     resource_names: list[str] | None = None,
     integration: str | None = None,
@@ -143,6 +144,8 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure]
     override: bool = False,
     report_file: Path | None = None,
     run_describe: bool = True,
+    use_llm_judge: bool = False,
+    use_batch_api: bool = False,
 ) -> list[RegressionIssue]:
     """Execute regression testing comparing baseline YAML metadata with test YAML metadata.
 
@@ -156,12 +159,15 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure]
         override: Whether to force rewrite/re-run describe generation.
         report_file: Output CSV report path (defaults to 'regression_report.csv').
         run_describe: Whether to run Gemini describe generation before comparing.
+        use_llm_judge: Whether to use Gemini Judge to evaluate text field equivalence.
+        use_batch_api: Whether to use Google GenAI Batch API for LLM Judge.
 
     Returns:
         list[RegressionIssue]: List of all identified regression issues.
 
     """
     target_dst: Path = dst or Path("test_descriptions")
+    start_time: float = time.perf_counter()
 
     if run_describe:
         asyncio.run(
@@ -208,18 +214,28 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure]
             if not baseline_file.exists() and not test_file.exists():
                 continue
 
+            target_entries: set[str] | None = (
+                set(resource_names) if content_type != "integration" and resource_names else None
+            )
             issues: list[RegressionIssue] = compare_yaml_files(
                 baseline_path=baseline_file,
                 test_path=test_file,
                 path_of_files=str(baseline_file),
+                use_llm_judge=use_llm_judge,
+                use_batch_api=use_batch_api,
+                target_entries=target_entries,
             )
             all_issues.extend(issues)
 
     write_regression_report_csv(all_issues, out_report)
 
+    elapsed_seconds: float = time.perf_counter() - start_time
     console = Console()
     if all_issues:
-        console.print(f"\n[bold red]Regression Test Summary: Found {len(all_issues)} issue(s).[/bold red]")
+        console.print(
+            f"\n[bold red]Regression Test Summary: Found {len(all_issues)} issue(s)"
+            f" in {elapsed_seconds:.1f}s.[/bold red]"
+        )
         console.print(f"[bold yellow]Report written to: {out_report.resolve()}[/bold yellow]\n")
 
         table = Table(title="Regression Testing Results")
@@ -235,7 +251,10 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure]
 
         console.print(table)
     else:
-        console.print("\n[bold green]Regression Test Summary: 0 issues found. All metadata matches![/bold green]")
+        console.print(
+            f"\n[bold green]Regression Test Summary: 0 issues found in {elapsed_seconds:.1f}s."
+            " All metadata matches![/bold green]"
+        )
         console.print(f"[green]Empty report generated at: {out_report.resolve()}[/green]\n")
 
     return all_issues

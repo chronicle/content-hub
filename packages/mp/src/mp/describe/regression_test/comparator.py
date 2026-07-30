@@ -23,6 +23,8 @@ from typing import cast
 
 import yaml
 
+from .judge import TextCandidate, run_judge_evaluation_sync
+
 
 @dataclasses.dataclass
 class RegressionIssue:
@@ -36,10 +38,14 @@ class RegressionIssue:
     llm_input: str
 
 
-def compare_yaml_files(
+def compare_yaml_files(  # ruff:ignore[too-many-arguments]
     baseline_path: pathlib.Path,
     test_path: pathlib.Path,
     path_of_files: str | None = None,
+    *,
+    use_llm_judge: bool = False,
+    use_batch_api: bool = False,
+    target_entries: set[str] | None = None,
 ) -> list[RegressionIssue]:
     """Compare baseline and test YAML files and return a list of regression issues.
 
@@ -47,6 +53,9 @@ def compare_yaml_files(
         baseline_path: Path to the baseline YAML file.
         test_path: Path to the test YAML file.
         path_of_files: Display path of files (defaults to baseline_path relative path).
+        use_llm_judge: Whether to use Gemini Judge to evaluate text field equivalence.
+        use_batch_api: Whether to use Google GenAI Batch API for LLM Judge evaluation.
+        target_entries: Optional set of top-level keys (e.g. action names) to restrict comparison to.
 
     Returns:
         list[RegressionIssue]: List of identified regression issues.
@@ -110,21 +119,30 @@ def compare_yaml_files(
             )
         ]
 
+    if target_entries and isinstance(baseline_data, dict) and isinstance(test_data, dict):
+        baseline_data = {k: v for k, v in baseline_data.items() if k in target_entries}
+        test_data = {k: v for k, v in test_data.items() if k in target_entries}
+
     return compare_yaml_dicts(
         baseline_data=baseline_data,
         test_data=test_data,
         path_of_files=rel_path,
         baseline_file_str=str(baseline_path),
         test_file_str=str(test_path),
+        use_llm_judge=use_llm_judge,
+        use_batch_api=use_batch_api,
     )
 
 
-def compare_yaml_dicts(  # ruff:ignore[complex-structure]
+def compare_yaml_dicts(  # ruff:ignore[complex-structure,too-many-arguments]
     baseline_data: object,
     test_data: object,
     path_of_files: str,
     baseline_file_str: str,
     test_file_str: str,
+    *,
+    use_llm_judge: bool = False,
+    use_batch_api: bool = False,
 ) -> list[RegressionIssue]:
     """Recursively compare baseline and test dictionary structures.
 
@@ -134,14 +152,19 @@ def compare_yaml_dicts(  # ruff:ignore[complex-structure]
         path_of_files: Display path for files.
         baseline_file_str: Baseline file path string.
         test_file_str: Test file path string.
+        use_llm_judge: Whether to use Gemini Judge to evaluate text field equivalence.
+        use_batch_api: Whether to use Google GenAI Batch API for LLM Judge.
 
     Returns:
         list[RegressionIssue]: List of regression issues found.
 
     """
     issues: list[RegressionIssue] = []
+    text_candidates: list[TextCandidate] = []
 
-    def _recurse(b_val: object, t_val: object, key_path: list[str], parent_context: dict[str, object] | None) -> None:
+    def _recurse(  # ruff:ignore[complex-structure]
+        b_val: object, t_val: object, key_path: list[str], parent_context: dict[str, object] | None
+    ) -> None:
         entry_str: str = " -> ".join(key_path)
 
         # 1. Compare booleans
@@ -222,10 +245,40 @@ def compare_yaml_dicts(  # ruff:ignore[complex-structure]
                     )
             return
 
-        # 3. Text/scalar fields vary naturally across LLM runs and are not regression issues.
-        return
+        # 3. Compare text fields using LLM as a Judge if requested
+        if use_llm_judge and isinstance(b_val, str) and isinstance(t_val, str):
+            if b_val != t_val and len(key_path) > 0 and key_path[-1] in {
+                "ai_description",
+                "ai_short_description",
+                "parameters_description",
+                "reasoning",
+            }:
+                text_candidates.append(
+                    TextCandidate(
+                        entry_path=entry_str,
+                        baseline_text=b_val,
+                        test_text=t_val,
+                    )
+                )
+            return
 
     _recurse(baseline_data, test_data, [], None)
+
+    if use_llm_judge and text_candidates:
+        judge_results = run_judge_evaluation_sync(text_candidates, use_batch=use_batch_api)
+        issues.extend(
+            RegressionIssue(
+                path_of_files=path_of_files,
+                baseline_file=baseline_file_str,
+                test_file=test_file_str,
+                entry=res.entry_path,
+                issue="text semantic mismatch (NOT_EQUIVALENT)",
+                llm_input=f"Reasoning: {res.verdict.comparison_reasoning}",
+            )
+            for res in judge_results
+            if res.verdict.verdict == "NOT_EQUIVALENT"
+        )
+
     return issues
 
 

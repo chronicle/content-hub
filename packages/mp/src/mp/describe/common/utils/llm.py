@@ -49,6 +49,7 @@ async def call_gemini_bulk(prompts: list[str], response_json_schema: type[T_Sche
         return await gemini.send_bulk_messages(
             prompts,
             response_json_schema=response_json_schema,
+            use_batch=True,
         )
 
 

@@ -29,6 +29,7 @@ from mp.describe.regression_test.comparator import (
     compare_yaml_files,
     write_regression_report_csv,
 )
+from mp.describe.regression_test.judge import JudgeEvaluationResult, JudgeVerdict
 from mp.describe.regression_test.orchestrator import run_regression_test
 from mp.describe.regression_test.typer_app import app as regression_app
 
@@ -167,6 +168,30 @@ def test_compare_yaml_files_file_io(tmp_path: Path) -> None:
     assert issues[0].issue == "marked as a regression for manual checking"
 
 
+def test_compare_yaml_files_with_target_entries(tmp_path: Path) -> None:
+    b_file = tmp_path / "baseline.yaml"
+    t_file = tmp_path / "test.yaml"
+
+    b_content = {
+        "Action1": {"capabilities": {"can_update_entities": True}},
+        "Action2": {"capabilities": {"can_update_entities": True}},
+    }
+    t_content = {
+        "Action1": {"capabilities": {"can_update_entities": False}},
+        "Action2": {"capabilities": {"can_update_entities": False}},
+    }
+
+    b_file.write_text(yaml.safe_dump(b_content), encoding="utf-8")
+    t_file.write_text(yaml.safe_dump(t_content), encoding="utf-8")
+
+    issues_all = compare_yaml_files(b_file, t_file)
+    assert len(issues_all) == 2
+
+    issues_filtered = compare_yaml_files(b_file, t_file, target_entries={"Action1"})
+    assert len(issues_filtered) == 1
+    assert "Action1" in issues_filtered[0].entry
+
+
 def test_write_regression_report_csv(tmp_path: Path) -> None:
     csv_file = tmp_path / "report.csv"
     issue = RegressionIssue(
@@ -245,6 +270,8 @@ def test_cli_describe_regression_test_action_command(tmp_path: Path) -> None:
         override=False,
         report_file=report_file,
         run_describe=True,
+        use_llm_judge=False,
+        use_batch_api=False,
     )
 
 
@@ -271,4 +298,106 @@ def test_cli_describe_regression_test_all_content_command(tmp_path: Path) -> Non
         override=False,
         report_file=report_file,
         run_describe=True,
+        use_llm_judge=False,
+        use_batch_api=False,
+    )
+
+
+def test_compare_yaml_dicts_with_llm_judge() -> None:
+    baseline = {"ai_description": "First description text"}
+    test_data = {"ai_description": "Contradictory new description text"}
+
+    mock_verdict = JudgeVerdict(
+        prompt_intent_analysis="Evaluate intent",
+        field_1_core_claims=["Claim A"],
+        field_2_core_claims=["Claim B"],
+        comparison_reasoning="Contradictory information",
+        verdict="NOT_EQUIVALENT",
+    )
+    mock_result = JudgeEvaluationResult(
+        entry_path="ai_description",
+        baseline_text=baseline["ai_description"],
+        test_text=test_data["ai_description"],
+        verdict=mock_verdict,
+    )
+
+    with mock.patch(
+        "mp.describe.regression_test.comparator.run_judge_evaluation_sync",
+        return_value=[mock_result],
+    ) as mock_judge:
+        issues = compare_yaml_dicts(
+            baseline_data=baseline,
+            test_data=test_data,
+            path_of_files="base.yaml",
+            baseline_file_str="base.yaml",
+            test_file_str="test.yaml",
+            use_llm_judge=True,
+        )
+
+    mock_judge.assert_called_once()
+    assert len(issues) == 1
+    assert issues[0].issue == "text semantic mismatch (NOT_EQUIVALENT)"
+    assert "Contradictory information" in issues[0].llm_input
+
+
+def test_cli_describe_regression_test_action_command_with_judge(tmp_path: Path) -> None:
+    report_file = tmp_path / "report.csv"
+    with mock.patch("mp.describe.regression_test.typer_app.run_regression_test") as mock_run:
+        result = runner.invoke(
+            regression_app,
+            [
+                "action",
+                "-i",
+                "anomali",
+                "-j",
+                "--report-file",
+                str(report_file),
+            ],
+        )
+
+    assert result.exit_code == 0, f"Command failed: {result.output}"
+    mock_run.assert_called_once_with(
+        content_type="action",
+        resource_names=None,
+        integration="anomali",
+        all_marketplace=False,
+        src=None,
+        dst=None,
+        override=False,
+        report_file=report_file,
+        run_describe=True,
+        use_llm_judge=True,
+        use_batch_api=False,
+    )
+
+
+def test_cli_describe_regression_test_action_command_with_batch_api(tmp_path: Path) -> None:
+    report_file = tmp_path / "report.csv"
+    with mock.patch("mp.describe.regression_test.typer_app.run_regression_test") as mock_run:
+        result = runner.invoke(
+            regression_app,
+            [
+                "action",
+                "-i",
+                "anomali",
+                "-j",
+                "--use-batch-api",
+                "--report-file",
+                str(report_file),
+            ],
+        )
+
+    assert result.exit_code == 0, f"Command failed: {result.output}"
+    mock_run.assert_called_once_with(
+        content_type="action",
+        resource_names=None,
+        integration="anomali",
+        all_marketplace=False,
+        src=None,
+        dst=None,
+        override=False,
+        report_file=report_file,
+        run_describe=True,
+        use_llm_judge=True,
+        use_batch_api=True,
     )

@@ -15,7 +15,7 @@ The `describe-regression-test` command compares baseline metadata files (`action
 - **Boolean attribute `False` → `True`**: Marked as `might be a regression`.
 - **Action missing in test** (Action present in baseline but missing in test code generation): Marked as `marked as a regression for manual checking (action missing in test)`.
 - **Action missing in baseline** (Action present in code generation but missing in baseline): Marked as `action missing in baseline (needs mp describe)`.
-- **Free-form text fields** (`ai_description`, `ai_short_description`, `reasoning`, `parameters_description`): Naturally vary between LLM runs and are ignored as regression triggers.
+- **Free-form text fields** (`ai_description`, `ai_short_description`, `reasoning`, `parameters_description`): By default, natural phrasing variations between LLM runs are ignored. When `-j` / `--use-llm-judge` is enabled, an LLM Judge (`Gemini 3.1 Pro Preview`) evaluates mismatched text fields for semantic equivalence; `NOT_EQUIVALENT` verdicts are recorded as `text semantic mismatch (NOT_EQUIVALENT)`.
 - **LLM Reasoning Context**: For any boolean attribute regression, the corresponding section reasoning text is recorded in the `LLM Input` column of the CSV report.
 
 ---
@@ -40,6 +40,8 @@ mp describe-regression-test action [ACTIONS]... [OPTIONS]
 | `--dst`            |           | Customize destination/test folder to compare with (defaults to `test_descriptions/`).        | `path`   | `None`  |
 | `--report-file`    |           | CSV report file path for results (defaults to `regression_report.csv`).                      | `path`   | `None`  |
 | `--run-describe`   |           | Automatically run Gemini describe generation to `--dst` before comparing (default `True`).   | `bool`   | `True`  |
+| `--use-llm-judge`  | `-j`      | Use Gemini Judge to evaluate text field semantic equivalence.                                | `bool`   | `False` |
+| `--use-batch-api`  |           | Use Google GenAI Batch API for LLM Judge evaluation instead of fast concurrent requests.      | `bool`   | `False` |
 | `--override`       | `-o`      | Force rewrite content when generating descriptions.                                           | `bool`   | `False` |
 | `--quiet`          | `-q`      | Log less on runtime.                                                                         | `bool`   | `False` |
 | `--verbose`        | `-v`      | Log more on runtime.                                                                         | `bool`   | `False` |
@@ -66,6 +68,8 @@ mp describe-regression-test connector [CONNECTORS]... [OPTIONS]
 | `--dst`            |           | Customize destination/test folder to compare with.                                           | `path`   | `None`  |
 | `--report-file`    |           | CSV report file path for results.                                                            | `path`   | `None`  |
 | `--run-describe`   |           | Automatically run Gemini describe generation to `--dst` before comparing.                   | `bool`   | `True`  |
+| `--use-llm-judge`  | `-j`      | Use Gemini Judge to evaluate text field semantic equivalence.                                | `bool`   | `False` |
+| `--use-batch-api`  |           | Use Google GenAI Batch API for LLM Judge evaluation instead of fast concurrent requests.      | `bool`   | `False` |
 | `--override`       | `-o`      | Force rewrite content when generating descriptions.                                           | `bool`   | `False` |
 | `--quiet`          | `-q`      | Log less on runtime.                                                                         | `bool`   | `False` |
 | `--verbose`        | `-v`      | Log more on runtime.                                                                         | `bool`   | `False` |
@@ -92,6 +96,8 @@ mp describe-regression-test job [JOBS]... [OPTIONS]
 | `--dst`            |           | Customize destination/test folder to compare with.                                           | `path`   | `None`  |
 | `--report-file`    |           | CSV report file path for results.                                                            | `path`   | `None`  |
 | `--run-describe`   |           | Automatically run Gemini describe generation to `--dst` before comparing.                   | `bool`   | `True`  |
+| `--use-llm-judge`  | `-j`      | Use Gemini Judge to evaluate text field semantic equivalence.                                | `bool`   | `False` |
+| `--use-batch-api`  |           | Use Google GenAI Batch API for LLM Judge evaluation instead of fast concurrent requests.      | `bool`   | `False` |
 | `--override`       | `-o`      | Force rewrite content when generating descriptions.                                           | `bool`   | `False` |
 | `--quiet`          | `-q`      | Log less on runtime.                                                                         | `bool`   | `False` |
 | `--verbose`        | `-v`      | Log more on runtime.                                                                         | `bool`   | `False` |
@@ -117,6 +123,8 @@ mp describe-regression-test integration [INTEGRATIONS]... [OPTIONS]
 | `--dst`            |           | Customize destination/test folder to compare with.                                           | `path`   | `None`  |
 | `--report-file`    |           | CSV report file path for results.                                                            | `path`   | `None`  |
 | `--run-describe`   |           | Automatically run Gemini describe generation to `--dst` before comparing.                   | `bool`   | `True`  |
+| `--use-llm-judge`  | `-j`      | Use Gemini Judge to evaluate text field semantic equivalence.                                | `bool`   | `False` |
+| `--use-batch-api`  |           | Use Google GenAI Batch API for LLM Judge evaluation instead of fast concurrent requests.      | `bool`   | `False` |
 | `--override`       | `-o`      | Force rewrite content when generating descriptions.                                           | `bool`   | `False` |
 | `--quiet`          | `-q`      | Log less on runtime.                                                                         | `bool`   | `False` |
 | `--verbose`        | `-v`      | Log more on runtime.                                                                         | `bool`   | `False` |
@@ -142,6 +150,8 @@ mp describe-regression-test all-content [INTEGRATIONS]... [OPTIONS]
 | `--dst`            |           | Customize destination/test folder to compare with.                                           | `path`   | `None`  |
 | `--report-file`    |           | CSV report file path for results.                                                            | `path`   | `None`  |
 | `--run-describe`   |           | Automatically run Gemini describe generation to `--dst` before comparing.                   | `bool`   | `True`  |
+| `--use-llm-judge`  | `-j`      | Use Gemini Judge to evaluate text field semantic equivalence.                                | `bool`   | `False` |
+| `--use-batch-api`  |           | Use Google GenAI Batch API for LLM Judge evaluation instead of fast concurrent requests.      | `bool`   | `False` |
 | `--override`       | `-o`      | Force rewrite content when generating descriptions.                                           | `bool`   | `False` |
 | `--quiet`          | `-q`      | Log less on runtime.                                                                         | `bool`   | `False` |
 | `--verbose`        | `-v`      | Log more on runtime.                                                                         | `bool`   | `False` |
@@ -180,6 +190,30 @@ Run regression testing across all marketplace integrations for all content types
 
 ```bash
 uv run --project packages/mp mp describe-regression-test all-content -a
+```
+
+### 5. Semantic Regression Test with LLM as a Judge
+
+Run regression testing on `duo` action descriptions and use Gemini as an LLM Judge (`-j` / `--use-llm-judge`) to evaluate semantic equivalence of modified text descriptions:
+
+```bash
+uv run --project packages/mp mp describe-regression-test action -i duo -j
+```
+
+### 6. Filter by Specific Action Name with Debug Logging
+
+Run regression testing on a specific action within an integration (`"Get Authentication Logs for User"`), using existing test files (`--no-run-describe`) and verbose debug logging (`-v`) to monitor live batch polling:
+
+```bash
+uv run --project packages/mp mp describe-regression-test action -i duo -j --no-run-describe -v "Get Authentication Logs for User"
+```
+
+### 7. Optional Batch API Execution (`--use-batch-api`)
+
+By default, the LLM Judge executes via fast concurrent interactive requests (`asyncio.gather`), which takes ~3–8 seconds. For large-scale overnight regression tests across hundreds of marketplace integrations, use `--use-batch-api` to route requests through Google GenAI's asynchronous cloud Batch queue:
+
+```bash
+uv run --project packages/mp mp describe-regression-test action -i duo -j --use-batch-api --no-run-describe
 ```
 
 > [!WARNING]

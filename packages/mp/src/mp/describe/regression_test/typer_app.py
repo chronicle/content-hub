@@ -60,6 +60,18 @@ def describe_action(  # ruff:ignore[too-many-arguments]
     run_describe: Annotated[
         bool, typer.Option("--run-describe/--no-run-describe", help="Run Gemini describe generation before comparing.")
     ] = True,
+    use_llm_judge: Annotated[
+        bool,
+        typer.Option(
+            "-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."
+        ),
+    ] = False,
+    use_batch_api: Annotated[
+        bool,
+        typer.Option(
+            "--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."
+        ),
+    ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
 ) -> None:
@@ -74,6 +86,8 @@ def describe_action(  # ruff:ignore[too-many-arguments]
         override: Override flag.
         report_file: Report file path.
         run_describe: Run describe generation first.
+        use_llm_judge: Use Gemini Judge to evaluate text field equivalence.
+        use_batch_api: Use Google GenAI Batch API for LLM Judge.
         quiet: Quiet log option.
         verbose: Verbose log option.
 
@@ -98,6 +112,8 @@ def describe_action(  # ruff:ignore[too-many-arguments]
         override=override,
         report_file=report_file,
         run_describe=run_describe,
+        use_llm_judge=use_llm_judge,
+        use_batch_api=use_batch_api,
     )
 
 
@@ -122,6 +138,18 @@ def describe_integration(  # ruff:ignore[too-many-arguments]
     run_describe: Annotated[
         bool, typer.Option("--run-describe/--no-run-describe", help="Run Gemini describe generation before comparing.")
     ] = True,
+    use_llm_judge: Annotated[
+        bool,
+        typer.Option(
+            "-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."
+        ),
+    ] = False,
+    use_batch_api: Annotated[
+        bool,
+        typer.Option(
+            "--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."
+        ),
+    ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
 ) -> None:
@@ -135,6 +163,8 @@ def describe_integration(  # ruff:ignore[too-many-arguments]
         override: Override flag.
         report_file: Report file path.
         run_describe: Run describe generation first.
+        use_llm_judge: Use Gemini Judge to evaluate text field equivalence.
+        use_batch_api: Use Google GenAI Batch API for LLM Judge.
         quiet: Quiet log option.
         verbose: Verbose log option.
 
@@ -158,6 +188,8 @@ def describe_integration(  # ruff:ignore[too-many-arguments]
         override=override,
         report_file=report_file,
         run_describe=run_describe,
+        use_llm_judge=use_llm_judge,
+        use_batch_api=use_batch_api,
     )
 
 
@@ -183,6 +215,18 @@ def describe_connector(  # ruff:ignore[too-many-arguments]
     run_describe: Annotated[
         bool, typer.Option("--run-describe/--no-run-describe", help="Run Gemini describe generation before comparing.")
     ] = True,
+    use_llm_judge: Annotated[
+        bool,
+        typer.Option(
+            "-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."
+        ),
+    ] = False,
+    use_batch_api: Annotated[
+        bool,
+        typer.Option(
+            "--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."
+        ),
+    ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
 ) -> None:
@@ -197,6 +241,8 @@ def describe_connector(  # ruff:ignore[too-many-arguments]
         override: Override flag.
         report_file: Report file path.
         run_describe: Run describe generation first.
+        use_llm_judge: Use Gemini Judge to evaluate text field equivalence.
+        use_batch_api: Use Google GenAI Batch API for LLM Judge.
         quiet: Quiet log option.
         verbose: Verbose log option.
 
@@ -221,6 +267,8 @@ def describe_connector(  # ruff:ignore[too-many-arguments]
         override=override,
         report_file=report_file,
         run_describe=run_describe,
+        use_llm_judge=use_llm_judge,
+        use_batch_api=use_batch_api,
     )
 
 
@@ -246,6 +294,18 @@ def describe_job(  # ruff:ignore[too-many-arguments]
     run_describe: Annotated[
         bool, typer.Option("--run-describe/--no-run-describe", help="Run Gemini describe generation before comparing.")
     ] = True,
+    use_llm_judge: Annotated[
+        bool,
+        typer.Option(
+            "-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."
+        ),
+    ] = False,
+    use_batch_api: Annotated[
+        bool,
+        typer.Option(
+            "--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."
+        ),
+    ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
 ) -> None:
@@ -260,6 +320,8 @@ def describe_job(  # ruff:ignore[too-many-arguments]
         override: Override flag.
         report_file: Report file path.
         run_describe: Run describe generation first.
+        use_llm_judge: Use Gemini Judge to evaluate text field equivalence.
+        use_batch_api: Use Google GenAI Batch API for LLM Judge.
         quiet: Quiet log option.
         verbose: Verbose log option.
 
@@ -284,6 +346,8 @@ def describe_job(  # ruff:ignore[too-many-arguments]
         override=override,
         report_file=report_file,
         run_describe=run_describe,
+        use_llm_judge=use_llm_judge,
+        use_batch_api=use_batch_api,
     )
 
 
@@ -308,6 +372,18 @@ def describe_all_content(  # ruff:ignore[too-many-arguments]
     run_describe: Annotated[
         bool, typer.Option("--run-describe/--no-run-describe", help="Run Gemini describe generation before comparing.")
     ] = True,
+    use_llm_judge: Annotated[
+        bool,
+        typer.Option(
+            "-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."
+        ),
+    ] = False,
+    use_batch_api: Annotated[
+        bool,
+        typer.Option(
+            "--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."
+        ),
+    ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
 ) -> None:
@@ -321,6 +397,8 @@ def describe_all_content(  # ruff:ignore[too-many-arguments]
         override: Override flag.
         report_file: Report file path.
         run_describe: Run describe generation first.
+        use_llm_judge: Use Gemini Judge to evaluate text field equivalence.
+        use_batch_api: Use Google GenAI Batch API for LLM Judge.
         quiet: Quiet log option.
         verbose: Verbose log option.
 
@@ -344,4 +422,6 @@ def describe_all_content(  # ruff:ignore[too-many-arguments]
         override=override,
         report_file=report_file,
         run_describe=run_describe,
+        use_llm_judge=use_llm_judge,
+        use_batch_api=use_batch_api,
     )
