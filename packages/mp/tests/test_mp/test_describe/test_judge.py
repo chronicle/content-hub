@@ -107,12 +107,12 @@ def test_run_judge_evaluation_sync() -> None:
 
 
 def test_judge_verdict_resilience() -> None:
-    # 1. Flash model alias 'result' with lowercase 'not_equivalent'
-    v1 = JudgeVerdict.model_validate({"result": "not_equivalent", "reasoning": "diff"})
+    # 1. Lowercase 'not_equivalent' with alias 'reasoning'
+    v1 = JudgeVerdict.model_validate({"verdict": "not_equivalent", "reasoning": "diff"})
     assert v1.verdict == "NOT_EQUIVALENT"
     assert v1.comparison_reasoning == "diff"
 
-    # 2. Missing verdict key but string 'EQUIVALENT' present
+    # 2. Missing verdict key defaults to EQUIVALENT
     v2 = JudgeVerdict.model_validate({"explanation": "The texts are EQUIVALENT in meaning."})
     assert v2.verdict == "EQUIVALENT"
 

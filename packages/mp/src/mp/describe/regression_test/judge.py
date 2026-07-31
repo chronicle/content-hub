@@ -24,6 +24,9 @@ from typing import Literal, cast
 
 from pydantic import BaseModel, Field, model_validator
 
+from mp.core.data_models.integrations.action.ai.param_types import (
+    build_dynamic_param_type_synonym_rules,
+)
 from mp.core.llm.gemini import Gemini, GeminiConfig
 
 logger = logging.getLogger(__name__)
@@ -44,11 +47,15 @@ JUDGE_SYSTEM_PROMPT: str = (
     "- *Ignore Internal Backend Data Sorting & Heuristics*: Differences in secondary phrasing or omission of internal "
     "backend data sorting or fallback heuristics (such as 'uses newest threat if no active threats found') must be "
     "evaluated as EQUIVALENT.\n"
+    "- *Ignore Parameter Type Synonyms in Tables*: In `parameters_description` tables, differences in naming "
+    "synonymous SOAR UI data types MUST be evaluated as EQUIVALENT:\n"
+    f"{build_dynamic_param_type_synonym_rules()}\n"
+    "       Only mark NOT_EQUIVALENT if the change is between incompatible functional categories (e.g., changing a "
+    "dropdown list `DDL` to a free-text `String`, or changing `Mandatory` flags).\n"
     "- **NOT_EQUIVALENT**: The candidate description conveys different facts, contradictory conclusions, or omits "
     "a critical operational mechanism present in the baseline (such as retries, rate limits, timeouts, or required "
     "authentication keys). For parameter tables (`parameters_description`), any change or mismatch in parameter "
-    "names, data types (e.g., DDL vs String, Boolean vs String), or mandatory flags MUST be evaluated as "
-    "NOT_EQUIVALENT.\n\n"
+    "names, incompatible data types, or mandatory flags MUST be evaluated as NOT_EQUIVALENT.\n\n"
     "### Rules for Borderline Cases & Supplementary Notes\n\n"
     "1. **Supplementary Notes / Additional Phrasing**: Differences in phrasing of supplementary notes are NOT "
     "regressions. Do NOT mark NOT_EQUIVALENT unless there is a genuine factual contradiction or an omission of a "
@@ -113,88 +120,25 @@ class JudgeVerdict(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _map_aliases_and_defaults(  # ruff:ignore[complex-structure,too-many-branches,too-many-statements]
-        cls, values: dict[str, object] | object
-    ) -> dict[str, object] | object:
-        if isinstance(values, dict):
-            val_dict = cast("dict[str, object]", values)
-            # 1. Map reasoning alias
-            if not val_dict.get("comparison_reasoning") and val_dict.get("reasoning"):
-                val_dict["comparison_reasoning"] = str(val_dict["reasoning"])
+    def _normalize_verdict(cls, values: dict[str, object] | object) -> dict[str, object] | object:
+        if not isinstance(values, dict):
+            return values
+        val_dict = cast("dict[str, object]", values)
 
-            # 2. Map verdict aliases from Flash models
-            verdict_val = val_dict.get("verdict")
-            if verdict_val is None:
-                for alias in (
-                    "result",
-                    "decision",
-                    "status",
-                    "equivalence",
-                    "evaluation",
-                    "judgment",
-                    "answer",
-                    "outcome",
-                    "category",
-                    "is_equivalent",
-                ):
-                    if alias in val_dict and val_dict[alias] is not None:
-                        verdict_val = val_dict[alias]
-                        break
+        if not val_dict.get("comparison_reasoning") and val_dict.get("reasoning"):
+            val_dict["comparison_reasoning"] = str(val_dict["reasoning"])
 
-            # 3. If still None, inspect string values in dict for EQUIVALENT / NOT_EQUIVALENT
-            if verdict_val is None:
-                for v in val_dict.values():
-                    if isinstance(v, str):
-                        v_up = v.upper()
-                        if "NOT_EQUIVALENT" in v_up or "NOT EQUIVALENT" in v_up:
-                            verdict_val = "NOT_EQUIVALENT"
-                            break
-                        if "EQUIVALENT" in v_up:
-                            verdict_val = "EQUIVALENT"
-                            break
+        verdict = str(val_dict.get("verdict", "EQUIVALENT")).strip().upper()
+        val_dict["verdict"] = "NOT_EQUIVALENT" if "NOT_EQUIVALENT" in verdict else "EQUIVALENT"
 
-            # 4. Normalize verdict value to exact Literal
-            if verdict_val is not None:
-                v_str = str(verdict_val).strip().upper()
-                if any(
-                    x in v_str
-                    for x in ("NOT_EQUIVALENT", "NOT EQUIVALENT", "FALSE", "NO", "DIFFERENT")
-                ):
-                    val_dict["verdict"] = "NOT_EQUIVALENT"
-                elif any(x in v_str for x in ("EQUIVALENT", "TRUE", "YES", "IDENTICAL", "SAME")):
-                    val_dict["verdict"] = "EQUIVALENT"
-                else:
-                    val_dict["verdict"] = "EQUIVALENT"
-            else:
-                val_dict["verdict"] = "EQUIVALENT"
-
-            # 5. Normalize missing_operational_facts
-            missing_val = val_dict.get("missing_operational_facts")
-            if missing_val is None or not isinstance(missing_val, list):
-                val_dict["missing_operational_facts"] = []
-            else:
-                val_dict["missing_operational_facts"] = [str(x) for x in missing_val]
-
-            # 6. Normalize change_type
-            if val_dict["verdict"] == "EQUIVALENT":
-                val_dict["change_type"] = "EQUIVALENT"
-            else:
-                change_val = val_dict.get("change_type")
-                if change_val is None:
-                    for alias in ("origin", "change", "type", "regression_type", "conflict_type"):
-                        if alias in val_dict and val_dict[alias] is not None:
-                            change_val = val_dict[alias]
-                            break
-                if change_val is not None:
-                    c_str = str(change_val).strip().upper()
-                    if "CONFLICT" in c_str:
-                        val_dict["change_type"] = "GENERATION_CONFLICT"
-                    elif "AMBIGUOUS" in c_str:
-                        val_dict["change_type"] = "AMBIGUOUS_CHANGE"
-                    else:
-                        val_dict["change_type"] = "GENERATOR_REGRESSION"
-                else:
-                    val_dict["change_type"] = "GENERATOR_REGRESSION"
+        if val_dict["verdict"] == "EQUIVALENT":
+            val_dict["change_type"] = "EQUIVALENT"
+        elif val_dict.get("change_type") not in {
+            "GENERATOR_REGRESSION",
+            "GENERATION_CONFLICT",
+            "AMBIGUOUS_CHANGE",
+        }:
+            val_dict["change_type"] = "GENERATOR_REGRESSION"
 
         return values
 

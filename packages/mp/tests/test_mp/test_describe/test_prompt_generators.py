@@ -19,6 +19,10 @@ from mp.core.data_models.integrations.action.ai.entity_types import (
     build_dynamic_entity_prompt_rules,
     get_all_entity_param_examples_string,
 )
+from mp.core.data_models.integrations.action.ai.param_types import (
+    PARAM_TYPE_TO_SYNONYMS,
+    build_dynamic_param_type_synonym_rules,
+)
 
 
 def test_get_all_entity_param_examples_string() -> None:
@@ -42,3 +46,13 @@ def test_build_dynamic_entity_prompt_rules() -> None:
         )
         assert expected_rule in rules_str
     assert "or similar" not in rules_str
+
+
+def test_build_dynamic_param_type_synonym_rules() -> None:
+    """Test that prompt rules cover all parameter type synonyms in PARAM_TYPE_TO_SYNONYMS."""
+    rules_str = build_dynamic_param_type_synonym_rules()
+    for param_type, synonyms in PARAM_TYPE_TO_SYNONYMS.items():
+        synonyms_str = " ≡ ".join(f"`{s}`" for s in synonyms)
+        title = param_type.name.replace("_", " ")
+        expected_rule = f"* {title}: {synonyms_str}"
+        assert expected_rule in rules_str
