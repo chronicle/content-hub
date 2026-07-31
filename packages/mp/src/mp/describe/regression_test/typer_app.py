@@ -39,7 +39,9 @@ app: typer.Typer = typer.Typer(
 )
 def describe_action(  # ruff:ignore[too-many-arguments]
     actions: Annotated[list[str] | None, typer.Argument(help="Action names")] = None,
-    integration: Annotated[str | None, typer.Option("-i", "--integration", help="Integration name")] = None,
+    integration: Annotated[
+        str | None, typer.Option("-i", "--integration", help="Integration name(s), comma-separated")
+    ] = None,
     *,
     all_marketplace: Annotated[
         bool,
@@ -199,7 +201,9 @@ def describe_integration(  # ruff:ignore[too-many-arguments]
 )
 def describe_connector(  # ruff:ignore[too-many-arguments]
     connectors: Annotated[list[str] | None, typer.Argument(help="Connector names")] = None,
-    integration: Annotated[str | None, typer.Option("-i", "--integration", help="Integration name")] = None,
+    integration: Annotated[
+        str | None, typer.Option("-i", "--integration", help="Integration name(s), comma-separated")
+    ] = None,
     *,
     all_marketplace: Annotated[
         bool, typer.Option("-a", "--all", help="Test all integrations in the marketplace")
@@ -278,7 +282,9 @@ def describe_connector(  # ruff:ignore[too-many-arguments]
 )
 def describe_job(  # ruff:ignore[too-many-arguments]
     jobs: Annotated[list[str] | None, typer.Argument(help="Job names")] = None,
-    integration: Annotated[str | None, typer.Option("-i", "--integration", help="Integration name")] = None,
+    integration: Annotated[
+        str | None, typer.Option("-i", "--integration", help="Integration name(s), comma-separated")
+    ] = None,
     *,
     all_marketplace: Annotated[
         bool, typer.Option("-a", "--all", help="Test all integrations in the marketplace")

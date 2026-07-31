@@ -29,31 +29,51 @@ from mp.core.llm.gemini import Gemini, GeminiConfig
 logger = logging.getLogger(__name__)
 
 JUDGE_SYSTEM_PROMPT: str = (
-    "You are an expert quality assurance evaluator and semantic judge. Your task is to determine if two text fields "
-    "(which are parts of generated responses) are semantically equivalent with respect to answering a specific "
-    "original user prompt.\n\n"
+    "You are an expert quality assurance evaluator and semantic judge for Google SecOps SOAR integrations. Your task "
+    "is to determine if two user-facing action descriptions are semantically equivalent with respect to "
+    "**Action Operational Behavior (Operational Materiality)**.\n\n"
     "### Evaluation Criteria\n\n"
-    "You must evaluate whether Text Field 1 and Text Field 2 are **semantically equal**.\n\n"
-    "- **EQUIVALENT**: Both text fields convey the exact same core answer, factual claims, or decision.\n"
-    "- *Ignore*: Minor grammatical differences, syntax, Markdown formatting (e.g., bullet points vs. paragraphs),\n"
-    "tone, and verbosity (one field being longer or having more polite/explanatory fluff than the other). "
-    "If the core answer is identical, they are EQUIVALENT.\n"
-    "- **NOT_EQUIVALENT**: The two fields convey different facts, contradictory conclusions, or one field contains "
-    "critical, prompt-relevant details or constraints that the other completely omits.\n\n"
+    "You must evaluate whether Text Field 1 (Baseline) and Text Field 2 (Test/Candidate) are **semantically equal** "
+    "in how they describe and guide action execution.\n\n"
+    "- **EQUIVALENT**: Both descriptions guide action execution identically (specifying the same "
+    "action selection conditions, supplying identical parameters, expecting the same execution scope, "
+    "and adhering to the same rate limits or security constraints).\n"
+    "- *Ignore Cosmetic & Verbosity Differences*: Minor grammatical differences, syntax, Markdown formatting (e.g., "
+    "bullet points vs. paragraphs), tone, and verbosity must be ignored. If the operational meaning is preserved, "
+    "they are EQUIVALENT.\n"
+    "- *Ignore Internal Backend Data Sorting & Heuristics*: Differences in secondary phrasing or omission of internal "
+    "backend data sorting or fallback heuristics (such as 'uses newest threat if no active threats found') must be "
+    "evaluated as EQUIVALENT.\n"
+    "- **NOT_EQUIVALENT**: The candidate description conveys different facts, contradictory conclusions, or omits "
+    "a critical operational mechanism present in the baseline (such as retries, rate limits, timeouts, or required "
+    "authentication keys). For parameter tables (`parameters_description`), any change or mismatch in parameter "
+    "names, data types (e.g., DDL vs String, Boolean vs String), or mandatory flags MUST be evaluated as "
+    "NOT_EQUIVALENT.\n\n"
     "### Rules for Borderline Cases & Supplementary Notes\n\n"
-    "1. **Supplementary Notes / Additional Phrasing**: Differences in phrasing of supplementary notes (e.g. saying "
-    "'does not process entities' vs 'does not require action parameters', or minor phrasing in flow steps) are NOT "
+    "1. **Supplementary Notes / Additional Phrasing**: Differences in phrasing of supplementary notes are NOT "
     "regressions. Do NOT mark NOT_EQUIVALENT unless there is a genuine factual contradiction or an omission of a "
     "critical operational mechanism (such as retries, rate limits, or required authentication keys).\n"
     "2. **Tie-Breaker Rule**: When two descriptions agree on the primary purpose, API endpoints, and general flow, "
-    "but differ only in supplementary fluff or secondary notes, you MUST default to **EQUIVALENT**.\n\n"
+    "but differ only in supplementary fluff or secondary notes (e.g., internal data sorting or fallback heuristics), "
+    "you MUST default to **EQUIVALENT**.\n\n"
+    "### Intra-Field Information Relocation Rule\n\n"
+    "1. **Intra-Field Relocation**: Information relocation *within logical sections of the same "
+    "user-facing description*\n"
+    "(e.g., moving an informational note from 'General Description' to 'Additional Notes' or 'Flow Description'\n"
+    "within `ai_description`) is **EQUIVALENT**.\n"
+    "2. **Strict Contract Boundary**: Never allow cross-field relocation between incompatible contracts (e.g., moving "
+    "core operational workflow logic from `ai_description` into parameter tables in `parameters_description`).\n\n"
     "### Step-by-Step Evaluation Protocol\n\n"
-    "1. **Analyze the Prompt**: Identify the core information, decision, or question expected to be answered.\n"
-    "2. **Deconstruct Field 1**: Extract essential semantic claims/facts present in Text Field 1.\n"
-    "3. **Deconstruct Field 2**: Extract essential semantic claims/facts present in Text Field 2.\n"
-    "4. **Map & Compare**: Contrast extracted claims. Are they functionally and semantically identical? "
-    "Identify any critical omissions or contradictions.\n"
-    "5. **Formulate the Verdict**: Make your final categorical determination based strictly on your mapping.\n"
+    "1. **Analyze Operational Intent**: Identify the core operational facts, API endpoints, parameters, and "
+    "constraints\n"
+    "expected by a SOAR AI agent.\n"
+    "2. **Deconstruct Baseline (Field 1)**: Extract essential operational claims and constraints.\n"
+    "3. **Deconstruct Candidate (Field 2)**: Extract essential operational claims and constraints.\n"
+    "4. **Map & Compare**: Identify any critical operational facts present in Baseline but missing in Candidate "
+    "(`missing_operational_facts`).\n"
+    "5. **Classify Change Type**: If NOT_EQUIVALENT, determine if it is `GENERATOR_REGRESSION` (critical fact lost "
+    "in description) or `GENERATION_CONFLICT` (generated text contradicts deterministic parameter schema).\n"
+    "6. **Formulate Verdict**: Make your final categorical determination based strictly on operational materiality.\n"
 )
 
 
@@ -69,6 +89,10 @@ class JudgeVerdict(BaseModel):
     field_2_core_claims: list[str] = Field(
         default_factory=list, description="List of core claims/facts extracted from Field 2."
     )
+    missing_operational_facts: list[str] = Field(
+        default_factory=list,
+        description="List of critical operational facts or constraints present in baseline but lost in test.",
+    )
     comparison_reasoning: str = Field(
         default="",
         description="A step-by-step logical comparison explaining why the core meanings are identical or different.",
@@ -77,10 +101,19 @@ class JudgeVerdict(BaseModel):
         default="EQUIVALENT",
         description="Categorical determination: EQUIVALENT or NOT_EQUIVALENT.",
     )
+    change_type: Literal[
+        "EQUIVALENT", "GENERATOR_REGRESSION", "GENERATION_CONFLICT", "AMBIGUOUS_CHANGE"
+    ] = Field(
+        default="EQUIVALENT",
+        description=(
+            "Classification of the change: EQUIVALENT, GENERATOR_REGRESSION (critical operational fact lost), "
+            "GENERATION_CONFLICT (generated text contradicts deterministic schema), or AMBIGUOUS_CHANGE."
+        ),
+    )
 
     @model_validator(mode="before")
     @classmethod
-    def _map_aliases_and_defaults(  # ruff:ignore[complex-structure,too-many-branches]
+    def _map_aliases_and_defaults(  # ruff:ignore[complex-structure,too-many-branches,too-many-statements]
         cls, values: dict[str, object] | object
     ) -> dict[str, object] | object:
         if isinstance(values, dict):
@@ -134,6 +167,34 @@ class JudgeVerdict(BaseModel):
                     val_dict["verdict"] = "EQUIVALENT"
             else:
                 val_dict["verdict"] = "EQUIVALENT"
+
+            # 5. Normalize missing_operational_facts
+            missing_val = val_dict.get("missing_operational_facts")
+            if missing_val is None or not isinstance(missing_val, list):
+                val_dict["missing_operational_facts"] = []
+            else:
+                val_dict["missing_operational_facts"] = [str(x) for x in missing_val]
+
+            # 6. Normalize change_type
+            if val_dict["verdict"] == "EQUIVALENT":
+                val_dict["change_type"] = "EQUIVALENT"
+            else:
+                change_val = val_dict.get("change_type")
+                if change_val is None:
+                    for alias in ("origin", "change", "type", "regression_type", "conflict_type"):
+                        if alias in val_dict and val_dict[alias] is not None:
+                            change_val = val_dict[alias]
+                            break
+                if change_val is not None:
+                    c_str = str(change_val).strip().upper()
+                    if "CONFLICT" in c_str:
+                        val_dict["change_type"] = "GENERATION_CONFLICT"
+                    elif "AMBIGUOUS" in c_str:
+                        val_dict["change_type"] = "AMBIGUOUS_CHANGE"
+                    else:
+                        val_dict["change_type"] = "GENERATOR_REGRESSION"
+                else:
+                    val_dict["change_type"] = "GENERATOR_REGRESSION"
 
         return values
 

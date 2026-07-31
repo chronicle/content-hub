@@ -30,7 +30,7 @@ from mp.describe.regression_test.comparator import (
     write_regression_report_csv,
 )
 from mp.describe.regression_test.judge import JudgeEvaluationResult, JudgeVerdict
-from mp.describe.regression_test.orchestrator import run_regression_test
+from mp.describe.regression_test.orchestrator import format_integration_and_component, run_regression_test
 from mp.describe.regression_test.typer_app import app as regression_app
 
 if TYPE_CHECKING:
@@ -245,6 +245,39 @@ def test_run_regression_test_orchestration(tmp_path: Path) -> None:
     assert report_file.exists()
 
 
+def test_run_regression_test_multiple_integrations(tmp_path: Path) -> None:
+    report_file = tmp_path / "custom_report.csv"
+    dst_dir = tmp_path / "test_dst"
+
+    for int_name in ("int1", "int2"):
+        int_dir = tmp_path / int_name / "resources" / "ai"
+        int_dir.mkdir(parents=True, exist_ok=True)
+        baseline_yaml = int_dir / "actions_ai_description.yaml"
+        b_data = {"Action1": {"capabilities": {"can_mutate_internal_data": True}}}
+        baseline_yaml.write_text(yaml.safe_dump(b_data), encoding="utf-8")
+
+        test_int_dir = dst_dir / int_name / "resources" / "ai"
+        test_int_dir.mkdir(parents=True, exist_ok=True)
+        test_yaml = test_int_dir / "actions_ai_description.yaml"
+        t_data = {"Action1": {"capabilities": {"can_mutate_internal_data": False}}}
+        test_yaml.write_text(yaml.safe_dump(t_data), encoding="utf-8")
+
+    def mock_get_int_path(name: str, **kwargs: object) -> Path:
+        return tmp_path / name
+
+    with mock.patch("mp.describe.regression_test.orchestrator.get_integration_path", side_effect=mock_get_int_path):
+        issues = run_regression_test(
+            content_type="action",
+            integration="int1, int2",
+            dst=dst_dir,
+            report_file=report_file,
+            run_describe=False,
+        )
+
+    assert len(issues) == 2
+    assert report_file.exists()
+
+
 def test_cli_describe_regression_test_action_command(tmp_path: Path) -> None:
     report_file = tmp_path / "report.csv"
     with mock.patch("mp.describe.regression_test.typer_app.run_regression_test") as mock_run:
@@ -311,8 +344,10 @@ def test_compare_yaml_dicts_with_llm_judge() -> None:
         prompt_intent_analysis="Evaluate intent",
         field_1_core_claims=["Claim A"],
         field_2_core_claims=["Claim B"],
+        missing_operational_facts=["Omitted rate limit"],
         comparison_reasoning="Contradictory information",
         verdict="NOT_EQUIVALENT",
+        change_type="GENERATOR_REGRESSION",
     )
     mock_result = JudgeEvaluationResult(
         entry_path="ai_description",
@@ -336,8 +371,29 @@ def test_compare_yaml_dicts_with_llm_judge() -> None:
 
     mock_judge.assert_called_once()
     assert len(issues) == 1
-    assert issues[0].issue == "text semantic mismatch (NOT_EQUIVALENT)"
+    assert issues[0].issue == "text semantic mismatch (GENERATOR_REGRESSION)"
     assert "Contradictory information" in issues[0].llm_input
+    assert "Missing facts: Omitted rate limit" in issues[0].llm_input
+
+
+def test_compare_yaml_dicts_reasoning_ignored_by_judge() -> None:
+    baseline = {"reasoning": "Old classifier scratchpad reasoning"}
+    test_data = {"reasoning": "New classifier scratchpad reasoning"}
+
+    with mock.patch(
+        "mp.describe.regression_test.comparator.run_judge_evaluation_sync"
+    ) as mock_judge:
+        issues = compare_yaml_dicts(
+            baseline_data=baseline,
+            test_data=test_data,
+            path_of_files="base.yaml",
+            baseline_file_str="base.yaml",
+            test_file_str="test.yaml",
+            use_llm_judge=True,
+        )
+
+    mock_judge.assert_not_called()
+    assert len(issues) == 0
 
 
 def test_cli_describe_regression_test_action_command_with_judge(tmp_path: Path) -> None:
@@ -401,3 +457,18 @@ def test_cli_describe_regression_test_action_command_with_batch_api(tmp_path: Pa
         use_llm_judge=True,
         use_batch_api=True,
     )
+
+
+def test_format_integration_and_component() -> None:
+    path_action = (
+        "/usr/local/google/home/siedovolosyi/repos/content-hub/content/"
+        "response_integrations/third_party/community/duo/resources/ai/actions_ai_description.yaml"
+    )
+    int_name, comp_name = format_integration_and_component(path_action)
+    assert int_name == "duo"
+    assert comp_name == "action"
+
+    path_conn = "/some/path/my_int/resources/ai/connectors_ai_description.yaml"
+    int_name, comp_name = format_integration_and_component(path_conn)
+    assert int_name == "my_int"
+    assert comp_name == "connector"

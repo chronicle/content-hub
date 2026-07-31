@@ -80,6 +80,43 @@ def _resolve_test_file(
     return candidates[0]
 
 
+MIN_PATH_PARTS: int = 2
+
+
+def format_integration_and_component(path_str: str) -> tuple[str, str]:
+    """Extract integration name and component type from metadata file path.
+
+    Args:
+        path_str: Metadata file path string.
+
+    Returns:
+        tuple[str, str]: A tuple of (integration_name, component_type).
+
+    """
+    p = Path(path_str)
+    name_lower = p.name.lower()
+    component = "metadata"
+    if "actions_" in name_lower:
+        component = "action"
+    elif "connectors_" in name_lower:
+        component = "connector"
+    elif "jobs_" in name_lower:
+        component = "job"
+    elif "integration_" in name_lower:
+        component = "integration"
+
+    parts = p.parts
+    integration_name = p.stem
+    if "resources" in parts:
+        idx = parts.index("resources")
+        if idx > 0:
+            integration_name = parts[idx - 1]
+    elif len(parts) >= MIN_PATH_PARTS:
+        integration_name = parts[-MIN_PATH_PARTS]
+
+    return integration_name, component
+
+
 async def run_describe_generation(  # ruff:ignore[too-many-arguments]
     content_type: str,
     resource_names: list[str] | None,
@@ -105,8 +142,8 @@ async def run_describe_generation(  # ruff:ignore[too-many-arguments]
     gen_override: bool = override or True
     integrations_to_run: list[str] = []
     if integration:
-        integrations_to_run = [integration]
-    elif content_type == "integration" and resource_names and not all_marketplace:
+        integrations_to_run = [i.strip() for i in integration.split(",") if i.strip()]
+    elif content_type in {"integration", "all-content"} and resource_names and not all_marketplace:
         integrations_to_run = resource_names
     else:
         paths = get_all_integrations_paths(src=src)
@@ -186,8 +223,8 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure,too
 
     integrations_to_check: list[str] = []
     if integration:
-        integrations_to_check = [integration]
-    elif content_type == "integration" and resource_names and not all_marketplace:
+        integrations_to_check = [i.strip() for i in integration.split(",") if i.strip()]
+    elif content_type in {"integration", "all-content"} and resource_names and not all_marketplace:
         integrations_to_check = resource_names
     else:
         paths: list[Path] = get_all_integrations_paths(src=src)
@@ -239,15 +276,17 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure,too
         console.print(f"[bold yellow]Report written to: {out_report.resolve()}[/bold yellow]\n")
 
         table = Table(title="Regression Testing Results")
-        table.add_column("Path of Files", style="cyan")
+        table.add_column("Integration", style="cyan")
+        table.add_column("Component", style="blue")
         table.add_column("Entry", style="magenta")
         table.add_column("Issue", style="bold red")
 
         for issue_item in all_issues[:MAX_DISPLAY_ISSUES]:
-            table.add_row(issue_item.path_of_files, issue_item.entry, issue_item.issue)
+            int_name, comp_name = format_integration_and_component(issue_item.path_of_files)
+            table.add_row(int_name, comp_name, issue_item.entry, issue_item.issue)
 
         if len(all_issues) > MAX_DISPLAY_ISSUES:
-            table.add_row("...", f"... and {len(all_issues) - MAX_DISPLAY_ISSUES} more", "...")
+            table.add_row("...", "...", f"... and {len(all_issues) - MAX_DISPLAY_ISSUES} more", "...")
 
         console.print(table)
     else:

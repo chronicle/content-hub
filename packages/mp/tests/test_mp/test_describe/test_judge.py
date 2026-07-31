@@ -119,3 +119,34 @@ def test_judge_verdict_resilience() -> None:
     # 3. Completely empty dict defaults to EQUIVALENT
     v3 = JudgeVerdict.model_validate({})
     assert v3.verdict == "EQUIVALENT"
+    assert v3.change_type == "EQUIVALENT"
+
+
+def test_judge_verdict_operational_materiality_fields() -> None:
+    # 1. NOT_EQUIVALENT with change_type conflict and missing facts
+    v1 = JudgeVerdict.model_validate(
+        {
+            "verdict": "NOT_EQUIVALENT",
+            "change_type": "GENERATION_CONFLICT",
+            "missing_operational_facts": ["Rate limit 100 req/min missing"],
+        }
+    )
+    assert v1.verdict == "NOT_EQUIVALENT"
+    assert v1.change_type == "GENERATION_CONFLICT"
+    assert v1.missing_operational_facts == ["Rate limit 100 req/min missing"]
+
+    # 2. EQUIVALENT forces change_type to EQUIVALENT
+    v2 = JudgeVerdict.model_validate(
+        {
+            "verdict": "EQUIVALENT",
+            "change_type": "GENERATOR_REGRESSION",
+        }
+    )
+    assert v2.verdict == "EQUIVALENT"
+    assert v2.change_type == "EQUIVALENT"
+
+    # 3. NOT_EQUIVALENT with missing change_type defaults to GENERATOR_REGRESSION
+    v3 = JudgeVerdict.model_validate({"verdict": "NOT_EQUIVALENT"})
+    assert v3.verdict == "NOT_EQUIVALENT"
+    assert v3.change_type == "GENERATOR_REGRESSION"
+    assert v3.missing_operational_facts == []

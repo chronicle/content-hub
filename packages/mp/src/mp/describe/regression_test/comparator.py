@@ -251,7 +251,6 @@ def compare_yaml_dicts(  # ruff:ignore[complex-structure,too-many-arguments]
                 "ai_description",
                 "ai_short_description",
                 "parameters_description",
-                "reasoning",
             }:
                 text_candidates.append(
                     TextCandidate(
@@ -266,18 +265,24 @@ def compare_yaml_dicts(  # ruff:ignore[complex-structure,too-many-arguments]
 
     if use_llm_judge and text_candidates:
         judge_results = run_judge_evaluation_sync(text_candidates, use_batch=use_batch_api)
-        issues.extend(
-            RegressionIssue(
-                path_of_files=path_of_files,
-                baseline_file=baseline_file_str,
-                test_file=test_file_str,
-                entry=res.entry_path,
-                issue="text semantic mismatch (NOT_EQUIVALENT)",
-                llm_input=f"Reasoning: {res.verdict.comparison_reasoning}",
-            )
-            for res in judge_results
-            if res.verdict.verdict == "NOT_EQUIVALENT"
-        )
+        for res in judge_results:
+            if res.verdict.verdict == "NOT_EQUIVALENT":
+                issue_type = f"text semantic mismatch ({res.verdict.change_type})"
+                missing_info = ""
+                if res.verdict.missing_operational_facts:
+                    missing_info = (
+                        f" | Missing facts: {', '.join(res.verdict.missing_operational_facts)}"
+                    )
+                issues.append(
+                    RegressionIssue(
+                        path_of_files=path_of_files,
+                        baseline_file=baseline_file_str,
+                        test_file=test_file_str,
+                        entry=res.entry_path,
+                        issue=issue_type,
+                        llm_input=f"Reasoning: {res.verdict.comparison_reasoning}{missing_info}",
+                    )
+                )
 
     return issues
 

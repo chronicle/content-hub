@@ -8,14 +8,17 @@ Commands for executing end-to-end regression testing on AI-generated metadata de
 
 ## Overview & Classification Rules
 
-The `describe-regression-test` command compares baseline metadata files (`actions_ai_description.yaml`, `integration_ai_description.yaml`, `connectors_ai_description.yaml`, `jobs_ai_description.yaml`) against test metadata files.
+The `describe-regression-test` command compares baseline metadata files (`actions_ai_description.yaml`, `integration_ai_description.yaml`, `connectors_ai_description.yaml`, `jobs_ai_description.yaml`) against test metadata files. This comparison verifies that `mp describe` metadata remains safe, accurate, and actionable for tool selection and action execution.
 
 **Regression Classification Rules:**
 - **Boolean attribute `True` → `False`**: Marked as `marked as a regression for manual checking`.
 - **Boolean attribute `False` → `True`**: Marked as `might be a regression`.
 - **Action missing in test** (Action present in baseline but missing in test code generation): Marked as `marked as a regression for manual checking (action missing in test)`.
 - **Action missing in baseline** (Action present in code generation but missing in baseline): Marked as `action missing in baseline (needs mp describe)`.
-- **Free-form text fields** (`ai_description`, `ai_short_description`, `reasoning`, `parameters_description`): By default, natural phrasing variations between LLM runs are ignored. When `-j` / `--use-llm-judge` is enabled, an LLM Judge (`Gemini 3.1 Pro Preview`) evaluates mismatched text fields for semantic equivalence; `NOT_EQUIVALENT` verdicts are recorded as `text semantic mismatch (NOT_EQUIVALENT)`.
+- **Free-form text fields** (`ai_description`, `ai_short_description`, `parameters_description`): By default, natural phrasing variations between LLM runs are ignored. When `-j` / `--use-llm-judge` is enabled, an LLM Judge (`Gemini 3.1 Pro Preview`) evaluates mismatched text fields for operational semantic equivalence:
+  - **`NOT_EQUIVALENT` (True Regression)**: Candidate description omits a critical operational mechanism present in the baseline (`such as retries, rate limits, timeouts, or required authentication keys`), introduces factual contradictions, or alters parameter table (`parameters_description`) names, types (e.g., `DDL vs String`), or mandatory flags.
+  - **`EQUIVALENT`**: Cosmetic rephrasing, formatting, verbosity, and secondary implementation notes or internal backend data sorting rules (e.g., `"uses newest threat if no active threats found"`).
+  - Note that internal classifier `reasoning` fields are excluded from LLM Judge evaluation.
 - **LLM Reasoning Context**: For any boolean attribute regression, the corresponding section reasoning text is recorded in the `LLM Input` column of the CSV report.
 
 ---
@@ -34,7 +37,7 @@ mp describe-regression-test action [ACTIONS]... [OPTIONS]
 
 | Option             | Shorthand | Description                                                                                  | Type     | Default |
 |:-------------------|:----------|:---------------------------------------------------------------------------------------------|:---------|:--------|
-| `--integration`    | `-i`      | The name of the integration containing the actions.                                          | `str`    | `None`  |
+| `--integration`    | `-i`      | The name of the integration(s) containing the actions, comma-separated.                      | `str`    | `None`  |
 | `--all`            | `-a`      | Test all integrations in the marketplace, or all actions if an integration is specified.     | `bool`   | `False` |
 | `--src`            |           | Customize source folder to compare from.                                                     | `path`   | `None`  |
 | `--dst`            |           | Customize destination/test folder to compare with (defaults to `test_descriptions/`).        | `path`   | `None`  |
@@ -214,6 +217,14 @@ By default, the LLM Judge executes via fast concurrent interactive requests (`as
 
 ```bash
 uv run --project packages/mp mp describe-regression-test action -i duo -j --use-batch-api --no-run-describe
+```
+
+### 8. Multi-Integration Regression Testing (`-i "duo,anomali"`)
+
+Run regression testing across multiple integrations simultaneously by specifying a comma-separated list of integration names. The terminal report displays clean `Integration` and `Component` columns (`duo` | `action`, `anomali` | `action`) for readable console scanning:
+
+```bash
+uv run --project packages/mp mp describe-regression-test action -i "duo,anomali" -j --no-run-describe
 ```
 
 > [!WARNING]
