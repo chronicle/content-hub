@@ -1,12 +1,5 @@
 # **GitHub Contribution Playbook**
 
-# 
-
-| \#begin-approvals-addon-section Username Role Status Last change [idanpatelsky](http://teams/idanpatelsky) Approver 🟢 Approved Jul 30, 2026 [teakay](http://teams/teakay) Approver 🟡 Pending Jul 30, 2026      ![][image1] Approval Instructions: Please approve or LGTM through the [G3 Assist](https://goto.google.com/g3a-approvals-reviewing) sidebar. For more information, see [go/g3a-approvals-reviewing](https://goto.google.com/g3a-approvals-reviewing)  |
-| ----- |
-
-# 
-
 # **1.0 Introduction**
 
 This runbook serves as a comprehensive guide for developers and contributors to standardize the process of submitting code to the GitHub repository. By following these procedures, contributors ensure that all additions meet the required quality, security, and functional standards for seamless integration.
@@ -68,8 +61,8 @@ ssh-keygen -t ed25519 -C "your_email@google.com"
 
 * To initiate a formal code review, contributors **must** ensure the feature branch is synchronized with the master branch and provide sufficient context for reviewers.  
 * **Branch Management & Push:** Push your completed feature branch to the remote repository. Ensure your commit history is clean—squash related commits if necessary to maintain a clear audit trail before initiating the merge request.  
-* **PR Submission & Description:** When opening a Pull Request (PR), you **must** populate the description template thoroughly. It must include:  
-  * **Buganizer Reference:** A direct link to the associated tracking ticket.  
+* **PR Submission & Description:** When opening a Pull Request (PR), you **must** populate the description template thoroughly. It must include:
+
   * **Log Samples:** Provide raw input logs alongside the corresponding parsed output to demonstrate correct mapping.  
   * **Test Evidence:** A summary of test execution results or screenshots of your local validation.
 
@@ -81,11 +74,9 @@ ssh-keygen -t ed25519 -C "your_email@google.com"
 - Maps internal status codes to standard severity levels (e.g., CRITICAL, HIGH, MEDIUM, LOW, INFORMATIONAL).  
 - Maps internal state flags to security actions (e.g., new, accepted, resolved, remediation, remediated).  
 - Extracts principal, target, cloud, and additional fields from event data.  
-* **Standardized Naming:** The PR title **must strictly** follow the format \[b/\<Buganizer\_Ticket\_ID\>\] Feat: \<Title\> to enable automated tracking.  
-  \<Ticket can’t be created by the end user. We need to create the ticket.\>PR by CBN team can follow this. 
+* **Standardized Naming:** The PR title **must strictly** follow the format   
+  Feat: \<Title\> 
 
-
-  
 Create a DL in github, tag that group.To-do
 
 # **4.0 Automated Validation Pipeline**
@@ -121,20 +112,19 @@ During this phase, the reviewer audits the submission for:
 * **Functional Accuracy:** Consistency between input logs and output formatting.  
 * **Technical Standards:** Adherence to the Core Logic, Error Handling, and Data Mapping guidelines outlined in this document.
 
-Once the review is complete, the CBN team will approve the CL or provide feedback. You **must** address all comments and push requested changes to the same branch for re-review.
+Once the review is complete. You **must** address all comments and push requested changes to the same branch for re-review.
 
 # **6.0 Review & Merging Lifecycle**
 
 The review process is a collaborative, iterative loop designed to ensure code quality and adherence to security standards.
 
-1. **Phase 1: Assignment & Tracking:** Upon PR submission, a Buganizer ticket is linked to the PR as the single source of truth.  
-2. **Phase 2: Technical Review Loop:** An iterative cycle involving reviewer feedback and contributor responses.  
+1. **Phase 1: Technical Review Loop:** An iterative cycle involving reviewer feedback and contributor responses.  
    * **Reviewer Feedback:** Reviewers utilize GitHub’s pull request review interface to leave line-level comments, suggesting code improvements, security hardening, or logic corrections.  
    * **Contributor Response:** You are expected to engage with every thread. Address feedback by:  
      * Applying the necessary code changes and pushing incremental commits to the same PR branch.  
      * Replying to the reviewer’s comment thread confirming the fix, providing context, or requesting clarification.  
    * **Thread Resolution:** A discussion thread is considered 'resolved' only after you have implemented the fix and the reviewer has acknowledged the correction. Avoid resolving threads yourself until the reviewer has verified the change.  
-3. **Phase 3: Final Approval & Merging:** Final LGTM is granted once all checks pass and threads are resolved.  
+2. **Phase 2: Final Approval & Merging:** Final LGTM is granted once all checks pass and threads are resolved.  
    * Once all threads are marked as resolved and the Automated Validation Pipeline (Section 4\) passes all checks, the assigned reviewer will grant final approval (LGTM).
 
-Upon approval, the PR is merged into the master branch. The associated Buganizer ticket is then automatically updated and transitioned to 'Closed' status.
+Upon approval, the PR is merged into the master branch.
