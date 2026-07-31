@@ -25,11 +25,11 @@ class MockHttpClient:
     """
 
     def __init__(self) -> None:
-        self.requests: list[dict[str, Any]] = []
+        self.requests: list[dict[str, str]] = []
         self.response: MagicMock = MagicMock()
         self.response.status_code = 200
 
-    def request(self, method: str, url: str, **kwargs: Any) -> MagicMock:
+    def request(self, method: str, url: str, **kwargs: str) -> MagicMock:
         self.requests.append({"method": method, "url": url, **kwargs})
         return self.response
 
@@ -41,11 +41,11 @@ class GetFederationCasesStub:
     """
 
     def __init__(self) -> None:
-        self.calls: list[dict[str, Any]] = []
+        self.calls: list[dict[str, str]] = []
         self.response: MagicMock = MagicMock()
         self.response.status_code = 200
         self.response.json.return_value = {"cases": [], "continuationToken": None}
 
-    def __call__(self, **kwargs: Any) -> MagicMock:
+    def __call__(self, **kwargs: str) -> MagicMock:
         self.calls.append(kwargs)
         return self.response
