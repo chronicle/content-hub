@@ -1,5 +1,12 @@
 # **GitHub Contribution Playbook**
 
+# 
+
+| \#begin-approvals-addon-section Username Role Status Last change [idanpatelsky](http://teams/idanpatelsky) Approver 🟢 Approved Jul 30, 2026 [teakay](http://teams/teakay) Approver 🟡 Pending Jul 30, 2026      ![][image1] Approval Instructions: Please approve or LGTM through the [G3 Assist](https://goto.google.com/g3a-approvals-reviewing) sidebar. For more information, see [go/g3a-approvals-reviewing](https://goto.google.com/g3a-approvals-reviewing)  |
+| ----- |
+
+# 
+
 # **1.0 Introduction**
 
 This runbook serves as a comprehensive guide for developers and contributors to standardize the process of submitting code to the GitHub repository. By following these procedures, contributors ensure that all additions meet the required quality, security, and functional standards for seamless integration.
@@ -55,11 +62,7 @@ ssh-keygen -t ed25519 -C "your_email@google.com"
 
 * [opensource.corp.google.com/github](https://opensource.corp.google.com/github)
 
-**1.6 MDB Group Access**
-
-* **Access:** [Request membership](http://mdb/malachite-github-content-hub-parsers-writers-tvc-team)  
-* **Action:** Click "Join group".  
-* **Access & Compliance:** Before pushing code, verify that your email ID is registered with the Contributor License Agreement (CLA) or the relevant Google Group to grant the required permissions.
+**1.6 Access & Compliance:** Before pushing code, verify that your email ID is registered with the Contributor License Agreement (CLA) or the relevant Google Group to grant the required permissions.
 
 # **3.0 Pull Request Workflow**
 
@@ -87,7 +90,9 @@ Create a DL in github, tag that group.To-do
 
 # **4.0 Automated Validation Pipeline**
 
-All PRs undergo a series of automated checks through GitHub Workflows:
+All PRs undergo a series of automated checks through GitHub Workflows: 
+
+Once a pull request is created, verify all automated checks and ensure any failures are promptly resolved.
 
 | Category | Workflow | Purpose |
 | :---- | :---- | :---- |
