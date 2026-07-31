@@ -14,8 +14,6 @@
 
 from __future__ import annotations
 
-from typing import NoReturn
-
 from TIPCommon.base.action import Action
 
 from ..core.constants import PING_SCRIPT_NAME
@@ -36,11 +34,12 @@ class Ping(Action):
     def _init_api_clients(self) -> None:
         pass
 
-    def _perform_action(self, _=None) -> None:
+    def _perform_action(self, nothing: str | None) -> None:
         pass
 
 
-def main() -> NoReturn:
+def main() -> None:
+    """Main function to run the ping action."""
     Ping(PING_SCRIPT_NAME).run()
 
 
