@@ -39,7 +39,7 @@ def test_create_judge_prompt() -> None:
     prompt = create_judge_prompt(candidate)
     assert "Old description" in prompt
     assert "New description" in prompt
-    assert "Evaluate whether these two text fields are semantically equivalent" in prompt
+    assert "Evaluate whether these two text fields for `ai_description` are semantically equivalent:" in prompt
 
 
 @pytest.mark.anyio
