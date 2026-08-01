@@ -32,6 +32,7 @@ from mp.describe.connector.describe import DescribeConnector
 from mp.describe.job.describe import DescribeJob
 
 from .comparator import RegressionIssue, compare_yaml_files, write_regression_report_csv
+from .judge import TextCandidate, run_judge_evaluation_sync
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -170,7 +171,7 @@ async def run_describe_generation(  # ruff:ignore[too-many-arguments]
             await DescribeJob(int_name, target_jobs, src=src, dst=int_dst, override=gen_override).describe(sem=sem)
 
 
-def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure,too-many-locals]
+def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure,too-many-locals,too-many-branches,too-many-statements]
     content_type: str,
     resource_names: list[str] | None = None,
     integration: str | None = None,
@@ -233,6 +234,7 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure,too
     metadata_filenames: list[str] = METADATA_FILES.get(content_type, METADATA_FILES["all-content"])
 
     all_issues: list[RegressionIssue] = []
+    global_text_candidates: list[TextCandidate] = []
 
     for int_name in integrations_to_check:
         try:
@@ -261,8 +263,34 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure,too
                 use_llm_judge=use_llm_judge,
                 use_batch_api=use_batch_api,
                 target_entries=target_entries,
+                deferred_judge_pool=global_text_candidates,
             )
             all_issues.extend(issues)
+
+    if use_llm_judge and global_text_candidates:
+        console = Console()
+        with console.status(
+            f"[bold cyan]Evaluating {len(global_text_candidates)} text candidates via LLM Judge...[/bold cyan]"
+        ):
+            judge_results = run_judge_evaluation_sync(global_text_candidates, use_batch=use_batch_api)
+        for res in judge_results:
+            if res.verdict.verdict == "NOT_EQUIVALENT":
+                issue_type = f"text semantic mismatch ({res.verdict.change_type})"
+                missing_info = ""
+                if res.verdict.missing_operational_facts:
+                    missing_info = (
+                        f" | Missing facts: {', '.join(res.verdict.missing_operational_facts)}"
+                    )
+                all_issues.append(
+                    RegressionIssue(
+                        path_of_files=res.candidate.path_of_files if res.candidate else "",
+                        baseline_file=res.candidate.baseline_file if res.candidate else "",
+                        test_file=res.candidate.test_file if res.candidate else "",
+                        entry=res.entry_path,
+                        issue=issue_type,
+                        llm_input=f"Reasoning: {res.verdict.comparison_reasoning}{missing_info}",
+                    )
+                )
 
     write_regression_report_csv(all_issues, out_report)
 

@@ -46,6 +46,7 @@ def compare_yaml_files(  # ruff:ignore[too-many-arguments]
     use_llm_judge: bool = False,
     use_batch_api: bool = False,
     target_entries: set[str] | None = None,
+    deferred_judge_pool: list[TextCandidate] | None = None,
 ) -> list[RegressionIssue]:
     """Compare baseline and test YAML files and return a list of regression issues.
 
@@ -54,7 +55,8 @@ def compare_yaml_files(  # ruff:ignore[too-many-arguments]
         test_path: Path to the test YAML file.
         path_of_files: Display path of files (defaults to baseline_path relative path).
         use_llm_judge: Whether to use Gemini Judge to evaluate text field equivalence.
-        use_batch_api: Whether to use Google GenAI Batch API for LLM Judge evaluation.
+        use_batch_api: Whether to use Google GenAI Batch API.
+        deferred_judge_pool: Pool of candidates.for LLM Judge evaluation.
         target_entries: Optional set of top-level keys (e.g. action names) to restrict comparison to.
 
     Returns:
@@ -131,6 +133,7 @@ def compare_yaml_files(  # ruff:ignore[too-many-arguments]
         test_file_str=str(test_path),
         use_llm_judge=use_llm_judge,
         use_batch_api=use_batch_api,
+        deferred_judge_pool=deferred_judge_pool,
     )
 
 
@@ -143,6 +146,7 @@ def compare_yaml_dicts(  # ruff:ignore[complex-structure,too-many-arguments]
     *,
     use_llm_judge: bool = False,
     use_batch_api: bool = False,
+    deferred_judge_pool: list[TextCandidate] | None = None,
 ) -> list[RegressionIssue]:
     """Recursively compare baseline and test dictionary structures.
 
@@ -153,7 +157,8 @@ def compare_yaml_dicts(  # ruff:ignore[complex-structure,too-many-arguments]
         baseline_file_str: Baseline file path string.
         test_file_str: Test file path string.
         use_llm_judge: Whether to use Gemini Judge to evaluate text field equivalence.
-        use_batch_api: Whether to use Google GenAI Batch API for LLM Judge.
+        use_batch_api: Whether to use Google GenAI Batch API.
+        deferred_judge_pool: Pool of candidates.for LLM Judge.
 
     Returns:
         list[RegressionIssue]: List of regression issues found.
@@ -257,32 +262,38 @@ def compare_yaml_dicts(  # ruff:ignore[complex-structure,too-many-arguments]
                         entry_path=entry_str,
                         baseline_text=b_val,
                         test_text=t_val,
+                        path_of_files=path_of_files,
+                        baseline_file=baseline_file_str,
+                        test_file=test_file_str,
                     )
                 )
             return
 
     _recurse(baseline_data, test_data, [], None)
 
-    if use_llm_judge and text_candidates:
-        judge_results = run_judge_evaluation_sync(text_candidates, use_batch=use_batch_api)
-        for res in judge_results:
-            if res.verdict.verdict == "NOT_EQUIVALENT":
-                issue_type = f"text semantic mismatch ({res.verdict.change_type})"
-                missing_info = ""
-                if res.verdict.missing_operational_facts:
-                    missing_info = (
-                        f" | Missing facts: {', '.join(res.verdict.missing_operational_facts)}"
+    if text_candidates:
+        if deferred_judge_pool is not None:
+            deferred_judge_pool.extend(text_candidates)
+        elif use_llm_judge:
+            judge_results = run_judge_evaluation_sync(text_candidates, use_batch=use_batch_api)
+            for res in judge_results:
+                if res.verdict.verdict == "NOT_EQUIVALENT":
+                    issue_type = f"text semantic mismatch ({res.verdict.change_type})"
+                    missing_info = ""
+                    if res.verdict.missing_operational_facts:
+                        missing_info = (
+                            f" | Missing facts: {', '.join(res.verdict.missing_operational_facts)}"
+                        )
+                    issues.append(
+                        RegressionIssue(
+                            path_of_files=path_of_files,
+                            baseline_file=baseline_file_str,
+                            test_file=test_file_str,
+                            entry=res.entry_path,
+                            issue=issue_type,
+                            llm_input=f"Reasoning: {res.verdict.comparison_reasoning}{missing_info}",
+                        )
                     )
-                issues.append(
-                    RegressionIssue(
-                        path_of_files=path_of_files,
-                        baseline_file=baseline_file_str,
-                        test_file=test_file_str,
-                        entry=res.entry_path,
-                        issue=issue_type,
-                        llm_input=f"Reasoning: {res.verdict.comparison_reasoning}{missing_info}",
-                    )
-                )
 
     return issues
 

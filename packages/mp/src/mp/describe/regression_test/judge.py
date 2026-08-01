@@ -44,17 +44,15 @@ JUDGE_SYSTEM_PROMPT: str = (
     "  5. Expect the same result.\n"
     "- *Ignore Cosmetic & Verbosity Differences*: Grammatical structure, Markdown formatting (e.g., bullet points "
     "vs. paragraphs), tone, and verbosity MUST be ignored.\n"
-    "- *Ignore Non-Actionable Backend Implementation Details*: Differences in phrasing or omission of internal "
-    "backend data sorting, score aggregation, or fallback heuristics that do not affect how the calling agent "
-    "decides to invoke the action MUST be evaluated as EQUIVALENT.\n"
     "- *Ignore Synonymous UI Data Types*: In parameter tables, differences in naming synonymous UI data types "
     "(e.g., DDL vs. Dropdown, Boolean vs. Bool) MUST be evaluated as EQUIVALENT.\n"
     "- **Strict Data Type & Constraint Enforcements**: You MUST mark NOT_EQUIVALENT if the change alters structural "
     "UI data types (e.g., changing a dropdown list `DDL` to a free-text `String`), changes `Mandatory`/Optional "
-    "flags, or introduces hallucinated types.\n\n"
+    "flags.\n\n"
     "- **NOT_EQUIVALENT**: The candidate description omits or distorts decision-critical information capable of "
     "changing an AI Agent's execution behavior, including:\n"
-    "  1. When to choose or NOT choose the action (e.g., entity prerequisites, required identifier formats, "
+    "  1. Any logical workflow sequences, flow descriptions, or steps explicitly provided in the baseline (if it was included in the AI description, it MUST be treated as important context);\n"
+    "  1a. When to choose or NOT choose the action (e.g., entity prerequisites, required identifier formats, "
     "applicability);\n"
     "  2. What parameter values to pass or which parameters are mandatory;\n"
     "  3. What execution scope, target environment, or side effects to expect;\n"
@@ -64,7 +62,8 @@ JUDGE_SYSTEM_PROMPT: str = (
     "(e.g., moving a note from 'General Description' to 'Additional Notes' within `ai_description`) "
     "is **EQUIVALENT**.\n"
     "2. **Strict Contract Boundary**: Cross-field relocation between incompatible contracts (e.g., moving workflow "
-    "logic from `ai_description` into parameter tables in `parameters_description`) is **NOT_EQUIVALENT**.\n\n"
+    "logic from `ai_description` into parameter tables in `parameters_description`) is **NOT_EQUIVALENT**.\n"
+    "3. **Zero Tolerance for Typos**: Any introduction of spelling errors, typographical mistakes, or strangely corrupted words in the Candidate that are absent in the Baseline makes it strictly **NOT_EQUIVALENT**.\n\n"
     "### Step-by-Step Evaluation Protocol\n\n"
     "1. **Analyze Decision-Critical Intent**: Identify the core applicability conditions, entity prerequisites, "
     "parameters, and operational boundaries expected by an AI Agent.\n"
@@ -143,6 +142,9 @@ class TextCandidate:
     entry_path: str
     baseline_text: str
     test_text: str
+    path_of_files: str | None = None
+    baseline_file: str | None = None
+    test_file: str | None = None
 
 
 @dataclasses.dataclass
@@ -153,6 +155,7 @@ class JudgeEvaluationResult:
     baseline_text: str
     test_text: str
     verdict: JudgeVerdict
+    candidate: TextCandidate | None = None
 
 
 def create_judge_prompt(candidate: TextCandidate) -> str:
@@ -205,12 +208,12 @@ async def evaluate_text_equivalence_batch(
     close_after: bool = False
     if llm is None:
         config = GeminiConfig()
-        config.use_thinking = False
+        config.use_thinking = True
         config.temperature = 0.0
         llm = Gemini(config)
         close_after = True
     else:
-        llm.config.use_thinking = False
+        llm.config.use_thinking = True
         llm.config.temperature = 0.0
 
     try:
@@ -235,6 +238,7 @@ async def evaluate_text_equivalence_batch(
                     baseline_text=candidate.baseline_text,
                     test_text=candidate.test_text,
                     verdict=response,
+                    candidate=candidate,
                 )
             )
         else:
