@@ -5,7 +5,7 @@ import re
 import pycti
 from pydantic import AwareDatetime
 
-from ..datamodels.base_octi_object import BaseOCTIObject
+from ...core.datamodels.base_octi_object import BaseOCTIObject
 
 
 class Indicator(BaseOCTIObject):

@@ -60,12 +60,17 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
         installed_playbooks = gitsync.api.get_playbooks()
+        pushed_playbooks = set()
 
         for playbook in installed_playbooks:
             if (
                 playbook.get("name") in playbooks_allowlist
                 or playbook.get("categoryName") in folders_allowlist
             ):
+                playbook_id = playbook.get("identifier")
+                if playbook_id in pushed_playbooks:
+                    continue
+
                 siemplify.LOGGER.info(f"Pushing Playbook {playbook['name']}")
 
                 if readme_addon:
@@ -78,10 +83,11 @@ def main():
                         readme_addon,
                     )
 
-                playbook = gitsync.api.get_playbook(playbook.get("identifier"))
-                workflow = Workflow(playbook)
+                playbook_data = gitsync.api.get_playbook(playbook_id)
+                workflow = Workflow(playbook_data)
                 workflow.update_instance_name_in_steps(gitsync.api, siemplify)
                 gitsync.content.push_playbook(workflow)
+                pushed_playbooks.add(playbook_id)
 
                 if include_blocks:
                     for block in workflow.get_involved_blocks():
@@ -98,11 +104,18 @@ def main():
                                 f"Block {block.get('name')} wasn't found in the repo, ignoring",
                             )
                             continue
-                        block = Workflow(
-                            gitsync.api.get_playbook(installed_block.get("identifier")),
+                        block_id = installed_block.get("identifier")
+                        if block_id in pushed_playbooks:
+                            continue
+
+                        block_workflow = Workflow(
+                            gitsync.api.get_playbook(block_id),
                         )
-                        block.update_instance_name_in_steps(gitsync.api, siemplify)
-                        gitsync.content.push_playbook(block)
+                        block_workflow.update_instance_name_in_steps(
+                            gitsync.api, siemplify
+                        )
+                        gitsync.content.push_playbook(block_workflow)
+                        pushed_playbooks.add(block_id)
             else:
                 siemplify.LOGGER.warn(
                     f"Playbook {playbook.get('name')} not found, Skipping",
