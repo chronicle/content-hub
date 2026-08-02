@@ -58,13 +58,13 @@ You must ruthlessly protect operational constraints while completely forgiving s
 
 5. **Backend Protocol Noise vs. Infrastructure (CRITICAL DISTINCTION):**
    - Exposing or adding generic network, transport, or standard authentication protocols -> **EQUIVALENT**.
-   - Hallucinating specific unmentioned infrastructure, architectural components, or proprietary databases -> **NOT_EQUIVALENT**.
+   - Introducing specific infrastructure, architectural components, or proprietary databases not present in the Baseline (indicating contract divergence or configuration drift) -> **NOT_EQUIVALENT**.
 
 ### Output Schema Instructions:
 You must output a strict JSON object based on the schema. Follow this logic:
 - `prompt_intent_analysis`: Briefly state what the text is describing.
 - `field_1_core_claims` & `field_2_core_claims`: Extract facts, keeping parameter-to-type mappings intact.
-- `missing_operational_facts`: CRITICAL: List BOTH any facts from Field 1 missing in Field 2, AND any illegal constraints/infrastructure hallucinated in Field 2.
+- `missing_operational_facts`: CRITICAL: List BOTH any facts from Field 1 missing in Field 2, AND any unverified constraints, limits, or infrastructure newly introduced in Field 2.
 - `comparison_reasoning`: Explain the difference step-by-step using the 'Rules for Evaluation' above.
 - `verdict`: Categorical determination strictly based on operational materiality.
 """
@@ -202,12 +202,12 @@ async def evaluate_text_equivalence_batch(
     close_after: bool = False
     if llm is None:
         config = GeminiConfig()
-        config.use_thinking = True
+        config.use_thinking = False
         config.temperature = 0.0
         llm = Gemini(config)
         close_after = True
     else:
-        llm.config.use_thinking = True
+        llm.config.use_thinking = False
         llm.config.temperature = 0.0
 
     try:
