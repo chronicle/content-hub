@@ -34,15 +34,6 @@ if TYPE_CHECKING:
     from TIPCommon.types import Entity, SingleJson
 
 
-TYPE_MAPPING = {
-    "Address": "address",
-    "EmailAddress": "address",
-    "File": "file",
-    "Host": "host",
-    "URL": "url",
-}
-
-
 class EnrichEntities(ThreatConnectAction):
     """Action to enrich IP addresses, hosts, URLs and hashes using
     ThreatConnect V3 REST API.
