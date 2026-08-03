@@ -17,7 +17,7 @@ from __future__ import annotations
 import pytest
 from soar_sdk.SiemplifyJob import SiemplifyJob
 
-from ...core import FederationSyncManager as manager_module
+from ...core import federation_sync_manager as manager_module
 from ..core.mocks import GetFederationCasesStub, MockHttpClient
 
 

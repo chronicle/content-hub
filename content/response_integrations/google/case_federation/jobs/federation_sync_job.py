@@ -21,7 +21,7 @@ from TIPCommon.base.job import Job
 
 from ..core.constants import FEDERATION_SYNC_JOB_SCRIPT_NAME, SUCCESS_STATUS_CODE
 from ..core.exceptions import MissingParameterError
-from ..core.FederationSyncManager import (
+from ..core.federation_sync_manager import (
     ApiClientParameters,
     FederationSyncExecutionData,
     FederationSyncManager,
