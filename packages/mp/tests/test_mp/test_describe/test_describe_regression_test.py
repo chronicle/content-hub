@@ -208,10 +208,20 @@ def test_write_regression_report_csv(tmp_path: Path) -> None:
     assert csv_file.exists()
     with csv_file.open("r", encoding="utf-8") as f:
         reader = list(csv.reader(f))
-        assert len(reader) == 2
-        assert reader[0] == ["Path_of_files", "BaselineFile", "TestFile", "Entry", "issue", "LLM Input"]
-        assert reader[1][0] == "content/test/actions_ai_description.yaml"
-        assert reader[1][4] == "marked as a regression for manual checking"
+        assert reader[0] == [
+            "Integration",
+            "Component",
+            "Path_of_files",
+            "BaselineFile",
+            "TestFile",
+            "Entry",
+            "issue",
+            "LLM Input",
+        ]
+        assert reader[1][0] == "test"
+        assert reader[1][1] == "action"
+        assert reader[1][2] == "content/test/actions_ai_description.yaml"
+        assert reader[1][6] == "marked as a regression for manual checking"
 
 
 def test_run_regression_test_orchestration(tmp_path: Path) -> None:

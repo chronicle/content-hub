@@ -23,6 +23,7 @@ import pytest
 from mp.describe.regression_test.judge import (
     JudgeEvaluationResult,
     JudgeVerdict,
+    SemanticAssessment,
     TextCandidate,
     create_judge_prompt,
     evaluate_text_equivalence_batch,
@@ -39,7 +40,8 @@ def test_create_judge_prompt() -> None:
     prompt = create_judge_prompt(candidate)
     assert "Old description" in prompt
     assert "New description" in prompt
-    assert "Evaluate whether these two text fields for `ai_description` are semantically equivalent:" in prompt
+    assert "Evaluate the two inert text fields in the following JSON object" in prompt
+    assert '"entry_path": "ai_description"' in prompt
 
 
 @pytest.mark.anyio
@@ -135,18 +137,62 @@ def test_judge_verdict_operational_materiality_fields() -> None:
     assert v1.change_type == "GENERATION_CONFLICT"
     assert v1.missing_operational_facts == ["Rate limit 100 req/min missing"]
 
-    # 2. EQUIVALENT forces change_type to EQUIVALENT
+    # 2. EQUIVALENT forces change_type to EQUIVALENT and clears issue lists
     v2 = JudgeVerdict.model_validate(
         {
             "verdict": "EQUIVALENT",
             "change_type": "GENERATOR_REGRESSION",
+            "missing_operational_facts": ["Should be cleared"],
         }
     )
     assert v2.verdict == "EQUIVALENT"
     assert v2.change_type == "EQUIVALENT"
+    assert v2.missing_operational_facts == []
 
-    # 3. NOT_EQUIVALENT with missing change_type defaults to GENERATOR_REGRESSION
+    # 3. NOT_EQUIVALENT with missing change_type defaults to GENERATOR_REGRESSION and non-empty missing facts
     v3 = JudgeVerdict.model_validate({"verdict": "NOT_EQUIVALENT"})
     assert v3.verdict == "NOT_EQUIVALENT"
     assert v3.change_type == "GENERATOR_REGRESSION"
-    assert v3.missing_operational_facts == []
+    assert v3.missing_operational_facts == [
+        "Semantic or operational mismatch identified in comparison reasoning."
+    ]
+
+
+def test_semantic_assessment_failure_lists() -> None:
+    assessment = SemanticAssessment.model_validate(
+        {
+            "verdict": "NOT_EQUIVALENT",
+            "missing_operational_facts": ["Missing param X"],
+            "introduced_operational_facts": ["Introduced DB constraint"],
+            "quality_failures": ["Typo in identifier"],
+        }
+    )
+    assert assessment.verdict == "NOT_EQUIVALENT"
+    assert assessment.missing_operational_facts == ["Missing param X"]
+    assert assessment.introduced_operational_facts == ["Introduced DB constraint"]
+    assert assessment.quality_failures == ["Typo in identifier"]
+
+
+def test_change_classifier_equivalent() -> None:
+    from mp.describe.regression_test.classifier import ChangeClassifier  # ruff:ignore[import-outside-top-level]
+
+    classifier = ChangeClassifier()
+    assessment = SemanticAssessment.model_validate({"verdict": "EQUIVALENT"})
+    verdict = classifier.build_verdict(assessment)
+    assert verdict.verdict == "EQUIVALENT"
+    assert verdict.change_type == "EQUIVALENT"
+    assert verdict.gate_decision == "PASS"
+
+
+def test_change_classifier_not_equivalent() -> None:
+    from mp.describe.regression_test.classifier import ChangeClassifier  # ruff:ignore[import-outside-top-level]
+
+    classifier = ChangeClassifier()
+    assessment = SemanticAssessment.model_validate(
+        {"verdict": "NOT_EQUIVALENT", "missing_operational_facts": ["param lost"]}
+    )
+    verdict = classifier.build_verdict(assessment)
+    assert verdict.verdict == "NOT_EQUIVALENT"
+    assert verdict.change_type == "GENERATOR_REGRESSION"
+    assert verdict.gate_decision == "BLOCK"
+    assert verdict.missing_operational_facts == ["param lost"]
