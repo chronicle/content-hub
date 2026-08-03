@@ -65,8 +65,9 @@ class FederationSyncManager:
         self.sync_endpoint = api_client_parameters.sync_api_root
         self.chronicle_soar = chronicle_soar
         self.http_client = None
+        self.verify_ssl = api_client_parameters.verify_ssl
         self._get_credentials_using_p4sa()
-        self._prepare_http_client(verify_ssl=api_client_parameters.verify_ssl)
+        self._prepare_http_client()
 
     def sync_cases_from(self, continuation_token: str | None) -> FederationSyncResult:
         """Sync cases that were created or modified since the last sync execution.
@@ -154,8 +155,8 @@ class FederationSyncManager:
             fallback_to_env_email=True,
         )
 
-    def _prepare_http_client(self, verify_ssl: bool) -> None:
+    def _prepare_http_client(self) -> None:
         auth_session = CreateSession.create_session()
-        auth_session.verify = verify_ssl
+        auth_session.verify = self.verify_ssl
         self.http_client = AuthorizedSession(self.creds, auth_request=Request(session=auth_session))
-        self.http_client.verify = verify_ssl
+        self.http_client.verify = self.verify_ssl
