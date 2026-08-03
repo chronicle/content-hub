@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import csv
 import dataclasses
-import pathlib  # ruff:ignore[typing-only-standard-library-import]
+import pathlib
 from typing import cast
 
 import yaml
@@ -316,6 +316,45 @@ def _extract_reasoning(context: dict[str, object] | None) -> str:
     return ""
 
 
+MIN_PATH_PARTS: int = 2
+
+
+def format_integration_and_component(path_str: str) -> tuple[str, str]:
+    """Extract integration name and component type from metadata file path.
+
+    Args:
+        path_str: Metadata file path string.
+
+    Returns:
+        tuple[str, str]: A tuple of (integration_name, component_type).
+
+    """
+    p = pathlib.Path(path_str)
+    name_lower = p.name.lower()
+    component = "metadata"
+    if "actions_" in name_lower:
+        component = "action"
+    elif "connectors_" in name_lower:
+        component = "connector"
+    elif "jobs_" in name_lower:
+        component = "job"
+    elif "integration_" in name_lower:
+        component = "integration"
+
+    parts = p.parts
+    integration_name = p.stem
+    if len(parts) >= MIN_PATH_PARTS:
+        parent_dir = parts[-2]
+        if parent_dir == "ai" and len(parts) >= MIN_PATH_PARTS + 2:
+            integration_name = parts[-4]
+        elif parent_dir == "test_descriptions" and len(parts) >= MIN_PATH_PARTS + 1:
+            integration_name = parts[-3]
+        else:
+            integration_name = parent_dir
+
+    return integration_name, component
+
+
 def write_regression_report_csv(issues: list[RegressionIssue], report_file: pathlib.Path) -> None:
     """Write list of regression issues to a CSV report file.
 
@@ -327,9 +366,21 @@ def write_regression_report_csv(issues: list[RegressionIssue], report_file: path
     report_file.parent.mkdir(parents=True, exist_ok=True)
     with report_file.open("w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["Path_of_files", "BaselineFile", "TestFile", "Entry", "issue", "LLM Input"])
+        writer.writerow([
+            "Integration",
+            "Component",
+            "Path_of_files",
+            "BaselineFile",
+            "TestFile",
+            "Entry",
+            "issue",
+            "LLM Input",
+        ])
         for item in issues:
+            int_name, comp_name = format_integration_and_component(item.path_of_files)
             writer.writerow([
+                int_name,
+                comp_name,
                 item.path_of_files,
                 item.baseline_file,
                 item.test_file,

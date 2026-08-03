@@ -31,7 +31,12 @@ from mp.describe.common.utils.paths import get_integration_path
 from mp.describe.connector.describe import DescribeConnector
 from mp.describe.job.describe import DescribeJob
 
-from .comparator import RegressionIssue, compare_yaml_files, write_regression_report_csv
+from .comparator import (
+    RegressionIssue,
+    compare_yaml_files,
+    format_integration_and_component,
+    write_regression_report_csv,
+)
 from .judge import TextCandidate, run_judge_evaluation_sync
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -79,43 +84,6 @@ def _resolve_test_file(
             return candidate
 
     return candidates[0]
-
-
-MIN_PATH_PARTS: int = 2
-
-
-def format_integration_and_component(path_str: str) -> tuple[str, str]:
-    """Extract integration name and component type from metadata file path.
-
-    Args:
-        path_str: Metadata file path string.
-
-    Returns:
-        tuple[str, str]: A tuple of (integration_name, component_type).
-
-    """
-    p = Path(path_str)
-    name_lower = p.name.lower()
-    component = "metadata"
-    if "actions_" in name_lower:
-        component = "action"
-    elif "connectors_" in name_lower:
-        component = "connector"
-    elif "jobs_" in name_lower:
-        component = "job"
-    elif "integration_" in name_lower:
-        component = "integration"
-
-    parts = p.parts
-    integration_name = p.stem
-    if "resources" in parts:
-        idx = parts.index("resources")
-        if idx > 0:
-            integration_name = parts[idx - 1]
-    elif len(parts) >= MIN_PATH_PARTS:
-        integration_name = parts[-MIN_PATH_PARTS]
-
-    return integration_name, component
 
 
 async def run_describe_generation(  # ruff:ignore[too-many-arguments]
@@ -276,11 +244,20 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure,too
         for res in judge_results:
             if res.verdict.verdict == "NOT_EQUIVALENT":
                 issue_type = f"text semantic mismatch ({res.verdict.change_type})"
-                missing_info = ""
+                details: list[str] = []
                 if res.verdict.missing_operational_facts:
-                    missing_info = (
-                        f" | Missing facts: {', '.join(res.verdict.missing_operational_facts)}"
+                    details.append(
+                        f"Missing facts: {', '.join(res.verdict.missing_operational_facts)}"
                     )
+                if getattr(res.verdict, "introduced_operational_facts", None):
+                    details.append(
+                        f"Introduced facts: {', '.join(res.verdict.introduced_operational_facts)}"
+                    )
+                if getattr(res.verdict, "quality_failures", None):
+                    details.append(
+                        f"Quality failures: {', '.join(res.verdict.quality_failures)}"
+                    )
+                missing_info = (" | " + " | ".join(details)) if details else ""
                 all_issues.append(
                     RegressionIssue(
                         path_of_files=(res.candidate.path_of_files or "") if res.candidate else "",
