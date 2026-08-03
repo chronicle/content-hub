@@ -283,9 +283,9 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure,too
                     )
                 all_issues.append(
                     RegressionIssue(
-                        path_of_files=res.candidate.path_of_files if res.candidate else "",
-                        baseline_file=res.candidate.baseline_file if res.candidate else "",
-                        test_file=res.candidate.test_file if res.candidate else "",
+                        path_of_files=(res.candidate.path_of_files or "") if res.candidate else "",
+                        baseline_file=(res.candidate.baseline_file or "") if res.candidate else "",
+                        test_file=(res.candidate.test_file or "") if res.candidate else "",
                         entry=res.entry_path,
                         issue=issue_type,
                         llm_input=f"Reasoning: {res.verdict.comparison_reasoning}{missing_info}",

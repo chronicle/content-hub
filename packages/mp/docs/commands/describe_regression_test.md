@@ -15,11 +15,15 @@ The `describe-regression-test` command compares baseline metadata files (`action
 - **Boolean attribute `False` → `True`**: Marked as `might be a regression`.
 - **Action missing in test** (Action present in baseline but missing in test code generation): Marked as `marked as a regression for manual checking (action missing in test)`.
 - **Action missing in baseline** (Action present in code generation but missing in baseline): Marked as `action missing in baseline (needs mp describe)`.
-- **Free-form text fields** (`ai_description`, `ai_short_description`, `parameters_description`): By default, natural phrasing variations between LLM runs are ignored. When `-j` / `--use-llm-judge` is enabled, an LLM Judge (`Gemini 3.1 Pro Preview`) evaluates mismatched text fields for operational semantic equivalence:
-  - **`NOT_EQUIVALENT` (True Regression)**: Candidate description omits a critical operational mechanism present in the baseline (`such as retries, rate limits, timeouts, or required authentication keys`), introduces factual contradictions, or alters parameter table (`parameters_description`) names, types (e.g., `DDL vs String`), or mandatory flags.
-  - **`EQUIVALENT`**: Cosmetic rephrasing, formatting, verbosity, and secondary implementation notes or internal backend data sorting rules (e.g., `"uses newest threat if no active threats found"`).
+- **Free-form text fields** (`ai_description`, `ai_short_description`, `parameters_description`): By default, natural phrasing variations between LLM runs are ignored. When `-j` / `--use-llm-judge` is enabled, an LLM Judge (`Gemini 3.1 Pro Preview`) evaluates mismatched text fields via **Deferred Batch Evaluation** (collecting text candidates across all integrations and evaluating them concurrently in a single batch):
+  - **5-Rule Operational Equivalence Contract**:
+    1. **Parameter & Constraint Integrity (CRITICAL)**: Dropping a parameter, altering data types, shifting applicability (`Mandatory` to `Optional`), reversing boolean intent, or introducing operational limits not in baseline is **`NOT_EQUIVALENT`**.
+    2. **Flow & Core Intent Descriptions**: Omitting logical workflow steps/sequence or dropping declarative action is **`NOT_EQUIVALENT`**.
+    3. **Zero Tolerance for Semantic Typos & Broken Grammar**: Typographical errors causing semantic drift, misspelled technical identifiers, or severely degraded grammar are **`NOT_EQUIVALENT`**.
+    4. **Format & Markdown Agnosticism (FORGIVE)**: Flattening tables, removing styling tags, or deep domain synonyms are **`EQUIVALENT`**.
+    5. **Backend Protocol Noise vs. Infrastructure**: Exposing generic network/transport/auth protocols is **`EQUIVALENT`**; introducing unverified infrastructure or proprietary databases not present in Baseline is **`NOT_EQUIVALENT`**.
   - Note that internal classifier `reasoning` fields are excluded from LLM Judge evaluation.
-- **LLM Reasoning Context**: For any boolean attribute regression, the corresponding section reasoning text is recorded in the `LLM Input` column of the CSV report.
+- **LLM Reasoning Context**: For any boolean attribute regression or text semantic mismatch, the corresponding reasoning and any missing facts are recorded in the `LLM Input` column of the CSV report.
 
 ---
 

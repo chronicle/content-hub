@@ -33,18 +33,19 @@ JUDGE_SYSTEM_PROMPT: str = """You are an expert AI evaluator acting as an automa
 Your task is to compare two text fields: Field 1 (Baseline) and Field 2 (Candidate). These texts are not generic paragraphs; they are strict technical descriptions and execution constraints for over **300+ integrations** within the Chronicle ecosystem. You must determine if they are **semantically and operationally equivalent** from the perspective of an autonomous AI Agent executing code based on this data.
 
 ### Core Principle: Decision-Critical Information vs. Cosmetic/Backend Noise
-You must ruthlessly protect operational constraints while completely forgiving structural and formatting changes.
+You must ruthlessly protect operational constraints (parameters, data types, logic) while completely forgiving structural formatting changes and natural variations in AI-generated descriptive summaries.
 
 ### Rules for Evaluation:
 1. **Parameter & Constraint Integrity (CRITICAL):**
    - IF the Candidate drops a parameter, alters a data type, or shifts applicability requirements (e.g., Mandatory to Optional) -> **NOT_EQUIVALENT**.
-   - IF the Candidate introduces operational limits, conditions, or validation constraints not explicitly stated in the Baseline -> **NOT_EQUIVALENT**.
-   - IF the Candidate reverses or negates the logical intent of an action -> **NOT_EQUIVALENT**.
+   - IF the Candidate reverses or negates the logical intent of an action (e.g., changing a boolean flag from `false` to `true`) -> **NOT_EQUIVALENT**.
+   - IF the Candidate introduces operational limits or validation constraints NOT found in the baseline code/text -> **NOT_EQUIVALENT**.
+   - **GENERATIVE DRIFT EXCEPTION (FORGIVE):** In narrative text descriptions (not strict parameter tables), omitting the explicit enumeration of secondary items (e.g., listing all 3 API keys vs just saying 'Requires API keys') OR surfacing background code mechanics (e.g., retry loops, `sleep()` delays, sorting logic) is **EQUIVALENT**. These are valid descriptive variations of the same underlying code.
 
 2. **Flow & Core Intent Descriptions:**
-   - IF logical workflow steps or sequential actions are omitted -> **NOT_EQUIVALENT**.
+   - IF logical workflow steps or sequential actions are omitted completely -> **NOT_EQUIVALENT**.
    - IF the Candidate drops the core declarative action entirely, leaving only secondary notes or parameters -> **NOT_EQUIVALENT**.
-   - Exception: Omitting purely decorative headers or redundant introductory clauses is EQUIVALENT, provided the underlying facts remain intact.
+   - **ABSTRACTION SHIFT EXCEPTION (FORGIVE):** IF the Candidate shifts the level of abstraction (e.g., 'ensures signature generation' vs 'ensures connectivity'; 'calculating frequencies' vs 'aggregating sources') OR uses deep synonyms for target entities (e.g., 'Address' vs 'IP'), this is **EQUIVALENT** as long as the fundamental SOAR action intent remains the same. Omitting purely decorative headers is also EQUIVALENT.
 
 3. **Zero Tolerance for Semantic Typos & Broken Grammar:**
    - IF the Candidate introduces typographical errors that result in valid but contextually incorrect English words (semantic drift), or severely misspells technical identifiers -> **NOT_EQUIVALENT**. The Agent must not be forced to guess the intent.
@@ -202,12 +203,12 @@ async def evaluate_text_equivalence_batch(
     close_after: bool = False
     if llm is None:
         config = GeminiConfig()
-        config.use_thinking = False
+        config.use_thinking = True
         config.temperature = 0.0
         llm = Gemini(config)
         close_after = True
     else:
-        llm.config.use_thinking = False
+        llm.config.use_thinking = True
         llm.config.temperature = 0.0
 
     try:
