@@ -22,7 +22,7 @@ from integration_testing.set_meta import set_metadata
 
 from ...core.constants import FEDERATION_SYNC_JOB_SCRIPT_NAME
 from ...core.exceptions import MissingParameterError
-from ...jobs import FederationSyncJob
+from ...jobs import federation_sync_job
 from ..common import CONFIG_PATH
 
 if TYPE_CHECKING:
@@ -40,7 +40,7 @@ SYNC_URL: str = f"{TARGET_PLATFORM}/legacyFederatedCases:legacyBatchPatchFederat
 def test_missing_target_platform_fails(
     federation_cases: GetFederationCasesStub,
 ) -> None:
-    job = FederationSyncJob.CaseFederationSyncJob(FEDERATION_SYNC_JOB_SCRIPT_NAME)
+    job = federation_sync_job.CaseFederationSyncJob(FEDERATION_SYNC_JOB_SCRIPT_NAME)
     job.params.target_platform = ""
 
     with pytest.raises(MissingParameterError):
@@ -60,7 +60,7 @@ def test_first_run_without_cases_does_not_save_execution_data(
     }
 
     # Act
-    FederationSyncJob.main()
+    federation_sync_job.main()
 
     # Assert
     assert len(federation_cases.calls) == 1
@@ -99,7 +99,7 @@ def test_sync_success_sends_cases_and_saves_execution_data(
     })
 
     # Act
-    FederationSyncJob.main()
+    federation_sync_job.main()
 
     # Assert - sync request
     assert len(mock_http_client.requests) == 1
@@ -133,7 +133,7 @@ def test_sync_failure_does_not_save_execution_data(
     mock_http_client.response.status_code = 500
 
     # Act
-    FederationSyncJob.main()
+    federation_sync_job.main()
 
     # Assert
     assert len(mock_http_client.requests) == 1  # sync was attempted
@@ -153,8 +153,8 @@ def test_continuation_token_is_reused_on_next_run(
     mock_http_client.response.status_code = 200
 
     # Act - two consecutive job executions
-    FederationSyncJob.main()
-    FederationSyncJob.main()
+    federation_sync_job.main()
+    federation_sync_job.main()
 
     # Assert - the second run fetched with the saved continuation token
     assert len(federation_cases.calls) == 2
