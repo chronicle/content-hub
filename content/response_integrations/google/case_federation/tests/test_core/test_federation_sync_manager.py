@@ -19,9 +19,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ...core import FederationSyncManager as manager_module
+from ...core import federation_sync_manager as manager_module
 from ...core.constants import SUCCESS_STATUS_CODE
-from ...core.FederationSyncManager import (
+from ...core.federation_sync_manager import (
     ApiClientParameters,
     FederationSyncManager,
 )
