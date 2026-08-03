@@ -15,25 +15,29 @@
 from __future__ import annotations
 
 import dataclasses
-import requests
+import json
+import os
+from typing import TYPE_CHECKING
 
-from soar_sdk.SiemplifyLogger import SiemplifyLogger
-
-from TIPCommon.rest.soar_api import get_federation_cases, patch_federation_cases
+from google.auth.transport.requests import AuthorizedSession, Request
+from TIPCommon.base.utils import CreateSession
+from TIPCommon.rest.auth import get_secops_siem_tenant_credentials
+from TIPCommon.rest.soar_api import get_federation_cases
 from TIPCommon.transformation import convert_list_to_comma_string
-import TIPCommon.types
+from TIPCommon.utils import camel_to_snake_case
 
 from .constants import SUCCESS_STATUS_CODE
+
+if TYPE_CHECKING:
+    import requests
+    import TIPCommon.types
+    from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
 
 @dataclasses.dataclass
 class ApiClientParameters:
     sync_api_root: str
-
-
-@dataclasses.dataclass
-class AuthParameters:
-    api_key: str | None
+    verify_ssl: bool
 
 
 @dataclasses.dataclass
@@ -49,20 +53,21 @@ class FederationSyncExecutionData:
 
 
 class FederationSyncManager:
-
     def __init__(
         self,
         session: requests.Session,
         logger: SiemplifyLogger,
         api_client_parameters: ApiClientParameters,
-        auth_parameters: AuthParameters,
         chronicle_soar: TIPCommon.types.ChronicleSOAR,
     ) -> None:
         self.session = session
         self.logger = logger
         self.sync_endpoint = api_client_parameters.sync_api_root
-        self.api_key = auth_parameters.api_key
         self.chronicle_soar = chronicle_soar
+        self.http_client = None
+        self.verify_ssl = api_client_parameters.verify_ssl
+        self._get_credentials_using_p4sa()
+        self._prepare_http_client()
 
     def sync_cases_from(self, continuation_token: str | None) -> FederationSyncResult:
         """Sync cases that were created or modified since the last sync execution.
@@ -73,6 +78,7 @@ class FederationSyncManager:
 
         Returns:
             The result of syncing cases.
+
         """
         fetch_body = self._get_cases_to_sync(continuation_token)
         updated_cases = fetch_body.get(
@@ -84,33 +90,30 @@ class FederationSyncManager:
                 "continuationToken",
                 fetch_body.get("nextPageToken"),
             ),
-            execution_message=fetch_body.get(
-                "executionMessage",
-                "No additional execution details available."
-            ),
+            execution_message=fetch_body.get("executionMessage", "No additional execution details available."),
         )
         case_ids = convert_list_to_comma_string([case["id"] for case in updated_cases])
         self.logger.info(f"Modified cases IDs: {case_ids}")
         self.logger.info(f"Number of cases to sync: {len(updated_cases)}")
 
         if len(updated_cases) > 0:
+            for case in updated_cases:
+                if (alerts_sla := case.get("alertsSla")) and (expiration_status := alerts_sla.get("expirationStatus")):
+                    alerts_sla["expirationStatus"] = camel_to_snake_case(expiration_status)
+                if (case_sla := case.get("caseSla")) and (expiration_status := case_sla.get("expirationStatus")):
+                    case_sla["expirationStatus"] = camel_to_snake_case(expiration_status)
             sync_result = self._sync(cases_payload=updated_cases)
             self.logger.info(f"Response status code: {sync_result.status_code}")
 
-            return FederationSyncResult(
-                status_code=sync_result.status_code, execution_data=execution_data
-            )
+            return FederationSyncResult(status_code=sync_result.status_code, execution_data=execution_data)
 
-        return FederationSyncResult(
-            status_code=SUCCESS_STATUS_CODE, execution_data=execution_data
-        )
+        return FederationSyncResult(status_code=SUCCESS_STATUS_CODE, execution_data=execution_data)
 
     def _get_cases_to_sync(
         self,
         continuation_token: str | None,
     ) -> TIPCommon.types.SingleJson:
-        """Retrieve list of cases that have been created or modified since the
-        last sync execution.
+        """Retrieve list of cases that have been created or modified since the last sync execution.
 
         Args:
             continuation_token: Token received from the server for fetching the next
@@ -118,6 +121,7 @@ class FederationSyncManager:
 
         Returns:
             The response body of fetching the cases which should be synced.
+
         """
         fetch_result = get_federation_cases(
             chronicle_soar=self.chronicle_soar,
@@ -134,10 +138,25 @@ class FederationSyncManager:
 
         Returns:
             The response of the sync.
+
         """
-        return patch_federation_cases(
+        url = self.sync_endpoint + "/legacyFederatedCases:legacyBatchPatchFederatedCases"
+        payload = json.dumps({"cases": cases_payload})
+        header = {"CLIENT-ADDRESS": os.getenv("CLIENT_ADDRESS")}
+        return self.http_client.request("POST", url, data=payload, headers=header)
+
+    def _get_credentials_using_p4sa(self) -> None:
+        project_id = os.getenv("GCP_PROJECT_ID")
+
+        self.creds = get_secops_siem_tenant_credentials(
             chronicle_soar=self.chronicle_soar,
-            cases_payload=cases_payload,
-            api_root=self.sync_endpoint,
-            api_key=self.api_key,
+            target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
+            quota_project_id=project_id,
+            fallback_to_env_email=True,
         )
+
+    def _prepare_http_client(self) -> None:
+        auth_session = CreateSession.create_session()
+        auth_session.verify = self.verify_ssl
+        self.http_client = AuthorizedSession(self.creds, auth_request=Request(session=auth_session))
+        self.http_client.verify = self.verify_ssl
