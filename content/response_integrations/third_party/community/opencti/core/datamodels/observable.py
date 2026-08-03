@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ..datamodels.base_octi_object import BaseOCTIObject
-from ..utils import get_hash_type
+from ...core.datamodels.base_octi_object import BaseOCTIObject
+from ...core.utils import get_hash_type
 
 
 class Observable(BaseOCTIObject):
