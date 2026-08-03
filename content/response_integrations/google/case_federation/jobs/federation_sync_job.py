@@ -129,7 +129,7 @@ class CaseFederationSyncJob(Job):
 
 
 def main() -> None:
-    """Main function to run the job."""
+    """Run the case federation sync job."""
     CaseFederationSyncJob(FEDERATION_SYNC_JOB_SCRIPT_NAME).start()
 
 
