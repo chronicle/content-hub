@@ -58,7 +58,7 @@ def manager(
     monkeypatch.setattr(
         FederationSyncManager,
         "_prepare_http_client",
-        lambda self, verify_ssl: setattr(self, "http_client", mock_http_client),
+        lambda self: setattr(self, "http_client", mock_http_client),
     )
     return FederationSyncManager(
         session=MagicMock(),
