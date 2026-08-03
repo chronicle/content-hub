@@ -39,7 +39,7 @@ class Ping(Action):
 
 
 def main() -> None:
-    """Main function to run the ping action."""
+    """Run the ping action script."""
     Ping(PING_SCRIPT_NAME).run()
 
 

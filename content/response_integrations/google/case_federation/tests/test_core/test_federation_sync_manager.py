@@ -28,6 +28,9 @@ from ...core.federation_sync_manager import (
 from ..core.mocks import GetFederationCasesStub, MockHttpClient
 
 SYNC_API_ROOT: str = "https://primary.example.com"
+DEFAULT_LEGACY_CONTINUTATION: str = "blabla1"
+DEFAULT_NEXT_CONTINUATION: str = "blabla2"
+DEFAULT_PREVIOUS_CONTINUATION: str = "blabla3"
 
 
 @pytest.fixture
@@ -99,16 +102,16 @@ def test_sync_posts_cases_and_normalizes_sla_statuses(
                 "caseSla": {"expirationStatus": "alreadyExpired"},
             },
         ],
-        "continuationToken": "next-token",
+        "continuationToken": DEFAULT_NEXT_CONTINUATION,
         "executionMessage": "message",
     }
     mock_http_client.response.status_code = 200
 
     # Act
-    result = manager.sync_cases_from(continuation_token="previous-token")
+    result = manager.sync_cases_from(continuation_token=DEFAULT_PREVIOUS_CONTINUATION)
 
     # Assert - the fetch was made with the given continuation token
-    assert federation_cases.calls[0]["continuation_token"] == "previous-token"
+    assert federation_cases.calls[0]["continuation_token"] == DEFAULT_PREVIOUS_CONTINUATION
 
     # Assert - the sync request
     assert len(mock_http_client.requests) == 1
@@ -121,7 +124,7 @@ def test_sync_posts_cases_and_normalizes_sla_statuses(
 
     # Assert - the result
     assert result.status_code == 200
-    assert result.execution_data.continuation_token == "next-token"
+    assert result.execution_data.continuation_token == DEFAULT_NEXT_CONTINUATION
     assert result.execution_data.execution_message == "message"
 
 
@@ -133,7 +136,7 @@ def test_legacy_response_keys_are_supported(
     # Arrange - response uses the legacy keys
     federation_cases.response.json.return_value = {
         "legacyFederatedCases": [{"id": 7}],
-        "nextPageToken": "legacy-token",
+        "nextPageToken": DEFAULT_LEGACY_CONTINUTATION,
     }
     mock_http_client.response.status_code = 200
 
@@ -144,7 +147,7 @@ def test_legacy_response_keys_are_supported(
     assert len(mock_http_client.requests) == 1
     payload = json.loads(mock_http_client.requests[0]["data"])
     assert payload["cases"] == [{"id": 7}]
-    assert result.execution_data.continuation_token == "legacy-token"
+    assert result.execution_data.continuation_token == DEFAULT_LEGACY_CONTINUTATION
 
 
 def test_failed_sync_propagates_status_code(
