@@ -63,3 +63,56 @@ RESOLVE_ISSUE_RESOLUTION_REASONS: Mapping[str, str] = {
 }
 ISSUE_NOT_FOUND_ERRORS: Sequence[str] = ["id must be a valid service issue id"]
 UNAUTHORIZED_STATUS_CODE: int = 401
+
+
+SYNC_JOB_SCRIPT_NAME: str = "Wiz - Wiz & Google SecOps Bi-directional Sync Job"
+SYNC_JOB_IDENTIFIER: str = "WizSecopsBidirectionalSyncJob"
+UUID_LENGTH: int = 36
+FALLBACK_TIMESTAMP: int = 0
+MS_TO_SEC_DIVISOR: int = 1000
+
+WIZ_SEVERITY_WEIGHTS: Mapping[str, int] = {
+    "CRITICAL": 500,
+    "HIGH": 400,
+    "MEDIUM": 300,
+    "LOW": 200,
+    "INFORMATIONAL": 100,
+}
+
+SECOPS_PRIORITY_WEIGHTS: Mapping[str, int] = {
+    "critical": 500,
+    "high": 400,
+    "medium": 300,
+    "low": 200,
+    "informational": 100,
+    "info": 100,
+}
+
+WIZ_TO_SECOPS_PRIORITY: Mapping[str, str] = {
+    "CRITICAL": "Critical",
+    "HIGH": "High",
+    "MEDIUM": "Medium",
+    "LOW": "Low",
+    "INFORMATIONAL": "Informational",
+}
+
+WIZ_CLOSED_STATUSES: Sequence[str] = [
+    STATUS_RESOLVED,
+    STATUS_REJECTED,
+]
+
+WIZ_REASON_FALSE_POSITIVE: str = "FALSE_POSITIVE"
+WIZ_REASON_MALICIOUS_THREAT: str = "MALICIOUS_THREAT"
+WIZ_REASON_PLANNED_ACTION_THREAT: str = "PLANNED_ACTION_THREAT"
+WIZ_REASON_INCONCLUSIVE_THREAT: str = "INCONCLUSIVE_THREAT"
+
+CLOSE_REASON_TO_WIZ_REASON: Mapping[str, str] = {
+    "REASON_MALICIOUS": WIZ_REASON_MALICIOUS_THREAT,
+    "REASON_NOT_MALICIOUS": WIZ_REASON_FALSE_POSITIVE,
+    "REASON_MAINTENANCE": WIZ_REASON_PLANNED_ACTION_THREAT,
+}
+
+CLOSE_VERDICT_TO_WIZ_REASON: Mapping[int, str] = {
+    1: WIZ_REASON_MALICIOUS_THREAT,
+    2: WIZ_REASON_FALSE_POSITIVE,
+}

@@ -119,6 +119,39 @@ class WizApiClient(Apiable):
 
         return data_parser.build_issue_comment_object(response.json())
 
+    def associate_service_ticket(
+        self,
+        issue_id: str,
+        ticket_id: str,
+        ticket_url: str,
+    ) -> requests.Response:
+        """Associate a service ticket with an issue.
+
+        Args:
+            issue_id (str): The ID of the issue/threat in Wiz.
+            ticket_id (str): The Case ID in Google SecOps.
+            ticket_url (str): The full URL of the SecOps case.
+
+        Returns:
+            requests.Response: Response object.
+        """
+        mutation_query = query_builder.AssociateServiceTicketMutationBuilder(
+            issue_id=issue_id,
+            ticket_id=ticket_id,
+            ticket_url=ticket_url,
+        )
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=mutation_query.build_mutation(),
+        )
+        api_utils.validate_response(response=response)
+
+        return response
+
     def reopen_issue(self, issue_id: str) -> datamodels.Issue:
         """Reopen an issue.
 

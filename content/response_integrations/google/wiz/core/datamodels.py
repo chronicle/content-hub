@@ -45,9 +45,22 @@ class BaseModel:
         return self.raw_data
 
 
+class WizIncidentComment:
+    def __init__(self, raw_comment: SingleJson) -> None:
+        self.raw_comment = raw_comment
+
+    @property
+    def message(self) -> str:
+        return self.raw_comment.get("text", "")
+
+
 @dataclasses.dataclass(slots=True)
 class Issue(BaseModel):
     issue_id: str
+    status: str | None = None
+    severity: str | None = None
+    updated_at: str | None = None
+    comments: list[WizIncidentComment] = dataclasses.field(default_factory=list)
 
     @classmethod
     def from_json(cls, json_data: SingleJson) -> Issue:
@@ -57,7 +70,16 @@ class Issue(BaseModel):
             An Issue instance.
 
         """
-        return cls(raw_data=json_data, issue_id=json_data["id"])
+        notes = json_data.get("notes") or []
+        comments = [WizIncidentComment(note) for note in notes]
+        return cls(
+            raw_data=json_data,
+            issue_id=json_data["id"],
+            status=json_data.get("status"),
+            severity=json_data.get("severity"),
+            updated_at=json_data.get("updatedAt"),
+            comments=comments,
+        )
 
 
 @dataclasses.dataclass(slots=True)

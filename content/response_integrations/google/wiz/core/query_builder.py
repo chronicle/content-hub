@@ -61,6 +61,7 @@ class IssueQueryBuilder:
             ),
             Field(name="projects", fields=["id", "name"]),
             Field(name="sourceRules", fields=["id", "name", "description"]),
+            Field(name="notes", fields=["id", "text", "createdAt"]),
         ]
 
     def build_query(self) -> SingleJson:
@@ -124,6 +125,46 @@ class AddCommentThreadMutationBuilder:
             queries=[mutation],
         )
         input_value = {"issueId": self.issue_id, "text": self.comment}
+
+        return {
+            "query": operation.render(),
+            "variables": {self.input_variable_name: input_value},
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class AssociateServiceTicketMutationBuilder:
+    issue_id: str
+    ticket_id: str
+    ticket_url: str
+    input_variable_name: str = "input"
+    input_variable_type: str = "AssociateServiceTicketInput!"
+    operation_name: str = "AssociateServiceTicket"
+    mutation_name: str = "associateServiceTicket"
+
+    def build_mutation(self) -> SingleJson:
+        """Builds the GraphQL mutation payload for associating a service ticket to an issue."""
+        variable = Variable(
+            name=self.input_variable_name,
+            type=self.input_variable_type,
+        )
+        service_ticket_fields = ["id", "externalId", "name", "url"]
+        mutation = Query(
+            name=self.mutation_name,
+            arguments=[Argument(name=self.input_variable_name, value=variable)],
+            fields=[Field(name="serviceTicket", fields=service_ticket_fields)],
+        )
+        operation = Operation(
+            type="mutation",
+            name=self.operation_name,
+            variables=[variable],
+            queries=[mutation],
+        )
+        input_value = {
+            "issueId": self.issue_id,
+            "ticketId": self.ticket_id,
+            "ticketUrl": self.ticket_url,
+        }
 
         return {
             "query": operation.render(),
