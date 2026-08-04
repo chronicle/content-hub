@@ -138,7 +138,7 @@ class TestOpenCTIClientInit:
             mock_health_check.assert_called_once()
 
     def test_raises_on_invalid_connection(self):
-        with patch("core.opencti_client.client.OpenCTIApiClient") as mock_cls:
+        with patch("opencti.core.opencti_client.client.OpenCTIApiClient") as mock_cls:
             mock_cls.side_effect = ValueError("bad url")
 
             with pytest.raises(

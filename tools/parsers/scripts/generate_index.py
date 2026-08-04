@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import subprocess
 import sys
 
 # Target directory to walk (assumes script is run from repo root)
@@ -11,6 +12,28 @@ output_dir = Path("content/parsers/third_party")
 # Subdirectories for community and partner
 community_dir = target_dir / "community"
 partner_dir = target_dir / "partner"
+
+def get_latest_commit_info(file_path: Path) -> tuple[str, int | None]:
+    """Helper to get the latest Git commit SHA and commit time (epoch) for the file."""
+    try:
+        # %H is commit hash, %ct is committer date (unix timestamp)
+        result = subprocess.run(
+            ["git", "log", "-n", "1", "--pretty=format:%H,%ct", "--", file_path.as_posix()],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        output = result.stdout.strip()
+        if not output:
+            return "", None
+            
+        sha, timestamp_str = output.split(",", 1)
+        return sha, int(timestamp_str)
+    except subprocess.CalledProcessError:
+        return "", None
+    except Exception as e:
+        print(f"WARNING: Failed to get commit info for {file_path}: {e}", file=sys.stderr)
+        return "", None
 
 def generate_index_for_subdir(sub_dir: Path, output_json_name: str, source_type: str):
     entries = []
@@ -44,13 +67,18 @@ def generate_index_for_subdir(sub_dir: Path, output_json_name: str, source_type:
             print(f"WARNING: Missing log type in {metadata_path}", file=sys.stderr)
             continue
             
+        # Get the latest commit ID and time for the config file
+        commit_id, commit_time = get_latest_commit_info(config_path)
+            
         entries.append({
             "log_type": log_type.strip().upper(),
             "config_path": config_path.as_posix(),
             "metadata_path": metadata_path.as_posix(),
             "vendor": meta.get("vendor", ""),
             "product": meta.get("product", ""),
-            "source": source_type
+            "source": source_type,
+            "latest_commit_id": commit_id,
+            "latest_commit_time": commit_time
         })
         
     # Sort entries alphabetically by log type and config path to prevent ordering variance

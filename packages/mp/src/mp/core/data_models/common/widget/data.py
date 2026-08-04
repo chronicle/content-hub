@@ -45,6 +45,14 @@ class WidgetType(RepresentableEnum):
     CASE_IMPACTED_RESOURCES = 19
     FORM = 20
     QUICK_ACTIONS = 21
+    COMPOSITE_ALERT = 22
+    RULE_OVERVIEW = 23
+    CASE_DETECTIONS = 24
+    UDM_EVENTS = 25
+    UDM_ENTITIES = 26
+    EVENT_HIGHLIGHTS = 27
+    THREAT_HUNT = 28
+    THIRD_PARTY = 29
 
 
 class WidgetDefinitionScope(RepresentableEnum):

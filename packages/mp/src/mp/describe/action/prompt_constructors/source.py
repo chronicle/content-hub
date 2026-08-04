@@ -21,6 +21,10 @@ import toon_format
 import yaml
 
 from mp.core import constants
+from mp.core.data_models.integrations.action.ai.entity_types import (
+    build_dynamic_entity_prompt_rules,
+    get_all_entity_param_examples_string,
+)
 
 from .prompt_constructor import PromptConstructor
 
@@ -47,6 +51,8 @@ class SourcePromptConstructor(PromptConstructor):
         core_names, core_content = await self._get_core_modules_names_and_content()
         template: Template = await self.task_prompt
         return template.safe_substitute({
+            "all_entity_param_examples": get_all_entity_param_examples_string(),
+            "entity_type_mapping_rules": build_dynamic_entity_prompt_rules(),
             "json_file_name": f"{self.action_file_name}.yaml",
             "json_file_content": await self._get_non_built_action_def_content(),
             "python_file_name": f"{self.action_file_name}.py",
