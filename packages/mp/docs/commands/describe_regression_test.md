@@ -234,3 +234,30 @@ uv run --project packages/mp mp describe-regression-test action -i "duo,anomali"
 
 > [!WARNING]
 > **Execution Duration**: Running a marketplace-wide regression test processes every integration and content type across the entire repository. This operation invokes LLM API generation at scale, will take a very long time to complete, and the exact execution duration cannot be predicted in advance.
+
+---
+
+## Promoting Generated Descriptions (`mp describe-accept` / `mp accept`)
+
+When `mp describe-regression-test` identifies differences between existing baselines in `resources/ai/` and newly generated test descriptions in `test_descriptions/`, there are three primary operational scenarios:
+
+### 1. Scenario 1: Refactoring or Bugfix without Contract Change (`EQUIVALENT`)
+When a developer modifies internal implementation details (e.g., bug fixes, logging improvements, refactored helpers) without altering the action's operational contract, the **Asymmetric LLM Judge** (`-j`) evaluates phrasing variations as **`EQUIVALENT`**.
+- **Action**: No baseline update is needed. The existing baseline in `resources/ai/` remains accurate and valid. Do **NOT** run `mp describe-accept`.
+
+### 2. Scenario 2: Legitimate Contract Change (`NOT_EQUIVALENT` -> Accept)
+When a developer intentionally updates the operational contract (e.g., adding a parameter, changing data types, or adding external mutation capabilities), the regression test returns **`NOT_EQUIVALENT` (`GENERATOR_REGRESSION`)**.
+- **Action**: Once verified, run `mp describe-accept -i <integration>` to promote the newly generated candidate in `test_descriptions/` to the official baseline in `resources/ai/`:
+
+```bash
+# Simulate which baselines would be updated (dry run)
+uv run --project packages/mp mp describe-accept action -i duo --dry-run
+
+# Promote candidate files and update official baselines in resources/ai/
+uv run --project packages/mp mp describe-accept action -i duo
+```
+
+### 3. Scenario 3: Unintended Contract Regression (`NOT_EQUIVALENT` -> Fix Code)
+If an action contract is accidentally broken (e.g., dropping a required parameter or filter check during refactoring), the regression test alerts the developer.
+- **Action**: Fix the Python source code and re-run the regression test. Do **NOT** run `mp describe-accept`.
+

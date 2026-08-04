@@ -28,6 +28,7 @@ from .all_content import describe_all_content
 from .connector.typer_app import app as connector_app
 from .integration.typer_app import app as integration_app
 from .job.typer_app import app as job_app
+from .regression_test.accept_typer_app import app as accept_app
 from .regression_test.typer_app import app as regression_test_app
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -40,6 +41,8 @@ app.add_typer(connector_app)
 app.add_typer(integration_app)
 app.add_typer(job_app)
 app.add_typer(regression_test_app, name="describe-regression-test")
+app.add_typer(accept_app, name="accept")
+app.add_typer(accept_app, name="describe-accept")
 
 
 @app.command(
