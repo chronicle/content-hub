@@ -291,7 +291,183 @@ Enrich Certificates:
     update_identity: false
     update_ticket: false
   parameters_description: There are no parameters for this action
-Enrich IPs:
+Enrich Host - Get Host Enrichment API:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves focused enrichment data for IP address entities using
+    the Censys get host enrichment API. It provides intelligence about internet-facing
+    infrastructure, including services, ports, protocols, and location data, along
+    with reputation score, GreyNoise classification, and privacy signals (TOR/VPN/proxy)
+    to help security teams assess risk exposure for an IP address.
+
+
+    ### Flow Description
+
+    1. Extracts integration configuration parameters (API Key, Organization ID,
+    Verify SSL, Enable Get Host Enrichment API).
+
+    2. If `Enable Get Host Enrichment API` is disabled for this instance, ends
+    immediately with a false result value so a playbook can branch to the older
+    Enrich Host - Get Host API action instead.
+
+    3. Filters the target entities to identify valid IP addresses (ADDRESS entity
+    type).
+
+    4. Makes a GET request to the Censys API (`/v3/global/asset/enrichment/host/{ip}`)
+    for each valid IP address individually, since the endpoint does not support
+    batch requests.
+
+    5. Parses the API response for each IP to extract enrichment fields such as
+    services, ports, location, reputation score, GreyNoise classification, and
+    privacy signals.
+
+    6. Removes any old Censys IP enrichment data from the entity.
+
+    7. Updates the entity's `additional_properties` with the new enrichment data
+    and sets `is_enriched` to True.
+
+    8. Updates the entities in the Google SecOps platform and attaches the JSON
+    results to the action.
+
+
+    ### Additional Notes
+
+    - The action skips invalid IP addresses and logs them. If no valid IP addresses
+    are found, the action fails.
+
+    - Errors from the API are split into two categories. Per-entity errors (IP
+    not found, malformed request) only affect that one IP - they are logged and
+    processing continues with the remaining IPs, and do not fail the action.
+    Account-level errors (invalid credentials, no permission for this endpoint,
+    feature not enabled for the account tier, or the daily request quota reached)
+    stop processing entirely as soon as the first one occurs, since every
+    remaining IP would fail identically - any IPs already enriched keep their
+    data and are still saved to the platform, the rest are reported as skipped,
+    and the action ends in the FAILED state with a false result value, matching
+    every other action in this integration.
+
+    - `Enable Get Host Enrichment API` is an instance-level configuration toggle
+    for a phased rollout. When disabled, the action ends in the COMPLETED state
+    with a false result value rather than FAILED - this is a controlled bypass
+    so a playbook's Previous Actions Condition can fall back to Enrich Host (Get
+    Host API) without the step showing as an error. This is the only outcome
+    besides a full success that does not fail the action - any account-level API
+    error, or an unexpected error while calling the new API, ends the action
+    FAILED instead.
+
+    - Unlike Enrich Host - Get Host API, this action does not support the `At Time`
+    historical lookup parameter, and does not populate `Censys_transport_protocols`,
+    `Censys_vulnerabilities`, or `Censys_last_scan_time`, since the new endpoint
+    does not return this data.
+  ai_short_description: >-
+    Retrieves focused enrichment data for IP address entities using the Censys
+    host enrichment API, including reputation score, GreyNoise classification,
+    and privacy signals in addition to standard host intelligence.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Censys host enrichment API to fetch
+      focused host intelligence for each IP (fetches_data=true). It does not mutate
+      external data or internal platform data outside of entities. It updates the
+      internal entities with the fetched enrichment data by calling `siemplify.update_entities`
+      (can_update_entities=true).
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.ADDRESS` via the `get_ip_entities` function.
+      Therefore, it targets ADDRESS entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches focused intelligence about IP addresses (IOCs) from the
+      Censys host enrichment API, including reputation, GreyNoise classification,
+      and privacy signals, which aligns with the 'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Enrich Host - Get Host API:
   ai_description: >-
     ### General Description
 
