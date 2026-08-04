@@ -976,10 +976,7 @@ class CaseDetails:
         entities_json = [entity.to_json() for entity in self.entities]
         sla_json = self.sla.to_json()
         stage_sla_json = self.stage_sla.to_json()
-        tags = [
-            tag.get("displayName", tag) if isinstance(tag, dict) else tag
-            for tag in self.tags
-        ]
+        tags = [tag.get("displayName", tag) if isinstance(tag, dict) else tag for tag in self.tags]
 
         case_data = {
             "id": self.id_,
@@ -1976,3 +1973,29 @@ class CaseCloseComment:
         case_comment = full_comment.split("\n")[0].strip() if full_comment else ""
 
         return cls(comment=case_comment)
+
+
+class ScriptResultEntityData:
+    """Represents ScriptResultEntityData nested in ApiActionResult."""
+
+    def __init__(self, raw_data: dict[str, Any]):
+        self.raw_data = raw_data
+        self.raw_json = raw_data.get("rawJson")
+        self.content = raw_data.get("content")
+
+
+class ApiActionResult:
+    """Represents ApiActionResultDataModel."""
+
+    def __init__(self, raw_data: dict[str, Any]):
+        self.raw_data = raw_data
+        self.id = raw_data.get("id")
+        self.status = raw_data.get("status")
+        self.message = raw_data.get("message")
+        self.result_value = raw_data.get("resultValue")
+        self.result_json_object = raw_data.get("resultJsonObject")
+
+        raw_entity_data = raw_data.get("scriptResultEntityData") or []
+        self.script_result_entity_data = [
+            ScriptResultEntityData(item) for item in raw_entity_data if isinstance(item, dict)
+        ]
