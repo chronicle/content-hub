@@ -51,6 +51,12 @@ class WizIncidentComment:
 
     @property
     def message(self) -> str:
+        """The text comment message.
+
+        Returns:
+            str: The comment text.
+
+        """
         return self.raw_comment.get("text", "")
 
 

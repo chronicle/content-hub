@@ -143,7 +143,12 @@ class AssociateServiceTicketMutationBuilder:
     mutation_name: str = "associateServiceTicket"
 
     def build_mutation(self) -> SingleJson:
-        """Builds the GraphQL mutation payload for associating a service ticket to an issue."""
+        """Build the GraphQL mutation payload for associating a service ticket to an issue.
+
+        Returns:
+            SingleJson: The mutation payload dictionary.
+
+        """
         variable = Variable(
             name=self.input_variable_name,
             type=self.input_variable_type,

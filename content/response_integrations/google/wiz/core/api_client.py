@@ -134,6 +134,7 @@ class WizApiClient(Apiable):
 
         Returns:
             requests.Response: Response object.
+
         """
         mutation_query = query_builder.AssociateServiceTicketMutationBuilder(
             issue_id=issue_id,
