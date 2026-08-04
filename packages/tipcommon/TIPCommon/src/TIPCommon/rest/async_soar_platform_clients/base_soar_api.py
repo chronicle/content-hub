@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from TIPCommon.data_models import Container
+from TIPCommon.rest.async_soar_platform_clients.constants import STATUS_CODE_NO_CONTENT
 from TIPCommon.rest.custom_types import HttpMethod
 
 if TYPE_CHECKING:
@@ -212,7 +213,7 @@ class BaseAsyncSoarApi:
 
             try:
                 response = await self.get(endpoint, params=request_params)
-                if response.status_code == 204:
+                if response.status_code == STATUS_CODE_NO_CONTENT:
                     break
                 response_data = response.json()
             except Exception as e:
