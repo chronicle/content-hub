@@ -199,7 +199,7 @@ def _decrypt_smime_message(
         )
 
         sp.run(decrypt_command.split(), capture_output=True, text=True, check=True)
-        with open(message_file_path, "rb") as file:
+        with Path(message_file_path).open("rb") as file:
             decrypted_msg: email.message.Message = email.message_from_bytes(file.read())
 
         for key, value in smime_email_config.email.items():
@@ -248,7 +248,7 @@ def _verify_smime_message(
         )
 
         sp.run(verify_command.split(), capture_output=True, text=True, check=True)
-        with open(message_file_path, "rb") as file:
+        with Path(message_file_path).open("rb") as file:
             extracted_msg: email.message.Message = email.message_from_bytes(file.read())
 
         for key, value in msg.items():
