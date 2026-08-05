@@ -2,7 +2,7 @@ from __future__ import annotations
 
 INTEGRATION_NAME = "Censys"
 
-INTEGRATION_VERSION = "1.0.0"
+INTEGRATION_VERSION = "5.0"
 
 # API Configuration
 API_ROOT = "https://api.platform.censys.io"
