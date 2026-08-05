@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XM Cyber - Labels</title>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.2/echarts.min.js"
+      integrity="sha512-VdqgeoWrVJcsDXFlQEKqE5MyhaIgB9yXUVaiUa8DR2J4Lr1uWcFm+ZH/YnzV5WqgKf4GPyHQ64vVLgzqGIchyw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      * {
+        font-family: "Lexend", sans-serif !important;
+        font-optical-sizing: auto;
+        font-weight: 400;
+        font-style: normal;
+      }
+
+      body {
+        margin: 20px;
+        text-align: center;
+        background-color: #344262 !important;
+      }
+
+      .chart-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+      }
+      .chart {
+        min-width: 450px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="chart-container">
+      <div
+        id="labelsChart"
+        style="width: 50%; height: 450px"
+        class="chart"
+      ></div>
+    </div>
+    <script>
+      const entitiesData = [XMCyber_Get Event Data JSON_1.JsonResult];
+
+      function createPieChart(id, title, data) {
+        let chart = echarts.init(document.getElementById(id), "dark", {
+          renderer: "svg",
+        });
+
+        let option = {
+          title: {
+            text: Object.keys(data).length === 0 ? "No Labels data found" : "",
+            left: "center",
+            top: "center",
+          },
+          tooltip: { trigger: "item" },
+          legend: {
+            orient: "vertical",
+            top: 20,
+            right: 20,
+            formatter: function (name) {
+              let data = option.series[0].data;
+              let item = data.find((item) => item.name === name);
+              return `${name}: ${item ? item.value : ""}`; // Shows label & count
+            },
+          },
+          series: [
+            {
+              type: "pie",
+              radius: "50%",
+              data:
+                Object.keys(data).length > 0
+                  ? Object.entries(data).map(([key, value]) => ({
+                      name: key,
+                      value,
+                    }))
+                  : [{}],
+            },
+          ],
+        };
+        chart.setOption(option);
+      }
+
+      function getListData(field) {
+        // Iterate through the entities
+        return Object.entries(entitiesData).reduce(
+          (counter, [entityID, entityData]) => {
+            // Fetch labels from each entity and use a global counter
+            if (!entityData[field]) return counter;
+
+            entityData[field].split(",").forEach((label) => {
+              const trimmedLabel = label.trim();
+              counter[trimmedLabel] = (counter[trimmedLabel] || 0) + 1;
+            });
+
+            return counter;
+          },
+          {}
+        );
+      }
+
+      createPieChart("labelsChart", "Labels", getListData("Labels"));
+    </script>
+  </body>
+</html>
