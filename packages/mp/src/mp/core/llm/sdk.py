@@ -100,12 +100,14 @@ class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig_co]):
         /,
         *,
         response_json_schema: type[T_Schema] | None = None,
+        use_batch: bool = False,
     ) -> list[T_Schema | str]:
         """Send multiple messages to the LLM provider in bulk.
 
         Args:
             prompts: The prompts to send to the LLM provider.
             response_json_schema: The JSON schema to validate the responses against.
+            use_batch: Whether to use Google GenAI Batch API when count exceeds threshold.
 
         Returns:
             The responses from the LLM provider.
