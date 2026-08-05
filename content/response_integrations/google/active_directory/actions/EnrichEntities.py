@@ -42,6 +42,7 @@ from core.utils import (
     filter_nested_dictionary,
     is_action_approaching_timeout,
     is_action_approaching_iteration_run_timeout,
+    prevent_reverting_properties,
 )
 
 # =====================================
@@ -292,6 +293,7 @@ def main(is_first_run):
                         entity.additional_properties.update(enrichment_data)
                         entity.is_enriched = True
                         result_value["successful"].append(entity.identifier)
+                        prevent_reverting_properties(entity)
                         entities_to_update.append(entity)
                     else:
                         result_value["failed"].append(entity.identifier)
