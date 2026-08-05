@@ -23,4 +23,31 @@ DELAY_PLAYBOOK_SYNCHRONOUS_SCRIPT_NAME: str = (
 
 MAX_SYNC_DELAY_TIME_IN_SECONDS: int = 30
 MIN_SYNC_DELAY_TIME_IN_SECONDS: int = 0
-LABEL_REGEX: str = re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$")
+LABEL_REGEX = re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$")
+
+CASE_TYPE_MAP: dict[int, str] = {
+    1: "EXTERNAL",
+    2: "TEST",
+    3: "REQUEST",
+}
+
+DATA_TYPE_MAP: dict[int, str] = {
+    1: "1",
+    2: "2",
+}
+
+SOURCE_TYPE_MAP: dict[int, str] = {
+    1: "CONNECTOR",
+    2: "API",
+    3: "SIEMPLIFY",
+}
+
+RAW_FIELDS_KEY: str = "_fields"
+FIELDS_KEY: str = "fields"
+RAW_DATA_FIELDS_KEY: str = "_rawDataFields"
+DATA_FIELDS_KEY: str = "rawDataFields"
+UNDEFINED_VALUE: str = "undefined"
+
+CASE_TYPE_KEYS: list[str] = ["Type", "type"]
+DATA_TYPE_KEYS: list[str] = ["DataType", "Datatype", "dataType", "datatype"]
+SOURCE_TYPE_KEYS: list[str] = ["SourceType", "sourceType", "sourcetype"]

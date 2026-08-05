@@ -78,6 +78,7 @@ def reset_tools_state(tools: Tools) -> None:
     tools.workflows = []
     tools.case_metadata = {}
     tools.alerts_full_details = []
+    tools.imported_custom_cases = []
 
 
 class MockEntity:

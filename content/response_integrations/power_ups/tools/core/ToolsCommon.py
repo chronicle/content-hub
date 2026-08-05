@@ -161,6 +161,7 @@ def find_key_path_recursive(
                     iteration=iteration + 1,
                 )
             return []
+        return []
     else:
         if isinstance(current_json, dict):
             return [current_json]
@@ -256,7 +257,7 @@ def get_execution_scope(raw_scope: Any, logger: Any = None) -> ExecutionScope:
 
 def get_case_alerts(siemplify: Any) -> list[Any]:
     """Retrieve the list of open alerts for the case safely, with fallback to all alerts."""
-    return getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+    return list(getattr(siemplify.case, "open_alerts", None) or siemplify.case.alerts)
 
 
 def get_target_alerts(

@@ -11,7 +11,9 @@ from .constants import (
     ENDPOINT_ENRICH_STORAGE,
     ENDPOINT_JOB_STATUS,
     ENDPOINT_TAKE_SNAPSHOT,
+    ENDPOINT_UNBLOCK_USER,
     ENDPOINT_VOLUME_OFFLINE,
+    ENDPOINT_VOLUME_ONLINE,
     RRS_SERVICE_URL,
 )
 from .utils import (
@@ -309,6 +311,46 @@ class ApiManager:
 
         return response_data
 
+    def volume_online(self, volume_id: str, agent_id: str, system_id: str) -> dict:
+        """
+        Bring a volume online.
+
+        Extracts volume parameters from action and brings the volume online.
+
+        Args:
+            volume_id: Volume ID to bring online, extracted from action parameters.
+            agent_id: Console agent ID, extracted from action parameters.
+            system_id: Storage system ID, extracted from action parameters.
+
+        Returns:
+            Response data from the volume online API.
+
+        Raises:
+            requests.HTTPError: If the API call returns a non-2xx status code.
+
+        """
+        self.siemplify.LOGGER.info(f"ApiManager.volume_online: Bringing volume online for volume_id: {volume_id}")
+
+        # Build full URL
+        url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_VOLUME_ONLINE)
+
+        # Build request payload
+        request_payload = {"volume_id": volume_id, "agent_id": agent_id, "system_id": system_id}
+
+        self.siemplify.LOGGER.info(f"ApiManager.volume_online: POST URL={url}")
+
+        # Make API call using session (already has Authorization header from __init__)
+        response = self.session.post(url, json=request_payload, verify=self.SSL_VERIFY)
+
+        # Check if request was successful
+        response.raise_for_status()
+
+        # Parse response
+        response_data = response.json()
+        self.siemplify.LOGGER.info(f"ApiManager.volume_online: API call successful. Status: {response.status_code}")
+
+        return response_data
+
     def block_user(self, user_id: str, user_ips: str, duration: str) -> dict:
         """
         Block a user.
@@ -357,5 +399,54 @@ class ApiManager:
         # Parse response
         response_data = response.json()
         self.siemplify.LOGGER.info(f"ApiManager.block_user: API call successful. Status: {response.status_code}")
+
+        return response_data
+
+    def unblock_user(self, user_id: str, user_ips: str) -> dict:
+        """
+        Unblock a user.
+
+        Unblocks a previously blocked user with the specified parameters.
+
+        Args:
+            user_id: ID of the user to unblock.
+            user_ips: Client IPs to unblock as comma-separated string
+                (required for NFS; optional for CIFS).
+
+        Returns:
+            dict: Response data from the unblock user API.
+
+        Raises:
+            requests.HTTPError: If the API call returns a non-2xx status code.
+
+        """
+        # Mask sensitive values for logging
+        masked_user_id = mask_sensitive_value(user_id) if user_id else "N/A"
+
+        # Convert comma-separated IPs to list
+        user_ips_list = [ip.strip() for ip in user_ips.split(",") if ip.strip()] if user_ips else []
+
+        self.siemplify.LOGGER.info(
+            f"ApiManager.unblock_user: Unblocking user with user_id: {masked_user_id}, "
+            f"user_ips: {mask_sensitive_value(user_ips)}"
+        )
+
+        # Build full URL
+        url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_UNBLOCK_USER)
+
+        # Build request payload
+        request_payload = {"user_id": user_id, "user_ips": user_ips_list}
+
+        self.siemplify.LOGGER.info(f"ApiManager.unblock_user: POST URL={url}")
+
+        # Make API call using session (already has Authorization header from __init__)
+        response = self.session.post(url, json=request_payload, verify=self.SSL_VERIFY)
+
+        # Check if request was successful
+        response.raise_for_status()
+
+        # Parse response
+        response_data = response.json()
+        self.siemplify.LOGGER.info(f"ApiManager.unblock_user: API call successful. Status: {response.status_code}")
 
         return response_data

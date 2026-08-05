@@ -2,47 +2,31 @@ Acknowledge Console Alert:
   ai_description: >-
     ### General Description
 
-
-    Acknowledges an alert on the Thinkst Canary console. This action allows analysts
-    to programmatically mark Canary incidents as acknowledged directly from the Google
-    SecOps interface, ensuring synchronization between the SOAR and the Canary platform.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not take any input parameters. It automatically
-    identifies the alert to acknowledge using the `AlertId` stored in the alert's
-    metadata. |
-
-
-    ### Additional Notes
-
-
-    This action requires the `AlertId` to be present in the `additional_properties`
-    of the first security event of the alert. This ID is typically populated automatically
-    by the Thinkst Canary connector when the alert is ingested. If the `AlertId` is
-    missing, the action will fail.
+    Acknowledges an alert on the Thinkst Canary console. This action updates the status
+    of the corresponding incident in the external Canary system to indicate it has
+    been acknowledged.
 
 
     ### Flow Description
 
+    1. Retrieves the `AlertId` from the `additional_properties` of the first security
+    event associated with the current alert in Google SecOps.
 
-    1. **Extract Configuration**: Retrieves the API Key, Console Hash, and SSL verification
-    settings from the integration configuration.
+    2. Initiates a POST request to the Thinkst Canary API (`/incident/acknowledge`)
+    using the extracted incident ID.
 
-    2. **Identify Incident**: Accesses the current alert's security events and extracts
-    the `AlertId` from the `additional_properties` field of the first event.
+    3. Returns a success or failure message based on the API response.
 
-    3. **API Request**: Sends a POST request to the `/api/v1/incident/acknowledge`
-    endpoint on the Canary Console using the extracted `AlertId`.
 
-    4. **Finalize**: Reports the outcome of the acknowledgement request (success or
-    failure) to the case wall.
+    ### Additional Notes
+
+    This action requires the `AlertId` to be present in the security event's additional
+    properties. This ID is typically populated automatically when the alert is initially
+    ingested by the Thinkst Canary connector.
+  ai_short_description: >-
+    Acknowledges an alert on the Thinkst Canary console by extracting the incident
+    ID from the current alert and sending an acknowledgment request to the external
+    API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -51,14 +35,52 @@ Acknowledge Console Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of an incident on the Thinkst Canary console to 'acknowledged'
-      via a POST request to the API.
+      Acknowledges an incident on the Thinkst Canary Console by sending a POST request
+      to the API.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action executes a POST request to the Thinkst Canary API to acknowledge
+      an incident, which mutates external data. It does not fetch additional contextual
+      data, mutate internal SecOps data, update entities, create insights, modify
+      alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -72,63 +94,76 @@ Acknowledge Console Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. Instead,
+      it operates on the `siemplify.current_alert.security_events` to extract the
+      incident ID. Therefore, it does not use any entity types or apply any entity
+      filters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action acknowledges an alert in an external 3rd-party system (Thinkst Canary).
+      It does not update the alert within the SecOps platform itself, nor does it
+      act as an ITSM ticketing system update, blocklist/allowlist modification, or
+      enrichment. Therefore, it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility used to verify the connectivity and
-    authentication credentials between Google SecOps and the Thinkst Canary Console.
-    It ensures that the provided API Key and Console Hash are valid and that the network
-    path to the Canary API is open.
-
-
-    ### Parameters Description
-
-    This action does not have any action-specific parameters. It relies entirely on
-    the integration's global configuration parameters:
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **API Key** | String | Yes | The authentication token used to access the Thinkst
-    Canary API. |
-
-    | **Console Hash** | String | Yes | The unique subdomain identifier for your Canary
-    Console (e.g., the 'example' in 'example.canary.tools'). |
-
-    | **Verify SSL** | Boolean | No | Determines whether to verify the SSL certificate
-    of the Canary Console. |
-
-
-    ### Additional Notes
-
-    * This action will fail immediately if the **API Key** or **Console Hash** are
-    left as their default placeholder values.
-
-    * Per Google SecOps standards, Ping actions are used for health checks and do
-    not contribute to case enrichment or data mutation.
+    Verifies connectivity to the Thinkst Canary Console by testing the configured
+    API key and console hash. This action ensures that the integration is properly
+    authenticated and can communicate with the external service.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The script retrieves the global configuration for
-    the Thinkst integration, including the API Key, Console Hash, and SSL verification
-    setting.
+    1. Extracts the API key, console hash, and SSL verification settings from the
+    integration configuration.
 
-    2. **Validation:** It checks if the API Key and Console Hash have been changed
-    from their default values. If not, the action fails with an error message.
+    2. Validates that the API key and console hash are provided and not set to default
+    placeholder values.
 
-    3. **Manager Initialization:** It initializes the `ThinkstActionManager` which
-    sets up the HTTP session and base URL for the Canary API.
+    3. Initializes the `ThinkstActionManager` and makes a GET request to the `/ping`
+    endpoint of the Canary Console API.
 
-    4. **Connectivity Check:** The script calls the `/api/v1/ping` endpoint using
-    a GET request.
+    4. Evaluates the response and returns a successful execution state if the connection
+    is established, or a failure state if it cannot connect.
 
-    5. **Result Processing:** If the API returns a JSON response with a 'success'
-    result, the action completes successfully. Otherwise, it reports a connection
-    failure.
+
+    ### Additional Notes
+
+    This action is primarily used as a health check or test to validate the integration's
+    configuration settings. It does not interact with alerts or entities.
+  ai_short_description: >-
+    Verifies connectivity to the Thinkst Canary Console by testing the configured
+    API key and console hash against the `/ping` endpoint.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -137,12 +172,50 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the `/ping` endpoint to verify connectivity.
+      It does not fetch contextual data for alerts/entities, mutate external data,
+      mutate internal data, update entities, create insights, modify alert data, or
+      create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -156,3 +229,43 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or process any
+      entity-specific data. It solely relies on integration configuration parameters
+      to perform a connectivity check. Therefore, all entity type and filter flags
+      are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a simple GET request to a `/ping` endpoint to verify API
+      credentials and connectivity. It does not enrich IOCs or assets, mutate alerts,
+      interact with tickets, modify blocklists/allowlists, manage identities, contain
+      hosts, search events, or perform any other operations that match the available
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

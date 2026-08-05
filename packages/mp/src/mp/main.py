@@ -79,8 +79,8 @@ def main() -> None:
         if is_verbose:
             logger.exception("An unexpected error occurred.")
         else:
-            logger.error("An error occurred: %s", e)  # noqa: TRY400
-            logger.error("Run with --verbose (-v) for a full stack trace.")  # noqa: TRY400
+            logger.error("An error occurred: %s", e)  # ruff:ignore[error-instead-of-exception]
+            logger.error("Run with --verbose (-v) for a full stack trace.")  # ruff:ignore[error-instead-of-exception]
 
         sys.exit(1)
 

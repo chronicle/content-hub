@@ -36,7 +36,6 @@ jobs:
         uses: dorny/paths-filter@v3
         id: filter
         with:
-          list-files: csv
           # language=yaml
           filters: |
             mp:
@@ -55,7 +54,8 @@ jobs:
           FILTER_MP: ${{ steps.filter.outputs.mp }}
           FILTER_PACKAGES: ${{ steps.filter.outputs.integration_packages }}
           FILTER_GOOGLE: ${{ steps.filter.outputs.response_integrations_google }}
-          FILTER_GOOGLE_FILES: ${{ steps.filter.outputs.response_integrations_google_files }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         # language=bash
         run: |
           # If shared packages or mp changed, test everything
@@ -68,12 +68,21 @@ jobs:
 
           echo "test_all=false" >> $GITHUB_OUTPUT
 
+          # Get changed files directly from git to avoid environment variable limits
+          if [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || [[ -z "$BASE_SHA" ]]; then
+            # New branch or push without base, compare against parent
+            git diff --name-only --diff-filter=d HEAD~1 HEAD > changed_files.txt
+          else
+            # Use three-dot diff for PRs to get changes relative to the merge base
+            # For pushes, it works as a standard two-dot diff if the range is valid
+            git diff --name-only --diff-filter=d "$BASE_SHA...$HEAD_SHA" > changed_files.txt || \
+            git diff --name-only --diff-filter=d "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
+          fi
+
           INTEGRATIONS=""
           # Extract unique integration names from changed file paths (Google)
           if [[ "$FILTER_GOOGLE" == "true" ]]; then
-            GOOGLE_INTS=$(echo "$FILTER_GOOGLE_FILES" | tr ',' '\n' | \
-              sed 's/"//g' | \
-              grep "^content/response_integrations/google/" | \
+            GOOGLE_INTS=$(grep "^content/response_integrations/google/" changed_files.txt | \
               sed 's|content/response_integrations/google/||' | \
               cut -d'/' -f1 | \
               sort -u | \

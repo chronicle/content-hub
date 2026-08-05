@@ -14,31 +14,22 @@
 
 👋 Hello and welcome!
 
-This repository is the central hub for a wide array of community-contributed content intended to
-enhance the Google SecOps platform.
+This repository is the central hub for a wide array of community-contributed content intended to enhance the Google SecOps platform.
 
 ## How it Works
 
 The Content Hub operates on a principle of collaborative development. Integrations and playbooks are developed here, verified, and then published to the Google SecOps Content-Hub.
 
-
-From normalizing and transforming telemetry for ingestion, to
-connecting Google SecOps with other security tools, to exploring practical use-cases and leveraging
-powerful development packages -- anything needed to enhance the Google Security Operations
-experience lives here.
+From normalizing and transforming telemetry for ingestion, to connecting Google SecOps with other security tools, to exploring practical use-cases and leveraging powerful development packages -- anything needed to enhance the Google Security Operations experience lives here.
 
 ## **Getting Started: Your First Contribution**
 
-Looking to build? We've designed a straightforward path to get you from setup to a finished
-integration. Follow the steps below.
+Looking to build? We've designed a straightforward path to get you from setup to a finished integration. Follow the steps below.
 
-1. [**Set Up Your Environment**](/docs/getting_started/setup_your_environment.md)—Install the
-   necessary
-   tools and configure the local environment for your development.
+1. [**Set Up Your Environment**](/docs/getting_started/setup_your_environment.md)—Install the necessary tools and configure the local environment for your development.
 2. [**Understand the Core Concepts**](/docs/getting_started/core_concepts.md)
    —Learn about the different content types you can build.
-3. [**Contribute to the Project**](/docs/contributing.md)—Understand the requirements for
-   contributing to our repository.
+3. [**Contribute to the Project**](/docs/contributing.md)—Understand the requirements for contributing to our repository.
 4. [**Code of Conduct**](/docs/code_of_conduct.md)—Learn about the repository's code of conduct.
 5. [**Navigation**](/docs/navigation.md)—Understand the structure of the repository in high level.
 
@@ -49,9 +40,16 @@ For more detailed information, use the following guides as a reference while you
 * **Deep Dive**
     * [Response Integration Structure](/docs/content_deep_dive/response_integrations/response_integration_structure.md)
     * [Playbook Structure](/docs/content_deep_dive/playbooks/playbook_structure.md)
+    * [Parser Structure](/docs/content_deep_dive/parsers/parser_structure.md)
 * **Tooling and TIPCommon Library**
     * [CLI Tool (mp)](docs/tools_and_sdk/mp.md)
     * [Parser Validation Script](tools/parsers/docs/README.md)
     * [Google SecOps SOAR SDK Reference](/docs/tools_and_sdk/soar_sdk.md)
     * [TIPCommon Reference](/docs/tools_and_sdk/tipcommon_and_envcommon.md)
     * [GitHub Actions](/docs/github_actions.md)
+
+### **Google Cloud Security Integration Ecosystem Program**
+
+This program is designed specifically for technology vendors and developers looking to join our global security ecosystem. By partnering with us, you can accelerate your time-to-market with a **NFR development license**, seamlessly validate your integrations and showcase your solution directly in the **Google SecOps Content Hub**.
+
+**Get started today:** Please **[submit your request using this form](https://docs.google.com/forms/d/e/1FAIpQLSf7LYpIPhzFAYLo2NPpl5NUBX6h2zG4rDlLjWjm2Ic_U2FhZg/viewform)**. Once reviewed and approved, you will connect directly with our Google Cloud Security Tech Partners team to secure your development environment and gain official access to our dedicated support ecosystem.

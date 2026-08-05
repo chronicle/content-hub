@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.ToolsCommon import ExecutionScope
+from ..core.ToolsCommon import ExecutionScope, get_case_alerts
 
 if TYPE_CHECKING:
     from typing import Any
@@ -48,7 +48,7 @@ def main():
 
     else:
         combined_results: list = []
-        case_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        case_alerts = get_case_alerts(siemplify)
         for alert in case_alerts:
             try:
                 if alert.entities:

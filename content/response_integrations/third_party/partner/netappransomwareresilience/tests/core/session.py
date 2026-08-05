@@ -25,7 +25,9 @@ class RRSSession(MockSession[MockRequest, MockResponse, RansomwareResilience]):
             self.check_job_status_endpoint,
             self.take_snapshot_endpoint,
             self.volume_offline_endpoint,
+            self.volume_online_endpoint,
             self.block_user_endpoint,
+            self.unblock_user_endpoint,
         ]
 
     @router.post(r"/oauth/token")
@@ -82,6 +84,15 @@ class RRSSession(MockSession[MockRequest, MockResponse, RansomwareResilience]):
             return MockResponse(content=body, status_code=status_code)
         return MockResponse(content=self._product.get_volume_offline(), status_code=200)
 
+    @router.post(r".*/storage/take-volume-online")
+    def volume_online_endpoint(self, request: MockRequest) -> MockResponse:
+        """Handle volume online requests."""
+        status_code = self._product.volume_online_status_code
+        if status_code and status_code >= 400:
+            body = self._product.volume_online_response or {"error": "request_failed"}
+            return MockResponse(content=body, status_code=status_code)
+        return MockResponse(content=self._product.get_volume_online(), status_code=200)
+
     @router.post(r".*/users/block-user")
     def block_user_endpoint(self, request: MockRequest) -> MockResponse:
         """Handle block user requests."""
@@ -90,3 +101,12 @@ class RRSSession(MockSession[MockRequest, MockResponse, RansomwareResilience]):
             body = self._product.block_user_response or {"error": "request_failed"}
             return MockResponse(content=body, status_code=status_code)
         return MockResponse(content=self._product.get_block_user(), status_code=200)
+
+    @router.post(r".*/users/unblock-user")
+    def unblock_user_endpoint(self, request: MockRequest) -> MockResponse:
+        """Handle unblock user requests."""
+        status_code = self._product.unblock_user_status_code
+        if status_code and status_code >= 400:
+            body = self._product.unblock_user_response or {"error": "request_failed"}
+            return MockResponse(content=body, status_code=status_code)
+        return MockResponse(content=self._product.get_unblock_user(), status_code=200)

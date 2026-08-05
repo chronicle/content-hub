@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from mp.core.data_models.playbooks.overview.metadata import Overview
+from mp.core.data_models.common.overview.metadata import Overview
 from mp.core.exceptions import NonFatalValidationError
 
 if TYPE_CHECKING:

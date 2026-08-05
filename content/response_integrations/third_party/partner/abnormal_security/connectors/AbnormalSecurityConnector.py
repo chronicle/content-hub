@@ -63,6 +63,7 @@ def _last_run_to_iso(last_run_ms: int) -> str:
 
 def _validate_timestamp(timestamp_ms: int, max_days_backwards: int) -> int:
     from datetime import timedelta
+
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=max_days_backwards)
     cutoff_ms = convert_datetime_to_unix_time(cutoff)
     return max(timestamp_ms, cutoff_ms)
@@ -92,11 +93,15 @@ def _write_ids(ids_file_path: str, ids: dict, logger) -> None:
 
 def _build_threat_case_info(threat: dict, environment: str) -> CaseInfo:
     case_info = CaseInfo()
-    case_info.ticket_id = threat.get("threatId", "")
-    case_info.display_id = case_info.ticket_id
+    threat_id = threat.get("threatId", "")
+    case_info.ticket_id = threat_id
+    case_info.display_id = threat_id
+    case_info.source_grouping_identifier = threat_id
     attack_type = threat.get("attackType", "Unknown")
     subject = threat.get("subject", "")
-    case_info.name = f"[Threat] {attack_type}: {subject}" if subject else f"[Threat] {attack_type}"
+    # Title: [Threat: abc-123-uuid…] AttackType: subject
+    id_tag = f"Threat: {threat_id[:12]}…" if threat_id else "Threat"
+    case_info.name = f"[{id_tag}] {attack_type}: {subject}" if subject else f"[{id_tag}] {attack_type}"
     case_info.rule_generator = attack_type
     case_info.device_vendor = DEVICE_VENDOR
     case_info.device_product = DEVICE_PRODUCT_THREAT
@@ -104,29 +109,53 @@ def _build_threat_case_info(threat: dict, environment: str) -> CaseInfo:
     case_info.end_time = case_info.start_time
     case_info.priority = _to_priority(threat.get("confidence"))
     case_info.environment = environment
-    case_info.events = [dict_to_flat(threat)]
+
+    # Flat event preserves all the raw threat fields. SOAR's ontology mapping
+    # extracts entities (ThreatSignature, SourceUserName, EmailSubject, etc.)
+    # from these field names — see ontology_mapping.yaml.
+    event = dict_to_flat(threat)
+    # Make sure the canonical field names the ontology mapping looks for are
+    # present, even if the API returned snake_case or omitted them.
+    if threat.get("threatId"):
+        event.setdefault("threatId", threat["threatId"])
+    if threat.get("fromAddress") or threat.get("from_address"):
+        event.setdefault("fromAddress", threat.get("fromAddress") or threat.get("from_address"))
+    if threat.get("subject"):
+        event.setdefault("subject", threat["subject"])
+    if threat.get("senderIpAddress") or threat.get("sender_ip_address"):
+        event.setdefault(
+            "senderIpAddress",
+            threat.get("senderIpAddress") or threat.get("sender_ip_address"),
+        )
+    case_info.events = [event]
     return case_info
 
 
 def _build_case_case_info(case: dict, environment: str) -> CaseInfo:
     case_info = CaseInfo()
-    case_info.ticket_id = str(case.get("caseId", ""))
-    case_info.display_id = case_info.ticket_id
+    case_id = str(case.get("caseId", ""))
+    case_info.ticket_id = case_id
+    case_info.display_id = case_id
+    case_info.source_grouping_identifier = case_id
     description = case.get("description", "Abnormal Case")
-    case_info.name = f"[Case] {description}"
+    id_tag = f"Case: {case_id}" if case_id else "Case"
+    case_info.name = f"[{id_tag}] {description}"
     case_info.rule_generator = "Abnormal Case"
     case_info.device_vendor = DEVICE_VENDOR
     case_info.device_product = DEVICE_PRODUCT_CASE
-    time_field = (
-        case.get("firstObserved")
-        or case.get("customerVisibleTime")
-        or case.get("lastModifiedTime")
-    )
+    time_field = case.get("firstObserved") or case.get("customerVisibleTime") or case.get("lastModifiedTime")
     case_info.start_time = _unix_ms_from_iso(time_field)
     case_info.end_time = case_info.start_time
     case_info.priority = _to_priority(case.get("severity_level") or case.get("confidence"))
     case_info.environment = environment
-    case_info.events = [dict_to_flat(case)]
+
+    # Flat event with the canonical caseId field that ontology_mapping.yaml
+    # maps to the ThreatCampaign entity. When analysts run case-targeted
+    # actions, the entity's identifier (caseId) auto-fills as the Case ID.
+    event = dict_to_flat(case)
+    if case.get("caseId"):
+        event.setdefault("caseId", str(case["caseId"]))
+    case_info.events = [event]
     return case_info
 
 
@@ -145,22 +174,16 @@ def main(test_handler: bool = False) -> None:
     cases: list = []
 
     try:
-        api_url = connector_scope.extract_connector_param(
-            "API URL", is_mandatory=True, print_value=True
-        )
+        api_url = connector_scope.extract_connector_param("API URL", is_mandatory=True, print_value=True)
         api_key = connector_scope.extract_connector_param("API Key", is_mandatory=True)
-        verify_ssl = connector_scope.extract_connector_param(
-            "Verify SSL", input_type=bool, default_value=True
-        )
+        verify_ssl = connector_scope.extract_connector_param("Verify SSL", input_type=bool, default_value=True)
         max_days_backwards = connector_scope.extract_connector_param(
             "Max Days Backwards", input_type=int, default_value=DEFAULT_MAX_DAYS_BACKWARDS
         )
         max_alerts_per_cycle = connector_scope.extract_connector_param(
             "Max Alerts Per Cycle", input_type=int, default_value=DEFAULT_MAX_ALERTS_PER_CYCLE
         )
-        force_from_date = connector_scope.extract_connector_param(
-            "Force From Date", default_value="None"
-        )
+        force_from_date = connector_scope.extract_connector_param("Force From Date", default_value="None")
         environment = connector_scope.context.connector_info.environment or ""
 
         manager = AbnormalManager(api_url=api_url, api_key=api_key, verify_ssl=verify_ssl)
@@ -212,9 +235,7 @@ def main(test_handler: bool = False) -> None:
 
         for kind, alert in all_alerts:
             if len(cases) >= max_alerts_per_cycle:
-                connector_scope.LOGGER.info(
-                    f"Reached max alerts per cycle ({max_alerts_per_cycle})"
-                )
+                connector_scope.LOGGER.info(f"Reached max alerts per cycle ({max_alerts_per_cycle})")
                 break
 
             if kind == "threat":
@@ -223,9 +244,7 @@ def main(test_handler: bool = False) -> None:
             else:
                 alert_id = f"case_{alert.get('caseId', '')}"
                 time_field = (
-                    alert.get("firstObserved")
-                    or alert.get("customerVisibleTime")
-                    or alert.get("last_modified")
+                    alert.get("firstObserved") or alert.get("customerVisibleTime") or alert.get("lastModifiedTime")
                 )
 
             if not alert_id or alert_id in existing_ids:

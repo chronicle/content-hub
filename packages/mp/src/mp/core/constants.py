@@ -200,6 +200,11 @@ EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
     "lacework",
 }
 
+INTEGRATIONS_WITH_INTEGRATION_SUFFIX: set[str] = {
+    "http_integration",
+    "twilio_integration",
+}
+
 VALID_SSL_PARAM_NAMES: set[str] = {
     "Verify SSL",
     "Verify SSL Certificate",
@@ -250,3 +255,10 @@ PLAYBOOK_MUST_HAVE_KEYS: set[str] = {
     "WidgetTemplates",
     "Definition",
 }
+
+# ------------------ Views ------------------
+
+VIEWS_DIR_NAME: str = "views"
+VIEW_BASE_OUT_DIR_NAME: str = "Views"
+VIEW_OUT_DIR_NAME: str = "view_definitions"
+VIEW_FILE_NAME: str = f"view{YAML_SUFFIX}"

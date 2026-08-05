@@ -1,37 +1,34 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Add Tag:
   ai_description: >-
-    ### General Description Adds a tag to an endpoint in McAfee ePO. This action allows
-    security teams to label systems for organizational or policy-based purposes. Note
-    that the tag must already exist in the McAfee ePO system to be applied. ### Parameters
-    Description | Parameter | Type | Mandatory | Description | | :--- | :--- | :---
-    | :--- | | Tag Name | String | Yes | Specify the name of the tag that needs to
-    be added to the endpoints. | ### Flow Description 1. **Initialization**: Connects
-    to the McAfee ePO server using provided credentials and configuration. 2. **Entity
-    Filtering**: Identifies target entities that are either Hostnames or IP Addresses.
-    3. **System Verification**: Checks if each entity exists in the McAfee ePO database.
-    4. **Tag Application**: If a GroupName is configured, the action retrieves systems
-    within that group and applies the tag using the internal Host ID. If no GroupName
-    is configured, the action applies the tag directly using the Host Name (truncated
-    to 15 characters as per ePO requirements). 5. **Result Aggregation**: Collects
-    the status for each entity (Success, Already Tagged, or Failed) and provides a
-    summary message. ### Additional Notes - The action only supports applying tags
-    that have been pre-defined in the McAfee ePO environment. - Hostnames are truncated
-    to 15 characters during the lookup and application process to match McAfee ePO's
-    internal naming conventions.
+    ### General Description
+
+    Adds a specific tag to endpoint entities (Hostname, IP Address) in McAfee ePO.
+    This action allows analysts to categorize or mark endpoints directly within the
+    McAfee ePO console.
+
+
+    ### Flow Description
+
+    1. Establishes a connection to the McAfee ePO API.
+
+    2. Iterates over the target entities, filtering for Hostname and IP Address types.
+
+    3. Retrieves system information for each valid entity using the `system.find`
+    API endpoint to ensure the endpoint exists.
+
+    4. Applies the specified tag to the endpoint using the `system.applyTag` API endpoint.
+    If a group is configured, it applies the tag by host ID; otherwise, it applies
+    it by host name.
+
+    5. Compiles and returns a summary of successfully tagged, ignored (already tagged),
+    and failed endpoints.
+
+
+    ### Additional Notes
+
+    You can only apply tags that already exist in the McAfee ePO system.
+  ai_short_description: >-
+    Adds a specified tag to Hostname and IP Address endpoint entities in McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,15 +37,51 @@ Add Tag:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a specified tag to endpoints (Hostnames or IP Addresses) in McAfee ePO.
+      Applies a specified tag to an endpoint in McAfee ePO.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches system information from McAfee ePO to verify the endpoint
+      exists (fetches_data=true). It then makes an API request to apply a tag to the
+      endpoint in McAfee ePO (can_mutate_external_data=true). It does not mutate internal
+      SOAR data, update entities, create insights, or add case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -62,61 +95,83 @@ Add Tag:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets IP Address and Hostname entities
+      and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds a tag to an endpoint in McAfee ePO. This does not directly align
+      with any of the predefined outcome categories such as Contain Host, Enrich Asset,
+      or Update Alert.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Tag Name | String | Yes | Specify the name of the tag that needs to be added
+    to the endpoints. |
 Compare Server and Agent DAT:
   ai_description: >-
     ### General Description
 
-    The **Compare Server and Agent DAT** action retrieves and compares the Anti-Virus
-    DAT (Digital Asset Template) versions between the McAfee ePO server and the managed
-    agents on specific endpoints. This action is primarily used to verify that internal
-    endpoints are synchronized with the latest security definitions available on the
-    central management server.
-
-
-    ### Parameters
-
-    There are no action-specific parameters for this action. It utilizes the global
-    integration configuration for connectivity and authentication, including:
-
-    * **ServerAddress**: The URL of the McAfee ePO server.
-
-    * **Username/Password**: Credentials for API access.
-
-    * **GroupName**: (Optional) Filters systems within a specific ePO group.
-
-    * **Verify SSL**: Determines if the SSL certificate is validated.
+    This action retrieves and compares the server and agent DAT (antivirus signature)
+    versions for specified endpoints in McAfee ePO. It helps analysts determine if
+    an endpoint's antivirus definitions are up-to-date with the server.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action identifies target entities within the current
-    context, filtering for internal entities of type **IP Address** or **Hostname**.
+    1. Filters the target entities to include only internal IP Address and Hostname
+    entities.
 
-    2. **Manager Setup**: Establishes a connection to the McAfee ePO server using
-    the provided integration credentials.
+    2. Iterates over the suitable entities and queries the McAfee ePO API to retrieve
+    the agent DAT version for each endpoint.
 
-    3. **Master Data Retrieval**: Fetches the current master DAT version from the
-    McAfee ePO Master Repository.
+    3. Queries the McAfee ePO API to retrieve the current server DAT version.
 
-    4. **Endpoint Data Retrieval**: For each valid entity, the action queries the
-    ePO server to retrieve the DAT version currently installed on that specific agent.
+    4. Compares the agent DAT version with the server DAT version to determine if
+    they match.
 
-    5. **Comparison**: It compares the agent's DAT version against the server's master
-    version to determine if they are identical.
-
-    6. **Output**: Results are presented in an entity-specific table showing the server
-    version, agent version, and comparison status. A summary JSON is also provided
-    for downstream automation.
+    5. Attaches the comparison results to the case as an entity table and a JSON result.
 
 
     ### Additional Notes
 
-    * This action only processes entities that are marked as **Internal** in Google
-    SecOps.
+    - Supported entity types are IP Address and Hostname.
 
-    * If a **GroupName** is configured in the integration settings, the action will
-    attempt to verify that the system belongs to that group before retrieving its
-    DAT information.
+    - The action only processes entities that are marked as internal.
+  ai_short_description: >-
+    Retrieves and compares the server and agent DAT versions for specified endpoints
+    in McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -127,12 +182,49 @@ Compare Server and Agent DAT:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches DAT version information from McAfee ePO via API requests
+      (fetches_data=true). It does not perform any state-changing operations on external
+      systems (can_mutate_external_data=false). Internally, it adds tables and JSON
+      results but does not update entities, create insights, modify alert data, or
+      create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -146,64 +238,74 @@ Compare Server and Agent DAT:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.is_internal
+      and entity.entity_type in SUPPORTED_ENTITY_TYPES` (where SUPPORTED_ENTITY_TYPES
+      includes ADDRESS and HOSTNAME). Therefore, it targets Address and Hostname entities,
+      filtering by entity_type and is_internal.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches the agent and server DAT versions for specific endpoints
+      from McAfee ePO. This provides contextual metadata about the security posture
+      of the asset, which aligns with the 'Enrich Asset' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Execute Custom Query:
   ai_description: >-
     ### General Description
 
-    The **Execute Custom Query** action allows users to perform advanced data retrieval
-    from the McAfee ePO database by executing custom SQL-like queries. This is useful
-    for fetching specific endpoint data, event logs, or system properties that are
-    not covered by standard enrichment actions.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Table Name** | String | Yes | The name of the McAfee ePO table or view to
-    query (e.g., `EPOLeafNode`). |
-
-    | **Fields To Return** | String | No | A comma-separated list of fields to include
-    in the results. If empty, all fields are returned. |
-
-    | **Where Clause** | String | No | The filtering condition for the query using
-    ePO's query language syntax. |
-
-    | **Sort Field** | String | No | The field name used to order the results. |
-
-    | **Sort Order** | String | No | The direction of sorting: `ASC` (Ascending) or
-    `DESC` (Descending). |
-
-    | **Max Results To Return** | Integer | No | The maximum number of records to
-    retrieve. Defaults to 50. |
+    Executes a custom query against a specified table in McAfee ePO and returns the
+    results. This action allows users to fetch specific records from the McAfee ePO
+    database by defining the target table, fields to return, and filtering conditions.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the McAfee ePO server using provided credentials
-    and validates connectivity.
+    1. Extracts the table name, fields to return, where clause, sort field, sort order,
+    and limit from the action parameters.
 
-    2. **Query Construction**: Processes the input parameters to build a structured
-    query request for the `core.executeQuery` API endpoint.
+    2. Initiates a request to the McAfee ePO API (`core.executeQuery`) to execute
+    the custom database query with the provided parameters.
 
-    3. **Execution**: Sends the request to the ePO Remote API.
+    3. Parses the returned results and formats them into JSON and CSV structures.
 
-    4. **Data Processing**: Receives the raw JSON response and parses it into structured
-    data models.
-
-    5. **Output**: Populates the action's JSON result and creates a data table in
-    the SOAR case for visibility.
+    4. Attaches the formatted results to the action's JSON result and outputs a data
+    table containing the queried records.
 
 
     ### Additional Notes
 
-    - This action does not target specific entities in the case; it is a global query
-    tool.
-
-    - Users should refer to McAfee ePO documentation for valid table names and field
-    identifiers.
+    This action does not operate on entities. It relies entirely on the provided action
+    parameters to construct and execute the query.
+  ai_short_description: >-
+    Executes a custom query against a specified table in McAfee ePO and returns the
+    results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -214,10 +316,47 @@ Execute Custom Query:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action executes a custom query against the McAfee ePO database to fetch
+      data. It does not mutate external data, internal data, update entities, or create
+      insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -231,131 +370,155 @@ Execute Custom Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It relies solely on
+      the provided action parameters to execute the query.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a generic custom query against the McAfee ePO database.
+      It does not specifically target IOC enrichment, asset enrichment, or event searching
+      by default, nor does it perform any containment or ticketing operations. Therefore,
+      it does not match any specific outcome category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Table Name | String | Yes | Specify the name of the table from which you want
+    to fetch results. |
+
+    | Fields To Return | String | No | Specify what fields to return. If nothing is
+    specified action will return all available fields. |
+
+    | Where Clause | String | No | Specify the where clause for the query. For more
+    information please refer to the documentation portal. |
+
+    | Sort Field | String | No | Specify what field should be used for ordering of
+    the results. |
+
+    | Sort Order | String | No | Specify what sort order should be applied to the
+    query. |
+
+    | Max Results To Return | String | No | Specify how many results to return. Default:
+    50. |
 Execute Entity Query:
   ai_description: >-
     ### General Description
 
-    Executes a dynamic entity-based query in McAfee ePO to retrieve event or system
-    data. This action automatically constructs a complex SQL-like "Where" clause by
-    mapping entities in the current Google SecOps scope (IP, Hostname, User, File
-    Hash, URL) to specific columns in a target ePO table. It is highly configurable,
-    allowing users to define logical operators between entity types, specify time
-    ranges, and control the output fields and sorting.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Table Name | String | Yes | Specify the name of the ePO table from which you
-    want to fetch results (e.g., EPOEvents). |
-
-    | Fields To Return | String | No | Comma-separated list of fields to return. If
-    empty, all available fields are returned. |
-
-    | Sort Field | String | No | Specify the field to be used for ordering the results.
-    |
-
-    | Sort Order | Enum | No | Specify the sort order: `ASC` (default) or `DESC`.
-    |
-
-    | Time Frame | Enum | No | Predefined time frame for results: `Last Hour` (default),
-    `Last 6 Hours`, `Last 24 Hours`, `Last Week`, `Last Month`, or `Custom`. |
-
-    | Start Time | String | No | Start time for the results in ISO 8601 format. Mandatory
-    if "Time Frame" is set to `Custom`. |
-
-    | End Time | String | No | End time for the results in ISO 8601 format. Defaults
-    to current time if "Time Frame" is `Custom` and this is empty. |
-
-    | Max Results To Return | Integer | No | Maximum number of results to retrieve.
-    Default is 50. |
-
-    | IP Entity Key | String | No | The ePO column name to match against IP Address
-    entities. |
-
-    | Hostname Entity Key | String | No | The ePO column name to match against Hostname
-    entities. |
-
-    | File Hash Entity Key | String | No | The ePO column name to match against File
-    Hash entities. |
-
-    | User Entity Key | String | No | The ePO column name to match against User entities.
-    |
-
-    | URL Entity Key | String | No | The ePO column name to match against URL entities.
-    |
-
-    | Email Address Entity Key | String | No | The ePO column name to match against
-    User entities that follow an email format. |
-
-    | Stop If Not Enough Entities | Boolean | Yes | If enabled (default), the action
-    fails if any specified "Entity Key" has no corresponding entities in the scope.
-    |
-
-    | Cross Entity Operator | Enum | Yes | Logical operator used between different
-    entity types: `OR` (default) or `AND`. |
-
-
-    ### Additional Notes
-
-    - **Conditional Requirement:** If the "Time Frame" parameter is set to `Custom`,
-    the "Start Time" parameter becomes mandatory.
-
-    - **Entity Mapping:** The action distinguishes between standard User entities
-    and Email addresses (User entities matching an email regex) and allows mapping
-    them to different ePO keys.
-
-    - **Internal Mutation:** This action creates a data table named "Query Results"
-    within the Google SecOps case to display the retrieved data.
+    Executes a custom entity query in McAfee ePO based on the provided entities (IP,
+    Hostname, User, File Hash, URL). This action dynamically builds a query using
+    the specified table, time frame, and entity keys, and retrieves the matching records
+    from the McAfee ePO database.
 
 
     ### Flow Description
 
-    1. **Initialization:** Parses input parameters and establishes a connection to
-    the McAfee ePO server using the integration configuration.
+    1. Connects to the McAfee ePO instance using the provided credentials.
 
-    2. **Time Range Calculation:** Determines the query's time boundaries based on
-    the "Time Frame" or custom "Start/End Time" inputs.
+    2. Filters the target entities to include only supported types (ADDRESS, HOSTNAME,
+    USER, FILEHASH, URL).
 
-    3. **Entity Categorization:** Scans the current scope for supported entities (IP,
-    Hostname, User, File Hash, URL) and groups them by type.
+    3. Extracts the original identifiers from the filtered entities and groups them
+    by their respective types (including extracting valid emails from USER entities).
 
-    4. **Validation:** If "Stop If Not Enough Entities" is enabled, the action verifies
-    that at least one entity exists for every provided "Entity Key".
+    4. Validates if the required entity types are present based on the `Stop If Not
+    Enough Entities` parameter.
 
-    5. **Query Construction:** Dynamically builds a SQL-like "Where" clause using
-    the categorized entity values, the specified column keys, and the "Cross Entity
-    Operator".
+    5. Constructs a database query using the provided table name, fields to return,
+    sort parameters, time frame, and the grouped entity identifiers.
 
-    6. **Execution:** Sends the constructed query to the McAfee ePO `core.executeQuery`
-    API endpoint.
+    6. Executes the query via the McAfee ePO API (`core.executeQuery`).
 
-    7. **Output Generation:** Processes the API response to populate the action's
-    JSON result and generates a CSV-formatted data table named "Query Results".
+    7. Parses the returned events and adds them to the action's JSON result and a
+    data table.
+
+
+    ### Additional Notes
+
+    The action prepares the "Where" clause based on the entities and the specified
+    `Cross Entity Operator`. If `Stop If Not Enough Entities` is enabled, the action
+    will fail if any specified entity key lacks corresponding entities in the scope.
+  ai_short_description: >-
+    Executes a custom entity query in McAfee ePO based on the provided entities and
+    returns the matching records.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table named 'Query Results' to the case and populates the action's
-      JSON result with the retrieved event data from McAfee ePO.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by executing a query against the McAfee ePO database
+      (`core.executeQuery`). It does not mutate external data, update internal entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
-    - USERUNIQNAME
-    - FILEHASH
-    - DestinationURL
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -369,47 +532,187 @@ Execute Entity Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes ADDRESS,
+      HOSTNAME, USER, FILEHASH, and URL. Therefore, it targets these specific entity
+      types and filters by `entity_type`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a query in McAfee ePO to fetch records (events/logs) matching
+      the provided entities and search parameters. This aligns with the 'Search Events'
+      outcome category. It does not enrich the IOCs directly with reputation or threat
+      intelligence, nor does it mutate any external or internal state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Table Name | String | Yes | Specify the name of the table from which you want
+    to fetch results. |
+
+    | Fields To Return | String | No | Specify what fields to return. If nothing is
+    specified action will return all available fields. |
+
+    | Sort Field | String | No | Specify what field should be used for ordering of
+    the results. |
+
+    | Sort Order | Dropdown | No | Specify what sort order should be applied to the
+    query. |
+
+    | Time Frame | Dropdown | No | Specify a time frame for the results. If "Custom"
+    is selected, you also need to provide "Start Time". |
+
+    | Start Time | String | No | Specify the start time for the results. This parameter
+    is mandatory, if "Custom" is selected for the "Time Frame" parameter. Format:
+    ISO 8601 |
+
+    | End Time | String | No | Specify the end time for the results. Format: ISO 8601.
+    If nothing is provided and "Custom" is selected for the "Time Frame" parameter
+    then this parameter will use current time. |
+
+    | Max Results To Return | String | No | Specify how many results to return. Default:
+    50. |
+
+    | IP Entity Key | String | No | Specify what key should be used with IP entities.
+    Please refer to the action documentation for details. |
+
+    | Hostname Entity Key | String | No | Specify what key should be used with Hostname
+    entities. Please refer to the action documentation for details. |
+
+    | File Hash Entity Key | String | No | Specify what key should be used with File
+    Hash entities. Please refer to the action documentation for details. |
+
+    | User Entity Key | String | No | Specify what key should be used with User entities.
+    Please refer to the action documentation for details. |
+
+    | URL Entity Key | String | No | Specify what key should be used with URL entities.
+    Please refer to the action documentation for details. |
+
+    | Email Address Entity Key | String | No | Specify what key should be used with
+    Email Address (User entity with email regex) entities. Please refer to the action
+    documentation for details. |
+
+    | Stop If Not Enough Entities | Boolean | Yes | If enabled, action will not start
+    execution, unless all of the entity types are available for the specified "..
+    Entity Keys". Example: if "IP Entity Key" and "File Hash Entity Key" are specified,
+    but in the scope there are no file hashes then if this parameter is enabled, action
+    will not execute the query. |
+
+    | Cross Entity Operator | Dropdown | Yes | Specify what should be the logical
+    operator used between different entity types. |
 Execute Query By ID:
-  ai_description: "### General Description\nThe **Execute Query By ID** action allows\
-    \ users to run a pre-configured query within McAfee ePO by providing its unique\
-    \ Query ID. This action is designed to retrieve specific datasets\u2014such as\
-    \ event logs, system statuses, or threat reports\u2014that have already been defined\
-    \ in the McAfee ePO console. It is a versatile tool for fetching bulk data from\
-    \ the ePO database without needing to construct complex SQL queries manually.\n\
-    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| **Query ID** | String | Yes | The unique identifier\
-    \ of the query to be executed in McAfee ePO. |\n| **Max Results To Return** |\
-    \ Integer | No | Specifies the maximum number of result rows to retrieve. If not\
-    \ provided, it defaults to 50. |\n\n### Flow Description\n1. **Initialization**:\
-    \ The action extracts connection details (Server Address, Credentials, SSL settings)\
-    \ and action parameters (Query ID, Limit).\n2. **Connection**: It initializes\
-    \ the `McafeeEpoManager` and verifies connectivity to the ePO server.\n3. **Execution**:\
-    \ The action calls the `run_query_by_id` method, which triggers the `core.executeQuery`\
-    \ command on the McAfee ePO remote API using the provided Query ID.\n4. **Data\
-    \ Processing**: The results returned by ePO are parsed into a list of `QueryResult`\
-    \ objects.\n5. **Output**: \n    *   The raw results are added to the action's\
-    \ JSON output.\n    *   A Data Table named \"McAfee Query Results\" is created\
-    \ and attached to the case, containing the query results in a flattened format.\n\
-    \n### Additional Notes\n- This action does not operate on specific entities (like\
-    \ IPs or Hostnames) from the SecOps case; it executes a global query based on\
-    \ the ID provided.\n- If the query returns no results, the action will complete\
-    \ successfully with a message indicating that no data was found."
+  ai_description: >-
+    ### General Description
+
+    Executes a saved query in McAfee ePO using a specified Query ID and retrieves
+    the results. This action allows analysts to run predefined queries directly from
+    the SOAR platform and view the output as structured data.
+
+
+    ### Flow Description
+
+    1. Extracts the `Query ID` and `Max Results To Return` parameters from the action
+    configuration.
+
+    2. Initializes the McAfee ePO manager using the provided integration credentials.
+
+    3. Makes an API call to McAfee ePO (`core.executeQuery`) to execute the query
+    associated with the given ID.
+
+    4. Retrieves the query results, limiting the output to the specified maximum number
+    of results.
+
+    5. Formats the retrieved data and attaches it to the action's result as a JSON
+    object and a data table.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities. It relies entirely on the provided
+    Query ID, which must correspond to a valid, existing query configured within the
+    McAfee ePO environment.
+  ai_short_description: >-
+    Executes a saved query in McAfee ePO by its Query ID and returns the results as
+    JSON and a data table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action creates and adds a Data Table named 'McAfee Query Results' to the
-      Google SecOps case containing the results of the executed query.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by executing a query in McAfee ePO and retrieving the
+      results. It does not mutate external data, mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -423,70 +726,89 @@ Execute Query By ID:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It solely relies on the provided Query ID parameter to fetch data.
+      Therefore, all entity type and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a generic saved query by its ID in McAfee ePO. It does not
+      specifically enrich an IOC or asset, update alerts, manage tickets, modify blocklists/allowlists,
+      or perform containment/identity actions. While it retrieves data, it does not
+      strictly match the 'Search Events' category which implies searching historical
+      logs based on specific search parameters (like time or query strings) rather
+      than just triggering a pre-saved query by ID.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query ID | String | Yes | Specify the id of the query that needs to be executed.
+    |
+
+    | Max Results To Return | String | No | Specify how many results to return. Default:
+    50. |
 Get Agent Information:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed agent and system information for Hostname and IP entities from
-    McAfee ePO. This action is used to enrich endpoint entities with metadata such
-    as Agent Version, OS details, and network configuration directly from the ePO
-    management console.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | ServerAddress | String | Yes | The URL of the McAfee ePO server (e.g., https://epo-server:8443/remote).
-    |
-
-    | Username | String | Yes | The username used to authenticate with the McAfee
-    ePO server. |
-
-    | Password | String | Yes | The password used to authenticate with the McAfee
-    ePO server. |
-
-    | GroupName | String | No | If provided, the action will limit its search for
-    systems to this specific ePO group. |
-
-    | CA Certificate File | String | No | Base64 encoded string of the CA certificate
-    file used for SSL verification. |
-
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    of the ePO server. |
+    Retrieves information about endpoint agents from McAfee ePO. This action fetches
+    contextual metadata for Hostname and IP Address entities and enriches them within
+    the platform.
 
 
     ### Flow Description
 
-    1. **Authentication**: Establishes a connection to the McAfee ePO API using the
-    provided credentials and server address.
+    1. Initializes the McAfee ePO manager with the provided integration credentials.
 
-    2. **Group Context (Optional)**: If a `GroupName` is specified, the action fetches
-    all systems belonging to that group to optimize the search process.
+    2. Iterates over the target entities, filtering for supported types (Hostname
+    and IP Address).
 
-    3. **Entity Processing**: Iterates through all `HOSTNAME` and `ADDRESS` entities
-    provided in the context.
+    3. For each suitable entity, makes an API call to McAfee ePO (`manager.get_system_info`)
+    to retrieve system and agent information.
 
-    4. **Data Retrieval**: For each entity, the action queries the ePO server for
-    system information using the entity's identifier (IP or Hostname).
+    4. Extracts the agent information and updates the entity's additional properties
+    with the enrichment data.
 
-    5. **Enrichment**: If information is found, the action updates the entity's additional
-    properties with agent metadata and attaches a data table containing the system
-    details.
+    5. Marks the entity as enriched and adds the agent information to the action's
+    JSON result and entity table.
 
-    6. **Finalization**: Updates the entities within Google SecOps and provides a
-    comprehensive JSON result of the gathered information.
+    6. Updates the enriched entities in the SecOps platform.
 
 
     ### Additional Notes
 
-    - The action uses the `OriginalIdentifier` of the entity if available, otherwise
-    it uses the standard identifier.
-
-    - Hostnames are truncated to 15 characters when searching in certain ePO fields
-    to match NetBIOS naming conventions.
+    Supported entity types are Hostname and IP Address.
+  ai_short_description: >-
+    Retrieves information about endpoint agents from McAfee ePO for Hostname and IP
+    Address entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -497,14 +819,51 @@ Get Agent Information:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with agent information and adds data tables
-      to the entities.
-  categories:
-    enrichment: true
+      Updates the entity's additional properties with agent enrichment data and sets
+      is_enriched to True.
+    reasoning: >-
+      The action fetches data by making a GET request to McAfee ePO to retrieve system
+      information (`manager.get_system_info`). It does not mutate any external data.
+      It mutates internal data by updating the entity's additional properties and
+      setting `is_enriched` to True. It updates entities by calling `siemplify.update_entities`.
+      It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -518,50 +877,82 @@ Get Agent Information:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities
+      and filters by `entity_type`. It does not filter by identifier, creation time,
+      modification time, additional properties, case identifier, alert identifier,
+      is_internal, is_suspicious, is_artifact, is_vulnerable, is_enriched, or is_pivot.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches contextual metadata (agent information) for a host or IP
+      address from McAfee ePO and enriches the entity. This directly aligns with the
+      'Enrich Asset' expected outcome. It does not perform any threat intelligence
+      enrichment (Enrich IOC), state-changing operations on external systems (Contain
+      Host, Blocklist), or any other category outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Dat Version:
   ai_description: >-
     ### General Description
 
-    Retrieves the DAT (Virus Definition) version information for Hostname and IP Address
-    entities from McAfee ePO. This action allows security analysts to verify if endpoints
-    are running up-to-date virus definitions by querying the ePO database directly.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not have any action-specific parameters.
-    It relies on global integration configuration settings. |
-
-
-    ### Additional Notes
-
-    This action requires the McAfee ePO integration to be configured with valid server
-    credentials (Server Address, Username, Password). It specifically targets the
-    `EPOProdPropsView_VIRUSCAN` table in the ePO database to extract the `datver`
-    field.
+    Retrieves DAT (antivirus signature) version information from endpoints managed
+    by McAfee ePO. This action queries the McAfee ePO database to find the current
+    DAT version installed on the specified assets.
 
 
     ### Flow Description
 
-    1. **Authentication**: Establishes a connection to the McAfee ePO server using
-    the integration's global configuration parameters.
+    1. Filters the target entities to include only IP Addresses and Hostnames.
 
-    2. **Entity Filtering**: Identifies and filters the target entities in the current
-    context, selecting only those of type `ADDRESS` (IP) or `HOSTNAME`.
+    2. Initializes a connection to the McAfee ePO API.
 
-    3. **System Lookup**: For each valid entity, the action performs a lookup in the
-    McAfee ePO database to identify the corresponding system record.
+    3. For each suitable entity, retrieves the system information to identify the
+    endpoint's internal parent ID.
 
-    4. **DAT Version Retrieval**: Executes a query against the `EPOProdPropsView_VIRUSCAN`
-    table to retrieve the specific DAT version currently installed on the endpoint.
+    4. Executes a database query (`core.executeQuery`) against the McAfee ePO database
+    to fetch the DAT version associated with the endpoint.
 
-    5. **Result Aggregation**: Compiles the retrieved version data into a JSON result
-    and provides a summary message indicating the success or failure of the retrieval
-    for each entity.
+    5. Aggregates the retrieved DAT versions and attaches them to the action's JSON
+    result.
+
+
+    ### Additional Notes
+
+    - Supported entity types are Hostname and IP Address.
+
+    - The action relies on the original identifier of the entity to match against
+    McAfee ePO records.
+  ai_short_description: >-
+    Retrieves DAT version information for specified endpoints (IPs and Hostnames)
+    from McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -572,18 +963,54 @@ Get Dat Version:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches DAT version data from McAfee ePO using a GET/query request.
+      It does not perform any state-changing operations on the external system. Internally,
+      it only adds the retrieved data to the action's JSON result and does not update
+      entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -591,99 +1018,133 @@ Get Dat Version:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`. It then
+      extracts the original identifier using `get_entity_original_identifier(entity)`
+      to query McAfee ePO. Therefore, it targets Address and Hostname entities, filtering
+      by entity type and identifier.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves the DAT version (antivirus signature version) for a specific
+      endpoint (IP or Hostname). This provides contextual metadata about the security
+      posture of an internal resource, which aligns with the 'Enrich Asset' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Endpoint Events:
   ai_description: >-
     ### General Description
 
-
-    The **Get Endpoint Events** action retrieves historical endpoint events from the
-    McAfee ePO database for specific entities. It allows security analysts to gather
-    telemetry and threat event data (from the `EPOEvents` table) associated with Hostnames,
-    IP Addresses, or MAC Addresses within a specified time window. This action is
-    primarily used for forensic investigation and log retrieval during incident response.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Fields To Return** | String | No | A comma-separated list of specific fields
-    to retrieve from the events. If left empty, all available fields are returned.
-    |
-
-    | **Sort Field** | String | No | The field name used to order the results (e.g.,
-    `EPOEvents.ReceivedUTC`). |
-
-    | **Sort Order** | String | No | The direction of sorting: `ASC` (Ascending) or
-    `DESC` (Descending). Default is `ASC`. |
-
-    | **Time Frame** | String | No | Predefined time range for the query (e.g., `Last
-    Hour`, `Last 24 Hours`). If set to `Custom`, the **Start Time** must be provided.
-    |
-
-    | **Start Time** | String | No* | The beginning of the search window in ISO 8601
-    format. *Mandatory only if **Time Frame** is set to `Custom`.* |
-
-    | **End Time** | String | No | The end of the search window in ISO 8601 format.
-    Defaults to the current time if not provided for a `Custom` time frame. |
-
-    | **Max Events To Return** | Integer | No | The maximum number of events to retrieve
-    per entity. Default is 50. |
+    Retrieves endpoint events related to specific endpoints (Hostname, IP, or MAC
+    Address) from McAfee ePO. This action queries the McAfee ePO database for historical
+    events associated with the targeted entities and returns the data as entity-specific
+    tables and JSON results.
 
 
     ### Flow Description
 
+    1. Extracts action parameters including time frame, sort options, event limits,
+    and specific fields to return.
 
-    1. **Initialization**: The action parses the connection configuration (Server
-    Address, Credentials) and user-provided parameters.
+    2. Filters the target entities to include only Address, Hostname, and MAC Address
+    types.
 
-    2. **Time Range Calculation**: It determines the start and end timestamps based
-    on the selected **Time Frame** or the **Start/End Time** parameters.
+    3. Iterates over the filtered entities and makes an API call to McAfee ePO (`core.executeQuery`)
+    to fetch endpoint events for each entity based on the specified time frame and
+    limits.
 
-    3. **Entity Filtering**: It identifies supported entities (IP Address, Hostname,
-    MAC Address) from the current context.
-
-    4. **Query Execution**: For each entity, it constructs a SQL-like query targeting
-    the `EPOEvents` table in McAfee ePO, applying filters for the entity identifier
-    and the calculated time range.
-
-    5. **Data Processing**: Retrieved events are processed and formatted into CSV
-    and JSON structures.
-
-    6. **Output Generation**: The action attaches a data table to each entity containing
-    the event details and populates the global JSON result for downstream playbook
-    use.
+    4. Formats the retrieved events and attaches them to the case as entity-specific
+    tables and JSON results.
 
 
     ### Additional Notes
 
+    - Supports custom time frames. If 'Custom' is selected for the Time Frame parameter,
+    the 'Start Time' parameter becomes mandatory.
 
-    - If **Time Frame** is set to `Custom`, the **Start Time** parameter becomes mandatory.
-
-    - The action uses the `core.executeQuery` remote command in McAfee ePO to fetch
-    data.
+    - The action allows specifying exact fields to return to reduce payload size and
+    improve readability.
+  ai_short_description: >-
+    Retrieves endpoint events related to specific endpoints (Hostname, IP, or MAC
+    Address) from McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds data tables to entities within the Google SecOps case to display
-      the retrieved endpoint events.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches endpoint events from McAfee ePO via an API query. It does
+      not mutate any external data, nor does it mutate internal data such as updating
+      entities, creating insights, or adding case comments. It only attaches the fetched
+      data as JSON results and entity tables.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
-    - MacAddress
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: true
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -697,77 +1158,85 @@ Get Endpoint Events:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `get_entity_type(entity.entity_type)
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.ADDRESS`,
+      `EntityTypes.HOSTNAME`, and `EntityTypes.MACADDRESS`. Therefore, it filters
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries McAfee ePO for historical endpoint events associated with
+      specific entities (IP, Hostname, MAC Address) and returns them as tables and
+      JSON results. This directly aligns with the 'Search Events' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Fields To Return | String | No | Specify what fields to\
+    \ return. If nothing is specified action will return all available fields. |\n\
+    | Sort Field | String | No | Specify what field should be used for ordering of\
+    \ the results. |\n| Sort Order | Dropdown | No | Specify what sort order should\
+    \ be applied to the query. |\n| Time Frame | Dropdown | No | Specify a time frame\
+    \ for the events. If \u201CCustom\u201D is selected, you also need to provide\
+    \ \u201CStart Time\u201D. |\n| Start Time | String | No | Specify the start time\
+    \ for the events. This parameter is mandatory, if \u201CCustom\u201D is selected\
+    \ for the \u201CTime Frame\u201D parameter. Format: ISO 8601 |\n| End Time | String\
+    \ | No | Specify the end time for the events. Format: ISO 8601. If nothing is\
+    \ provided and \u201CCustom\u201D is selected for the \u201CTime Frame\u201D parameter\
+    \ then this parameter will use current time. |\n| Max Events To Return | String\
+    \ | No | Specify how many events to return. Default: 50. |"
 Get Events For Hash:
   ai_description: >-
-    Retrieves event information from McAfee ePO related to specific MD5 file hashes.
-    This action queries the McAfee ePO database to find security events associated
-    with file hash entities within a specified time frame. It can search across both
-    standard event tables and extended event tables for comprehensive coverage.
+    ### General Description
 
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Fetch Events From EPExtendedEvent Table | Boolean | Yes | If enabled, the action
-    will also query the `EPExtendedEvent` table for additional hash information. |
-
-    | Mark As Suspicious | Boolean | No | If enabled (default), entities with found
-    events will be marked as suspicious in Google SecOps. |
-
-    | Create Insight | Boolean | No | If enabled, creates a case insight for each
-    entity where events were found. |
-
-    | Fields To Return | String | No | A comma-separated list of specific fields to
-    include in the results. If empty, all fields are returned. |
-
-    | Sort Field | String | No | The database field used to sort the results. |
-
-    | Sort Order | Enum | No | The order of sorting: 'ASC' (default) or 'DESC'. |
-
-    | Time Frame | Enum | No | The time window for the search (e.g., 'Last Hour',
-    'Last 24 Hours', 'Custom'). |
-
-    | Start Time | String | No | Mandatory if 'Time Frame' is set to 'Custom'. Expected
-    format: ISO 8601 or Unix timestamp. |
-
-    | End Time | String | No | Used if 'Time Frame' is 'Custom'. Defaults to current
-    time if not provided. |
-
-    | Max Events To Return | Integer | No | Limits the number of events returned per
-    query (default: 50). |
-
-
-    ### Additional Notes
-
-    - Only **MD5** hashes are supported by this action due to the underlying McAfee
-    ePO database schema requirements for these specific queries.
-
-    - If 'Custom' is selected for 'Time Frame', the 'Start Time' parameter must be
-    provided.
+    Retrieves information about events related to MD5 hashes from McAfee ePO.
 
 
     ### Flow Description
 
-    1. **Initialization**: Validates connection parameters and initializes the McAfee
-    ePO manager.
+    1. Iterates over target entities and filters for FileHash entities.
 
-    2. **Entity Filtering**: Identifies `FILEHASH` entities from the input list.
+    2. Queries McAfee ePO for events associated with the MD5 hashes using the `get_events_by_hash_with_vse_query`
+    API method.
 
-    3. **Time Range Calculation**: Determines the start and end timestamps based on
-    the 'Time Frame' and 'Start/End Time' parameters.
+    3. Optionally queries the `EPExtendedEvent` table using the `get_events_by_hash_with_epe_query`
+    API method if configured.
 
-    4. **Data Retrieval**: Executes queries against the `EPOEvents` table, joining
-    with `VSECustomEvent` and optionally `EPExtendedEvent` based on the user configuration.
+    4. If events are found, optionally marks the entities as suspicious and creates
+    insights.
 
-    5. **Internal Mutation**: If events are found, the action optionally marks the
-    entities as suspicious and creates insights in the Google SecOps case.
+    5. Returns the events as JSON and CSV tables.
 
-    6. **Result Compilation**: Formats the retrieved event data into JSON and CSV
-    tables for the action output.
+
+    ### Additional Notes
+
+    Only MD5 hashes are supported.
+  ai_short_description: >-
+    Retrieves information about events related to MD5 hashes from McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -778,14 +1247,48 @@ Get Events For Hash:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action can update the 'is_suspicious' attribute of FILEHASH entities and
-      create entity insights within Google SecOps based on the findings from McAfee
-      ePO.
-  categories:
-    enrichment: true
+      Updates entities to mark them as suspicious and creates insights.
+    reasoning: >-
+      The action fetches event data from McAfee ePO. It does not mutate external data.
+      It can mutate internal data by updating entities (marking them as suspicious)
+      and creating insights.
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -799,66 +1302,95 @@ Get Events For Hash:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      is `[EntityTypes.FILEHASH]`. Therefore, it targets FileHash entities and filters
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries McAfee ePO for historical events related to specific MD5
+      hashes. This aligns with the 'Search Events' category. It does not mutate external
+      data or return reputation scores directly.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Fetch Events From EPExtendedEvent Table | Boolean | Yes\
+    \ | If enabled, action also will use \u201CEPExtendedEvent\u201C Table to find\
+    \ information about hashes. |\n| Mark As Suspicious | Boolean | No | If enabled,\
+    \ action will mark all of the hashes for which events were found as suspicious.\
+    \ |\n| Create Insight | Boolean | No | If enabled, action will create an insight\
+    \ containing information about which hashes have events associated with them.\
+    \ |\n| Fields To Return | String | No | Specify what fields to return. If nothing\
+    \ is specified action will return all available fields. |\n| Sort Field | String\
+    \ | No | Specify what field should be used for ordering of the results. |\n| Sort\
+    \ Order | DDL | No | Specify what sort order should be applied to the query. |\n\
+    | Time Frame | DDL | No | Specify a time frame for the events. If \u201CCustom\u201D\
+    \ is selected, you also need to provide \u201CStart Time\u201D. |\n| Start Time\
+    \ | String | No | Specify the start time for the events. This parameter is mandatory,\
+    \ if \u201CCustom\u201D is selected for the \u201CTime Frame\u201D parameter.\
+    \ Format: ISO 8601 |\n| End Time | String | No | Specify the end time for the\
+    \ events. Format: ISO 8601. If nothing is provided and \u201CCustom\u201D is selected\
+    \ for the \u201CTime Frame\u201D parameter then this parameter will use current\
+    \ time. |\n| Max Events To Return | String | No | Specify how many events to return\
+    \ per table that is queried. Default: 50. |"
 Get Host IPS Status:
   ai_description: >-
     ### General Description
 
-    Retrieves the Host Intrusion Prevention System (HIPS) status for Hostname and
-    IP Address entities from a McAfee ePO server. This action allows security analysts
-    to verify if the IPS protection is active on specific endpoints, providing critical
-    context during incident response or compliance audits. The results are presented
-    in a structured data table and as raw JSON for further automation.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | ServerAddress | String | Yes | The URL of the McAfee ePO server (e.g., https://hostname:8443/remote).
-    |
-
-    | Username | String | Yes | The username for authentication. |
-
-    | Password | String | Yes | The password for authentication. |
-
-    | GroupName | String | No | The name of the group in ePO to search within. If
-    provided, the action will only search for entities within this group. |
-
-    | CA Certificate File - parsed into Base64 String | String | No | The CA certificate
-    file content, encoded as a Base64 string, used for SSL verification. |
-
-    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate of the ePO
-    server. |
+    Retrieves Host Intrusion Prevention System (IPS) status information for specific
+    endpoints (IP addresses and Hostnames) from McAfee ePO.
 
 
     ### Flow Description
 
-    1. **Initialization**: Connects to the McAfee ePO server using the provided address,
-    credentials, and SSL configuration.
+    1. Initializes the connection to the McAfee ePO server using the provided integration
+    credentials.
 
-    2. **Entity Filtering**: Identifies target entities and filters them to include
-    only Hostname and IP Address types.
+    2. Iterates through the target entities, filtering for supported types (IP Address
+    and Hostname).
 
-    3. **Group Scoping**: If a `GroupName` is specified, the action retrieves all
-    systems belonging to that group from ePO to scope the search.
+    3. If a specific group name is configured in the integration, it fetches the systems
+    for that group and filters them to match the current entity.
 
-    4. **Status Retrieval**: For each entity, the action queries the ePO database
-    (specifically the `HIP8_Properties` table) to retrieve the current HIPS status.
+    4. Queries McAfee ePO for the Host IPS status of each valid entity by executing
+    a database query (`core.executeQuery`) against the `HIP8_Properties` table.
 
-    5. **Output Generation**: Aggregates the retrieved status information into a data
-    table named "Hosts IPS Statuses" and a raw JSON result object.
+    5. Aggregates the retrieved IPS statuses and attaches them to the case as a data
+    table and a JSON result.
 
 
     ### Additional Notes
 
-    - If the `GroupName` parameter is left empty, the action performs a global search
-    across all systems in the ePO environment.
-
-    - The action uses the `core_execute_query` API method to perform database-level
-    queries for status information.
+    Supported entity types are IP Address and Hostname.
+  ai_short_description: >-
+    Retrieves Host Intrusion Prevention System (IPS) status information for specific
+    endpoints (IP addresses and Hostnames) from McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -869,12 +1401,47 @@ Get Host IPS Status:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches data from McAfee ePO using a database query to retrieve IPS
+      status. It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -888,88 +1455,125 @@ Get Host IPS Status:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it filters
+      by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches the Host IPS status for specific endpoints (IPs and Hostnames)
+      from McAfee ePO. This aligns with the 'Enrich Asset' category as it retrieves
+      contextual security metadata for an internal resource.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Host Network IPS Status:
   ai_description: >-
-    Retrieves the Network Intrusion Prevention System (IPS) status for Hostname and
-    IP Address entities from a McAfee ePO server. This action queries the ePO database
-    to determine if the IPS protection is active on specific endpoints, providing
-    security analysts with critical visibility into the protection state of systems
-    during an investigation.
+    ### General Description
 
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | ServerAddress | String | Yes | The URL of the McAfee ePO server (e.g., https://hostname:8443/remote).
-    |
-
-    | Username | String | Yes | The username for the McAfee ePO account. |
-
-    | Password | String | Yes | The password for the McAfee ePO account. |
-
-    | GroupName | String | No | Optional group name to narrow the search scope within
-    ePO. |
-
-    | CA Certificate File | String | No | Base64 encoded CA certificate for SSL verification.
-    |
-
-    | Verify SSL | Boolean | Yes | If enabled, verifies the SSL certificate for the
-    connection. |
+    Retrieves Network IPS information from the endpoints in McAfee ePO.
 
 
     ### Flow Description
 
+    1. Initializes the McAfee ePO manager with the provided integration configuration.
 
-    1. **Initialization**: Connects to the McAfee ePO server using the provided credentials
-    and connection settings.
+    2. Filters the target entities to include only supported types (Hostname and IP
+    Address).
 
-    2. **Entity Filtering**: Filters the target entities in the case to identify supported
-    Hostname and Address (IP) entities.
+    3. Iterates over the suitable entities and queries McAfee ePO for the endpoint's
+    system information.
 
-    3. **Group Context (Optional)**: If a `GroupName` is provided, the action retrieves
-    the list of systems belonging to that specific group to ensure accurate matching.
+    4. Uses the retrieved system information to query the `HIP8_Properties` table
+    for the Network IPS status.
 
-    4. **Status Retrieval**: For each valid entity, the action queries the McAfee
-    ePO database (specifically the `HIP8_Properties` table) to fetch the current `HIPSStatus`
-    (Network IPS status).
+    5. Aggregates the results into a JSON object and a CSV table.
 
-    5. **Data Aggregation**: Compiles the retrieved status information into a JSON
-    result and a formatted data table named 'Hosts Network IPS Statuses'.
-
-    6. **Case Update**: Attaches the data table and JSON results to the Google SecOps
-    case for analyst review.
+    6. Returns the aggregated data and a summary message.
 
 
     ### Additional Notes
 
-
-    * This action is read-only and does not modify any settings or states within the
-    McAfee ePO environment.
-
-    * If an entity cannot be found in the ePO inventory, it will be reported as a
-    failed entity in the action output.
+    Supported entities: Hostname, IP Address.
+  ai_short_description: >-
+    Retrieves Network IPS information from the endpoints in McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table named 'Hosts Network IPS Statuses' to the case containing
-      the IPS status for each processed entity.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from McAfee ePO using a database query to retrieve Network
+      IPS status. It does not mutate external data, nor does it update internal entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -983,156 +1587,82 @@ Get Host Network IPS Status:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets
+      Address and Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches Network IPS status for specific endpoints (Hostname or IP
+      Address) from McAfee ePO. This aligns with the 'Enrich Asset' category as it
+      retrieves contextual metadata for a resource.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Last Communication Time:
   ai_description: >-
     ### General Description
 
-    Retrieves the last communication time for endpoints from McAfee ePO. This action
-    helps security analysts determine the last time a specific host or IP address
-    was seen active by the ePO server, which is crucial for identifying stale or disconnected
-    endpoints during an investigation.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | ServerAddress | String | Yes | The address of the McAfee ePO server (e.g., https://10.0.0.1:8443).
-    |
-
-    | Username | String | Yes | The username used to authenticate with the McAfee
-    ePO server. |
-
-    | Password | String | Yes | The password used to authenticate with the McAfee
-    ePO server. |
-
-    | GroupName | String | No | If provided, the action will only search for systems
-    within this specific ePO group. |
-
-    | CA Certificate File | String | No | Base64 encoded string of the CA certificate
-    file for SSL verification. |
-
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    of the ePO server. |
+    Retrieves the last communication time for endpoint entities (Hostname, IP Address)
+    from McAfee ePO. This action helps analysts understand when an endpoint last checked
+    in or communicated with the McAfee ePO management server.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieves connection details and optional group filtering
-    settings.
+    1. Initializes the McAfee ePO manager using the provided integration configuration
+    parameters.
 
-    2. **Connectivity & Group Setup**: Initializes the McAfee ePO manager and validates
-    the group if specified.
+    2. Filters the target entities to include only supported types (Hostname and IP
+    Address).
 
-    3. **Entity Filtering**: Identifies all ADDRESS and HOSTNAME entities in the current
-    context.
+    3. Iterates through the filtered entities and makes an API call to McAfee ePO
+    (`manager.get_last_comm_time`) to fetch the last communication time using the
+    entity's original identifier.
 
-    4. **Data Retrieval**: For each entity, it queries the ePO database to find the
-    system's unique ID and then fetches the LastUpdate timestamp from the EPOLeafNode
+    4. Aggregates the retrieved communication times into JSON results and a CSV data
     table.
 
-    5. **Output Generation**: Compiles the retrieved timestamps into a JSON result
-    and a data table named 'Last Communication Times'.
+    5. Returns a success message with the list of successfully processed endpoints,
+    or a failure message if no data was found.
 
 
     ### Additional Notes
 
-    The action supports both IP Address (ADDRESS) and Hostname entities. It uses the
-    original identifier of the entity if available.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds a data table named 'Last Communication Times' to the case and
-      populates the action's JSON results with the retrieved timestamps.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - HOSTNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get McAfee Epo Agent Version:
-  ai_description: >-
-    ### General Description
+    - Supported entity types are Hostname and IP Address.
 
-    Retrieves the McAfee agent version for Hostname and IP Address entities from a
-    McAfee ePO server. This action is used to verify the deployment status and versioning
-    of security agents across endpoints managed by McAfee ePO.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | ServerAddress | String | Yes | The URL of the McAfee ePO server (e.g., https://epo-server:8443/remote).
-    |
-
-    | Username | String | Yes | The username used to authenticate with the McAfee
-    ePO server. |
-
-    | Password | String | Yes | The password used to authenticate with the McAfee
-    ePO server. |
-
-    | GroupName | String | No | If provided, the action will first filter systems
-    belonging to this specific ePO group before searching for the entity. |
-
-    | CA Certificate File | String | No | A Base64 encoded string of the CA certificate
-    file used for SSL verification. |
-
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    of the McAfee ePO server. |
-
-
-    ### Additional Notes
-
-    - The action supports both IP Address (`ADDRESS`) and `HOSTNAME` entity types.
-
-    - If a `GroupName` is specified, the action performs an initial fetch of all systems
-    within that group to optimize the search process.
-
-
-    ### Flow Description
-
-    1. **Initialization**: Extracts configuration parameters and initializes the McAfee
-    ePO manager, establishing a connection to the remote API.
-
-    2. **Entity Filtering**: Identifies all `ADDRESS` and `HOSTNAME` entities within
-    the current Google SecOps scope.
-
-    3. **Group Context (Optional)**: If a `GroupName` is provided, the action retrieves
-    a list of all systems associated with that group in McAfee ePO.
-
-    4. **System Lookup**: For each entity, the action queries McAfee ePO for detailed
-    system information using the entity's identifier (IP or Hostname).
-
-    5. **Data Extraction**: If the system is found, the action extracts the `agent_version`
-    attribute from the system metadata.
-
-    6. **Result Aggregation**: Compiles the agent version information into a JSON
-    result and provides a summary message of successful and failed lookups.
+    - If a group name is configured in the integration, the action will first fetch
+    systems for that group and filter them locally before retrieving the communication
+    time.
+  ai_short_description: >-
+    Retrieves the last communication time for endpoint entities (Hostname, IP Address)
+    from McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1143,12 +1673,47 @@ Get McAfee Epo Agent Version:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches data from McAfee ePO (last communication time) via a database
+      query/API call. It does not mutate external data, update internal entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1162,52 +1727,258 @@ Get McAfee Epo Agent Version:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS
+      and HOSTNAME. It does not filter the entities by identifier, creation time,
+      or other properties.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches the last communication time for an endpoint (Hostname or
+      IP Address) from McAfee ePO. This aligns with the 'Enrich Asset' category as
+      it returns contextual metadata for a resource. It does not mutate external data,
+      update alerts, or perform containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get McAfee Epo Agent Version:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the McAfee ePO agent version for specified Hostname and IP Address entities.
+
+
+    ### Flow Description
+
+    1. Initializes the connection to the McAfee ePO server.
+
+    2. Filters the provided entities to include only Hostnames and IP Addresses.
+
+    3. Iterates through the filtered entities and queries McAfee ePO for system information
+    matching the entity's identifier.
+
+    4. Extracts the agent version from the retrieved system information.
+
+    5. Aggregates the agent versions and returns them as a JSON result.
+
+
+    ### Additional Notes
+
+    Supported entities: Hostname, IP.
+  ai_short_description: >-
+    Retrieves the McAfee ePO agent version for specified Hostname and IP Address entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to McAfee ePO to fetch system information and
+      extract the agent version. It does not mutate external data, nor does it update
+      internal entities, create insights, or add case comments. It only returns a
+      JSON result.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` contains `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities
+      and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches the agent version for a given endpoint (Hostname or IP) from
+      McAfee ePO. This aligns with the 'Enrich Asset' category as it returns contextual
+      metadata about a resource.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get System Information:
-  ai_description: "### General Description\nThis action retrieves comprehensive system\
-    \ information for Hostname and IP Address entities from McAfee ePO (ePolicy Orchestrator).\
-    \ It is designed to provide security analysts with deep visibility into endpoint\
-    \ characteristics, such as operating system details, hardware specifications,\
-    \ network configurations, and agent status, directly within the Google SecOps\
-    \ case.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| Create Insight | Boolean | No | If enabled\
-    \ (default is true), the action will generate a formatted insight in the case\
-    \ wall containing a summary of the retrieved endpoint information. |\n\n### Flow\
-    \ Description\n1. **Initialization**: The action initializes a connection to the\
-    \ McAfee ePO server using the provided credentials and configuration (Server Address,\
-    \ Username, Password, etc.).\n2. **Entity Filtering**: It identifies all Hostname\
-    \ and IP Address entities within the current alert context.\n3. **Data Retrieval**:\
-    \ \n    * If a `GroupName` is configured in the integration settings, the action\
-    \ first fetches systems within that specific group and then filters for the target\
-    \ entities.\n    * If no group is specified, it performs a direct search across\
-    \ the ePO environment using the entity's identifier.\n4. **Enrichment**: For each\
-    \ successfully found system, the action retrieves detailed properties (e.g., OS\
-    \ Type, CPU Speed, Total Memory, Last Update Time, MAC Address).\n5. **Internal\
-    \ Updates**: \n    * **Entity Enrichment**: Updates the entity's additional properties\
-    \ with the retrieved data (prefixed with `EPO_`).\n    * **Data Table**: Populates\
-    \ a data table named 'McAfee ePO: Endpoints' with a summary of the results.\n\
-    \    * **Insights**: If the 'Create Insight' parameter is true, it generates a\
-    \ case insight containing a formatted view of the system details.\n6. **Completion**:\
-    \ The action returns a success message listing the enriched entities or a failure\
-    \ message if no information was found."
+  ai_description: >-
+    ### General Description
+
+    Retrieves system information about endpoints from McAfee ePO. It supports Hostname
+    and IP Address entities, enriching them with contextual metadata such as OS details,
+    MAC addresses, and other system properties.
+
+
+    ### Flow Description
+
+    1. Filters the target entities to include only Hostname and IP Address entities.
+
+    2. Initializes the connection to the McAfee ePO API.
+
+    3. Iterates over the suitable entities and makes an API call to McAfee ePO to
+    fetch system information for each endpoint.
+
+    4. Enriches the entity's additional properties with the retrieved system information.
+
+    5. Optionally creates an insight containing the endpoint information, based on
+    the action parameters.
+
+    6. Updates the entities in the SecOps platform with the new enrichment data.
+
+
+    ### Additional Notes
+
+    If a group name is configured in the integration settings, the action will first
+    fetch systems by that group and then filter them locally to match the entities.
+  ai_short_description: >-
+    Retrieves system information about endpoints from McAfee ePO and enriches Hostname
+    and IP Address entities with the retrieved contextual data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action updates entity additional properties with enriched system information,
-      adds a data table to the case, and creates a case insight if the 'Create Insight'
-      parameter is enabled.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the McAfee ePO API to fetch system information.
+      It does not mutate external data. It updates internal entities with the fetched
+      data and creates insights if configured.
   entity_usage:
     entity_types:
-    - HOSTNAME
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1221,72 +1992,82 @@ Get System Information:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets ADDRESS and HOSTNAME entities,
+      filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches system information (such as OS version, MAC address, domain
+      name, etc.) for endpoints (IP, Hostname) from McAfee ePO. This directly aligns
+      with the 'Enrich Asset' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Create Insight | Boolean | No | If enabled, action will create an insight containing
+    information about the endpoint. |
 Get Virus Engine Agent Version:
   ai_description: >-
     ### General Description
 
-    Retrieves the Virus Engine agent version information for specific endpoints from
-    McAfee ePO. This action allows security analysts to verify the version of the
-    virus scan engine running on Hostname or IP Address entities to ensure compliance
-    and up-to-date protection.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | ServerAddress | String | Yes | The URL of the McAfee ePO server (e.g., https://hostname:8443/remote).
-    |
-
-    | Username | String | Yes | The username used to authenticate with the McAfee
-    ePO server. |
-
-    | Password | String | Yes | The password used to authenticate with the McAfee
-    ePO server. |
-
-    | GroupName | String | No | If provided, the action will only search for systems
-    within this specific McAfee ePO group. |
-
-    | CA Certificate File - parsed into Base64 String | String | No | Base64 encoded
-    CA certificate for SSL verification. |
-
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    of the ePO server. |
-
-
-    ### Additional Notes
-
-    - The action supports **ADDRESS** (IP) and **HOSTNAME** entity types.
-
-    - If a `GroupName` is specified, the action performs client-side filtering to
-    ensure the entity belongs to that group before querying the version.
-
-    - The version information is retrieved by querying the `EPOProdPropsView_VIRUSCAN`
-    table in the ePO database.
+    Retrieves the Virus Engine agent version information from endpoints in McAfee
+    ePO. This action queries the McAfee ePO database to find the installed Virus Scan
+    agent version for specified IP Address and Hostname entities.
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts configuration parameters including server details,
-    credentials, and SSL settings.
+    1. Initializes the McAfee ePO manager using the provided integration configurations.
 
-    2. **Entity Filtering**: Identifies all `ADDRESS` and `HOSTNAME` entities from
-    the target list.
+    2. Filters the target entities to include only IP Addresses and Hostnames.
 
-    3. **Manager Setup**: Establishes a connection to the McAfee ePO API and validates
-    connectivity.
+    3. If a group name is configured in the integration, fetches the systems data
+    for that specific group.
 
-    4. **Group Context (Optional)**: If a `GroupName` is provided, it retrieves the
-    list of systems belonging to that group.
+    4. Iterates over the suitable entities and makes an API call (via a database query
+    to `EPOProdPropsView_VIRUSCAN`) to McAfee ePO to retrieve the Virus Scan agent
+    version for each entity's original identifier.
 
-    5. **Version Retrieval**: For each suitable entity, the action:
-        - Resolves the entity to its internal ePO `parent_id` (LeafNodeID).
-        - Executes a database query against the `EPOProdPropsView_VIRUSCAN` table
-    to fetch the `productversion` field.
-    6. **Result Compilation**: Aggregates the version data into a JSON result and
-    provides a summary message of successful and failed retrievals.
+    5. Collects the retrieved version information and adds it to the action's JSON
+    result.
+
+
+    ### Additional Notes
+
+    Supported entities are Hostname and IP Address.
+  ai_short_description: >-
+    Retrieves the Virus Engine agent version information for specified endpoint entities
+    (IPs and Hostnames) from McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1297,12 +2078,47 @@ Get Virus Engine Agent Version:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request (via a database query) to McAfee ePO to fetch
+      the Virus Scan agent version for the specified entities. It does not mutate
+      external data, update internal entities, or create insights.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1316,46 +2132,68 @@ Get Virus Engine Agent Version:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS and HOSTNAME.
+      It does not filter by identifier, creation time, or other attributes.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches contextual metadata (specifically, the Virus Engine agent
+      version) for a resource (IP or Hostname) from McAfee ePO. This aligns with the
+      'Enrich Asset' expected outcome. It does not mutate data on external systems,
+      update alerts, or perform other actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 List Queries:
   ai_description: >-
-    Lists available queries from the McAfee ePO server. This action allows users to
-    discover and filter existing queries defined within the ePO environment, which
-    can then be used for further investigation or reporting. It retrieves metadata
-    such as query IDs, names, and descriptions.
+    ### General Description
 
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Filter Logic | String | No | Defines the matching strategy for the 'Filter Value'.
-    Options are 'Equal' (exact match) or 'Contains' (partial match). Defaults to 'Equal'.
-    |
-
-    | Filter Value | String | No | The string used to filter query names. If left
-    empty, all queries are returned up to the limit. |
-
-    | Max Results To Return | Integer | No | The maximum number of query records to
-    include in the output. Defaults to 50. |
+    Lists available queries in McAfee ePO based on specified filter criteria.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the McAfee ePO server using the provided credentials
-    and server address.
+    1. Initializes connection to McAfee ePO.
 
-    2. **Data Retrieval**: Fetches the complete list of available queries via the
-    `core.listQueries` API command.
+    2. Retrieves a list of available queries using the `core.listQueries` API endpoint.
 
-    3. **Filtering**: Processes the retrieved list locally in Python, applying the
-    selected 'Filter Logic' and 'Filter Value' against the query names.
+    3. Filters the retrieved queries based on the provided 'Filter Logic' and 'Filter
+    Value'.
 
-    4. **Limiting**: Truncates the result set to the specified 'Max Results To Return'.
+    4. Returns the filtered queries as a JSON result and a data table.
 
-    5. **Output**: Populates a data table named 'Available Queries' and provides the
-    raw JSON data for the filtered queries.
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Lists available queries in McAfee ePO based on specified filter criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1366,10 +2204,47 @@ List Queries:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data (a list of queries) from McAfee ePO via an API call.
+      It does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1383,133 +2258,81 @@ List Queries:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use or process any entities. It simply fetches a list of
+      queries from the McAfee ePO server based on the provided parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of available queries from McAfee ePO. This does
+      not match any of the predefined outcome categories such as enriching IOCs/assets,
+      updating alerts, or mutating external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Logic | Drop-down | No | Specify what filter logic should be applied.
+    |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    |
+
+    | Max Results To Return | String | No | Specify how many results to return. Default:
+    50. |
 List Tasks:
   ai_description: >-
-    The 'List Tasks' action retrieves a list of available client tasks from the McAfee
-    ePO server. It allows users to search for specific tasks using a filter string
-    and limit the number of results returned. The retrieved task information includes
-    details such as Product ID, Task Name, Type, and Object ID. This data is then
-    presented as a JSON result and a data table within the Google SecOps platform.
+    ### General Description
 
-
-    ### Flow Description:
-
-    1. **Parameter Extraction:** The action retrieves configuration details (Server
-    Address, Credentials, SSL settings) and action parameters (Filter Value, Max Tasks
-    To Return).
-
-    2. **Manager Initialization:** It initializes the McAfee ePO Manager to establish
-    a connection with the server.
-
-    3. **Data Retrieval:** The action calls the McAfee ePO API (`clienttask.find`)
-    to search for tasks matching the provided filter value.
-
-    4. **Result Processing:** If tasks are found, they are converted into JSON format
-    and a CSV-formatted data table.
-
-    5. **Output:** The action updates the case with the results and provides a success
-    message.
-
-
-    ### Parameters Description:
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Filter Value | String | No | A search string used to filter the tasks. If left
-    empty, all tasks (up to the limit) are returned. |
-
-    | Max Tasks To Return | Integer | No | The maximum number of task records to retrieve
-    from the server. Defaults to 50 if not specified. |
-
-
-    ### Additional Notes:
-
-    - This action does not operate on specific entities (like IPs or Hostnames) but
-    rather queries the global task list of the ePO environment.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds a data table and JSON results to the Google SecOps case containing
-      the list of retrieved tasks.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Ping:
-  ai_description: >-
-    Tests the connectivity between Google SecOps and the McAfee ePO server using the
-    provided configuration parameters. This action is primarily used to verify that
-    the integration can successfully authenticate and communicate with the ePO remote
-    API.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | ServerAddress | String | Yes | The root URL of the McAfee ePO server (e.g.,
-    `https://<epo-server-ip>:8443/remote`). |
-
-    | Username | String | Yes | The username used to authenticate with the ePO server.
-    |
-
-    | Password | String | Yes | The password used to authenticate with the ePO server.
-    |
-
-    | GroupName | String | No | An optional group name to verify access or existence
-    during the connection test. |
-
-    | CA Certificate File - parsed into Base64 String | String | No | A Base64 encoded
-    string of the CA certificate file used for SSL verification. |
-
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    of the ePO server. |
+    Lists available client tasks in McAfee ePO based on a search filter. This action
+    retrieves a list of tasks configured in the McAfee ePO environment, which can
+    be useful for identifying task IDs or names for subsequent actions.
 
 
     ### Flow Description
 
+    1. Extracts the action parameters: `Filter Value` and `Max Tasks To Return`.
 
-    1. **Parameter Extraction:** The action retrieves the connection details (URL,
-    credentials, SSL settings) from the integration configuration.
+    2. Initializes the McAfee ePO manager with the provided integration configuration.
 
-    2. **Manager Initialization:** It initializes the `McafeeEpoManager` which configures
-    the request session and handles SSL certificate parsing if a CA certificate is
-    provided.
+    3. Calls the McAfee ePO API (`clienttask.find`) to search for client tasks matching
+    the provided filter value up to the specified limit.
 
-    3. **Connectivity Test:** The manager executes a `test_connectivity` call, which
-    performs a GET request to the `core.help` endpoint of the McAfee ePO API.
+    4. Returns the retrieved tasks as JSON results and populates a data table with
+    the task details.
 
-    4. **Validation:** The action validates the HTTP response. If the server returns
-    a successful response (OK:), the connection is confirmed.
 
-    5. **Result Reporting:** The action returns a success status if the connection
-    is established, or a failure status with the specific error reason if the connection
-    fails.
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Lists available client tasks in McAfee ePO based on a search filter.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1520,10 +2343,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data (a list of tasks) from McAfee ePO using a GET request.
+      It does not mutate external data, internal data, update entities, create insights,
+      modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1537,43 +2397,210 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It simply queries
+      the McAfee ePO API for a list of tasks based on the provided action parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of tasks from McAfee ePO. It does not enrich specific
+      IOCs or assets, nor does it mutate any external or internal state. Therefore,
+      it does not match any of the specified outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Value | String | No | Specify what value should be used in the search.
+    |
+
+    | Max Tasks To Return | String | No | Specify how many tasks to return. Default:
+    50. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the McAfee ePO server to ensure the integration is configured
+    correctly.
+
+
+    ### Flow Description
+
+    1. Extracts the integration configuration parameters (e.g., Server Address, Username,
+    Password).
+
+    2. Initializes the McAfee ePO manager with the provided credentials and settings.
+
+    3. Makes an HTTP GET request to the `core.help` API endpoint to verify connectivity.
+
+    4. Returns a success message if the connection is established, or an error message
+    if the connection fails.
+
+
+    ### Additional Notes
+
+    This action does not interact with any entities or case data. It is solely used
+    for diagnostic purposes to validate the integration setup.
+  ai_short_description: >-
+    Tests connectivity to the McAfee ePO server to ensure the integration is configured
+    correctly.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only makes a GET request to a help endpoint to verify connectivity.
+      It does not fetch contextual data for alerts, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It only tests connectivity
+      to the external system.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Remove Tag:
   ai_description: >-
     ### General Description
 
-    Removes a specified tag from endpoint entities (Hostname or IP Address) in McAfee
-    ePO. This action is used to manage endpoint metadata and policy assignments by
-    detaching tags that may have been applied for containment, investigation, or categorization.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Tag Name | String | Yes | The name of the tag to be removed from the target
-    endpoints. |
+    Removes a specified tag from an endpoint in McAfee ePO. This action modifies the
+    external state of the endpoint within the McAfee ePO management console by clearing
+    a designated tag.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieves the tag name from the action parameters
-    and connection details from the integration configuration.
+    1. Extracts the provided 'Tag Name' parameter.
 
-    2. **Entity Filtering**: Identifies supported entities (Hostname and IP Address)
-    from the current context.
+    2. Filters the target entities to include only IP Addresses and Hostnames.
 
-    3. **Manager Initialization**: Establishes a connection to the McAfee ePO server.
+    3. Iterates through the suitable entities and fetches their system information
+    from McAfee ePO via an API call.
 
-    4. **System Verification**: For each entity, it verifies the system's existence
-    in ePO and retrieves its details.
+    4. Makes an API call to McAfee ePO to clear the specified tag from the endpoint,
+    using either the host ID (if a group is configured) or the hostname.
 
-    5. **Tag Removal**: Executes the `system.clearTag` command. If a group is specified
-    in the configuration, it uses the host ID; otherwise, it uses the hostname.
+    5. Aggregates the success, failure, and ignored results and outputs a summary
+    message.
 
-    6. **Result Reporting**: Aggregates the results, identifying which entities were
-    successfully updated, which failed, and which did not have the tag to begin with.
+
+    ### Additional Notes
+
+    The action requires the endpoint to exist in McAfee ePO to successfully remove
+    the tag.
+  ai_short_description: >-
+    Removes a specified tag from an endpoint in McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1582,16 +2609,50 @@ Remove Tag:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a tag from an endpoint in McAfee ePO using the 'system.clearTag' API
-      method.
-    fetches_data: true
+      Removes a specified tag from an endpoint in McAfee ePO.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action mutates external data by making an API call to McAfee ePO to clear
+      a tag from an endpoint. It does not fetch contextual data for enrichment, nor
+      does it mutate internal data, update entities, or create insights.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1605,53 +2666,83 @@ Remove Tag:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS
+      and HOSTNAME. Therefore, it filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes a tag from an endpoint in McAfee ePO. This is an endpoint
+      management operation that does not align with any of the specific expected outcomes
+      such as containing a host, enriching an asset, or updating an alert.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Tag Name | String | Yes | Specify the name of the tag that needs to be removed
+    from the endpoints. |
 Run Full Scan:
   ai_description: >-
     ### General Description
 
-    Triggers a full on-demand scan on specified endpoints (Hostname or IP) using McAfee
-    ePO. This action allows security teams to remotely initiate a thorough security
-    scan on managed systems to detect potential threats.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Task Name | String | Yes | The name of the McAfee ePO client task to be executed
-    for the scan. Default is "On-Demand Scan - Full Scan". |
-
-
-    ### Additional Notes
-
-    - The action requires the McAfee ePO integration to be configured with valid credentials
-    and server address.
-
-    - If a `GroupName` is provided in the integration configuration, the action will
-    attempt to locate the system within that group to execute the task by ID; otherwise,
-    it defaults to execution by system name.
+    Initiates a full scan on specified endpoint entities (IP addresses and hostnames)
+    using McAfee ePO. This action triggers a predefined client task on the target
+    systems to perform an on-demand virus scan.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieves integration settings (credentials, server
-    address, group name) and the specific task name to run.
+    1. Filters the target entities to include only IP Addresses and Hostnames.
 
-    2. **Manager Initialization**: Establishes a connection with the McAfee ePO server.
+    2. Retrieves the specified client task details from McAfee ePO using the provided
+    task name.
 
-    3. **Task Retrieval**: Fetches the metadata for the specified scan task from the
-    ePO server.
+    3. Iterates through the valid entities and retrieves their system information
+    from McAfee ePO to verify their existence and obtain necessary internal IDs.
 
-    4. **Entity Validation**: For each Hostname or IP entity, the action checks if
-    the system is known to the ePO server.
+    4. Triggers the full scan task on each endpoint via the McAfee ePO API (`clienttask.run`).
 
-    5. **Scan Initiation**: Triggers the scan task on the target endpoint using either
-    the system ID (if group-scoped) or the system name.
+    5. Collects the task execution status for each endpoint and returns the results
+    as a JSON object.
 
-    6. **Result Reporting**: Collects the execution status for each endpoint and provides
-    a summary in the action output and JSON results.
+
+    ### Additional Notes
+
+    The action requires the specified task name to be pre-configured and available
+    in McAfee ePO. If a group name is configured in the integration settings, the
+    action will attempt to run the scan by system ID within that group; otherwise,
+    it will run the scan by system name.
+  ai_short_description: >-
+    Initiates a full scan on specified endpoint entities (IP addresses and hostnames)
+    using McAfee ePO.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1660,16 +2751,51 @@ Run Full Scan:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates a full system scan task on the target endpoints via the McAfee ePO
-      server.
-    fetches_data: true
+      Triggers a full scan client task on the specified endpoints in McAfee ePO.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action mutates external data by triggering a task execution (full scan)
+      on the endpoints via the McAfee ePO API. It does not fetch data for enrichment
+      purposes, nor does it mutate internal SecOps data, update entities, or create
+      insights.
   entity_usage:
     entity_types:
-    - HOSTNAME
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1683,50 +2809,83 @@ Run Full Scan:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS
+      and HOSTNAME. Therefore, it filters by entity type and targets IP addresses
+      and hostnames.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action triggers a full scan task on endpoints via McAfee ePO. This does
+      not match any of the specific expected outcomes such as enriching an IOC/asset,
+      containing a host, or executing a command that returns STDOUT. Therefore, no
+      outcome categories apply.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Task Name | String | Yes | Specify what task should be executed in order to
+    get a full scan. |
 Update Mcafee Agent:
   ai_description: >-
     ### General Description
 
-    Triggers a McAfee Agent update task on specified endpoints (Hostname or IP) within
-    McAfee ePO. This action allows administrators to remotely initiate update tasks,
-    such as DAT updates, for Windows or Linux systems managed by the ePO server.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Task Name | String | Yes | The specific client task name to be executed in McAfee
-    ePO (e.g., 'DAT_Update_Windows_CWS' for Windows or 'DAT_Update_Linux_CWS' for
-    Linux). |
+    Updates the McAfee Agent on specified endpoints (Hostname, IP) in McAfee ePO by
+    executing a designated client task.
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves connection details (Server Address, Credentials)
-    and the specific task name from the action parameters.
+    1. Extracts the task name parameter.
 
-    2. **Task Validation**: Connects to the McAfee ePO manager and verifies that the
-    requested task exists on the server.
+    2. Initializes the McAfee ePO manager.
 
-    3. **System Discovery**: If a group name is provided in the configuration, the
-    action retrieves all systems within that group to ensure the target entities are
-    within scope.
+    3. Retrieves the specified task from McAfee ePO.
 
-    4. **Execution**: Iterates through the target entities (Hostnames and IP Addresses),
-    matches them against the ePO systems, and triggers the specified client task for
-    each matching endpoint.
+    4. Iterates over the supported target entities (Hostname, IP).
 
-    5. **Reporting**: Collects the execution status for each entity and returns a
-    JSON result indicating success or failure.
+    5. Executes the client task on each endpoint to update the agent via the McAfee
+    ePO API.
+
+    6. Collects the task execution status and adds it to the JSON result.
+
+    7. Returns a summary message indicating successful and failed updates.
 
 
     ### Additional Notes
 
-    The action uses the first 15 characters of the hostname for matching, as McAfee
-    ePO often truncates NetBIOS names.
+    None.
+  ai_short_description: >-
+    Updates the McAfee Agent on specified endpoints in McAfee ePO by executing a designated
+    client task.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1735,16 +2894,50 @@ Update Mcafee Agent:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers a client task (e.g., an agent update) on the target endpoints managed
-      by McAfee ePO.
-    fetches_data: true
+      Executes a client task on McAfee ePO to update the agent on the specified endpoints.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action executes a client task on McAfee ePO to update the agent on specified
+      endpoints, which mutates external data. It does not fetch contextual enrichment
+      data, mutate internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1758,3 +2951,45 @@ Update Mcafee Agent:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets
+      Address and Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a specific product task (updating the McAfee Agent) on endpoints
+      via McAfee ePO. This does not perfectly align with any of the standard outcome
+      categories such as 'Execute Command on the Host' (which expects STDOUT from
+      a generic script/command) or containment/enrichment categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Task Name | String | Yes | Specify what task should be\
+    \ executed in order to update the McAfee Agent. Default for Windows is DAT_Update_Windows_CWS.\
+    \ For Linux it\u2019s DAT_Update_Linux_CWS |"
