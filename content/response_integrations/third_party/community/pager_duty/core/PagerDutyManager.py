@@ -31,6 +31,18 @@ class PagerDutyManager:
         )
         response.raise_for_status()
 
+    def send_event(self, payload):
+        try:
+            response = self.requests_session.post(
+                "https://events.pagerduty.com/v2/enqueue",
+                timeout=10,
+                json=payload
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            return None
+    
     def acknowledge_incident(self, incident_id):
         """Acknowledges an incident in PagerDuty
         API Reference: https://developer.pagerduty.com/api-reference/8a0e1aa2ec666-update-an-incident
