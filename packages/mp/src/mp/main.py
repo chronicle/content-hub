@@ -38,6 +38,8 @@ from .check.typer_app import check_app
 from .config.typer_app import config_app
 from .core.logger.setup import setup_logging
 from .core.update_checker import UpdateChecker, get_mp_version, print_mp_version
+from .describe.regression_test import app as describe_regression_test_app
+from .describe.regression_test.accept_typer_app import app as describe_accept_app
 from .dev_env.typer_app import dev_env_app, login_app, pull_app, push_app
 from .format.typer_app import format_app
 from .pack.typer_app import pack_app
@@ -61,6 +63,9 @@ def main() -> None:
     app.add_typer(login_app)
     app.add_typer(validate_app, name="validate")
     app.add_typer(describe.app, name="describe")
+    app.add_typer(describe_regression_test_app, name="describe-regression-test")
+    app.add_typer(describe_accept_app, name="describe-accept")
+    app.add_typer(describe_accept_app, name="accept")
     app.add_typer(pack_app, name="pack")
     app.add_typer(self_app, name="self")
     app.add_typer(dev_env_app, name="dev-env")
