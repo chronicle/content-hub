@@ -116,3 +116,8 @@ CLOSE_VERDICT_TO_WIZ_REASON: Mapping[int, str] = {
     1: WIZ_REASON_MALICIOUS_THREAT,
     2: WIZ_REASON_FALSE_POSITIVE,
 }
+
+SYNC_COMMENT_PREFIX: str = "[SecOps & Wiz Sync Job]"
+WROTE_IN_SECOPS_SIGNATURE: str = " wrote in Google SecOps on "
+WROTE_IN_WIZ_SIGNATURE: str = " wrote in Wiz on "
+NOT_FOUND_INDEX: int = -1

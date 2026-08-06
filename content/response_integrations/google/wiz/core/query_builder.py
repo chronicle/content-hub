@@ -61,7 +61,16 @@ class IssueQueryBuilder:
             ),
             Field(name="projects", fields=["id", "name"]),
             Field(name="sourceRules", fields=["id", "name", "description"]),
-            Field(name="notes", fields=["id", "text", "createdAt"]),
+            Field(
+                name="notes",
+                fields=[
+                    "id",
+                    "text",
+                    "createdAt",
+                    Field(name="user", fields=["email", "name"]),
+                    Field(name="serviceAccount", fields=["email", "name"]),
+                ],
+            ),
         ]
 
     def build_query(self) -> SingleJson:
@@ -407,4 +416,84 @@ class ThreatAIAnalysisQueryBuilder:
         return {
             "query": operation.render(),
             "variables": {self.variable_name: self.issue_id},
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class IssuesQueryBuilder:
+    variable_name: str = "filterBy"
+    variable_type: str = "IssueFilters"
+    operation_name: str = "GetLatestUpdatedThreats"
+    query_name: str = "issuesV2"
+
+    def build_query(
+        self,
+        statuses: list[str],
+        status_changed_after: str | None = None,
+        first: int = 250,
+    ) -> SingleJson:
+        """Build the GraphQL query and variables payload for multiple issues.
+
+        Args:
+            statuses (list[str]): The list of issue statuses to filter.
+            status_changed_after (str | None): Optional date to filter by statusChangedAt.
+            first (int): The number of items to return.
+
+        Returns:
+            SingleJson: The query payload dict.
+
+        """
+        filter_var = Variable(name=self.variable_name, type=self.variable_type)
+        first_var = Variable(name="first", type="Int")
+
+        query = Query(
+            name=self.query_name,
+            arguments=[
+                Argument(name=self.variable_name, value=filter_var),
+                Argument(name="first", value=first_var),
+            ],
+            fields=[
+                Field(
+                    name="nodes",
+                    fields=[
+                        "id",
+                        "status",
+                        "updatedAt",
+                        "severity",
+                        Field(
+                            name="notes",
+                            fields=[
+                                "id",
+                                "text",
+                                "createdAt",
+                                Field(name="user", fields=["email", "name"]),
+                                Field(name="serviceAccount", fields=["email", "name"]),
+                            ],
+                        ),
+                    ],
+                )
+            ],
+        )
+
+        operation = Operation(
+            type="query",
+            name=self.operation_name,
+            variables=[filter_var, first_var],
+            queries=[query],
+        )
+
+        filter_payload: dict[str, any] = {
+            "type": ["THREAT_DETECTION"],
+            "status": statuses,
+        }
+
+        if status_changed_after:
+            filter_payload["statusChangedAt"] = {"after": status_changed_after}
+
+        return {
+            "query": operation.render(),
+            "variables": {
+                self.variable_name: filter_payload,
+                "first": first,
+            },
         }
