@@ -84,9 +84,7 @@ def _load_yaml_file_data(
             params_desc = str(action_data.get("parameters_description") or "")
             capabilities_str = json.dumps(action_data.get("capabilities") or {})
             entity_usage_str = json.dumps(action_data.get("entity_usage") or {})
-            outcome_str = json.dumps(
-                action_data.get("outcome_categories") or action_data.get("categories") or {}
-            )
+            outcome_str = json.dumps(action_data.get("outcome_categories") or action_data.get("categories") or {})
 
             actions_dict[action_name] = {
                 "ai_description": ai_desc,
@@ -154,8 +152,7 @@ def load_integration_artifacts(
             continue
         suffix = file_path.suffix.lower()
         if suffix in {".yaml", ".json", ".actiondef", ".action_def"} and not any(
-            p.lower() in {"actions", "actionsdefinitions", "actions_definitions"}
-            for p in parts
+            p.lower() in {"actions", "actionsdefinitions", "actions_definitions"} for p in parts
         ):
             continue
         logger.info("  📄 Loaded source/actiondef file: %s", rel_path)
@@ -208,19 +205,10 @@ def normalize_action_name(raw_name: str) -> str:
     for ext in (".py", ".yaml", ".yml", ".json", ".actiondef", ".action_def"):
         if name.lower().endswith(ext):
             name = name[: -len(ext)]
-    return (
-        name.lower()
-        .replace(" ", "")
-        .replace("_", "")
-        .replace(":", "")
-        .replace("-", "")
-        .rstrip("s")
-    )
+    return name.lower().replace(" ", "").replace("_", "").replace(":", "").replace("-", "").rstrip("s")
 
 
-def get_code_for_action(
-    action_name: str, python_files: dict[str, str]
-) -> tuple[str, list[str], list[str]]:
+def get_code_for_action(action_name: str, python_files: dict[str, str]) -> tuple[str, list[str], list[str]]:
     """Select Python source code and definition files relevant to a specific action.
 
     Args:
@@ -263,9 +251,7 @@ def get_code_for_action(
         action_files.sort()
         shared_files.sort()
         used_files = action_files + shared_files
-        combined_code = "\n\n".join(
-            f"# File: {f}\n{python_files[f]}" for f in used_files
-        )
+        combined_code = "\n\n".join(f"# File: {f}\n{python_files[f]}" for f in used_files)
         return combined_code, action_files, shared_files
 
     all_files = sorted(python_files.keys())
@@ -375,9 +361,7 @@ class EvaluationEngine:
         return True, ""
 
     @staticmethod
-    def _validate_field_for_rule(
-        target_field: str, fields: dict[str, str]
-    ) -> tuple[bool, str]:
+    def _validate_field_for_rule(target_field: str, fields: dict[str, str]) -> tuple[bool, str]:
         """Validate that a target YAML field is present and structurally valid before running its rule evaluation.
 
         Args:
@@ -443,9 +427,7 @@ class EvaluationEngine:
                 "ai_short_description key is missing or empty in YAML.",
                 "Define ai_short_description as a direct single-paragraph summary without bulleted lists or tables.",
             )
-        has_lists = any(
-            line.strip().startswith(("-", "*", "1.")) for line in target_val.splitlines()
-        )
+        has_lists = any(line.strip().startswith(("-", "*", "1.")) for line in target_val.splitlines())
         if has_lists or "|" in target_val or "\n\n" in target_val:
             return (
                 VerdictEnum.FAIL,
@@ -462,9 +444,7 @@ class EvaluationEngine:
         )
 
     @staticmethod
-    def _heuristic_eval_params_desc(
-        title_lower: str, val_lower: str
-    ) -> tuple[VerdictEnum, str, str | None]:
+    def _heuristic_eval_params_desc(title_lower: str, val_lower: str) -> tuple[VerdictEnum, str, str | None]:
         """Heuristically evaluate parameters_description field structure.
 
         Args:
@@ -485,10 +465,7 @@ class EvaluationEngine:
                         "table or fallback text."
                     ),
                 )
-            if (
-                "| parameter | type | mandatory | description |" in val_lower
-                or "there are no parameters" in val_lower
-            ):
+            if "| parameter | type | mandatory | description |" in val_lower or "there are no parameters" in val_lower:
                 return (
                     VerdictEnum.PASS,
                     (
@@ -660,9 +637,7 @@ class EvaluationEngine:
             disk_code_map, disk_actions, loaded_paths = load_integration_artifacts(
                 integration_id, src=src, config_yaml=config_yaml
             )
-            python_files = (
-                {"all_files.py": python_code} if python_code else disk_code_map
-            )
+            python_files = {"all_files.py": python_code} if python_code else disk_code_map
             if extracted_fields:
                 actions_dict: dict[str, dict[str, str]] = {"all_actions": extracted_fields}
             elif disk_actions:
@@ -678,12 +653,7 @@ class EvaluationEngine:
         if action:
             norm_target = normalize_action_name(action)
             matched_key = next(
-                (
-                    k
-                    for k in actions_dict
-                    if normalize_action_name(k) == norm_target
-                    or k.lower() == action.lower()
-                ),
+                (k for k in actions_dict if normalize_action_name(k) == norm_target or k.lower() == action.lower()),
                 None,
             )
             if matched_key:
@@ -729,9 +699,7 @@ class EvaluationEngine:
                 "integration_categories",
             }:
                 continue
-            action_code, action_files, shared_files = get_code_for_action(
-                action_name, python_files
-            )
+            action_code, action_files, shared_files = get_code_for_action(action_name, python_files)
             logger.info(
                 "  📄 (%s) Using %d files for evaluation prompt:\n"
                 "    - Action-Specific (%d):\n        * %s\n"
@@ -744,9 +712,7 @@ class EvaluationEngine:
                 "\n        * ".join(shared_files) if shared_files else "None",
             )
             for rule in active_rules:
-                is_valid, err_reason = self._validate_field_for_rule(
-                    rule.target_field, fields
-                )
+                is_valid, err_reason = self._validate_field_for_rule(rule.target_field, fields)
                 if not is_valid:
                     eval_id = f"eval_{uuid.uuid4().hex[:8]}"
                     res_fail = RuleEvaluationResult(
@@ -759,8 +725,7 @@ class EvaluationEngine:
                         actual_value=fields.get(rule.target_field, "-"),
                         verdict=VerdictEnum.FAIL,
                         reasoning=(
-                            f"target field '{rule.target_field}' is missing, "
-                            f"empty, or malformed in YAML: {err_reason}."
+                            f"target field '{rule.target_field}' is missing, empty, or malformed in YAML: {err_reason}."
                         ),
                         suggested_fix=f"Define a valid '{rule.target_field}' in the action YAML.",
                         prompt=None,
@@ -825,9 +790,7 @@ class EvaluationEngine:
                     )
             else:
                 heuristic_fallbacks.append((action_name, rule.title))
-                verdict_val, reasoning, fix = self._heuristic_evaluate_rule(
-                    rule.title, rule.target_field, str(target_val)
-                )
+                verdict_val, reasoning, fix = self._heuristic_evaluate_rule(rule.title, rule.target_field, target_val)
                 logger.info(
                     "  [%s] %s: %s (Heuristic)",
                     action_name,
@@ -842,7 +805,7 @@ class EvaluationEngine:
                 run_id=run_id,
                 evaluated_at=evaluated_at,
                 rule_title=rule.title,
-                actual_value=str(target_val),
+                actual_value=target_val,
                 verdict=verdict_val,
                 reasoning=reasoning,
                 suggested_fix=fix,

@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 import anyio
 import yaml
-from pydantic import BaseModel
 
 from mp.core import constants
 from mp.core.data_models.integrations.action.ai.metadata import ActionAiMetadata
@@ -38,6 +37,7 @@ if TYPE_CHECKING:
     import asyncio
     from collections.abc import Callable
 
+    from pydantic import BaseModel
     from rich.progress import Progress
 
     from mp.core.data_models.integrations.action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
@@ -285,11 +285,12 @@ class MultiPromptDescribeAction(DescribeAction):
         """
         anyio_loc = anyio.Path(location_path)
         if not await anyio_loc.exists():
-            raise FileNotFoundError(f"Custom prompt location '{location_path}' does not exist.")
+            error_msg = f"Custom prompt location '{location_path}' does not exist."
+            raise FileNotFoundError(error_msg)
 
         return string.Template(await anyio_loc.read_text(encoding="utf-8"))
 
-    async def _apply_prompt_overrides(  # ruff:ignore[too-many-locals]
+    async def _apply_prompt_overrides(
         self,
         resources: list[str],
         status: IntegrationStatus,
@@ -323,7 +324,11 @@ class MultiPromptDescribeAction(DescribeAction):
             if target_model is None:
                 target_model = create_dynamic_field_model(override.field_name, override.schema_def)
 
-            logger.debug(f"Applying prompt override for field '{override.field_name}' from template '{location_path.name}'")
+            logger.debug(
+                "Applying prompt override for field '%s' from template '%s'",
+                override.field_name,
+                location_path.name,
+            )
 
             custom_prompts: list[str] = await self._construct_custom_prompts(resources, status, template)
             valid_indices: list[int] = [i for i, prompt in enumerate(custom_prompts) if prompt]
@@ -337,7 +342,12 @@ class MultiPromptDescribeAction(DescribeAction):
             for i, result in zip(valid_indices, llm_results, strict=True):
                 resource_name: str = resources[i]
                 if isinstance(result, str):
-                    logger.error(f"Failed custom describe for action {resource_name} field {override.field_name}: {result}")
+                    logger.error(
+                        "Failed custom describe for action %s field %s: %s",
+                        resource_name,
+                        override.field_name,
+                        result,
+                    )
                     continue
 
                 idx = name_to_idx.get(resource_name)
@@ -353,8 +363,10 @@ class MultiPromptDescribeAction(DescribeAction):
                     continue
 
                 logger.debug(
-                    f"Successfully overridden field '{override.field_name}' "
-                    f"for action '{resource_name}' with LLM response:\n{format_display_value(override_val)}",
+                    "Successfully overridden field '%s' for action '%s' with LLM response:\n%s",
+                    override.field_name,
+                    resource_name,
+                    format_display_value(override_val),
                 )
 
                 updated_meta = curr_meta.model_copy(update={override.field_name: override_val})

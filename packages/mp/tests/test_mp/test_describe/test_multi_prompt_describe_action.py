@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import pathlib
 from typing import TYPE_CHECKING, Any
 from unittest import mock
 
@@ -27,6 +26,8 @@ from mp.describe.action.utils import create_nested_schema
 from mp.describe.common.describe import DescriptionResult, IntegrationStatus
 
 if TYPE_CHECKING:
+    import pathlib
+
     from pydantic import BaseModel
 
 
@@ -128,10 +129,32 @@ async def test_multi_prompt_describe_action_test_data_overrides(
     int_dir.mkdir()
     status = IntegrationStatus(is_built=False, out_path=anyio.Path(int_dir))
 
-    test_data_dir = (
-        pathlib.Path(__file__).parent / "test_data" / "prompt_overrides"
-    )
-    override_all_config = test_data_dir / "override_all.json"
+    params_prompt = tmp_path / "parameters_description_prompt.md"
+    params_prompt.write_text("Parameters prompt for ${python_file_name}")
+
+    entity_prompt = tmp_path / "entity_usage_prompt.md"
+    entity_prompt.write_text("Entity usage prompt for ${python_file_name}")
+
+    outcome_prompt = tmp_path / "outcome_categories_prompt.md"
+    outcome_prompt.write_text("Outcome categories prompt for ${python_file_name}")
+
+    override_all_config = tmp_path / "override_all.json"
+    override_all_config.write_text(f"""{{
+      "prompt_config": [
+        {{
+          "location": "{params_prompt}",
+          "field_name": "parameters_description"
+        }},
+        {{
+          "location": "{entity_prompt}",
+          "field_name": "entity_usage"
+        }},
+        {{
+          "location": "{outcome_prompt}",
+          "field_name": "outcome_categories"
+        }}
+      ]
+    }}""")
 
     describer = MultiPromptDescribeAction("test_int", {"Ping"}, src=tmp_path, prompt_overrides=override_all_config)
     baseline_results = [DescriptionResult("Ping", mock_action_ai_metadata)]
