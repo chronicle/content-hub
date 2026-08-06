@@ -58,7 +58,14 @@ def job(mock_job_env):
     original_logger = SyncIncidents.logger
     original_soar_job = SyncIncidents.soar_job
 
-    SyncIncidents.params = property(lambda self: MagicMock(api_key="test_key"))
+    SyncIncidents.params = property(
+        lambda self: MagicMock(
+            api_key="test_key",
+            verify_ssl=True,
+            from_email="user@example.com",
+            max_hours_backwards=24,
+        )
+    )
     mock_logger = MagicMock()
 
     SyncIncidents.logger = property(lambda self: mock_logger)
@@ -86,7 +93,14 @@ def job_failing_api(mock_job_env):
     original_logger = SyncIncidents.logger
     original_soar_job = SyncIncidents.soar_job
 
-    SyncIncidents.params = property(lambda self: MagicMock(api_key="test_key"))
+    SyncIncidents.params = property(
+        lambda self: MagicMock(
+            api_key="test_key",
+            verify_ssl=True,
+            from_email="user@example.com",
+            max_hours_backwards=24,
+        )
+    )
     mock_logger = MagicMock()
     SyncIncidents.logger = property(lambda self: mock_logger)
     mock_soar_job = MagicMock()
@@ -130,7 +144,9 @@ def job_case_sync():
 
     meta = SyncMetadata(status="triggered", incident_number="P123", closure_reason=None)
 
-    res.incidents_to_close_in_product = [{"meta": meta, "alert": alert}]
+    res.incidents_to_close_in_product = [
+        {"meta": meta, "alert": alert, "is_case_closed": False, "comment": "SecOps closed"}
+    ]
     res.alerts_to_close_in_soar = []
 
     job_case.get_status_to_sync.return_value = res

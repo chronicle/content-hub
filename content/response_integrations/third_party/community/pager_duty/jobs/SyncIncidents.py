@@ -211,19 +211,17 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
 
     def _extract_product_id_from_ticket(self, ticket: AlertCard) -> str | None:
         """Extracts PagerDuty Incident ID from a single ticket.
+
         Args:
             ticket: The ticket to extract ID from.
+
         Returns:
             The incident ID if found, None otherwise.
         """
-        if hasattr(ticket, "_cached_pagerduty_id"):
-            return getattr(ticket, "_cached_pagerduty_id")
-
         if ticket.ticket_id:
             try:
                 uuid.UUID(ticket.ticket_id)
             except ValueError:
-                setattr(ticket, "_cached_pagerduty_id", ticket.ticket_id)
                 return ticket.ticket_id
 
         if hasattr(ticket, "alert_group_identifier") and ticket.alert_group_identifier:
@@ -234,10 +232,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                     key,
                 )
                 if val:
-                    setattr(ticket, "_cached_pagerduty_id", val)
                     return val
 
-        setattr(ticket, "_cached_pagerduty_id", None)
         return None
 
     def map_product_data_to_case(self, job_case: JobCase) -> None:
@@ -360,6 +356,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         case_id=job_case.case_detail.id_,
                         alert_identifier=alert.identifier,
                     )
+                    alert.status = "closed"
                     self.logger.info(
                         f"Successfully closed case {job_case.case_detail.id_} "
                         f"because alert {alert.identifier} was the last open alert "
@@ -378,6 +375,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         case_id=job_case.case_detail.id_,
                         alert_id=alert.identifier,
                     )
+                    alert.status = "closed"
                     self.logger.info(
                         f"Successfully closed alert {alert.identifier} in case "
                         f"{job_case.case_detail.id_} because PagerDuty incident "

@@ -11,6 +11,9 @@ from pager_duty.tests.common import CONFIG_PATH, MOCK_INCIDENTS_FILE
 from pager_duty.tests.core.product import PagerDuty
 from pager_duty.tests.core.session import PagerDutySession
 
+EXPECTED_SUCCESS_OUTPUT_MSG = "Successfully Snoozed Incident\n"
+EXPECTED_FAILED_OUTPUT_MSG = "Incident wasnt snoozed\nPagerDuty API error: 404 None"
+
 VALID_INCIDENT_ID = "Q3SN8FBZ4LBON7"
 INVALID_INCIDENT_ID = "NONEXISTENT_INCIDENT"
 TEST_EMAIL = "test@example.com"
@@ -31,18 +34,16 @@ def test_snooze_incident_success(
     pagerduty: PagerDuty,
 ) -> None:
     """Tests the SnoozeIncident action for a successful API call."""
-
     mock_incidents = json.loads(MOCK_INCIDENTS_FILE.read_text())
     mock_incidents["incidents"][0]["status"] = "acknowledged"
     pagerduty.set_incidents(mock_incidents)
-    success_output_msg = "Successfully Snoozed Incident\n"
 
     SnoozeIncident.main()
 
     assert len(script_session.request_history) == 1
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
     assert action_output.results.result_value is True
-    assert action_output.results.output_message == success_output_msg
+    assert action_output.results.output_message == EXPECTED_SUCCESS_OUTPUT_MSG
 
 
 @set_metadata(
@@ -58,14 +59,12 @@ def test_snooze_incident_not_found(
     pagerduty: PagerDuty,
 ) -> None:
     """Tests the SnoozeIncident action when the incident is not found."""
-
     mock_incidents = json.loads(MOCK_INCIDENTS_FILE.read_text())
     pagerduty.set_incidents(mock_incidents)
-    expected_output_msg = "Incident wasnt snoozed\nPagerDuty API error: 404 None"
 
     SnoozeIncident.main()
 
     assert len(script_session.request_history) == 1
     assert action_output.results.execution_state.value == EXECUTION_STATE_FAILED
     assert action_output.results.result_value is False
-    assert expected_output_msg in action_output.results.output_message
+    assert EXPECTED_FAILED_OUTPUT_MSG in action_output.results.output_message
