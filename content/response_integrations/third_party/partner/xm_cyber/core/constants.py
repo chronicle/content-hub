@@ -6,7 +6,7 @@ from soar_sdk.SiemplifyDataModel import EntityTypes
 
 INTEGRATION_NAME = "XM Cyber"
 INTEGRATION_IDENTIFIER = "XMCyber"
-INTEGRATION_VERSION = "8.0"  # keep in sync with pyproject.toml + release_notes.yaml
+INTEGRATION_VERSION = "7.0"  # keep in sync with pyproject.toml + release_notes.yaml
 CONNECTOR_NAME_VERSION_HEADER = "X-XMCYBER-CONNECTOR-NAME-VERSION"
 SUPPORTED_ENTITY_TYPES = [EntityTypes.USER, EntityTypes.HOSTNAME]
 # Action Names
