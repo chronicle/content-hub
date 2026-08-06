@@ -92,7 +92,7 @@ async def test_multi_prompt_describe_action_with_overrides(
     config_file.write_text(f"""{{
       "prompt_config": [
         {{
-          "location": "{prompt_file}",
+          "location": "{prompt_file.as_posix()}",
           "field_name": "ai_description"
         }}
       ]
@@ -142,15 +142,15 @@ async def test_multi_prompt_describe_action_test_data_overrides(
     override_all_config.write_text(f"""{{
       "prompt_config": [
         {{
-          "location": "{params_prompt}",
+          "location": "{params_prompt.as_posix()}",
           "field_name": "parameters_description"
         }},
         {{
-          "location": "{entity_prompt}",
+          "location": "{entity_prompt.as_posix()}",
           "field_name": "entity_usage"
         }},
         {{
-          "location": "{outcome_prompt}",
+          "location": "{outcome_prompt.as_posix()}",
           "field_name": "outcome_categories"
         }}
       ]
