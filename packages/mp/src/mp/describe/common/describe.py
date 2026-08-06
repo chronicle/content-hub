@@ -436,4 +436,4 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
 
         await save_dir.mkdir(parents=True, exist_ok=True)
         yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
-        await metadata_file.write_text(yaml.safe_dump(metadata), encoding="utf-8")
+        await metadata_file.write_text(yaml.safe_dump(metadata, allow_unicode=True), encoding="utf-8")
