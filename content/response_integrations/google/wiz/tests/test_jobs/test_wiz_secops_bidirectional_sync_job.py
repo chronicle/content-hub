@@ -221,7 +221,7 @@ class TestWizSecopsBidirectionalSyncJob:
             new_priority="Critical",
         )
         job.soar_job.add_comment.assert_called_once()
-        assert "Severity Escalation" in job.soar_job.add_comment.call_args[1]["comment"]
+        assert "severity increased to" in job.soar_job.add_comment.call_args[1]["comment"]
 
         job2 = _make_job()
         alerts2 = [_make_mock_alert("alert_1", "wiz_threat_1", priority="High")]
@@ -234,7 +234,7 @@ class TestWizSecopsBidirectionalSyncJob:
 
         job2.sync_severity_to_case.assert_not_called()
         job2.soar_job.add_comment.assert_called_once()
-        assert "Severity Downgrade Ignored" in job2.soar_job.add_comment.call_args[1]["comment"]
+        assert "severity decreased to" in job2.soar_job.add_comment.call_args[1]["comment"]
 
     def test_sync_comments_loop_back_prevention(self) -> None:
         """Verifies that sync comments ignores loopback comments originating from sync job."""
@@ -454,3 +454,81 @@ class TestWizSecopsBidirectionalSyncJob:
         _, kwargs = job.api_client.add_comment_to_issue.call_args
         assert "[SecOps & Wiz Sync Job] real_analyst@company.com wrote in Google SecOps on " in kwargs["comment"]
         assert "analyst comment on Case" in kwargs["comment"]
+
+    def test_sync_status_outbound_closes_threat_if_all_its_alerts_are_closed_in_open_case(self) -> None:
+        """Verifies outbound threat status is resolved if all alerts for that threat are closed."""
+        job = _make_job()
+        alerts = [
+            _make_mock_alert("alert_1", "wiz_threat_1", status="closed"),
+            _make_mock_alert("alert_2", "wiz_threat_1", status="closed"),
+            _make_mock_alert("alert_3", "wiz_threat_2", status="open"),
+        ]
+        case = _make_mock_case(1234, alerts, status=CaseDataStatus.OPENED)
+        job_case = JobCase(case_detail=case, modification_time=1000)
+
+        job.case_threat_alerts[1234] = {
+            "wiz_threat_1": [alerts[0], alerts[1]],
+            "wiz_threat_2": [alerts[2]],
+        }
+        job_case.product_ids_from_secops_alerts = {
+            "wiz_threat_1": alerts[0],
+            "wiz_threat_2": alerts[2],
+        }
+        job_case.alert_metadata["alert_1"] = SyncMetadata(status="OPEN")
+        job_case.alert_metadata["alert_2"] = SyncMetadata(status="OPEN")
+        job_case.alert_metadata["alert_3"] = SyncMetadata(status="OPEN")
+
+        job.sync_status(job_case)
+
+        job.api_client.resolve_issue.assert_called_once_with(
+            issue_id="wiz_threat_1",
+            resolution_reason="Inconclusive Threat",
+            resolution_note="Closed via SecOps Case Sync",
+        )
+
+    def test_sync_status_inbound_reopens_alert_on_wiz_reopen_transition(self) -> None:
+        """Verifies that closed alerts in SecOps are reopened if Wiz threat status changes to open."""
+        job = _make_job()
+        alerts = [_make_mock_alert("alert_1", "wiz_threat_1", status="closed")]
+        comment_text = (
+            "[SecOps & Wiz Sync Job] wiz_threat_1: Alert was closed because the "
+            "corresponding Wiz Threat was marked RESOLVED."
+        )
+        comments = [{"comment": comment_text}]
+        case = _make_mock_case(1234, alerts, status=CaseDataStatus.OPENED, comments=comments)
+        job_case = JobCase(case_detail=case, modification_time=1000)
+        job_case.product_ids_from_secops_alerts = {"wiz_threat_1": alerts[0]}
+        job_case.alert_metadata["alert_1"] = SyncMetadata(status="OPEN")
+
+        job.sync_status(job_case)
+
+        # Alert should be reopened because previous state was CLOSED/RESOLVED:
+        job.soar_job.session.post.assert_any_call(
+            f"{job.soar_job.API_ROOT}/external/v1/dynamic-cases/ReopenAlert",
+            json={"caseId": 1234, "alertIdentifier": "alert_1"}
+        )
+        job.soar_job.add_comment.assert_called_once()
+        comment_arg = job.soar_job.add_comment.call_args[1]["comment"]
+        assert "was reopened because the corresponding Wiz Threat status was updated to OPEN" in comment_arg
+
+    def test_sync_status_inbound_leaves_alert_closed_if_no_wiz_reopen_transition(self) -> None:
+        """Verifies manually closed alert is NOT reopened if Wiz threat is already open."""
+        job = _make_job()
+        alerts = [
+            _make_mock_alert("alert_1", "wiz_threat_1", status="closed"),
+            _make_mock_alert("alert_2", "wiz_threat_1", status="open"),
+        ]
+        case = _make_mock_case(1234, alerts, status=CaseDataStatus.OPENED)
+        job_case = JobCase(case_detail=case, modification_time=1000)
+        job_case.product_ids_from_secops_alerts = {"wiz_threat_1": alerts[0]}
+        job.case_threat_alerts[1234] = {
+            "wiz_threat_1": [alerts[0], alerts[1]],
+        }
+        job_case.alert_metadata["alert_1"] = SyncMetadata(status="OPEN")
+        job_case.alert_metadata["alert_2"] = SyncMetadata(status="OPEN")
+
+        job.sync_status(job_case)
+
+        # Alert should NOT be reopened:
+        job.soar_job.session.post.assert_not_called()
+        job.soar_job.add_comment.assert_not_called()

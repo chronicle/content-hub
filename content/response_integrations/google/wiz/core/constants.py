@@ -121,3 +121,12 @@ SYNC_COMMENT_PREFIX: str = "[SecOps & Wiz Sync Job]"
 WROTE_IN_SECOPS_SIGNATURE: str = " wrote in Google SecOps on "
 WROTE_IN_WIZ_SIGNATURE: str = " wrote in Wiz on "
 NOT_FOUND_INDEX: int = -1
+
+WIZ_REOPENED_COMMENT_SUBSTRING: str = (
+    "was reopened because the corresponding Wiz Threat status was updated to"
+)
+DEFAULT_FALLBACK_VALUE: int = 0
+STATUS_CAPTURE_GROUP: int = 1
+COLON_SPACE_OFFSET: int = 2
+HOURS_BACK_24: int = 24
+MS_TO_S_FACTOR: int = 1000

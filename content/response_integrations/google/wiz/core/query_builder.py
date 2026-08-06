@@ -62,6 +62,10 @@ class IssueQueryBuilder:
             Field(name="projects", fields=["id", "name"]),
             Field(name="sourceRules", fields=["id", "name", "description"]),
             Field(
+                name="serviceTickets",
+                fields=["id", "externalId", "name", "url"],
+            ),
+            Field(
                 name="notes",
                 fields=[
                     "id",
