@@ -6,6 +6,8 @@ from urllib.parse import quote_plus
 import requests
 from TIPCommon.types import SingleJson
 
+from .Exceptions import PagerDutyNotFoundError
+
 
 class PagerDutyManager:
     BASE_URL: str = "https://api.pagerduty.com"
@@ -289,14 +291,17 @@ class PagerDutyManager:
 
         return incident_data
 
-    def get_user_by_email(self, email: str) -> SingleJson | str:
+    def get_user_by_email(self, email: str) -> SingleJson:
         """Gets user by email.
 
         Args:
             email (str): User email.
 
         Returns:
-            SingleJson | str: User dict or "No User Found".
+            SingleJson: User dict.
+
+        Raises:
+            PagerDutyNotFoundError: If no user is found with the specified email.
         """
         url: str = f"{self.BASE_URL}/users"
         params: dict[str, str] = {"query": email}
@@ -309,16 +314,19 @@ class PagerDutyManager:
         for user in users:
             if user.get("email") == email:
                 return user
-        return "No User Found"
+        raise PagerDutyNotFoundError(f"User with email '{email}' was not found.")
 
-    def get_user_by_ID(self, userID: str) -> SingleJson | str:
+    def get_user_by_ID(self, userID: str) -> SingleJson:
         """Gets user by ID.
 
         Args:
             userID (str): User ID.
 
         Returns:
-            SingleJson | str: User dict or "No User Found".
+            SingleJson: User dict.
+
+        Raises:
+            PagerDutyNotFoundError: If no user is found with the specified ID.
         """
         headers: dict[str, str] = {
             "Content-Type": "application/json",
@@ -330,9 +338,9 @@ class PagerDutyManager:
             "GET", url, headers=headers, timeout=10
         )
         response.raise_for_status()
-        if response.json()["user"]:
+        if response.json().get("user"):
             return response.json()["user"]
-        return "No User Found"
+        raise PagerDutyNotFoundError(f"User with ID '{userID}' was not found.")
 
     def list_filtered_incidents(self, params: dict[str, Any]) -> list[SingleJson]:
         """Lists filtered incidents.

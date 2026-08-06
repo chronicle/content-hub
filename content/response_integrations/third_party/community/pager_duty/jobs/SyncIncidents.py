@@ -421,7 +421,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             except Exception as e:
                 self.logger.error(
                     f"Failed to resolve PagerDuty incident "
-                    f"{meta.incident_number}: {e}"
+                    f"{meta.incident_number}: {e}",
+                    exc_info=True,
                 )
 
     def sync_comments(self, job_case: JobCase) -> None:
@@ -470,7 +471,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                     )
                 except Exception as e:
                     self.logger.error(
-                        f"Failed to add note to PagerDuty incident {incident_id}: {e}"
+                        f"Failed to add note to PagerDuty incident {incident_id}: {e}",
+                        exc_info=True,
                     )
 
     def is_alert_and_product_closed(
