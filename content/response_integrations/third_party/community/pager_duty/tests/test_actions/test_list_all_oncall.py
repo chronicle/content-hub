@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 
 from pager_duty.actions import ListAllOncall
 from pager_duty.tests.common import CONFIG_PATH
