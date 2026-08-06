@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 
 INTEGRATIONS_PATH = "Integrations"
 PLAYBOOKS_PATH = "Playbooks"
+BLOCKS_PATH = "Blocks"
 CONNECTORS_PATH = "Connectors"
 JOBS_PATH = "Jobs"
 MAPPINGS_PATH = "Ontology/Mappings"
@@ -97,6 +98,7 @@ class GitContentManager:
         """
         try:
             zip_buffer = BytesIO()
+            definition = None
             with zipfile.ZipFile(
                 zip_buffer,
                 "a",
@@ -106,14 +108,20 @@ class GitContentManager:
                 for file in self.git.get_file_objects_from_path(
                     f"Integrations/{integration_name}",
                 ):
-                    if file.path == f"Integration-{integration_name}.def":
+                    if file.path in (
+                        f"Integration-{integration_name}.def",
+                        f"Integration-{integration_name}.json",
+                    ):
                         definition = json.loads(file.content)
                     zip_file.writestr(file.path, file.content)
             zip_buffer.seek(0)
+            if definition is None:
+                raise KeyError(f"Definition file for integration {integration_name} not found.")
             return Integration(
                 {
                     "identifier": integration_name,
-                    "isCustomIntegration": definition["IsCustom"],
+                    "isCustomIntegration": definition.get("IsCustom") or definition.get("Custom", False),
+                    "Staging": definition.get("Staging", "False"),
                 },
                 zip_buffer,
             )
@@ -143,6 +151,9 @@ class GitContentManager:
             for playbook in self.git.get_file_objects_from_path(PLAYBOOKS_PATH):
                 if pathlib.Path(playbook.path).name == f"{playbook_name}.json":
                     return Workflow(json.loads(playbook.content))
+            for block in self.git.get_file_objects_from_path(BLOCKS_PATH):
+                if block.path.endswith(f"/{playbook_name}.json"):
+                    return Workflow(json.loads(block.content))
         except KeyError:
             return None
 
@@ -151,6 +162,9 @@ class GitContentManager:
             for playbook in self.git.get_file_objects_from_path(PLAYBOOKS_PATH):
                 if pathlib.Path(playbook.path).suffix == ".json":
                     yield Workflow(json.loads(playbook.content))
+            for block in self.git.get_file_objects_from_path(BLOCKS_PATH):
+                if block.path.endswith(".json"):
+                    yield Workflow(json.loads(block.content))
         except KeyError:
             return []
 
@@ -340,6 +354,22 @@ class GitContentManager:
             playbook.name,
             "Playbook",
             f"{PLAYBOOKS_PATH}/{playbook.category}/{playbook.name}",
+        )
+
+    def push_block(self, block: Workflow, category: str | None = None) -> None:
+        """Writes a block to the repo
+
+        Args:
+            block: A block object
+            category: Optional category to override the block's own category
+
+        """
+        cat = category or block.category
+        self._push_obj(
+            block,
+            block.name,
+            "Block",
+            f"{PLAYBOOKS_PATH}/{cat}/{block.name}",
         )
 
     def push_connector(self, connector: Connector) -> None:

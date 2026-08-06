@@ -55,17 +55,20 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        for job in gitsync.api.get_jobs():
+        for job in gitsync.api.get_jobs(chronicle_soar=siemplify):
+            job_name = job.get("displayName", job.get("name", "")).strip()
+
             if (
-                job.get("name") in jobs
-                and job.get("name") not in IGNORED_JOBS
+                job_name in jobs
+                and job_name not in IGNORED_JOBS
                 and job.get("integration") != INTEGRATION_NAME
             ):
-                siemplify.LOGGER.info(f"Pushing {job['name']}")
+                siemplify.LOGGER.info(f"Pushing {job_name}")
                 job = Job(job)
                 if readme_addon:
                     siemplify.LOGGER.info(
-                        "Readme addon found - adding to GitSync metadata file (GitSync.json)",
+                        "Readme addon found - "
+                        "adding to GitSync metadata file (GitSync.json)",
                     )
                     gitsync.content.metadata.set_readme_addon(
                         "Job",
