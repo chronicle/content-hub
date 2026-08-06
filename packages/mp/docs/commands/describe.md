@@ -109,3 +109,9 @@ mp describe all-content [INTEGRATIONS]... [OPTIONS]
 | `--quiet`    | `-q`      | Log less on runtime.                                      | `bool` | `False` |
 | `--verbose`  | `-v`      | Log more on runtime.                                      | `bool` | `False` |
 | `--override` | `-o`      | Rewrite content that already have their description.      | `bool` | `False` |
+
+---
+
+## `mp describe-regression-test`
+
+For end-to-end regression testing of AI descriptions against baseline repository metadata, see [describe_regression_test.md](file:///usr/local/google/home/siedovolosyi/repos/content-hub/packages/mp/docs/commands/describe_regression_test.md).

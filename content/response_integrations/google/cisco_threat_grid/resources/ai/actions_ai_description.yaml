@@ -1,49 +1,30 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get Hash Associated Domains:
   ai_description: >-
     ### General Description
 
-    Retrieves domain names associated with a specific file hash by querying Cisco
-    Threat Grid's sandbox analysis results. This action is useful for identifying
-    network-based indicators of compromise (IoCs) linked to a known malicious or suspicious
-    file.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
+    Retrieves domains associated with a given file hash entity using Cisco Threat
+    Grid.
 
 
     ### Flow Description
 
-    1. **Entity Filtering**: The action iterates through the provided entities and
-    filters for those of type `FILEHASH`.
+    1. Iterates over the target entities and filters for File Hash entities.
 
-    2. **Submission Search**: For each file hash, it queries Cisco Threat Grid to
-    find successful sandbox analysis submissions associated with that hash.
+    2. For each file hash, makes a GET request to the Cisco Threat Grid API to fetch
+    associated network streams.
 
-    3. **Network Stream Retrieval**: For every identified sample ID, the action retrieves
-    the network stream data generated during the sandbox analysis.
+    3. Extracts the associated domains from the network streams.
 
-    4. **DNS Parsing**: It parses the network streams, specifically looking for DNS
-    protocol traffic (port 53). It extracts unique domain names from the DNS queries,
-    excluding common system domains like time servers or local workstations.
+    4. Adds the extracted domains to the action's JSON results and attaches an entity
+    table to the case.
 
-    5. **Data Output**: The discovered domains are added to an entity-specific data
-    table and included in the action's JSON results for further use in the playbook.
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Retrieves domains associated with a given file hash entity using Cisco Threat
+    Grid.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -54,11 +35,47 @@ Get Hash Associated Domains:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action makes GET requests to the Cisco Threat Grid API to fetch network
+      streams and extract associated domains for a file hash. It does not mutate external
+      data, update internal entities, or create insights.
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -72,31 +89,74 @@ Get Hash Associated Domains:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.FILEHASH`. This means it targets FILEHASH entities, filtering
+      strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches associated domains for a file hash from Cisco Threat Grid,
+      which provides additional threat intelligence for the indicator. This matches
+      the 'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Hash Associated IPs:
-  ai_description: "### General Description\nThe **Get Hash Associated IPs** action\
-    \ enriches File Hash entities by retrieving associated IP addresses from Cisco\
-    \ Threat Grid analysis reports. This action identifies network infrastructure\
-    \ that a specific file interacted with during sandbox execution, helping analysts\
-    \ understand the potential command-and-control (C2) or distribution network related\
-    \ to a malware sample.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| None | N/A | N/A | This action\
-    \ does not require any input parameters. |\n\n### Additional Notes\n* This action\
-    \ only processes entities of type **FILEHASH**.\n* It relies on existing analysis\
-    \ results within Cisco Threat Grid. If a hash has not been previously analyzed,\
-    \ no associated IPs will be found.\n* The action automatically filters out internal\
-    \ and broadcast IP addresses (e.g., 224.0.0.252, 169.254.x.x) to reduce noise.\n\
-    \n### Flow Description\n1. **Connection**: Establishes a session with the Cisco\
-    \ Threat Grid API using the configured API Root and API Key.\n2. **Entity Filtering**:\
-    \ Iterates through the target entities and selects only those identified as File\
-    \ Hashes.\n3. **Submission Search**: For each hash, it queries Cisco Threat Grid\
-    \ for successful analysis submissions.\n4. **Network Stream Retrieval**: For every\
-    \ identified sample ID, the action fetches the associated network stream data.\n\
-    5. **IP Extraction & Filtering**: It extracts unique destination IP addresses\
-    \ from the network streams, excluding known internal and broadcast ranges.\n6.\
-    \ **Output Generation**: \n    * Creates an **Entity Table** for each hash to\
-    \ display the associated IPs directly in the SOAR interface.\n    * Populates\
-    \ a **JSON Result** mapping each hash to its list of associated IPs for use in\
-    \ downstream playbook logic."
+  ai_description: >-
+    ### General Description
+
+    Retrieves IP addresses associated with a given file hash entity using Cisco Threat
+    Grid.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities provided in the case.
+
+    2. Filters the entities to process only those of type File Hash.
+
+    3. For each valid file hash, makes an API call to Cisco Threat Grid to fetch associated
+    network streams from previous sandbox submissions.
+
+    4. Extracts the destination IP addresses from the network streams, excluding internal
+    IPs.
+
+    5. Attaches the discovered IP addresses to the action's JSON result and creates
+    an entity-specific table.
+
+
+    ### Additional Notes
+
+    The action automatically filters out common internal IPs (e.g., 224.0.0.252, 169.254.255.255,
+    255.255.255.255, 239.255.255.250) and specific subnets (172.16.x.x) from the results.
+  ai_short_description: >-
+    Retrieves IP addresses associated with a given file hash entity using Cisco Threat
+    Grid.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -107,11 +167,47 @@ Get Hash Associated IPs:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches data from Cisco Threat Grid via HTTP GET requests to retrieve
+      associated network streams. It does not mutate external data, update internal
+      entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -125,86 +221,137 @@ Get Hash Associated IPs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == EntityTypes.FILEHASH`. Therefore,
+      it targets File Hash entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves associated IP addresses for a file hash from Cisco Threat
+      Grid, which provides threat intelligence and context for the indicator. This
+      aligns with the 'Enrich IOC' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Submissions:
   ai_description: >-
     ### General Description
 
-    Retrieves historical submission data and detailed analysis reports from Cisco
-    ThreatGrid for supported entities (IPs, Hashes, Hostnames, Processes, URLs, and
-    Filenames). This action provides deep visibility into past sandbox executions,
-    including threat scores, behavioral indicators, and network traffic. It enriches
-    entities with risk scores and attaches forensic artifacts like PCAPs and screenshots
-    directly to the case.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Threshold | Integer | Yes | The threat score threshold (0-100). If the maximum
-    threat score found for an entity exceeds this value, the entity is marked as suspicious
-    in Google SecOps. Default is 50. |
-
-    | Max Submissions To Return | Integer | No | The maximum number of historical
-    submissions to retrieve for each entity. Must be between 1 and 100. Default is
-    10. |
+    Retrieves submission details, analysis reports, and threat scores from Cisco Threat
+    Grid for specific entities (Address, FileHash, Hostname, Process, URL, FileName).
+    It enriches the entities with the retrieved data and can optionally mark them
+    as suspicious based on a configurable threat score threshold.
 
 
     ### Flow Description
 
-    1. **Status Check**: Queries Cisco ThreatGrid to determine the state of submissions
-    for each entity.
+    1. Iterates through the target entities and filters them by supported entity types
+    (Address, FileHash, Hostname, Process, URL, FileName).
 
-    2. **Asynchronous Waiting**: If submissions are still processing, the action enters
-    an 'In Progress' state and waits for completion.
+    2. Makes an asynchronous API call (GET) to Cisco Threat Grid to check the submission
+    state for each entity.
 
-    3. **Data Retrieval**: Fetches historical submission records once they are ready.
+    3. Once the submissions are fully processed, retrieves the submission details.
 
-    4. **Report Acquisition**: Downloads the HTML analysis report, network PCAP, and
-    screenshot for the most recent submission.
+    4. Downloads the most recent analysis report (HTML), network PCAP, screenshot,
+    and threat report for the entity.
 
-    5. **Entity Enrichment**: Updates the entity with the maximum threat score found
-    and marks it as enriched.
+    5. Calculates the maximum threat score across the retrieved submissions.
 
-    6. **Risk Flagging**: Sets the entity as suspicious if the maximum threat score
-    exceeds the configured threshold.
+    6. Updates the entity's additional properties with the max score, marks it as
+    enriched, and marks it as suspicious if the score exceeds the configured threshold.
 
-    7. **Documentation**: Attaches the downloaded files and creates data tables for
-    submissions and threat indicators within the SOAR.
+    7. Attaches the downloaded reports, PCAPs, screenshots, and tables to the entity
+    results in the SecOps platform.
 
 
     ### Additional Notes
 
-    This action is asynchronous and will wait for pending submissions to complete
-    before finalizing the enrichment. It specifically targets the most recent successful
-    submission for detailed report and file downloads. Note that file downloads (HTML,
-    PCAP, PNG) prevent this action from being categorized as a standard enrichment
-    action.
+    This is an asynchronous action. It will periodically check the status of the submissions
+    until they are ready to be fetched.
+  ai_short_description: >-
+    Retrieves submission details, analysis reports, and threat scores from Cisco Threat
+    Grid for supported entities, enriching them and optionally marking them as suspicious
+    based on a threat score threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes (is_enriched, is_suspicious, additional_properties)
-      and attaches analysis files (HTML reports, PCAPs, screenshots) and data tables
-      to the entities.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the Cisco Threat Grid API to fetch submission
+      states, details, reports, pcaps, and screenshots (fetches_data=true). It does
+      not mutate any data in external systems (can_mutate_external_data=false). It
+      updates the entities with the fetched threat scores and marks them as enriched
+      or suspicious (can_update_entities=true). It does not create insights, modify
+      alert data, or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - FILEHASH
-    - PROCESS
-    - HOSTNAME
-    - FILENAME
-    - DestinationURL
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: true
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: true
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -218,43 +365,82 @@ Get Submissions:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity_type`.
+      It specifically checks if the entity type is ADDRESS, FILEHASH, or if it exists
+      in the `ENTITY_TERM_MAPPER` which includes HOSTNAME, PROCESS, URL, and FILENAME.
+      Therefore, it targets these specific entity types and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches submission details, threat scores, and analysis reports from
+      Cisco Threat Grid for various IOCs (like IP addresses, hashes, domains, URLs).
+      This matches the 'Enrich IOC' expected outcome as it returns threat intelligence
+      and reputation data. It does not perform any other actions like submitting files
+      or mutating external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | Yes | Mark as suspicious if max threat score pass the threshold
+    |
+
+    | Max Submissions To Return | String | No | Specify how many submissions to return
+    per entitiy. Default: 10. Maximum: 100 |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity to the Cisco Threat Grid instance using the configured
-    API Root and API Key. This action ensures that the integration can successfully
-    communicate with the external service and that the provided credentials are valid.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not require any input parameters. |
+    Tests connectivity to the Cisco Threat Grid API to ensure the integration is configured
+    correctly and can communicate with the service.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: Fetches the 'Api Root', 'Api Key', and 'Use SSL'
-    settings from the integration configuration.
+    1. Retrieves integration configuration parameters (API Root, API Key, Use SSL).
 
-    2. **Manager Initialization**: Initializes the `CiscoThreatGridManager` with the
-    retrieved settings.
+    2. Initializes the Cisco Threat Grid Manager.
 
-    3. **Connectivity Check**: Executes a GET request to the `/api/v2/samples` endpoint
-    with the `user_only` flag to verify the API key's validity and service reachability.
+    3. Makes a GET request to the `/api/v2/samples` endpoint to verify authentication
+    and network connectivity.
 
-    4. **Result Reporting**: If the request is successful (no exception occurs), the
-    action completes with a success message confirming the connection.
+    4. Returns a success message if the connection is established without errors.
 
 
     ### Additional Notes
 
-    This is a standard connectivity test action. It does not process any entities,
-    modify any data, or generate insights.
+    This action is typically used as a diagnostic tool to verify that the integration's
+    credentials and network settings are valid.
+  ai_short_description: >-
+    Tests connectivity to the Cisco Threat Grid API to ensure the integration is configured
+    correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -263,12 +449,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to test connectivity. It does not fetch contextual
+      data for entities, mutate external or internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -282,76 +505,75 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It only tests the
+      connection to the external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Upload Sample:
   ai_description: >-
     ### General Description
 
-    The **Upload Sample** action allows users to submit a file to Cisco Threat Grid
-    for automated sandbox analysis. This action is designed to handle both local files
-    (stored on the SOAR runner) and remote files (located on a Linux server and accessed
-    via SFTP). It operates asynchronously, meaning it submits the file and then periodically
-    polls the service until the analysis is complete, at which point it retrieves
-    the threat intelligence results.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **File Path** | String | Yes | The full path to the sample file to be analyzed.
-    |
-
-    | **Vm** | String | No | The specific virtual machine environment to run the analysis
-    on (e.g., `win7-x64`). |
-
-    | **Playbook** | String | No | The name of a Cisco Threat Grid playbook to apply
-    to the analysis (e.g., `default`). |
-
-    | **Network Exit** | String | No | Specifies the network exit location for traffic
-    generated during analysis. |
-
-    | **Private** | Boolean | Yes | If enabled, the sample will be marked as private
-    in Cisco Threat Grid. |
-
-    | **Linux Server Address** | String | No | The IP address of a remote Linux server
-    where the file is located. |
-
-    | **Linux Username** | String | No | The username for SSH/SFTP access to the remote
-    Linux server. |
-
-    | **Linux Password** | Password | No | The password for SSH/SFTP access to the
-    remote Linux server. |
+    Uploads a file to Cisco Threat Grid for malware analysis and sandboxing. The file
+    can be retrieved from a local path or a remote Linux server via SSH. The action
+    runs asynchronously, waiting for the analysis to complete, and then retrieves
+    the threat score, behavioral indicators, and links to the HTML report, PCAP, and
+    screenshots.
 
 
     ### Flow Description
 
-    1. **File Retrieval**: The action first determines the source of the file. If
-    remote Linux parameters are provided, it connects via SFTP to retrieve the file
-    content. Otherwise, it reads the file from the local file system.
+    1. Retrieves the file content from the specified local path or remote Linux server.
 
-    2. **Submission**: The file is uploaded to Cisco Threat Grid using the `/api/v2/samples`
-    endpoint with the specified configuration (VM, Playbook, Privacy, etc.).
+    2. Submits the file to Cisco Threat Grid via a POST request to `/api/v2/samples`.
 
-    3. **Asynchronous Polling**: The action enters an "In Progress" state. In subsequent
-    execution cycles, it checks the state of the submission using the sample ID.
+    3. Waits asynchronously for the analysis to complete by polling the sample state.
 
-    4. **Result Processing**: Once the analysis is finished, the action retrieves
-    the threat score and detailed Indicators of Compromise (IOCs).
+    4. Once completed, fetches the threat report via a GET request to `/api/v2/samples/{sample_id}/threat`.
 
-    5. **Output**: It generates a "Threat Report" data table, provides direct download
-    links for the HTML report, PCAP, and screenshots, and returns the final calculated
-    threat score.
+    5. Attaches the threat report, analysis links (HTML, PCAP, Screenshot), and JSON
+    results to the action output.
 
 
     ### Additional Notes
 
-    * This action is **Asynchronous**. Ensure the script timeout in the IDE is adjusted
-    if necessary to allow for sandbox analysis time.
-
-    * To use a remote file, all three Linux parameters (**Linux Server Address**,
-    **Linux Username**, and **Linux Password**) must be provided together.
+    The action runs asynchronously. Ensure the script timeout value in the IDE is
+    adjusted accordingly. If fetching from a remote Linux server, all three Linux
+    parameters (Address, Username, Password) must be provided.
+  ai_short_description: >-
+    Uploads a file to Cisco Threat Grid for sandbox analysis and retrieves the resulting
+    threat score and analysis reports.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -360,14 +582,53 @@ Upload Sample:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Uploads a file sample to Cisco Threat Grid for analysis, creating a new sample
-      submission record in the external system.
+      Uploads a file sample to Cisco Threat Grid, creating a new analysis submission
+      in the external sandbox environment.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to upload a file to Cisco Threat Grid, which
+      mutates external data by creating a new analysis submission. It also fetches
+      data by retrieving the threat report and analysis links once the submission
+      is complete. It does not update internal entities, create insights, or modify
+      alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -381,3 +642,72 @@ Upload Sample:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the provided file path parameter to locate
+      and upload the file. Therefore, it does not run on entities, and all entity
+      type flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action uploads a file to Cisco Threat Grid (a sandbox/analysis engine) and
+      returns a threat score and behavior report. This directly matches the 'Submit
+      File' expected outcome. It does not enrich existing IOCs, update alerts, or
+      perform containment actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Path | String | Yes | The sample file path |
+
+    | Vm | String | No | The vm to run the analysis on. e.g. win7-x64 |
+
+    | Playbook | String | No | Name of a playbook to apply to this sample run. e.g.
+    default |
+
+    | Network Exit | String | No | Any outgoing network traffic that is generated
+    during the analysis to appear to exit from the Network Exit Location. |
+
+    | Private | Boolean | Yes | if checked, the sample will be marked private |
+
+    | Linux Server Address | String | No | Specify the IP address of the remote linux
+    server, where the file is located. |
+
+    | Linux Username | String | No | Specify the username of the remote linux server,
+    where the file is located. |
+
+    | Linux Password | Password | No | Specify the password of the remote linux server,
+    where the file is located. |
+
+
+    **Parameter Notes:**
+
+    For remote server connection, values must be provided for all three Linux parameters
+    (`Linux Server Address`, `Linux Username`, `Linux Password`).

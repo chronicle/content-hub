@@ -40,7 +40,7 @@ class SOCRadarManager:
     def __init__(self, api_root: str, api_key: str, company_id: str | int, verify_ssl: bool = True) -> None:
         """Initialize SOCRadarManager with API credentials."""
         self.api_root: str = (api_root or "https://platform.socradar.com/api").rstrip("/")
-        self.api_key: str = api_key
+        self.api_key: str = (api_key or "").strip()
         self.company_id: str = str(company_id)
         self.verify_ssl: bool = verify_ssl
         self.session: requests.Session = requests.Session()
@@ -406,7 +406,9 @@ class SOCRadarManager:
             try:
                 resp = self.session.get(url, params=params, timeout=60)
                 if resp.status_code == 401:
-                    raise SOCRadarManagerError("Unauthorized - check your API key")
+                    raise SOCRadarManagerError(
+                        f"Unauthorized - check your API key. Response body: {resp.text[:200]}"
+                    )
                 if 400 <= resp.status_code < 500:
                     raise SOCRadarManagerError(f"Feed request error {resp.status_code} for {collection_uuid}")
                 resp.raise_for_status()

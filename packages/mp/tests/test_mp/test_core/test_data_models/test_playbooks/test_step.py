@@ -74,11 +74,11 @@ class TestDebugStepEnrichmentDataModel:
         assert DEBUG_STEP_ENRICHMENT_DATA.to_non_built() == NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             StepDebugEnrichmentData.from_built(cast("BuiltStepDebugEnrichmentData", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             StepDebugEnrichmentData.from_non_built(cast("NonBuiltStepDebugEnrichmentData", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
@@ -108,11 +108,11 @@ class TestStepDebugDataModel:
         assert StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA).to_non_built() == NON_BUILT_STEP_DEBUG_DATA
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             StepDebugData.from_built(cast("BuiltStepDebugData", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             StepDebugData.from_non_built(cast("NonBuiltStepDebugData", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
@@ -148,11 +148,11 @@ class TestStepParameterDataModel:
         assert STEP_PARAMETER.to_non_built() == NON_BUILT_STEP_PARAMETER
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             StepParameter.from_built(cast("BuiltStepParameter", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             StepParameter.from_non_built(cast("NonBuiltStepParameter", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
@@ -188,11 +188,11 @@ class TestStepDataModel:
         assert STEP.to_non_built() == NON_BUILT_STEP
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             Step.from_built("", {})
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             Step.from_non_built("", {})
 
     def test_from_built_to_built_is_idempotent(self) -> None:

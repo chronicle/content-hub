@@ -26,7 +26,7 @@ from mp.core.utils import to_snake_case
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mp.core.data_models.playbooks.overview.metadata import Overview
+    from mp.core.data_models.common.overview.metadata import Overview
     from mp.core.data_models.playbooks.playbook import BuiltPlaybook, Playbook
     from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 
