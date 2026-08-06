@@ -2,73 +2,87 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches **USER** entities (email addresses) using the Full Contact API. This
-    action retrieves comprehensive data about both the individual (e.g., job title,
-    gender, LinkedIn profile) and the organization associated with their email domain
-    (e.g., company name, industry, employee count, location). It enhances the context
-    of a case by populating entity properties with external identity and firmographic
-    intelligence.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    * The action requires a valid Full Contact API Key to be configured in the integration
-    settings.
-
-    * It specifically targets entities of type **USER** (interpreted as email addresses).
-
-    * It handles the asynchronous nature of the Full Contact API by polling when a
-    `202 Accepted` status is received during domain enrichment.
+    Enriches User entities with contextual data extracted from the Full Contact product.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: Fetches the API Key from the 'Full Contact' integration
-    configuration.
+    1. Iterates through the target entities and filters for User entities.
 
-    2. **Entity Filtering**: Iterates through the target entities and selects those
-    identified as `USER` types.
+    2. Extracts the email address and domain from the User entity's identifier.
 
-    3. **Domain Extraction**: Parses the email address of the user entity to extract
-    the domain name.
+    3. Makes a POST request to the Full Contact API (`/v3/company.enrich`) to retrieve
+    company details based on the domain.
 
-    4. **Company Enrichment**: Queries the Full Contact `company.enrich` endpoint
-    using the extracted domain. It includes logic to retry if the API returns a 202
-    status.
+    4. Makes a POST request to the Full Contact API (`/v3/person.enrich`) to retrieve
+    person details based on the email address.
 
-    5. **Person Enrichment**: Queries the Full Contact `person.enrich` endpoint using
-    the user's email address.
+    5. Updates the entity's additional properties with the retrieved company and person
+    information.
 
-    6. **Data Mapping**: Maps the retrieved JSON data (Company Name, Industry, Founded
-    Year, Employees, Website, Location, Gender, Title, LinkedIn) to a local dictionary.
+    6. Saves the updated entities back to the platform and returns the enrichment
+    data as a JSON result.
 
-    7. **Internal Update**: Updates the `additional_properties` of the entity within
-    Google SecOps with the enriched data.
 
-    8. **Finalization**: Updates the entities in the case and returns a JSON result
-    containing the enrichment details for all processed entities.
+    ### Additional Notes
+
+    The action expects User entities to be formatted as email addresses to successfully
+    extract the domain and email for enrichment.
+  ai_short_description: >-
+    Enriches User entities by retrieving company and person details from the Full
+    Contact API and updating the entities' additional properties.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' field of USER entities with data retrieved
-      from Full Contact.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes POST requests to Full Contact's enrichment endpoints to fetch
+      data. Although it uses POST, it does not mutate external data. It updates internal
+      entities with the fetched data but does not create insights or mutate other
+      internal data.
   entity_usage:
     entity_types:
-    - USERUNIQNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -82,42 +96,72 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `ent.entity_type
+      == EntityTypes.USER`. This means it targets USER entities, filtering strictly
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches contextual metadata (company and person details) for User
+      entities from Full Contact. This matches the 'Enrich Asset' expected outcome,
+      as it returns contextual metadata for a user.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is designed to verify the connectivity between Google SecOps
-    and the Full Contact service. Its primary purpose is to ensure that the integration's
-    API Key is correctly configured and that the environment can successfully communicate
-    with the Full Contact API endpoints.
-
-
-    ### Parameters Description
-
-    There are no user-facing parameters for this action. It relies entirely on the
-    'API Key' provided in the integration's configuration settings.
+    This action tests connectivity to the Full Contact API to ensure the integration
+    is configured correctly with valid credentials.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action fetches the 'API Key' from the Full
-    Contact integration configuration.
+    1. Retrieves the API key from the integration configuration.
 
-    2. **API Connection Attempt**: It initializes a connection to the Full Contact
-    API and performs a test request to the company enrichment endpoint (`https://api.fullcontact.com/v3/company.enrich`)
-    using the hardcoded domain 'google.com'.
+    2. Makes a POST request to the Full Contact `company.enrich` API endpoint using
+    a hardcoded test domain (`google.com`).
 
-    3. **Validation**: The action checks the response from the API. If a 401 Unauthorized
-    status is returned, it raises an exception to notify the user of invalid credentials.
+    3. Evaluates the API response to ensure the provided API key is valid and does
+    not return a 401 Unauthorized status.
 
-    4. **Result Reporting**: If the request is successful, the action returns a success
-    message and a boolean result of `True`.
+    4. Returns a success message and a true result value if the connection is successfully
+    established and authenticated.
 
 
     ### Additional Notes
 
-    This action does not interact with or process any entities within a case. It is
-    a diagnostic tool used for integration setup and troubleshooting.
+    This is a utility action primarily used for verifying integration health and credentials.
+    It does not process case entities or return enrichment data to the case.
+  ai_short_description: >-
+    Tests connectivity to the Full Contact API by attempting to enrich a hardcoded
+    test domain.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -126,12 +170,51 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes an HTTP POST request to the Full Contact API solely to test
+      connectivity. It does not fetch contextual data for alerts/entities, does not
+      mutate external data (the endpoint is for enrichment, not state change), and
+      does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -145,3 +228,41 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It uses a hardcoded domain to test connectivity, meaning it does
+      not run on or process any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) that verifies API credentials by making
+      a test request. It does not perform any enrichment on case entities, mutate
+      external state, or interact with alerts, tickets, or emails. Therefore, it does
+      not match any of the expected outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

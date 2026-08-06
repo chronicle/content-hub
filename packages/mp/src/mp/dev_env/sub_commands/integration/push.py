@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path  # noqa: TC003
+from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
 from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
@@ -127,7 +127,7 @@ def _push_custom_integrations(zipped_paths: list[Path]) -> None:
             backend_api.upload_integration(zip_path, details["identifier"])
             logger.info("Successfully pushed: %s", zip_path.name)
 
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # ruff:ignore[blind-except]
             results.append(f"{zip_path.name}: {e}")
 
     if results:

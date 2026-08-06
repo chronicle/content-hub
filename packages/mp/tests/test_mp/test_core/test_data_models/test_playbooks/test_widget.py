@@ -42,11 +42,11 @@ class TestPlaybookWidgetMetadataDataModel:
         assert PLAYBOOK_WIDGET_METADATA.to_non_built() == NON_BUILT_PLAYBOOK_WIDGET_METADATA
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             PlaybookWidgetMetadata.from_built("", {})
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             PlaybookWidgetMetadata.from_non_built("", {})
 
     def test_from_built_with_none_values(self) -> None:

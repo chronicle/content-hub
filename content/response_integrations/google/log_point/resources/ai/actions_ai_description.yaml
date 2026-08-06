@@ -1,113 +1,44 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Execute Entity Query:
   ai_description: >-
     ### General Description
 
-    Executes a search query in LogPoint, dynamically filtered by the entities present
-    in the Google SecOps case. This action allows for complex investigations by automatically
-    building a LogPoint query that targets specific IP addresses, hostnames, users,
-    URLs, and file hashes found in the alert context.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Query | String | Yes | The base LogPoint query to append to the entity filters.
-    |
-
-    | Time Frame | Enum | Yes | The time range for the search. Options: Last Hour,
-    Last 12 Hours, Last 24 Hours, Last 30 Days, Last 365 Days, Custom. |
-
-    | Start Time | String | No | Start time for 'Custom' time frame (Format: YYYY-MM-DDThh:mm:ssZ
-    or timestamp). |
-
-    | End Time | String | No | End time for 'Custom' time frame. Defaults to current
-    time if not provided. |
-
-    | Repos | String | No | Comma-separated list of LogPoint repository names to search.
-    If empty, searches all repos. |
-
-    | IP Entity Key | String | No | LogPoint field name used to filter IP Address
-    entities. |
-
-    | Hostname Entity Key | String | No | LogPoint field name used to filter Hostname
-    entities. |
-
-    | File Hash Entity Key | String | No | LogPoint field name used to filter File
-    Hash entities. |
-
-    | User Entity Key | String | No | LogPoint field name used to filter User entities.
-    |
-
-    | URL Entity Key | String | No | LogPoint field name used to filter URL entities.
-    |
-
-    | Email Address Entity Key | String | No | LogPoint field name used to filter
-    Email Address entities (Users matching email format). |
-
-    | Stop if Not Enough Entities | Boolean | Yes | If enabled, the action fails if
-    any specified entity key has no corresponding entities in the current scope. |
-
-    | Cross Entity Operator | Enum | Yes | Logical operator (OR/AND) used to join
-    filters between different entity types. |
-
-    | Max Results To Return | Integer | No | Maximum number of log entries to retrieve
-    (default 100). |
-
-
-    ### Additional Notes
-
-    - **Requirement:** At least one "Entity Key" parameter must be configured for
-    the action to execute.
-
-    - **Entity Mapping:** User entities are automatically checked against an email
-    regex; if they match, the "Email Address Entity Key" is used instead of the "User
-    Entity Key".
-
-    - **Asynchronous Execution:** This action initiates a search job and polls LogPoint
-    for results. It may take multiple playbook iterations to complete depending on
-    the query complexity.
+    Executes a dynamic search query in LogPoint based on the identifiers of supported
+    entities (User, IP, URL, File Hash, Hostname). The action constructs a query using
+    the provided entity keys and retrieves matching logs or events from the LogPoint
+    platform.
 
 
     ### Flow Description
 
-    1. **Initialization:** Validates LogPoint connectivity and parses time frame/repository
-    parameters.
+    1. Validates the provided parameters, including time frames, repositories, and
+    entity keys.
 
-    2. **Entity Scoping:** Identifies all supported entities (IP, Host, User, URL,
-    Hash) in the case and maps them to the provided LogPoint keys.
+    2. Iterates over the target entities and filters them to include only supported
+    types (User, IP, URL, File Hash, Hostname). It also distinguishes between standard
+    User entities and Email Addresses based on format validation.
 
-    3. **Validation:** If "Stop if Not Enough Entities" is True, ensures every provided
-    key has at least one matching entity.
+    3. Constructs a dynamic LogPoint query by combining the base `Query` parameter
+    with sub-queries built from the entity identifiers and their corresponding entity
+    keys.
 
-    4. **Query Construction:** Builds a composite query string. For each entity type,
-    it creates an OR-joined group of identifiers (e.g., `("ip"="1.1.1.1" OR "ip"="2.2.2.2")`).
-    These groups are then joined by the "Cross Entity Operator" and appended to the
-    user-provided "Query".
+    4. Initiates an asynchronous query job in LogPoint by making a POST request to
+    the `/getsearchlogs` API endpoint.
 
-    5. **Job Submission:** Submits the search request to LogPoint and stores the Search
-    ID.
+    5. Periodically polls the LogPoint API to check the status of the query job.
 
-    6. **Polling:** In subsequent runs, checks the status of the Search ID.
+    6. Once the query finishes, retrieves the results and attaches them to the action's
+    output as a data table and JSON.
 
-    7. **Completion:** Once the job is finished, retrieves the logs and outputs them
-    as a Data Table and JSON result.
+
+    ### Additional Notes
+
+    - Email addresses are processed as User entities that match an email format.
+
+    - The action can be configured to halt execution if not all specified entity types
+    are present in the scope (controlled by the `Stop if Not Enough Entities` parameter).
+  ai_short_description: >-
+    Executes a dynamic search query in LogPoint based on the identifiers of supported
+    entities and returns the matching logs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -118,15 +49,49 @@ Execute Entity Query:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data by making a POST request to the LogPoint API to create
+      a query job and retrieve search results. It does not mutate external data (it
+      only performs a search). It does not mutate internal data, update entities,
+      or create insights; it only attaches the search results as a data table and
+      JSON to the action result.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
-    - USERUNIQNAME
-    - DestinationURL
-    - FILEHASH
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -140,77 +105,126 @@ Execute Entity Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `if
+      entity.entity_type not in supported_entities: continue`. The supported entities
+      are URL, ADDRESS, USER, HOSTNAME, and FILEHASH. Therefore, it filters by `entity_type`
+      and targets these specific entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a search query in LogPoint to retrieve logs and events related
+      to the provided entities. This directly aligns with the 'Search Events' expected
+      outcome. It does not enrich the entities with threat intelligence or asset context,
+      nor does it mutate any external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query | String | Yes | Specify the query that needs to be executed. Please refer
+    to the action documentation for details. |
+
+    | Time Frame | DropDown | Yes | Specify the time frame for the query. If "Custom"
+    is selected, you need also provide start time, end time by default will be current
+    time. |
+
+    | Start Time | String | No | Specify the start time for the query. Format: YYYY-MM-DDThh:mm:ssZ
+    or timestamp. |
+
+    | End Time | String | No | Specify the end time for the query. Format: YYYY-MM-DDThh:mm:ssZ
+    or timestamp. If nothing is provided action will use current time as end time.
+    |
+
+    | Repos | String | No | Specify a comma-separated list of names of the repos.
+    If nothing is provided, action will search in all repos. |
+
+    | IP Entity Key | String | No | Specify what key should be used with IP entities.
+    Please refer to the action documentation for details. |
+
+    | Hostname Entity Key | String | No | Specify what key should be used with Hostname
+    entities, when preparing the filter. Please refer to the action documentation
+    for details. |
+
+    | File Hash Entity Key | String | No | Specify what key should be used with File
+    Hash entities. Please refer to the action documentation for details. |
+
+    | User Entity Key | String | No | Specify what key should be used with User entities.
+    Please refer to the action documentation for details. |
+
+    | URL Entity Key | String | No | Specify what key should be used with URL entities.
+    Please refer to the action documentation for details. |
+
+    | Email Address Entity Key | String | No | Specify what key should be used with
+    Email Address entities. Please refer to the action documentation for details.
+    |
+
+    | Stop if Not Enough Entities | Boolean | Yes | If enabled, action will not start
+    execution, unless all of the entity types are available for the specified "..
+    Entity Keys". |
+
+    | Cross Entity Operator | DropDown | Yes | Specify what should be the logical
+    operator used between different entity types. |
+
+    | Max Results To Return | String | No | Specify how many results should be returned.
+    |
 Execute Query:
   ai_description: >-
     ### General Description
 
-    Executes a search query in LogPoint to retrieve log data based on specified criteria.
-    This action is designed to perform broad searches across one or multiple repositories
-    within a defined time range. It supports both predefined time frames (e.g., Last
-    24 Hours) and custom time ranges, providing flexibility for incident investigation
-    and threat hunting.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Query | String | Yes | The specific search query to be executed in LogPoint.
-    |
-
-    | Time Frame | Dropdown | Yes | The time range for the search. Options include
-    'Last Hour', 'Last 12 Hours', 'Last 24 Hours', 'Last 30 Days', 'Last 365 Days',
-    or 'Custom'. |
-
-    | Start Time | String | No | The starting point for the search. **Mandatory**
-    if 'Time Frame' is set to 'Custom'. Supports ISO 8601 format (YYYY-MM-DDThh:mm:ssZ)
-    or unix timestamps. |
-
-    | End Time | String | No | The ending point for the search. Used if 'Time Frame'
-    is set to 'Custom'. If omitted, the current time is used. |
-
-    | Repos | String | No | A comma-separated list of repository names to restrict
-    the search. If empty, all repositories are searched. |
-
-    | Max Results To Return | String | No | The maximum number of log entries to retrieve.
-    Default is 100. |
-
-
-    ### Additional Notes
-
-    - This is an asynchronous action that polls LogPoint until the search job is completed.
-
-    - If specific repositories are provided, the action validates their existence
-    against the LogPoint server before starting the query.
-
-    - The 'Max Results To Return' must be an integer greater than or equal to 1.
+    Executes a search query in Logpoint to retrieve historical logs and event data.
+    This action allows analysts to search across specified repositories within a defined
+    time frame and returns the matching results as JSON and a data table.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** Retrieves the query, time frame, and optional filters
-    (repos, limits) from the action configuration.
+    1. Extracts the search query, time frame, and repository parameters.
 
-    2. **Time Range Calculation:** Determines the start and end timestamps based on
-    the selected 'Time Frame'. If 'Custom' is selected, it validates the provided
-    'Start Time'.
+    2. Validates the time frame and repository names (fetching available repos from
+    Logpoint if specific repositories are requested).
 
-    3. **Repo Validation:** If repository names are provided, it fetches the list
-    of available repositories from LogPoint to verify that all requested repos exist.
+    3. Initiates an asynchronous search query job in Logpoint via the `/getsearchlogs`
+    API endpoint.
 
-    4. **Job Creation:** Submits a search request to LogPoint and receives a unique
-    `search_id`.
+    4. Polls the Logpoint API periodically to check the status of the query job.
 
-    5. **Status Polling:** Periodically checks the status of the search job using
-    the `search_id` until the execution state is finished.
+    5. Once the query execution is completed, retrieves the query results and attaches
+    them to the action's output as JSON and a data table.
 
-    6. **Data Retrieval:** Once the job is finished, it fetches the raw log data from
-    the server.
 
-    7. **Output Generation:** Formats the results into a JSON object and a CSV data
-    table, which are then attached to the SOAR case.
+    ### Additional Notes
+
+    This action runs asynchronously to accommodate long-running queries. If "Custom"
+    is selected for the time frame, a valid start time must be provided.
+  ai_short_description: >-
+    Executes a search query in Logpoint and returns the matching log results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -221,10 +235,47 @@ Execute Query:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data by executing a search query and retrieving the results
+      from Logpoint. It does not mutate external data, update internal entities, create
+      insights, or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -238,49 +289,78 @@ Execute Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or perform any
+      entity-specific operations. It executes a general search query based on the
+      provided input parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a search query in Logpoint to retrieve historical logs and
+      telemetry data. This directly aligns with the 'Search Events' expected outcome.
+      It does not enrich specific IOCs or assets, nor does it mutate external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Query | String | Yes | Specify the query that needs to\
+    \ be executed in Logpoint. |\n| Time Frame | Dropdown | Yes | Specify the time\
+    \ frame for the query. If \u201CCustom\u201D is selected, you need to also provide\
+    \ start time and end time. |\n| Start Time | String | No | Specify the start time\
+    \ for the query. Format: YYYY-MM-DDThh:mm:ssZ or timestamp. |\n| End Time | String\
+    \ | No | Specify the end time for the query.Format: YYYY-MM-DDThh:mm:ssZ or timestamp.\
+    \ If nothing is provided action will use current time as end time. |\n| Repos\
+    \ | String | No | Specify a comma-separated list of names of the repos. If nothing\
+    \ is provided, action will search in all repos. |\n| Max Results To Return | String\
+    \ | No | Specify how many results should be returned. |"
 List Repos:
   ai_description: >-
     ### General Description
 
-    Lists available repositories (repos) from a LogPoint instance. This action is
-    primarily used for discovery and configuration verification, allowing users to
-    see which data repositories are accessible with the provided credentials.
-
-
-    ### Parameters
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Max Repos To Return | Integer | No | Specifies the maximum number of repositories
-    to retrieve and display. Default is 100. Must be an integer greater than or equal
-    to 1. |
+    Lists available repositories in Logpoint.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the LogPoint manager using the provided
-    integration configuration (IP Address, Username, Secret, and SSL settings).
+    1. Initializes the LogPointManager with the provided credentials.
 
-    2. **Validation**: It validates the `Max Repos To Return` parameter to ensure
-    it meets the minimum requirement.
-
-    3. **API Request**: It sends a POST request to the LogPoint `/getalloweddata`
-    endpoint with the type set to `logpoint_repos` to fetch the list of authorized
+    2. Makes a POST request to the `/getalloweddata` endpoint to fetch the available
     repositories.
 
-    4. **Data Processing**: The retrieved repository data is parsed into structured
-    objects containing the repository name and its address.
+    3. Parses the response and limits the results based on the 'Max Repos To Return'
+    parameter.
 
-    5. **Output**: The results are formatted into a JSON object and a data table titled
-    'Available Repos' for display within the Google SecOps interface.
+    4. Returns the repositories as JSON results and a data table.
 
 
     ### Additional Notes
 
-    This action does not require or process any entities. It is a global utility action
-    for the LogPoint integration.
+    None.
+  ai_short_description: >-
+    Lists available repositories in Logpoint.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -291,10 +371,46 @@ List Repos:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to the Logpoint API to fetch available repositories.
+      It does not mutate external data, update internal entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -308,30 +424,79 @@ List Repos:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It simply fetches a list of repositories
+      from the Logpoint server without referencing any specific entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a list of repositories from Logpoint. It does not match any
+      of the specific outcome categories such as enriching IOCs, updating alerts,
+      or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Repos To Return | Integer | No | Specify how many reports should be returned.
+    Default is 100. |
 Ping:
   ai_description: >-
-    ### General Description\n\nThe **Ping** action is used to verify the connectivity
-    between Google SecOps and the LogPoint server. It ensures that the provided configuration
-    parameters, such as the IP address and credentials, are correct and that the LogPoint
-    API is reachable.\n\n### Parameters Description\n\n| Parameter | Type | Mandatory
-    | Description |\n| :--- | :--- | :--- | :--- |\n| **IP Address** | String | Yes
-    | The IP address or hostname of the LogPoint server. |\n| **Username** | String
-    | Yes | The username used for authentication with the LogPoint server. |\n| **Secret**
-    | String | Yes | The secret key used for authentication with the LogPoint server.
-    |\n| **CA Certificate File** | String | No | A base64 encoded CA certificate file
-    used for SSL verification. |\n| **Verify SSL** | Boolean | Yes | If set to true,
-    the action will verify the SSL certificate of the LogPoint server. Default is
-    true. |\n\n### Flow Description\n\n1. **Parameter Extraction**: The action retrieves
-    the connection details (IP, Username, Secret, SSL settings) from the integration
-    configuration.\n2. **Manager Initialization**: A `LogPointManager` instance is
-    created using the provided credentials and connection settings.\n3. **Connectivity
-    Test**: The action calls the `test_connectivity` method, which sends a POST request
-    to the LogPoint `/getalloweddata` endpoint.\n4. **Result Handling**: If the request
-    is successful and the API returns a valid response, the action completes successfully.
-    If an error occurs (e.g., authentication failure, network timeout), the action
-    fails and provides an error message.\n\n### Additional Notes\n\n- This action
-    does not process any entities.\n- It is primarily used for troubleshooting and
-    initial setup verification.
+    ### General Description
+
+    Tests connectivity to the LogPoint server using the provided integration configuration
+    parameters. This action ensures that the credentials and network settings are
+    correct and that the SOAR platform can successfully communicate with the LogPoint
+    API.
+
+
+    ### Flow Description
+
+    1. Extracts integration-level configuration parameters (IP Address, Username,
+    Secret, CA Certificate File, Verify SSL).
+
+    2. Initializes the LogPoint API manager with the provided credentials.
+
+    3. Sends a POST request to the LogPoint `/getalloweddata` endpoint to verify authentication
+    and connectivity.
+
+    4. Returns a success message if the connection is established, or a failure message
+    if an error occurs.
+
+
+    ### Additional Notes
+
+    This action is primarily used for administrative purposes to validate the integration
+    setup and does not interact with case data or entities.
+  ai_short_description: >-
+    Tests connectivity to the LogPoint server to verify integration configuration
+    and authentication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -342,10 +507,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action only tests connectivity to the LogPoint server by making a POST request
+      to the ping endpoint. It does not fetch contextual data, mutate external or
+      internal data, update entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -359,29 +561,70 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It operates independently
+      of case or alert entities to test system connectivity, so all entity-related
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Update Incident Status:
-  ai_description: "### General Description\nThe **Update Incident Status** action\
-    \ allows users to programmatically change the status of a specific incident within\
-    \ the LogPoint SIEM. It supports transitioning incidents to either a 'Resolved'\
-    \ or 'Closed' state. This action is typically used in automated playbooks to synchronize\
-    \ the status of a LogPoint incident with the resolution of a case in Google SecOps.\n\
-    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| **Incident ID** | String | Yes | The unique identifier\
-    \ of the incident in LogPoint that needs to be updated. |\n| **Action** | Dropdown\
-    \ | Yes | The target status for the incident. Options are **Close** or **Resolve**.\
-    \ If 'Close' is selected, the action will attempt to both resolve and close the\
-    \ incident. |\n\n### Additional Notes\n- This action does not operate on entities;\
-    \ it requires a specific Incident ID provided as a parameter.\n- If the 'Close'\
-    \ action is selected, the logic internally attempts to call the 'Resolve' endpoint\
-    \ before the 'Close' endpoint to ensure a valid state transition in LogPoint.\n\
-    \n### Flow Description\n1. **Initialization**: The action extracts integration\
-    \ configuration (IP, credentials) and action parameters (Incident ID, Action).\n\
-    2. **Connectivity Check**: It initializes the LogPoint Manager and verifies connectivity\
-    \ to the LogPoint API.\n3. **Status Update**: \n    - If the action is **Close**,\
-    \ it first attempts to resolve the incident and then proceeds to close it.\n \
-    \   - If the action is **Resolve**, it only attempts to resolve the incident.\n\
-    4. **Completion**: The action reports whether the status update was successful\
-    \ in the external system and provides a status message."
+  ai_description: >-
+    ### General Description
+
+    Updates the status of a specific incident in LogPoint.
+
+
+    ### Flow Description
+
+    1. Extracts the `Incident ID` and the desired `Action` (Close or Resolve) from
+    the action parameters.
+
+    2. Initializes the LogPoint API client.
+
+    3. Makes a POST request to the LogPoint API (`/close_incident` or `/resolve_incident`)
+    to update the incident status.
+
+    4. Returns a success message if the update is successful, or an error message
+    otherwise.
+
+
+    ### Additional Notes
+
+    If the action is set to 'Close', the integration will first attempt to resolve
+    the incident before closing it.
+  ai_short_description: >-
+    Updates the status of a specific incident in LogPoint to either Closed or Resolved.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -390,14 +633,50 @@ Update Incident Status:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of an incident in the LogPoint SIEM to either 'Resolved'
-      or 'Closed' via API POST requests.
+      Updates the status of an incident in LogPoint to either Closed or Resolved.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to LogPoint to update the status of an incident.
+      It mutates external data but does not fetch data, update internal entities,
+      or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -411,3 +690,48 @@ Update Incident Status:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or filter any entities. It relies solely on the
+      provided Incident ID parameter.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates an incident in an external SIEM (LogPoint). It does not match
+      any of the specific outcome categories such as updating an internal alert, updating
+      an ITSM ticket, or modifying blocklists.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident ID | String | Yes | Specify the id of the incident, which you want
+    to update. |
+
+    | Action | String | Yes | Specify the action for the incident (Close or Resolve).
+    |

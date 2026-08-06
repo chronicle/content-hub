@@ -18,7 +18,7 @@ import contextlib
 import logging
 import pathlib
 import shutil
-import subprocess  # noqa: S404
+import subprocess  # ruff:ignore[suspicious-subprocess-import]
 
 import typer
 
@@ -43,7 +43,7 @@ def get_git_repo_root(path: pathlib.Path) -> pathlib.Path:
     """
     try:
         output: str = (
-            subprocess  # noqa: S603
+            subprocess  # ruff:ignore[subprocess-without-shell-equals-true]
             .check_output(
                 [GIT_PATH, "rev-parse", "--show-toplevel"],
                 cwd=path,
@@ -90,7 +90,7 @@ def find_commit_sha(src_path: pathlib.Path, version: str) -> str:
         ]
         with contextlib.suppress(subprocess.CalledProcessError):
             output: str = (
-                subprocess  # noqa: S603
+                subprocess  # ruff:ignore[subprocess-without-shell-equals-true]
                 .check_output(
                     cmd,
                     cwd=src_path,
@@ -120,7 +120,7 @@ def find_commit_sha(src_path: pathlib.Path, version: str) -> str:
             ]
             with contextlib.suppress(subprocess.CalledProcessError):
                 output: str = (
-                    subprocess  # noqa: S603
+                    subprocess  # ruff:ignore[subprocess-without-shell-equals-true]
                     .check_output(
                         cmd,
                         cwd=src_path,
@@ -154,7 +154,7 @@ def create_git_worktree(src_path: pathlib.Path, version: str, temp_dir: pathlib.
     repo_root: pathlib.Path = get_git_repo_root(src_path)
     commit_sha: str = find_commit_sha(src_path, version)
     try:
-        subprocess.run(  # noqa: S603
+        subprocess.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             [GIT_PATH, "worktree", "add", str(temp_dir), commit_sha],
             cwd=repo_root,
             check=True,
@@ -175,7 +175,7 @@ def remove_git_worktree(temp_dir: pathlib.Path, repo_root: pathlib.Path) -> None
     """
     git_path: str = shutil.which("git") or "git"
     try:
-        subprocess.run(  # noqa: S603
+        subprocess.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             [git_path, "worktree", "remove", "--force", str(temp_dir)],
             cwd=repo_root,
             check=True,

@@ -14,8 +14,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import zipfile
+from enum import Enum
+from typing import Any, NamedTuple
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -25,6 +28,64 @@ from ..core.AttachmentsManager import AttachmentsManager
 
 INTEGRATION_NAME = "FileUtilities"
 ACTION_NAME = "Extract Zip Files"
+
+
+class ZipType(str, Enum):
+    ZIP = "ZIP"
+    SEVEN_ZIP = "7Z"
+    UNKNOWN = "UNKNOWN"
+
+
+class ExtractZipData(NamedTuple):
+    entity_identifier: str
+    zip_file_content: io.BytesIO
+    bruteforce: bool
+    pwds: list[str]
+
+
+class UnzipFile:
+    def __init__(self, zip_data: ExtractZipData, zip_type: ZipType, attach_mgr: AttachmentsManager):
+        self.zip_data = zip_data
+        self.zip_type = zip_type
+        self.attach_mgr = attach_mgr
+
+    def unzip(self) -> list[dict[str, Any]]:
+        match self.zip_type:
+            case ZipType.SEVEN_ZIP:
+                return self.attach_mgr.extract_7z(
+                    self.zip_data.entity_identifier,
+                    self.zip_data.zip_file_content,
+                    bruteforce=self.zip_data.bruteforce,
+                    pwds=self.zip_data.pwds,
+                )
+            case ZipType.ZIP:
+                return self.attach_mgr.extract_zip(
+                    self.zip_data.entity_identifier,
+                    self.zip_data.zip_file_content,
+                    bruteforce=self.zip_data.bruteforce,
+                    pwds=self.zip_data.pwds,
+                )
+            case _:
+                return []
+
+
+def determine_zip_type(zip_file_content: io.BytesIO) -> ZipType:
+    is_7z = False
+    with contextlib.suppress(OSError):
+        zip_file_content.seek(0)
+        header = zip_file_content.read(6)
+        if header == b"7z\xbc\xaf\x27\x1c":
+            is_7z = True
+    with contextlib.suppress(OSError):
+        zip_file_content.seek(0)
+
+    if is_7z:
+        return ZipType.SEVEN_ZIP
+
+    if zipfile.is_zipfile(zip_file_content):
+        return ZipType.ZIP
+
+    return ZipType.UNKNOWN
 
 
 @output_handler
@@ -39,18 +100,15 @@ def main():
         ).lower()
         == "true"
     )
-    bruteforce_password = (
-        siemplify.extract_action_param("BruteForce Password", print_value=True).lower()
-        == "true"
-    )
-    create_entities = (
-        siemplify.extract_action_param("Create Entities", print_value=True).lower()
-        == "true"
-    )
-    add_to_case_wall = (
-        siemplify.extract_action_param("Add to Case Wall", print_value=True).lower()
-        == "true"
-    )
+    bruteforce_password = siemplify.extract_action_param(
+        "BruteForce Password", print_value=True
+    ).lower() == "true"
+    create_entities = siemplify.extract_action_param(
+        "Create Entities", print_value=True
+    ).lower() == "true"
+    add_to_case_wall = siemplify.extract_action_param(
+        "Add to Case Wall", print_value=True
+    ).lower() == "true"
 
     zip_passwords = list(
         filter(
@@ -73,7 +131,9 @@ def main():
     output_message = (
         "output message :"  # human readable message, showed in UI as the action result
     )
-    result_value = "false"  # Set a simple result value, used for playbook if\else and placeholders.
+    result_value = (
+        "false"  # Set a simple result value, used for playbook if\else and placeholders.
+    )
     attach_mgr = AttachmentsManager(siemplify=siemplify)
 
     extracted_files = {}
@@ -87,13 +147,20 @@ def main():
                     entity.additional_properties["attachment_id"],
                 )
                 zip_file_content = io.BytesIO(_attachment.getvalue())
-                if zipfile.is_zipfile(zip_file_content):
-                    extracted_files[entity.identifier] = attach_mgr.extract_zip(
-                        entity.identifier,
-                        zip_file_content,
+                zip_type = determine_zip_type(zip_file_content)
+                if zip_type != ZipType.UNKNOWN:
+                    zip_data = ExtractZipData(
+                        entity_identifier=entity.identifier,
+                        zip_file_content=zip_file_content,
                         bruteforce=bruteforce_password,
                         pwds=zip_passwords,
                     )
+                    unzip_file = UnzipFile(
+                        zip_data=zip_data,
+                        zip_type=zip_type,
+                        attach_mgr=attach_mgr,
+                    )
+                    extracted_files[entity.identifier] = unzip_file.unzip()
                     result_value = "true"
 
     if add_to_case_wall:
@@ -101,8 +168,7 @@ def main():
             for x_file in extracted_files[file_name]:
                 if x_file["filename"].endswith("/") or not x_file.get("raw", ""):
                     siemplify.LOGGER.info(
-                        "Skipping directory or empty file: "
-                        f"{x_file['filename']} from case wall.",
+                        f"Skipping directory or empty file: {x_file['filename']} from case wall.",
                     )
                     continue
                 siemplify.LOGGER.info(

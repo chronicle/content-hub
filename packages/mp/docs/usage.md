@@ -10,6 +10,7 @@ For a high-level overview and workflow, see the [Main README](../README.md).
 - [**Check**](commands/check.md): Lint and check code quality.
 - [**Config**](commands/config.md): Configure `mp` settings.
 - [**Describe**](commands/describe.md): Generate AI action descriptions.
+- [**Describe Regression Test**](commands/describe_regression_test.md): Run regression testing on AI-generated metadata.
 - [**Format**](commands/format.md): Format Python code.
 - [**Test**](commands/test.md): Run integration tests.
 - [**Validate**](commands/validate.md): Validate integration structure.

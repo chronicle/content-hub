@@ -19,10 +19,10 @@ from typing import TYPE_CHECKING
 import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.restructure.playbooks.deconstruct import (
-    _sanitize_step_filename,  # noqa: PLC2701
+    _sanitize_step_filename,  # ruff:ignore[import-private-name]
 )
+from mp.core.data_models.common.overview.metadata import Overview
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
-from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
 from mp.core.data_models.playbooks.step.step_debug_data import StepDebugData
 from mp.core.data_models.playbooks.step.step_parameter import StepParameter
