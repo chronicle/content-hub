@@ -10,7 +10,10 @@ import requests
 
 from .censys_exceptions import (
     CensysException,
+    FeatureNotEnabledException,
+    ForbiddenErrorException,
     InternalServerError,
+    ItemNotFoundException,
     PartialDataException,
     RateLimitException,
     UnauthorizedErrorException,
@@ -22,8 +25,11 @@ from .constants import (
     DEFAULT_REQUEST_TIMEOUT,
     ENDPOINTS,
     ENRICH_CERTIFICATES_ACTION_IDENTIFIER,
+    ENRICH_HOST_ACTION_IDENTIFIER,
     ENRICH_IPS_ACTION_IDENTIFIER,
     ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER,
+    FEATURE_NOT_ENABLED_STATUS_CODE,
+    FORBIDDEN_STATUS_CODE,
     GET_HOST_HISTORY_ACTION_IDENTIFIER,
     GET_RELATED_INFRA_JOB_STATUS_ACTION_IDENTIFIER,
     GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER,
@@ -36,6 +42,7 @@ from .constants import (
     MAX_PAGINATION_CALLS,
     MAX_PAYLOAD_SIZE_BYTES,
     MAX_RECORD_THRESHOLD,
+    NOT_FOUND_STATUS_CODE,
     PING_ACTION_IDENTIFIER,
     RATE_LIMIT_EXCEEDED_STATUS_CODE,
     RETRY_COUNT,
@@ -191,8 +198,13 @@ class APIManager:
 
         Raises:
             ValidationException: If input validation fails (400, 422)
-            RateLimitException: If API rate limit exceeded
-            UnauthorizedErrorException: If authentication failed
+            UnauthorizedErrorException: If authentication failed (401)
+            ForbiddenErrorException: If the account lacks permission for this
+                resource (403)
+            ItemNotFoundException: If the requested resource does not exist (404)
+            FeatureNotEnabledException: If the feature is not enabled for the
+                account's tier (409)
+            RateLimitException: If API rate limit exceeded (429)
             InternalServerError: If server error occurred
             CensysException: For other errors
         """
@@ -201,6 +213,15 @@ class APIManager:
         except requests.HTTPError as error:
             if response.status_code == UNAUTHORIZED_STATUS_CODE:
                 raise UnauthorizedErrorException()
+            if response.status_code == FORBIDDEN_STATUS_CODE:
+                error_detail = self._parse_validation_error(response)
+                raise ForbiddenErrorException(error_detail)
+            if response.status_code == NOT_FOUND_STATUS_CODE:
+                error_detail = self._parse_validation_error(response)
+                raise ItemNotFoundException(error_detail)
+            if response.status_code == FEATURE_NOT_ENABLED_STATUS_CODE:
+                error_detail = self._parse_validation_error(response)
+                raise FeatureNotEnabledException(error_detail)
             if response.status_code == RATE_LIMIT_EXCEEDED_STATUS_CODE:
                 raise RateLimitException("API rate limit exceeded")
             if response.status_code in VALIDATION_ERROR_STATUS_CODES:
@@ -214,6 +235,9 @@ class APIManager:
         except (
             ValidationException,
             UnauthorizedErrorException,
+            ForbiddenErrorException,
+            ItemNotFoundException,
+            FeatureNotEnabledException,
             RateLimitException,
             InternalServerError,
         ):
@@ -576,6 +600,30 @@ class APIManager:
                 },
             }
         }
+
+    def get_host_enrichment(self, host_ip: str) -> Dict[str, Any]:
+        """
+        Retrieve enrichment data for a single host from the new enrichment endpoint.
+
+        Args:
+            host_ip: IP address of the host to enrich
+
+        Returns:
+            Dict containing host enrichment data with structure
+            {"result": {"resource": {...}}}
+
+        Raises:
+            CensysException: If there's an error in the API response
+        """
+        url = self._get_full_url(ENRICH_HOST_ACTION_IDENTIFIER, host_ip=host_ip)
+
+        response = self._make_rest_call(
+            ENRICH_HOST_ACTION_IDENTIFIER,
+            "GET",
+            url,
+        )
+
+        return response
 
     def enrich_hosts(
         self, host_ids: List[str], at_time: Optional[str] = None
