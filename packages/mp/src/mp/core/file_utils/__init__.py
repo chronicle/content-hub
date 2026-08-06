@@ -14,6 +14,9 @@
 
 from __future__ import annotations
 
+from .alert_grouping_rules import (
+    create_or_get_alert_grouping_rules_root_dir,
+)
 from .common import (
     VALID_REPEATED_FILES,
     create_dir_if_not_exists,
@@ -30,6 +33,9 @@ from .common import (
     remove_rglobs_if_exists,
     save_yaml,
     validate_safe_path,
+)
+from .custom_fields import (
+    create_or_get_custom_fields_root_dir,
 )
 from .integrations import (
     IntegrationParityValidator,
@@ -72,6 +78,13 @@ from .playbooks import (
     is_built_playbook,
     is_non_built_playbook,
 )
+from .views import (
+    create_or_get_views_root_dir,
+    get_view_out_base_dir,
+    get_view_out_dir,
+    is_built_view,
+    is_non_built_view,
+)
 
 __all__: list[str] = [
     "VALID_REPEATED_FILES",
@@ -79,7 +92,9 @@ __all__: list[str] = [
     "base64_to_png_file",
     "create_dir_if_not_exists",
     "create_dirs_if_not_exists",
+    "create_or_get_alert_grouping_rules_root_dir",
     "create_or_get_content_dir",
+    "create_or_get_custom_fields_root_dir",
     "create_or_get_download_dir",
     "create_or_get_integrations_dir",
     "create_or_get_integrations_path",
@@ -87,6 +102,7 @@ __all__: list[str] = [
     "create_or_get_out_dir",
     "create_or_get_out_integrations_dir",
     "create_or_get_playbooks_root_dir",
+    "create_or_get_views_root_dir",
     "discover_core_modules",
     "flatten_dir",
     "get_all_marketplace_integrations_paths",
@@ -99,13 +115,17 @@ __all__: list[str] = [
     "get_playbook_base_folders_paths",
     "get_playbook_out_base_dir",
     "get_playbook_out_dir",
+    "get_view_out_base_dir",
+    "get_view_out_dir",
     "is_built",
     "is_built_playbook",
+    "is_built_view",
     "is_certified_integration",
     "is_half_built",
     "is_integration",
     "is_non_built_integration",
     "is_non_built_playbook",
+    "is_non_built_view",
     "is_python_file",
     "is_valid_source_path",
     "load_json_file",

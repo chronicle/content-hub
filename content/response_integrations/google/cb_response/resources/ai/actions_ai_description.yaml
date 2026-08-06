@@ -1,65 +1,32 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Binary Free Query:
   ai_description: >-
     ### General Description
 
-    The **Binary Free Query** action allows users to perform a custom search for binaries
-    within the Carbon Black Response environment using a free-form query string. This
-    action is designed to retrieve detailed metadata for binaries that match specific
-    criteria, such as MD5 hashes, filenames, or digital signature information, without
-    being tied to specific entities in a case.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Query** | String | Yes | The Carbon Black search query to execute. For example:
-    `md5:098f6bcd4621d373cade4e832627b4f6` or `original_filename:test.exe`. |
+    Executes a free text query in Carbon Black Response to search for and retrieve
+    information about binaries. This action allows analysts to find specific binaries
+    based on various attributes supported by the Carbon Black query language.
 
 
     ### Flow Description
 
-    1. **Initialization:** The action extracts the Carbon Black Response integration
-    configuration (API Root, API Key, Version, etc.) and the user-provided search
-    query.
+    1. Initializes the Carbon Black Response manager with the provided API credentials.
 
-    2. **Manager Loading:** It utilizes the `CBResponseManagerLoader` to instantiate
-    the appropriate manager version for the target environment.
+    2. Executes a free query against the Carbon Black Response binaries API endpoint
+    (`/api/v1/binary`) using the provided query string.
 
-    3. **Data Retrieval:** The action executes a GET request to the Carbon Black binary
-    search endpoint (`/api/v1/binary`) using the provided query.
+    3. Retrieves the matching binaries and formats their details into a CSV table
+    and JSON results.
 
-    4. **Pagination:** It automatically handles pagination to retrieve up to the global
-    limit of 300 results.
-
-    5. **Result Formatting:** If binaries are found, the action generates a CSV-formatted
-    data table named "Binaries" and attaches the full raw JSON data to the action
-    results. If no results are found, it reports a successful completion with a "No
-    binaries were found" message.
+    4. Attaches the formatted table and JSON data to the action's output results.
 
 
     ### Additional Notes
 
-    - This action does not iterate over or filter existing entities in the Google
-    SecOps case; it operates globally based on the input query.
-
-    - The action is read-only and does not modify any data within Carbon Black Response.
+    The query syntax should follow Carbon Black Response's supported search query
+    format (e.g., `md5:* AND original_filename:<file-name>`).
+  ai_short_description: >-
+    Executes a free text query in Carbon Black Response to search for and retrieve
+    information about binaries.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -70,10 +37,47 @@ Binary Free Query:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data by making a GET request to the Carbon Black Response
+      API to query binaries. It does not mutate external data, mutate internal data,
+      update entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -87,62 +91,73 @@ Binary Free Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process any entities from the case. It relies
+      solely on the provided 'Query' parameter to fetch data.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for binaries based on a free text query. It does not enrich
+      specific IOCs or assets, nor does it search for events, emails, or alerts in
+      a way that matches the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query | String | Yes | The free text query to execute against the binaries in
+    Carbon Black Response (e.g., `md5:* AND original_filename:<file-name>`). |
 Block Hash:
   ai_description: >-
     ### General Description
 
-    The **Block Hash** action allows security analysts to blacklist specific file
-    hashes within a Carbon Black Response environment. By adding a hash to the blacklist,
-    the action prevents the associated binary from executing on any sensor-managed
-    endpoint. This action is primarily used for containment during incident response
-    to stop the spread of known malicious files.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api Root | String | Yes | The base URL of the Carbon Black Response API server.
-    |
-
-    | Api Key | String | Yes | The API token used for authentication with the Carbon
-    Black Response server. |
-
-    | Version | Float | Yes | The version of the Carbon Black Response server (e.g.,
-    5.1, 6.3). |
-
-    | CA Certificate File | String | No | Base64 encoded CA certificate file for SSL
-    verification. |
-
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the API server. Defaults to False. |
+    Blocks a specific file hash (MD5) on Carbon Black Response. This action initiates
+    a state change on the external device to prevent the execution or presence of
+    the specified file hash.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves integration-level configuration parameters
-    (API credentials and server version) and initializes the Carbon Black Response
-    manager.
+    1. Iterates over target entities, filtering for `FILEHASH` entities with an identifier
+    length of 32 characters (MD5).
 
-    2. **Entity Filtering**: It identifies `FILEHASH` entities from the current context
-    that are exactly 32 characters long (MD5 hashes).
+    2. For each suitable entity, makes a POST request to the Carbon Black Response
+    API (`/api/v1/banning/blacklist`) to add the hash to the blocklist.
 
-    3. **Execution**: For each valid hash, it sends a POST request to the Carbon Black
-    Response `/api/v1/banning/blacklist` endpoint to enable the ban.
-
-    4. **Completion**: The action tracks successful and failed blocks and returns
-    a summary message to the case wall.
+    3. Returns a summary of successfully and unsuccessfully blocked hashes.
 
 
     ### Additional Notes
 
-    * This action specifically targets MD5 hashes (32 characters). Other hash types
-    (SHA1, SHA256) are not supported by this specific script logic.
-
-    * The parameters listed are integration-level configuration parameters required
-    for the action to establish a connection.
+    This action only supports MD5 hashes (length of 32 characters).
+  ai_short_description: >-
+    Blocks a specific file hash (MD5) on Carbon Black Response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -151,15 +166,49 @@ Block Hash:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds the file hash to the Carbon Black Response blacklist (banning list) to
-      prevent execution.
+      Adds the file hash to the active blocklist configuration on Carbon Black Response.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to Carbon Black Response to ban a hash (can_mutate_external_data=true).
+      It does not fetch context data, update internal entities, or create insights.
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -173,57 +222,74 @@ Block Hash:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` (which is `[EntityTypes.FILEHASH]`) and `len(entity.identifier)
+      == SUPPORTED_ENTITY_LENGTH` (32). This means it targets FILEHASH entities, filtering
+      by entity_type and identifier length.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a POST request to Carbon Black Response to ban a file hash.
+      This directly aligns with the 'Add IOC To Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Create Watchlist:
   ai_description: >-
     ### General Description
 
-    Creates a new watchlist in Carbon Black Response to monitor for specific processes
-    or binaries based on a provided raw query. This action allows security teams to
-    automate the creation of detection logic within the Carbon Black environment directly
-    from Google SecOps. Once the watchlist is created, the action also automatically
-    enables alert actions for it, ensuring that any matches against the query generate
-    alerts in the Carbon Black system.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Watchlist Name | String | Yes | The unique name to assign to the new watchlist.
-    |
-
-    | Query | String | Yes | The raw Carbon Black query string that defines the matching
-    criteria (e.g., `process_name:cmd.exe`). |
-
-    | Watchlist Type | String | Yes | Specifies the index type for the watchlist.
-    Use `events` for process-based watchlists or `modules` for binary-based watchlists.
-    |
-
-
-    ### Additional Notes
-
-    - The action automatically prepends `q=` to the query if it is not already present.
-
-    - This action performs two distinct API calls: one to create the watchlist and
-    another to enable the 'alert' action type for that watchlist.
+    Creates a new watchlist in Carbon Black Response for processes or binaries based
+    on a specified query. This action allows analysts to proactively monitor for specific
+    activities or files within their environment.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Carbon Black Response manager
-    using the provided integration configuration (API Root, API Key, etc.).
+    1. Extracts the watchlist name, query, and type from the action parameters.
 
-    2. **Query Formatting**: It checks the provided `Query` parameter and ensures
-    it is correctly formatted for the Carbon Black API.
+    2. Initializes the connection to the Carbon Black Response API.
 
-    3. **Watchlist Creation**: It sends a POST request to the Carbon Black API to
-    create the watchlist with the specified name, query, and type.
+    3. Makes a POST request to the `/api/v1/watchlist` endpoint to create the watchlist
+    with the provided query and type.
 
-    4. **Alert Activation**: Upon successful creation, it retrieves the new watchlist
-    ID and sends a subsequent request to enable alert generation for that specific
-    watchlist.
+    4. Makes a subsequent API request to create an alert action for the newly created
+    watchlist, ensuring alerts are generated when the watchlist criteria are met.
+
+    5. Returns a success message upon successful creation.
+
+
+    ### Additional Notes
+
+    The watchlist type can be set to "events" for process-related watchlists or "modules"
+    for binary-related watchlists.
+  ai_short_description: >-
+    Creates a new watchlist and an associated alert action in Carbon Black Response
+    based on a provided query.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -232,14 +298,50 @@ Create Watchlist:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new watchlist object and enables alert actions for it within the Carbon
-      Black Response platform.
+      Creates a new watchlist and an associated alert action in Carbon Black Response.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to the Carbon Black Response API to create a
+      new watchlist and an associated alert action. It mutates external data but does
+      not fetch contextual data, update internal entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -253,53 +355,88 @@ Create Watchlist:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the provided action parameters to create a watchlist, meaning
+      it does not run on any specific entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a watchlist in Carbon Black Response. This does not align
+      with any of the predefined outcome categories such as enriching IOCs, updating
+      alerts, blocking IOCs, or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Watchlist Name | String | Yes | Name of this watchlist |
+
+    | Query | String | Yes | The raw Carbon Black query that this watchlist matches
+    |
+
+    | Watchlist Type | String | Yes | The type of watchlist. e.g. modules |
 Download Binary:
   ai_description: >-
     ### General Description
 
-    The **Download Binary** action retrieves the physical binary file associated with
-    a specific MD5 file hash from the Carbon Black Response platform. This is useful
-    for forensic analysis or malware sandboxing, as it allows analysts to obtain the
-    actual file that triggered an alert.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | This action does not have any input parameters. |
+    Downloads a binary file associated with a specific file hash (MD5) from Carbon
+    Black Response. The downloaded binary is then base64 encoded and attached to the
+    corresponding entity within Google SecOps for further analysis.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action loads the Carbon Black Response manager based
-    on the configured version.
+    1. Iterates over target `FileHash` entities, filtering for those with an identifier
+    length of 32 characters (MD5 hashes).
 
-    2. **Entity Filtering**: It identifies `FILEHASH` entities from the current context
-    that have a length of exactly 32 characters (MD5 format).
+    2. For each valid entity, makes a GET request to the Carbon Black Response API
+    (`/api/v1/binary/{md5}`) to download the associated binary.
 
-    3. **Data Retrieval**: For each valid hash, it queries the Carbon Black API to
-    download the binary.
+    3. Extracts the binary content from the retrieved zip file.
 
-    4. **Extraction**: The API returns a ZIP file; the action extracts the raw binary
-    data (the 'filedata' member) from this archive.
+    4. Base64 encodes the binary content.
 
-    5. **Attachment**: The extracted binary is base64-encoded and attached to the
-    entity within the Google SecOps case.
+    5. Attaches the encoded binary to the entity in Google SecOps as a `.zip` file.
 
-    6. **Finalization**: The action updates the entities and returns the base64 content
-    in the JSON results.
+    6. Updates the successful entities and appends the base64 content to the action's
+    JSON results.
 
 
     ### Additional Notes
 
-    * This action specifically requires MD5 hashes (32 characters). Other hash types
-    (SHA1, SHA256) are not supported by this specific logic.
+    - This action strictly supports MD5 hashes (identifier length of 32).
 
-    * As this action downloads files, it is not categorized as a standard enrichment
-    action.
+    - The downloaded binary is attached directly to the entity in the platform.
+  ai_short_description: >-
+    Downloads a binary file associated with a specific MD5 file hash from Carbon Black
+    Response and attaches it to the entity.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -310,13 +447,48 @@ Download Binary:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds the downloaded binary as an attachment to the entity and updates the entity
-      state within the case.
-  categories:
-    enrichment: false
+      Attaches the downloaded binary to the entity as a zip file.
+    reasoning: >-
+      The action fetches binary data from Carbon Black Response via a GET request.
+      It does not mutate external data. It mutates internal data by attaching the
+      downloaded binary to the entity and updates the entities using `siemplify.update_entities`.
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -330,70 +502,129 @@ Download Binary:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES` (where SUPPORTED_ENTITY_TYPES
+      is `[EntityTypes.FILEHASH]`) and `len(entity.identifier) == SUPPORTED_ENTITY_LENGTH`
+      (32). Therefore, it targets FileHash entities and filters by entity type and
+      identifier.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action downloads a binary file from Carbon Black Response based on an MD5
+      hash. This directly aligns with the 'Download File' expected outcome, as it
+      retrieves a specific file from a remote host for local forensic analysis.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Enrich Binary:
   ai_description: >-
     ### General Description
 
-    Enriches **File Hash** entities (specifically MD5) using Carbon Black Response.
-    This action retrieves detailed binary metadata such as product version, company
-    name, digital signature status, and observed filenames. The retrieved data is
-    added to the entity's additional properties, and the entity is marked as enriched.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api Root | String | Yes | The endpoint URL for the Carbon Black Response API.
-    |
-
-    | Api Key | String | Yes | The API key used for authentication. |
-
-    | Version | Float | Yes | The version of the Carbon Black Response server (e.g.,
-    5.1, 6.3). |
-
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the server. Default is False. |
-
-    | CA Certificate File | String | No | Base64 encoded CA certificate file for SSL
-    verification. |
+    Enriches File Hash entities (specifically MD5 hashes) by retrieving binary information
+    from Carbon Black Response. This action fetches metadata about the binary associated
+    with the hash and appends it to the entity's properties.
 
 
     ### Flow Description
 
-    1. **Initialization**: Connects to the Carbon Black Response server using the
-    provided credentials and version-specific manager.
+    1. Filters the target entities to include only File Hash entities with an identifier
+    length of exactly 32 characters (representing an MD5 hash).
 
-    2. **Entity Filtering**: Identifies `FILEHASH` entities from the target list that
-    have a length of 32 characters (MD5 hashes).
+    2. Iterates over the filtered entities and makes a GET request to the Carbon Black
+    Response API (`/api/v1/binary/{md5}/summary`) to fetch binary summary data.
 
-    3. **Data Retrieval**: For each valid hash, it queries the Carbon Black Response
-    API (`/api/v1/binary/{md5}/summary`) to fetch binary metadata.
+    3. Updates the entity's `additional_properties` with the retrieved binary information
+    and sets the `is_enriched` flag to true.
 
-    4. **Enrichment**: Flattens the retrieved JSON data and updates the entity's additional
-    properties with a `CB_RESPONSE` prefix.
+    4. Saves the updated entities back to the platform and adds the raw binary data
+    to the action's JSON results.
 
-    5. **Internal Update**: Marks the entity as enriched and updates the entity records
-    within Google SecOps.
+
+    ### Additional Notes
+
+    This action only processes MD5 hashes (length of 32). Other hash types (like SHA-1
+    or SHA-256) will be skipped.
+  ai_short_description: >-
+    Enriches MD5 File Hash entities by retrieving binary summary information from
+    Carbon Black Response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity additional properties with binary metadata and sets the enrichment
-      status to true.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Carbon Black Response API to fetch binary
+      data (fetches_data=true). It does not perform any state-changing operations
+      on external systems (can_mutate_external_data=false). It updates the entities
+      with the fetched data using `siemplify.update_entities` (can_update_entities=true),
+      but it does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -407,71 +638,135 @@ Enrich Binary:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` (where SUPPORTED_ENTITY_TYPES is [EntityTypes.FILEHASH])
+      and `len(entity.identifier) == SUPPORTED_ENTITY_LENGTH` (where SUPPORTED_ENTITY_LENGTH
+      is 32). This means it targets File Hash entities and filters them by their entity
+      type and the length of their identifier.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches binary summary data for a file hash from Carbon Black Response,
+      which provides threat intelligence and metadata about the indicator. This directly
+      aligns with the 'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Enrich Process:
   ai_description: >-
     ### General Description
 
-    The **Enrich Process** action retrieves detailed process metadata from Carbon
-    Black Response for **PROCESS** entities and correlates this data with **HOSTNAME**
-    entities within the case. It provides visibility into process execution details
-    such as command lines, MD5 hashes, parent process information, and execution timestamps
-    to assist in incident investigation.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | This action does not have any input parameters. |
-
-
-    ### Additional Notes
-
-    This action is read-only regarding the Carbon Black Response environment. It relies
-    on the integration's global configuration (Api Root, Api Key, Version, etc.) to
-    establish a connection.
+    Enriches Process and Hostname entities using VMware Carbon Black EDR (CB Response).
+    This action retrieves detailed process execution information from the EDR and
+    correlates it with the relevant entities in the case.
 
 
     ### Flow Description
 
-    1. **Entity Identification**: The action identifies all **PROCESS** and **HOSTNAME**
-    entities in the current scope.
+    1. Iterates over all target entities and filters for `PROCESS` and `HOSTNAME`
+    entity types.
 
-    2. **Data Retrieval**: For each **PROCESS** entity, the action queries the Carbon
-    Black Response API using the entity's identifier (process name) to find matching
-    process executions.
+    2. For each `PROCESS` entity, makes a GET request to the CB Response API to fetch
+    process details matching the process name.
 
-    3. **Process Enrichment**: If matching processes are found, the action updates
-    the **PROCESS** entity's additional properties with the retrieved metadata (prefixed
-    with `CB_RESPONSE`) and marks the entity as enriched.
+    3. Updates the `PROCESS` entity's additional properties with the retrieved process
+    data and marks the entity as enriched.
 
-    4. **Host Correlation**: The action correlates the retrieved process data with
-    **HOSTNAME** entities. If a process was executed on a specific host, a "Processes"
-    data table is attached to that **HOSTNAME** entity for context.
+    4. For each `HOSTNAME` entity, filters the previously fetched processes to identify
+    those that executed on the specific host.
 
-    5. **Result Reporting**: The action returns a JSON result containing the full
-    raw data for all identified processes and updates the entities in the Google SecOps
+    5. Attaches an entity table containing the correlated process details to the `HOSTNAME`
+    entity.
+
+    6. Returns the raw process data as JSON results and updates the entities in the
     platform.
+
+
+    ### Additional Notes
+
+    This action relies on the process name (identifier) to query CB Response. Ensure
+    that the process entities have valid names.
+  ai_short_description: >-
+    Enriches Process and Hostname entities by retrieving process execution details
+    from VMware Carbon Black EDR (CB Response) and correlating them with the respective
+    entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity additional properties, sets the is_enriched flag, and adds data
-      tables to Hostname entities.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from CB Response using a GET request. It does not mutate
+      external data. It updates internal entities by adding additional properties
+      and setting is_enriched to True. It does not create insights, modify alert data,
+      or create case comments.
   entity_usage:
     entity_types:
-    - PROCESS
-    - HOSTNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: true
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -485,28 +780,77 @@ Enrich Process:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      `entity.entity_type == EntityTypes.PROCESS` and `entity.entity_type == EntityTypes.HOSTNAME`.
+      Therefore, it targets Process and Hostname entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches process execution details from CB Response to enrich Process
+      entities (Enrich IOC) and correlates these processes with Hostname entities,
+      adding contextual metadata to the asset (Enrich Asset).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get FileMod Data For Process:
-  ai_description: "Retrieves detailed file modification (filemod) events for a specific\
-    \ process execution from Carbon Black Response. This action is used to perform\
-    \ forensic analysis by identifying what files a process interacted with (created,\
-    \ modified, or deleted) during a specific segment of its lifecycle.\n\n### Flow\
-    \ Description:\n1. **Parameter Extraction:** The action retrieves the mandatory\
-    \ `Process ID` and `Segment Id` from the user input.\n2. **Manager Initialization:**\
-    \ It initializes the Carbon Black Response manager based on the configured API\
-    \ version and credentials.\n3. **Data Retrieval:** It calls the Carbon Black API\
-    \ endpoint `/api/v1/process/{process_id}/{segment_id}/event` to fetch event data\
-    \ associated with the process.\n4. **Parsing and Formatting:** The action parses\
-    \ the `filemod_complete` events, extracting fields such as operation type, event\
-    \ time, file path, and MD5 hashes. \n5. **Output:** It generates a data table\
-    \ titled 'Report for: [Process ID]' containing the parsed file modification details\
-    \ and attaches the full raw JSON response to the action results.\n\n### Parameters\
-    \ Description:\n| Parameter | Type | Mandatory | Description |\n| :--- | :---\
-    \ | :--- | :--- |\n| **Process ID** | String | Yes | The unique identifier of\
-    \ the process in Carbon Black Response. |\n| **Segment Id** | String | Yes | The\
-    \ specific segment identifier for the process execution (e.g., '1'). |\n\n###\
-    \ Additional Notes:\nThis action does not run on entities; it requires the specific\
-    \ Process ID and Segment ID to be provided as parameters, typically sourced from\
-    \ previous process search actions or alerts."
+  ai_description: >-
+    ### General Description
+
+    Retrieves file modification (filemod) data for a specific process from Carbon
+    Black Response. This action fetches telemetry details about files modified by
+    a given process and segment ID, returning the results as a data table and raw
+    JSON.
+
+
+    ### Flow Description
+
+    1. Extracts the `Process ID` and `Segment Id` from the action parameters.
+
+    2. Initializes the Carbon Black Response API client using the provided integration
+    configuration.
+
+    3. Makes a GET request to the Carbon Black Response API (`/api/v1/process/{process_id}/{segment_id}/event`)
+    to fetch the file modification event list.
+
+    4. Parses the returned events and constructs a data table containing the file
+    modification details (e.g., operation type, event time, file path, md5).
+
+    5. Attaches the data table and the raw JSON response to the action results.
+
+
+    ### Additional Notes
+
+    This action does not operate on SecOps entities. It requires specific process
+    and segment identifiers typically obtained from previous Carbon Black Response
+    queries or alerts.
+  ai_short_description: >-
+    Retrieves file modification event data for a specific process and segment ID from
+    Carbon Black Response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -517,10 +861,48 @@ Get FileMod Data For Process:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action makes a GET request to the Carbon Black Response API to fetch filemod
+      data (fetches_data=true). It does not perform any state-changing operations
+      on external systems (can_mutate_external_data=false). It does not update entities,
+      create insights, modify alert data, or create case comments within Google SecOps.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -534,39 +916,77 @@ Get FileMod Data For Process:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the explicitly provided action parameters
+      (Process ID and Segment Id). Therefore, it does not run on entities and all
+      entity type flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches file modification events (telemetry data) for a specific
+      process from Carbon Black Response. This aligns with the 'Search Events' category,
+      as it returns a collection of historical telemetry data matching specific search
+      parameters (Process ID and Segment ID). It does not enrich entities, mutate
+      external state, or update alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Process ID | String | Yes | process unique id |
+
+    | Segment Id | String | Yes | e.g. 1 |
 Get License:
   ai_description: >-
     ### General Description
 
-    Retrieves the current license information from the Carbon Black Response server.
-    This action is primarily used for administrative or diagnostic purposes to verify
-    the status and details of the Carbon Black license.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action does not operate on entities and is used for system-level information
-    retrieval.
+    Retrieves the current license information from Carbon Black Response.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Carbon Black Response manager
-    using the integration's configuration (API Root, API Key, etc.).
+    1. Initializes the connection to the Carbon Black Response API using the provided
+    integration configuration.
 
-    2. **Data Retrieval**: It sends a GET request to the `/api/v1/license` endpoint
-    of the Carbon Black Response API.
+    2. Makes a GET request to the `/api/v1/license` endpoint to fetch the license
+    details.
 
-    3. **Processing**: The action parses the response to extract the `license_request_block`
-    data point.
+    3. Returns the license information as the output message of the action.
 
-    4. **Completion**: The license information is formatted into an output message
-    and the action completes successfully.
+
+    ### Additional Notes
+
+    This action is useful for checking the status and details of the Carbon Black
+    Response license directly from the SOAR platform.
+  ai_short_description: >-
+    Retrieves the current license information from Carbon Black Response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -577,10 +997,47 @@ Get License:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the Carbon Black Response API to fetch license
+      data. It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -594,55 +1051,73 @@ Get License:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process any entities. It simply fetches
+      global license information from the external system.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves license information from Carbon Black Response. This does
+      not align with any of the specific outcome categories such as enriching IOCs/assets,
+      updating alerts, or modifying external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Process Tree Data:
   ai_description: >-
     ### General Description
 
-    Retrieves comprehensive process tree data from Carbon Black Response for a specific
-    process identified by its unique Process ID and Segment ID. This action provides
-    visibility into the process hierarchy, including its parent process, sibling processes,
-    and child processes, returned in a structured JSON format for further analysis.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Process ID | String | Yes | The unique identifier of the process for which to
-    retrieve the tree data. |
-
-    | Segment Id | String | Yes | The segment identifier associated with the process
-    (e.g., '1'). |
+    Retrieves process tree data from Carbon Black Response for a specific process
+    using its Process ID and Segment ID. This action fetches detailed telemetry about
+    the process, including its parent, siblings, and child processes.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts the integration configuration (API
-    Root, API Key, Version, SSL settings) and the mandatory action parameters: `Process
-    ID` and `Segment Id`.
+    1. Extracts the `Process ID` and `Segment Id` parameters provided by the user
+    or playbook.
 
-    2. **Manager Loading**: It initializes the appropriate Carbon Black Response manager
-    based on the product version specified in the configuration.
+    2. Initializes the Carbon Black Response API manager with the integration configuration.
 
-    3. **Data Retrieval**: The action calls the Carbon Black Response API endpoint
-    `/api/v1/process/{process_id}/{segment_id}` to fetch the process tree data.
+    3. Makes an HTTP GET request to the Carbon Black Response API (`/api/v1/process/{process_id}/{segment_id}`)
+    to fetch the process tree data.
 
-    4. **Result Processing**: The retrieved data, which includes the process details
-    along with its parent, siblings, and children, is parsed into a JSON object.
-
-    5. **Output**: The action attaches the process tree JSON to the action results
-    and completes the execution with a success message.
+    4. Parses the response and attaches the resulting process tree data as a JSON
+    object to the action's results.
 
 
     ### Additional Notes
 
-    This action does not operate on Google SecOps entities (such as IP addresses or
-    Hostnames) found in the alert. Instead, it relies entirely on the specific Carbon
-    Black internal identifiers (`Process ID` and `Segment Id`) provided as input parameters.
-    These identifiers are typically obtained from previous search actions or alert
-    metadata.
+    This action does not operate on SecOps entities and relies solely on the provided
+    action parameters.
+  ai_short_description: >-
+    Retrieves detailed process tree data, including parent, sibling, and child processes,
+    from Carbon Black Response for a specific process using its Process ID and Segment
+    ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -653,10 +1128,48 @@ Get Process Tree Data:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action makes a GET request to the Carbon Black Response API to fetch process
+      tree data, meaning it fetches data. It does not mutate external data, mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -670,74 +1183,138 @@ Get Process Tree Data:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the `Process ID` and `Segment Id` parameters.
+      Therefore, it does not run on entities and all entity flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches process tree data based on a specific Process ID and Segment
+      ID. It does not enrich an IOC or Asset entity, nor does it search for events,
+      execute commands, or perform any other operations that match the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Process ID | String | Yes | process unique id |
+
+    | Segment Id | String | Yes | e.g. 1 |
 Get System Info:
   ai_description: >-
     ### General Description
 
-    Retrieves comprehensive system and sensor information for Hostname and IP Address
-    entities from Carbon Black Response. This action is used to enrich entities with
-    real-time endpoint data, such as operating system details, network configuration,
-    sensor health, and uptime, providing analysts with immediate context regarding
-    the state of the affected host.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies on the global
-    integration configuration (Api Root, Api Key, etc.).
-
-
-    ### Additional Notes
-
-    - The action supports both **HOSTNAME** and **ADDRESS** (IP) entity types.
-
-    - It maps Carbon Black sensor data to the entity's additional properties using
-    the prefix `CB_RESPONSE`.
-
-    - A data table is added to each successfully enriched entity for quick visualization
-    of key sensor attributes.
+    Retrieves system information for a sensor from Carbon Black Response and enriches
+    the associated entities. This action fetches contextual metadata about the endpoint,
+    such as operating system, uptime, and health status, to provide analysts with
+    better visibility into the affected assets.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Carbon Black Response manager
-    using the provided integration credentials and version settings.
+    1. Iterates through the target entities, filtering for IP Address and Hostname
+    entity types.
 
-    2. **Entity Filtering**: It identifies all Hostname and IP Address entities within
-    the current alert context.
+    2. Makes a GET request to the Carbon Black Response API (`/api/v1/sensor`) to
+    fetch sensor data based on the entity's identifier (IP or hostname).
 
-    3. **Data Retrieval**: For each entity, it queries the Carbon Black Response API
-    to find a matching sensor. If the entity is an IP, it searches by IP; if it is
-    a Hostname, it searches by computer name.
+    3. If sensor data is found, it extracts the system information.
 
-    4. **Enrichment**: If a sensor is found, the action retrieves the raw sensor data,
-    flattens it, and adds it to the entity's `additional_properties`.
+    4. Enriches the entity's additional properties with the retrieved sensor data
+    and marks the entity as enriched.
 
-    5. **Internal Updates**: It marks the entity as enriched, attaches a formatted
-    data table containing key metrics (ID, FQDN, OS, Status, etc.), and updates the
-    entity in the Google SecOps platform.
-
-    6. **Finalization**: The action returns a JSON result containing the full sensor
-    data for all processed entities and provides a summary message of the enrichment
+    5. Attaches the sensor data as a JSON result and an entity table to the action
     results.
+
+    6. Updates the entities within the Google SecOps platform.
+
+
+    ### Additional Notes
+
+    - This action only processes Address and Hostname entities.
+  ai_short_description: >-
+    Retrieves system information for a sensor from Carbon Black Response and enriches
+    the associated IP Address and Hostname entities with the retrieved metadata.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity additional properties with sensor metadata and attaches data
-      tables to the entities within the case.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Carbon Black Response API to fetch sensor
+      data. It does not mutate external data. It updates internal entities with the
+      fetched data and adds JSON results, but does not create insights, modify alert
+      data, or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -751,66 +1328,130 @@ Get System Info:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS and HOSTNAME.
+      Therefore, it targets Address and Hostname entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches sensor data (such as OS version, uptime, and health status)
+      for IP addresses and hostnames from Carbon Black Response. This aligns with
+      the 'Enrich Asset' expected outcome, as it returns contextual metadata for a
+      resource. It does not perform any containment, blocklist, or ticketing operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Hosts By Process:
   ai_description: >-
     ### General Description
 
-    Retrieves host (sensor) information associated with a specific process name from
-    Carbon Black Response. This action is used to identify which machines in the environment
-    have executed a particular process, providing visibility into the scope of a process's
-    presence across the network.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies on the global
-    integration configuration (Api Root, Api Key, etc.) and the identifiers of the
-    input entities.
-
-
-    ### Additional Notes
-
-    This action specifically targets `PROCESS` entities. It performs a search for
-    the process name and then resolves the associated sensor IDs to provide detailed
-    host metadata such as OS version, IP address, and isolation status.
+    Retrieves a list of hosts (sensors) that are related to a specific process using
+    Carbon Black Response. This action helps determine the prevalence of a process
+    across the environment by identifying all endpoints where it has been observed.
 
 
     ### Flow Description
 
-    1. **Configuration Initialization**: Retrieves Carbon Black Response API credentials
-    and connection settings from the integration configuration.
+    1. Iterates over the target entities, filtering for those of type `PROCESS`.
 
-    2. **Entity Filtering**: Identifies all `PROCESS` entities within the current
-    alert context.
+    2. For each process entity, makes a GET request to the Carbon Black Response API
+    (`/api/v1/process`) to find instances matching the process name.
 
-    3. **Process Search**: For each process entity, queries the Carbon Black Response
-    API to find process instances matching the entity's identifier.
+    3. Extracts unique sensor IDs from the returned process execution data.
 
-    4. **Sensor Resolution**: Extracts unique sensor IDs from the process search results
-    and fetches detailed sensor/host information for each ID.
+    4. Makes subsequent GET requests to the Carbon Black Response API (`/api/v1/sensor/{id}`)
+    to retrieve detailed information for each identified sensor.
 
-    5. **Data Attachment**: Converts the retrieved host data into a CSV format and
-    attaches it as an entity table to the corresponding process entity.
+    5. Attaches the retrieved sensor data as a CSV table to the process entity and
+    updates the entity in the platform.
 
-    6. **Internal Update**: Updates the entities within Google SecOps and provides
-    a JSON result containing the raw sensor data.
+    6. Returns the aggregated sensor data as a JSON result.
+
+
+    ### Additional Notes
+
+    This action is useful for scoping an incident by identifying all machines that
+    have executed a suspicious process.
+  ai_short_description: >-
+    Retrieves a list of hosts (sensors) that are related to a specific process using
+    Carbon Black Response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes and attaches a data table containing host/sensor information
-      to the process entities.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Carbon Black Response via GET requests to find
+      processes and their associated sensors. It does not mutate external data. It
+      updates the internal entities with the results (via `siemplify.update_entities`)
+      but does not create insights or case comments.
   entity_usage:
     entity_types:
-    - PROCESS
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: true
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -824,53 +1465,74 @@ Hosts By Process:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      is defined as `[EntityTypes.PROCESS]`. Therefore, it strictly targets Process
+      entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries Carbon Black Response to find hosts where a specific process
+      has been observed. This provides prevalence information for the process indicator,
+      which aligns with the 'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Isolate Host:
   ai_description: >-
     ### General Description
 
-    Isolates an endpoint from the network using Carbon Black Response. This action
-    is used to contain potentially compromised hosts by disabling their network connectivity
-    through the Carbon Black sensor.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies on the integration's
-    configuration (Api Root, Api Key, Version, etc.) to establish a connection with
-    the Carbon Black Response server.
-
-
-    ### Additional Notes
-
-    * The action supports both **HOSTNAME** and **ADDRESS** (IP) entity types.
-
-    * It requires a valid sensor to be associated with the entity in Carbon Black
-    Response to perform the isolation.
-
-    * If multiple sensors are found for a single IP or Hostname, the logic typically
-    processes the first one returned by the API.
+    Isolates a specific endpoint from the network using Carbon Black Response. This
+    action initiates a state change on the external EDR device to prevent network
+    traffic to or from the specified entity, effectively containing the host.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Carbon Black Response manager
-    using the provided integration configuration.
+    1. Iterates over the target entities provided in the case, specifically filtering
+    for IP Address and Hostname entity types.
 
-    2. **Entity Filtering**: It identifies all Hostname and IP Address entities within
-    the current scope.
+    2. For each valid entity, makes a GET request to the Carbon Black Response API
+    to retrieve the corresponding sensor data and sensor ID.
 
-    3. **Sensor Retrieval**: For each identified entity, it queries the Carbon Black
-    Response API to find the corresponding sensor ID.
+    3. If a matching sensor is found, makes a PUT request to the Carbon Black Response
+    API to enable network isolation for that specific sensor.
 
-    4. **Isolation Command**: If a sensor is found, the action sends a `PUT` request
-    to the Carbon Black API to set the `network_isolation_enabled` status to `True`
-    for that specific sensor.
+    4. Collects the results and outputs a summary message detailing which entities
+    were successfully isolated and which failed.
 
-    5. **Result Tracking**: The action tracks which entities were successfully isolated
-    and which failed (e.g., due to no sensor found or API errors).
 
-    6. **Finalization**: The action concludes by providing a summary message of the
-    isolation results for all processed entities.
+    ### Additional Notes
+
+    This action requires the Carbon Black Response sensor to be active and manageable
+    via the API to successfully apply the network isolation.
+  ai_short_description: >-
+    Isolates a specific endpoint from the network using Carbon Black Response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -879,17 +1541,51 @@ Isolate Host:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the 'network_isolation_enabled' property of the sensor in Carbon Black
-      Response to 'True', which triggers the network isolation of the physical or
-      virtual host.
-    fetches_data: true
+      Updates the network isolation status of a sensor in Carbon Black Response to
+      isolate the endpoint.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action mutates external data by sending a PUT request to Carbon Black Response
+      to isolate a host. It does not fetch contextual enrichment data to update entities,
+      nor does it create insights or case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -903,60 +1599,78 @@ Isolate Host:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities
+      and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a PUT request to the Carbon Black Response API to enable
+      network isolation on a specific sensor (endpoint). This directly aligns with
+      the 'Contain Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Kill Process:
   ai_description: >-
     ### General Description
 
-    Kills a process on a specific host using Carbon Black Response's Live Response
-    capabilities. This action is designed to terminate potentially malicious or unwanted
-    processes across endpoints identified in a case by matching process names against
-    active PIDs on the target sensors.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Description | Type | Mandatory | Notes |
-
-    | :--- | :--- | :--- | :--- | :--- |
-
-    | None | This action does not have any specific input parameters. | N/A | No |
-    It relies entirely on the entities (PROCESS and HOSTNAME) provided in the alert
-    context. |
-
-
-    ### Additional Notes
-
-    * The action requires both `PROCESS` and `HOSTNAME` entities to be present in
-    the alert to function. It will attempt to kill every identified process on every
-    identified host (Cartesian product).
-
-    * This action utilizes Carbon Black's Live Response (CBLR) API, which may require
-    specific permissions and for the sensor to be online.
+    Kills a specific process on a target host using Carbon Black Response. This action
+    initiates a state change on the external device to terminate a running process
+    by leveraging the Live Response feature.
 
 
     ### Flow Description
 
-    1. **Entity Filtering**: The action filters the target entities to identify all
-    `PROCESS` and `HOSTNAME` objects.
+    1. Initializes the Carbon Black Response API client.
 
-    2. **Combination Logic**: It generates a list of all possible combinations (pairs)
-    of the identified hostnames and processes.
+    2. Filters the target entities to identify `PROCESS` and `HOSTNAME` entity types.
 
-    3. **Sensor Lookup**: For each hostname, it queries the Carbon Black API to retrieve
-    the corresponding sensor document and ID.
+    3. Generates combinations of the identified hostnames and processes.
 
-    4. **Live Response Session**: It initiates or retrieves an active Live Response
-    session for the target sensor.
+    4. For each combination, queries the Carbon Black API to retrieve the sensor information
+    associated with the hostname.
 
-    5. **Process Discovery**: It executes a 'process list' command on the remote host
-    via the Live Response session to find all PIDs associated with the target process
-    name.
+    5. If a sensor is found, initiates a Live Response session on the sensor to list
+    running processes and identify the PID of the target process.
 
-    6. **Process Termination**: It issues a 'kill' command for each identified PID
-    matching the process entity's identifier.
+    6. Executes a kill command via Live Response to terminate the identified process.
 
-    7. **Session Management**: The Live Response session is closed upon completion
-    of the task for that sensor.
+    7. Closes the Live Response session and returns the execution results.
+
+
+    ### Additional Notes
+
+    This action requires the Live Response feature to be enabled and supported on
+    the target sensor.
+  ai_short_description: >-
+    Kills a specific process on a target host using Carbon Black Response Live Response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -965,16 +1679,51 @@ Kill Process:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Terminates active processes on remote endpoints via Carbon Black Response Live
-      Response commands.
+      Terminates a running process on a remote endpoint via Carbon Black Live Response.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches sensor data to locate the host, but its primary capability
+      is mutating external data by terminating a process on a remote endpoint via
+      Live Response. It does not mutate internal data, update entities, or create
+      insights.
   entity_usage:
     entity_types:
-    - HOSTNAME
-    - PROCESS
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: true
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -988,56 +1737,75 @@ Kill Process:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.PROCESS` and `entity.entity_type == EntityTypes.HOSTNAME`. Therefore,
+      it targets Process and Hostname entities, filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action uses Carbon Black Live Response to execute a 'kill' command on a
+      remote endpoint to terminate a specific process. This aligns with the 'Execute
+      Command on the Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 List Processes:
   ai_description: >-
     ### General Description
 
-    The **List Processes** action retrieves a list of active or historical processes
-    associated with **HOSTNAME** or **ADDRESS** (IP) entities from Carbon Black Response.
-    This action provides critical endpoint visibility during an investigation, allowing
-    security analysts to identify software execution and potential malicious activity
-    on a specific host.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It utilizes the global
-    integration configuration parameters (Api Root, Api Key, Version, Verify SSL,
-    and CA Certificate File) to establish a connection with the Carbon Black Response
-    environment.
-
-
-    ### Additional Notes
-
-    - The action supports both IP Address and Hostname entities.
-
-    - It first resolves the entity to a Carbon Black 'Sensor' object before querying
-    for process data.
-
-    - The number of retrieved processes is subject to the `GLOBAL_API_LIMIT` (300)
-    defined in the integration's manager logic.
+    Retrieves a list of processes related to specific endpoint entities (IP Addresses
+    and Hostnames) from Carbon Black Response. This action helps analysts understand
+    the current state and activity on a given endpoint by fetching its running processes.
 
 
     ### Flow Description
 
-    1. **Manager Initialization**: The action initializes the Carbon Black Response
-    manager based on the configured product version.
+    1. Filters the target entities to include only supported types (Address and Hostname).
 
-    2. **Entity Filtering**: It identifies all Hostname and IP Address entities within
-    the current alert context.
+    2. Iterates over each valid entity and queries the Carbon Black Response API (`GET
+    /api/v1/sensor`) to find the associated sensor using the entity's identifier.
 
-    3. **Sensor Resolution**: For each valid entity, it queries the Carbon Black API
-    to find the corresponding sensor ID using the IP or Hostname.
+    3. If a sensor is found, makes another API call (`GET /api/v1/process`) to fetch
+    the list of processes associated with that sensor's ID.
 
-    4. **Process Retrieval**: Once a sensor is identified, the action fetches the
-    list of processes associated with that specific sensor ID.
+    4. Formats the retrieved process data and attaches it to the entity as a data
+    table and JSON result.
 
-    5. **Data Processing**: The retrieved process data is converted into JSON format
-    and formatted into a CSV-style table for each entity.
+    5. Updates the successfully processed entities within Google SecOps.
 
-    6. **Internal Updates**: The action updates the entities in Google SecOps, attaches
-    the process tables to the entity results, and provides a comprehensive JSON output
-    for downstream automation.
+
+    ### Additional Notes
+
+    This action relies entirely on integration-level configurations (such as API Root
+    and API Key) and does not require any action-specific parameters.
+  ai_short_description: >-
+    Retrieves a list of processes running on specific endpoint entities (IP Addresses
+    and Hostnames) from Carbon Black Response.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1048,14 +1816,50 @@ List Processes:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entities in Google SecOps and adds process information as entity-specific
-      data tables.
-  categories:
-    enrichment: true
+      Updates the target entities in Google SecOps to reflect successful processing.
+    reasoning: >-
+      The action makes GET requests to the Carbon Black Response API to fetch sensor
+      and process data (fetches_data=true). It does not mutate external data. It updates
+      internal entities via `siemplify.update_entities` (can_mutate_internal_data=true,
+      can_update_entities=true). It does not create insights, modify alert data, or
+      create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1069,68 +1873,69 @@ List Processes:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS and HOSTNAME.
+      Therefore, it targets Address and Hostname entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches running processes for a specific host or IP address from
+      Carbon Black Response. This aligns with the 'Enrich Asset' category, as it returns
+      contextual metadata and telemetry (processes) for an internal resource/endpoint.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility designed to verify the connectivity
-    between the Google SecOps environment and the Carbon Black Response (CB Response)
-    server. It ensures that the provided credentials (API Key) and server details
-    (API Root) are correct and that the network path is open. This action is typically
-    used during the initial setup of the integration or for troubleshooting communication
-    issues.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Api Root** | String | Yes | The base URL of the Carbon Black Response server
-    (e.g., `https://cb-server.example.com`). |
-
-    | **Api Key** | String | Yes | The API token used for authentication with the
-    Carbon Black Response API. |
-
-    | **Version** | Float | Yes | The version of the Carbon Black Response server
-    (e.g., `5.1`, `6.3`). This determines which API manager logic is loaded. |
-
-    | **CA Certificate File** | String | No | A base64-encoded CA certificate file
-    used for SSL verification if a private CA is used. |
-
-    | **Verify SSL** | Boolean | No | If set to `True`, the action will verify the
-    SSL certificate of the server. Defaults to `False`. |
+    Tests connectivity to the Carbon Black Response API.
 
 
     ### Flow Description
 
-    1.  **Initialization**: The action retrieves the integration configuration parameters,
-    including the API Root, API Key, Version, and SSL settings.
+    1. Extracts integration configuration parameters.
 
-    2.  **Manager Loading**: Based on the provided `Version` parameter, the `CBResponseManagerLoader`
-    instantiates the appropriate version-specific manager (e.g., `CBResponseManager5_1`,
-    `CBResponseManager6_3`, or the base `CBResponseManager`).
+    2. Initializes the Carbon Black Response manager.
 
-    3.  **Connectivity Test**: The action calls the `get_license()` method of the
-    manager, which performs a `GET` request to the `/api/v1/license` endpoint of the
-    Carbon Black Response server.
+    3. Makes an API call to retrieve the license information to verify connectivity.
 
-    4.  **Validation**: If the API call returns a successful response, the action
-    confirms connectivity. If an exception occurs (e.g., HTTP error, timeout, or authentication
-    failure), the action catches the error and reports a failure.
-
-    5.  **Completion**: The action returns a boolean result (`true` for success, `false`
-    for failure) and an output message indicating the connection status.
+    4. Returns a success message if the connection is established, or an error message
+    if it fails.
 
 
     ### Additional Notes
 
-    - This action does not process any entities and is strictly for system-level connectivity
-    testing.
-
-    - If `Verify SSL` is enabled and a `CA Certificate File` is provided, the action
-    will decode the certificate and use it to validate the server's identity.
+    This action is used to verify that the integration is configured correctly and
+    can communicate with the Carbon Black Response server.
+  ai_short_description: >-
+    Tests connectivity to the Carbon Black Response API by attempting to retrieve
+    license information.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1141,10 +1946,48 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action only tests connectivity by making a GET request to retrieve license
+      information. It does not fetch contextual data for entities, mutate external
+      data, mutate internal data, update entities, create insights, modify alert data,
+      or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1158,51 +2001,72 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities. It only tests connectivity to the
+      external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticket management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Process Free Query:
   ai_description: >-
     ### General Description
 
-    Executes a free-form search query against Carbon Black Response to retrieve a
-    list of processes matching specific criteria. This action allows users to perform
-    environment-wide hunting for process executions, file modifications, and network
-    connections associated with processes based on a custom query string. It is designed
-    for broad investigation and does not require specific entities to be present in
-    the case.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Query | String | Yes | The Carbon Black Response query string (e.g., `process_name:python.exe`).
-    This supports standard Carbon Black query syntax to filter results by process
-    name, MD5, hostname, etc. |
+    Executes a free-form query in Carbon Black Response to search for and retrieve
+    process information. This action allows analysts to find specific processes across
+    the environment based on custom search criteria.
 
 
     ### Flow Description
 
-    1. **Setup**: Initializes the Carbon Black Response manager using the integration's
-    API configuration (API Root, API Key, and Version).
+    1. Initializes the Carbon Black Response API client using the provided integration
+    configuration.
 
-    2. **Query Execution**: Sends the user-provided `Query` to the Carbon Black `/api/v1/process`
-    endpoint.
+    2. Executes a GET request to the Carbon Black Response API (`/api/v1/process`)
+    using the provided free-form query.
 
-    3. **Pagination**: Automatically handles result pagination to retrieve up to the
-    global limit of results (300).
+    3. Paginates through the results to retrieve all matching processes.
 
-    4. **Data Presentation**: Formats the retrieved process data into a 'Processes'
-    data table and attaches the full list as a JSON result for downstream use in the
-    playbook.
+    4. Formats the retrieved process data into a CSV table and a JSON array.
+
+    5. Attaches the results to the action's output in Google SecOps.
 
 
     ### Additional Notes
 
-    This action is a global search utility and does not require or interact with specific
-    entities (like IPs or Hostnames) present in the current Google SecOps case. If
-    no processes match the query, the action will complete successfully with a message
-    indicating no results were found.
+    The query parameter must follow the Carbon Black Response search syntax (e.g.,
+    `process_name:python.exe`).
+  ai_short_description: >-
+    Executes a free-form query in Carbon Black Response to search for and retrieve
+    process information.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1213,10 +2077,47 @@ Process Free Query:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the Carbon Black Response API to fetch process
+      data based on a query. It does not mutate external data, update internal entities,
+      create insights, or add case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1230,48 +2131,75 @@ Process Free Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates solely on the provided 'Query' parameter. Therefore,
+      it does not run on entities, and all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a query to search for process telemetry data in Carbon Black
+      Response. This aligns with the 'Search Events' category, as it returns a collection
+      of telemetry data matching specific search parameters. It does not operate on
+      specific entities or mutate any data.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query | String | Yes | The free-form query to execute in Carbon Black Response
+    (e.g., process_name:python.exe). |
 Resolve Alert:
   ai_description: >-
     ### General Description
 
-    Resolves a specific alert within the Carbon Black Response platform. This action
-    is used to programmatically close or mark an alert as resolved by providing its
-    unique identifier. It is important to note that the Carbon Black Response API
-    may return a successful response even if the provided Alert ID does not exist
-    in the system.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Alert ID | String | Yes | The unique identifier of the alert in Carbon Black
-    Response that you wish to resolve. |
-
-
-    ### Additional Notes
-
-    This action does not interact with Google SecOps entities; it operates solely
-    based on the provided Alert ID parameter. The underlying API call uses a POST
-    request to the `/api/v1/alert/{alert_id}` endpoint with a status update to 'Resolved'.
+    Resolves a specific alert in Carbon Black Response by updating its status to 'Resolved'.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Carbon Black Response manager
-    using the provided integration configuration (API Root, API Key, etc.).
+    1. Extracts the `Alert ID` parameter provided by the user or playbook.
 
-    2. **Parameter Extraction**: The mandatory `Alert ID` is extracted from the action
-    parameters.
+    2. Initializes the Carbon Black Response API manager with the integration configurations.
 
-    3. **API Interaction**: The action sends a POST request to the Carbon Black Response
-    API to update the status of the specified alert to 'Resolved'.
+    3. Sends a POST request to the Carbon Black Response API (`/api/v1/alert/{alert_id}`)
+    to update the alert's status to 'Resolved'.
 
-    4. **Outcome Reporting**: If the API call is successful, the action completes
-    with a success status. If an error occurs during the process, it logs the exception
-    and returns a failure status.
+    4. Returns a success message and updates the action execution state.
+
+
+    ### Additional Notes
+
+    The Carbon Black Response REST-API returns a successful response even if the alert
+    ID provided does not exist in the system.
+  ai_short_description: >-
+    Resolves a specific alert in Carbon Black Response by updating its status to 'Resolved'.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1280,14 +2208,51 @@ Resolve Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of a specific alert to 'Resolved' in the Carbon Black Response
-      platform via a POST request.
+      Updates the status of a specific alert to 'Resolved' in Carbon Black Response.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action executes a POST request to the Carbon Black Response API to change
+      the status of an alert to 'Resolved', which mutates external data. It does not
+      fetch additional data, mutate internal SecOps data, update entities, or create
+      insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1301,48 +2266,78 @@ Resolve Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It relies solely on the 'Alert
+      ID' parameter provided in the action configuration.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the status of an alert in an external EDR system (Carbon
+      Black Response). It does not update an alert within the SecOps platform, nor
+      does it match any other specific outcome categories such as ticketing, containment,
+      or blocklisting.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | String | Yes | The id of the alert to resolve |
 Unblock Hash:
   ai_description: >-
     ### General Description
 
-    Unblocks file hash entities in Carbon Black Response. This action interacts with
-    the Carbon Black Response API to remove specific MD5 hashes from the blacklist,
-    effectively allowing the files to run in the environment. It is primarily used
-    for remediation or reversing a previous block action.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not have any input parameters. |
-
-
-    ### Additional Notes
-
-    * The action specifically targets MD5 hashes (32 characters). Other hash types
-    (e.g., SHA1, SHA256) will be ignored by the logic.
-
-    * The action requires the Carbon Black Response integration to be configured with
-    valid API credentials and root URL.
+    Unblocks a specific file hash in Carbon Black Response. This action removes the
+    specified MD5 hash from the Carbon Black Response blacklist, allowing it to execute
+    on endpoints.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Carbon Black Response manager
-    using the provided integration configuration (API Root, API Key, etc.).
+    1. Initializes the Carbon Black Response manager using the provided integration
+    configuration.
 
-    2. **Entity Filtering**: It filters the target entities to identify `FILEHASH`
-    entities that have a length of exactly 32 characters (MD5 format).
+    2. Iterates over the target entities, filtering for `FILEHASH` entities that have
+    an identifier length of exactly 32 characters (MD5).
 
-    3. **Unblocking Logic**: For each valid hash, it sends a DELETE request to the
-    Carbon Black Response banning API endpoint (`/api/v1/banning/blacklist/{md5}`)
-    to disable the ban.
+    3. For each matching entity, makes a `DELETE` request to the Carbon Black Response
+    API to unban the hash.
 
-    4. **Result Reporting**: The action tracks successful and failed unblock attempts
-    and returns a summary message to the Google SecOps case wall.
+    4. Collects the results and outputs a summary message indicating which hashes
+    were successfully unblocked and which failed.
+
+
+    ### Additional Notes
+
+    - Only MD5 hashes (length of 32 characters) are supported by this action.
+  ai_short_description: >-
+    Unblocks a specific file hash in Carbon Black Response by removing it from the
+    blacklist.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1351,21 +2346,56 @@ Unblock Hash:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a file hash from the blacklist in Carbon Black Response by sending a
-      DELETE request to the banning API endpoint.
+      Removes the specified file hash from the Carbon Black Response blacklist.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action executes a DELETE request to the Carbon Black Response API to unban
+      a hash, which mutates external data. It does not fetch additional context, mutate
+      internal data, update entities, or create insights.
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -1373,65 +2403,125 @@ Unblock Hash:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES` (which is set to `[EntityTypes.FILEHASH]`)
+      and `len(entity.identifier) == SUPPORTED_ENTITY_LENGTH` (which is 32). Therefore,
+      it targets File Hash entities and filters by entity type and identifier length.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action makes a DELETE request to the Carbon Black Response API to unban
+      a file hash, effectively removing it from a blacklist. This aligns with the
+      'Remove IOC From Blocklist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Unisolate Host:
   ai_description: >-
     ### General Description
 
-    Rejoins an endpoint to the network by disabling its isolation status in Carbon
-    Black Response. This action is used to restore network connectivity to a previously
-    isolated host that was restricted for security reasons.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It utilizes the global
-    integration configuration parameters such as Api Root, Api Key, and Version to
-    authenticate and communicate with the Carbon Black Response server.
+    Unisolates an endpoint in Carbon Black Response, restoring its network connectivity.
+    This action reverses a previous containment action, allowing the host to communicate
+    normally on the network.
 
 
     ### Flow Description
 
-    1. **Entity Filtering**: The action filters the target entities to identify those
-    of type `HOSTNAME` or `ADDRESS`.
+    1. Iterates over target entities of type IP Address and Hostname.
 
-    2. **Sensor Identification**: For each valid entity, the action queries the Carbon
-    Black Response API to find the corresponding sensor object using the IP address
-    or hostname.
+    2. For each entity, queries the Carbon Black Response API (via GET request) to
+    find the corresponding sensor ID based on the IP address or hostname.
 
-    3. **Unisolation Command**: If a sensor is found, the action sends a `PUT` request
-    to the Carbon Black Response sensor endpoint, setting the `network_isolation_enabled`
-    attribute to `False`.
+    3. Sends a PUT request to the Carbon Black Response API to disable network isolation
+    (`network_isolation_enabled: False`) for the identified sensor.
 
-    4. **Internal Update**: The action updates the processed entities in Google SecOps
-    to reflect the successful operation and provides a summary message of the unisolated
-    hosts.
+    4. Updates the successfully processed entities in Google SecOps.
 
 
     ### Additional Notes
 
-    This action requires the Carbon Black Response sensor to be online or reachable
-    for the unisolation command to be queued and eventually executed by the endpoint
-    agent.
+    If no sensor is found for a given entity, the action will skip it and log a warning.
+  ai_short_description: >-
+    Unisolates an endpoint in Carbon Black Response, restoring its network connectivity.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: true
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: >-
-      Disables the network isolation state of a host in Carbon Black Response by sending
-      a PUT request to the sensor API endpoint.
+      Updates the network isolation status of the sensor in Carbon Black Response
+      to false, restoring its network connectivity.
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates the entity objects within the Google SecOps platform to reflect the
-      changes made during the unisolation process.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches sensor data (GET request) to find the sensor ID. It then
+      mutates external data by sending a PUT request to disable network isolation.
+      It updates internal entities using `siemplify.update_entities` but does not
+      create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1445,3 +2535,41 @@ Unisolate Host:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS
+      and HOSTNAME. Therefore, it filters by entity_type and targets IP Address and
+      Hostname entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action sends a PUT request to Carbon Black Response to disable network isolation
+      for a specific sensor, which directly aligns with the 'Uncontain Host' expected
+      outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: true
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

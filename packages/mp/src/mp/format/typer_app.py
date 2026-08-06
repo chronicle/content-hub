@@ -102,14 +102,17 @@ def _get_source_files(file_paths: list[str], *, changed_file: bool) -> list[str]
 
 
 def _get_relevant_source_paths(sources: list[str]) -> set[Path]:
-    return {
-        path
-        for source in sources
-        if mp.core.file_utils.is_python_file(
-            path := pathlib.Path(source).resolve().expanduser().absolute(),
-        )
-        or path.is_dir()
-    }
+    paths: set[Path] = set()
+    for source in sources:
+        path: Path = pathlib.Path(source).resolve().expanduser().absolute()
+        if mp.core.file_utils.is_python_file(path) or path.is_dir():
+            paths.add(path)
+            continue
+
+        if integration_path := mp.core.file_utils.get_marketplace_integration_path(source):
+            paths.add(integration_path)
+
+    return paths
 
 
 def _format_python_files(paths: Iterable[Path]) -> None:

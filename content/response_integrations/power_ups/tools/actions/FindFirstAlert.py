@@ -19,7 +19,7 @@ from typing import Any
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.ToolsCommon import ExecutionScope
+from ..core.ToolsCommon import ExecutionScope, get_case_alerts
 
 SCRIPT_NAME: str = "FindFirstAlert"
 
@@ -33,7 +33,15 @@ def main():
         siemplify, "execution_scope", ExecutionScope.Alert
     )
     
-    alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+    if execution_scope.value == ExecutionScope.Case.value:
+        alerts = get_case_alerts(siemplify)
+    else:
+        alerts = list(siemplify.case.alerts)
+
+    if not alerts:
+        siemplify.end("No alerts found in the case.", "false")
+        return
+
     alerts.sort(key=lambda x: x.creation_time)
     first_alert: Any = alerts[0]
 

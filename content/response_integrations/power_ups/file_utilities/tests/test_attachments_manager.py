@@ -14,7 +14,16 @@
 
 from __future__ import annotations
 
+import base64
+import io
+import os
+import shutil
+import subprocess
 from typing import TYPE_CHECKING
+
+import magic
+import py7zr
+import pytest
 
 from file_utilities.core.AttachmentsManager import (
     AttachmentsManager,
@@ -111,3 +120,89 @@ def test_attachments_manager_blobs_population(
     assert len(populated) == 1
     assert "base64_blob" in populated[0]
     assert len(populated[0]["base64_blob"]) == EXPECTED_BASE64_BLOB_LENGTH
+
+
+@pytest.fixture(autouse=True)
+def mock_magic(monkeypatch) -> None:
+    """Mock magic.detect_from_content to return a dummy result to prevent Windows libmagic errors."""
+    class MockMagicResult:
+        name = "text/plain"
+        mime_type = "text/plain"
+
+    monkeypatch.setattr(magic, "detect_from_content", lambda x: MockMagicResult(), raising=False)
+
+
+@pytest.fixture
+def mock_7z_cli(monkeypatch) -> None:
+    """
+    Mock shutil.which and subprocess.run to simulate 7z binary availability and
+    extraction.
+    """
+    monkeypatch.setattr(shutil, "which", lambda x: "/usr/bin/7z")
+
+    def mock_run(cmd, *args, **kwargs):
+        out_dir = None
+        for arg in cmd:
+            if arg.startswith("-o"):
+                out_dir = arg[2:]
+                break
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+            with open(os.path.join(out_dir, "test_file.txt"), "wb") as f:
+                f.write(b"This is a test 7z content.")
+        return subprocess.CompletedProcess(cmd, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+
+def test_extract_7z_with_password(mock_siemplify, mock_7z_cli) -> None:
+    """
+    Verify that extract_7z successfully extracts password protected archive in-memory
+    using py7zr.
+    """
+    archive_data = io.BytesIO()
+    with py7zr.SevenZipFile(
+        archive_data, mode="w", password="test_password"
+    ) as archive:
+        archive.writestr("This is a test 7z content.", "test_file.txt")
+
+    archive_bytes = archive_data.getvalue()
+
+    mgr = AttachmentsManager(mock_siemplify)
+    results = mgr.extract_7z(
+        zip_filename="test.7z",
+        content=io.BytesIO(archive_bytes),
+        pwds=["test_password"],
+    )
+
+    assert len(results) == 1
+    assert results[0]["filename"] == "test_file.txt"
+    assert base64.b64decode(results[0]["raw"]) == b"This is a test 7z content."
+
+
+def test_extract_7z_cli_fallback(mock_siemplify, mock_7z_cli, monkeypatch) -> None:
+    """
+    Verify that extract_7z falls back to CLI 7z execution when py7zr is unavailable.
+    """
+    archive_data = io.BytesIO()
+    with py7zr.SevenZipFile(
+        archive_data, mode="w", password="test_password"
+    ) as archive:
+        archive.writestr("This is a test 7z content.", "test_file.txt")
+
+    archive_bytes = archive_data.getvalue()
+
+    monkeypatch.setattr(
+        "file_utilities.core.AttachmentsManager.HAS_PY7ZR", False
+    )
+
+    mgr = AttachmentsManager(mock_siemplify)
+    results = mgr.extract_7z(
+        zip_filename="test.7z",
+        content=io.BytesIO(archive_bytes),
+        pwds=["test_password"],
+    )
+
+    assert len(results) == 1
+    assert results[0]["filename"] == "test_file.txt"
+    assert base64.b64decode(results[0]["raw"]) == b"This is a test 7z content."

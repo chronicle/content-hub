@@ -32,6 +32,7 @@ from base64 import urlsafe_b64decode
 from collections import Counter
 from email.message import Message
 from email.utils import parseaddr
+from enum import Enum
 from html import unescape
 from json import JSONEncoder
 from typing import Any
@@ -59,6 +60,13 @@ from .EmailUtilitiesManager import (
     extract_valid_ips_from_body,
     fix_malformed_eml_content,
 )
+
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
 
 if typing.TYPE_CHECKING:
     from collections.abc import Iterable
@@ -1630,9 +1638,15 @@ class EmailManager:
 
     def get_alert_entity_identifiers(self):
         self.siemplify.load_case_data()
-        alerts = getattr(
-            self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+        execution_scope = getattr(
+            self.siemplify, "execution_scope", ExecutionScope.Alert
         )
+        if execution_scope.value == ExecutionScope.Alert.value:
+            alerts = [self.siemplify.current_alert]
+        else:
+            alerts = getattr(
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
 
         identifiers = []
         for alert in alerts:
@@ -1648,9 +1662,15 @@ class EmailManager:
 
     def get_alert_entity_identifiers_with_entity_type(self):
         self.siemplify.load_case_data()
-        alerts = getattr(
-            self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+        execution_scope = getattr(
+            self.siemplify, "execution_scope", ExecutionScope.Alert
         )
+        if execution_scope.value == ExecutionScope.Alert.value:
+            alerts = [self.siemplify.current_alert]
+        else:
+            alerts = getattr(
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
 
         identifiers = []
         for alert in alerts:
@@ -1680,9 +1700,15 @@ class EmailManager:
 
     def get_alert_entities(self):
         self.siemplify.load_case_data()
-        alerts = getattr(
-            self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+        execution_scope = getattr(
+            self.siemplify, "execution_scope", ExecutionScope.Alert
         )
+        if execution_scope.value == ExecutionScope.Alert.value:
+            alerts = [self.siemplify.current_alert]
+        else:
+            alerts = getattr(
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
 
         entities = []
         for alert in alerts:

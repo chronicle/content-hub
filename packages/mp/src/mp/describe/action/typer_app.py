@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import pathlib  # noqa: TC003
+import pathlib  # ruff:ignore[typing-only-standard-library-import]
 from typing import Annotated
 
 import typer
@@ -44,7 +44,7 @@ app = typer.Typer(help="Commands for describing actions")
     ),
     no_args_is_help=True,
 )
-def describe(  # noqa: PLR0913
+def describe(  # ruff:ignore[too-many-arguments]
     actions: Annotated[list[str] | None, typer.Argument(help="Action names")] = None,
     integration: Annotated[str | None, typer.Option("-i", "--integration", help="Integration name")] = None,
     *,

@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
     from mp.core.llm.sdk import LlmConfig, LlmSdk
 
-GEMINI_MODEL_NAME: str = "gemini-3.1-flash-lite-preview"
+GEMINI_MODEL_NAME: str = "gemini-3.1-pro-preview"
 GEMINI_TEMPERATURE: float = 0.1
 DESCRIBE_BULK_SIZE: int = 4
 
@@ -49,6 +49,7 @@ async def call_gemini_bulk(prompts: list[str], response_json_schema: type[T_Sche
         return await gemini.send_bulk_messages(
             prompts,
             response_json_schema=response_json_schema,
+            use_batch=True,
         )
 
 

@@ -65,3 +65,8 @@ CHECK_ENTITIES_CASE_SCOPE_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
 CHECK_ENTITIES_ALERT_SCOPE_ENTITIES = [
     MockEntity(identifier=TARGET_IP, additional_properties={"key1": "val1"})
 ]
+
+CONVERT_INTO_SIMULATED_CASE_ALERT_DETAILS_KEY = "convert_into_simulated_case_alert_details"
+CONVERT_INTO_SIMULATED_CASE_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
+CONVERT_INTO_SIMULATED_CASE_EXPECTED_DATA_KEY = "convert_into_simulated_case_expected_data"
+
