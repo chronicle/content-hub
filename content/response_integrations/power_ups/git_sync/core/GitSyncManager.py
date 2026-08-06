@@ -711,7 +711,7 @@ class GitSyncManager:
             install_integration(
                 chronicle_soar=self._siemplify,
                 integration_identifier=integration_name,
-                integration_name="",
+                integration_name=integration_name,
                 version=version,
                 is_certified=is_certified,
             )
