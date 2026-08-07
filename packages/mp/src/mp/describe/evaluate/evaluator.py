@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import uuid
@@ -208,7 +209,67 @@ def normalize_action_name(raw_name: str) -> str:
     return name.lower().replace(" ", "").replace("_", "").replace(":", "").replace("-", "").rstrip("s")
 
 
-def get_code_for_action(action_name: str, python_files: dict[str, str]) -> tuple[str, list[str], list[str]]:
+def _match_action_files_by_yaml_name(
+    action_name: str, python_files: dict[str, str], shared_dirs: set[str]
+) -> list[str]:
+    """Find action-specific files by inspecting 'name:' field in action definition YAMLs.
+
+    Args:
+        action_name: Name of the action.
+        python_files: Mapping of relative filepath to code string.
+        shared_dirs: Set of directory names containing shared code.
+
+    Returns:
+        List of matching action file paths.
+
+    """
+    for filename, content in python_files.items():
+        if filename.endswith((".yaml", ".yml")) and action_name in content:
+            with contextlib.suppress(Exception):
+                parsed = yaml.safe_load(content)
+                if isinstance(parsed, dict) and parsed.get("name") == action_name:
+                    stem = Path(filename).stem
+                    return [
+                        f
+                        for f in python_files
+                        if Path(f).stem == stem
+                        and not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)
+                    ]
+    return []
+
+
+def _match_action_files_by_normalization(
+    action_name: str, python_files: dict[str, str], shared_dirs: set[str]
+) -> list[str]:
+    """Fallback: find action-specific files by normalized name matching.
+
+    Args:
+        action_name: Name of the action.
+        python_files: Mapping of relative filepath to code string.
+        shared_dirs: Set of directory names containing shared code.
+
+    Returns:
+        List of matching action file paths.
+
+    """
+    norm_target = normalize_action_name(action_name)
+    if not norm_target:
+        return []
+    non_shared = [
+        f for f in python_files if not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)
+    ]
+    exact = [f for f in non_shared if norm_target == normalize_action_name(f)]
+    fuzzy = [
+        f
+        for f in non_shared
+        if norm_target in normalize_action_name(f) or normalize_action_name(f) in norm_target
+    ]
+    return exact or fuzzy
+
+
+def get_code_for_action(
+    action_name: str, python_files: dict[str, str]
+) -> tuple[str, list[str], list[str]]:
     """Select Python source code and definition files relevant to a specific action.
 
     Args:
@@ -219,10 +280,6 @@ def get_code_for_action(action_name: str, python_files: dict[str, str]) -> tuple
         Tuple of (combined_code_string, action_specific_files, shared_common_files).
 
     """
-    norm_target = normalize_action_name(action_name)
-    exact_action_files: list[str] = []
-    fuzzy_action_files: list[str] = []
-    shared_files: list[str] = []
     shared_dirs = {
         "core",
         "common",
@@ -235,24 +292,25 @@ def get_code_for_action(action_name: str, python_files: dict[str, str]) -> tuple
         "clients",
     }
 
-    for filename in python_files:
-        norm_file = normalize_action_name(filename)
-        parts = {p.lower() for p in filename.split("/")[:-1]}
+    shared_files = [
+        f for f in python_files if {p.lower() for p in f.split("/")[:-1]} & shared_dirs
+    ]
 
-        if norm_target and norm_target == norm_file:
-            exact_action_files.append(filename)
-        elif norm_target and (norm_target in norm_file or norm_file in norm_target):
-            fuzzy_action_files.append(filename)
-        elif parts & shared_dirs:
-            shared_files.append(filename)
+    action_files = _match_action_files_by_yaml_name(action_name, python_files, shared_dirs)
+    if not action_files:
+        action_files = _match_action_files_by_normalization(action_name, python_files, shared_dirs)
 
-    action_files = exact_action_files or fuzzy_action_files
     if action_files:
         action_files.sort()
         shared_files.sort()
         used_files = action_files + shared_files
         combined_code = "\n\n".join(f"# File: {f}\n{python_files[f]}" for f in used_files)
         return combined_code, action_files, shared_files
+
+    if shared_files:
+        shared_files.sort()
+        combined_code = "\n\n".join(f"# File: {f}\n{python_files[f]}" for f in shared_files)
+        return combined_code, [], shared_files
 
     all_files = sorted(python_files.keys())
     combined_code = (
