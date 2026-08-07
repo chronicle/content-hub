@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import json
 import logging
 import uuid
@@ -324,19 +325,24 @@ def get_code_for_action(
 _get_code_for_action = get_code_for_action
 
 
-async def _direct_evaluate_prompts(prompts: list[str]) -> list[RuleVerdict | str]:
-    """Execute evaluation prompts directly via streaming Gemini LLM session.
+async def _direct_evaluate_prompts(
+    prompts: list[str], *, use_batch: bool = False
+) -> list[RuleVerdict | str]:
+    """Execute evaluation prompts via Gemini LLM session (streaming or Batch API).
 
     Args:
         prompts: List of prompt strings.
+        use_batch: Whether to use Google GenAI Batch API.
 
     Returns:
         List of RuleVerdict or error strings.
 
     """
     async with create_llm_session() as gemini:
-        gemini.__dict__["bulk_threshold"] = 500
-        return await gemini.send_bulk_messages(prompts, response_json_schema=RuleVerdict)
+        gemini.bulk_threshold = 0 if use_batch else 5000
+        return await gemini.send_bulk_messages(
+            prompts, response_json_schema=RuleVerdict, use_batch=use_batch
+        )
 
 
 class EvaluationEngine:
@@ -631,11 +637,14 @@ class EvaluationEngine:
             )
 
     @staticmethod
-    def _dispatch_prompts(prompts: list[str]) -> list[RuleVerdict | str]:
+    def _dispatch_prompts(
+        prompts: list[str], *, use_batch: bool = False
+    ) -> list[RuleVerdict | str]:
         """Dispatch prompts to Gemini API with event loop handling.
 
         Args:
             prompts: List of prompt strings.
+            use_batch: Whether to use Google GenAI Batch API.
 
         Returns:
             List of responses from Gemini API.
@@ -646,8 +655,10 @@ class EvaluationEngine:
         except RuntimeError:
             loop = None
         if loop and loop.is_running():
-            return anyio.from_thread.run(_direct_evaluate_prompts, prompts)
-        return asyncio.run(_direct_evaluate_prompts(prompts))
+            return anyio.from_thread.run(
+                functools.partial(_direct_evaluate_prompts, prompts, use_batch=use_batch)
+            )
+        return asyncio.run(_direct_evaluate_prompts(prompts, use_batch=use_batch))
 
     def evaluate_integration(  # ruff: ignore[complex-structure, too-many-branches, too-many-arguments, too-many-locals, too-many-statements, too-many-positional-arguments]
         self,
@@ -664,6 +675,7 @@ class EvaluationEngine:
         *,
         use_llm: bool = True,
         add_prompt: bool = False,
+        use_batch: bool = False,
     ) -> EvaluationReport:
         """Execute all evaluation rules per action for an integration.
 
@@ -680,6 +692,7 @@ class EvaluationEngine:
             action: Optional action name filter.
             use_llm: Whether to attempt Gemini API call.
             add_prompt: Whether to attach evaluation prompts in results.
+            use_batch: Whether to use Google GenAI Batch API.
 
         Returns:
             EvaluationReport containing overall evaluation results.
@@ -811,11 +824,13 @@ class EvaluationEngine:
 
         if use_llm and prompts:
             try:
+                mode_str = "Batch API" if use_batch else "Direct Streaming"
                 logger.info(
-                    "⚡ [3/4] Dispatching %d rule evaluation prompts to Gemini API (Direct Streaming)...",
+                    "⚡ [3/4] Dispatching %d rule evaluation prompts to Gemini API (%s)...",
                     len(prompts),
+                    mode_str,
                 )
-                llm_responses = EvaluationEngine._dispatch_prompts(prompts)
+                llm_responses = EvaluationEngine._dispatch_prompts(prompts, use_batch=use_batch)
             except Exception as err:  # ruff: ignore[blind-except]
                 logger.warning(
                     "Gemini API evaluation offline or unavailable: %s. Using heuristic evaluation.",
