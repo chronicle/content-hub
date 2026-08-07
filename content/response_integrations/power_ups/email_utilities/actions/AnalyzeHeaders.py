@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Analyze the headers of an email and report routing, authentication, and
+reputation findings.
+
+Accepts a JSON object of email headers and produces SPF/DKIM/DMARC/ARC
+authentication results (from the message's Authentication-Results headers),
+DKIM/ARC signature verification, per-hop relay enrichment (WHOIS, geo-location,
+denylist checks), and source-server details.
+"""
+
 from __future__ import annotations
 
 import binascii
@@ -20,22 +29,23 @@ import ipaddress
 import json
 import re
 import socket
+from typing import Any
 
-import checkdmarc
 import dns.resolver
 import pydnsbl
 import tldextract
 from dateutil.parser import parse
 from ipwhois import IPWhois
+from mailsuite.utils import parse_authentication_results
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core import EmailParserRouting, EmailUtilitiesManager
+from ..core import AuthenticationResults, EmailParserRouting, EmailUtilitiesManager
 from ..core.IpLocation import DbIpCity
 
 
-def ip_in_subnetwork(ip_address, subnetwork):
+def ip_in_subnetwork(ip_address: str, subnetwork: str) -> bool:
     """Returns True if the given IP address belongs to the
     subnetwork expressed in CIDR notation, otherwise False.
     Both parameters are strings.
@@ -43,6 +53,9 @@ def ip_in_subnetwork(ip_address, subnetwork):
     Both IPv4 addresses/subnetworks (e.g. "1.1.1.1"
     and "1.1.1.1/24") and IPv6 addresses/subnetworks (e.g.
     "2a02:a448:ddb0::" and "2a02:a448:ddb0::/44") are accepted.
+
+    Raises:
+        ValueError: If the address and subnetwork are different IP versions.
     """
     (ip_integer, version1) = ip_to_integer(ip_address)
     (ip_lower, ip_upper, version2) = subnetwork_to_ip_range(subnetwork)
@@ -53,7 +66,7 @@ def ip_in_subnetwork(ip_address, subnetwork):
     return ip_lower <= ip_integer <= ip_upper
 
 
-def ip_to_integer(ip_address):
+def ip_to_integer(ip_address: str) -> tuple[int, int]:
     """Converts an IP address expressed as a string to its
     representation as an integer value and returns a tuple
     (ip_integer, version), with version being the IP version
@@ -61,6 +74,9 @@ def ip_to_integer(ip_address):
 
     Both IPv4 addresses (e.g. "1.1.1.1") and IPv6 addresses
     (e.g. "2a02:a448:ddb0::") are accepted.
+
+    Raises:
+        ValueError: If the string is not a valid IPv4 or IPv6 address.
     """
     # try parsing the IP address first as IPv4, then as IPv6
     for version in (socket.AF_INET, socket.AF_INET6):
@@ -69,13 +85,14 @@ def ip_to_integer(ip_address):
             ip_integer = int(binascii.hexlify(ip_hex), 16)
 
             return (ip_integer, 4 if version == socket.AF_INET else 6)
-        except:
+        except OSError:
+            # not a valid address for this family; try the next one
             pass
 
     raise ValueError("invalid IP address")
 
 
-def subnetwork_to_ip_range(subnetwork):
+def subnetwork_to_ip_range(subnetwork: str) -> tuple[int, int, int]:
     """Returns a tuple (ip_lower, ip_upper, version) containing the
     integer values of the lower and upper IP addresses respectively
     in a subnetwork expressed in CIDR notation (as a string), with
@@ -83,6 +100,9 @@ def subnetwork_to_ip_range(subnetwork):
 
     Both IPv4 subnetworks (e.g. "1.1.1.1/24") and IPv6
     subnetworks (e.g. "2a02:a448:ddb0::/44") are accepted.
+
+    Raises:
+        ValueError: If the string is not a valid CIDR subnetwork.
     """
     try:
         fragments = subnetwork.split("/")
@@ -101,18 +121,23 @@ def subnetwork_to_ip_range(subnetwork):
                 ip_upper = ip_lower + suffix_mask
 
                 return (ip_lower, ip_upper, 4 if version == socket.AF_INET else 6)
-            except:
+            except (OSError, ValueError):
+                # not a valid network for this family; try the next one
                 pass
-    except:
+    except (ValueError, IndexError):
         pass
 
     raise ValueError("invalid subnetwork")
 
 
-def dateParser(line):
-    """DateParser will read in a line and parse a date.
-    :param line:
-    :return: {str} string
+def date_parser(line: str) -> datetime.datetime:
+    """Parse a date out of a header line, tolerating fuzzy formats.
+
+    Args:
+        line: The header line to extract a date from.
+
+    Returns:
+        The parsed datetime.
     """
     try:
         r = parse(line, fuzzy=True)
@@ -125,12 +150,16 @@ def dateParser(line):
     return r
 
 
-def getHeaderVal(h, data, rex="\\s*(.*?)\n\\S+:\\s"):
-    """GetHeaderVal will get the value from one of the email headers.
-    :param h:
-    :param data:
-    :param rex:
-    :return:
+def get_header_val(h: str, data: str, rex: str = "\\s*(.*?)\n\\S+:\\s") -> str | None:
+    """Extract the value of a single header from raw header text.
+
+    Args:
+        h: The header name to search for.
+        data: The raw header text to search within.
+        rex: The regex fragment matching the header's value.
+
+    Returns:
+        The matched header value, or None if not found.
     """
     r = re.findall(f"{h}:{rex}", data, re.VERBOSE | re.DOTALL | re.IGNORECASE)
     if r:
@@ -138,13 +167,16 @@ def getHeaderVal(h, data, rex="\\s*(.*?)\n\\S+:\\s"):
     return None
 
 
-def getAuthVal(a, data, rex=r"(\w+)\b"):
-    """GetAuthVal parses the authentication-results header for values.
-    Not really used any more.
-    :param a:
-    :param data:
-    :param rex:
-    :return:
+def get_auth_val(a: str, data: str, rex: str = r"(\w+)\b") -> str | None:
+    """Parse a value out of the Authentication-Results header (legacy helper).
+
+    Args:
+        a: The authentication mechanism name to search for.
+        data: The header text to search within.
+        rex: The regex fragment matching the value.
+
+    Returns:
+        The matched value, or None if not found.
     """
     r = re.findall(rf"{a}={rex}", data, re.VERBOSE | re.DOTALL | re.IGNORECASE)
     if r:
@@ -152,7 +184,15 @@ def getAuthVal(a, data, rex=r"(\w+)\b"):
     return None
 
 
-def return_domain(email):
+def return_domain(email: str) -> str | None:
+    """Return the domain portion of an email address.
+
+    Args:
+        email: An address, optionally in ``Display Name <local@domain>`` form.
+
+    Returns:
+        The domain after the ``@``, or None if no domain is present.
+    """
     f_domain = re.search("<(.*?)>", email)
 
     if f_domain:
@@ -160,31 +200,25 @@ def return_domain(email):
     else:
         domain = re.search("@(.*)", email)
 
-    if domain == None:
+    if domain is None:
         return None
     return domain.group(1)
 
 
-def ip_check(ip, domain):
-    spf_record = EmailUtilitiesManager.SpfRecord.from_domain(domain).record.split(" ")
+def parse_hops(received: list[str], siemplify: SiemplifyAction) -> list[dict]:
+    """Build per-hop relay details from a message's Received headers.
 
-    includes = [x.split(":")[1] for x in spf_record if x.startswith("include")]
-    ips = [x.split(":")[1] for x in spf_record if x.startswith("ip")]
-    for include_domain in includes:
-        include_spf = EmailUtilitiesManager.SpfRecord.from_domain(
-            include_domain,
-        ).record.split(" ")
-        includes.extend(
-            [x.split(":")[1] for x in include_spf if x.startswith("include")],
-        )
-        ips.extend([x.split(":")[1] for x in include_spf if x.startswith("ip")])
-    for cidr in ips:
-        if ip_in_subnetwork(ip, cidr):
-            return True
-    return False
+    Walks the Received headers oldest-first and, for each hop, records timing,
+    the from/by hosts, and best-effort WHOIS, geo-location, and denylist (RBL)
+    enrichment. Enrichment failures are logged and skipped rather than raised.
 
+    Args:
+        received: The message's Received header values.
+        siemplify: The action object, used for logging.
 
-def parseHops(received):
+    Returns:
+        One dict of relay details per hop.
+    """
     previous_hop = {}
     hops = []
     ip_checker = pydnsbl.DNSBLIpChecker()
@@ -195,10 +229,7 @@ def parseHops(received):
         hop_info["from_ip_whois"] = {}
         hop_info["by_ip_whois"] = {}
 
-        try:
-            parsed_route = EmailParserRouting.parserouting(hop)
-        except Exception:
-            raise
+        parsed_route = EmailParserRouting.parserouting(hop)
         if "date" not in parsed_route:
             continue
         hop_info["time"] = (
@@ -210,7 +241,7 @@ def parseHops(received):
                 denylist = {}
                 hop_info["from"] = f
                 try:
-                    test_ip = ipaddress.ip_address(f)
+                    ipaddress.ip_address(f)
                     ip_check = ip_checker.check(f)
                     # hop_info['from'] = f
                     try:
@@ -218,11 +249,10 @@ def parseHops(received):
                         hop_info["from_ip_whois"] = obj.lookup_rdap(depth=1)
                         response = DbIpCity.get(f, api_key="free")
                         hop_info["from_geo"] = json.loads(response.to_json())
-                    except Exception as expe:
-                        template = (
-                            "An exception of type {0} occurred. Arguments:\n{1!r}"
+                    except Exception as e:
+                        siemplify.LOGGER.debug(
+                            f"WHOIS/geo enrichment failed for a from-hop IP: {e}",
                         )
-                        message = template.format(type(expe).__name__, expe.args)
 
                     denylist["blacklisted"] = ip_check.blacklisted
                     denylist["detected_by"] = ip_check.detected_by.copy()
@@ -243,36 +273,32 @@ def parseHops(received):
                             )
                             hop_info["from_geo"] = json.loads(response.to_json())
                             hop_info["from_ip_whois"] = ip_whois
-                        except Exception as exp:
-                            template = (
-                                "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        except Exception as e:
+                            siemplify.LOGGER.debug(
+                                "WHOIS/geo enrichment failed for a resolved "
+                                f"from-hop host: {e}",
                             )
-                            message = template.format(type(exp).__name__, exp.args)
 
                         denylist["blacklisted"] = domain_check.blacklisted
                         denylist["detected_by"] = domain_check.detected_by.copy()
                         denylist["categories"] = domain_check.categories.copy()
                         hop_info["blacklist_info"].append(denylist)
                     except Exception as e:
-                        template = (
-                            "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        siemplify.LOGGER.debug(
+                            f"Denylist/DNS lookup failed for a from-hop host: {e}",
                         )
-                        message = template.format(type(e).__name__, e.args)
-                        logger(message)
-                except Exception as ex:
-                    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-                    message = template.format(type(ex).__name__, ex.args)
-                    logger(message)
+                except Exception as e:
+                    siemplify.LOGGER.warn(f"Failed to analyze a from-hop: {e}")
 
                 if "blacklisted" in denylist:
-                    if denylist["blacklisted"] == True:
+                    if denylist["blacklisted"]:
                         hop_info["blacklisted"] = True
         else:
             hop_info["from"] = ""
         if "by" in parsed_route:
             hop_info["by"] = parsed_route["by"][0]
             try:
-                test_ip = ipaddress.ip_address(hop_info["by"])
+                ipaddress.ip_address(hop_info["by"])
 
                 obj = IPWhois(hop_info["by"])
 
@@ -280,7 +306,10 @@ def parseHops(received):
                 hop_info["by_geo"] = json.loads(response.to_json())
                 hop_info["by_ip_whois"] = obj.lookup_rdap(depth=1)
 
-            except Exception:
+            except Exception as e:
+                siemplify.LOGGER.debug(
+                    f"by-hop is not a direct IP or enrichment failed, trying DNS: {e}",
+                )
                 try:
                     resolved_ip_answer = dns.resolver.resolve(hop_info["by"])
                     resolved_ip = resolved_ip_answer[0]
@@ -289,14 +318,15 @@ def parseHops(received):
                         hop_info["by_ip_whois"] = obj.lookup_rdap(depth=1)
                         response = DbIpCity.get(resolved_ip, api_key="free")
                         hop_info["by_geo"] = json.loads(response.to_json())
-                    except Exception as expl:
-                        template = (
-                            "An exception of type {0} occurred. Arguments:\n{1!r}"
+                    except Exception as e:
+                        siemplify.LOGGER.debug(
+                            "WHOIS/geo enrichment failed for a resolved "
+                            f"by-hop host: {e}",
                         )
-                        message = template.format(type(expl).__name__, expl.args)
-                except Exception as exp:
-                    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-                    message = template.format(type(exp).__name__, exp.args)
+                except Exception as e:
+                    siemplify.LOGGER.debug(
+                        f"Could not resolve/enrich a by-hop host: {e}",
+                    )
 
         if "with" in parsed_route:
             hop_info["with"] = parsed_route["with"].split(" ")[0]
@@ -314,7 +344,17 @@ def parseHops(received):
     return hops
 
 
-def coalesce(input_dict, *arg):
+def coalesce(input_dict: dict, *arg: str) -> Any:
+    """Return the first present key's value from a dict.
+
+    Args:
+        input_dict: The dict to look in.
+        *arg: Candidate keys, tried in order.
+
+    Returns:
+        The first matching value (its first element if that value is a list),
+        or None if no candidate key is present.
+    """
     for el in arg:
         if el in input_dict:
             if isinstance(input_dict[el], list):
@@ -323,11 +363,16 @@ def coalesce(input_dict, *arg):
     return None
 
 
-def buildResult(header, siemplify):
-    """Creates the result object after parsing the email.
-    :param header:
-    :param mail_data:
-    :return:
+def build_result(header: dict, siemplify: SiemplifyAction) -> dict:
+    """Assemble the full analysis result for a set of email headers.
+
+    Args:
+        header: The email headers as a mapping of name to value(s).
+        siemplify: The action object, used for logging.
+
+    Returns:
+        The analysis result: sender metadata, authentication results and
+        summaries, DKIM/ARC verification, relay info, and source server.
     """
     result = {
         "From": coalesce(header, "from"),
@@ -347,24 +392,47 @@ def buildResult(header, siemplify):
         res = re.search(r"header.i=@(.*?)\s", dmarc_sig)
         if res:
             result["DmarcDomain"] = res.group(1)
-    except:
-        pass
+    except Exception as e:
+        siemplify.LOGGER.debug(f"Could not derive DmarcDomain from headers: {e}")
 
     try:
         received_spf = header.get("received-spf")[0]
         res = re.search(r"domain of (?:.*?@)?(.*?)\s", received_spf)
         if res:
             result["SPFDomain"] = res.group(1)
-    except:
-        pass
-    domain_check = checkdmarc.check_domains(
-        [result["FromDomain"]],
-        include_tag_descriptions=True,
+    except Exception as e:
+        siemplify.LOGGER.debug(f"Could not derive SPFDomain from headers: {e}")
+    # The receiving MTA records the actual SPF/DKIM/DMARC verdict for *this*
+    # message in the Authentication-Results header(s). Parse those to report
+    # whether the email passed authentication, rather than looking up the From
+    # domain's published policy (which only describes what the domain enforces,
+    # not whether this particular message passed it).
+    auth_results = AuthenticationResults.collect_authentication_results(header)
+    if auth_results:
+        try:
+            result["AuthenticationResults"] = parse_authentication_results(
+                auth_results,
+                from_domain=result["FromDomain"],
+            )
+        except ValueError as e:
+            result["AuthenticationResults"] = [{"error": str(e)}]
+    else:
+        result["AuthenticationResults"] = []
+
+    # A receiver may emit one combined Authentication-Results header or split the
+    # checks across several (e.g. Postfix with separate milters). Collapse them
+    # into a provider-independent summary, and also keep them grouped by
+    # authserv-id so a consumer can weigh which server's verdict to trust.
+    result["AuthenticationSummary"] = (
+        AuthenticationResults.summarize_authentication_results(
+            result["AuthenticationResults"],
+        )
     )
-    result["SPF"] = domain_check.get("spf")
-    result["DMARC"] = domain_check.get("dmarc")
-    result["MX"] = domain_check.get("mx")
-    result["DNSSec"] = domain_check.get("dnssec")
+    result["AuthenticationByServer"] = (
+        AuthenticationResults.group_authentication_results_by_server(
+            result["AuthenticationResults"],
+        )
+    )
 
     dkim = EmailUtilitiesManager.DKIM(logger=siemplify.LOGGER, headers=header)
     arc = EmailUtilitiesManager.ARC(logger=siemplify.LOGGER, headers=header)
@@ -380,23 +448,26 @@ def buildResult(header, siemplify):
         arc_res["result"], arc_res["details"], arc_res["reason"] = arc.verify()
         arc_res["result"] = arc_res["result"].decode()
         result["ARCVerify"] = arc_res
-    except:
-        result["ARCVerify"] = {}
-        result["ARCVerify"]["result"] = "error"
+    except Exception as e:
+        result["ARCVerify"] = {"result": "error"}
+        siemplify.LOGGER.debug(f"ARC verification failed: {e}")
     result["RelayInfo"] = []
     result["SourceServer"] = ""
 
     try:
-        result["RelayInfo"] = parseHops(header["received"])
+        result["RelayInfo"] = parse_hops(header["received"], siemplify)
         for fromserver_str in reversed(header["received"]):
             if "by" in fromserver_str:
                 fromserver = EmailParserRouting.parserouting(fromserver_str)
                 try:
                     if "by" in fromserver:
-                        test_ip = ipaddress.ip_address(fromserver["by"][0])
+                        ipaddress.ip_address(fromserver["by"][0])
                         result["SourceServerIP"] = fromserver["by"][0]
                         result["SourceServer"] = fromserver["by"][0]
-                except Exception:
+                except Exception as e:
+                    siemplify.LOGGER.debug(
+                        f"Source server is not a direct IP, resolving by name: {e}",
+                    )
                     if "by" in fromserver:
                         result["SourceServer"] = fromserver["by"][0]
                         try:
@@ -405,28 +476,28 @@ def buildResult(header, siemplify):
                                     result["SourceServer"],
                                 )[0][2]
                             )
-                        except:
-                            pass
+                        except Exception as e:
+                            siemplify.LOGGER.debug(
+                                f"Could not resolve source server IP: {e}",
+                            )
                 continue
-    except Exception:
-        pass
+    except Exception as e:
+        siemplify.LOGGER.warn(f"Failed to build relay/source-server info: {e}")
 
-    try:
-        result["SPF"]["Auth"] = ip_check(result["SourceServerIP"], result["FromDomain"])
-    except Exception:
-        result["SPF"]["Auth"] = False
     try:
         result["StrongSPF"] = EmailUtilitiesManager.SpfRecord.from_domain(
             result["FromDomain"],
         ).is_record_strong()
-    except:
+    except Exception as e:
         result["StrongSPF"] = False
+        siemplify.LOGGER.debug(f"Could not evaluate StrongSPF: {e}")
 
     return result
 
 
 @output_handler
-def main(siemplify):
+def main(siemplify: SiemplifyAction) -> None:
+    """Parse the "Headers JSON" action parameter and emit the analysis result."""
     headers_json = siemplify.extract_action_param(
         "Headers JSON",
         default_value="{}",
@@ -442,7 +513,7 @@ def main(siemplify):
     )
     h = json.loads(headers_json)
 
-    headers_res = buildResult(h, siemplify)
+    headers_res = build_result(h, siemplify)
     # print(json.dumps(headers_res, indent=4, sort_keys=True, default=str))
     siemplify.result.add_result_json(headers_res)
     siemplify.result.add_json("Headers", headers_res)
@@ -455,5 +526,4 @@ def main(siemplify):
 if __name__ == "__main__":
     siemplify = SiemplifyAction()
     siemplify.script_name = "Analyze Headers"
-    logger = siemplify.LOGGER.info
     main(siemplify)
