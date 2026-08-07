@@ -2,60 +2,54 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches Hostname and IP Address entities using information retrieved from Nozomi
-    Networks Guardian. This action queries the Nozomi Networks device for node details
-    associated with the entities and appends the retrieved contextual metadata to
-    the entities in Google SecOps.
+    Enriches Hostname and IP Address entities using information from Nozomi Networks
+    Guardian. This action retrieves contextual metadata about the asset, such as OS
+    version, MAC address, vendor, and firmware version, and attaches it to the entity's
+    additional properties.
 
 
     ### Flow Description
 
-    1. Initializes the Nozomi Networks manager with the provided API credentials.
+    1. Initializes the connection to the Nozomi Networks API.
 
-    2. Iterates through the target entities, filtering for Hostname and IP Address
-    types.
+    2. Iterates through the provided Hostname and IP Address entities.
 
-    3. For each suitable entity, makes an API call (`manager.get_entity`) to Nozomi
-    Networks to retrieve node information.
+    3. For each entity, makes an API call (`GET /api/open/query/do?query=nodes`) to
+    fetch node information from Nozomi Networks.
 
     4. If multiple matches are found, selects the most recent match based on the last
     activity time.
 
-    5. Extracts the node details (e.g., OS, MAC address, vendor, firmware version)
-    and any specified additional fields to create enrichment data.
+    5. Extracts the enrichment data, including any additional fields specified in
+    the parameters.
 
-    6. Updates the entity's additional properties with the enrichment data and marks
-    it as enriched.
+    6. Updates the entity's additional properties and marks it as enriched.
 
-    7. Attaches the raw JSON result to the action and updates the entities in Google
-    SecOps.
+    7. Returns the raw node data as a JSON result.
 
 
     ### Additional Notes
 
-    The action supports adding custom fields to the enrichment data via the 'Additional
-    fields to add to enrichment' parameter. If an entity cannot be found in Nozomi
-    Networks, it will be skipped and reported in the action's output messages.
+    If no information is found for an entity in Nozomi Networks, the entity is skipped
+    and a message is added to the output.
   ai_short_description: >-
-    Enriches Hostname and IP Address entities using node information retrieved from
-    Nozomi Networks Guardian.
+    Enriches Hostname and IP Address entities by retrieving contextual asset metadata
+    from Nozomi Networks Guardian.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates the target entities' additional properties with the enrichment data
-      retrieved from Nozomi Networks.
+    internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from Nozomi Networks via a GET request (`manager.get_entity`).
-      It does not mutate external data. It mutates internal data by updating entities
-      with the fetched enrichment data using `siemplify.update_entities`. It does
-      not create insights, modify alert data, or create case comments.
+      The action fetches data from Nozomi Networks using a GET request to retrieve
+      node information. It does not mutate external data. It updates the entities
+      in Google SecOps with the fetched enrichment data by calling `siemplify.update_entities`.
+      It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -107,10 +101,10 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
-      includes `EntityTypes.HOSTNAME` and `EntityTypes.ADDRESS`. It does not filter
-      by any other entity attributes.
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.HOSTNAME`
+      and `EntityTypes.ADDRESS`. Therefore, it targets Hostname and Address entities
+      and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -126,11 +120,11 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches contextual metadata (such as OS, MAC address, vendor, and
-      firmware version) for IP addresses and hostnames from Nozomi Networks Guardian.
-      This aligns with the 'Enrich Asset' expected outcome. It does not return threat
-      intelligence like reputation or malware family, so it is not 'Enrich IOC'. It
-      does not mutate external state or perform other categorized actions.
+      The action fetches contextual metadata (such as OS, MAC address, vendor, firmware
+      version) for IP and Hostname entities from Nozomi Networks. This aligns with
+      the 'Enrich Asset' expected outcome. It does not return threat intelligence
+      or reputation, so it is not 'Enrich IOC'. It does not perform any containment,
+      ticketing, or other operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -157,33 +151,36 @@ List Vulnerabilities:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of vulnerabilities discovered by a Nozomi Networks device based
-    on specified search criteria such as IP address, CVE score, vulnerability name,
-    and CVE ID.
+    Lists vulnerabilities discovered by a Nozomi Networks device based on provided
+    input parameters such as IP address, CVE score, and CVE ID.
 
 
     ### Flow Description
 
-    1. Validates the provided `CVE Score` parameter to ensure it falls within the
-    0-10 range.
+    1. Extracts configuration and action parameters.
 
-    2. Initializes the connection to the Nozomi Networks API.
+    2. Validates the provided CVE score to ensure it falls within the 0-10 range.
 
-    3. Executes a GET request to the `/api/open/query/do` endpoint to fetch vulnerabilities
-    matching the provided parameters (IP addresses, CVE score, name, CVE IDs, record
-    limit, and resolution status).
+    3. Initializes the Nozomi Networks manager with the provided credentials and API
+    URL.
 
-    4. Parses the returned data and outputs the results as a JSON object and a data
-    table.
+    4. Makes a GET request to the Nozomi Networks API to fetch vulnerabilities matching
+    the specified criteria (IP addresses, CVE score, vulnerability name, CVE IDs,
+    record limit, and resolution status).
+
+    5. If vulnerabilities are found, they are formatted and added to the action's
+    JSON result and a data table.
+
+    6. Returns the execution status and a summary message.
 
 
     ### Additional Notes
 
-    This action does not operate on Siemplify entities; it relies entirely on the
-    provided action input parameters.
+    This action does not process Google SecOps entities directly; it relies entirely
+    on the provided action input parameters.
   ai_short_description: >-
-    Retrieves a list of vulnerabilities discovered by a Nozomi Networks device based
-    on specified search criteria.
+    Lists vulnerabilities discovered by a Nozomi Networks device based on provided
+    input parameters such as IP address, CVE score, and CVE ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -195,12 +192,12 @@ List Vulnerabilities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches vulnerability data from the Nozomi Networks API using a GET
-      request. It does not mutate external data, mutate internal data, update entities,
-      create insights, modify alerts, or create case comments.
+      The action makes a GET request to Nozomi Networks to fetch vulnerabilities based
+      on the provided parameters. It does not mutate external data, update internal
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
-      address: false
+      address: true
       alert: false
       application: false
       child_hash: false
@@ -209,7 +206,7 @@ List Vulnerabilities:
       container: false
       credit_card: false
       cve: false
-      cve_id: false
+      cve_id: true
       database: false
       deployment: false
       destination_domain: false
@@ -249,8 +246,11 @@ List Vulnerabilities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action explicitly states it does not work with Siemplify entities and only
-      uses action input parameters. The code does not reference `siemplify.target_entities`.
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      'IP Address' and 'CVE ID' as input parameters, which represent Address and CVE
+      ID entities respectively. Therefore, the `address` and `cve_id` flags are set
+      to true. Since it does not process the `target_entities` list, all filter flags
+      are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -266,10 +266,10 @@ List Vulnerabilities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for vulnerabilities based on input parameters. It does not
-      enrich specific IOCs or Assets in the context of SOAR entities, nor does it
-      search for events, alerts, or assets. Therefore, it does not match any of the
-      predefined outcome categories.
+      The action fetches a list of vulnerabilities from Nozomi Networks based on IP
+      addresses, CVE IDs, or other criteria. This does not align with any of the specific
+      expected outcomes such as Enrich IOC, Enrich Asset, or Search Events. Therefore,
+      all outcome category flags are false.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -317,25 +317,25 @@ Ping:
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters (API URL, Username, Password,
-    Verify SSL, CA Certificate File).
+    1. Extracts the integration-level configuration parameters (API URL, Username,
+    Password, Verify SSL, CA Certificate File).
 
-    2. Initializes the `NozomiNetworksManager` to handle API communication.
+    2. Initializes the Nozomi Networks manager to establish a session.
 
-    3. Executes the `test_connectivity` method, which sends a GET request to the Nozomi
-    Networks API (`/api/open/query/do?query=node_cpes | head 5`).
+    3. Makes a GET request to the test connectivity endpoint (`/api/open/query/do?query=node_cpes
+    | head 5`) to verify the connection.
 
-    4. Validates the response and returns a success message if the connection is established,
-    or an error message if it fails.
+    4. Returns a successful execution state if the connection is established, or fails
+    if an error occurs.
 
 
     ### Additional Notes
 
-    This action is typically used to verify that the integration is configured correctly
-    and can successfully communicate with the Nozomi Networks instance. It does not
-    require any action-specific parameters or entities to run.
+    This action relies entirely on integration-level configuration parameters and
+    does not require any action-specific inputs.
   ai_short_description: >-
-    Tests connectivity to the Nozomi Networks instance to verify integration configuration.
+    Tests connectivity to the Nozomi Networks instance to ensure the integration is
+    configured correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -347,9 +347,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only tests connectivity to the Nozomi Networks instance by making
-      a simple API request. It does not fetch contextual data for entities, mutate
-      external or internal data, update entities, or create insights.
+      The action only performs a GET request to test connectivity. It does not fetch
+      contextual data for alerts/entities, does not mutate external data, does not
+      mutate internal data, does not update entities, does not create insights, does
+      not modify alert data, and does not create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -401,8 +402,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It solely tests connectivity to
-      the external system using integration-level configuration.
+      The action does not process any entities. It does not iterate over target entities
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -418,9 +419,10 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      The action is a simple connectivity test (Ping) to verify integration settings.
+      It does not enrich data, mutate alerts, interact with tickets, or perform any
+      containment/remediation actions. Therefore, it does not match any of the specified
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -440,31 +442,30 @@ Run a CLI Command:
   ai_description: >-
     ### General Description
 
-    Executes a specified CLI command directly on a Nozomi Networks device. This action
-    allows users to interact with the Nozomi appliance via its API to perform administrative
-    or diagnostic tasks.
+    Executes a specified CLI command on a Nozomi Networks device. This action allows
+    users to run arbitrary commands directly on the appliance via its API.
 
 
     ### Flow Description
 
-    1. Extracts the provided `CLI Command` parameter.
+    1. Extracts the provided CLI command from the action parameters.
 
-    2. Authenticates with the Nozomi Networks API using the configured credentials.
+    2. Initiates an HTTP POST request to the Nozomi Networks API (`/api/open/cli`)
+    containing the command payload.
 
-    3. Sends an HTTP POST request to the `/api/open/cli` endpoint containing the command
-    payload.
+    3. Validates the API response to ensure the command was accepted and executed
+    successfully.
 
-    4. Returns a success message if the API accepts and executes the command without
-    error.
+    4. Returns a success message indicating the command execution status.
 
 
     ### Additional Notes
 
-    The Nozomi API does not provide validation for the executed CLI commands; it is
-    up to the user to ensure that the provided CLI command is correct and safe to
-    run. This action does not operate on or interact with Siemplify entities.
+    The Nozomi API does not provide validation for executed CLI commands; it is up
+    to the user to ensure that the provided CLI command is correct and safe to run.
+    This action does not interact with or process any SecOps entities.
   ai_short_description: >-
-    Executes a specified CLI command on a Nozomi Networks device via its API.
+    Executes a specified CLI command on a Nozomi Networks device.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -473,15 +474,14 @@ Run a CLI Command:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes a specified CLI command on the Nozomi Networks device, which may alter
-      the device's configuration or state.
+      Executes an arbitrary CLI command on the Nozomi Networks device.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action sends a POST request to the Nozomi Networks API to execute a CLI
-      command, which can mutate the state or configuration of the external device.
-      It does not fetch contextual enrichment data, nor does it update internal entities,
-      alerts, or case comments.
+      The action makes a POST request to the Nozomi Networks API to execute a CLI
+      command, which mutates the external state by running an arbitrary command on
+      the appliance. It does not fetch contextual data, update internal entities,
+      or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -533,9 +533,8 @@ Run a CLI Command:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      operates independently of any specific case entities, as explicitly stated in
-      the integration description.
+      The action does not process any entities. It simply takes a CLI command as a
+      parameter and executes it on the Nozomi Networks device.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -548,13 +547,13 @@ Run a CLI Command:
     enable_identity: false
     enrich_asset: false
     enrich_ioc: false
-    execute_command_on_the_host: true
+    execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a CLI command on the Nozomi Networks appliance via a POST
-      request. This aligns with the 'Execute Command on the Host' category, as it
-      runs a system command on a remote device. It does not enrich data, update alerts,
-      or modify tickets.
+      The action executes a CLI command on the Nozomi Networks appliance. It does
+      not return STDOUT from a remote host endpoint, nor does it match any of the
+      other specific outcome categories such as enriching IOCs, updating alerts, or
+      containing hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -574,38 +573,32 @@ Run a CLI Command:
 
     | --- | --- | --- | --- |
 
-    | CLI Command | String | Yes | Specify a CLI Command to execute on the Nozomi
-    Networks device. Note: Nozomi API doesn't provide validation for executed CLI
-    commands, so the user must ensure the command is correct. |
+    | CLI Command | String | Yes | Specify a CLI Command to execute on Nozomi Networks
+    device. Note: Nozomi API doesnt provide a validation for executed CLI commands,
+    its up to the User to make sure that the provided CLI command is correct. |
 Run a Query:
   ai_description: >-
     ### General Description
 
-    Executes a custom query on a Nozomi Networks device to retrieve specific data,
-    alerts, or telemetry. This action allows analysts to flexibly search the Nozomi
-    Networks database and returns the output as a JSON result.
+    Executes a custom query on a Nozomi Networks device and returns the results.
 
 
     ### Flow Description
 
-    1. Extracts the `Query` and `Record Limit` parameters provided by the user.
+    1. Extracts the provided query and record limit parameters.
 
-    2. Initializes the connection to the Nozomi Networks API using the integration's
-    configuration.
+    2. Initializes the Nozomi Networks API client.
 
-    3. Makes an HTTP GET request to the Nozomi Networks API (`/api/open/query/do`)
-    to execute the specified query, appending a limit if configured.
+    3. Sends a GET request to the Nozomi Networks API to execute the specified query.
 
-    4. Parses the returned results and attaches them to the action's JSON result for
-    further use in the playbook.
+    4. Retrieves the query results and appends them to the action's JSON result.
 
 
     ### Additional Notes
 
-    This action does not operate on or interact with Google SecOps entities.
+    This action does not operate on Google SecOps entities.
   ai_short_description: >-
-    Executes a custom query on a Nozomi Networks device and returns the results as
-    JSON.
+    Executes a custom query on a Nozomi Networks device and returns the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -617,11 +610,8 @@ Run a Query:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the Nozomi Networks API to fetch query
-      results (fetches_data=true). It does not perform any state-changing operations
-      on the external system (can_mutate_external_data=false). It also does not update
-      entities, create insights, modify alert data, or create case comments within
-      Google SecOps.
+      The action makes a GET request to the Nozomi Networks API to fetch query results.
+      It does not mutate external data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -673,9 +663,9 @@ Run a Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It executes a standalone query against the Nozomi Networks API.
-      Therefore, all entity type and filter flags are set to false.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity-related parameters. The description explicitly states it does not
+      work with entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -691,10 +681,8 @@ Run a Query:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a custom query on the Nozomi Networks device, which returns
-      a collection of data (such as alerts, nodes, or telemetry) matching the search
-      parameters. This aligns with the 'Search Events' expected outcome. It does not
-      enrich specific IOCs or assets, nor does it mutate external state.
+      The action executes a custom query on the Nozomi Networks device to retrieve
+      records, which aligns with the 'Search Events' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -709,16 +697,11 @@ Run a Query:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Query | String | Yes | Specify a query to execute on Nozomi Networks device,
-    for example: `alerts \| head 10` |
-
-    | Record Limit | String | No | Can be used to specify how many records can be
-    returned by the action. If default value of 10 is set, parameter adds `\| head
-    10` to the final query to limit the number of returned records. If nothing is
-    provided for the parameter - all query results are returned. Negative values are
-    ignored. |
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Query | String | Yes | Specify a query to execute on Nozomi\
+    \ Networks device, for example: alerts \\| head 10 |\n| Record Limit | String\
+    \ | No | Can be used to specify how many records can be returned by the action.\
+    \ If default value of 10 is set, parameter adds \u201C\\| head 10\u201D to the\
+    \ final query to limit the number of returned records. If nothing is provided\
+    \ for the parameter - all query results are returned. Negative values are ignored.\
+    \ |"

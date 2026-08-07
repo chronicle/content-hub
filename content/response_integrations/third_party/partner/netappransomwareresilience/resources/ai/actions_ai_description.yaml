@@ -2,9 +2,9 @@ Block User:
   ai_description: >-
     ### General Description
 
-    Blocks a specific user from accessing resources protected by NetApp Ransomware
-    Resilience. This action initiates a state change on the external NetApp service
-    to prevent the specified user or client IPs from accessing protected storage resources.
+    Blocks a user from accessing resources protected by NetApp Ransomware Resilience.
+    This action initiates a state change on the external service to prevent the specified
+    user and/or client IPs from accessing resources for a specified duration.
 
 
     ### Flow Description
@@ -12,22 +12,20 @@ Block User:
     1. Extracts the `User ID`, `User IPs`, and `Duration` parameters from the action
     configuration.
 
-    2. Formats the provided comma-separated IPs into a list.
+    2. Calls the NetApp Ransomware Resilience API (`users/block-user`) via a POST
+    request to block the user and/or IPs.
 
-    3. Makes a POST request to the NetApp Ransomware Resilience API (`users/block-user`
-    endpoint) with the user details and block duration.
-
-    4. Retrieves the API response and attaches it to the action's JSON result.
-
-    5. Returns a successful execution status along with a summary message.
+    3. Returns the JSON response from the API and updates the action result.
 
 
     ### Additional Notes
 
-    Client IPs are required for blocking NFS access but are optional for CIFS. The
-    block duration can be set to permanent or a specific number of hours.
+    - The `User IPs` parameter is required for NFS and optional for CIFS.
+
+    - The `Duration` can be set to permanent or a specific number of hours.
   ai_short_description: >-
-    Blocks a user from accessing resources protected by NetApp Ransomware Resilience.
+    Blocks a user and/or client IPs from accessing resources protected by NetApp Ransomware
+    Resilience.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -36,17 +34,16 @@ Block User:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Blocks a user and/or specific client IPs from accessing resources protected
-      by NetApp Ransomware Resilience.
+      Blocks a user and/or client IPs in NetApp Ransomware Resilience.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action executes a POST request to the NetApp Ransomware Resilience API to
-      block a user, which mutates external data. It does not fetch contextual enrichment
-      data, nor does it update internal SOAR entities, alerts, insights, or case comments.
+      block a user and/or IPs, mutating external data. It does not fetch contextual
+      data, mutate internal data, update entities, or create insights.
   entity_usage:
     entity_types:
-      address: false
+      address: true
       alert: false
       application: false
       child_hash: false
@@ -80,7 +77,7 @@ Block User:
       threat_signature: false
       url: false
       usb: false
-      user: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -95,14 +92,13 @@ Block User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or interact with `siemplify.target_entities`.
-      It relies entirely on the explicitly provided action parameters (User ID, User
-      IPs) to perform its execution. Therefore, all entity type and filter flags are
-      set to false.
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      'User ID' and 'User IPs' as input parameters, which represent User and Address
+      entities respectively.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
+    add_ioc_to_blocklist: true
     contain_host: false
     create_ticket: false
     delete_email: false
@@ -114,10 +110,9 @@ Block User:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action makes a POST request to the NetApp RRS API to block a user from accessing
-      resources. This directly aligns with the 'Disable Identity' expected outcome,
-      as it revokes access and prevents a user from authenticating or interacting
-      with the protected network resources.
+      The action makes a POST request to block a user and/or their IPs in NetApp Ransomware
+      Resilience. This aligns with the 'Disable Identity' outcome for the user and
+      'Add IOC To Blocklist' for the IPs.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -137,31 +132,28 @@ Block User:
 
     | --- | --- | --- | --- |
 
-    | User ID | String | Yes | ID of the user to block. |
+    | User ID | String | Yes | ID of user |
 
-    | User IPs | String | No | Client IPs to block as a comma-separated string (required
-    for NFS; optional for CIFS). |
+    | User IPs | String | No | Client IPs to block as comma-separated string (required
+    for NFS; optional for CIFS) |
 
-    | Duration | Dropdown | No | Block duration - can be set to 'permanent' or a specific
-    number of hours (e.g., 1, 2, 4, 8, 12, 24). |
+    | Duration | Dropdown | No | Block duration - permanent or hours |
 Check Job Status:
   ai_description: >-
     ### General Description
 
-    Checks the status of a previously triggered asynchronous job in NetApp Ransomware
+    Checks the status of a previously triggered asynchronous job in the NetApp Ransomware
     Resilience Service.
 
 
     ### Flow Description
 
-    1. Extracts the `Source`, `Agent ID`, and `Job ID` parameters from the action
-    configuration.
+    1. Extracts the Source, Agent ID, and Job ID parameters.
 
-    2. Makes an HTTP GET request to the NetApp Ransomware Resilience Service API (`job/status`
-    endpoint) to retrieve the current status of the specified job.
+    2. Makes a GET request to the NetApp Ransomware Resilience Service API (`job/status`
+    endpoint) to retrieve the job status.
 
-    3. Parses the API response and attaches the job status data to the action's JSON
-    result.
+    3. Returns the job status data as a JSON result to the SOAR platform.
 
 
     ### Additional Notes
@@ -169,7 +161,7 @@ Check Job Status:
     This action is typically used to poll for the completion of long-running tasks
     initiated by other actions.
   ai_short_description: >-
-    Checks the status of a previously triggered asynchronous job in NetApp Ransomware
+    Checks the status of a previously triggered asynchronous job in the NetApp Ransomware
     Resilience Service.
   capabilities:
     can_create_case_comments: false
@@ -182,9 +174,9 @@ Check Job Status:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a GET request to the NetApp RRS API to retrieve
-      job status. It does not mutate external data, mutate internal data, update entities,
-      create insights, modify alert data, or create case comments.
+      The action fetches job status data from the NetApp Ransomware Resilience Service
+      API via a GET request (fetches_data=true). It does not mutate external data,
+      update internal entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -236,9 +228,8 @@ Check Job Status:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It relies entirely
-      on the provided action parameters (Source, Agent ID, Job ID) to fetch the job
-      status.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity-related input parameters. It operates solely on job and agent identifiers.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -255,8 +246,8 @@ Check Job Status:
     get_alert_information: false
     reasoning: >-
       The action checks the status of an asynchronous job in an external system. This
-      does not match any of the predefined outcome categories such as Enrich IOC,
-      Contain Host, Create Ticket, etc.
+      does not align with any of the predefined outcome categories such as enriching
+      IOCs, modifying alerts, or containing hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -293,21 +284,20 @@ Enrich IP Address:
 
     1. Extracts the target IP address from the action parameters.
 
-    2. Authenticates with the NetApp RRS API using OAuth credentials.
+    2. Makes a POST request to the NetApp RRS API (`enrich/ip-address` endpoint) to
+    retrieve enrichment data for the specified IP.
 
-    3. Makes a POST request to the `enrich/ip-address` endpoint to retrieve enrichment
-    data for the specified IP.
-
-    4. Attaches the retrieved enrichment data to the action's JSON result.
+    3. Attaches the retrieved threat intelligence data as a JSON result to the action
+    output.
 
 
     ### Additional Notes
 
-    This action does not automatically update SOAR entities or create insights; it
-    only returns the raw enrichment data in the action results.
+    The action uses OAuth for authentication and requires valid NetApp RRS credentials
+    configured in the integration.
   ai_short_description: >-
-    Enriches a specified IP address with threat intelligence data using the NetApp
-    Ransomware Resilience Service.
+    Enriches an IP address with threat intelligence data using the NetApp Ransomware
+    Resilience Service (RRS) and attaches the results to the action output.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -319,12 +309,14 @@ Enrich IP Address:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches enrichment data from the NetApp RRS API (fetches_data=true).
-      It does not mutate external data, nor does it update internal entities, create
-      insights, or modify alert data.
+      The action fetches threat intelligence data for an IP address by making an API
+      request to the NetApp RRS service (fetches_data=true). It does not mutate external
+      data (it queries an enrichment endpoint), nor does it mutate internal SOAR data
+      such as updating entities, creating insights, modifying alerts, or adding case
+      comments. It only attaches the fetched data as a JSON result.
   entity_usage:
     entity_types:
-      address: false
+      address: true
       alert: false
       application: false
       child_hash: false
@@ -373,9 +365,10 @@ Enrich IP Address:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers. It relies solely on the 'IP Address' action parameter. Therefore,
-      it does not run on entities and all entity type flags are false.
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      an 'IP Address' input parameter, which represents an Address entity. Therefore,
+      the 'address' entity type flag is set to true. Since it does not process the
+      target entities list, all entity filter flags are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -391,9 +384,10 @@ Enrich IP Address:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches threat intelligence data for an IP address, which aligns
-      with the 'Enrich IOC' expected outcome. It does not mutate external data or
-      perform other categorized actions.
+      The action retrieves threat intelligence data for an IP address from the NetApp
+      RRS API. This directly aligns with the 'Enrich IOC' expected outcome. It does
+      not perform any state-changing operations on external systems or internal SOAR
+      records.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -418,29 +412,29 @@ Enrich Storage:
   ai_description: >-
     ### General Description
 
-    Retrieves volume and storage information for a specific agent and system using
-    the NetApp Ransomware Resilience Service (RRS).
+    Enriches storage information using the NetApp Ransomware Resilience Service (RRS).
+    This action retrieves volume information for a specific agent and storage system.
 
 
     ### Flow Description
 
-    1. Extracts the `Agent ID` and `System ID` parameters from the action configuration.
+    1. Extracts the `Agent ID` and `System ID` parameters provided by the user or
+    playbook.
 
-    2. Authenticates with the NetApp RRS API using the configured credentials.
+    2. Makes a GET request to the NetApp RRS API (`enrich/storage` endpoint) to fetch
+    storage enrichment data.
 
-    3. Makes an HTTP GET request to the `/enrich/storage` API endpoint to retrieve
-    volume information for the specified agent and system.
-
-    4. Attaches the retrieved storage data as a JSON result to the action output.
+    3. Parses the API response and attaches the retrieved data as a JSON result to
+    the action's output for further use in the playbook.
 
 
     ### Additional Notes
 
-    This action operates independently of SOAR entities and relies entirely on the
-    provided action parameters.
+    Ensure that the provided Agent ID and System ID are valid and accessible within
+    the configured NetApp account.
   ai_short_description: >-
-    Retrieves volume and storage information for a specific agent and system using
-    the NetApp Ransomware Resilience Service.
+    Retrieves storage volume information from the NetApp Ransomware Resilience Service
+    based on the provided Agent ID and System ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -452,9 +446,10 @@ Enrich Storage:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a GET request to the NetApp RRS API to retrieve
-      storage enrichment information. It does not mutate external data, update internal
-      entities, create insights, modify alert data, or create case comments.
+      The action makes a GET request to the NetApp RRS API to fetch storage enrichment
+      data (fetches_data=true). It does not perform any state-changing operations
+      on external systems (can_mutate_external_data=false) and does not update entities,
+      create insights, or modify internal case data (can_mutate_internal_data=false).
   entity_usage:
     entity_types:
       address: false
@@ -506,9 +501,9 @@ Enrich Storage:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided action parameters (Agent ID
-      and System ID). Therefore, all entity type and filter flags are set to false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters that represent standard entity types. Therefore, it does
+      not run on entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -524,10 +519,9 @@ Enrich Storage:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches storage volume information based on provided Agent ID and
-      System ID parameters. It does not enrich specific IOCs or Asset entities, nor
-      does it mutate external state, update alerts, or interact with tickets or emails.
-      Therefore, it does not match any of the predefined outcome categories.
+      The action fetches storage volume information from an external API based on
+      system IDs. It does not enrich standard IOCs or Assets, nor does it mutate external
+      or internal state in a way that matches the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -554,32 +548,30 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The Ping action tests the connectivity and authentication to the NetApp Ransomware
-    Resilience service.
+    Tests connectivity to the NetApp Ransomware Resilience service. This action verifies
+    that the integration is properly configured and the server is reachable by validating
+    the authentication token.
 
 
     ### Flow Description
 
-    1. Initializes the action execution environment.
+    1. Initializes the API manager and authenticates using the provided integration
+    credentials.
 
-    2. Retrieves integration configuration parameters (Client ID, Client Secret, Account
-    ID).
+    2. Validates the authentication token against the NetApp Ransomware Resilience
+    API.
 
-    3. Attempts to authenticate and retrieve an OAuth access token from the NetApp
-    authentication service.
-
-    4. Validates the retrieved token to ensure the integration is properly configured.
-
-    5. Returns a successful execution status if the connection and authentication
-    succeed, or fails with an error message if they do not.
+    3. Returns a success message if the token is valid and the server is reachable,
+    otherwise returns a failure message.
 
 
     ### Additional Notes
 
-    This action does not require any specific entities or action parameters to run.
-    It relies solely on the integration-level configuration.
+    This action is primarily used for diagnostic purposes to ensure the integration
+    is correctly set up and can communicate with the external service.
   ai_short_description: >-
-    Tests connectivity and authentication to the NetApp Ransomware Resilience service.
+    Tests connectivity to the NetApp Ransomware Resilience service by validating the
+    authentication token.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -591,9 +583,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only performs an authentication check to verify connectivity. It
-      does not fetch contextual data, mutate external or internal data, update entities,
-      create insights, modify alerts, or create case comments.
+      The action only validates the authentication token to test connectivity. It
+      does not fetch contextual data for alerts/entities, mutate external or internal
+      data, update entities, create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -645,8 +637,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely tests the
-      connection to the external service using integration configurations.
+      The action does not process any entities from the case, nor does it accept any
+      entity-related parameters. It solely tests connectivity to the external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -662,8 +654,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not perform any enrichment,
-      containment, ticketing, or other operations that match the defined outcome categories.
+      The action is a simple ping/connectivity test. It does not enrich IOCs or assets,
+      update alerts, interact with ticketing systems, modify blocklists/allowlists,
+      or perform any other operations that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -684,29 +677,29 @@ Take Snapshot:
     ### General Description
 
     Triggers a volume snapshot creation via the NetApp Ransomware Resilience Service
-    (RRS). This action initiates a backup of a specific storage volume to ensure data
-    resilience.
+    (RRS). This action initiates a state change on the external storage system to
+    create a backup snapshot of a specified volume.
 
 
     ### Flow Description
 
     1. Extracts the `Volume ID`, `Agent ID`, and `System ID` from the action parameters.
 
-    2. Authenticates with the NetApp RRS API using OAuth2 credentials.
+    2. Makes a POST request to the NetApp RRS API (`storage/take-snapshot` endpoint)
+    to initiate a new snapshot for the specified volume.
 
-    3. Makes a POST request to the `/storage/take-snapshot` endpoint with the provided
-    parameters to initiate the snapshot creation.
+    3. Retrieves the API response and attaches it as a JSON result to the action output.
 
-    4. Returns the API response as a JSON result and completes the action execution.
+    4. Returns a success or failure status based on the API response.
 
 
     ### Additional Notes
 
-    Ensure that the provided Agent ID and System ID are valid and accessible within
-    the NetApp environment.
+    Ensure that the provided Agent ID and System ID are valid and that the integration
+    has the necessary permissions to create snapshots on the target volume.
   ai_short_description: >-
-    Triggers the creation of a volume snapshot on the NetApp storage system via the
-    Ransomware Resilience Service API.
+    Triggers a volume snapshot creation on the NetApp storage system via the Ransomware
+    Resilience Service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -715,13 +708,14 @@ Take Snapshot:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers the creation of a volume snapshot on the NetApp storage system.
+      Triggers the creation of a volume snapshot on the external NetApp storage system.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the NetApp RRS API to create a volume snapshot,
-      which mutates external data. It does not fetch contextual data, update internal
-      entities, create insights, or modify alert data.
+      The action makes a POST request to the NetApp RRS API to trigger a snapshot
+      creation, which mutates external data. It does not fetch contextual data, mutate
+      internal data, update entities, create insights, modify alerts, or create case
+      comments.
   entity_usage:
     entity_types:
       address: false
@@ -773,8 +767,8 @@ Take Snapshot:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It relies entirely on the provided
-      action parameters (Volume ID, Agent ID, System ID) to perform its task.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related input parameters. It operates solely on storage volume identifiers.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -790,9 +784,9 @@ Take Snapshot:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action triggers a volume snapshot on a storage system. This does not match
-      any of the predefined outcome categories such as enriching IOCs, containing
-      hosts, or managing tickets.
+      The action creates a volume snapshot on a NetApp storage system. This is a storage
+      management operation and does not match any of the predefined security outcome
+      categories such as enriching IOCs, containing hosts, or updating tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -821,28 +815,28 @@ Unblock User:
   ai_description: >-
     ### General Description
 
-    Unblocks a user previously blocked by NetApp Ransomware Resilience. This action
-    serves as a remediation step to restore access for a user or specific client IPs.
+    Unblocks a user and their associated IP addresses via the NetApp Ransomware Resilience
+    Service. This action serves as a remediation step to restore access for a previously
+    blocked user.
 
 
     ### Flow Description
 
-    1. Extracts the `User ID` and `User IPs` parameters from the action configuration.
+    1. Extracts the `User ID` and `User IPs` from the action parameters.
 
-    2. Makes a POST request to the NetApp Ransomware Resilience API (`users/unblock-user`)
-    to unblock the specified user and/or IPs.
+    2. Initializes the API manager and handles OAuth authentication.
 
-    3. Returns the API response as a JSON result and outputs a success or failure
-    message to the SOAR platform.
+    3. Makes a POST request to the NetApp RRS API (`users/unblock-user`) to unblock
+    the specified user and IPs.
+
+    4. Returns the API response and updates the action result in the SOAR platform.
 
 
     ### Additional Notes
 
-    This action does not operate on SOAR entities but relies entirely on the provided
-    action parameters.
+    The `User IPs` parameter is required for NFS but optional for CIFS.
   ai_short_description: >-
-    Unblocks a user previously blocked by NetApp Ransomware Resilience to restore
-    their access.
+    Unblocks a user and their associated IP addresses in NetApp Ransomware Resilience.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -851,17 +845,16 @@ Unblock User:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Unblocks a user in NetApp Ransomware Resilience by making a POST request to
-      the API.
+      Unblocks a user and their associated IP addresses in NetApp Ransomware Resilience.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the NetApp Ransomware Resilience API to unblock
-      a user, which mutates external data. It does not fetch contextual data, mutate
-      internal SOAR data, update entities, or create insights.
+      The action makes a POST request to the NetApp RRS API to unblock a user, which
+      mutates external data. It does not fetch contextual data, mutate internal data,
+      update entities, create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
-      address: false
+      address: true
       alert: false
       application: false
       child_hash: false
@@ -895,7 +888,7 @@ Unblock User:
       threat_signature: false
       url: false
       usb: false
-      user: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -910,9 +903,9 @@ Unblock User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies solely on the provided action parameters (`User ID` and
-      `User IPs`). Therefore, all entity type and filter flags are false.
+      The action does not iterate over `target_entities`, but it accepts `User ID`
+      and `User IPs` as input parameters, which represent User and Address entities
+      respectively. It does not filter entities based on their attributes.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -928,12 +921,12 @@ Unblock User:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action unblocks a user in NetApp Ransomware Resilience, which restores their
-      access. This directly aligns with the 'Enable Identity' expected outcome. It
-      does not fetch enrichment data, update alerts, or modify blocklists for network
-      IOCs.
+      The action makes a POST request to unblock a user and their associated IP addresses
+      in NetApp RRS. This aligns with the 'Enable Identity' category (restoring access
+      for a user) and 'Remove IOC From Blocklist' (removing IPs from a restricted
+      list).
     remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
+    remove_ioc_from_blocklist: true
     reset_identity_password: false
     search_asset: false
     search_email: false
@@ -959,7 +952,7 @@ Volume Offline:
   ai_description: >-
     ### General Description
 
-    Takes a specific storage volume offline in the NetApp Ransomware Resilience Service.
+    Takes a storage volume offline via the NetApp Ransomware Resilience Service (RRS).
     This action initiates a state change on the external storage system to prevent
     access to the specified volume.
 
@@ -968,18 +961,19 @@ Volume Offline:
 
     1. Extracts the `Volume ID`, `Agent ID`, and `System ID` from the action parameters.
 
-    2. Makes a POST request to the NetApp RRS API endpoint `storage/take-volume-offline`
-    using the provided parameters.
+    2. Initiates a POST request to the NetApp RRS API (`storage/take-volume-offline`)
+    to take the target volume offline.
 
-    3. Returns the API response as a JSON result to the SOAR platform and marks the
-    action as completed or failed based on the response.
+    3. Retrieves the API response and attaches it to the action's JSON result.
+
+    4. Updates the action execution status based on the success or failure of the
+    API call.
 
 
     ### Additional Notes
 
-    This action mutates external data by changing the operational state of a storage
-    volume. Ensure that taking the volume offline will not disrupt critical business
-    operations.
+    Ensure that the provided IDs are accurate to prevent unintended disruption of
+    storage services.
   ai_short_description: >-
     Takes a specific storage volume offline in the NetApp Ransomware Resilience Service.
   capabilities:
@@ -990,15 +984,13 @@ Volume Offline:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Takes a specific storage volume offline in the NetApp Ransomware Resilience
-      Service.
+      Takes a storage volume offline in the NetApp Ransomware Resilience Service.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the NetApp RRS API to take a storage volume
-      offline. This changes the state of the volume in the external system, so `can_mutate_external_data`
-      is true. It does not fetch contextual data, update internal entities, create
-      insights, or modify alert data.
+      The action makes a POST request to the NetApp RRS API to take a volume offline,
+      which mutates external data. It does not fetch contextual data, mutate internal
+      data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -1050,9 +1042,9 @@ Volume Offline:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      relies entirely on the provided action parameters (Volume ID, Agent ID, System
-      ID) to perform its task. Therefore, it does not run on any specific entity types.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. It operates solely on the provided Volume, Agent,
+      and System IDs.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1068,10 +1060,9 @@ Volume Offline:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action takes a storage volume offline in a NetApp system. This does not
+      The action takes a storage volume offline in an external system. This does not
       match any of the predefined outcome categories such as Contain Host (which applies
-      to endpoints via EDR), Blocklist (which applies to network indicators), or any
-      other category. Therefore, all outcome category flags are false.
+      to endpoints/EDR), Blocklist, or Ticket creation.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1109,18 +1100,19 @@ Volume Online:
 
     1. Extracts the `Volume ID`, `Agent ID`, and `System ID` from the action parameters.
 
-    2. Makes a POST request to the NetApp Ransomware Resilience API (`storage/take-volume-online`)
-    to bring the specified volume online.
+    2. Makes a POST request to the NetApp Ransomware Resilience API (`storage/take-volume-online`
+    endpoint) to bring the specified volume online.
 
-    3. Returns the API response and attaches it to the action's JSON result.
+    3. Attaches the API response as a JSON result to the action output.
+
+    4. Returns a success or failure message based on the API response.
 
 
     ### Additional Notes
 
-    This action mutates external data by changing the operational state of a storage
-    volume. It does not operate on SOAR entities.
+    None.
   ai_short_description: >-
-    Brings a specific storage volume online in the NetApp Ransomware Resilience service.
+    Brings a storage volume online in the NetApp Ransomware Resilience Service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1129,15 +1121,14 @@ Volume Online:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Brings a specific storage volume online in the NetApp Ransomware Resilience
-      service.
+      Brings a storage volume online in the NetApp Ransomware Resilience Service.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the NetApp Ransomware Resilience API to bring
       a volume online, which mutates external data. It does not fetch contextual data,
-      mutate internal SOAR data, update entities, create insights, modify alerts,
-      or create case comments.
+      update internal entities, create insights, modify alert data, or create case
+      comments.
   entity_usage:
     entity_types:
       address: false
@@ -1189,8 +1180,9 @@ Volume Online:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on action parameters to identify the target volume.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. Therefore, it does not run on entities
+      and all entity-related flags are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1206,9 +1198,9 @@ Volume Online:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action brings a storage volume online in an external system. This does not
-      match any of the predefined outcome categories such as enriching IOCs, updating
-      alerts, containing hosts, or managing identities.
+      The action brings a storage volume online in an external storage system. This
+      specific operation does not match any of the predefined outcome categories such
+      as enriching IOCs, containing hosts, or managing tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

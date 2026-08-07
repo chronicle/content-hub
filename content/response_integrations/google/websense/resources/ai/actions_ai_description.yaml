@@ -2,33 +2,32 @@ Block Url API:
   ai_description: >-
     ### General Description
 
-    This action blocks specified URLs by adding them to a designated API-managed category
-    within Websense.
+    Blocks specified URLs by adding them to a designated API-managed category in Websense.
+    This action initiates a state change on the external Websense gateway to prevent
+    network traffic to the specified URLs.
 
 
     ### Flow Description
 
-    1. Initializes the connection to the Websense API.
+    1. Retrieves the target category name and a list of URLs from the action parameters.
 
-    2. Retrieves the target category name and an optional list of URLs from the action
-    parameters.
+    2. If no URLs are provided in the parameters, the action falls back to extracting
+    URL entities from the case's target entities.
 
-    3. If the 'Urls' parameter is empty, the action falls back to extracting identifiers
-    from the case's target entities that are of type URL.
-
-    4. Iterates through the collected URLs and executes a POST request to the Websense
+    3. Iterates through the list of URLs and makes a POST request to the Websense
     API (`categories/urls` endpoint) to add each URL to the specified category.
 
-    5. Commits the transaction in Websense.
-
-    6. Outputs a summary message detailing which URLs were successfully blocked.
+    4. Commits the transaction in Websense and returns a summary of the successfully
+    blocked URLs.
 
 
     ### Additional Notes
 
-    Only API-created categories can be manipulated using this action.
+    The category specified in the `CategoryName` parameter must be an API-managed
+    category in Websense, as only API-created categories can be manipulated via this
+    action.
   ai_short_description: >-
-    Blocks specified URLs by adding them to an API-managed category in Websense.
+    Blocks specified URLs by adding them to a designated API-managed category in Websense.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -37,13 +36,14 @@ Block Url API:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds URLs to a specified API-managed category in Websense.
+      Adds specified URLs to a designated API-managed category in Websense, effectively
+      blocking or categorizing them.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Websense API to add URLs to a category,
-      which mutates external data. It does not fetch data for enrichment, nor does
-      it update internal entities, create insights, or modify alert data.
+      mutating external data. It does not fetch contextual data, mutate internal SecOps
+      data, update entities, or create insights/comments.
   entity_usage:
     entity_types:
       address: false
@@ -95,9 +95,10 @@ Block Url API:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == EntityTypes.URL`. Therefore, it targets URL entities and filters by entity
-      type.
+      The action checks if the 'Urls' parameter is provided. If it is empty, it iterates
+      over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.URL`. Therefore, it targets URL entities and filters them by
+      their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -113,9 +114,9 @@ Block Url API:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds URLs to a specific category in Websense, which is intended to
-      block access to those URLs (as indicated by the action name 'Block Url API').
-      This aligns with the 'Add IOC To Blocklist' expected outcome.
+      The action performs a POST request to Websense to add URLs to a specific category,
+      which is used to block access to those URLs. This directly aligns with the 'Add
+      IOC To Blocklist' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -138,36 +139,36 @@ Block Url API:
     | CategoryName | String | Yes | The API manage category name. |
 
     | Urls | String | No | The URLs to block, comma separated. If not provided, the
-    action will use URL entities from the case. |
+    action will automatically use URL entities from the case. |
 Get Category Urls API:
   ai_description: >-
     ### General Description
 
     Retrieves a list of all URLs associated with a specific API-managed category in
-    Websense. It connects to the Websense API, fetches the URLs for the provided category
-    name, and outputs the results as a data table within the SecOps platform.
+    Websense. The retrieved URLs are then presented as a data table within the action
+    results.
 
 
     ### Flow Description
 
-    1. Initializes the Websense API client using the provided integration configuration.
+    1. Initializes the Websense API manager using the provided integration credentials.
 
-    2. Retrieves the target category name from the action parameters.
+    2. Retrieves the target category name from the `CategoryName` parameter.
 
-    3. Makes an HTTP GET request to the Websense API to fetch the list of URLs for
-    the specified category.
+    3. Makes an HTTP GET request to the Websense API to fetch the list of URLs associated
+    with the specified category.
 
-    4. Formats the retrieved URLs and attaches them to the action's results as a data
+    4. Formats the retrieved list of URLs and attaches it to the action's result data
     table.
 
 
     ### Additional Notes
 
-    This action does not operate on specific entities but rather queries the Websense
-    system for configuration or policy data.
+    This action only retrieves data and does not modify any categories or URLs in
+    Websense.
   ai_short_description: >-
     Retrieves a list of all URLs associated with a specific API-managed category in
-    Websense and returns them as a data table.
+    Websense and outputs them as a data table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -180,10 +181,9 @@ Get Category Urls API:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes an HTTP GET request to the Websense API to fetch a list of
-      URLs for a given category, meaning it fetches data. It does not perform any
-      state-changing operations on external systems (no POST/PUT/DELETE), nor does
-      it update internal entities, create insights, modify alerts, or create case
-      comments.
+      URLs for a category, meaning it fetches data. It does not perform any POST/PUT/DELETE
+      requests to mutate external data, nor does it update internal entities, create
+      insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -235,9 +235,9 @@ Get Category Urls API:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided `CategoryName` parameter. Therefore,
-      it does not run on entities and all entity-related flags are false.
+      The action does not process `siemplify.target_entities` and does not accept
+      any input parameters representing entities. Therefore, it does not run on entities
+      and all entity-related flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -254,8 +254,8 @@ Get Category Urls API:
     get_alert_information: false
     reasoning: >-
       The action retrieves a list of URLs for a specific category from Websense. It
-      does not enrich specific IOCs or assets, mutate external state, or match any
-      of the predefined outcome categories.
+      does not enrich specific IOCs or assets, nor does it perform any containment,
+      ticketing, or other operations that match the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -280,30 +280,31 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Websense API server to verify integration credentials
-    and network access.
+    Tests connectivity to the Websense API to ensure the integration is configured
+    correctly and the service is reachable.
 
 
     ### Flow Description
 
-    1. Initializes the Websense API manager using the provided integration configurations.
+    1. Extracts integration configuration parameters (API Root, Username, Password,
+    Verify SSL).
 
-    2. Makes an API call to obtain a transaction ID from the Websense server.
+    2. Initializes the Websense API Manager.
 
-    3. Commits the transaction to verify that the connection and authentication are
-    successful.
+    3. Makes an API call to obtain a transaction ID and immediately commits it to
+    verify connectivity.
 
-    4. Returns a success or failure message based on the result of the connection
-    test.
+    4. Returns a success message if the connection is established, or an error message
+    otherwise.
 
 
     ### Additional Notes
 
-    This is a standard ping action used to verify integration credentials and network
-    connectivity. It does not perform any data enrichment or mutation.
+    This action is typically used for diagnostic purposes and does not interact with
+    alerts or entities.
   ai_short_description: >-
-    Tests connectivity to the Websense API server to verify integration credentials
-    and network access.
+    Tests connectivity to the Websense API to ensure the integration is configured
+    correctly and the service is reachable.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -315,9 +316,11 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only tests connectivity by obtaining and committing a transaction
-      ID. It does not fetch contextual data, mutate external data, mutate internal
-      data, update entities, create insights, modify alert data, or create case comments.
+      The action performs a basic connectivity test by requesting and committing a
+      transaction ID from the Websense API. It does not fetch contextual data for
+      alerts, mutate meaningful external data (like blocking IPs or creating tickets),
+      mutate internal SecOps data, update entities, create insights, modify alerts,
+      or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -369,8 +372,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely tests the
-      connection to the external service.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -386,9 +389,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      The action is strictly a connectivity test (ping). It does not enrich IOCs/assets,
+      update alerts, manage tickets, modify blocklists/allowlists, manage identities,
+      contain hosts, search events, or perform any other category-specific operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -409,29 +412,29 @@ Unblock Url API:
     ### General Description
 
     Unblocks a URL by removing it from a specified API-managed category in Websense.
-    This action restores access to the URL by modifying the external Websense configuration.
+    This action restores access to the URL by modifying the category configuration
+    on the Websense content gateway.
 
 
     ### Flow Description
 
     1. Retrieves the `CategoryName` and optional `URL` from the action parameters.
 
-    2. If the `URL` parameter is not provided, the action iterates over the case's
-    target entities and filters for those of type `URL`.
+    2. If a specific URL is not provided in the parameters, the action extracts all
+    entities of type `URL` from the case's target entities.
 
-    3. For each identified URL, the action makes a POST request to the Websense API
-    (`categories/delete/urls`) to remove the URL from the specified category.
+    3. Iterates through the identified URLs and makes a POST request to the Websense
+    API (`categories/delete/urls`) to remove each URL from the specified category.
 
-    4. Commits the changes to the Websense gateway.
+    4. Commits the transaction to apply the changes on the Websense gateway.
 
-    5. Returns a summary message indicating which URLs were successfully unblocked.
+    5. Returns a success message listing the URLs that were successfully unblocked.
 
 
     ### Additional Notes
 
-    Only API-created categories can be manipulated by this action. If the `URL` parameter
-    is provided, the action will ignore case entities and only process the provided
-    URL.
+    Only API-created categories can be manipulated using this action. Ensure the provided
+    category name corresponds to an existing API-managed category in Websense.
   ai_short_description: >-
     Unblocks a URL by removing it from a specified API-managed category in Websense.
   capabilities:
@@ -442,13 +445,14 @@ Unblock Url API:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a URL from a specified API-managed category in Websense.
+      Removes a URL from a specified API-managed category in the Websense content
+      gateway.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Websense API to remove a URL from a category,
-      which mutates external data. It does not fetch enrichment data, update internal
-      entities, or create insights.
+      mutating external data. It does not fetch contextual data, mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -500,9 +504,9 @@ Unblock Url API:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == EntityTypes.URL`. Therefore, it targets URL entities and filters strictly
-      by the entity_type attribute.
+      The action iterates over `siemplify.target_entities` if the `URL` parameter
+      is not provided. It filters the entities using `entity.entity_type == EntityTypes.URL`.
+      Therefore, it targets URL entities and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -518,9 +522,9 @@ Unblock Url API:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes a URL from a Websense category, which restores connectivity
-      to the URL by removing it from a restricted list. This directly matches the
-      'Remove IOC From Blocklist' expected outcome.
+      The action removes a URL from a Websense category, which effectively unblocks
+      it and restores connectivity. This aligns with the 'Remove IOC From Blocklist'
+      expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: true
     reset_identity_password: false
@@ -542,5 +546,4 @@ Unblock Url API:
 
     | CategoryName | String | Yes | The API manage category name. |
 
-    | URL | String | No | The url to block (unblock). If not provided, the action
-    will process URL entities attached to the case. |
+    | URL | String | No | The url to block. |

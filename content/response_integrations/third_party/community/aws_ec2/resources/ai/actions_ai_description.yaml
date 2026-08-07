@@ -3,29 +3,30 @@ Authorize Security Group Egress:
     ### General Description
 
     This action adds or updates outbound IP permissions (egress rules) for a specific
-    security group within an AWS Virtual Private Cloud (VPC). It allows security teams
-    to programmatically modify network access controls directly from the SOAR platform.
+    security group within an AWS Virtual Private Cloud (VPC). It interacts with the
+    AWS EC2 service to apply the specified network traffic rules, allowing for automated
+    infrastructure configuration and network access management.
 
 
     ### Flow Description
 
-    1. Retrieves the target Security Group ID and the desired IP permissions (formatted
-    as JSON) from the action parameters.
+    1. Extracts the target Security Group ID and the desired IP Permissions (in JSON
+    format) from the action parameters.
 
-    2. Establishes a connection to AWS EC2 using the provided integration credentials.
+    2. Initializes the AWS EC2 Manager using the integration's configured credentials
+    and region.
 
-    3. Executes the `authorize_security_group_egress` API call to apply the new outbound
-    rules to the specified security group.
+    3. Makes an API call to AWS EC2 (`authorize_security_group_egress`) to apply the
+    new egress rules to the specified security group.
 
-    4. Captures the API response and attaches it to the action's JSON results.
-
-    5. Returns a success or failure message based on the API call's outcome.
+    4. Outputs a success or failure message and attaches the AWS API response as a
+    JSON result to the action.
 
 
     ### Additional Notes
 
-    Ensure that the 'IP Permissions' parameter strictly follows the JSON structure
-    expected by the AWS boto3 EC2 client.
+    The `IP Permissions` parameter must be a valid JSON string representing the egress
+    rules (e.g., specifying `FromPort`, `ToPort`, `IpProtocol`, and `IpRanges`).
   ai_short_description: >-
     Adds or updates outbound IP permissions (egress rules) for a specific security
     group in an AWS VPC.
@@ -42,9 +43,8 @@ Authorize Security Group Egress:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an API request to AWS EC2 (`authorize_security_group_egress`)
-      to modify the configuration of a security group. This changes the state of an
-      external system, so `can_mutate_external_data` is true. It does not fetch contextual
+      The action makes an API call to AWS EC2 to authorize security group egress rules,
+      which mutates external data (can_mutate_external_data=true). It does not fetch
       data, update internal entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
@@ -97,10 +97,8 @@ Authorize Security Group Egress:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the provided action parameters (Group ID
-      and IP Permissions) to execute its logic. Therefore, it does not run on entities,
-      and all entity type and filter flags are set to false.
+      The action does not process any entities. It relies entirely on the provided
+      Group ID and IP Permissions parameters to interact with AWS EC2.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -116,12 +114,9 @@ Authorize Security Group Egress:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies AWS EC2 security group egress rules. While this affects
-      network traffic, it is a cloud infrastructure configuration action rather than
-      a direct IOC enrichment, alert update, or standard endpoint containment. It
-      does not strictly match any of the predefined expected outcomes such as 'Add
-      IOC To Blocklist' (which typically targets firewalls/EDRs with specific IOCs)
-      or 'Contain Host'. Therefore, all outcome category flags are set to false.
+      The action modifies AWS EC2 security group egress rules. This is an infrastructure
+      configuration change and does not directly match any of the predefined outcome
+      categories such as enriching IOCs, updating alerts, or containing hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,42 +139,41 @@ Authorize Security Group Egress:
     | Group ID | String | No | The security group ID which you want to add outbound
     IP permissions in a VPC (Virtual Private Cloud) egress. |
 
-    | IP Permissions | String | No | The IP permissions in a JSON format. For example:
-    `{"FromPort": 80,"IpProtocol": "tcp","IpRanges": [{"CidrIp": "1.1.1.1/16"}],"ToPort":
-    80}` |
+    | IP Permissions | Code | No | The IP permissions in a JSON format. For example:
+    `{"FromPort": 80, "IpProtocol": "tcp", "IpRanges": [{"CidrIp": "1.1.1.1/16"}],
+    "ToPort": 80}` |
 Authorize Security Group Ingress:
   ai_description: >-
     ### General Description
 
-    Adds or updates inbound IP permissions (ingress rules) for a specific security
-    group within an AWS Virtual Private Cloud (VPC). This action allows users to programmatically
-    configure network access controls by defining allowed inbound traffic protocols,
-    ports, and IP ranges.
+    This action adds or updates inbound IP permissions (ingress rules) for a specific
+    security group within an AWS Virtual Private Cloud (VPC). It allows users to programmatically
+    define and apply network access rules to their AWS infrastructure.
 
 
     ### Flow Description
 
-    1. Extracts the target `Group ID` and the desired `IP Permissions` (in JSON format)
-    from the action parameters.
+    1. Extracts the AWS EC2 configuration and action parameters, including the target
+    Group ID and the IP Permissions.
 
-    2. Initializes the AWS EC2 client using the provided integration credentials.
+    2. Parses the provided IP Permissions from a JSON string into a Python dictionary.
 
-    3. Calls the AWS EC2 API (`authorize_security_group_ingress`) to apply the new
-    inbound rules to the specified security group.
+    3. Initializes the AWS EC2 Manager to establish a connection with the AWS API.
 
-    4. Attaches the API response to the action's JSON results.
+    4. Makes an API call to AWS EC2 to authorize the security group ingress using
+    the provided group ID and permissions.
 
-    5. Returns a success or failure message based on the API call's outcome.
+    5. Appends the API response to the action's JSON results and returns a success
+    or failure message based on the outcome.
 
 
     ### Additional Notes
 
-    The `IP Permissions` parameter must be provided in a valid JSON format that matches
-    the AWS boto3 specification for `IpPermissions` (e.g., specifying `FromPort`,
-    `ToPort`, `IpProtocol`, and `IpRanges`).
+    The IP Permissions parameter must be provided in a valid JSON format that complies
+    with the AWS boto3 EC2 client specifications.
   ai_short_description: >-
     Adds or updates inbound IP permissions (ingress rules) for a specific security
-    group in an AWS VPC.
+    group in AWS EC2.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -193,10 +187,9 @@ Authorize Security Group Ingress:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a state-changing API call (`authorize_security_group_ingress`)
-      to AWS EC2 to modify a security group's inbound rules. It does not fetch data
-      for enrichment, nor does it mutate internal SecOps data like entities, insights,
-      or case comments.
+      The action makes a state-changing API call to AWS EC2 to authorize security
+      group ingress rules, which mutates external data. It does not fetch contextual
+      data, update internal entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -248,10 +241,8 @@ Authorize Security Group Ingress:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or process any
-      entity-specific identifiers. It operates solely on the provided action parameters
-      (Group ID and IP Permissions). Therefore, all entity types and filter flags
-      are set to false.
+      The action does not iterate over target entities and does not accept any entity-related
+      input parameters. It operates solely on AWS security group IDs provided as parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -267,13 +258,9 @@ Authorize Security Group Ingress:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies an AWS EC2 Security Group by adding ingress rules. While
-      it changes network access controls, it does not strictly align with the 'Add
-      IOC To Allowlist' category (which is for preventing security alerts/false positives)
-      or 'Remove IOC From Blocklist' (which is for restoring connectivity for a specific
-      indicator previously blocked). It is a general infrastructure configuration
-      action. Therefore, it does not match any of the specific predefined outcome
-      categories.
+      The action modifies network access rules (ingress permissions) on an AWS security
+      group. This does not directly align with any of the predefined outcome categories
+      such as blocking/allowing IOCs, containing hosts, or enriching data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -296,41 +283,41 @@ Authorize Security Group Ingress:
     | Group ID | String | No | The security group ID which you want to add inbound
     IP permissions in a VPC (Virtual Private Cloud) egress. |
 
-    | IP Permissions | Code | No | The IP permissions in a JSON format. For example:
+    | IP Permissions | String | No | The IP permissions in a JSON format. For example:
     `{"FromPort": 80,"IpProtocol": "tcp","IpRanges": [{"CidrIp": "1.1.1.1/16"}],"ToPort":
     80}` |
 Create Instance:
   ai_description: >-
     ### General Description
 
-    Creates new Amazon EC2 instances for a specific Amazon Machine Image (AMI) using
-    AWS EC2.
+    Creates a new EC2 instance in AWS for a specific Amazon Machine Image (AMI).
 
 
     ### Flow Description
 
-    1. Extracts the provided Image ID, Instance Type, Min/Max Count, and Security
-    Group IDs from the action parameters.
+    1. Extracts action parameters including Image ID, Instance Type, Max Count, Min
+    Count, and Security Group IDs.
 
-    2. Initializes the AWS EC2 client.
+    2. Initializes the EC2Manager to connect to AWS EC2.
 
-    3. Makes an API call to AWS EC2 (`run_instances`) to create the requested instances.
+    3. If it is the first run, calls the AWS API (`run_instances`) to create the instance(s).
 
-    4. Checks the state of the newly created instances. If they are in a 'pending'
-    state, the action enters an asynchronous loop, periodically checking their status
-    via the `describe_instances` API call.
+    4. Checks the state of the created instances. If they are 'pending', the action
+    suspends and waits.
 
-    5. Once the instances reach the 'running' state, the action completes and returns
-    the instance details in a JSON result.
+    5. If it is a subsequent run, checks the state of the pending instances via the
+    AWS API (`describe_instances`).
+
+    6. Once instances are 'running', returns the instance details as a JSON result.
 
 
     ### Additional Notes
 
-    This is an asynchronous action that will continue to run until the instances are
-    fully provisioned and running.
+    This is an asynchronous action that will continue to check the instance state
+    until it is running.
   ai_short_description: >-
-    Creates new Amazon EC2 instances for a specific Amazon Machine Image (AMI) and
-    waits for them to reach a running state.
+    Creates a new EC2 instance in AWS for a specific Amazon Machine Image (AMI) and
+    waits for it to reach the running state.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -339,12 +326,158 @@ Create Instance:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates new EC2 instances in AWS based on the provided AMI ID and configuration.
+      Creates a new EC2 instance in AWS using the specified AMI and configuration.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an API request (`run_instances`) to AWS EC2 to create new instances,
-      which mutates external data. It does not fetch data for enrichment, update internal
+      The action makes a request to AWS EC2 to create a new instance (can_mutate_external_data=true).
+      It does not fetch context data for enrichment, update internal entities, or
+      create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It relies entirely on the provided
+      action parameters to create an EC2 instance.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new EC2 instance in AWS. This does not match any of the
+      predefined outcome categories such as Enrich IOC, Contain Host, or Create Ticket.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Image ID | string | False | The AMI ID which you want to create a new instance
+    to. For example: ami-12345 |
+
+    | Instance Type | string | False | The hardware of the host computer to use in
+    your instance. For example :m1.small |
+
+    | Max Count | string | True | The maximum amount of instances to create. |
+
+    | Min Count | string | True | The minimum number of instances to create. |
+
+    | Security Group ID | string | False | The IDs of the security groups you want
+    to assign to the instance For example: sg-12345,sg-6789 (comma seperated). |
+Create Tags:
+  ai_description: >-
+    ### General Description
+
+    Creates tags for specific instances or other resources in AWS EC2. This action
+    initiates a state change on the external AWS environment by assigning metadata
+    tags to the specified resources.
+
+
+    ### Flow Description
+
+    1. Extracts the `Resources ID` and `Tags` parameters provided by the user.
+
+    2. Initializes the AWS EC2 manager using the integration configuration.
+
+    3. Parses the provided tags into a list of dictionaries.
+
+    4. Iterates over the provided resource IDs and calls the AWS EC2 API to create
+    or overwrite the specified tags for each resource.
+
+    5. Aggregates the results and returns a JSON object containing the details of
+    the tagged resources.
+
+
+    ### Additional Notes
+
+    The `Tags` parameter must be provided in a specific JSON format containing a list
+    of tag dictionaries with 'Key' and 'Value' pairs.
+  ai_short_description: >-
+    Creates or overwrites tags for specified Amazon EC2 resources.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds or overwrites tags for specified Amazon EC2 resources.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a request to AWS EC2 to create tags on resources, which mutates
+      external data. It does not fetch data for enrichment, nor does it update internal
       entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
@@ -397,9 +530,9 @@ Create Instance:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the provided action parameters to create
-      the EC2 instances.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. It operates solely on the provided AWS resource
+      IDs.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -415,162 +548,9 @@ Create Instance:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a new EC2 instance in AWS. This does not align with any of
-      the predefined outcome categories such as enriching IOCs, containing hosts,
-      or creating tickets.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Image ID | String | No | The AMI ID which you want to create a new instance
-    to. For example: ami-12345 |
-
-    | Instance Type | String | No | The hardware of the host computer to use in your
-    instance. For example :m1.small |
-
-    | Max Count | String | Yes | The maximum amount of instances to create. |
-
-    | Min Count | String | Yes | The minimum number of instances to create. |
-
-    | Security Group ID | String | No | The IDs of the security groups you want to
-    assign to the instance. For example: sg-12345,sg-6789 (comma seperated). |
-Create Tags:
-  ai_description: >-
-    ### General Description
-
-    Creates tags for specific AWS EC2 instances or other AWS resources using the AWS
-    EC2 API. This action allows users to programmatically assign metadata to their
-    AWS infrastructure for better organization, tracking, and management.
-
-
-    ### Flow Description
-
-    1. Extracts the target resource IDs and the tags to be applied from the action
-    parameters.
-
-    2. Parses the provided tags JSON string into a list of tag objects.
-
-    3. Iterates through the provided comma-separated resource IDs.
-
-    4. Makes an API call to AWS EC2 (`create_tags`) for each resource to assign the
-    specified tags.
-
-    5. Returns the results and attaches the tagged resource details as JSON to the
-    action results.
-
-
-    ### Additional Notes
-
-    The `Tags` parameter must be a valid JSON string containing a "tags" key with
-    a list of key-value dictionaries (e.g., `{"tags": [{"Key": "Environment", "Value":
-    "Production"}]}`).
-  ai_short_description: >-
-    Creates tags for specific AWS EC2 instances or other resources by interacting
-    with the AWS EC2 API.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Adds or overwrites tags on specified AWS EC2 resources.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action parses input parameters and makes a request (`create_tags`) to the
-      AWS EC2 API to assign tags to external resources, which mutates external data.
-      It does not fetch contextual data, update internal entities, create insights,
-      modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the `Resources ID` action parameter to determine
-      which AWS resources to tag. Therefore, it does not run on entities and all entity-related
-      flags are false.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action creates tags on AWS EC2 resources. This does not align with any of
-      the predefined outcome categories such as enriching assets, containing hosts,
-      or updating alerts. Therefore, all outcome category flags are set to false.
+      The action creates tags on AWS EC2 resources. This does not match any of the
+      specific expected outcomes such as enriching IOCs/assets, updating alerts, containing
+      hosts, or managing tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -593,41 +573,40 @@ Create Tags:
     | Resources ID | String | Yes | The resources IDs which you want to tag. (comma
     separated) |
 
-    | Tags | Code | Yes | The tags you want to create for given resource IDs. Must
-    be formatted as a JSON string containing a "tags" key with a list of key-value
-    dictionaries. |
+    | Tags | Code | Yes | The tags you want to create for given resource IDs. For
+    example:{"Key":"k","Value":"v"};{"key2":"","value2":""} seperated by ";" Note:Case
+    sensitive |
 Delete Instance:
   ai_description: >-
     ### General Description
 
-    Deletes (terminates) specific EC2 instances in AWS based on provided instance
-    IDs. This action initiates a state change on the external AWS infrastructure to
-    permanently shut down and remove the specified virtual machines.
+    Deletes (terminates) specific AWS EC2 instances based on the provided instance
+    IDs.
 
 
     ### Flow Description
 
-    1. Extracts the provided `Instance Ids` from the action parameters.
+    1. Extracts the provided instance IDs from the action parameters.
 
-    2. Initializes the AWS EC2 client using the integration credentials.
+    2. Initializes the AWS EC2 manager with the provided integration credentials.
 
-    3. Iterates through the list of instance IDs and calls the AWS EC2 API (`terminate_instances`)
-    to delete each instance.
+    3. Iterates through the list of instance IDs and calls the AWS EC2 API to terminate
+    each instance.
 
-    4. Evaluates the returned state of each instance to verify if it is 'shutting-down'
-    or 'terminated'.
+    4. Checks the current state of the instance to verify if it is shutting down or
+    terminated.
 
-    5. Outputs the count of successfully deleted instances and provides the detailed
-    AWS response as a JSON result.
+    5. Returns a JSON result containing the details of the terminated instances and
+    outputs the count of successfully deleted instances.
 
 
     ### Additional Notes
 
     Deleted instances may remain visible in the AWS console for approximately one
-    hour after being terminated. If an instance is in the 'shutting-down' state during
-    execution, the action will return an 'In Progress' status.
+    hour after termination.
   ai_short_description: >-
-    Terminates specific AWS EC2 instances based on the provided instance IDs.
+    Deletes specified AWS EC2 instances and returns the count of successfully terminated
+    instances.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -636,13 +615,14 @@ Delete Instance:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Terminates the specified EC2 instances in the AWS environment.
+      Terminates the specified AWS EC2 instances.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a state-changing API call (`terminate_instances`) to AWS to
-      delete EC2 instances, meaning it mutates external data. It does not fetch contextual
-      data, update internal SOAR entities, create insights, or modify alert data.
+      The action makes a request to the AWS EC2 API to terminate instances, which
+      mutates external data (can_mutate_external_data=true). It does not fetch contextual
+      data for enrichment, nor does it update internal SecOps entities, alerts, or
+      insights.
   entity_usage:
     entity_types:
       address: false
@@ -694,9 +674,9 @@ Delete Instance:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the 'Instance Ids' parameter provided by the user to identify
-      which instances to delete. Therefore, it does not use or filter any SOAR entities.
+      The action does not process `siemplify.target_entities` and does not accept
+      any parameters representing standard entity types. It operates solely on AWS
+      EC2 instance IDs provided as a string.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -712,10 +692,9 @@ Delete Instance:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action terminates an AWS EC2 instance. This is an infrastructure management
-      operation (destroying a virtual machine) and does not align with any of the
-      available security outcome categories such as containing a host via EDR, enriching
-      an IOC, or updating an alert.
+      The action terminates AWS EC2 instances. This is an infrastructure management
+      operation and does not match any of the specific security outcome categories
+      such as containing a host, blocking an IOC, or enriching data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -741,41 +720,32 @@ Find Instance:
   ai_description: >-
     ### General Description
 
-    Fetches detailed information about specific Amazon EC2 instances or all instances
-    based on provided IDs and filters. This action interacts with the AWS EC2 API
-    to retrieve configuration, status, and metadata for the requested cloud resources.
+    Retrieves detailed information about specific Amazon EC2 instances or all instances
+    matching provided filters from AWS.
 
 
     ### Flow Description
 
-    1. Extracts the AWS credentials and action parameters, including `Instance Ids`,
-    `Filters`, and `Max Results`.
+    1. Extracts action parameters including Instance IDs, Filters, and Max Results.
 
-    2. Initializes the `EC2Manager` to establish a connection with the AWS EC2 service.
+    2. Initializes the AWS EC2 Manager with the provided credentials.
 
-    3. Parses the provided JSON filters into a dictionary format.
+    3. If specific Instance IDs are provided, it iterates through them and calls the
+    AWS EC2 `describe_instances` API for each.
 
-    4. If specific `Instance Ids` are provided, the action iterates through the list
-    and makes a `describe_instances` API call for each instance.
+    4. If no Instance IDs are provided, it calls the `describe_instances` API using
+    the provided filters.
 
-    5. If no `Instance Ids` are provided, the action makes a single `describe_instances`
-    API call using the provided filters to retrieve matching instances.
-
-    6. Aggregates the retrieved instance details and attaches them to the action's
-    JSON result.
-
-    7. Returns a success message indicating which instances were successfully fetched.
+    5. Aggregates the retrieved instance details and returns them as a JSON result.
 
 
     ### Additional Notes
 
-    If neither instance IDs nor filters are specified, the output will include information
-    for all instances in the region, limited by the `Max Results` parameter (which
-    defaults to AWS limits if not strictly bounded, though the parameter suggests
-    5 to 1000).
+    If no instance IDs or filters are specified, the output includes information for
+    all instances up to the maximum result limit.
   ai_short_description: >-
-    Fetches detailed information about Amazon EC2 instances from AWS based on specified
-    instance IDs or filters.
+    Retrieves detailed information about specific Amazon EC2 instances or all instances
+    matching provided filters from AWS.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -787,9 +757,9 @@ Find Instance:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a read-only API call (`describe_instances`) to AWS to fetch
-      EC2 instance data. It does not mutate external data, update internal entities,
-      create insights, or modify alert data.
+      The action fetches data from AWS EC2 using the `describe_instances` API. It
+      does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -841,9 +811,9 @@ Find Instance:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates entirely on the explicitly provided action parameters
-      (`Instance Ids` and `Filters`). Therefore, it does not run on entities.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any standard SOAR entity identifiers as input parameters. It operates solely
+      on AWS Instance IDs provided via action parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -859,10 +829,9 @@ Find Instance:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches information about AWS EC2 instances based on user-provided
-      parameters. It does not enrich SOAR entities directly, nor does it mutate external
-      state, update alerts, or interact with emails/tickets. Thus, it does not match
-      any of the specific expected outcome categories.
+      The action queries AWS for EC2 instance details. It does not enrich standard
+      SOAR IOCs or assets, nor does it mutate alerts, tickets, or external systems
+      in a way that matches the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -883,45 +852,40 @@ Find Instance:
     | --- | --- | --- | --- |
 
     | Instance Ids | String | No | The instance IDs which you want to fetch. For example:
-    instanceID1,instanceID2. |
+    instanceID1,instanceID2 |
 
-    | Filters | String | No | The filters of the instances you want to fetch, provided
-    as a JSON string. For example: `{"Name": "instance-type", "Values": ["t2.micro"]}`.
-    |
+    | Filters | String | No | The filters of the instances you want to fetch. For
+    example: {"Name": "instance-type", "Values": ["t2.micro"]} |
 
     | Max Results | String | No | The maximum number of results to return (between
-    5 to 1000). For example: 5. |
+    5 to 1000). For example: 5 |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the AWS EC2 service. This action verifies that the provided
-    AWS credentials and region configurations are valid and have the necessary permissions
-    to interact with the AWS API.
+    Tests connectivity with AWS EC2 by attempting to retrieve the list of available
+    regions. This action serves as a health check to ensure the integration is properly
+    configured and can communicate with the AWS API.
 
 
     ### Flow Description
 
-    1. Initializes the AWS EC2 client using the provided integration-level configurations
-    (Access Key ID, Secret Access Key, and Default Region).
+    1. Extracts AWS credentials and default region from the integration configuration.
 
-    2. Executes the `describe_regions` API call to the AWS EC2 service to test authentication
-    and network connectivity.
+    2. Initializes the EC2Manager client.
 
-    3. Evaluates the response; if successful, the action outputs a success message
-    and returns `True`.
+    3. Makes an API call to AWS EC2 (`describe_regions`) to verify connectivity.
 
-    4. If the connection fails, it outputs a failure message and returns `False`.
+    4. Returns a success message if the connection is established, or a failure message
+    otherwise.
 
 
     ### Additional Notes
 
-    This is a utility action primarily used during integration setup or troubleshooting
-    to ensure that the Google SecOps platform can successfully communicate with the
-    AWS EC2 environment.
+    This action does not require any input parameters and does not operate on entities.
+    It is primarily used for troubleshooting and verifying integration setup.
   ai_short_description: >-
-    Tests connectivity to the AWS EC2 service by verifying authentication and access
-    to the AWS API.
+    Tests connectivity with AWS EC2 by attempting to describe available regions.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -930,13 +894,12 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: false
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a read-only API call (`describe_regions`) to AWS to test connectivity.
-      It does not fetch contextual data for alerts/entities, nor does it mutate any
-      external data. It also does not interact with internal SOAR data, update entities,
-      create insights, modify alerts, or create case comments.
+      The action fetches data by making a 'describe_regions' API call to AWS to test
+      connectivity. It does not mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -988,9 +951,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or iterate over `siemplify.target_entities`.
-      It is a generic connectivity test that does not require or process any specific
-      entities. Therefore, all entity type and filter flags are set to false.
+      The action does not iterate over target entities or accept any entity-related
+      input parameters. It solely tests connectivity to the AWS API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1006,11 +968,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      This action is a simple connectivity test (Ping) that calls the AWS `describe_regions`
-      endpoint. It does not enrich IOCs or assets, update alerts, manage tickets,
-      modify blocklists/allowlists, manage identities, contain hosts, or perform any
-      of the other specific expected outcomes listed in the categories. Therefore,
-      all outcome category flags are false.
+      The action only tests connectivity to AWS EC2 and does not match any of the
+      specific outcome categories such as enrichment, containment, ticketing, or alert
+      modification.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1030,35 +990,31 @@ Revoke Security Group Egress:
   ai_description: >-
     ### General Description
 
-    Revokes specified outbound IP permissions (egress rules) from a specific AWS EC2
-    security group. This action initiates a state change in the AWS environment by
-    removing network access rules defined in the input parameters.
+    Revokes specified outbound IP permissions from a specific security group in an
+    AWS Virtual Private Cloud (VPC). This action modifies the security group's egress
+    rules to restrict outbound network traffic.
 
 
     ### Flow Description
 
-    1. Extracts the AWS credentials and region from the integration configuration.
+    1. Extracts the `Group ID` and `IP Permissions` parameters provided to the action.
 
-    2. Retrieves the target `Group ID` and the `IP Permissions` JSON from the action
-    parameters.
+    2. Parses the `IP Permissions` parameter from a JSON string into a dictionary.
 
-    3. Initializes the AWS EC2 client via Boto3.
+    3. Makes an API call to AWS EC2 (`revoke_security_group_egress`) to remove the
+    specified egress rules from the target security group.
 
-    4. Calls the AWS EC2 API (`revoke_security_group_egress`) to remove the specified
-    egress rules from the security group.
-
-    5. Returns the response from AWS as a JSON result and outputs a success or failure
-    message to the case wall.
+    4. Returns the execution status and attaches the AWS API response as a JSON result
+    to the action.
 
 
     ### Additional Notes
 
-    The `IP Permissions` parameter must be provided in a valid JSON format that matches
-    the AWS Boto3 specification for `IpPermissions` (e.g., specifying FromPort, IpProtocol,
-    IpRanges, and ToPort).
+    Ensure that the `IP Permissions` parameter is formatted as a valid JSON string
+    that matches the exact structure expected by the AWS EC2 API.
   ai_short_description: >-
-    Revokes specified outbound IP permissions (egress rules) from a specific AWS EC2
-    security group.
+    Revokes specified outbound IP permissions from a specific security group in an
+    AWS VPC.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1067,14 +1023,13 @@ Revoke Security Group Egress:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes specified outbound IP permissions (egress rules) from a specific AWS
-      EC2 security group.
+      Revokes outbound IP permissions from a specific security group in AWS EC2.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an API call to AWS to revoke egress rules on a security group,
-      which mutates external data. It does not fetch data for enrichment, nor does
-      it mutate internal SecOps data, update entities, or create insights.
+      The action makes an API call to AWS EC2 to revoke security group egress rules,
+      which mutates external data. It does not fetch data, mutate internal data, update
+      entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -1126,9 +1081,9 @@ Revoke Security Group Egress:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on or interact with any entities. It relies entirely
-      on the provided action parameters (Group ID and IP Permissions) to execute the
-      AWS API call.
+      The action does not process any entities from the case, nor does it accept any
+      entity identifiers as parameters. It operates solely on AWS Security Group IDs
+      and IP permissions provided as action parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1144,10 +1099,9 @@ Revoke Security Group Egress:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies AWS EC2 security group egress rules based on provided JSON
-      parameters. It does not directly enrich IOCs/assets, manage alerts/tickets,
-      block specific IOC entities, or perform any of the other predefined outcome
-      categories.
+      The action modifies AWS EC2 security group rules by revoking egress permissions.
+      This does not directly align with any of the predefined outcome categories such
+      as blocking an IOC, containing a host, or enriching data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1177,35 +1131,32 @@ Revoke Security Group ingress:
   ai_description: >-
     ### General Description
 
-    Revokes specified inbound IP permissions from a specific AWS EC2 security group.
-    This action modifies the virtual firewall rules of a VPC to remove previously
-    allowed incoming traffic based on the provided JSON configuration.
+    Revokes specified inbound IP permissions from a specific security group in an
+    AWS Virtual Private Cloud (VPC). This action modifies the security group's rules
+    to remove previously allowed incoming traffic based on the provided IP permissions.
 
 
     ### Flow Description
 
-    1. Extracts the AWS EC2 integration configuration and action parameters, including
-    the target Security Group ID and the IP Permissions JSON.
+    1. Extracts the `Group ID` and `IP Permissions` from the action parameters.
 
-    2. Initializes the `EC2Manager` using the provided AWS credentials and region.
+    2. Parses the `IP Permissions` JSON string into a dictionary object.
 
-    3. Makes an API call to AWS EC2 (`revoke_security_group_ingress`) to remove the
-    specified inbound rules from the security group.
+    3. Initiates an API call to AWS EC2 (`revoke_security_group_ingress`) to remove
+    the specified ingress rules from the target security group.
 
-    4. Attaches the AWS response containing the revoked security group details to
-    the action's JSON result.
-
-    5. Returns a success message if the revocation is successful, or an error message
-    if the operation fails.
+    4. Outputs the API response as a JSON result and completes the action with a success
+    or failure message.
 
 
     ### Additional Notes
 
-    The `IP Permissions` parameter must be provided in a valid JSON format that strictly
-    matches the AWS `boto3` specifications for IP permissions (e.g., specifying `FromPort`,
-    `IpProtocol`, `IpRanges`, and `ToPort`).
+    The `IP Permissions` parameter must be provided in a valid JSON format that matches
+    the AWS boto3 specification for IP permissions (e.g., specifying FromPort, IpProtocol,
+    IpRanges, and ToPort).
   ai_short_description: >-
-    Revokes specified inbound IP permissions from a specific AWS EC2 security group.
+    Revokes specified inbound IP permissions from a specific security group in an
+    AWS VPC.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1214,14 +1165,15 @@ Revoke Security Group ingress:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Revokes specified inbound IP permissions from a specific AWS EC2 security group.
+      Revokes specified inbound IP permissions from a specific security group in AWS
+      EC2.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action executes a state-changing API call (`revoke_security_group_ingress`)
-      to AWS EC2, which mutates external data by removing an inbound rule from a security
-      group. It does not fetch contextual data, mutate internal SecOps data, update
-      entities, or create insights/comments.
+      to AWS EC2 to modify a security group, meaning it mutates external data. It
+      does not fetch contextual data, mutate internal SecOps data, update entities,
+      or create insights/comments.
   entity_usage:
     entity_types:
       address: false
@@ -1273,10 +1225,9 @@ Revoke Security Group ingress:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or process any
-      entities. It relies entirely on the explicitly provided 'Group ID' and 'IP Permissions'
-      parameters to execute the AWS API call. Therefore, all entity types and filter
-      flags are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-based parameters. It operates strictly on AWS Security Group IDs
+      and JSON-formatted IP permissions.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1292,13 +1243,12 @@ Revoke Security Group ingress:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies an AWS EC2 Security Group by revoking an ingress rule. While
-      this is a network security control change, it operates on raw JSON rule definitions
-      rather than specific IOC entities (like an IP or Domain entity). It does not
-      directly match the strict definitions of 'Add IOC To Blocklist' or 'Remove IOC
-      From Allowlist' which expect an indicator as the primary target. It also does
-      not enrich data, update alerts, manage tickets, or contain a host via EDR. Therefore,
-      no outcome categories apply.
+      The action modifies AWS EC2 security group rules by revoking ingress permissions.
+      While this affects network access, it does not directly align with the specific
+      expected outcomes of 'Contain Host' (which specifies EDR isolation) or 'Add
+      IOC to Blocklist' (which specifies Firewall/EDR/Proxy blocking of an IOC). It
+      is a cloud infrastructure configuration change, so no specific outcome categories
+      are matched.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1321,42 +1271,38 @@ Revoke Security Group ingress:
     | Group ID | String | No | The security group ID which you want to revoke outbound
     IP permissions in a VPC (Virtual Private Cloud) egress. |
 
-    | IP Permissions | Code | No | The IP permissions in a JSON format.<br>For example:<br>{"FromPort":
-    80,"IpProtocol": "tcp","IpRanges": [{"CidrIp": "1.1.1.1/16"}],"ToPort": 80} |
+    | IP Permissions | Code | No | The IP permissions in a JSON format. For example:
+    `{"FromPort": 80,"IpProtocol": "tcp","IpRanges": [{"CidrIp": "1.1.1.1/16"}],"ToPort":
+    80}` |
 Start Instance:
   ai_description: >-
     ### General Description
 
-    This action starts one or more specified EC2 instances in Amazon Web Services
-    (AWS). It initiates a state change on the external AWS environment to bring the
-    instances online.
+    Starts specific EC2 instances in AWS. This action initiates a state change on
+    the external AWS environment to start the specified virtual machines.
 
 
     ### Flow Description
 
-    1. Retrieves the comma-separated list of instance IDs from the action parameters.
+    1. Extracts the provided Instance IDs from the action parameters.
 
     2. Initializes the AWS EC2 client using the provided integration credentials.
 
-    3. Iterates over the provided instance IDs and sends a request to the AWS EC2
-    API (`start_instances`) to start each instance.
+    3. Iterates through the provided Instance IDs and calls the AWS EC2 API (`start_instances`)
+    to start each instance.
 
-    4. Evaluates the returned state of each instance; if an instance is 'pending',
-    the action logs it and prepares to return an in-progress status. If 'running',
-    it is marked as successfully started.
+    4. Evaluates the current state of each instance (e.g., pending or running).
 
-    5. Outputs a JSON result containing the details of the started instances and returns
-    the total count of successfully started instances.
+    5. Returns the count of successfully started instances and attaches their details
+    as JSON results.
 
 
     ### Additional Notes
 
-    This action supports asynchronous execution. If instances are in a 'pending' state
-    after the start request, the action will return an in-progress status and can
-    be polled until completion.
+    The action supports asynchronous execution and may return an in-progress state
+    if instances are still in a pending state after the API call.
   ai_short_description: >-
-    Starts one or more specified EC2 instances in AWS, changing their operational
-    state to running.
+    Starts specific EC2 instances in AWS and returns their status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1365,15 +1311,14 @@ Start Instance:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends a request to the AWS EC2 API to start the specified instances, changing
-      their operational state in AWS.
+      Starts the specified EC2 instances in AWS, changing their state from stopped
+      to running.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a request to the AWS EC2 API to start instances, which mutates
-      external data by changing the state of the instances. It does not fetch contextual
-      data for enrichment, nor does it mutate internal SecOps data, update entities,
-      create insights, modify alerts, or create case comments.
+      The action makes a POST/state-changing request to the AWS EC2 API to start instances,
+      which mutates external data. It does not fetch contextual data, update internal
+      entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -1425,9 +1370,9 @@ Start Instance:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      relies entirely on the 'Instance Ids' provided as an action parameter. Therefore,
-      it does not use any entity types or apply any entity filters.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity-related input parameters. It operates solely on the provided AWS
+      Instance IDs.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1443,10 +1388,9 @@ Start Instance:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action starts an EC2 instance in AWS. This operation does not align with
-      any of the predefined outcome categories such as enriching IOCs/assets, updating
-      alerts/tickets, modifying blocklists/allowlists, managing identities, or containing
-      hosts.
+      The action starts an EC2 instance in AWS. This is a cloud infrastructure management
+      operation and does not match any of the predefined security outcome categories
+      such as containment, enrichment, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1478,25 +1422,24 @@ Stop Instance:
 
     ### Flow Description
 
-    1. Extracts the AWS credentials and action parameters, including the comma-separated
-    list of Instance IDs and the force stop flag.
+    1. Extracts the provided instance IDs and the force stop flag from the action
+    parameters.
 
-    2. Initializes the AWS EC2 client using the provided credentials.
+    2. Initializes the AWS EC2 manager with the provided integration credentials.
 
-    3. Iterates through the provided Instance IDs.
+    3. Iterates through the list of instance IDs and calls the AWS EC2 API (`stop_instances`)
+    to stop each instance.
 
-    4. Calls the AWS EC2 API (`stop_instances`) to stop each instance.
+    4. Checks the current state of the instance to confirm if it is stopping or stopped.
 
-    5. Checks the state of each instance to confirm if it is 'stopped' or 'stopping'.
-
-    6. Returns a JSON result with the instance details and the count of successfully
-    stopped instances.
+    5. Returns the count of successfully stopped instances and a JSON result with
+    the instance details.
 
 
     ### Additional Notes
 
-    The action can force stop instances if the corresponding parameter is set. It
-    handles multiple instances via a comma-separated list.
+    The action can force the instance to stop without processing file system caches
+    if the `Force Instance To Stop` parameter is set to true.
   ai_short_description: >-
     Stops one or more specified AWS EC2 instances using the AWS EC2 API.
   capabilities:
@@ -1506,15 +1449,13 @@ Stop Instance:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Stops the specified AWS EC2 instances via the AWS API.
+    external_data_mutation_explanation: Stops the specified AWS EC2 instances.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a state-changing API call (`stop_instances`) to AWS EC2 to
-      shut down virtual machines, which means it mutates external data. It does not
-      fetch contextual enrichment data, nor does it mutate internal SecOps data like
-      entities, insights, or case comments.
+      The action makes a state-changing request to the AWS EC2 API to stop instances
+      (can_mutate_external_data=true). It does not fetch context data, update internal
+      entities, create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1566,10 +1507,9 @@ Stop Instance:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. Instead, it relies entirely on the 'Instance Ids' action parameter
-      to determine which instances to stop. Therefore, it does not run on entities,
-      and all entity type and filter flags are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. It operates solely on AWS EC2 instance IDs provided
+      as a string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1585,11 +1525,10 @@ Stop Instance:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action stops an AWS EC2 instance. While this is a containment-like action
-      for cloud infrastructure, it does not match the strict definition of 'Contain
-      Host' which specifies isolating an endpoint from the network via EDR. It also
-      does not match any other expected outcomes such as enriching IOCs, updating
-      alerts, or blocking IOCs.
+      The action stops an AWS EC2 instance. This does not align with any of the specific
+      outcome categories such as 'Contain Host' (which specifically refers to EDR
+      network isolation), 'Disable Identity', or 'Add IOC To Blocklist'. Therefore,
+      no outcome categories are applicable.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

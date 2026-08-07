@@ -2,42 +2,37 @@ Approval Request:
   ai_description: >-
     ### General Description
 
-    This action requires approval from a reviewer before continuing a workflow. It
-    assigns the current case or alert to a specified approval manager and sends a
-    notification to a Slack channel via a webhook.
+    Assigns a case or alert to a reviewer for approval and optionally sends a notification
+    to Slack.
 
 
     ### Flow Description
 
-    1. Extracts configuration parameters (such as API credentials and Slack webhook
-    URL) and the action parameter `Move Alert If Grouped`.
+    1. Extracts configuration and action parameters.
 
-    2. Evaluates if the alert should be moved to a new case if it is grouped with
-    other alerts.
+    2. Checks if the alert should be moved to a new case if grouped with other alerts.
 
-    3. If the alert should not be moved, it assigns the current case to the approval
-    manager and sends a Slack notification.
+    3. If not moving, assigns the current case to the reviewer and sends a Slack message
+    via a POST request to the configured webhook.
 
-    4. If the alert should be moved and the case contains multiple alerts, it makes
-    a POST request to the Siemplify API (`/api/external/v1/cases/MoveAlertToNewCase`)
-    to move the alert to a new case. It then assigns the new case to the approval
-    manager and sends a Slack notification.
+    4. If moving and there are multiple alerts, calls the Siemplify API (`/api/external/v1/cases/MoveAlertToNewCase`)
+    to move the alert to a new case, assigns the new case to the reviewer, and sends
+    a Slack message.
 
-    5. If the alert should be moved but is the only alert in the case, it simply assigns
-    the case to the approval manager and sends a Slack notification.
+    5. If moving but there is only one alert, assigns the current case to the reviewer
+    and sends a Slack message.
 
-    6. Returns a JSON result containing the original case ID, new case ID, and approval
-    manager details.
+    6. Returns a JSON result containing the original case ID, new case ID, and reviewer
+    information.
 
 
     ### Additional Notes
 
-    The action relies on a Slack webhook URL configured in the integration settings
-    to send notifications. It also requires valid Siemplify API credentials to move
-    alerts and assign cases.
+    Requires Siemplify API credentials and optionally a Slack Webhook URL configured
+    in the integration settings.
   ai_short_description: >-
-    Assigns a case or alert to an approval manager for review, optionally moving grouped
-    alerts to a new case, and sends a notification via Slack webhook.
+    Assigns a case or alert to a reviewer for approval, optionally moving grouped
+    alerts to a new case, and sends a notification to Slack.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -46,16 +41,16 @@ Approval Request:
     can_mutate_internal_data: true
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends a notification message to a Slack channel via a webhook URL.
+      Sends a notification message to a Slack channel via a Webhook.
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Assigns the case to an approval manager and optionally moves an alert to a new
-      case if it is grouped with other alerts.
+      Assigns the case to a reviewer and optionally moves the alert to a new case.
     reasoning: >-
-      The action does not fetch contextual data. It mutates external data by sending
-      a message to a Slack webhook. It mutates internal data by assigning cases to
-      users and optionally moving alerts to new cases via the Siemplify API. It does
-      not update entities or create insights.
+      The action does not fetch external data. It mutates external data by sending
+      a message to a Slack webhook. It mutates internal data by assigning a case to
+      a user and potentially moving an alert to a new case via the Siemplify API.
+      It does not update entities, create insights, or create case comments. It modifies
+      alert data by changing the assignee and potentially the parent case.
   entity_usage:
     entity_types:
       address: false
@@ -107,9 +102,8 @@ Approval Request:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates at the case and alert level, using `siemplify.case.identifier`
-      and `siemplify.current_alert.identifier`. It does not process, iterate over,
-      or filter `siemplify.target_entities`, meaning it does not use entities.
+      The action does not iterate over target entities or accept any entity-related
+      parameters. It operates strictly on the case and alert level.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -126,9 +120,9 @@ Approval Request:
     get_alert_information: false
     reasoning: >-
       The action assigns the case/alert to a reviewer, which matches the 'Update Alert'
-      category (changing assignee). It also sends a notification to Slack, which matches
+      category (changes assignee). It also sends a notification to Slack, which matches
       the 'Send Message' category. It does not perform enrichment, containment, or
-      ticketing.
+      other operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -155,39 +149,38 @@ Approval Response:
   ai_description: >-
     ### General Description
 
-    Allows an authorized user to respond to a workflow approval request, either approving
-    or denying it. The action verifies the user's permissions, records their response,
-    optionally adds comments to the case, and sends a notification to a configured
-    Slack channel.
+    Allows a designated user to respond to an approval request within a workflow,
+    either approving or denying it. It verifies the user's authorization, logs the
+    decision, and optionally adds comments to the case while notifying a Slack channel.
 
 
     ### Flow Description
 
-    1. Extracts the action parameters (`Action Approved` and `Response Comments`)
-    and integration configuration parameters.
+    1. Extracts configuration and action parameters, including the Slack webhook URL
+    and the reviewer's decision.
 
-    2. Verifies if the requesting user is authorized to approve or deny the request
-    by checking their username or role via the internal Siemplify API (`/api/external/v1/settings/GetUserProfiles`).
+    2. Verifies if the requesting user matches the designated Approval Manager or
+    Secondary Approval Manager (or their respective roles) by querying the Siemplify
+    API (`/api/external/v1/settings/GetUserProfiles`).
 
-    3. If authorized, evaluates the `Action Approved` parameter to determine the response
-    status.
+    3. If authorized, processes the approval or denial decision.
 
-    4. If `Response Comments` are provided, adds a comment to the case using the Siemplify
-    API.
+    4. If comments are provided, appends them to the case using `siemplify.add_comment`.
 
-    5. Sends a notification message containing the approval status and comments to
-    a configured Slack Webhook URL via an HTTP POST request.
+    5. Sends a notification message containing the decision and comments to Slack
+    via an HTTP POST request to the configured webhook URL.
 
-    6. Returns a JSON result with the approval status, reviewer details, and comments.
+    6. Returns a JSON result with the approval status and reviewer details.
 
 
     ### Additional Notes
 
-    If the requesting user is unauthorized, the action fails, logs an error to Slack,
-    and raises an exception to halt the workflow.
+    If the user is unauthorized, the action will fail and raise an error, halting
+    the workflow.
   ai_short_description: >-
-    Allows an authorized user to respond to a workflow approval request, optionally
-    adding case comments and sending a notification to Slack.
+    Allows an authorized user to approve or deny a workflow request, appending any
+    provided comments to the case and sending a notification to a configured Slack
+    webhook.
   capabilities:
     can_create_case_comments: true
     can_create_insight: false
@@ -196,15 +189,14 @@ Approval Response:
     can_mutate_internal_data: true
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends an approval or denial notification message to a configured Slack Webhook.
+      Sends an approval or denial notification message to a configured Slack webhook.
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Adds a comment to the case with the reviewer's response notes.
+      Adds the reviewer's response comments to the case within Google SecOps.
     reasoning: >-
-      The action does not fetch external contextual data for enrichment. It mutates
-      external data by sending a POST request to a Slack Webhook. It mutates internal
-      data by adding a comment to the case/alert. It does not update entities or create
-      insights.
+      The action does not fetch external contextual data. It mutates external data
+      by sending a POST request to a Slack webhook. It mutates internal data by adding
+      a comment to the case. It does not update entities or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -256,9 +248,9 @@ Approval Response:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or process any
-      entity objects. It operates strictly on the case/alert level and user authorization,
-      so all entity flags are false.
+      The action does not process `siemplify.target_entities` nor does it accept any
+      entity-specific input parameters. It operates strictly on case and user approval
+      data.
   outcome_categories:
     add_alert_comment: true
     add_ioc_to_allowlist: false
@@ -274,10 +266,10 @@ Approval Response:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds a comment to the case/alert using `siemplify.add_comment`, which
-      matches the 'Add Alert Comment' category. It also sends a notification to a
-      Slack Webhook, which matches the 'Send Message' category. It does not perform
-      IOC enrichment, containment, or ticketing.
+      The action appends comments to the case/alert using `siemplify.add_comment`,
+      matching the 'Add Alert Comment' category. It also sends a notification to Slack
+      via a webhook, matching the 'Send Message' category. It does not perform any
+      IOC enrichment, containment, or ticketing operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -298,7 +290,7 @@ Approval Response:
     | --- | --- | --- | --- |
 
     | Action Approved | Boolean | No | Approval managers response to request. Determines
-    if the action is approved or denied. |
+    whether the workflow action is approved or denied. |
 
     | Response Comments | String | No | Please enter any relevant notes to be added
     to the case. |
@@ -306,29 +298,28 @@ Assign Case to Current User:
   ai_description: >-
     ### General Description
 
-    Assigns the current case to the user who manually executed the playbook action.
-    This action is designed to be placed at the start of a playbook and executed when
-    an analyst begins working on a case.
+    Assigns the current case to the user who executed the playbook action. It is designed
+    to be used as a manual action at the start of a playbook when an analyst begins
+    working on a case.
 
 
     ### Flow Description
 
-    1. Retrieves the current case ID, alert ID, and the original requesting user from
-    the environment.
+    1. Retrieves the original requesting user, case ID, and alert ID from the environment.
 
-    2. Verifies that the requesting user is not the "System" user, ensuring the action
-    was triggered manually.
+    2. Verifies that the requesting user is not the "System" user (ensuring the action
+    was manually executed).
 
-    3. Calls the internal SecOps API (`siemplify.assign_case`) to assign the case
-    and alert to the requesting user.
+    3. Calls the internal Siemplify SDK method to assign the case and alert to the
+    requesting user.
 
-    4. Returns the assigned user's name as the result value.
+    4. Returns the assigned user's name as the result.
 
 
     ### Additional Notes
 
-    This action will fail if executed automatically by the system; it must be set
-    to manual execution.
+    This action must be set to manual execution; otherwise, it will fail if executed
+    automatically by the "System" user.
   ai_short_description: >-
     Assigns the current case to the user who manually executed the playbook action.
   capabilities:
@@ -343,9 +334,9 @@ Assign Case to Current User:
     internal_data_mutation_explanation: >-
       Assigns the current case and alert to the user who executed the action.
     reasoning: >-
-      The action mutates internal data by assigning the case to a user. It does not
-      fetch external data, mutate external data, update entities, create insights,
-      or create case comments.
+      The action does not fetch data from or mutate data in external systems. It mutates
+      internal data by assigning the case to a user via the Siemplify SDK, which modifies
+      the alert/case assignee data. It does not update entities or create insights/comments.
   entity_usage:
     entity_types:
       address: false
@@ -397,8 +388,8 @@ Assign Case to Current User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely operates
-      on the case and alert context.
+      The action does not process or interact with any entities. It operates solely
+      on the case and alert context (case ID, alert ID) and the requesting user.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -414,8 +405,10 @@ Assign Case to Current User:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action assigns the case/alert to the current user, which changes the assignee
-      of the alert within the SecOps platform. This matches the 'Update Alert' category.
+      The action assigns the current case/alert to the user who executed the playbook.
+      This directly matches the 'Update Alert' category, which includes changing the
+      assignee of an alert within the SecOps platform. It does not interact with external
+      systems or perform any other categorized outcomes.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -435,34 +428,30 @@ Ping:
   ai_description: >-
     ### General Description
 
-    This action serves as a connectivity test (ping) for the Workflow Tools integration.
-    It verifies the integration's configuration by checking user roles via the internal
-    Siemplify API and sending a test message to a configured Slack webhook.
+    Tests the connectivity and configuration of the Workflow Tools integration.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters, including API credentials, reviewer
-    details, and a Slack webhook URL.
+    1. Extracts integration configuration parameters including API details, Slack
+    webhook URL, and approval managers.
 
-    2. Initializes the `WorkflowToolsManager`.
+    2. Initializes the WorkflowToolsManager.
 
-    3. Checks the configured primary and secondary approval managers against the Siemplify
-    API (`/api/external/v1/settings/GetUserProfiles`) to verify user roles.
+    3. Queries the Siemplify API to verify the configured approval managers' roles.
 
-    4. Sends a test message to the configured Slack webhook URL via an HTTP POST request.
+    4. Sends a test message to the configured Slack webhook URL to verify connectivity.
 
-    5. Returns a successful execution status if all operations complete without errors.
+    5. Returns a successful execution status if all checks pass.
 
 
     ### Additional Notes
 
-    This action does not operate on entities and relies entirely on integration-level
-    configuration parameters. It is primarily used to ensure the integration is set
-    up correctly.
+    This action is primarily used to verify that the integration is configured correctly
+    and can communicate with both the Siemplify API and the Slack webhook.
   ai_short_description: >-
-    Tests the Workflow Tools integration connectivity by verifying user roles via
-    the Siemplify API and sending a test message to a configured Slack webhook.
+    Tests the connectivity and configuration of the Workflow Tools integration by
+    verifying user roles via the Siemplify API and sending a test message to Slack.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -471,14 +460,14 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends a test message to a configured Slack webhook via an HTTP POST request.
+      Sends a test message to the configured Slack webhook URL.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action queries the internal Siemplify API to check user roles but does not
-      fetch external contextual data. It mutates external data by sending an HTTP
-      POST request to a Slack webhook. It does not mutate internal data, update entities,
-      create insights, modify alert data, or create case comments.
+      The action does not fetch contextual data for alerts or entities. It mutates
+      external data by sending a POST request to a Slack webhook to log a test message.
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -530,8 +519,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on integration configuration parameters.
+      The action does not process any entities. It does not iterate over target_entities
+      or accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -548,8 +537,7 @@ Ping:
     get_alert_information: false
     reasoning: >-
       The action sends a test message to a Slack webhook, which aligns with the 'Send
-      Message' category. It does not enrich IOCs, update alerts, or perform any other
-      categorized operations.
+      Message' category. It does not perform any other specific outcome category actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

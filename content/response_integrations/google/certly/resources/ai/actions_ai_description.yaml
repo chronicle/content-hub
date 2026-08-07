@@ -3,8 +3,9 @@ Get Url Status:
     ### General Description
 
     Queries the Certly service to retrieve reputation and status information for URL
-    entities. It enriches the entities with the retrieved status and flags malicious
-    URLs as suspicious.
+    entities. It evaluates the risk of the URLs, updates the entities with the retrieved
+    status, marks them as enriched, and generates insights for any URLs identified
+    as malicious.
 
 
     ### Flow Description
@@ -16,22 +17,22 @@ Get Url Status:
     3. Makes an HTTP GET request to the Certly API (`/v1/lookup`) to fetch the status
     of each URL.
 
-    4. Updates the entity's additional properties with the retrieved Certly status
-    and marks the entity as enriched.
+    4. Updates the entity's additional properties with the Certly status and marks
+    the entity as enriched.
 
-    5. If the status is identified as "malicious", marks the entity as suspicious
-    and attaches an insight to it.
+    5. If the URL is deemed malicious, marks the entity as suspicious and adds an
+    insight to the entity.
 
-    6. Updates the modified entities within the Google SecOps platform.
+    6. Updates the enriched entities within the Google SecOps platform.
 
 
     ### Additional Notes
 
-    The action returns a result value of "true" if at least one URL is found to be
-    malicious, and "false" otherwise.
+    This action relies on integration-level configurations (API Token and API Root)
+    to authenticate and communicate with the Certly service.
   ai_short_description: >-
     Queries the Certly service to retrieve reputation and status information for URL
-    entities, enriching them and flagging malicious URLs as suspicious.
+    entities, updating entity properties and generating insights for malicious findings.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -44,9 +45,9 @@ Get Url Status:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Certly API to fetch URL status data (fetches_data=true).
-      It does not mutate external data or internal system data outside of standard
-      entity updates. It updates entities using `siemplify.update_entities` (can_update_entities=true)
-      and creates insights using `siemplify.add_entity_insight` (can_create_insight=true).
+      It does not mutate external data (can_mutate_external_data=false). It updates
+      internal entities via `siemplify.update_entities` (can_update_entities=true)
+      and creates insights via `siemplify.add_entity_insight` (can_create_insight=true).
   entity_usage:
     entity_types:
       address: false
@@ -98,9 +99,9 @@ Get Url Status:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The script iterates over `siemplify.target_entities` and explicitly filters
-      them using the condition `if entity.entity_type == EntityTypes.URL:`. Therefore,
-      it targets URL entities and filters by entity type.
+      The code iterates over `siemplify.target_entities` and explicitly filters them
+      using `if entity.entity_type == EntityTypes.URL:`. Therefore, it targets URL
+      entities and filters strictly by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -116,9 +117,9 @@ Get Url Status:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action queries Certly for URL reputation and status, which enriches the
-      IOC (URL) with threat intelligence. This matches the 'Enrich IOC' expected outcome.
-      It does not modify external systems, alerts, tickets, or perform other actions.
+      The action fetches reputation and status data for URL entities from Certly.
+      This aligns perfectly with the 'Enrich IOC' expected outcome. It does not modify
+      external systems, so it is not a blocklist or containment action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -138,30 +139,30 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Validates the asset configuration and connectivity to the Certly API. This action
-    ensures that the provided API Token and API Root are correct and that the SecOps
-    platform can successfully communicate with the Certly service.
+    Validates connectivity to the Certly API by performing a test lookup on a known
+    URL. This action ensures that the integration is correctly configured with valid
+    credentials and network access.
 
 
     ### Flow Description
 
-    1. Retrieves the integration configuration parameters (API Token and API Root).
+    1. Retrieves the API token and root URL from the integration configuration.
 
-    2. Initializes the Certly API manager.
+    2. Makes a GET request to the Certly API (`/v1/lookup`) using a hardcoded test
+    URL (`http://gumblar.cn`).
 
-    3. Executes a test connectivity check by making an HTTP GET request to the Certly
-    `/v1/lookup` endpoint using a hardcoded test URL (`http://gumblar.cn`).
+    3. Evaluates the HTTP response to confirm successful authentication and connectivity.
 
-    4. Returns a successful output message and the JSON response if the connection
-    is established without errors.
+    4. Returns a success message and the JSON response from the API.
 
 
     ### Additional Notes
 
-    This action is typically used during the initial setup or troubleshooting of the
-    Certly integration to verify network access and authentication validity.
+    This is typically used as a ping or test action to verify integration health and
+    does not affect case data.
   ai_short_description: >-
-    Validates connectivity to the Certly API by performing a test lookup request.
+    Validates connectivity to the Certly API by performing a test lookup on a known
+    URL.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -170,13 +171,12 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the Certly API to fetch the status of
-      a test URL, which qualifies as fetching data. It does not perform any POST/PUT/DELETE
-      requests to mutate external data, nor does it update internal entities, create
-      insights, modify alerts, or create case comments.
+      The action makes a GET request to a hardcoded URL to test API connectivity.
+      It does not fetch contextual data for alerts/entities, does not mutate external
+      data, and does not update internal case data, entities, or insights.
   entity_usage:
     entity_types:
       address: false
@@ -228,8 +228,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely relies
-      on integration configuration to test API connectivity.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -245,10 +245,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) that makes a test request to
-      the Certly API. It does not enrich specific IOCs from an alert, update alerts,
-      create tickets, or perform any other operations that match the defined outcome
-      categories.
+      The action is a simple connectivity test (Ping) to verify integration configuration.
+      It does not interact with alerts, entities, tickets, or perform any security
+      operations that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

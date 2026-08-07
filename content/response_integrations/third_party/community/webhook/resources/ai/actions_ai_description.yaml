@@ -2,35 +2,33 @@ Create Token:
   ai_description: >-
     ### General Description
 
-    Creates a new webhook token using the Webhook integration. This action generates
-    a unique webhook URL that can be used to receive incoming HTTP requests. It allows
-    customization of the default content, content type, and response timeout presented
-    when the webhook URL is accessed.
+    Creates a token for a new webhook on the configured webhook service. This action
+    generates a unique webhook URL that can be used to receive incoming HTTP requests,
+    returning the specified default content and content type.
 
 
     ### Flow Description
 
-    1. Extracts the base URL from the integration configuration.
+    1. Extracts the action parameters: `Default Content`, `Default Content Type`,
+    and `Timeout`.
 
-    2. Retrieves the action parameters: Default Content, Default Content Type, and
-    Timeout.
+    2. Initializes the `WebhookManager` with the integration's base URL.
 
-    3. Makes a POST request to the external webhook service's `/token` endpoint to
-    generate a new token with the specified attributes.
+    3. Makes a POST request to the webhook service's `/token` endpoint to create a
+    new token with the specified attributes.
 
-    4. Constructs the full webhook URL and appends it to the JSON result.
+    4. Constructs the full webhook URL using the returned UUID and base URL.
 
-    5. Returns the generated token details and webhook URL as a JSON result to the
-    SecOps platform.
+    5. Returns the generated webhook details as a JSON result.
 
 
     ### Additional Notes
 
-    The timeout parameter is primarily intended for testing timeouts and has a maximum
-    value of 10 seconds.
+    The `Timeout` parameter can be used to simulate delayed responses for testing
+    purposes.
   ai_short_description: >-
-    Creates a new webhook token and generates a unique webhook URL, allowing customization
-    of the default response content and timeout.
+    Creates a new webhook token on the external webhook service and returns the generated
+    webhook URL along with its configuration details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -43,9 +41,9 @@ Create Token:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to an external webhook service to create a new
-      token (mutates external data). It does not fetch contextual data for entities,
-      nor does it mutate internal SecOps data, update entities, or create insights.
+      The action makes a POST request to the webhook service to create a new token,
+      which mutates external data. It does not fetch contextual data, update internal
+      entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -97,8 +95,8 @@ Create Token:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It operates independently
-      of case entities to create a webhook token.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity-related input parameters. Therefore, it does not run on any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -114,9 +112,9 @@ Create Token:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a webhook token on an external service. This does not align
-      with any of the predefined outcome categories such as enriching IOCs, updating
-      alerts, creating tickets, or modifying blocklists.
+      The action creates a webhook token on an external service. This functionality
+      does not align with any of the predefined outcome categories such as enriching
+      IOCs, managing tickets, or blocking indicators.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -140,7 +138,7 @@ Create Token:
     click, if successful. |
 
     | Default Content Type | String | Yes | Type of content to be presented upon the
-    new webhook URL click |
+    new webhook URL click. |
 
     | Timeout | String | No | Amount of seconds to wait before returning the response
     (intended for testing timeouts). Max is 10. |
@@ -148,32 +146,31 @@ Delete Token:
   ai_description: >-
     ### General Description
 
-    Deletes a specific Webhook token using its token ID. This action interacts with
-    the external Webhook service to remove the token, rendering the associated webhook
-    URL permanently inaccessible.
+    Deletes a specific Webhook token by its ID using the Webhook service. This action
+    initiates a state change on the external service to remove the token, rendering
+    the associated webhook URL inaccessible.
 
 
     ### Flow Description
 
-    1. Extracts the `Token ID` parameter provided in the action configuration.
+    1. Extracts the `Token ID` parameter provided by the user or playbook.
 
-    2. Initializes the WebhookManager using the integration's configured base URL.
+    2. Initializes the WebhookManager with the integration's base URL.
 
-    3. Makes an HTTP DELETE request to the Webhook service API (`/token/{token_id}`)
-    to delete the specified token.
+    3. Makes a DELETE API call (`DELETE /token/{token_id}`) to the external Webhook
+    service to remove the specified token.
 
-    4. Returns the execution status and an output message indicating whether the deletion
-    was successful.
+    4. Returns the execution status and a success or failure message based on the
+    API response.
 
 
     ### Additional Notes
 
-    Ensure the provided token ID is correct, as this action is irreversible and will
-    immediately invalidate any integrations or services relying on the associated
-    webhook URL.
+    This action permanently removes the token from the Webhook service. Ensure the
+    correct Token ID is provided to avoid unintended deletions.
   ai_short_description: >-
-    Deletes a specific Webhook token by its token ID, rendering the associated webhook
-    URL inaccessible.
+    Deletes a specific Webhook token by its ID on the external Webhook service, rendering
+    the associated webhook URL inaccessible.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -182,15 +179,14 @@ Delete Token:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends an HTTP DELETE request to the external Webhook service to permanently
-      remove the specified token.
+      Deletes a webhook token on the external Webhook service via a DELETE API request.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes an HTTP DELETE request to an external Webhook service to
-      remove a token, which means it mutates external data. It does not fetch contextual
-      data for enrichment, nor does it interact with internal SecOps data like entities,
-      insights, alerts, or case comments.
+      The action makes a DELETE request to the external Webhook service to remove
+      a token (can_mutate_external_data=true). It does not fetch contextual data,
+      mutate internal data, update entities, create insights, modify alerts, or create
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -242,9 +238,8 @@ Delete Token:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process, iterate over, or interact with any entities (`siemplify.target_entities`).
-      It relies entirely on the explicitly provided 'Token ID' action parameter. Therefore,
-      all entity types and filtering flags are set to false.
+      The action does not iterate over target entities or accept any entity-related
+      parameters. It solely relies on the 'Token ID' parameter to perform its operation.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -260,10 +255,9 @@ Delete Token:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action deletes a webhook token in an external service. This specific operation
-      does not align with any of the predefined outcome categories such as enriching
-      IOCs, managing tickets, blocking indicators, containing hosts, or sending messages.
-      Therefore, all outcome category flags are false.
+      The action deletes a webhook token on an external service. This operation does
+      not align with any of the predefined outcome categories such as enriching IOCs,
+      managing tickets, blocking indicators, or containing hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -288,35 +282,36 @@ Get Webhook Response:
   ai_description: >-
     ### General Description
 
-    Retrieves request data for a specific webhook token ID from the configured webhook
-    service.
+    Fetches data of requests made to a specific webhook URL (Base URL/Token ID). The
+    action can wait for a specified timeframe or until a first click (request) is
+    detected before retrieving the responses.
 
 
     ### Flow Description
 
-    1. Extracts the Token ID, Responses To Retrieve, TimeFrame, and Pending Condition
-    parameters.
+    1. Initializes the WebhookManager with the base URL.
 
-    2. Evaluates the Pending Condition. If set to 'TimeFrame', the action waits asynchronously
-    for the specified duration before making an API call. If set to 'AwaitClick',
-    it continuously polls until a request is detected.
+    2. Evaluates the pending condition (`TimeFrame` or `AwaitClick`).
 
-    3. Makes a GET request to the webhook service endpoint (`/token/{token_id}/requests`)
-    to fetch the request data.
+    3. If `TimeFrame` is selected, the action waits for the specified duration before
+    making a GET request to the webhook endpoint to retrieve the requests.
 
-    4. Filters out automated Slackbot requests and optionally limits the results to
-    only the latest request based on the 'Responses To Retrieve' parameter.
+    4. If `AwaitClick` is selected, the action periodically makes a GET request to
+    the webhook endpoint until at least one request is detected.
 
-    5. Returns the fetched request data as a JSON result.
+    5. Filters out automated Slackbot requests and returns either all or the latest
+    request data based on the configuration.
+
+    6. Outputs the retrieved request data as a JSON result.
 
 
     ### Additional Notes
 
-    The action runs asynchronously, allowing it to wait for a specified timeframe
-    or until a click/request occurs without blocking the execution thread.
+    This is an asynchronous action that will run in the background until the specified
+    condition is met.
   ai_short_description: >-
-    Retrieves request data for a specific webhook token ID, optionally waiting for
-    a specified timeframe or until a request is received.
+    Fetches request data for a specific webhook URL, optionally waiting for a specified
+    timeframe or until a request is detected.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -328,9 +323,10 @@ Get Webhook Response:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to fetch webhook request data (fetches_data=true).
-      It does not mutate external data, update internal entities, create insights,
-      or modify alert data.
+      The action makes a GET request to a webhook service to fetch request data (fetches_data=true).
+      It does not perform any state-changing operations on external systems (can_mutate_external_data=false)
+      or internal systems (can_mutate_internal_data=false). It does not update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -382,8 +378,9 @@ Get Webhook Response:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It relies solely on the provided
-      action parameters (Token ID) to fetch webhook responses.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters representing entities. Therefore, it does not run on entities
+      and all entity-related flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -399,9 +396,10 @@ Get Webhook Response:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches webhook responses based on a token ID. This behavior does
-      not align with any of the predefined outcome categories such as enriching IOCs,
-      updating alerts, or modifying external system states.
+      The action fetches HTTP requests made to a specific webhook URL. It does not
+      enrich specific IOCs or assets, update alerts, manage tickets, modify blocklists/allowlists,
+      or interact with identities or endpoints. Therefore, it does not match any of
+      the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -421,40 +419,42 @@ Get Webhook Response:
 
     | --- | --- | --- | --- |
 
-    | Pending Condition | Dropdown | Yes | TimeFrame - Choose the custom timeout condition.
-    AwaitClick - Wait for first click before ending script. |
+    | Pending Condition | Dropdown | Yes | TimeFrame - Choose the custom timeout condition.\nAwaitClick
+    - Wait for first click before ending script. |
 
     | TimeFrame | String | Yes | Minutes to wait for requests for URL (by token ID),
-    before ending the action. Relevant only if "Timeout" is chosen as parameter. |
+    before ending the action.\nRelevant only if "Timeout" is chosen as parameter.
+    |
 
     | Responses To Retrieve | Dropdown | Yes | Choose All to retrieve all responses
     data, or Latest to retrieve only the latest responses data. |
 
-    | Token ID | String | Yes | The ID of the token to read requests for. |
+    | Token ID | String | Yes | The ID of the token to read requests for |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Webhook service. This action verifies that the integration
-    is properly configured and can successfully communicate with the target URL.
+    Tests connectivity to the Webhook service. This action verifies that the Google
+    SecOps platform can successfully communicate with the configured Webhook base
+    URL.
 
 
     ### Flow Description
 
-    1. Retrieves the base URL from the integration configuration.
+    1. Retrieves the Webhook base URL from the integration configuration.
 
-    2. Makes an HTTP GET request to the base URL via the `test_connectivity` method.
+    2. Initializes the WebhookManager.
 
-    3. Evaluates the HTTP response status code.
+    3. Makes an HTTP GET request to the base URL to test connectivity.
 
-    4. Returns a success message if the connection is established, or an error message
-    if it fails.
+    4. Returns a success message if the HTTP status code indicates success, or an
+    error message if the connection fails.
 
 
     ### Additional Notes
 
-    This action does not require any action-specific parameters as it relies solely
-    on the integration-level configuration.
+    This is a utility action primarily used to verify integration configuration and
+    network access. It does not interact with case entities or modify any data.
   ai_short_description: >-
     Tests connectivity to the Webhook service by making an HTTP GET request to the
     configured base URL.
@@ -469,9 +469,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a simple GET request to the configured base URL to test connectivity.
-      It does not fetch contextual data for alerts/entities, nor does it mutate any
-      external or internal data, update entities, or create insights.
+      The action makes a simple GET request to test connectivity. It does not fetch
+      contextual data for alerts/entities, mutate external data, mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -523,8 +523,9 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely tests connectivity
-      to the configured URL. Therefore, all entity-related flags are set to false.
+      The action does not process `siemplify.target_entities` nor does it accept any
+      entity-related input parameters. It operates entirely independently of any case
+      entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -540,10 +541,10 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping). It does not match any of the
-      specific expected outcomes such as enriching IOCs, updating alerts, creating
-      tickets, or modifying external systems. Therefore, all outcome category flags
-      are set to false.
+      The action is a simple connectivity test (ping) to verify network access to
+      the Webhook service. It does not enrich IOCs/assets, modify alerts, manage tickets,
+      block/allowlist indicators, manage identities, or perform any other specific
+      outcome category operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -2,41 +2,41 @@ EnrichAssetInformation:
   ai_description: >-
     ### General Description
 
-    Enriches IP Address entities by retrieving associated asset information from the
-    CylusOne platform. The action fetches asset details, flattens the returned properties,
-    and appends them to the entity's additional properties within Google SecOps.
+    Enriches IP address entities by retrieving associated asset information from the
+    Cylus API. This action fetches contextual metadata for the specified IP addresses
+    and appends it to the entity's properties within the SecOps platform.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities and filters for those with the `ADDRESS`
-    entity type.
+    1. Initializes the Cylus API client using the provided integration configuration.
 
-    2. Validates that the entity identifier is a properly formatted IPv4 address.
+    2. Iterates through the target entities, filtering for those of type IP Address.
 
-    3. Makes an HTTP GET request to the CylusOne API (`/rest/v1/assets/by-ip`) to
-    fetch asset details for each valid IP address.
+    3. Validates the format of each IP address to ensure it is a valid IPv4 address.
 
-    4. Parses the API response, extracting and flattening asset properties (including
-    MAC addresses and custom properties).
+    4. Makes a GET request to the Cylus API (`/rest/v1/assets/by-ip?ip={ip}`) to fetch
+    asset details for the IP.
 
-    5. Updates the entity's `additional_properties` with the retrieved data and marks
-    the entity as enriched (`is_enriched = True`).
+    5. Parses the returned asset data, flattening properties and formatting lists.
 
-    6. Saves the updated entities back to the platform and returns a JSON result containing
-    the enrichment data.
+    6. Updates the entity's `additional_properties` with the enriched data and marks
+    the entity as enriched.
+
+    7. Calls the SecOps platform to save the updated entities.
+
+    8. Returns a summary message and a JSON object containing the enrichment results
+    or errors for each processed entity.
 
 
     ### Additional Notes
 
-    - The action strictly requires valid IPv4 addresses; other formats or entity types
-    will be skipped and marked as failed.
+    - The action only processes valid IPv4 addresses.
 
-    - Extracted list fields (like `ips` and `macs`) are formatted as comma-separated
-    strings up to a maximum of 5 items.
+    - Entities that are not of type IP Address are skipped.
   ai_short_description: >-
-    Enriches IP Address entities by retrieving and appending asset information from
-    the CylusOne platform to the entity's additional properties.
+    Enriches IP address entities by retrieving associated asset information from the
+    Cylus API and updating the entity properties in the SecOps platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -48,9 +48,9 @@ EnrichAssetInformation:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a GET request to the CylusOne API. It does
-      not mutate external data. It updates internal entities by appending the retrieved
-      asset data to the entity's additional properties and calling `siemplify.update_entities`.
+      The action makes a GET request to the Cylus API to fetch asset data (fetches_data=true).
+      It does not mutate external data. It updates the entities in the SecOps platform
+      with the fetched data using `siemplify.update_entities` (can_update_entities=true).
       It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -104,8 +104,8 @@ EnrichAssetInformation:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and explicitly checks `if
-      entity.entity_type != EntityTypes.ADDRESS:`. Therefore, it targets ADDRESS entities
-      and filters them by their entity_type.
+      entity.entity_type != EntityTypes.ADDRESS:` to filter out non-IP address entities.
+      Therefore, it targets Address entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -121,9 +121,10 @@ EnrichAssetInformation:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches asset information (such as MAC addresses and custom properties)
-      associated with an IP address from the CylusOne platform. This aligns with the
-      'Enrich Asset' expected outcome, which returns contextual metadata for a resource.
+      The action fetches asset information (contextual metadata) for an IP address
+      from the Cylus API. This aligns with the 'Enrich Asset' expected outcome. It
+      does not fetch threat intelligence, so it is not 'Enrich IOC'. It does not mutate
+      external state or perform other actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -143,36 +144,32 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the CylusOne platform. This action verifies that the provided
-    integration credentials are valid and that the SecOps platform can successfully
-    communicate with the CylusOne API.
+    Tests connectivity to the CylusOne platform to ensure the integration is configured
+    correctly and credentials are valid.
 
 
     ### Flow Description
 
-    1. Extracts the integration-level configuration parameters (API Root, API Key,
-    Verify SSL).
+    1. Extracts integration configuration parameters (Base URL, API Key, Verify SSL).
 
-    2. Initializes the API manager with the extracted credentials.
+    2. Initializes the API manager with the provided credentials.
 
-    3. Executes a test GET request to the `/rest/v1/assets/by-ip` endpoint using a
-    hardcoded test IP address (`10.0.0.5`).
+    3. Makes a test GET request to the `/rest/v1/assets/by-ip` endpoint using a dummy
+    IP address (`10.0.0.5`).
 
-    4. Evaluates the HTTP response status code to determine if authentication and
-    network reachability are successful.
+    4. Evaluates the HTTP response status code to determine if the connection and
+    authentication were successful.
 
-    5. Returns a completed status with a success message if connected, or a failed
-    status with an error message if the connection or authentication fails.
+    5. Returns a success or failure message based on the result.
 
 
     ### Additional Notes
 
-    This is a standard utility action used primarily during integration setup and
-    troubleshooting. It does not interact with case entities, modify any data, or
-    consume action-specific parameters.
+    This is a standard ping action used primarily during integration setup and troubleshooting.
+    It does not process alerts, entities, or modify any data.
   ai_short_description: >-
-    Tests connectivity to the CylusOne platform by verifying the provided API credentials
-    and network reachability.
+    Tests connectivity to the CylusOne platform by making a test API request to verify
+    the provided integration credentials and network access.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -184,10 +181,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a single GET request to verify API credentials and network
-      connectivity. It does not fetch contextual data for alerts or entities, nor
-      does it mutate any external or internal data. It does not update entities, create
-      insights, modify alert data, or create case comments.
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for alerts or entities. It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -239,9 +235,9 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      performs a generic connectivity test using a hardcoded IP address ('10.0.0.5')
-      and does not rely on any entity data from the case.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters representing entities. It is a standalone connectivity
+      test.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -257,9 +253,10 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      This action is strictly a connectivity test (Ping). It does not enrich indicators
-      or assets, update alerts, interact with ticketing systems, modify blocklists/allowlists,
-      or perform any other operations that match the defined outcome categories.
+      This action is a simple connectivity test (Ping) that verifies API credentials.
+      It does not enrich IOCs or assets, update alerts, interact with ticketing systems,
+      modify blocklists/allowlists, contain hosts, or perform any other operations
+      that match the available outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

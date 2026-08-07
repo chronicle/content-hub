@@ -2,40 +2,43 @@ Get Domain Rdap:
   ai_description: >-
     ### General Description
 
-    Enriches Domain, Hostname, and URL entities with parsed Domain RDAP data from
-    DomainTools. This action retrieves detailed registration data, contacts, and statuses
-    for the specified domains to provide additional context for investigations.
+    Enriches external domain entities with DomainTools threat intelligence data by
+    retrieving parsed domain RDAP information. This action fetches registration, contact,
+    and DNSSEC details for the specified domains and updates the entities with the
+    retrieved data.
 
 
     ### Flow Description
 
-    1. The action checks if a specific `Domain` parameter is provided. If so, it creates
-    a temporary domain entity to process; otherwise, it retrieves target entities
-    from the case that match the supported types (Domain, Hostname, URL).
+    1. Retrieves the `Domain` parameter if provided, creating a temporary domain entity
+    for processing.
 
-    2. For each entity, it extracts the domain string and makes an API request to
-    DomainTools to fetch the parsed domain RDAP data.
+    2. If the parameter is not provided, iterates over the case's target entities,
+    filtering for URL, Hostname, and Domain types.
 
-    3. If RDAP data is found, the action flattens the JSON response and appends it
-    to the entity's `additional_properties` with a 'DT' prefix.
+    3. Extracts the domain string from the entity identifier.
 
-    4. It generates entity-specific CSV tables and a summary data table containing
-    the parsed RDAP information.
+    4. Makes an API call to the DomainTools `parsed_domain_rdap` endpoint to fetch
+    RDAP data.
 
-    5. Finally, the action updates the enriched entities in the platform and attaches
-    the raw JSON results to the action output.
+    5. If data is found, updates the entity's `additional_properties` with the flattened
+    RDAP information.
+
+    6. Attaches the results as JSON and creates a CSV data table for the enriched
+    entities.
+
+    7. Updates the entities in the Google SecOps platform.
 
 
     ### Additional Notes
 
-    - The action requires a valid DomainTools API key and username with access to
-    the `parsed-domain-rdap` product license.
+    - Supported entity types: URL, Hostname, Domain.
 
-    - If the `Domain` parameter is used, the action will ignore the case's target
-    entities and only process the provided domain.
+    - If the `Domain` parameter is provided, the action will only process that specific
+    domain and ignore the case entities.
   ai_short_description: >-
-    Enriches Domain, Hostname, and URL entities with parsed Domain RDAP data from
-    DomainTools.
+    Enriches external domain entities with DomainTools threat intelligence data by
+    retrieving parsed domain RDAP information and updating entity properties.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -48,10 +51,152 @@ Get Domain Rdap:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the DomainTools API to fetch parsed domain
-      RDAP data (fetches_data=true). It does not mutate external data or internal
-      SecOps data. It updates the entities with the fetched data using `siemplify.update_entities`
-      (can_update_entities=true). It does not create insights, modify alert data,
-      or create case comments.
+      RDAP data. It does not mutate external data but updates internal entities with
+      the retrieved information.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: true
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The script processes entities of type URL, HOSTNAME, and DOMAIN. It filters
+      `siemplify.target_entities` by `entity.entity_type in SUPPORTED_ENTITY_TYPES`
+      (which are URL, HOSTNAME, DOMAIN). It also accepts a `Domain` parameter which
+      acts as a DOMAIN entity.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches parsed domain RDAP data for domain, hostname, and URL entities,
+      which provides threat intelligence and contextual information about the indicator.
+      This matches the 'Enrich IOC' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Domain | String | No | The domain to get the parsed domain RDAP result. |
+Get WhoIs History:
+  ai_description: >-
+    ### General Description
+
+    Enriches Domain, URL, and Hostname entities by retrieving Whois History data from
+    DomainTools. This action provides historical context about domain registrations,
+    which can be useful for threat intelligence and investigations.
+
+
+    ### Flow Description
+
+    1. The action checks if a specific `Domain` parameter is provided. If so, it creates
+    a temporary domain entity for processing. Otherwise, it iterates over the case's
+    target entities, filtering for URL, Hostname, and Domain types.
+
+    2. For each valid entity, it extracts the domain name and makes an API request
+    to the DomainTools `whois_history` endpoint.
+
+    3. The retrieved Whois History data is parsed and flattened.
+
+    4. The action updates the entity's `additional_properties` with the flattened
+    Whois data.
+
+    5. It attaches the raw results as JSON, creates an entity-specific data table,
+    and compiles a summary data table for all enriched entities.
+
+    6. Finally, it updates the enriched entities within the Google SecOps platform.
+
+
+    ### Additional Notes
+
+    If the `Domain` parameter is provided, the action will only process that specific
+    domain and ignore the target entities in the case.
+  ai_short_description: >-
+    Enriches Domain, URL, and Hostname entities by retrieving Whois History data from
+    DomainTools.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes an API request to DomainTools to fetch Whois History data (fetches_data=true).
+      It does not mutate external data or internal system data outside of the case.
+      It updates the entities with the retrieved data via `siemplify.update_entities`
+      (can_update_entities=true). It does not create insights or case comments.
   entity_usage:
     entity_types:
       address: false
@@ -104,9 +249,10 @@ Get Domain Rdap:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
-      includes URL, HOSTNAME, and DOMAIN. Therefore, it targets these specific entity
-      types and filters by entity_type.
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, which includes URL, HOSTNAME,
+      and DOMAIN. It also accepts a 'Domain' input parameter which is explicitly processed
+      as a DOMAIN entity. Therefore, it targets URL, Hostname, and Domain entities,
+      filtering by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -122,9 +268,9 @@ Get Domain Rdap:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches parsed domain RDAP data (registration, contacts, statuses)
-      for domain-related entities from DomainTools. This provides contextual metadata
-      and intelligence for the indicator, matching the 'Enrich IOC' expected outcome.
+      The action fetches Whois History data for domain-related entities, providing
+      historical registration context and threat intelligence for the indicator. This
+      aligns with the 'Enrich IOC' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,42 +290,40 @@ Get Domain Rdap:
 
     | --- | --- | --- | --- |
 
-    | Domain | String | No | The domain to get the parsed domain RDAP result. If provided,
-    the action will run on this domain instead of the target entities. |
-Get WhoIs History:
+    | Domain | String | No | The domain to get the whois history result. If provided,
+    the action will process this domain instead of the case entities. |
+Investigate Domain:
   ai_description: >-
     ### General Description
 
-    Enriches external domain, URL, and hostname entities with Whois History threat
-    intelligence data from DomainTools. This action retrieves historical registration
-    records and updates the entities with the findings, providing analysts with a
-    timeline of domain ownership and status changes.
+    Enriches Domain, Hostname, and URL entities using DomainTools Iris Investigate.
+    This action retrieves comprehensive threat intelligence, including risk scores,
+    analytics, identity, registration, and hosting details.
 
 
     ### Flow Description
 
-    1. Determines the target domains either from the `Domain` action parameter or
-    by filtering the case's target entities for URL, Hostname, and Domain types.
+    1. Extracts the target domain from the `Domain` input parameter. If not provided,
+    it iterates over the target entities.
 
-    2. Iterates over the target domains and makes an API request to DomainTools to
-    fetch the Whois History.
+    2. Makes a GET request to the DomainTools Iris Investigate API to fetch threat
+    intelligence data for the extracted domains.
 
-    3. Parses the historical Whois records, including registrar, creation dates, expiration
-    dates, and registrant details.
+    3. Parses the API response to extract detailed domain information.
 
-    4. Updates the entities' `additional_properties` with the flattened Whois history
-    data.
+    4. Updates the target entities with the enriched data as additional properties
+    and marks them as enriched.
 
-    5. Attaches the results as JSON and creates a CSV data table summarizing the Whois
-    history for the case wall.
+    5. Attaches JSON results, entity-specific CSV tables, and a summary data table
+    to the action results.
 
 
     ### Additional Notes
 
-    If the `Domain` parameter is explicitly provided, the action will ignore the case's
-    target entities and only execute the enrichment on the specified domain.
+    The action batches domains into chunks of 100 to optimize API calls.
   ai_short_description: >-
-    Enriches domain, URL, and hostname entities with historical Whois data from DomainTools.
+    Enriches Domain, Hostname, and URL entities with threat intelligence data using
+    DomainTools Iris Investigate.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -191,10 +335,9 @@ Get WhoIs History:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an API request to DomainTools to fetch Whois history data,
-      so it fetches data. It does not perform any state-changing operations on external
-      systems or internal SecOps systems outside of entities. It updates the entities
-      with the retrieved data using `siemplify.update_entities`. It does not create
+      The action fetches threat intelligence data from the DomainTools Iris Investigate
+      API (fetches_data=true). It does not mutate external data. It updates internal
+      entities with the enriched data (can_update_entities=true) but does not create
       insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -247,11 +390,10 @@ Get WhoIs History:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action checks if the `Domain` parameter is provided. If it is, it creates
-      a dummy DOMAIN entity to process. If not, it iterates over `siemplify.target_entities`
-      and filters them using `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where
-      `SUPPORTED_ENTITY_TYPES` includes URL, HOSTNAME, and DOMAIN. Therefore, it targets
-      URL, Hostname, and Domain entities, filtering strictly by `entity_type`.
+      The action processes entities by iterating over `siemplify.target_entities`
+      and filtering them using `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where
+      supported types are URL, HOSTNAME, and DOMAIN. It also accepts a 'Domain' parameter
+      which is treated as a DOMAIN entity.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -267,10 +409,10 @@ Get WhoIs History:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches historical Whois data for domain-related indicators from
-      DomainTools. This provides threat intelligence and contextual information about
-      the indicator, which directly aligns with the 'Enrich IOC' expected outcome.
-      It does not modify external systems, alerts, or tickets.
+      The action retrieves threat intelligence and risk scores for domain, hostname,
+      and URL entities from DomainTools. This aligns with the 'Enrich IOC' expected
+      outcome. It does not perform any containment, ticketing, or external mutation
+      actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -290,157 +432,13 @@ Get WhoIs History:
 
     | --- | --- | --- | --- |
 
-    | Domain | String | No | The domain to get the whois history result. If provided,
-    the action will run on this domain instead of the target entities. |
-Investigate Domain:
-  ai_description: >-
-    ### General Description
-
-    Enriches external domain entities with DomainTools Iris Investigate threat intelligence
-    data. This action retrieves comprehensive domain information, including risk scores,
-    identity, registration, and hosting details, to provide context for security investigations.
-
-
-    ### Flow Description
-
-    1. Extracts the `Domain` parameter if provided. If not, it iterates over target
-    entities of type URL, HOSTNAME, and DOMAIN.
-
-    2. Extracts the domain string from the entity identifier or the provided parameter.
-
-    3. Chunks the domains into groups of 100 to optimize API calls.
-
-    4. Makes a request to the DomainTools Iris Investigate API to fetch threat intelligence
-    data for the domains.
-
-    5. Parses the response and updates the entity's `additional_properties` with the
-    retrieved data.
-
-    6. Marks the entity as enriched and updates it in the platform.
-
-    7. Generates JSON results and CSV data tables summarizing the investigation.
-
-
-    ### Additional Notes
-
-    If the `Domain` parameter is provided, the action will only process that specific
-    domain and ignore the target entities.
-  ai_short_description: >-
-    Enriches domain, URL, and hostname entities with threat intelligence data using
-    the DomainTools Iris Investigate API.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data from the DomainTools API (`dt_manager.investigate_domains`).
-      It does not mutate external data or internal case data. It updates entities
-      with the fetched data (`siemplify.update_entities`). It does not create insights,
-      modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: true
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: true
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
-      includes URL, HOSTNAME, and DOMAIN. It does not filter by any other entity attributes.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches threat intelligence data (risk scores, registration, hosting)
-      for domains/URLs/hostnames from DomainTools Iris Investigate. This directly
-      aligns with the 'Enrich IOC' expected outcome.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Domain | String | No | The domain to investigate. If provided, the action will
-    process this domain instead of the target entities. |
+    | Domain | String | No | The domain to investigate. If not provided, the action
+    will process the target entities. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the DomainTools API to ensure that the integration is configured
+    Tests connectivity to the DomainTools API to ensure the integration is configured
     correctly.
 
 
@@ -449,21 +447,19 @@ Ping:
     1. Retrieves the integration configuration parameters (Username, API Token, Verify
     SSL).
 
-    2. Initializes the DomainToolsManager, which makes an API call to the DomainTools
-    account information endpoint to verify credentials.
+    2. Initializes the DomainToolsManager, which automatically makes an API call to
+    retrieve account information to verify the credentials.
 
-    3. Evaluates whether the connection was successfully established.
-
-    4. Returns a success or failure message based on the connection status.
+    3. Returns a success message if the connection is established, or a failure message
+    otherwise.
 
 
     ### Additional Notes
 
-    This action does not process any entities or alerts. It is solely used for verifying
-    credentials and network connectivity.
+    This action is typically used during the initial setup of the integration to verify
+    that the provided credentials are valid and the API is reachable.
   ai_short_description: >-
-    Tests connectivity to the DomainTools API to ensure that the integration is configured
-    correctly.
+    Tests connectivity to the DomainTools API by verifying the provided credentials.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -475,10 +471,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action initializes a manager which makes a GET request to verify credentials,
-      but it does not fetch contextual data for entities, mutate external data, mutate
-      internal data, update entities, create insights, modify alert data, or create
-      case comments.
+      The action initializes the DomainToolsManager which makes a GET request to the
+      DomainTools API to fetch account information. This is purely to test connectivity.
+      It does not fetch contextual data for entities, mutate external data, or mutate
+      internal data.
   entity_usage:
     entity_types:
       address: false
@@ -530,8 +526,9 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It only tests connectivity to the external API.
+      The action does not process any entities from the case, nor does it accept any
+      entity-related input parameters. It solely tests connectivity to the external
+      API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -547,9 +544,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not enrich IOCs, mutate
-      external systems, update alerts, or perform any of the specific expected outcomes
-      defined in the categories.
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -4,34 +4,35 @@ Delete Messages:
 
     Deletes specified email messages from recipient mailboxes using Abnormal Security.
     This action serves as a convenience wrapper for the Remediate Messages action
-    with the delete operation hard-coded, making it easier to discover and use in
-    playbooks.
+    with the remediation action hard-coded to 'delete'.
 
 
     ### Flow Description
 
-    1. Extracts the provided JSON array of message objects, source, remediation reason,
-    and optional tenant IDs.
+    1. Extracts the necessary integration configuration and action parameters, including
+    the source, messages JSON, remediation reason, and optional tenant IDs.
 
-    2. Parses and validates the input messages JSON to ensure all required fields
-    are present.
+    2. Parses the provided `Messages JSON` string into a list of message objects.
 
     3. Initiates a POST request to the Abnormal Security API (`/v1/search/remediate`)
-    with the action set to `delete` to remove the specified messages.
+    to submit a delete request for the specified messages.
 
-    4. Returns the activity log ID and appends the API response to the action's JSON
-    results.
+    4. Retrieves the activity log ID from the API response and attaches the full response
+    as a JSON result to the action.
+
+    5. Returns a success status if the request is submitted successfully, or fails
+    with an error message if validation or API errors occur.
 
 
     ### Additional Notes
 
     The `Messages JSON` parameter must contain full message objects (typically obtained
-    from the JSON result of a prior Search Messages action). Each object must include
-    `tenant_id`, `raw_message_id`, `mailbox_name`, `native_user_id`, `subject`, `sender`,
-    and `received_time`. A single message ID is insufficient for this action.
+    from a prior 'Search Messages' action), including fields like `tenant_id`, `raw_message_id`,
+    `mailbox_name`, `native_user_id`, `subject`, `sender`, and `received_time`. A
+    single message ID is insufficient for this action.
   ai_short_description: >-
     Deletes specified email messages from recipient mailboxes via the Abnormal Security
-    API based on a provided JSON array of message objects.
+    API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,14 +41,15 @@ Delete Messages:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes specified email messages from recipient mailboxes via the Abnormal Security
-      API.
+      Submits a request to the Abnormal Security API to delete specified email messages
+      from recipient mailboxes.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a POST request to the Abnormal Security API to delete emails,
-      which mutates external data. It does not fetch contextual data, update internal
-      entities, create insights, modify alert data, or create case comments.
+      The action makes a POST request to the Abnormal Security API to delete email
+      messages, which mutates external data. It does not fetch contextual data, mutate
+      internal SOAR data, update entities, create insights, modify alerts, or create
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -99,10 +101,9 @@ Delete Messages:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the `Messages JSON` parameter to identify which messages
-      to delete. Therefore, it does not run on entities and all entity-related flags
-      are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters that represent standard SOAR entities. It operates purely
+      on a provided JSON array of message objects.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -118,9 +119,9 @@ Delete Messages:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action makes a POST request to the Abnormal Security API to delete specific
-      email messages from recipient mailboxes. This directly aligns with the 'Delete
-      Email' expected outcome.
+      The action submits a request to delete specific email messages from mailboxes
+      using the Abnormal Security API. This directly aligns with the 'Delete Email'
+      outcome category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -135,54 +136,46 @@ Delete Messages:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Source | String | Yes | Source mailbox for the messages. Valid values: abnormal,
-    quarantine. |
-
-    | Messages JSON | String | Yes | JSON array of message objects to delete, from
-    the JsonResult of a prior Search Messages action. Each object must include tenant_id,
-    raw_message_id, mailbox_name, native_user_id, subject, sender, and received_time.
-    A single message ID is not sufficient. |
-
-    | Remediation Reason | String | Yes | Reason for remediation. Valid values: false_negative,
-    unsolicited, other, groups_remediation, quarantine_release. |
-
-    | Tenant IDs | String | No | Optional comma-separated tenant IDs. |
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Source | String | Yes | Source mailbox for the messages.\
+    \ Valid values: abnormal, quarantine. |\n| Messages JSON | String | Yes | JSON\
+    \ array of message objects to delete, from the JsonResult of a prior Search Messages\
+    \ action. Each object must include tenant_id, raw_message_id, mailbox_name, native_user_id,\
+    \ subject, sender, and received_time. A single message ID is not sufficient \u2014\
+    \ to act on the message behind a single threat, use the Remediate Threat action\
+    \ instead. |\n| Remediation Reason | String | Yes | Reason for remediation. Valid\
+    \ values: false_negative, unsolicited, other, groups_remediation, quarantine_release.\
+    \ |\n| Tenant IDs | String | No | Optional comma-separated tenant IDs. |"
 Get Activity Status:
   ai_description: >-
     ### General Description
 
-    Checks the status of a remediation operation in Abnormal Security using an Activity
-    Log ID. This action is designed to be polled until the remediation reaches a terminal
-    state (success, partial_success, or error), providing visibility into asynchronous
-    message remediation tasks.
+    Checks the status of a remediation operation in Abnormal Security using the Activity
+    Log ID. This action is designed to monitor the progress of remediation tasks initiated
+    by other actions, such as 'Remediate Messages'.
 
 
     ### Flow Description
 
     1. Extracts the `Activity Log ID` and optional `Tenant IDs` from the action parameters.
 
-    2. Makes an HTTP GET request to the Abnormal Security API (`/v1/search/activities/{activity_log_id}/status`)
-    to retrieve the current status of the specified remediation activity.
+    2. Makes a GET request to the Abnormal Security API (`/v1/search/activities/{activity_log_id}/status`)
+    to retrieve the current status of the remediation activity.
 
-    3. Evaluates whether the returned status is a terminal state (e.g., success, partial_success,
-    error) or if it is still pending/in progress.
+    3. Evaluates whether the activity has reached a terminal state (`success`, `partial_success`,
+    or `error`).
 
-    4. Outputs the full response as a JSON result and completes the action execution.
+    4. Outputs the status and attaches the full API response as a JSON result.
 
 
     ### Additional Notes
 
-    The action returns a successful execution state if the activity is completed successfully
-    or is still in progress. This behavior allows the action to be used effectively
-    within a SOAR playbook polling loop until a terminal state is reached.
+    This action is typically used in a polling loop within a playbook to wait until
+    a remediation operation completes. The `Tenant IDs` parameter is optional and
+    generally ignored by the API since the tenant scope is resolved from the API key.
   ai_short_description: >-
-    Checks the status of a remediation operation in Abnormal Security using an Activity
-    Log ID, returning the current state of the activity.
+    Checks the status of a remediation operation in Abnormal Security using the Activity
+    Log ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -194,10 +187,10 @@ Get Activity Status:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the Abnormal Security API to fetch the
-      status of an activity log ID (fetches_data=true). It does not perform any state-changing
-      operations on external systems (can_mutate_external_data=false) and does not
-      update internal entities, alerts, or create insights/comments.
+      The action makes a GET request to the Abnormal Security API to fetch the status
+      of a remediation activity (fetches_data=true). It does not mutate external data,
+      mutate internal data, update entities, create insights, modify alert data, or
+      create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -249,9 +242,9 @@ Get Activity Status:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It relies entirely
-      on the provided Activity Log ID parameter to fetch data from the Abnormal Security
-      API.
+      The action does not operate on or filter any entities. It relies entirely on
+      the 'Activity Log ID' and 'Tenant IDs' input parameters, which do not map to
+      any standard entity types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -267,10 +260,10 @@ Get Activity Status:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action checks the status of a previously initiated remediation activity
-      (such as an email deletion or move). It does not directly enrich IOCs/assets,
-      mutate alerts, or perform any of the specific expected outcomes listed in the
-      outcome categories. It is a utility/polling action.
+      The action checks the status of a remediation operation in Abnormal Security.
+      This is a status-checking utility and does not directly match any of the expected
+      outcome categories such as enriching IOCs, updating alerts, or mutating external
+      systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -305,21 +298,23 @@ Get Case:
 
     ### Flow Description
 
-    1. Extracts the `Case ID` parameter.
+    1. Extracts the required Case ID from the action parameters.
 
-    2. Initializes the Abnormal Security API manager.
+    2. Initializes the Abnormal Security API manager with the integration credentials.
 
-    3. Makes a GET request to the `/v1/cases/{case_id}` endpoint to fetch the case
-    details.
+    3. Makes a GET request to the Abnormal Security API (`/v1/cases/{case_id}`) to
+    fetch the case details.
 
-    4. Returns the retrieved case details as a JSON result.
+    4. Appends the retrieved case information to the action's JSON result.
+
+    5. Completes the action execution and returns the status.
 
 
     ### Additional Notes
 
     Cases are a distinct resource from threats and do not appear in the SIEM threat-log
-    event body. The case ID must be entered directly or chained from a prior List
-    Cases or Get Case step.
+    event body, so this field does not auto-fill from a threat event. Enter the case
+    ID directly, or chain it from a prior List Cases / Get Case step.
   ai_short_description: >-
     Retrieves full details of a specific Abnormal Security case by its ID, including
     case status, severity, affected employees, and analysis summary.
@@ -334,9 +329,10 @@ Get Case:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Abnormal Security API to fetch case details.
-      It does not mutate external data, update internal entities, create insights,
-      modify alert data, or create case comments.
+      The action makes a GET request to the Abnormal Security API to fetch case details,
+      meaning it fetches data. It does not perform any state-changing operations on
+      external systems, nor does it mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -388,8 +384,9 @@ Get Case:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided Case ID parameter.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any parameters that represent entities. It operates solely on a string parameter
+      representing a Case ID. Therefore, all entity flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -406,8 +403,8 @@ Get Case:
     get_alert_information: true
     reasoning: >-
       The action fetches information about a specific case (which is analogous to
-      an alert/incident in Abnormal Security) from the 3rd party product. This matches
-      the 'Get Alert Information' category.
+      an alert or incident in Abnormal Security) from the 3rd party product. This
+      matches the 'Get Alert Information' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -436,29 +433,30 @@ Get Case Analysis:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed analysis for a specific Abnormal Security case, including findings,
+    Retrieves the detailed analysis for an Abnormal Security case, including findings,
     attack signals, and supporting evidence beyond what the standard Get Case action
     returns.
 
 
     ### Flow Description
 
-    1. Extracts the `Case ID` parameter provided by the user or a previous step.
+    1. Extracts the `Case ID` from the action parameters.
 
-    2. Makes an HTTP GET request to the Abnormal Security API (`/v1/cases/{case_id}/analysis`)
+    2. Makes a GET request to the Abnormal Security API (`/v1/cases/{case_id}/analysis`)
     to fetch the detailed case analysis.
 
-    3. Attaches the retrieved analysis data to the action's JSON result.
+    3. Attaches the retrieved analysis data to the action's JSON result for further
+    use in the playbook.
 
 
     ### Additional Notes
 
     Cases in Abnormal Security are distinct resources from threats and do not appear
-    in the SIEM threat-log event body. The Case ID must be provided directly or chained
-    from a prior List Cases or Get Case step.
+    in the SIEM threat-log event body. Therefore, the Case ID must be provided directly
+    or chained from a previous step like List Cases or Get Case.
   ai_short_description: >-
-    Retrieves detailed analysis for a specific Abnormal Security case, including findings,
-    attack signals, and supporting evidence.
+    Retrieves detailed analysis and supporting evidence for a specific Abnormal Security
+    case.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -471,8 +469,9 @@ Get Case Analysis:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Abnormal Security API to fetch case analysis
-      data. It does not mutate external data, update internal entities, or create
-      insights.
+      data. It does not perform any state-changing operations on external systems,
+      nor does it mutate internal SecOps data such as updating entities, creating
+      insights, or adding case comments.
   entity_usage:
     entity_types:
       address: false
@@ -524,9 +523,9 @@ Get Case Analysis:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the explicitly provided `Case ID` parameter. Therefore, it
-      does not run on entities.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on the provided
+      Case ID parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -542,9 +541,10 @@ Get Case Analysis:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action fetches detailed analysis information about a specific case (which
-      acts as an alert/incident in Abnormal Security) from the 3rd party product.
-      This aligns with the 'Get Alert Information' category.
+      The action makes a GET request to the Abnormal Security API to retrieve detailed
+      analysis for a specific case. Since a case in Abnormal Security represents an
+      alert or incident, this matches the 'Get Alert Information' expected outcome.
+      It does not modify external data or enrich specific IOCs/assets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -580,11 +580,10 @@ Get Threat:
 
     ### Flow Description
 
-    1. Extracts the `Threat ID` parameter provided by the user or resolved dynamically
-    from the event or entity.
+    1. Extracts the `Threat ID` from the action parameters.
 
-    2. Makes an HTTP GET request to the Abnormal Security API (`/v1/threats/{threat_id}`)
-    to fetch the comprehensive threat details.
+    2. Makes a GET request to the Abnormal Security API (`/v1/threats/{threat_id}`)
+    to fetch the comprehensive details of the specified threat.
 
     3. Attaches the retrieved threat information to the action's JSON result for further
     use in the playbook.
@@ -592,13 +591,12 @@ Get Threat:
 
     ### Additional Notes
 
-    This action operates on a specific threat ID and does not directly iterate over
-    case entities in the code, though the ID can be dynamically mapped from a ThreatSignature
-    entity.
+    This action is typically used to gather more context about a threat detected by
+    Abnormal Security. When executed on a ThreatSignature entity, the `Threat ID`
+    parameter can automatically resolve to the entity's identifier.
   ai_short_description: >-
-    Retrieves full details of a specific Abnormal Security threat by its ID, including
-    attack type, confidence score, disposition, affected messages, and available remediation
-    actions.
+    Retrieves full details of a specific Abnormal Security threat by its ID, returning
+    information such as attack type, confidence score, and affected messages.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -610,9 +608,9 @@ Get Threat:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the Abnormal Security API to fetch threat
-      details (fetches_data=true). It does not mutate external data, update internal
-      entities, create insights, or modify alert data.
+      The action makes a GET request to the Abnormal Security API to fetch threat
+      data. It does not mutate external data, update internal entities, create insights,
+      modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -646,7 +644,7 @@ Get Threat:
       source_domain: false
       threat_actor: false
       threat_campaign: false
-      threat_signature: false
+      threat_signature: true
       url: false
       usb: false
       user: false
@@ -664,10 +662,9 @@ Get Threat:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or filter entities
-      in the code. It relies entirely on the `Threat ID` action parameter, which may
-      be dynamically populated but is not processed as an entity object within the
-      script.
+      The action accepts a 'Threat ID' parameter which represents a Threat Signature
+      entity. It does not iterate over or filter the `target_entities` list directly
+      in the code, so all filter flags are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -683,9 +680,9 @@ Get Threat:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action fetches detailed information about a specific threat (which acts
-      as an alert in Abnormal Security) from the 3rd party product. This aligns with
-      the 'Get Alert Information' category.
+      The action fetches detailed information about a specific threat (which functions
+      as an alert in Abnormal Security) from the Abnormal Security platform. This
+      aligns with the 'Get Alert Information' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -712,25 +709,25 @@ Get Threat Attachments:
   ai_description: >-
     ### General Description
 
-    Retrieves the list of attachments associated with a specific Abnormal Security
-    threat. This action is useful for forensics workflows where an analyst needs to
-    enumerate attachment metadata before deciding on remediation.
+    Retrieves the list of attachments associated with an Abnormal Security threat.
+    This action is useful for forensics workflows where an analyst needs to enumerate
+    attachment metadata before deciding on remediation.
 
 
     ### Flow Description
 
-    1. Extracts the `Threat ID` from the action parameters.
+    1. Extracts the `Threat ID` parameter from the action configuration.
 
     2. Makes a GET request to the Abnormal Security API (`/v1/threats/{threat_id}/attachments`)
-    to fetch the attachments associated with the threat.
+    to fetch the attachments for the specified threat.
 
-    3. Returns the retrieved attachment data as a JSON result to the platform.
+    3. Returns the retrieved attachment data as a JSON result.
 
 
     ### Additional Notes
 
-    The action does not modify any external or internal data. It strictly fetches
-    information based on the provided Threat ID.
+    The action can be run on a ThreatSignature entity, in which case the `Threat ID`
+    parameter can automatically resolve to the entity's identifier.
   ai_short_description: >-
     Retrieves the list of attachments associated with a specific Abnormal Security
     threat.
@@ -745,11 +742,9 @@ Get Threat Attachments:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Abnormal Security API to fetch threat
-      attachments (`fetches_data` = true). It does not perform any state-changing
-      operations on external systems (`can_mutate_external_data` = false) and does
-      not update entities, create insights, or modify internal case data (`can_mutate_internal_data`
-      = false).
+      The action makes a GET request to the Abnormal Security API to fetch attachment
+      data for a threat. It does not mutate external data, update internal entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -783,7 +778,7 @@ Get Threat Attachments:
       source_domain: false
       threat_actor: false
       threat_campaign: false
-      threat_signature: false
+      threat_signature: true
       url: false
       usb: false
       user: false
@@ -801,10 +796,9 @@ Get Threat Attachments:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action code does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers directly in the code. It relies entirely on the `Threat ID` action
-      parameter, which may be populated by the platform but is not processed as an
-      entity object within the script. Therefore, all entity type flags are false.
+      The action accepts a 'Threat ID' parameter which represents a ThreatSignature
+      entity. The YAML configuration also explicitly scopes this action to THREATSIGNATURE
+      entities. The code does not filter entities by any specific attributes.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -820,9 +814,10 @@ Get Threat Attachments:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action fetches attachment metadata for a specific threat (alert) from Abnormal
-      Security. This matches the 'Get Alert Information' expected outcome, as it retrieves
-      additional details about an alert from the 3rd party product.
+      The action fetches attachment metadata associated with a specific threat (which
+      acts as an alert in Abnormal Security) from the 3rd party product. This aligns
+      with the 'Get Alert Information' category. It does not mutate data or perform
+      other specific actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -849,35 +844,30 @@ Get Threat Links:
   ai_description: >-
     ### General Description
 
-    Retrieves the list of URLs and links observed in the messages of an Abnormal Security
-    threat. This action is useful for enriching investigations with the URLs the attacker
-    used.
+    Retrieves the list of URLs and links observed in the messages of a specific Abnormal
+    Security threat. This action is useful for enriching investigations with the URLs
+    the attacker used.
 
 
     ### Flow Description
 
-    1. Extracts the `Threat ID` parameter provided to the action.
+    1. Extracts the `Threat ID` from the action parameters.
 
-    2. Initializes the Abnormal Security API manager with the configured API URL and
-    API Key.
+    2. Initializes the Abnormal Security API client.
 
-    3. Makes a GET request to the `/v1/threats/{threat_id}/links` endpoint to fetch
-    the links associated with the threat.
+    3. Makes an HTTP GET request to the Abnormal Security API (`/v1/threats/{threat_id}/links`)
+    to fetch the links associated with the specified threat.
 
-    4. Appends the retrieved JSON response to the action's results.
-
-    5. Returns a success status if the links are retrieved successfully, or a failure
-    status if an error occurs.
+    4. Returns the retrieved links as a JSON result attached to the action.
 
 
     ### Additional Notes
 
-    This action does not iterate over entities directly but relies on the `Threat
-    ID` parameter, which can be dynamically populated from a ThreatSignature entity's
-    identifier.
+    The action can be scoped to a ThreatSignature entity, in which case the `Threat
+    ID` parameter automatically resolves to the entity's identifier.
   ai_short_description: >-
-    Retrieves the list of URLs and links observed in the messages of an Abnormal Security
-    threat.
+    Retrieves the list of URLs and links observed in the messages of a specific Abnormal
+    Security threat.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -889,10 +879,9 @@ Get Threat Links:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Abnormal Security API to fetch threat
-      links (fetches_data=true). It does not perform any POST/PUT/DELETE operations
-      to mutate external data, nor does it update internal entities, create insights,
-      or add case comments.
+      The action fetches data by making a GET request to the Abnormal Security API
+      to retrieve threat links. It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -926,7 +915,7 @@ Get Threat Links:
       source_domain: false
       threat_actor: false
       threat_campaign: false
-      threat_signature: false
+      threat_signature: true
       url: false
       usb: false
       user: false
@@ -944,10 +933,11 @@ Get Threat Links:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or process entities
-      directly in the code. It relies entirely on the `Threat ID` action parameter,
-      which may be populated by the platform but is treated as a static input by the
-      script. Therefore, all entity type and filter flags are false.
+      The action accepts a 'Threat ID' parameter which represents a ThreatSignature
+      entity in the context of Abnormal Security. The action does not iterate over
+      `siemplify.target_entities` directly, but processes the provided Threat ID.
+      Therefore, the `threat_signature` flag is set to true. Since it does not iterate
+      over entities in code, all filter flags are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -963,10 +953,10 @@ Get Threat Links:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action fetches links associated with a specific threat (alert) from Abnormal
-      Security. This aligns with the 'Get Alert Information' category, as it retrieves
-      additional details about an alert from the 3rd party product. It does not mutate
-      data, enrich specific IOCs directly, or perform containment actions.
+      The action makes a GET request to fetch links associated with a specific threat
+      (alert) in Abnormal Security. This aligns with the 'Get Alert Information' category,
+      as it retrieves additional details about the threat from the 3rd party product.
+      It does not mutate data, enrich standard IOCs, or perform containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -993,29 +983,33 @@ List Activities:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of remediation activities from Abnormal Security. This action
-    is useful for audit workflows to view all remediation actions submitted across
-    the platform, rather than querying them individually by ID.
+    Retrieves a list of all remediation activities visible to the configured API key
+    in Abnormal Security. It supports optional tenant scoping and pagination. This
+    action is particularly useful for audit workflows, allowing users to review all
+    submitted actions rather than querying them individually by ID.
 
 
     ### Flow Description
 
-    1. Extracts the provided action parameters, including tenant IDs, page size, and
-    page number.
+    1. Extracts the integration configuration and action parameters (Tenant IDs, Page
+    Size, Page Number).
 
-    2. Makes a GET request to the Abnormal Security API (`/v1/search/activities`)
-    to fetch the list of remediation activities matching the criteria.
+    2. Initializes the Abnormal Security API manager.
 
-    3. Returns the retrieved activities as a JSON object attached to the action result.
+    3. Makes a GET request to the `/v1/search/activities` endpoint to retrieve the
+    list of remediation activities.
+
+    4. Returns the retrieved activities as a JSON result and outputs the total count
+    of records fetched.
 
 
     ### Additional Notes
 
-    The action supports pagination through the `Page Size` and `Page Number` parameters,
-    and results can be scoped to specific tenants using the `Tenant IDs` parameter.
+    The action does not require any specific entities to run and operates purely based
+    on the provided input parameters.
   ai_short_description: >-
-    Retrieves a paginated list of remediation activities from Abnormal Security, with
-    optional tenant scoping.
+    Retrieves a paginated list of all remediation activities visible to the API key
+    in Abnormal Security, with optional tenant scoping.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1028,8 +1022,9 @@ List Activities:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Abnormal Security API to fetch a list
-      of activities. It does not mutate external data, update internal entities, create
-      insights, or modify alert data.
+      of activities, so fetches_data is true. It does not perform any state-changing
+      operations on external systems (can_mutate_external_data=false) and does not
+      update internal entities, alerts, or cases (can_mutate_internal_data=false).
   entity_usage:
     entity_types:
       address: false
@@ -1081,8 +1076,9 @@ List Activities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It retrieves a general
-      list of activities from the external system without relying on entity identifiers.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-based input parameters. Therefore, it does not run on any entities
+      and all entity flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1098,16 +1094,16 @@ List Activities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches a list of historical remediation activities (audit logs)
-      from Abnormal Security based on pagination and tenant parameters. This aligns
-      with the 'Search Events' category, as it returns a collection of historical
-      logs matching specific search parameters.
+      The action retrieves a list of remediation activities (audit logs) from Abnormal
+      Security. This is a general data retrieval function and does not match any of
+      the specific expected outcomes such as enriching IOCs, mutating alerts, searching
+      SIEM events, or modifying external state.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: true
+    search_events: false
     send_email: false
     send_message: false
     submit_file: false
@@ -1124,29 +1120,26 @@ List Activities:
     | Tenant IDs | String | No | Optional comma-separated tenant IDs to scope the
     query to. |
 
-    | Page Size | String | No | Number of activities to return per page. Default is
-    100. |
+    | Page Size | String | No | Number of activities to return per page. |
 
-    | Page Number | String | No | Page number to retrieve. Default is 1. |
+    | Page Number | String | No | Page number to retrieve. |
 List Cases:
   ai_description: >-
     ### General Description
 
-    Retrieves a paginated list of cases from Abnormal Security.
+    Retrieves a paginated list of cases from Abnormal Security. This action allows
+    users to fetch cases based on optional filter criteria such as time range or status.
 
 
     ### Flow Description
 
-    1. Extracts the necessary configuration and action parameters.
+    1. Extracts the `Filter`, `Page Size`, and `Page Number` parameters provided by
+    the user.
 
-    2. Initializes the Abnormal Security API manager.
+    2. Makes a GET request to the Abnormal Security API (`/v1/cases`) to retrieve
+    the list of cases matching the criteria.
 
-    3. Makes a GET request to the `/v1/cases` endpoint to retrieve the list of cases
-    based on the provided filter, page size, and page number.
-
-    4. Adds the retrieved cases to the action's JSON result.
-
-    5. Outputs a success message with the number of cases retrieved.
+    3. Attaches the retrieved cases as a JSON object to the action's results.
 
 
     ### Additional Notes
@@ -1168,8 +1161,9 @@ List Cases:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Abnormal Security API to fetch a list
-      of cases. It does not mutate external data, update internal entities, or create
-      insights.
+      of cases, so `fetches_data` is true. It does not perform any state-changing
+      operations on external systems, nor does it mutate internal data, update entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -1221,8 +1215,9 @@ List Cases:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It operates independently of any entities.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related input parameters. Therefore, it does not run on any entities
+      and all entity flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1239,8 +1234,9 @@ List Cases:
     get_alert_information: false
     reasoning: >-
       The action retrieves a list of cases from Abnormal Security. It does not enrich
-      specific IOCs or assets, nor does it modify alerts, tickets, or external systems.
-      It does not match any of the specific outcome categories.
+      specific IOCs or assets, update alerts, create tickets, or perform any containment
+      or remediation actions. Thus, it does not match any of the predefined outcome
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1271,31 +1267,28 @@ List Threats:
     ### General Description
 
     Retrieves a paginated list of threats from Abnormal Security. This action allows
-    users to fetch threat data from the platform, optionally narrowing down the results
-    using a filter expression such as a specific time range.
+    analysts to fetch threat data, optionally filtering by specific criteria such
+    as time range, and returns the results in JSON format for further use in the playbook.
 
 
     ### Flow Description
 
-    1. Extracts the `Filter`, `Page Size`, and `Page Number` parameters provided by
-    the user.
+    1. Extracts the integration configuration and action parameters (Filter, Page
+    Size, Page Number).
 
-    2. Initiates a GET request to the Abnormal Security `/v1/threats` API endpoint
-    using the provided parameters.
+    2. Makes a GET request to the Abnormal Security API (`/v1/threats`) to retrieve
+    the list of threats.
 
-    3. Retrieves the list of threats and attaches the raw JSON response to the action's
-    results for further use in the playbook.
+    3. Returns the retrieved threats as a JSON object in the action results.
 
 
     ### Additional Notes
 
-    - The `Filter` parameter supports specific expressions (e.g., `receivedTime gte
-    2025-01-01T00:00:00Z`) to refine the returned threats.
-
-    - The maximum `Page Size` allowed by the API is 100.
+    The `Filter` parameter can be used to narrow down results, for example, by specifying
+    a time range like `receivedTime gte 2025-01-01T00:00:00Z`.
   ai_short_description: >-
-    Retrieves a paginated list of threats from Abnormal Security, optionally filtered
-    by specific criteria such as time range.
+    Retrieves a paginated list of threats from Abnormal Security based on optional
+    filter criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1308,8 +1301,8 @@ List Threats:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Abnormal Security API to fetch a list
-      of threats. It does not mutate external data, update internal entities, or create
-      insights.
+      of threats. It does not mutate any external or internal data, nor does it update
+      entities, create insights, or add case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1361,9 +1354,9 @@ List Threats:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      operates independently of any specific entities and relies solely on the provided
-      action parameters.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity-related input parameters. It operates independently of any specific
+      entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1380,8 +1373,8 @@ List Threats:
     get_alert_information: false
     reasoning: >-
       The action retrieves a list of threats from Abnormal Security. This does not
-      directly match any of the specific outcome categories such as enriching IOCs,
-      updating alerts, or searching raw events/emails.
+      directly align with any of the specific outcome categories such as enriching
+      IOCs/assets, mutating alerts/tickets, or executing containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1411,32 +1404,34 @@ Mark Case Action Required:
   ai_description: >-
     ### General Description
 
-    Flags an Abnormal Security case as needing analyst attention by setting its status
-    to 'action required'. This is a convenience action that hard-codes the action
-    parameter for the Abnormal Security case update endpoint.
+    Flags an Abnormal Security case as needing analyst attention by marking it as
+    'action required'. This action serves as a specific implementation of the Post
+    Case Action, targeting either a provided Case ID or Threat Campaign entities.
 
 
     ### Flow Description
 
-    1. Extracts the `Case ID` parameter or retrieves identifiers from target entities
-    of type `THREATCAMPAIGN`.
+    1. Extracts the `Case ID` parameter and retrieves any target entities of type
+    `THREATCAMPAIGN`.
 
-    2. Iterates over the collected case IDs.
+    2. Compiles a list of case IDs to process from the entities' identifiers and the
+    provided parameter.
 
-    3. Makes a POST request to the Abnormal Security API (`/v1/cases/{case_id}`) to
-    update the case action to `action_required`.
+    3. Iterates through the case IDs and makes a POST request to the Abnormal Security
+    API (`/v1/cases/{case_id}`) with the action set to `action_required`.
 
-    4. Aggregates the API responses and returns a JSON object containing the status
-    of the operation for each case.
+    4. Collects the results and returns a summary message along with the JSON response
+    from the API.
 
 
     ### Additional Notes
 
-    This action can be executed on a single case by providing the `Case ID` parameter,
-    or in batch mode by running it on `THREATCAMPAIGN` entities.
+    Cases in Abnormal Security are distinct resources from threats and do not appear
+    in the SIEM threat-log event body. If no entities are provided, the action relies
+    on the `Case ID` parameter.
   ai_short_description: >-
-    Flags an Abnormal Security case as needing analyst attention by setting its status
-    to 'action required' via the Abnormal Security API.
+    Flags an Abnormal Security case as needing analyst attention by marking it as
+    'action required' via the Abnormal Security API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1450,9 +1445,8 @@ Mark Case Action Required:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Abnormal Security API to change the state
-      of a case (marking it as 'action required'). This constitutes mutating external
-      data. It does not fetch contextual data, mutate internal SecOps data, update
-      entities, create insights, or add case comments.
+      of a case (marking it as 'action required'). It does not fetch contextual data,
+      update internal entities, create insights, or modify internal SecOps alerts.
   entity_usage:
     entity_types:
       address: false
@@ -1506,7 +1500,7 @@ Mark Case Action Required:
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `str(getattr(e,
       'entity_type', '')).upper() == 'THREATCAMPAIGN'`. Therefore, it targets Threat
-      Campaign entities and filters by entity type.
+      Campaign entities and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1522,11 +1516,10 @@ Mark Case Action Required:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the status of a case in an external security platform (Abnormal
-      Security). It does not update an alert within the SecOps platform, nor does
-      it update a ticket in an ITSM system. It does not enrich IOCs or assets, nor
-      does it perform containment or blocklist operations. Therefore, it does not
-      strictly match any of the predefined outcome categories.
+      The action updates the status of a case in a 3rd party security product (Abnormal
+      Security). This does not match 'Update Alert' (which is for SecOps platform
+      alerts) or 'Update Ticket' (which is for ITSM systems). It does not enrich data,
+      block IOCs, or perform other categorized outcomes.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1550,42 +1543,47 @@ Mark Case Action Required:
     Takeover / abuse-mailbox case) to act on. Cases are a distinct resource from threats
     and do not appear in the SIEM threat-log event body, so this field does not auto-fill
     from a threat event. Enter the case ID directly, or chain it from a prior List
-    Cases / Get Case step.<br><br>*Parameter Notes:* Although marked as mandatory
-    in the configuration, code execution allows this to be optional if the action
-    is run on `THREATCAMPAIGN` entities. |
+    Cases / Get Case step. |
+
+
+    *Parameter Notes:* Although marked as mandatory in the configuration, the code
+    execution can proceed without it if `THREATCAMPAIGN` entities are provided in
+    the scope.
 Mark Case In Progress:
   ai_description: >-
     ### General Description
 
-    Marks an Abnormal Security case as currently being worked on. This action serves
-    as a convenience wrapper for the Post Case Action, specifically hard-coding the
-    action to acknowledge the case as in progress.
+    Marks an Abnormal Security case as currently being worked on by acknowledging
+    it as 'in progress'. This action serves as a specific implementation of the Post
+    Case Action, hard-coding the action type to 'acknowledge_in_progress'.
 
 
     ### Flow Description
 
-    1. Retrieves the Case ID from the action parameters or extracts identifiers from
-    target entities of type Threat Campaign.
+    1. Retrieves the integration configuration and action parameters, including the
+    target Case ID.
 
-    2. Iterates through the collected case IDs.
+    2. Determines the target case IDs either from the provided `Case ID` parameter
+    or by extracting identifiers from `Threat Campaign` entities.
 
-    3. Makes a POST request to the Abnormal Security API (`/v1/cases/{case_id}`) to
-    submit the `acknowledge_in_progress` action.
+    3. Iterates through the identified case IDs and makes a POST request to the Abnormal
+    Security API (`/v1/cases/{case_id}`) to update the case status to 'acknowledge_in_progress'.
 
-    4. Aggregates the API responses and attaches them to the action's JSON results.
+    4. Aggregates the API responses and attaches them to the action's JSON result.
 
     5. Returns a summary message indicating successful and failed case updates.
 
 
     ### Additional Notes
 
-    Cases in Abnormal Security are distinct resources from threats and do not appear
-    in the SIEM threat-log event body. Therefore, the Case ID must be provided directly
-    or chained from a prior List Cases or Get Case step if not running on Threat Campaign
-    entities.
+    - Cases in Abnormal Security are distinct resources from threats and do not appear
+    in the SIEM threat-log event body.
+
+    - The action can process multiple cases simultaneously if multiple `Threat Campaign`
+    entities are provided.
   ai_short_description: >-
-    Acknowledges an Abnormal Security case as currently being worked on by marking
-    it as 'in progress'.
+    Marks an Abnormal Security case as currently being worked on by acknowledging
+    it as 'in progress' via the Abnormal Security API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1594,12 +1592,165 @@ Mark Case In Progress:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Marks a case as 'in progress' in the Abnormal Security platform.
+      Updates the status of a case in Abnormal Security to 'acknowledge_in_progress'.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Abnormal Security API to change the state
-      of a case (marking it as 'in progress'). It does not fetch data for enrichment,
+      The action makes a POST request to the Abnormal Security API to update the status
+      of a case to 'acknowledge_in_progress'. This mutates external data. It does
+      not fetch data, mutate internal data, update entities, create insights, modify
+      alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: true
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code retrieves `siemplify.target_entities` and filters them using `str(getattr(e,
+      'entity_type', '')).upper() == 'THREATCAMPAIGN'`. Therefore, it targets Threat
+      Campaign entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the status of a case in the external Abnormal Security platform.
+      This does not match 'Update Alert' (which is for the SecOps platform) or 'Update
+      Ticket' (which is for ITSM systems). It does not enrich data, block IOCs, or
+      perform any other categorized outcome. Therefore, all outcome categories are
+      false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Case ID | String | Yes | The unique identifier of the Abnormal Case (Account
+    Takeover / abuse-mailbox case) to act on. Cases are a distinct resource from threats
+    and do not appear in the SIEM threat-log event body, so this field does not auto-fill
+    from a threat event. Enter the case ID directly, or chain it from a prior List
+    Cases / Get Case step. |
+
+
+    **Parameter Notes:**
+
+    Although marked as mandatory, the action can also execute successfully if `Threat
+    Campaign` entities are provided in the case, as it will extract the case IDs from
+    the entity identifiers.
+Mark Case Not An Attack:
+  ai_description: >-
+    ### General Description
+
+    Acknowledges an Abnormal Security case as benign or not an attack. This action
+    updates the status of the specified cases directly within the Abnormal Security
+    platform.
+
+
+    ### Flow Description
+
+    1. Extracts the target case IDs either from the provided `Case ID` parameter or
+    from the identifiers of target `Threat Campaign` entities.
+
+    2. Iterates over the collected case IDs.
+
+    3. Makes a POST request to the Abnormal Security API (`/v1/cases/{case_id}`) for
+    each case, submitting the `acknowledge_not_an_attack` action.
+
+    4. Aggregates the API responses and attaches them to the action's JSON result.
+
+    5. Returns a success or failure message based on the API responses.
+
+
+    ### Additional Notes
+
+    This action modifies the state of cases in the external Abnormal Security platform.
+    It requires either a valid `Case ID` parameter or target entities of type `Threat
+    Campaign` to execute successfully.
+  ai_short_description: >-
+    Acknowledges an Abnormal Security case as benign or not an attack by updating
+    its status in the Abnormal Security platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of a case in the Abnormal Security platform to 'not an attack'.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Abnormal Security API to mutate external
+      data (marking a case as 'not an attack'). It does not fetch data for enrichment,
       nor does it mutate internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
@@ -1643,7 +1794,7 @@ Mark Case In Progress:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -1652,9 +1803,9 @@ Mark Case In Progress:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code retrieves target entities and filters them using `str(getattr(e, "entity_type",
-      "")).upper() == "THREATCAMPAIGN"`. Therefore, it specifically targets Threat
-      Campaign entities and filters by entity type.
+      The action retrieves target entities and filters them by checking if their `entity_type`
+      is `THREATCAMPAIGN`. It then extracts the `identifier` of these entities to
+      use as the case IDs for the API request.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1670,11 +1821,10 @@ Mark Case In Progress:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the status of a case in the external Abnormal Security platform.
-      This does not perfectly align with 'Update Alert' (which is specific to the
-      SecOps platform) or 'Update Ticket' (which is specific to ITSM systems). It
-      does not enrich IOCs/assets, block/allowlist items, or perform other categorized
-      outcomes.
+      The action updates the status of a case in the Abnormal Security platform. This
+      does not align with updating an internal SecOps alert, nor does it fit into
+      standard ITSM ticketing, blocklisting, or enrichment categories. Therefore,
+      no outcome categories are matched.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1701,187 +1851,42 @@ Mark Case In Progress:
     Cases / Get Case step. |
 
 
-    *Parameter Notes:*
-
-    Although marked as mandatory in the configuration, the code allows this parameter
-    to be empty if the action is executed on `ThreatCampaign` entities, in which case
-    the entity identifiers are used as Case IDs.
-Mark Case Not An Attack:
-  ai_description: >-
-    ### General Description
-
-    Acknowledges an Abnormal Security case as benign or not an attack. This action
-    serves as a convenience wrapper for posting a case action with the `acknowledge_not_an_attack`
-    status hard-coded.
-
-
-    ### Flow Description
-
-    1. Retrieves configuration and action parameters, including the target Case ID.
-
-    2. Checks for any target entities of type `THREATCAMPAIGN` to extract their identifiers
-    as case IDs.
-
-    3. If no entities are found, falls back to the provided `Case ID` parameter.
-
-    4. Iterates through the collected case IDs and makes a POST request to the Abnormal
-    Security API (`/v1/cases/{case_id}`) to mark each case as `acknowledge_not_an_attack`.
-
-    5. Aggregates the API responses and outputs a JSON result with success or failure
-    messages.
-
-
-    ### Additional Notes
-
-    Supports single-target invocation via the Case ID parameter or multi-entity batch
-    execution when scoped to ThreatCampaign entities.
-  ai_short_description: >-
-    Acknowledges an Abnormal Security case as benign or not an attack by updating
-    its status via the Abnormal Security API.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Updates the status of a case in Abnormal Security to acknowledge it as not an
-      attack.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a POST request to the Abnormal Security API to update the status
-      of a case to 'acknowledge_not_an_attack'. This mutates data on the external
-      Abnormal Security platform. It does not fetch data, update internal entities,
-      or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: true
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `str(getattr(e,
-      "entity_type", "")).upper() == "THREATCAMPAIGN"`. This means it targets THREATCAMPAIGN
-      entities, filtering strictly by the `entity_type` attribute.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action updates the status of a case in the external Abnormal Security platform.
-      This does not match any of the predefined outcome categories such as updating
-      a SecOps alert, creating a ticket in an ITSM, or modifying an email. Therefore,
-      no outcome categories apply.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Case ID | String | Yes | The unique identifier of the Abnormal Case (Account
-    Takeover / abuse-mailbox case) to act on. Cases are a distinct resource from threats
-    and do not appear in the SIEM threat-log event body, so this field does not auto-fill
-    from a threat event. Enter the case ID directly, or chain it from a prior List
-    Cases / Get Case step. |
+    *Parameter Notes:* The `Case ID` parameter is technically optional if the action
+    is executed on `Threat Campaign` entities, as the action will extract the case
+    IDs from the entity identifiers.
 Move Messages To Inbox:
   ai_description: >-
     ### General Description
 
-    Restores email messages back to their recipients' inboxes using Abnormal Security.
-    This is a convenience action that hard-codes the remediation action to 'move_to_inbox'.
+    Restores specified email messages back to their recipients' inboxes using Abnormal
+    Security. This is a convenience action that hard-codes the remediation action
+    to `move_to_inbox`.
 
 
     ### Flow Description
 
-    1. Extracts the provided parameters including the source, messages JSON, remediation
-    reason, and tenant IDs.
+    1. Extracts the provided parameters, including the JSON array of messages to be
+    restored.
 
-    2. Parses the provided messages JSON into a list of message objects.
+    2. Parses and validates the `Messages JSON` input to ensure it contains valid
+    message objects.
 
     3. Makes a POST request to the Abnormal Security API (`/v1/search/remediate`)
-    to submit the move-to-inbox remediation request.
+    to submit the move-to-inbox remediation request for the specified messages.
 
-    4. Returns the activity log ID and adds the API response to the action's JSON
-    result.
+    4. Retrieves the activity log ID from the response and attaches the full response
+    to the action's JSON results.
 
 
     ### Additional Notes
 
-    The 'Messages JSON' parameter must be a valid JSON array of message objects, typically
-    obtained from a prior 'Search Messages' action. A single message ID is not sufficient
+    The `Messages JSON` parameter must be the JSON array output from a prior "Search
+    Messages" action, containing full message objects with required fields (e.g.,
+    `tenant_id`, `raw_message_id`, `mailbox_name`). A single message ID is not sufficient
     for this action.
   ai_short_description: >-
-    Restores specified email messages back to their recipients' inboxes in Abnormal
-    Security.
+    Submits a request to Abnormal Security to restore specified email messages back
+    to their recipients' inboxes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1890,14 +1895,15 @@ Move Messages To Inbox:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Moves specified email messages back to their recipients' inboxes in the Abnormal
-      Security platform.
+      Submits a request to Abnormal Security to move specified email messages back
+      to their recipients' inboxes.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action executes a POST request to the Abnormal Security API to remediate
-      messages (move to inbox), which mutates external data. It does not fetch data,
-      update entities, create insights, or modify internal case data.
+      messages by moving them to the inbox. This mutates external data. It does not
+      fetch contextual data, update internal entities, create insights, modify alerts,
+      or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1949,8 +1955,9 @@ Move Messages To Inbox:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not use or process any entities. It relies entirely on the 'Messages
-      JSON' parameter to identify the messages to be moved.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates entirely on a JSON array
+      of message objects provided in the 'Messages JSON' parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1966,9 +1973,9 @@ Move Messages To Inbox:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action makes a POST request to the Abnormal Security API to move specific
-      email messages back to the inbox. This modifies the state of an email, which
-      aligns with the 'Update Email' category.
+      The action makes a POST request to Abnormal Security to move specified email
+      messages back to the inbox. This modifies the state of the emails, which aligns
+      with the 'Update Email' outcome category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1998,23 +2005,21 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity and authentication to the Abnormal Security API. This action
-    is used to verify that the integration is configured correctly with a valid API
-    URL and API Key.
+    Tests connectivity and authentication to the Abnormal Security API.
 
 
     ### Flow Description
 
-    1. Extracts the integration configuration parameters, including the API URL, API
-    Key, and SSL verification settings.
+    1. Extracts the integration configuration parameters (API URL, API Key, Verify
+    SSL).
 
     2. Initializes the Abnormal Security API manager.
 
-    3. Makes a lightweight GET request to the `/v1/threats` endpoint to test network
-    connectivity and authentication.
+    3. Makes a lightweight GET request to the `/v1/threats` endpoint to verify the
+    credentials and network connectivity.
 
-    4. Outputs a success message if the connection is successful, or an error message
-    if authentication or connectivity fails.
+    4. Returns a success status if the connection is established and authenticated,
+    or a failure status if an error occurs.
 
 
     ### Additional Notes
@@ -2022,8 +2027,8 @@ Ping:
     Run this action after configuring the integration to verify the API URL and API
     key are valid before building playbooks.
   ai_short_description: >-
-    Tests connectivity and authentication to the Abnormal Security API to verify integration
-    configuration.
+    Tests connectivity and authentication to the Abnormal Security API to ensure the
+    integration is configured correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2036,8 +2041,8 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to test connectivity but does not fetch contextual
-      data for alerts or entities. It does not mutate external or internal data, update
-      entities, create insights, or modify alert data.
+      data for alerts/entities, mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -2089,8 +2094,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It solely tests the integration's connection to the external API.
+      The action does not process any entities. It only tests connectivity to the
+      external API using integration-level configuration parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -2107,8 +2112,7 @@ Ping:
     get_alert_information: false
     reasoning: >-
       The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      specific outcome categories such as enrichment, containment, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2128,36 +2132,42 @@ Post Case Action:
   ai_description: >-
     ### General Description
 
-    Updates the status of an Abnormal Security case. This action can be used to flag
-    a case for attention ('action_required'), mark it as reviewed ('acknowledge'),
-    or close the case entirely. It supports single-target invocation via the Case
-    ID parameter and multi-entity batch execution when scoped to ThreatCampaign entities.
+    The Post Case Action updates the status of an Abnormal Security case (such as
+    an Account Takeover or abuse-mailbox case). It allows analysts to flag a case
+    for attention ('action_required'), mark it as reviewed ('acknowledge_resolved',
+    'acknowledge_in_progress', 'acknowledge_not_an_attack'), or close the case directly
+    from the SOAR platform.
 
 
     ### Flow Description
 
-    1. Extracts the necessary configuration and action parameters (Case ID, Action).
+    1. Extracts the necessary configuration parameters (API URL, API Key, Verify SSL)
+    and action parameters (Case ID, Action).
 
-    2. Determines the target case IDs either from the provided `Case ID` parameter
-    or by iterating over `ThreatCampaign` entities in the case.
+    2. Identifies the target cases to act upon. This is done by either reading the
+    `Case ID` parameter or by iterating over the provided `THREATCAMPAIGN` entities
+    in the case.
 
-    3. Validates that at least one case ID is available for processing.
+    3. Validates that at least one case ID has been provided or identified.
 
-    4. Iterates over the identified case IDs and makes a POST request to the Abnormal
+    4. Initializes the `AbnormalManager` to interact with the Abnormal Security API.
+
+    5. Iterates over the identified case IDs and sends a POST request to the Abnormal
     Security API (`/v1/cases/{case_id}`) to apply the specified action.
 
-    5. Aggregates the results and attaches the API response to the action's JSON result.
+    6. Aggregates the API responses and adds them to the action's JSON result.
 
-    6. Returns a success or failure message based on the execution outcome.
+    7. Outputs a success or failure message based on the results of the API calls.
 
 
     ### Additional Notes
 
-    If the `Case ID` parameter is not provided, the action will automatically attempt
-    to execute on all available `ThreatCampaign` entities within the case.
+    This action supports single-target invocation via the `Case ID` parameter, as
+    well as multi-entity batch execution when the action is scoped to `ThreatCampaign`
+    entities and multiple are selected from the case view.
   ai_short_description: >-
-    Updates the status of an Abnormal Security case to flag it for attention, mark
-    it as reviewed, or close it.
+    Updates the status of an Abnormal Security case by applying a specified action
+    such as acknowledging or flagging it.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2166,13 +2176,13 @@ Post Case Action:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of a case in Abnormal Security.
+      Updates the status of a case in the Abnormal Security platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Abnormal Security API to update the status
-      of a case. It mutates external data but does not fetch data for enrichment,
-      mutate internal data, update entities, or create insights.
+      of a case. It mutates external data but does not fetch enrichment data, mutate
+      internal SecOps data, update entities, or create insights/comments.
   entity_usage:
     entity_types:
       address: false
@@ -2224,9 +2234,9 @@ Post Case Action:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `str(getattr(e,
-      'entity_type', '')).upper() == 'THREATCAMPAIGN'`. Therefore, it targets ThreatCampaign
-      entities and filters by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `str(getattr(e, 'entity_type', '')).upper() == 'THREATCAMPAIGN'`. Therefore,
+      it targets Threat Campaign entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -2242,10 +2252,10 @@ Post Case Action:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the status of a case in Abnormal Security. This does not
-      match any of the specific expected outcomes such as Update Alert (which refers
-      to SecOps platform alerts), Update Ticket (which refers to ITSM systems), or
-      any other category.
+      The action updates the status of a case in the external Abnormal Security platform.
+      This does not strictly align with 'Update Alert' (which specifies updating within
+      the SecOps platform) or 'Update Ticket' (which specifies an external ITSM/ticketing
+      system). Therefore, no specific outcome category perfectly matches this action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2273,37 +2283,52 @@ Post Case Action:
 
     | Action | String | Yes | Action to take on the case. Valid values: action_required,
     acknowledge_resolved, acknowledge_in_progress, acknowledge_not_an_attack. |
+
+
+    **Parameter Notes:**
+
+    Although `Case ID` is marked as mandatory in the configuration, the action can
+    also execute successfully if `ThreatCampaign` entities are provided in the scope,
+    as it will extract the case IDs from the entity identifiers.
 Post Threat Action:
   ai_description: >-
     ### General Description
 
-    Applies a remediation action (such as 'remediate' or 'unremediate') to a specific
-    threat in Abnormal Security. This action can be executed on a single threat ID
-    provided as a parameter or in batch across multiple Threat Signature entities.
+    Submits a remediation or unremediation action for a specific threat in Abnormal
+    Security. This action can be executed on a specific Threat ID provided as a parameter
+    or dynamically on Threat Signature entities associated with the case. It allows
+    security analysts to quickly respond to identified threats by modifying the state
+    of the associated messages.
 
 
     ### Flow Description
 
-    1. Extracts the target threat IDs either from the provided `Threat ID` parameter
-    or by iterating over the identifiers of `ThreatSignature` entities in the case.
+    1. Extracts the `Threat ID`, `Action` (remediate or unremediate), and optional
+    `Message IDs` from the action parameters.
 
-    2. Makes a POST request to the Abnormal Security API (`/v1/threats/{threat_id}`)
-    for each identified threat, passing the specified action and optional message
-    IDs.
+    2. Checks if the action is scoped to entities. If so, it iterates over the target
+    entities and filters for those with the `THREATSIGNATURE` entity type, extracting
+    their identifiers to use as Threat IDs.
 
-    3. Collects the results and returns a JSON object containing the status of the
-    submitted actions.
+    3. If no Threat Signature entities are found, it falls back to using the `Threat
+    ID` provided in the parameters.
+
+    4. Iterates over the collected Threat IDs and makes a POST request to the Abnormal
+    Security API (`/v1/threats/{threat_id}`) to apply the specified action (optionally
+    scoped to specific message IDs).
+
+    5. Aggregates the API responses and attaches them to the case as a JSON result,
+    updating the action's success or failure status accordingly.
 
 
     ### Additional Notes
 
-    When scoped to entities, the action specifically filters for `ThreatSignature`
-    entities. The `Message IDs` parameter can be used to scope the remediation to
-    specific messages within the threat; if left empty, the action applies to all
-    messages associated with the threat.
+    This action supports batch execution when multiple Threat Signature entities are
+    selected from the case view. If specific `Message IDs` are not provided, the remediation
+    action will apply to all messages associated with the threat.
   ai_short_description: >-
-    Applies a remediation or unremediation action to a specific threat in Abnormal
-    Security, either by targeting a provided Threat ID or by processing Threat Signature
+    Submits a remediation or unremediation action for a specific threat in Abnormal
+    Security, either by using a provided Threat ID or by acting on Threat Signature
     entities.
   capabilities:
     can_create_case_comments: false
@@ -2313,14 +2338,15 @@ Post Threat Action:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Applies a remediation or unremediation action to a threat in Abnormal Security.
+      Submits a remediation or unremediation action for a specific threat in Abnormal
+      Security.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Abnormal Security API to apply a remediation
-      action (e.g., remediate or unremediate) to a threat. This mutates data on the
-      external system. It does not fetch data for enrichment, nor does it update internal
-      SecOps entities or create insights.
+      The action makes a POST request to the Abnormal Security API to remediate or
+      unremediate a threat, which mutates external data. It does not fetch contextual
+      data for enrichment, nor does it update internal entities, create insights,
+      modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -2372,9 +2398,10 @@ Post Threat Action:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `str(getattr(e,
-      'entity_type', '')).upper() == 'THREATSIGNATURE'`. This means it targets Threat
-      Signature entities, filtering strictly by the entity_type attribute.
+      The script iterates over `siemplify.target_entities` and filters them using
+      the condition `str(getattr(e, "entity_type", "")).upper() == "THREATSIGNATURE"`.
+      Therefore, it explicitly targets Threat Signature entities and filters them
+      by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -2390,10 +2417,11 @@ Post Threat Action:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action applies a remediation or unremediation action to a threat in Abnormal
-      Security. Since Abnormal Security is an email security platform and remediating
-      a threat involves modifying the state of associated email messages (e.g., moving
-      them to quarantine or restoring them), this aligns with the 'Update Email' category.
+      The action submits a remediation or unremediation request for a threat in Abnormal
+      Security. This effectively modifies the state of the emails associated with
+      that threat (e.g., moving them to quarantine or restoring them to the inbox).
+      This aligns with the 'Update Email' expected outcome. It does not enrich IOCs,
+      update alerts, or block network indicators.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2426,37 +2454,39 @@ Remediate Messages:
   ai_description: >-
     ### General Description
 
-    Submits an automated remediation request to Abnormal Security for email messages
-    identified as threats. This action allows analysts to perform operations such
-    as deleting messages, moving them to the inbox, or submitting them to D360 based
-    on a provided JSON array of message objects.
+    Takes automated remediation action on email messages identified as threats in
+    Abnormal Security. This action submits a request to delete, move to inbox, or
+    submit messages to D360, returning an Activity Log ID to track the operation's
+    status.
 
 
     ### Flow Description
 
-    1. Extracts the provided action parameters, including the remediation action,
-    source, reason, and the JSON array of message objects.
+    1. Extracts the provided action parameters including the remediation action, source,
+    messages JSON, remediation reason, and optional tenant IDs.
 
-    2. Parses the provided JSON array of messages to ensure it meets the required
-    schema (must include fields like `tenant_id`, `raw_message_id`, `mailbox_name`,
-    etc.).
+    2. Parses the `Messages JSON` input to ensure it contains a valid list of full
+    message objects.
 
-    3. Makes a POST request to the Abnormal Security API (`/v1/search/remediate`)
-    to execute the specified remediation action on the provided messages.
+    3. Initializes the Abnormal Security API manager with the provided credentials.
 
-    4. Retrieves the Activity Log ID from the API response and attaches the full response
-    to the action's JSON results.
+    4. Submits a POST request to the `/v1/search/remediate` endpoint with the parsed
+    messages and remediation details.
+
+    5. Retrieves the `activity_log_id` from the API response and attaches the full
+    response to the action's JSON result.
+
+    6. Outputs a success message containing the Activity Log ID for further tracking.
 
 
     ### Additional Notes
 
-    The action requires a JSON array of message objects, typically obtained from the
-    JSON result of a prior "Search Messages" action. A single message ID is not sufficient.
-    The action returns an Activity Log ID which can be used with the "Get Activity
-    Status" action to track the asynchronous completion of the remediation.
+    The action requires full message objects (typically obtained from a prior Search
+    Messages action), not just message IDs. To act on a message behind a single threat,
+    use the Remediate Threat action instead.
   ai_short_description: >-
-    Submits an automated remediation request to Abnormal Security to take actions
-    such as deleting or moving specific email messages.
+    Takes automated remediation action on email messages identified as threats in
+    Abnormal Security.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2465,15 +2495,14 @@ Remediate Messages:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits a remediation request to Abnormal Security to perform actions such as
-      deleting or moving email messages.
+      Submits a remediation request to Abnormal Security to perform actions like deleting
+      or moving email messages.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Abnormal Security API (`/v1/search/remediate`)
-      to mutate external data by deleting or moving email messages. It does not fetch
-      data for enrichment, nor does it update internal entities, create insights,
-      or modify alert data within Google SecOps.
+      The action makes a POST request to `/v1/search/remediate` to mutate external
+      data (remediate emails). It does not fetch data, update entities, or create
+      insights.
   entity_usage:
     entity_types:
       address: false
@@ -2525,10 +2554,9 @@ Remediate Messages:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the 'Messages JSON' input parameter to determine
-      which messages to remediate. Therefore, it does not run on entities and all
-      entity-related flags are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on the provided
+      JSON array of message objects.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -2544,10 +2572,9 @@ Remediate Messages:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs remediation on email messages. Depending on the 'Action'
-      parameter, it can delete messages ('delete') which aligns with 'Delete Email',
-      or move them to the inbox ('move_to_inbox') which aligns with 'Update Email'.
-      It does not enrich IOCs, update alerts, or perform host containment.
+      The action submits a request to remediate messages, which includes actions like
+      'delete' and 'move_to_inbox'. This matches the 'Delete Email' and 'Update Email'
+      expected outcomes.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2583,34 +2610,36 @@ Remediate Threat:
   ai_description: >-
     ### General Description
 
-    Remediates a specific threat in Abnormal Security. This action serves as a convenience
-    wrapper for posting a threat action with the "remediate" verb hard-coded, allowing
-    analysts to quickly remediate threats and their associated messages.
+    Remediates a specific threat in Abnormal Security. This action acts as a convenience
+    wrapper for posting a threat action with the "remediate" verb hard-coded, making
+    it easier to discover and use in playbooks for mitigating threats.
 
 
     ### Flow Description
 
-    1. Extracts the `Threat ID` and `Message IDs` from the action parameters.
+    1. Extracts the `Threat ID` from the action parameters or from the identifiers
+    of target `ThreatSignature` entities.
 
-    2. Checks if the action is scoped to `THREATSIGNATURE` entities; if so, it extracts
-    their identifiers to use as the target threat IDs.
+    2. Parses the optional `Message IDs` parameter into a list of specific messages
+    to target.
 
-    3. If no entities are found, it falls back to using the provided `Threat ID` parameter.
+    3. Iterates over the collected Threat IDs.
 
-    4. Iterates over the collected threat IDs and makes a POST request to the Abnormal
-    Security API (`/v1/threats/{threat_id}`) to submit a "remediate" action, optionally
-    scoped to specific message IDs.
+    4. Makes a POST request to the Abnormal Security API (`/v1/threats/{threat_id}`)
+    to apply the "remediate" action, optionally scoped to the provided message IDs.
 
-    5. Aggregates the API responses and returns them as a JSON result object.
+    5. Aggregates the API responses and returns them as a JSON result to the SecOps
+    platform.
 
 
     ### Additional Notes
 
-    This action can process multiple `THREATSIGNATURE` entities in a single run. If
-    executed on entities, the `Threat ID` parameter is not strictly required.
+    This action supports single-target invocation via the `Threat ID` parameter, as
+    well as multi-entity batch execution when scoped to `ThreatSignature` entities
+    in the playbook.
   ai_short_description: >-
-    Remediates a specific threat in Abnormal Security by submitting a remediate action
-    to the API, optionally scoped to specific message IDs.
+    Remediates a specific threat in Abnormal Security by applying the "remediate"
+    action to the provided Threat ID or ThreatSignature entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2619,15 +2648,16 @@ Remediate Threat:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits a remediation action to Abnormal Security to remediate a specific threat
-      and its associated messages.
+      Submits a 'remediate' action to the Abnormal Security API to mitigate the specified
+      threat(s).
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Abnormal Security API to submit a 'remediate'
-      action for a specific threat. This mutates data on the external system (Abnormal
-      Security). It does not fetch additional contextual data, nor does it update
-      internal SecOps entities or create insights.
+      The action extracts parameters and target entities, then makes a POST request
+      to the Abnormal Security API (`/v1/threats/{threat_id}`) to apply a 'remediate'
+      action. This mutates external data by changing the state of the threat in the
+      Abnormal Security platform. It does not fetch additional contextual data, mutate
+      internal SecOps data, update entities, create insights, or add case comments.
   entity_usage:
     entity_types:
       address: false
@@ -2679,9 +2709,11 @@ Remediate Threat:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `str(getattr(e,
-      "entity_type", "")).upper() == "THREATSIGNATURE"`. This means it targets THREATSIGNATURE
-      entities, filtering strictly by the `entity_type` attribute.
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      them using the condition `str(getattr(e, 'entity_type', '')).upper() == 'THREATSIGNATURE'`.
+      This means it targets ThreatSignature entities and filters the entities it runs
+      on by their `entity_type` attribute. It does not filter by identifier, creation
+      time, modification time, or any other entity properties.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -2698,9 +2730,12 @@ Remediate Threat:
     get_alert_information: false
     reasoning: >-
       The action makes a POST request to the Abnormal Security API to remediate a
-      threat, which typically involves quarantining, deleting, or otherwise modifying
-      the state of associated malicious emails. This aligns with the 'Update Email'
-      expected outcome.
+      specific threat. While Abnormal Security is an email security platform and remediating
+      a threat may involve modifying or deleting emails, the action itself is a generic
+      threat remediation abstraction and does not explicitly map to the 'Delete Email'
+      or 'Update Email' expected outcomes. It does not update internal SecOps alerts,
+      enrich data, or modify blocklists. Therefore, it does not strictly match any
+      of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2712,7 +2747,7 @@ Remediate Threat:
     submit_file: false
     uncontain_host: false
     update_alert: false
-    update_email: true
+    update_email: false
     update_identity: false
     update_ticket: false
   parameters_description: >-
@@ -2726,40 +2761,37 @@ Remediate Threat:
 
     | Message IDs | String | No | Comma-separated list of specific message IDs to
     act on within the threat. Leave empty to act on all messages. |
-
-
-    **Parameter Notes:**
-
-    `Threat ID` is required unless the action is executed on `THREATSIGNATURE` entities,
-    in which case the entity identifiers are used automatically.
 Resolve Case:
   ai_description: >-
     ### General Description
 
     Acknowledges an Abnormal Security case as resolved. This action serves as a convenience
-    wrapper for the Post Case Action, specifically hard-coding the action to 'acknowledge_resolved'.
+    wrapper that submits an 'acknowledge_resolved' action to the Abnormal Security
+    API for specified cases.
 
 
     ### Flow Description
 
-    1. Extracts the `Case ID` parameter or retrieves identifiers from target Threat
-    Campaign entities.
+    1. Extracts the target Case IDs either from the `Case ID` parameter or from the
+    identifiers of target entities filtered by the `Threat Campaign` type.
 
-    2. Iterates over the collected case IDs.
+    2. Iterates over the collected Case IDs.
 
     3. Makes a POST request to the Abnormal Security API (`/v1/cases/{case_id}`) to
-    update the case status to 'acknowledge_resolved'.
+    submit the 'acknowledge_resolved' action for each case.
 
-    4. Aggregates the results and returns a JSON object containing the API responses.
+    4. Aggregates the API responses and returns a JSON object containing the status
+    of the submitted actions.
 
 
     ### Additional Notes
 
-    If both the `Case ID` parameter and Threat Campaign entities are provided, the
-    action prioritizes the entities.
+    Cases are a distinct resource from threats in Abnormal Security and do not appear
+    in the SIEM threat-log event body. Therefore, the Case ID must be provided directly
+    or chained from a prior step if not running on Threat Campaign entities.
   ai_short_description: >-
-    Acknowledges an Abnormal Security case as resolved by updating its status via
-    the Abnormal Security API.
+    Acknowledges an Abnormal Security case as resolved by submitting an 'acknowledge_resolved'
+    action to the Abnormal Security API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2768,13 +2800,14 @@ Resolve Case:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of a case in Abnormal Security to 'acknowledge_resolved'.
+      Resolves a case in Abnormal Security by submitting an 'acknowledge_resolved'
+      action.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Abnormal Security API to update the status
-      of a case to 'acknowledge_resolved'. This mutates external data. It does not
-      fetch data, update internal entities, or create insights.
+      The action makes a POST request to the Abnormal Security API to change the state
+      of a case to resolved. This mutates external data. It does not fetch data, mutate
+      internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -2826,9 +2859,10 @@ Resolve Case:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `str(getattr(e,
-      'entity_type', '')).upper() == 'THREATCAMPAIGN'`. This means it targets THREATCAMPAIGN
-      entities, filtering strictly by entity_type.
+      The code iterates over `siemplify.target_entities` and filters them using `str(getattr(e,
+      'entity_type', '')).upper() == 'THREATCAMPAIGN'`. It then uses the entity's
+      identifier as the case ID. Therefore, it targets Threat Campaign entities and
+      filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -2844,11 +2878,10 @@ Resolve Case:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the status of a case in the external Abnormal Security platform.
-      This does not directly match any of the specific outcome categories such as
-      Update Alert (which refers to SecOps platform alerts) or Update Ticket (which
-      refers to ITSM systems like Jira/ServiceNow). Therefore, no outcome categories
-      are matched.
+      The action resolves a case in the Abnormal Security platform. This does not
+      directly align with updating a SecOps alert, creating a ticket in an ITSM, or
+      modifying blocklists/allowlists. Therefore, no specific outcome category matches
+      this action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2872,43 +2905,41 @@ Resolve Case:
     Takeover / abuse-mailbox case) to act on. Cases are a distinct resource from threats
     and do not appear in the SIEM threat-log event body, so this field does not auto-fill
     from a threat event. Enter the case ID directly, or chain it from a prior List
-    Cases / Get Case step. |
+    Cases / Get Case step. Note: This parameter is not mandatory if the action is
+    executed on Threat Campaign entities. |
 Search Messages:
   ai_description: >-
     ### General Description
 
     Searches for email messages across the organization based on threat indicators
-    such as time range, sender email, or subject using Abnormal Security. The results
-    are stored as a JSON result and can be passed to Remediate Messages for automated
-    response.
+    such as time range, sender email, or subject using Abnormal Security.
 
 
     ### Flow Description
 
-    1. Extracts the provided parameters including Start Time, End Time, Sender Email,
-    Subject, and Tenant IDs.
+    1. Extracts configuration and action parameters.
 
-    2. Calculates default time ranges (trailing 24 hours) if Start Time or End Time
-    are omitted.
+    2. Calculates default time ranges (trailing 24 hours) if start or end times are
+    not provided.
 
-    3. Makes a POST request to the Abnormal Security `/v1/search` API endpoint to
-    search for messages matching the criteria.
+    3. Initializes the Abnormal Security API manager.
 
-    4. Retrieves the matching messages from the API response.
+    4. Sends a POST request to the `/v1/search` API endpoint to search for messages
+    matching the criteria.
 
-    5. Attaches the raw API response as a JSON result to the action.
+    5. Retrieves the matching messages and adds the raw JSON response to the action
+    results.
 
-    6. Completes the action and outputs the number of found messages.
+    6. Returns a summary message with the count of found messages.
 
 
     ### Additional Notes
 
-    The action does not operate on entities. It relies entirely on the provided action
-    parameters to execute the search.
+    The results are stored as a JSON result and can be passed to the Remediate Messages
+    action for automated response.
   ai_short_description: >-
     Searches for email messages across the organization based on threat indicators
-    such as time range, sender email, or subject using Abnormal Security, returning
-    a list of matching messages.
+    such as time range, sender email, or subject using Abnormal Security.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2920,10 +2951,9 @@ Search Messages:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an API request to the Abnormal Security API to fetch/search
-      for email messages (fetches_data=true). Although it uses a POST method, it is
-      a search query and does not mutate external data. It does not update internal
-      entities, create insights, or modify alert data.
+      The action makes a POST request to the Abnormal Security API to search for and
+      fetch email messages matching the criteria. It does not mutate external data,
+      update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -2975,9 +3005,9 @@ Search Messages:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on action parameters to perform the search,
-      so all entity type flags are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      entity identifiers as input parameters to run on. It performs a search query
+      based on string parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -2994,9 +3024,7 @@ Search Messages:
     get_alert_information: false
     reasoning: >-
       The action searches for email messages based on criteria like sender, subject,
-      and time range, which directly aligns with the 'Search Email' expected outcome.
-      It does not enrich IOCs, mutate external data, or perform other categorized
-      actions.
+      and time range. This directly aligns with the 'Search Email' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -3034,34 +3062,31 @@ Submit Inquiry:
   ai_description: >-
     ### General Description
 
-    Submits a false-positive or false-negative report to Abnormal Security's detection
-    team. This action is typically used when a SOAR analyst disagrees with an Abnormal
-    verdict and wishes to challenge it.
+    Submits a false-positive or false-negative inquiry report to the Abnormal Security
+    detection team. This action is typically used when a SOAR analyst disagrees with
+    an Abnormal verdict regarding a specific email message.
 
 
     ### Flow Description
 
-    1. Extracts the necessary configuration and action parameters, including the report
-    type, reporter details, and optional message metadata.
+    1. Extracts the action parameters, including the report type, reporter identifier,
+    and optional message details (subject, sender, recipient, received time, description).
 
-    2. Initializes the Abnormal Security API manager with the provided API credentials.
+    2. Initializes the Abnormal Security API manager with the provided integration
+    configuration.
 
-    3. Makes a POST request to the Abnormal Security `/v1/inquiry` endpoint to submit
+    3. Makes a POST request to the Abnormal Security API (`/v1/inquiry`) to submit
     the inquiry report.
 
-    4. Attaches the JSON response from the API to the action's results.
-
-    5. Returns a success message indicating the inquiry was submitted.
+    4. Attaches the API response to the action's JSON result and completes the execution.
 
 
     ### Additional Notes
 
-    - The `Report Type` must be either `false-positive` or `false-negative`.
-
-    - The `Reporter` parameter is mandatory and should be the email or username of
-    the analyst submitting the inquiry.
+    The `Report Type` parameter must be strictly set to either `false-positive` or
+    `false-negative`.
   ai_short_description: >-
-    Submits a false-positive or false-negative inquiry report to Abnormal Security's
+    Submits a false-positive or false-negative inquiry report to the Abnormal Security
     detection team.
   capabilities:
     can_create_case_comments: false
@@ -3071,14 +3096,15 @@ Submit Inquiry:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits a false-positive or false-negative inquiry report to Abnormal Security's
-      detection team.
+      Submits a false-positive or false-negative inquiry report to the Abnormal Security
+      platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Abnormal Security API to submit an inquiry
-      report, which mutates external data. It does not fetch contextual data, update
-      entities, create insights, or modify internal case data.
+      report, which mutates external data by creating a new record on the vendor's
+      side. It does not fetch contextual data, mutate internal SOAR data, update entities,
+      or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -3130,8 +3156,9 @@ Submit Inquiry:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided action parameters.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters that represent SOAR entities. Therefore, it does not run
+      on any entities and all entity-related flags are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -3147,9 +3174,10 @@ Submit Inquiry:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action submits an inquiry report to Abnormal Security. This does not match
-      any of the predefined outcome categories such as creating a ticket in an ITSM,
-      sending an email, or enriching an IOC.
+      The action submits a false-positive or false-negative report to the Abnormal
+      Security platform. This operation does not align with any of the predefined
+      outcome categories such as creating a ticket in an ITSM, updating an alert,
+      or enriching an IOC.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -3194,33 +3222,39 @@ Submit Messages To D360:
   ai_description: >-
     ### General Description
 
-    Submits email messages to Abnormal Security's Detection 360 service for re-analysis.
-    This action acts as a specialized version of the Remediate Messages action, specifically
-    hard-coded to submit messages for further inspection by Abnormal Security.
+    Submits messages to Abnormal Security's Detection 360 service for re-analysis.
+    This action serves as a convenience wrapper for the `Remediate Messages` action
+    with the action parameter hard-coded to `submit_to_d360`.
 
 
     ### Flow Description
 
-    1. Extracts the provided parameters including the source, messages JSON, remediation
-    reason, and tenant IDs.
+    1. Extracts the necessary configuration and action parameters, including the source,
+    messages JSON, remediation reason, and optional tenant IDs.
 
-    2. Parses the provided JSON array of message objects to ensure they meet the required
-    schema.
+    2. Parses the provided `Messages JSON` string into a list of message objects.
 
-    3. Makes a POST request to the Abnormal Security API (`/v1/search/remediate`)
-    with the action explicitly set to `submit_to_d360`.
+    3. Initializes the `AbnormalManager` to handle API communication.
 
-    4. Retrieves the activity log ID from the response and attaches the full response
-    to the action's JSON result.
+    4. Calls the `remediate_messages` method, which sends a POST request to the `/v1/search/remediate`
+    endpoint with the action set to `submit_to_d360`.
+
+    5. Retrieves the activity log ID from the response and adds the full JSON response
+    to the action results.
+
+    6. Outputs a success message containing the number of submitted messages and the
+    activity log ID.
 
 
     ### Additional Notes
 
-    The `Messages JSON` parameter must be a valid JSON array of message objects, typically
-    obtained from the JSON result of a prior "Search Messages" action. A single message
-    ID is not sufficient for this action.
+    The `Messages JSON` parameter expects a JSON array of message objects, typically
+    obtained from the JsonResult of a prior `Search Messages` action. Each object
+    must include specific fields like `tenant_id`, `raw_message_id`, `mailbox_name`,
+    `native_user_id`, `subject`, `sender`, and `received_time`.
   ai_short_description: >-
-    Submits email messages to Abnormal Security's Detection 360 service for re-analysis.
+    Submits email messages to Abnormal Security's Detection 360 service for re-analysis
+    by executing a remediation action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -3233,10 +3267,9 @@ Submit Messages To D360:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Abnormal Security API to submit messages
-      for re-analysis, which mutates external data by initiating a remediation/analysis
-      workflow on the vendor's side. It does not fetch data, mutate internal SecOps
-      data, update entities, or create insights.
+      The action executes a POST request to the Abnormal Security API to submit messages
+      for re-analysis (can_mutate_external_data=true). It does not fetch contextual
+      data, mutate internal SOAR data, update entities, or create insights/comments.
   entity_usage:
     entity_types:
       address: false
@@ -3288,9 +3321,9 @@ Submit Messages To D360:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process any entities. It relies entirely
-      on the provided action parameters (such as Messages JSON) to determine which
-      messages to submit.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-specific parameters. It operates entirely on the provided `Messages
+      JSON` payload.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -3306,11 +3339,9 @@ Submit Messages To D360:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action submits email messages to a vendor's service (Detection 360) for
-      re-analysis. This does not perfectly align with 'Submit File' (which is for
-      files/samples) or 'Update Email' (which modifies the state of an email in a
-      mailbox). Therefore, no specific outcome category matches this specialized vendor
-      submission action.
+      The action submits email messages to Abnormal's Detection 360 service for re-analysis,
+      which acts as a remediation step that modifies the state or handling of the
+      email within the Abnormal platform. This aligns with the 'Update Email' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -3322,7 +3353,7 @@ Submit Messages To D360:
     submit_file: false
     uncontain_host: false
     update_alert: false
-    update_email: false
+    update_email: true
     update_identity: false
     update_ticket: false
   parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
@@ -3340,32 +3371,33 @@ Unremediate Threat:
   ai_description: >-
     ### General Description
 
-    Reverses a remediation action on a specific threat in Abnormal Security. This
-    action can be executed on ThreatSignature entities or by providing a specific
-    Threat ID.
+    Reverses a remediation action on an Abnormal Security threat. This action serves
+    as a convenience wrapper for the `Post Threat Action` with the action parameter
+    hard-coded to `unremediate`.
 
 
     ### Flow Description
 
-    1. Extracts the Threat ID and optional Message IDs from the action parameters.
+    1. Extracts the `Threat ID` and `Message IDs` parameters from the action configuration.
 
-    2. Identifies target ThreatSignature entities if available; otherwise, falls back
-    to the provided Threat ID parameter.
+    2. Determines the target threat IDs either from the provided `Threat ID` parameter
+    or by iterating over the case's `THREATSIGNATURE` entities.
 
-    3. Iterates through the identified threat IDs and makes a POST request to the
-    Abnormal Security API (`/v1/threats/{threat_id}`) to apply the `unremediate` action.
+    3. Makes a POST request to the Abnormal Security API (`/v1/threats/{threat_id}`)
+    to execute the `unremediate` action, optionally scoped to specific message IDs.
 
-    4. Aggregates the results and returns a JSON object containing the status of the
-    unremediation requests.
+    4. Aggregates the API responses and returns them as a JSON object attached to
+    the action result.
 
 
     ### Additional Notes
 
-    If specific Message IDs are provided, the unremediation will only apply to those
-    messages within the threat.
+    If no `Threat ID` is provided and no `THREATSIGNATURE` entities are found in the
+    scope, the action will fail. When scoped to entities, it can process multiple
+    threats in a single batch execution.
   ai_short_description: >-
-    Reverses a remediation action on a threat in Abnormal Security, optionally scoped
-    to specific messages.
+    Reverses a remediation action on an Abnormal Security threat by calling the Abnormal
+    Security API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -3379,8 +3411,8 @@ Unremediate Threat:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Abnormal Security API to unremediate
-      a threat, which mutates external data. It does not fetch data for enrichment,
-      nor does it update internal entities or create insights.
+      a threat, which mutates external data. It does not fetch contextual data, mutate
+      internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -3432,9 +3464,9 @@ Unremediate Threat:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters for entities
-      where `entity_type` is 'THREATSIGNATURE'. It then extracts the `identifier`
-      of these entities to use as the threat ID.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `str(getattr(e, 'entity_type', '')).upper() == 'THREATSIGNATURE'`. Therefore,
+      it targets Threat Signature entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -3450,9 +3482,9 @@ Unremediate Threat:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action reverses a remediation on a threat, which typically restores the
-      associated emails to the user's inbox. This modifies the state of the emails,
-      aligning with the 'Update Email' category.
+      The action reverses a remediation on a threat, which effectively modifies the
+      state of the associated emails (e.g., restoring them from quarantine or deleted
+      items back to the inbox). This aligns with the 'Update Email' outcome category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

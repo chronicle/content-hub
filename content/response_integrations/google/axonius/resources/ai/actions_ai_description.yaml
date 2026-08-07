@@ -2,37 +2,33 @@ Add Note:
   ai_description: >-
     ### General Description
 
-    Adds a specified note to supported entities (Hostname, IP Address, MAC Address,
-    and User) within the Axonius platform. This action allows analysts to append contextual
-    information or tracking details directly to asset and user records in Axonius.
+    Adds a specified note to user and device entities within Axonius.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities provided in the case and filters them
-    for supported types (Hostname, IP Address, MAC Address, and User).
+    1. Iterates through the target entities and filters for supported types (Hostname,
+    IP Address, MAC Address, User).
 
-    2. Categorizes the filtered entities into users (distinguishing between emails
-    and usernames using a regex) and devices (IPs, hostnames, MACs).
+    2. Categorizes the entities into users (differentiating between usernames and
+    emails via regex) and devices (IPs, hostnames, MACs).
 
     3. Makes a POST request to the Axonius API (`/api/V4.0/users` and `/api/V4.0/devices`)
-    to search for the entities and resolve their internal Axonius IDs.
+    to search for the corresponding Axonius internal IDs for the provided entities.
 
     4. Makes a POST request to the Axonius API (`/api/V4.0/users/{id}/notes` and `/api/V4.0/devices/{id}/notes`)
-    to append the provided note to each successfully resolved entity.
+    to append the specified note to each matched user and device.
 
-    5. Returns a JSON result containing the details of the added notes for each successful
-    entity.
+    5. Returns the note details as JSON results for the successful entities.
 
 
     ### Additional Notes
 
-    User entities are automatically categorized as emails if they match a valid email
-    regular expression; otherwise, they are treated as standard usernames for the
-    Axonius search.
+    User entities are evaluated using a regular expression to determine if they should
+    be treated as email addresses or usernames during the Axonius search.
   ai_short_description: >-
-    Adds a specified note to Hostname, IP Address, MAC Address, and User entities
-    in the Axonius platform.
+    Adds a specified note to user and device entities (Hostname, IP, MAC Address,
+    User) in Axonius.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -41,14 +37,15 @@ Add Note:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a specified note to user and device entities in the Axonius platform.
+      Adds a note to the corresponding user or device records in Axonius.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from Axonius (using get_users and get_devices) to resolve
-      internal IDs, so fetches_data is true. It then mutates external data by making
-      POST requests to add notes to those users and devices in Axonius. It does not
-      mutate internal SecOps data, update entities, or create insights.
+      The action fetches data by making POST requests to Axonius to search for users
+      and devices to retrieve their internal IDs (fetches_data=true). It then mutates
+      external data by making POST requests to add notes to those users and devices
+      in Axonius (can_mutate_external_data=true). It does not mutate internal SOAR
+      data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -100,10 +97,10 @@ Add Note:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type not in SUPPORTED_ENTITIES`, where SUPPORTED_ENTITIES includes
-      HOSTNAME, ADDRESS, MACADDRESS, and USER. Therefore, it targets these specific
-      entity types and filters by the 'entity_type' attribute.
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `[EntityTypes.HOSTNAME, EntityTypes.ADDRESS, EntityTypes.MACADDRESS,
+      EntityTypes.USER]`. Therefore, it targets Hostname, Address, Mac Address, and
+      User entities, filtering strictly by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -119,11 +116,10 @@ Add Note:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds a note to an asset or user record in the external Axonius platform.
-      This does not strictly align with 'Update Identity' (which focuses on permissions/groups/contact
-      info) or 'Add Alert Comment' (which is for SecOps alerts). It does not enrich
-      data, block IOCs, or manage tickets. Therefore, it does not match any of the
-      predefined outcome categories.
+      The action adds a note to assets and users in Axonius. This does not align with
+      any of the predefined outcome categories such as Enrich Asset, Update Identity,
+      or Add Alert Comment, as it simply appends a note in an external asset management
+      system without modifying core identity metadata or SOAR alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -148,35 +144,39 @@ Add Tags:
   ai_description: >-
     ### General Description
 
-    Adds specified tags to user and device entities in Axonius. This action allows
-    analysts to categorize or label assets and identities directly within the Axonius
-    platform based on SecOps workflow outcomes.
+    Adds specified tags to user and device entities within Axonius. This action allows
+    analysts to categorize and label assets (Hostnames, IP Addresses, MAC Addresses)
+    and users (Usernames, Email Addresses) directly in the Axonius platform for better
+    asset management and tracking.
 
 
     ### Flow Description
 
-    1. Extracts the comma-separated list of tags provided in the action parameters.
+    1. Extracts the comma-separated list of tags from the action parameters.
 
-    2. Iterates through the target entities and filters for supported types (Address,
-    Hostname, MAC Address, and User).
+    2. Iterates through the target entities and filters for supported types (Hostname,
+    IP Address, MAC Address, and User).
 
-    3. Queries the Axonius API (`/api/V4.0/users` and `/api/V4.0/devices`) to resolve
-    the internal Axonius IDs for the provided entities.
+    3. Evaluates User entities to determine if they are email addresses or usernames
+    based on regex matching.
 
-    4. Sends a PUT request to the Axonius API (`/api/V4.0/users/labels` and `/api/V4.0/devices/labels`)
-    to append the specified tags to the resolved users and devices.
+    4. Queries Axonius via the `get_users` and `get_devices` API endpoints to retrieve
+    the internal Axonius IDs for the matching entities.
 
-    5. Returns a summary message indicating which entities were successfully tagged
-    and which failed.
+    5. Calls the `add_tags_to_users` and `add_tags_to_devices` API endpoints (via
+    PUT requests) to apply the specified tags to the resolved entities.
+
+    6. Returns a summary of successful and failed tagging operations to the SOAR platform.
 
 
     ### Additional Notes
 
-    Supported entity types include Hostname, IP Address, MAC Address, User, and Email
-    Addresses (User entities that match an email regex). Entities that cannot be found
-    in Axonius will be marked as failed.
+    User entities are automatically categorized as either emails or usernames based
+    on a regex check, ensuring the correct Axonius search fields are used during the
+    ID resolution phase.
   ai_short_description: >-
-    Adds specified tags to user and device entities in Axonius.
+    Adds specified tags to user and device entities (Hostname, IP Address, MAC Address,
+    User) in Axonius.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -185,14 +185,14 @@ Add Tags:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds specified tags to users and devices in the Axonius platform.
-    fetches_data: false
+      Adds specified tags to user and device entities in the Axonius platform.
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action does not fetch contextual data for enrichment (it only fetches internal
-      Axonius IDs to perform the tagging). It mutates external data by making PUT
-      requests to Axonius to add tags to users and devices. It does not mutate internal
-      data, update entities, create insights, modify alert data, or create case comments.
+      The action fetches data by querying Axonius to resolve entity identifiers to
+      internal Axonius IDs. It mutates external data by making PUT requests to add
+      tags to users and devices in Axonius. It does not mutate internal SOAR data,
+      update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -245,10 +245,9 @@ Add Tags:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITIES`, where supported entities are ADDRESS,
-      HOSTNAME, MACADDRESS, and USER. It routes USER entities based on whether their
-      identifier matches an email regex, but does not filter them out based on the
-      identifier.
+      `entity.entity_type not in SUPPORTED_ENTITIES`, where supported entities are
+      HOSTNAME, ADDRESS, MACADDRESS, and USER. Therefore, it targets these specific
+      entity types and filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -264,10 +263,10 @@ Add Tags:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds tags to users and devices in Axonius. Adding tags to a user
-      modifies their account metadata in the external system, which aligns with the
-      'Update Identity' category. It does not enrich entities, update alerts, or perform
-      containment/blocklist operations.
+      The action adds tags to assets and users in Axonius (an asset management platform).
+      This does not strictly align with updating an identity in an IdP, enriching
+      an IOC/Asset with context data in the SOAR platform, or containing a host. Therefore,
+      it does not match any of the specific expected outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -280,7 +279,7 @@ Add Tags:
     uncontain_host: false
     update_alert: false
     update_email: false
-    update_identity: true
+    update_identity: false
     update_ticket: false
   parameters_description: >-
     | Parameter | Type | Mandatory | Description |
@@ -293,58 +292,55 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches entities (IP Address, Hostname, MAC Address, User, and Email Addresses)
-    using information from Axonius. This action retrieves detailed asset and user
-    contextual metadata from Axonius and attaches it to the corresponding entities
-    in the SecOps platform.
+    Enriches entities (IP Address, Hostname, Mac Address, User, Email Addresses) using
+    information from Axonius. This action retrieves detailed user and device information
+    from Axonius and uses it to enrich the corresponding entities within Google SecOps,
+    optionally creating insights and data tables.
 
 
     ### Flow Description
 
-    1. Extracts configuration and action parameters.
+    1. Initializes the Axonius manager with the provided API credentials.
 
-    2. Filters the target entities to supported types (Address, Hostname, MAC Address,
-    User).
+    2. Iterates through the target entities and groups them into users and devices
+    based on their entity type.
 
-    3. Separates the entities into user-related (emails, usernames) and device-related
-    (IPs, hostnames, MACs) categories.
+    3. Queries Axonius to find matching users and devices based on the entity identifiers.
 
-    4. Queries the Axonius API to find matching users and devices.
+    4. Retrieves detailed information for each matched entity using its internal Axonius
+    ID.
 
-    5. Retrieves detailed information for each matched user and device using their
-    internal Axonius IDs.
+    5. Updates the entities with the retrieved enrichment data.
 
-    6. Enriches the entities with the retrieved details, updates their status, and
-    adds entity links, tables, and JSON results.
+    6. Creates insights, entity links, and data tables based on the action parameters.
 
-    7. Optionally creates case insights for the enriched users and endpoints based
-    on the action parameters.
+    7. Returns a JSON result containing the detailed information.
 
 
     ### Additional Notes
 
-    - Supported entities: IP Address, Hostname, Mac Address, User, Email Addresses
-    (User entities that match email regex).
-
-    - The action will fail if the Axonius API is unreachable or if the provided credentials
-    are invalid.
+    Supported entities include IP Address, Hostname, Mac Address, and User. User entities
+    that match an email regex are treated as email addresses for querying Axonius.
   ai_short_description: >-
-    Enriches IP Address, Hostname, MAC Address, and User entities by retrieving detailed
-    asset and user contextual metadata from Axonius.
+    Enriches IP Address, Hostname, Mac Address, and User entities using information
+    from Axonius.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates entities with enrichment data, creates insights, and adds data tables
+      to the case wall.
     reasoning: >-
-      The action fetches data from Axonius using GET and POST (for search) requests.
-      It does not mutate external data. It updates internal entities using `siemplify.update_entities`
-      and creates insights using `siemplify.create_case_insight`.
+      The action fetches data from Axonius via GET/POST requests to retrieve user
+      and device details. It does not mutate external data. It mutates internal data
+      by updating entities with enrichment data, creating insights, and adding data
+      tables to the case wall.
   entity_usage:
     entity_types:
       address: true
@@ -396,10 +392,10 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      not in SUPPORTED_ENTITIES`, where SUPPORTED_ENTITIES includes HOSTNAME, ADDRESS,
-      MACADDRESS, and USER. Therefore, it targets these specific entity types and
-      filters by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (HOSTNAME, ADDRESS, MACADDRESS,
+      USER). Therefore, it targets these specific entity types and filters by entity
+      type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -411,13 +407,14 @@ Enrich Entities:
     download_file: false
     enable_identity: false
     enrich_asset: true
-    enrich_ioc: false
+    enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches detailed information about users and devices (assets) from
-      Axonius, returning contextual metadata such as OS version, MAC address, and
-      user details. This directly aligns with the 'Enrich Asset' expected outcome.
+      The action fetches detailed information about users and devices (IPs, Hostnames,
+      MAC Addresses) from Axonius. This aligns with both 'Enrich IOC' (for IPs and
+      Hostnames) and 'Enrich Asset' (for Users, Hostnames, and MAC Addresses). It
+      does not mutate external data or perform containment/remediation actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -449,30 +446,30 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Axonius server using the parameters provided in the
-    integration configuration.
+    Tests connectivity to the Axonius platform using the provided integration configuration
+    parameters.
 
 
     ### Flow Description
 
-    1. Extracts the integration configuration parameters (API Root, API Key, API Secret,
+    1. Extracts integration configuration parameters (API Root, API Key, API Secret,
     Verify SSL).
 
     2. Initializes the AxoniusManager with the extracted parameters.
 
-    3. Executes a GET request to the `/api/V4.0/settings/meta/about` endpoint to verify
-    connectivity.
+    3. Calls the `test_connectivity` method, which makes a GET request to the `/api/V4.0/settings/meta/about`
+    endpoint on the Axonius server.
 
-    4. Returns a success message if the connection is established, or an error message
-    if it fails.
+    4. Returns a success message if the connection is established, otherwise returns
+    an error message and fails the action.
 
 
     ### Additional Notes
 
-    This action does not require any action-specific parameters and does not operate
-    on entities.
+    This action is typically used to verify that the integration is configured correctly
+    and can successfully authenticate and communicate with the Axonius API.
   ai_short_description: >-
-    Tests connectivity to the Axonius server using the provided integration configuration
+    Tests connectivity to the Axonius platform using the provided integration configuration
     parameters.
   capabilities:
     can_create_case_comments: false
@@ -485,10 +482,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only performs a GET request to a ping endpoint (`/api/V4.0/settings/meta/about`)
-      to test connectivity. It does not fetch contextual data for entities, mutate
-      external data, mutate internal data, update entities, create insights, modify
-      alert data, or create case comments.
+      The action only makes a GET request to test connectivity. It does not fetch
+      contextual data for alerts/entities, mutate external or internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -540,8 +536,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It operates independently
-      of case or alert entities, so all entity-related flags are set to false.
+      The action does not process any entities. It only tests connectivity to the
+      Axonius API using integration-level parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -557,11 +553,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping). It does not enrich IOCs/assets,
-      update alerts, manage tickets, modify blocklists/allowlists, manage identities,
-      contain hosts, search events, execute commands, manage emails, submit files,
-      send messages, or get alert information. Therefore, it does not match any of
-      the expected outcome categories.
+      The action is a simple connectivity test (ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -588,23 +582,23 @@ Remove Tags:
 
     1. Extracts the list of tags to remove from the action parameters.
 
-    2. Iterates over the target entities and filters for supported types (Address,
-    Hostname, MAC Address, User).
+    2. Iterates over the target entities and groups them by supported types (Address,
+    Hostname, MacAddress, User).
 
-    3. Queries Axonius via `AxoniusManager.get_users` and `AxoniusManager.get_devices`
-    to retrieve the internal Axonius IDs for the matching entities.
+    3. Makes API calls to Axonius to fetch the internal IDs for the matched users
+    and devices.
 
-    4. Calls the Axonius API (`remove_tags_from_users` and `remove_tags_from_devices`)
-    to remove the specified tags from the identified users and devices.
+    4. Makes API calls to Axonius to remove the specified tags from the identified
+    users and devices.
 
-    5. Returns a summary message indicating which entities had tags successfully removed
-    and which failed.
+    5. Returns a summary of the entities that had tags successfully removed and those
+    that failed.
 
 
     ### Additional Notes
 
     Supported entities include Hostname, IP, Mac Address, User, and Email Addresses
-    (User entities that match email regex).
+    (User entities that match an email regex).
   ai_short_description: >-
     Removes specified tags from user and device entities in Axonius.
   capabilities:
@@ -616,13 +610,13 @@ Remove Tags:
     can_update_entities: false
     external_data_mutation_explanation: >-
       Removes specified tags from users and devices in Axonius.
-    fetches_data: false
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action retrieves internal Axonius IDs for the provided entities and then
-      makes DELETE requests to the Axonius API to remove the specified tags from those
-      users and devices. It mutates external data but does not update internal SecOps
-      data.
+      The action fetches user and device details from Axonius to retrieve their internal
+      IDs (fetches_data=true). It then makes DELETE requests to the Axonius API to
+      remove tags from these users and devices (can_mutate_external_data=true). It
+      does not mutate internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -674,9 +668,11 @@ Remove Tags:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them based
-      on `entity.entity_type`. It specifically targets `ADDRESS`, `HOSTNAME`, `MACADDRESS`,
-      and `USER` entity types.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes
+      `EntityTypes.HOSTNAME`, `EntityTypes.ADDRESS`, `EntityTypes.MACADDRESS`, and
+      `EntityTypes.USER`. Therefore, it targets Address, Hostname, MacAddress, and
+      User entities, filtering strictly by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false

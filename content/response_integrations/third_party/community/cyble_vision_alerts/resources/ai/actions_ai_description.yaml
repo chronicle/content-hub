@@ -2,39 +2,36 @@ GetAlerts:
   ai_description: >-
     ### General Description
 
-    Fetches Cyble Vision alerts for specified services within a given time window.
-    This action is useful for analyst-triggered ad-hoc pulls (e.g., retrieving the
-    latest phishing alerts for a domain) or as a playbook enrichment step to gather
-    recent alerts without waiting for the regular job cycle.
+    Fetches Cyble Vision alerts for specified services within a defined time window.
+    This action is useful for ad-hoc analyst queries or playbook enrichment steps
+    to retrieve recent alerts from Cyble without waiting for a scheduled job cycle.
 
 
     ### Flow Description
 
     1. Extracts the action parameters including the target services, time window (hours
-    back), maximum results, and statuses.
+    back), maximum results, and alert statuses.
 
-    2. Parses and validates the requested services and statuses against known Cyble
-    Vision values.
+    2. Calculates the start and end times for the query based on the current time
+    and the `Hours Back` parameter.
 
-    3. Calculates the time window based on the `Hours Back` parameter.
+    3. Makes an API call to Cyble Vision (`manager.iter_alerts`) to fetch alerts matching
+    the specified criteria.
 
-    4. Makes a POST request to the Cyble Vision API (`/secops/alerts`) to fetch alerts
-    matching the specified criteria.
+    4. Maps the retrieved Cyble alerts into a standardized SecOps format using the
+    `CybleAlertMapper`.
 
-    5. Maps the fetched raw Cyble alerts into a standardized SecOps alert format.
-
-    6. Constructs a JSON output containing the fetched alerts and their details, and
-    attaches it to the action's result.
+    5. Returns the fetched alerts as a JSON object attached to the action result.
 
 
     ### Additional Notes
 
-    If unknown service names are provided, the action will log a warning but still
-    attempt to fetch alerts for them. The action handles pagination automatically
-    up to the specified `Max Results` limit.
+    The action handles pagination automatically up to the specified maximum results
+    limit. If unknown service names are provided, the action will log a warning but
+    attempt to fetch them anyway.
   ai_short_description: >-
-    Fetches Cyble Vision alerts for specified services within a given time window
-    and returns them as a JSON result.
+    Fetches Cyble Vision alerts for specified services within a defined time window
+    and returns the results as a JSON object.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -46,9 +43,11 @@ GetAlerts:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches alert data from the Cyble Vision API (fetches_data=true).
-      It does not perform any state-changing operations on external systems, nor does
-      it mutate internal SecOps data such as entities, insights, or case comments.
+      The action fetches data from the Cyble Vision API (fetches_data=true). It does
+      not perform any state-changing operations on external systems (can_mutate_external_data=false).
+      It also does not mutate internal SecOps data, update entities, create insights,
+      modify alert data, or create case comments (all internal mutation flags are
+      false).
   entity_usage:
     entity_types:
       address: false
@@ -100,9 +99,9 @@ GetAlerts:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on or filter by any entities. It fetches alerts
-      based on the provided action parameters (Services, Hours Back, etc.) rather
-      than entity data.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers via input parameters. It operates strictly on service
+      names and time windows to fetch alerts.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -116,13 +115,12 @@ GetAlerts:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: false
+    get_alert_information: true
     reasoning: >-
-      The action fetches a list of alerts from Cyble Vision based on search criteria
-      (services, time window). It does not enrich specific IOCs or assets, nor does
-      it mutate external state, update tickets, or fetch information about a specific
-      alert already in the platform. Therefore, it does not strictly match any of
-      the predefined outcome categories.
+      The action fetches alert information from a 3rd party product (Cyble Vision)
+      based on service names and time windows. This aligns with the 'Get Alert Information'
+      category. It does not enrich specific IOCs or assets, nor does it mutate external
+      systems or internal alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -154,36 +152,30 @@ GetServicesList:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of all active Cyble Vision threat intelligence services. This
-    action is primarily used as a utility to validate connector configurations, dynamically
-    populate service filter inputs in playbooks, or troubleshoot which services are
-    authorized for the configured API key.
+    Retrieves all active Cyble Vision threat intelligence services. This action connects
+    to the Cyble API to fetch a list of available services, which can be used for
+    validating connector configurations or dynamically populating service filter inputs
+    in playbooks.
 
 
     ### Flow Description
 
-    1. Initializes the Cyble API client using the integration-level configuration
-    parameters.
+    1. Initializes the Cyble API client using the provided integration configuration.
 
-    2. Makes an HTTP GET request to the Cyble Vision `/secops/alerts/services` endpoint
-    to fetch the available services.
+    2. Makes an HTTP GET request to the Cyble API to fetch the list of available services.
 
-    3. Filters the response to include only services that support alerts (`allowAlerts`
-    is true).
+    3. Parses the response to extract the service name, display name, and alert allowance
+    status for each service.
 
-    4. Formats the retrieved services into a structured JSON object containing the
-    total count and service details (name, display name, and alert support status).
-
-    5. Attaches the formatted JSON object to the action's result data.
+    4. Outputs the total count and the list of active services as a JSON result.
 
 
     ### Additional Notes
 
-    This action does not interact with or modify any alerts, cases, or entities within
-    Google SecOps.
+    This action does not require any specific input parameters and operates independently
+    of case entities.
   ai_short_description: >-
-    Retrieves a list of all active Cyble Vision threat intelligence services to validate
-    configuration or populate playbook inputs.
+    Retrieves a list of all active Cyble Vision threat intelligence services.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -249,8 +241,8 @@ GetServicesList:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It simply fetches
-      a static list of services from the external API without referencing `siemplify.target_entities`.
+      The action does not process any entities. It does not iterate over target_entities
+      or accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -266,10 +258,10 @@ GetServicesList:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches a list of available services from the Cyble API. It does
-      not enrich specific IOCs or assets, update alerts, interact with ticketing systems,
-      modify blocklists/allowlists, manage identities, or perform any other operations
-      that match the predefined outcome categories.
+      The action retrieves a list of available services from the Cyble API. It does
+      not enrich specific IOCs or assets, update alerts, manage tickets, or perform
+      any containment or remediation actions. Therefore, it does not match any of
+      the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -290,27 +282,31 @@ Ping:
     ### General Description
 
     Tests connectivity to the Cyble Vision API and validates the provided API key.
+    This action serves as a mandatory SecOps integration health check, used to mark
+    the integration as Healthy or Unhealthy in the platform's UI.
 
 
     ### Flow Description
 
-    1. Extracts the integration configuration parameters (API Key, Base URL, etc.).
+    1. Extracts the integration-level configuration parameters, including the API
+    key, Base URL, Verify SSL, and Timeout settings.
 
-    2. Initializes the CybleManager.
+    2. Initializes the Cyble API client (`CybleManager`) with the provided credentials.
 
-    3. Makes a GET request to the `/secops/alerts/services` endpoint to verify connectivity
-    and authentication.
+    3. Executes a lightweight GET request to the Cyble Vision services endpoint to
+    verify network connectivity and authentication validity.
 
-    4. Returns a success message if connected, or an error message if authentication
-    or connectivity fails.
+    4. Returns a successful result if the connection is established, or an error message
+    if authentication or connectivity fails.
 
 
     ### Additional Notes
 
-    This is a mandatory SecOps integration health check action used to mark the integration
-    as Healthy/Unhealthy in the UI.
+    This action does not require any action-specific parameters as it relies entirely
+    on the integration-level configuration.
   ai_short_description: >-
-    Tests connectivity to the Cyble Vision API and validates the API key.
+    Tests connectivity to the Cyble Vision API and validates the integration's API
+    key to ensure the integration is healthy and properly configured.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -322,8 +318,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to verify connectivity but does not fetch contextual
-      data for alerts/entities, nor does it mutate any external or internal data.
+      The action makes a lightweight GET request to test connectivity (ping). It does
+      not fetch contextual data for alerts/entities, nor does it mutate any external
+      or internal data, update entities, create insights, or modify alerts.
   entity_usage:
     entity_types:
       address: false
@@ -375,8 +372,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It only tests connectivity
-      to the external API.
+      The action does not process any entities. It only tests the connection to the
+      Cyble Vision API using integration configuration parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -392,9 +389,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple health check (Ping) to verify API connectivity and credentials.
-      It does not perform any enrichment, containment, ticketing, or other operational
-      outcomes.
+      The action is a simple ping/health check to verify API connectivity. It does
+      not enrich data, mutate alerts, interact with tickets, or perform any containment/remediation
+      actions. Therefore, it does not match any of the specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -420,27 +417,24 @@ UpdateAlertSeverity:
 
     ### Flow Description
 
-    1. Extracts the `Cyble Alert ID` and `Cyble Service` from the action parameters.
-    If not provided, it attempts to retrieve them from the current alert's additional
-    properties.
+    1. Extracts the Cyble Alert ID, Cyble Service, and New Severity from the action
+    parameters or the current alert's additional properties.
 
-    2. Validates the provided `New Severity` value, normalizing integer inputs to
-    their corresponding string representations if necessary.
+    2. Validates the inputs and normalizes the severity value (handling both string
+    and integer inputs).
 
-    3. Makes a PUT request to the Cyble Vision API (`/secops/alerts`) to update the
-    alert's severity in the external system.
+    3. Makes a PUT request to the Cyble Vision API to update the alert's severity.
 
     4. Updates the local SecOps alert's additional data with the new severity and
-    the current synchronization timestamp.
+    sync timestamp.
 
-    5. Adds a comment to the SecOps case to log the successful update.
+    5. Adds a comment to the case indicating the successful update.
 
 
     ### Additional Notes
 
-    Accepts both string (e.g., 'CRITICAL', 'HIGH') and integer (e.g., '-1', '2') severity
-    values to support seamless playbook mappings without requiring string conversion
-    blocks.
+    Accepts both string and integer severity values (e.g., "-1" for CRITICAL, "2"
+    for HIGH) to support playbook mappings without requiring string conversion blocks.
   ai_short_description: >-
     Updates the severity of a specific alert in Cyble Vision and synchronizes the
     change to the local SecOps alert.
@@ -455,13 +449,12 @@ UpdateAlertSeverity:
       Updates the severity of a specific alert in Cyble Vision.
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the local alert's additional data with the new severity and sync time,
-      and adds a comment to the case.
+      Updates the local alert's additional data with the new severity and adds a comment
+      to the case.
     reasoning: >-
-      The action makes a PUT request to Cyble Vision to update the alert severity
-      (mutates external data). It also updates the local alert's additional data and
-      adds a case comment (mutates internal data, modifies alert data, creates case
-      comments). It does not fetch enrichment data or update entities.
+      The action makes a PUT request to the Cyble Vision API to update the alert severity,
+      mutating external data. It also mutates internal data by updating the local
+      alert's additional data and adding a case comment.
   entity_usage:
     entity_types:
       address: false
@@ -513,9 +506,9 @@ UpdateAlertSeverity:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates on the current alert and its additional properties. It does
-      not iterate over or interact with specific entities (e.g., IP, Hash, User) from
-      `siemplify.target_entities`.
+      The action does not operate on entities. It retrieves the target alert ID and
+      service from the action parameters or the current alert's additional properties,
+      and updates the alert severity.
   outcome_categories:
     add_alert_comment: true
     add_ioc_to_allowlist: false
@@ -531,9 +524,9 @@ UpdateAlertSeverity:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the severity of an alert in Cyble Vision and updates the
-      local alert's additional data, matching the 'Update Alert' category. It also
-      adds a comment to the case, matching the 'Add Alert Comment' category.
+      The action updates the severity of an alert in Cyble Vision and locally in SecOps,
+      which matches the 'Update Alert' category. It also adds a comment to the case
+      timeline, matching the 'Add Alert Comment' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -564,37 +557,35 @@ UpdateAlertStatus:
   ai_description: >-
     ### General Description
 
-    Updates the status of a Cyble Vision alert in the Cyble platform and synchronizes
-    the change to the local SecOps alert. This action is typically used when an analyst
-    closes or triages a case, ensuring the upstream Cyble alert reflects the latest
-    status.
+    Updates the status of a specific alert in Cyble Vision and synchronizes the change
+    back to the Google SecOps alert.
 
 
     ### Flow Description
 
-    1. Extracts the `Cyble Alert ID`, `Cyble Service`, and `New Status` from the action
-    parameters. If the ID or Service are not provided, it attempts to auto-populate
-    them from the current alert's custom fields.
+    1. Retrieves the `Cyble Alert ID` and `Cyble Service` from the action parameters
+    or falls back to the current alert's custom fields.
 
-    2. Validates the inputs to ensure the provided status is a valid Cyble status.
+    2. Validates the provided inputs and maps the new status to a Cyble-compatible
+    status.
 
-    3. Builds the update payload and makes a PUT request to the Cyble API (`/secops/alerts`)
-    to update the alert status externally.
+    3. Makes a PUT request to the Cyble Vision API to update the alert's status.
 
-    4. On a successful API response, updates the `Status` and `LastSyncAt` custom
-    fields on the local SecOps alert to maintain synchronization.
+    4. Upon successful update in Cyble, updates the `Status` and `LastSyncAt` custom
+    fields on the corresponding Google SecOps alert.
 
-    5. Adds an audit comment to the SecOps case wall detailing the successful update.
+    5. Adds an audit comment to the Google SecOps case wall detailing the successful
+    update.
 
 
     ### Additional Notes
 
-    If the API call fails (e.g., due to authentication issues, validation errors,
-    or the alert not being found), the action raises an exception and fails explicitly,
-    allowing playbooks to route to an error branch.
+    If the `Cyble Alert ID` or `Cyble Service` parameters are left empty, the action
+    will automatically attempt to populate them from the `AlertId` and `Service` custom
+    fields of the current alert.
   ai_short_description: >-
-    Updates the status of a Cyble Vision alert in the Cyble platform and synchronizes
-    the change to the local SecOps alert's custom fields and case wall.
+    Updates the status of an alert in Cyble Vision and synchronizes the updated status
+    and sync time to the corresponding Google SecOps alert.
   capabilities:
     can_create_case_comments: true
     can_create_insight: false
@@ -603,16 +594,16 @@ UpdateAlertStatus:
     can_mutate_internal_data: true
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of a specific alert in Cyble Vision.
+      Updates the status of an alert in Cyble Vision.
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the 'Status' and 'LastSyncAt' custom fields on the SecOps alert and
-      adds a comment to the case.
+      Updates the SecOps alert's custom fields (Status, LastSyncAt) and adds an audit
+      comment to the case.
     reasoning: >-
-      The action makes a PUT request to the Cyble API to update the alert status (can_mutate_external_data=true).
-      It also updates the local alert's custom fields (can_modify_alert_data=true)
-      and adds a comment to the case wall (can_create_case_comments=true). It does
-      not fetch data for enrichment or update entities.
+      The action makes a PUT request to Cyble Vision to update an alert's status (can_mutate_external_data=true).
+      It also updates the custom fields of the alert in Google SecOps and adds a case
+      comment (can_mutate_internal_data=true, can_modify_alert_data=true, can_create_case_comments=true).
+      It does not fetch contextual data or update entities.
   entity_usage:
     entity_types:
       address: false
@@ -664,9 +655,8 @@ UpdateAlertStatus:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates on the current alert and its custom fields. It does not
-      iterate over or interact with specific entities (like IP addresses or file hashes).
-      Therefore, all entity types and filters are false.
+      The action does not iterate over target entities or accept any entity-related
+      parameters. It operates strictly on alert IDs and service names.
   outcome_categories:
     add_alert_comment: true
     add_ioc_to_allowlist: false
@@ -682,9 +672,9 @@ UpdateAlertStatus:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the status of an alert in Cyble and updates the local SecOps
-      alert's custom fields, matching the 'Update Alert' category. It also adds a
-      comment to the case wall, matching the 'Add Alert Comment' category.
+      The action updates the status of an alert in Cyble Vision and updates the corresponding
+      alert custom fields in Google SecOps, matching the 'Update Alert' category.
+      It also adds a comment to the case, matching the 'Add Alert Comment' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -704,11 +694,11 @@ UpdateAlertStatus:
 
     | --- | --- | --- | --- |
 
-    | Cyble Alert ID | String | No | Cyble alert UUID. Auto-populated from the alert's
-    custom fields if left empty. |
+    | Cyble Alert ID | String | No | Cyble alert UUID. Auto-populated from CybleAlertId
+    field if left empty. |
 
-    | Cyble Service | String | No | Cyble service name. Auto-populated from the alert's
-    custom fields if left empty. |
+    | Cyble Service | String | No | Cyble service name. Auto-populated from CybleService
+    field if left empty. |
 
-    | New Status | Dropdown | Yes | New status to apply: UNREVIEWED, VIEWED, CONFIRMED_INCIDENT,
+    | New Status | String | Yes | New status: UNREVIEWED, VIEWED, CONFIRMED_INCIDENT,
     UNDER_REVIEW, INFORMATIONAL, RESOLVED. |

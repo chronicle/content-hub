@@ -2,36 +2,35 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches IP and MAC Address entities using ForeScout CounterACT to retrieve endpoint
-    contextual information. This action fetches details such as vendor, classification,
-    agent version, and online status to provide better visibility into network assets.
+    Enriches IP and MAC Address entities using ForeScout CounterACT to retrieve detailed
+    endpoint information. This action fetches contextual metadata such as vendor,
+    classification, agent version, and online status to provide better visibility
+    into internal resources.
 
 
     ### Flow Description
 
-    1. Initializes the connection to the ForeScout CounterACT API.
+    1. Initializes the ForeScout CounterACT manager with the provided credentials.
 
-    2. Iterates over the target entities, filtering for IP Address and MAC Address
-    types.
+    2. Filters the target entities to process only supported types (IP Address and
+    MAC Address).
 
-    3. For each MAC Address, makes a GET request to `/api/hosts/mac/{mac_address}`
-    to fetch endpoint details.
+    3. Iterates over the filtered entities and makes an API call (GET request to `/api/hosts/mac/{mac_address}`
+    or `/api/hosts/ip/{ip_address}`) to ForeScout CounterACT to fetch endpoint details.
 
-    4. For each IP Address, makes a GET request to `/api/hosts/ip/{ip_address}` to
-    fetch endpoint details.
+    4. If the 'Create Insight' parameter is enabled, generates a case insight with
+    the retrieved endpoint data.
 
-    5. If the `Create Insight` parameter is enabled, generates an insight containing
-    the endpoint's status and classification.
+    5. Enriches the entity's additional properties with the fetched information and
+    marks it as enriched.
 
-    6. Updates the entity's additional properties with the retrieved enrichment data.
-
-    7. Saves the updated entities and attaches the results as JSON and CSV tables
-    to the action's output.
+    6. Updates the entities within the SecOps platform and attaches JSON results.
 
 
     ### Additional Notes
 
-    - Supported entity types are IP Address and MAC Address.
+    Supported entities are IP Address and MAC Address. The action will skip any other
+    entity types provided in the target entities list.
   ai_short_description: >-
     Enriches IP and MAC Address entities by retrieving endpoint contextual metadata
     from ForeScout CounterACT.
@@ -40,15 +39,16 @@ Enrich Entities:
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with enrichment data and creates case insights.
     reasoning: >-
       The action fetches endpoint data from ForeScout CounterACT via GET requests.
-      It does not mutate external data. Internally, it updates the entities with enrichment
-      data and creates case insights if configured to do so.
+      It does not mutate external data. It updates internal entities with the fetched
+      data and creates case insights.
   entity_usage:
     entity_types:
       address: true
@@ -100,10 +100,10 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITIES or entity.entity_type.lower() == EntityTypes.MACADDRESS`.
-      This means it specifically targets ADDRESS and MACADDRESS entities, filtering
-      by the `entity_type` attribute.
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITIES` or `entity.entity_type.lower() == EntityTypes.MACADDRESS`,
+      where `SUPPORTED_ENTITIES` includes `ADDRESS` and `MACADDRESS`. Therefore, it
+      targets Address and Mac Address entities, filtering strictly by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -119,10 +119,10 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (such as vendor, classification, agent
-      version, and online status) for IP and MAC addresses from ForeScout CounterACT.
-      This aligns with the 'Enrich Asset' expected outcome. It does not perform any
-      blocklist, containment, or ticketing operations.
+      The action fetches endpoint information (such as vendor, classification, agent
+      version, and online status) from ForeScout CounterACT based on IP or MAC address.
+      This aligns with the 'Enrich Asset' category as it returns contextual metadata
+      for an internal resource.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -148,31 +148,31 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the ForeScout CounterACT server using the parameters provided
-    in the integration configuration.
+    Tests connectivity to the ForeScout CounterACT server using the provided integration
+    configuration parameters.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters (API Root, Username, Password,
-    CA Certificate File, Verify SSL).
+    1. Extracts integration configuration parameters including API Root, Username,
+    Password, CA Certificate File, and Verify SSL.
 
-    2. Initializes the ForeScout CounterACT manager.
+    2. Initializes the `ForeScoutCounterACTManager` with the extracted parameters.
 
-    3. Makes an API call (POST to `/api/login`) to authenticate and retrieve a JWT
-    token.
+    3. The manager attempts to authenticate by making a POST request to the `/api/login`
+    endpoint to retrieve a JWT token.
 
-    4. Returns a success message if the connection and authentication are successful,
-    or an error message if they fail.
+    4. If the authentication is successful, the action completes and returns a success
+    message. Otherwise, it fails and logs the error.
 
 
     ### Additional Notes
 
-    This action is primarily used for verifying that the integration is configured
-    correctly and can communicate with the ForeScout CounterACT API.
+    This action is primarily used to verify that the integration is configured correctly
+    and can communicate with the ForeScout CounterACT API.
   ai_short_description: >-
-    Tests connectivity to the ForeScout CounterACT server to ensure the integration
-    is configured correctly.
+    Tests connectivity to the ForeScout CounterACT server by attempting to authenticate
+    and retrieve a JWT token.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -184,9 +184,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only performs an authentication request to test connectivity. It
-      does not fetch contextual data for alerts, mutate external or internal data,
-      update entities, or create insights/comments.
+      The action only tests connectivity by authenticating to the ForeScout CounterACT
+      API. It does not fetch contextual data, mutate external or internal data, update
+      entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -238,8 +238,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It only tests connectivity
-      to the external system.
+      The action does not process any entities. It only tests connectivity to the
+      external system using integration configuration parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -255,9 +255,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not perform any enrichment,
-      containment, ticket creation, or other operations that match the defined outcome
-      categories.
+      The action is a simple ping/connectivity test and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -2,64 +2,57 @@ Check Url:
   ai_description: >-
     ### General Description
 
-    Checks if a specific URL is marked as suspicious by the PhishTank Community. The
-    action queries the PhishTank database to retrieve threat intelligence regarding
-    the URL. It adds an insight with the result of the action and updates the entity's
-    suspicious status if the URL is verified as a phishing link.
+    Checks if specific URL entities are marked as suspicious by the PhishTank Community.
+    It retrieves threat intelligence data and evaluates the risk of the URLs, updating
+    their status and providing insights based on the findings.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities provided in the case.
+    1. Iterates through the target entities and filters for URL entities.
 
-    2. Filters the entities to process only those of type `URL`.
+    2. Extracts the original URL identifier from the entity's additional properties
+    or falls back to the standard identifier.
 
-    3. Extracts the original URL from the entity's additional properties or identifier.
+    3. Makes an HTTP POST request to the PhishTank API to check if the URL exists
+    in their database.
 
-    4. Makes an HTTP POST request to the PhishTank service URL to query the database
-    for the specific URL.
+    4. Parses the response to determine if the URL is in the database and if it is
+    verified as a phishing link.
 
-    5. Parses the XML response from PhishTank.
+    5. If verified as a phishing URL, marks the entity as suspicious and updates it
+    in the platform.
 
-    6. If the URL is found in the database, it creates an insight detailing the PhishTank
-    page link, verification status, and validity.
+    6. Adds an insight to the entity with the PhishTank details (e.g., verification
+    status, valid status, and detail page link) or a note that it wasn't found.
 
-    7. If the URL is verified as phishing, it marks the entity as suspicious and updates
-    it in the platform.
-
-    8. If the URL is not found, it creates an insight indicating its absence from
-    the database.
-
-    9. Returns a JSON result containing the parsed data for each processed URL.
+    7. Returns a JSON result containing the parsed response data for further playbook
+    use.
 
 
     ### Additional Notes
 
-    - The action relies on the `Service Url` configured at the integration level.
-
-    - Although the action uses an HTTP POST request, it functions as a data fetch/enrichment
-    operation rather than a mutation on the external system.
+    The action relies on the PhishTank service URL configured at the integration level.
   ai_short_description: >-
-    Checks if a specific URL is marked as suspicious by the PhishTank Community, enriching
-    the entity with threat intelligence and updating its suspicious status if verified
-    as phishing.
+    Checks if specific URL entities are marked as suspicious by the PhishTank Community,
+    enriching them with threat intelligence and updating their suspicious status if
+    verified as phishing.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates the suspicious status of URL entities and adds insights with PhishTank
-      data.
+    internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making an HTTP POST request to the PhishTank API
-      to retrieve URL information. It does not mutate external data. It mutates internal
-      data by updating the `is_suspicious` flag on entities (using `siemplify.update_entities`)
-      and creating insights (using `siemplify.add_entity_insight`).
+      The action makes an HTTP POST request to the PhishTank API to fetch threat intelligence
+      data about URLs (fetches_data=true). It does not mutate external data or internal
+      system data outside of entities. It updates entities by setting `is_suspicious
+      = True` and calling `siemplify.update_entities` (can_update_entities=true).
+      It also creates insights by calling `siemplify.add_entity_insight` (can_create_insight=true).
   entity_usage:
     entity_types:
       address: false
@@ -97,12 +90,12 @@ Check Url:
       url: true
       usb: false
       user: false
-    filters_by_additional_properties: true
+    filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: true
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -111,11 +104,9 @@ Check Url:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `if
-      entity.entity_type == EntityTypes.URL:`. It extracts the URL to check using
-      `entity.additional_properties.get("OriginalIdentifier", entity.identifier)`.
-      Therefore, it targets URL entities, filtering by entity type, and accesses both
-      the identifier and additional properties.
+      The script iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == EntityTypes.URL`. Therefore, it targets
+      URL entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -131,10 +122,9 @@ Check Url:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence (phishing verification status) for
-      URL indicators from PhishTank. This perfectly matches the 'Enrich IOC' expected
-      outcome. It does not perform any other actions like updating alerts, blocking
-      IOCs, or sending emails.
+      The action queries PhishTank for URL entities to retrieve threat intelligence
+      (phishing verification). This aligns with the 'Enrich IOC' category. It does
+      not mutate external state, so it is not a blocklist or containment action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -155,28 +145,27 @@ Ping:
     ### General Description
 
     Tests connectivity to the PhishTank service to ensure the integration is configured
-    correctly and the service is reachable.
+    correctly.
 
 
     ### Flow Description
 
-    1. Extracts the `Service Url` from the integration configuration.
+    1. Extracts the Service URL from the integration configuration.
 
-    2. Sends a test POST request to the PhishTank API using a static payload (`url:
-    google.com`).
+    2. Sends a test POST request to the PhishTank API with a sample URL payload (`google.com`).
 
-    3. Evaluates the HTTP response to ensure no errors occurred.
+    3. Verifies the HTTP response status to confirm connectivity.
 
-    4. Returns a success message indicating that PhishTank is connected.
+    4. Returns a success message if the connection is established.
 
 
     ### Additional Notes
 
-    This action is typically used as a health check or ping test during the initial
-    setup of the PhishTank integration. It does not process alerts or entities.
+    This action is typically used during the initial setup of the integration to validate
+    credentials and network access.
   ai_short_description: >-
-    Tests connectivity to the PhishTank service by sending a test POST request and
-    verifying the response.
+    Tests connectivity to the PhishTank service to ensure the integration is configured
+    correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -188,11 +177,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action sends a POST request to test connectivity. It does not fetch contextual
-      data for alerts/entities (fetches_data=false). It does not mutate external data
-      in a state-changing way (it just queries a test URL, can_mutate_external_data=false).
-      It does not mutate internal data, update entities, create insights, modify alerts,
-      or create case comments.
+      The action sends a test POST request to the PhishTank API to verify connectivity.
+      It does not fetch contextual data for alerts/entities, mutate external data
+      (the POST request is just a check, not a state change), mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -244,9 +232,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The script does not access `siemplify.target_entities` or perform any entity-based
-      operations. It executes a static test request independent of any case or alert
-      entities.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -262,9 +249,10 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      This action is a simple connectivity test (Ping). It does not enrich IOCs, update
-      alerts, create tickets, block IPs, or perform any of the specific outcome categories
-      listed. It solely verifies network and API reachability.
+      The action is a simple connectivity test (Ping) to the PhishTank service. It
+      does not enrich IOCs/assets, update alerts, manage tickets, modify blocklists/allowlists,
+      manage identities, contain hosts, search events/emails, or submit files for
+      analysis. Therefore, it does not match any of the specified outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -279,4 +267,4 @@ Ping:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: There are no parameters for this action
+  parameters_description: There are no parameters for this action.

@@ -3,37 +3,29 @@ Analyze File:
     ### General Description
 
     Submits a file to Falcon Sandbox for analysis and retrieves the resulting threat
-    report and score. This action allows analysts to detonate suspicious files in
-    a specific sandbox environment and review the behavioral analysis results directly
-    within the SecOps platform.
+    report.
 
 
     ### Flow Description
 
-    1. Extracts the `File Path`, `Environment`, and `Include Report` parameters from
-    the action configuration.
+    1. Initializes the Falcon Sandbox manager with API credentials.
 
-    2. Makes a POST request to the Falcon Sandbox API (`/submit/file`) to upload the
-    file and initiate the analysis job.
+    2. Submits the file specified by the `File Path` parameter to the specified `Environment`
+    via a POST request to the Falcon Sandbox API.
 
-    3. Operates asynchronously, periodically making GET requests to the API (`/report/{job_id}/state`)
-    to check the status of the analysis job.
+    3. Monitors the analysis job status asynchronously.
 
-    4. Once the job is completed, makes a request to fetch the scan information and
-    the maximum threat score.
+    4. Once completed, retrieves the scan information and threat score.
 
-    5. If the `Include Report` parameter is enabled, makes an additional GET request
-    to download the MISP report.
+    5. Attaches the JSON report to the action results.
 
-    6. Attaches the JSON scan information and the MISP report (if applicable) to the
-    action results.
+    6. If `Include Report` is enabled, fetches and attaches the MISP report.
 
 
     ### Additional Notes
 
-    This is an asynchronous action. Fetching the MISP report requires a premium API
-    key for Falcon Sandbox. If the provided file is an archive or container, the action
-    will attempt to fetch the child report of the embedded files.
+    The action runs asynchronously. Fetching the MISP report requires a premium API
+    key.
   ai_short_description: >-
     Submits a file to Falcon Sandbox for analysis and retrieves the resulting threat
     report and score.
@@ -45,15 +37,13 @@ Analyze File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits a file to the Falcon Sandbox for analysis, creating a new analysis job
-      in the external system.
+      Submits a file to Falcon Sandbox for analysis.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by retrieving the scan report and job state from Falcon
-      Sandbox. It mutates external data by submitting a new file for analysis via
-      a POST request, which creates a new job in the sandbox. It does not mutate internal
-      data, update entities, create insights, modify alert data, or create case comments.
+      The action makes a POST request to submit a file to Falcon Sandbox (can_mutate_external_data=true).
+      It also fetches the resulting analysis report (fetches_data=true). It does not
+      update entities, create insights, or modify internal SecOps data.
   entity_usage:
     entity_types:
       address: false
@@ -105,10 +95,9 @@ Analyze File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided file path parameter. Therefore,
-      it does not run on entities, and all entity type and filter flags are set to
-      false.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on a provided
+      file path.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -124,10 +113,8 @@ Analyze File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action uploads a file to Falcon Sandbox for analysis and retrieves the resulting
-      threat score and behavior report. This directly matches the 'Submit File' expected
-      outcome. It does not perform any other operations like enriching IOCs, updating
-      alerts, or modifying blocklists.
+      The action uploads a file to Falcon Sandbox for analysis and retrieves the threat
+      score and reports. This directly matches the 'Submit File' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -159,30 +146,30 @@ Analyze File Url:
     ### General Description
 
     Submits a file by URL to Falcon Sandbox for analysis and retrieves the resulting
-    threat report. This action initiates a sandbox detonation for the specified URL
-    and environment, returning the threat score and detailed analysis reports.
+    threat report and score.
 
 
     ### Flow Description
 
     1. Connects to the Falcon Sandbox API using the provided integration credentials.
 
-    2. Submits the specified `File Url` and `Environment` ID to initiate a new analysis
-    job via a POST request.
+    2. Submits the specified file URL and environment ID via a POST request to initiate
+    a new analysis job.
 
-    3. Checks the status of the analysis job asynchronously.
+    3. Checks the status of the analysis job asynchronously to wait for completion.
 
-    4. Once the job is completed, retrieves the scan information and maximum threat
-    score via GET/POST requests.
+    4. Once the job is completed, retrieves the scan information, including the threat
+    score.
 
-    5. Downloads the MISP report and attaches both the JSON scan info and MISP reports
-    to the action results.
+    5. Attaches the JSON and MISP reports to the action results and returns the maximum
+    threat score.
 
 
     ### Additional Notes
 
-    This action runs asynchronously, meaning it will periodically check the job status
-    in the background until the analysis is completed.
+    This action runs asynchronously, meaning it will periodically check the status
+    of the sandbox analysis job without blocking the execution thread until the report
+    is ready.
   ai_short_description: >-
     Submits a file by URL to Falcon Sandbox for analysis and retrieves the resulting
     threat report and score.
@@ -194,13 +181,16 @@ Analyze File Url:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits a file URL to Falcon Sandbox to initiate a new analysis job.
+      Submits a file URL to Falcon Sandbox, creating a new analysis job on the external
+      system.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to submit a file URL for analysis, mutating
-      external state by creating a new job in Falcon Sandbox. It then fetches the
-      resulting reports and data. It does not update internal entities or create insights.
+      The action makes a POST request to Falcon Sandbox to submit a file URL for analysis,
+      which creates a new job on the external system (can_mutate_external_data=true).
+      It then fetches the analysis report and threat score (fetches_data=true). It
+      does not update internal entities, create insights, modify alert data, or create
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -235,7 +225,7 @@ Analyze File Url:
       threat_actor: false
       threat_campaign: false
       threat_signature: false
-      url: false
+      url: true
       usb: false
       user: false
     filters_by_additional_properties: false
@@ -252,9 +242,9 @@ Analyze File Url:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process any entities from the case. It relies
-      entirely on the provided action parameters (File Url and Environment) to perform
-      its tasks.
+      The action does not iterate over target entities, but it accepts a 'File Url'
+      input parameter which represents a URL entity. Therefore, the URL entity type
+      is marked as true. No entity attributes are used for filtering.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -270,9 +260,9 @@ Analyze File Url:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action submits a file URL to a sandbox (Falcon Sandbox) for analysis and
-      retrieves the threat score and reports. This directly aligns with the 'Submit
-      File' expected outcome.
+      The action submits a file URL to Falcon Sandbox for analysis and retrieves the
+      resulting threat score and reports. This directly aligns with the 'Submit File'
+      expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -301,41 +291,43 @@ Get Hash Scan Report:
   ai_description: >-
     ### General Description
 
-    Fetches hybrid analysis reports from Falcon Sandbox for File Hash entities and
-    enriches them with the scan results. It retrieves threat scores, verdicts, and
-    other analysis details across multiple sandbox environments.
+    Fetches hybrid analysis reports from Falcon Sandbox to enrich File Hash entities.
+    This action retrieves threat intelligence, including threat scores, malware families,
+    and other scan details, and updates the entity's properties. It also evaluates
+    the threat score against a configured threshold to determine if the entity should
+    be marked as suspicious.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities and filters for File Hash entities.
+    1. Connects to the Falcon Sandbox API using the provided integration credentials.
 
-    2. For each File Hash, iterates through available Falcon Sandbox environments
-    (e.g., Windows 7, Linux, Android).
+    2. Iterates through the target entities, filtering for those of type `FILEHASH`.
 
-    3. Makes an API call to Falcon Sandbox to fetch scan information for the hash
-    in the specific environment.
+    3. For each file hash, makes a GET request to the Falcon Sandbox API to fetch
+    scan reports across multiple environments.
 
-    4. Extracts relevant threat intelligence data (e.g., threat score, verdict, AV
-    detection) and updates the entity's additional properties.
+    4. Extracts relevant threat intelligence data (e.g., threat score, vx_family,
+    verdict) from the reports.
 
-    5. Makes another API call to fetch the MISP report for the hash and attaches it
-    to the entity.
+    5. Updates the entity's additional properties with the extracted enrichment data.
 
-    6. If the maximum threat score across all reports exceeds the configured threshold,
-    marks the entity as suspicious.
+    6. Attaches the JSON report and MISP report to the entity.
 
-    7. Updates the entities in the SecOps platform with the enriched data.
+    7. Evaluates the maximum threat score against the configured threshold; if it
+    exceeds or equals the threshold, marks the entity as suspicious.
+
+    8. Marks the entity as enriched and updates it within the Google SecOps platform.
 
 
     ### Additional Notes
 
-    The action requires the Falcon Sandbox integration to be configured with a valid
-    API key and threshold. It will attempt to fetch reports for all supported environments
-    and aggregate the results.
+    The action relies on integration-level configurations for the API key, server
+    address, and threat score threshold.
   ai_short_description: >-
-    Fetches hybrid analysis reports from Falcon Sandbox for File Hash entities and
-    enriches them with the scan results.
+    Fetches hybrid analysis reports from Falcon Sandbox to enrich File Hash entities
+    with threat intelligence and updates their suspicious status based on a configured
+    threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -347,9 +339,9 @@ Get Hash Scan Report:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes GET requests to Falcon Sandbox to fetch scan info and MISP
-      reports (fetches_data=true). It does not mutate external data. It updates internal
-      entities with the fetched data (can_update_entities=true). It does not create
+      The action makes GET and POST requests to the Falcon Sandbox API to fetch existing
+      scan reports for file hashes. It does not mutate external data. It updates internal
+      entities with the fetched enrichment data and attachments, but does not create
       insights or case comments.
   entity_usage:
     entity_types:
@@ -420,8 +412,10 @@ Get Hash Scan Report:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches scan reports and threat intelligence for file hashes from
-      Falcon Sandbox, which directly aligns with the 'Enrich IOC' expected outcome.
+      The action fetches scan reports for file hashes from Falcon Sandbox, returning
+      threat intelligence such as threat scores and malware families. This matches
+      the 'Enrich IOC' expected outcome. It does not mutate data on external systems
+      or submit new files for analysis.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -442,27 +436,27 @@ Ping:
     ### General Description
 
     Tests connectivity to the Falcon Sandbox API. This action verifies that the integration
-    is configured correctly and can successfully authenticate and communicate with
-    the external service.
+    is configured correctly and can successfully authenticate with the external service.
 
 
     ### Flow Description
 
     1. Retrieves the API Root and API Key from the integration configuration.
 
-    2. Makes a GET request to the `/key/current` endpoint of the Falcon Sandbox API.
+    2. Makes a GET request to the `/key/current` endpoint of the Falcon Sandbox API
+    to validate the credentials and network connectivity.
 
-    3. Validates the HTTP response to ensure successful authentication and connectivity.
-
-    4. Returns a success message if the connection is established.
+    3. Returns a success message if the connection is established and the credentials
+    are valid.
 
 
     ### Additional Notes
 
-    This action does not process any entities or alerts and is primarily used for
-    administrative verification of the integration setup.
+    This action does not interact with any entities or case data. It is strictly used
+    for diagnostic and configuration verification purposes.
   ai_short_description: >-
-    Tests connectivity to the Falcon Sandbox API to verify integration configuration.
+    Tests connectivity to the Falcon Sandbox API to verify integration configuration
+    and credentials.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -475,461 +469,7 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action only makes a GET request to verify API credentials. It does not fetch
-      contextual data for alerts, mutate external data, update internal entities,
-      or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not process or iterate over any entities. It solely tests the
-      connection to the external API.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action is a simple connectivity test (ping) and does not match any of the
-      specific outcome categories such as enrichment, containment, or ticketing.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Scan URL:
-  ai_description: >-
-    ### General Description
-
-    Submits URL and Hostname entities to Falcon Sandbox for analysis and retrieves
-    the resulting threat reports. This asynchronous action evaluates the AV detection
-    rate against a configured threshold, marks malicious entities as suspicious, and
-    attaches the detailed MISP report to the entities in the SecOps platform.
-
-
-    ### Flow Description
-
-    1. Iterates through the target entities and filters for `URL` and `Hostname` entity
-    types.
-
-    2. Submits each valid entity to Falcon Sandbox for analysis via a POST request
-    to the `/submit/url` endpoint.
-
-    3. Periodically polls the status of the analysis jobs to check for completion.
-
-    4. Once a job is completed, fetches the scan summary and the MISP report for the
-    analyzed entity.
-
-    5. If the AV detection rate meets or exceeds the configured `Threshold`, marks
-    the entity as suspicious and enriched, and creates an insight with the detection
-    details.
-
-    6. Attaches the fetched MISP report to the entity and updates the entities in
-    the SecOps platform.
-
-    7. Returns a JSON result containing the scan reports.
-
-
-    ### Additional Notes
-
-    - This is an asynchronous action that will run in the background until the sandbox
-    analysis is complete.
-
-    - Entities that are not of type `URL` or `Hostname` will be skipped.
-  ai_short_description: >-
-    Submits URL and Hostname entities to Falcon Sandbox for analysis, retrieves the
-    resulting threat reports, and updates the entities with insights and attachments
-    based on the findings.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: >-
-      Creates a new analysis job in Falcon Sandbox by submitting a URL for scanning.
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity properties (is_suspicious, is_enriched), adds insights, and attaches
-      MISP reports to the entities.
-    reasoning: >-
-      The action fetches job status, scan summaries, and MISP reports from Falcon
-      Sandbox (fetches_data=true). It submits a URL to Falcon Sandbox for analysis,
-      which creates a new job on the external system (can_mutate_external_data=true).
-      It updates entities, adds insights, and attaches reports to the entities within
-      Google SecOps (can_mutate_internal_data=true, can_update_entities=true, can_create_insight=true).
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: true
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `if entity.entity_type not in SUPPORTED_ENTITIES:`, where `SUPPORTED_ENTITIES`
-      includes `EntityTypes.URL` and `EntityTypes.HOSTNAME`. Therefore, it targets
-      URL and Hostname entities and filters strictly by entity type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action submits a URL/Hostname (sample) to a sandbox (Falcon Sandbox) for
-      analysis, which aligns with the 'Submit File' category. It also retrieves threat
-      intelligence (AV detection rate, MISP report) for the indicator, which aligns
-      with the 'Enrich IOC' category.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: true
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Threshold | String | Yes | Mark entity as suspicious if number of av detection
-    is equal or above the given threshold |
-
-    | Environment | Dropdown | Yes | The environment to use for the scan. |
-Search:
-  ai_description: >-
-    ### General Description
-
-    Searches the Falcon Sandbox database for existing scan reports and information
-    about files and URLs based on provided criteria.
-
-
-    ### Flow Description
-
-    1. Initializes the Falcon Sandbox manager with API credentials.
-
-    2. Retrieves search parameters such as file name, type, verdict, host, domain,
-    etc.
-
-    3. Calls the Falcon Sandbox API (`/search/terms`) to search for matching analysis
-    reports.
-
-    4. Flattens the retrieved results and constructs a CSV table.
-
-    5. Attaches the results as a data table and JSON object to the action result.
-
-
-    ### Additional Notes
-
-    This action does not operate on specific entities but relies on the provided input
-    parameters to perform the search.
-  ai_short_description: >-
-    Searches the Falcon Sandbox database for existing scan reports and information
-    about files and URLs based on provided criteria.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a POST request to the `/search/terms` endpoint of the Falcon
-      Sandbox API to fetch existing analysis reports based on search criteria. It
-      does not mutate external data, update internal entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the provided action parameters to perform
-      the search. Therefore, it does not run on entities.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action searches a threat intelligence database for existing scan reports
-      based on various parameters. It does not directly enrich a specific IOC entity,
-      search for internal events/telemetry, or match any other specific outcome category.
-      Therefore, all outcome categories are false.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | File Name | String | No | Filename e.g. invoice.exe |
-
-    | File Type | String | No | e.g. docx |
-
-    | File Type Description | String | No | e.g. PE32 executable |
-
-    | Verdict | String | No | e.g. 1 (1=whitelisted, 2=no verdict, 3=no specific threat,
-    4=suspicious, 5=malicious) |
-
-    | AV Multiscan Range | String | No | e.g. 50-70 (min 0, max 100) |
-
-    | AV Family Substring | String | No | e.g. Agent.AD, nemucod |
-
-    | Hashtag | String | No | e.g. ransomware |
-
-    | Port | String | No | e.g. 8080 |
-
-    | Host | String | No | x.x.x.x |
-
-    | Domain | String | No | e.g. checkip.dyndns.org |
-
-    | HTTP Request Substring | String | No | e.g. google |
-
-    | Similar Samples | String | No | e.g. <sha256> |
-
-    | Sample Context | String | No | e.g. <sha256> |
-Submit File:
-  ai_description: >-
-    **General Description**
-
-    Submits one or more files to Falcon Sandbox for malware analysis within a specified
-    environment.
-
-
-    **Flow Description**
-
-    1. Extracts the file paths and the target environment from the action parameters.
-
-    2. Maps the environment name to its corresponding Falcon Sandbox environment ID.
-
-    3. Iterates through the provided file paths.
-
-    4. For each file, makes a POST request to the Falcon Sandbox API (`/submit/file`)
-    to upload the file for analysis.
-
-    5. Collects the resulting job ID and SHA256 hash for each successfully submitted
-    file.
-
-    6. Returns the results as a JSON object.
-
-
-    **Additional Notes**
-
-    Multiple file paths can be provided as a comma-separated list.
-  ai_short_description: >-
-    Submits one or more files to Falcon Sandbox for malware analysis within a specified
-    environment and returns the analysis job IDs.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Uploads a file to Falcon Sandbox, creating a new analysis job in the external
-      system.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a POST request to the Falcon Sandbox API to upload a file,
-      which creates a new analysis job in the external system (can_mutate_external_data=true).
-      It does not fetch contextual data for entities, mutate internal SecOps data,
+      contextual data for alerts/entities, mutate external data, mutate internal data,
       update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -982,10 +522,8 @@ Submit File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the 'File Path' action parameter to determine
-      which files to submit. Therefore, it does not run on entities, and all entity
-      type and filter flags are false.
+      The action does not process any entities. It does not iterate over target_entities
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1001,9 +539,150 @@ Submit File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action uploads a file to Falcon Sandbox for analysis and retrieves the resulting
-      job ID and SHA256 hash. This directly matches the 'Submit File' expected outcome.
-      It does not enrich IOCs, update alerts, or perform any other categorized operations.
+      The action is a simple connectivity test (Ping). It does not enrich data, mutate
+      external state, interact with tickets, or perform any security operations that
+      match the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Scan URL:
+  ai_description: >-
+    ### General Description
+
+    Submits URL and Hostname entities to CrowdStrike Falcon Sandbox for dynamic analysis
+    and retrieves the resulting threat reports.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities and filters for URL and Hostname types.
+
+    2. Submits each valid entity to Falcon Sandbox for analysis via a POST request
+    to the `/submit/url` endpoint.
+
+    3. Asynchronously polls the sandbox for job completion status using a GET request
+    to the `/report/{job_id}/state` endpoint.
+
+    4. Once the analysis is complete, fetches the scan summary and MISP report for
+    each job.
+
+    5. Evaluates the AV detection rate against the provided `Threshold`; if the score
+    meets or exceeds the threshold, the entity is marked as suspicious and enriched,
+    and an insight is created.
+
+    6. Attaches the MISP report to the case and updates the entities in the platform.
+
+
+    ### Additional Notes
+
+    This is an asynchronous action that will continue to run in the background until
+    all submitted jobs have completed or failed.
+  ai_short_description: >-
+    Submits URL and Hostname entities to CrowdStrike Falcon Sandbox for dynamic analysis
+    and retrieves the resulting threat reports.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Submits a URL to Falcon Sandbox, creating a new analysis job on the external
+      service.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving scan reports and MISP reports from Falcon
+      Sandbox. It mutates external data by submitting a new URL analysis job to the
+      sandbox. It updates internal entities with suspicious/enriched flags and creates
+      insights based on the AV detection rate.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` is
+      defined as `[EntityTypes.URL, EntityTypes.HOSTNAME]`. Thus, it targets URL and
+      Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits a URL/Hostname sample to a sandbox for analysis, which aligns
+      with the 'Submit File' category (as it uploads a sample to an analysis engine
+      and returns a behavior report). It also retrieves threat intelligence and reputation
+      data (AV detection rate) to enrich the IOC, aligning with the 'Enrich IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1023,60 +702,219 @@ Submit File:
 
     | --- | --- | --- | --- |
 
-    | File Path | String | Yes | The full path of the file to analyze. For multiple,
-    use comma separated values. |
+    | Threshold | String | Yes | Mark entity as suspicious if number of av detection
+    is equal or above the given threshold. |
 
-    | Environment | String | Yes | The environment to use for the scan. |
-Wait For Job and Fetch Report:
+    | Environment | DDL | Yes | The environment to use for the scan. |
+Search:
   ai_description: >-
     ### General Description
 
-    Waits for a specified Falcon Sandbox scan job to complete and fetches the resulting
-    scan report. This action is designed to run asynchronously, checking the status
-    of the provided jobs and retrieving their analysis results once they finish.
+    Searches the Falcon Sandbox (Hybrid Analysis) database for existing scan reports
+    and threat intelligence related to files, URLs, and other indicators.
 
 
     ### Flow Description
 
-    1. Retrieves the provided `Job ID`s from the action parameters.
+    1. Retrieves search parameters such as file name, host, domain, and hashes.
 
-    2. Queries the Falcon Sandbox API (`GET /report/{job_id}/state`) to check the
-    status of each job and any related jobs.
+    2. Constructs a search query and sends a POST request to the Falcon Sandbox API
+    (`/search/terms`).
 
-    3. If any job is still in progress or in the queue, the action returns an in-progress
-    status to wait for completion.
+    3. Parses the returned scan reports and threat intelligence data.
 
-    4. Once all jobs are completed, fetches the scan reports (`POST /report/summary`)
-    and MISP reports (`GET /report/{job_id}/report/misp`) for the successful jobs.
-
-    5. Attaches the MISP reports to the case and returns the scan information as JSON
-    results.
+    4. Formats the results into a CSV table and attaches it to the case, along with
+    the raw JSON results.
 
 
     ### Additional Notes
 
-    Supports multiple comma-separated Job IDs. If related jobs are found for a given
-    job ID, the action will also wait for those related jobs to complete before fetching
-    the reports.
+    This action does not automatically enrich entities; it provides a data table of
+    matching reports for analyst review.
   ai_short_description: >-
-    Waits for Falcon Sandbox scan jobs to complete, fetches their scan reports, and
-    attaches the resulting MISP reports to the case.
+    Searches the Falcon Sandbox database for existing scan reports and threat intelligence
+    based on provided file, network, or hash parameters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Attaches the fetched MISP reports to the case.
+    internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches job status and report data from Falcon Sandbox. It does not
-      mutate external data. It mutates internal data by attaching the fetched MISP
-      reports to the case. It does not update entities, create insights, modify alert
-      data, or create case comments.
+      The action makes a POST request to the Falcon Sandbox API to fetch search results.
+      It does not mutate external data, as it only queries the database. It does not
+      update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: true
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: true
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      entity identifiers via input parameters: 'File Name' maps to File Name, 'Host'
+      (described as x.x.x.x) maps to Address, 'Domain' maps to Domain, and 'Similar
+      Samples' / 'Sample Context' (described as <sha256>) map to File Hash. Since
+      it does not process the target_entities list, no entity property filters are
+      applied.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches the Falcon Sandbox database for existing scan reports based
+      on various parameters. While it retrieves threat intelligence, it functions
+      as a free-form search rather than a direct IOC enrichment (it does not update
+      entities or add insights), event search, or asset search. Therefore, it does
+      not strictly match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Name | String | No | Filename e.g. invoice.exe |
+
+    | File Type | String | No | e.g. docx |
+
+    | File Type Description | String | No | e.g. PE32 executable |
+
+    | Verdict | String | No | e.g. 1 (1=whitelisted, 2=no verdict, 3=no specific threat,
+    4=suspicious, 5=malicious) |
+
+    | AV Multiscan Range | String | No | e.g. 50-70 (min 0, max 100) |
+
+    | AV Family Substring | String | No | e.g. Agent.AD, nemucod |
+
+    | Hashtag | String | No | e.g. ransomware |
+
+    | Port | String | No | e.g. 8080 |
+
+    | Host | String | No | x.x.x.x |
+
+    | Domain | String | No | e.g. checkip.dyndns.org |
+
+    | HTTP Request Substring | String | No | e.g. google |
+
+    | Similar Samples | String | No | e.g. <sha256> |
+
+    | Sample Context | String | No | e.g. <sha256> |
+Submit File:
+  ai_description: >-
+    ### General Description
+
+    Submits one or more files to Falcon Sandbox for malware analysis.
+
+
+    ### Flow Description
+
+    1. Extracts the file paths and the target environment from the action parameters.
+
+    2. Iterates over the provided file paths.
+
+    3. Makes a POST request to the Falcon Sandbox API (`/submit/file`) for each file
+    to initiate the analysis.
+
+    4. Collects the resulting Job ID and SHA256 hash for each successfully submitted
+    file.
+
+    5. Returns the results as a JSON object and outputs a summary message.
+
+
+    ### Additional Notes
+
+    The action requires a valid API key and server address configured in the integration
+    settings.
+  ai_short_description: >-
+    Submits one or more files to Falcon Sandbox for malware analysis and retrieves
+    the corresponding job IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Submits a file to Falcon Sandbox, creating a new analysis job on the external
+      system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Falcon Sandbox API to submit a file for
+      analysis, which creates a new job on the external system (can_mutate_external_data=true).
+      It does not fetch enrichment data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -1128,8 +966,9 @@ Wait For Job and Fetch Report:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It relies entirely on the 'Job ID'
-      parameter provided in the action configuration to fetch reports.
+      The action does not process `siemplify.target_entities` nor does it accept any
+      entity-specific input parameters. It operates solely on file paths provided
+      as a string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1145,9 +984,154 @@ Wait For Job and Fetch Report:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches a report for a specific sandbox job ID. It does not enrich
-      an IOC directly, submit a file, or perform any containment/remediation actions.
-      Therefore, it does not match any of the specific expected outcome categories.
+      The action uploads a file to Falcon Sandbox for analysis and returns the job
+      ID and SHA256 hash. This directly matches the 'Submit File' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Path | String | Yes | The full path of the file to analyze. For multiple,
+    use comma separated values. |
+
+    | Environment | String | Yes | The environment to use for the scan. |
+Wait For Job and Fetch Report:
+  ai_description: >-
+    ### General Description
+
+    Waits for a previously submitted scan job to complete in CrowdStrike Falcon Sandbox
+    and fetches the corresponding analysis report.
+
+
+    ### Flow Description
+
+    1. Retrieves the provided Job IDs from the action parameters.
+
+    2. Queries the Falcon Sandbox API to check the execution status of each job and
+    any related child jobs.
+
+    3. If any job is still in progress or in the queue, the action returns an in-progress
+    status to be retried later (asynchronous execution).
+
+    4. Once all jobs are completed, it fetches the scan summary reports for the successful
+    jobs via the Falcon Sandbox API.
+
+    5. It also attempts to download the MISP format report for each completed job
+    and attaches it to the case.
+
+    6. Returns the fetched reports as JSON results.
+
+
+    ### Additional Notes
+
+    This action is designed to run asynchronously. It will suspend and re-execute
+    until the specified jobs have either completed successfully or failed.
+  ai_short_description: >-
+    Waits for a scan job to complete in CrowdStrike Falcon Sandbox and fetches the
+    analysis report, attaching the MISP report to the case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes requests to the Falcon Sandbox API to fetch job status and
+      analysis reports (fetches_data=true). It does not mutate external data (the
+      POST request is used for querying data, not changing state), update internal
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It only accepts a Job ID. Therefore,
+      it does not run on entities and all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action checks the status of a sandbox job and retrieves the analysis report.
+      It does not directly enrich an IOC (it takes a Job ID, not an IOC), submit a
+      file (it only fetches the result of a previous submission), or perform any containment
+      or ticketing operations. Therefore, it does not match any of the predefined
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

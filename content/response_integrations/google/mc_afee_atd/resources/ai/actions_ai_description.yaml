@@ -2,27 +2,34 @@ Check Hash:
   ai_description: >-
     ### General Description
 
-    This action checks if a file hash entity is blacklisted in McAfee ATD. It retrieves
-    the blacklist status for the provided hashes to determine if they are known threats.
+    Checks if File Hash entities are blacklisted in McAfee Advanced Threat Defense
+    (ATD).
 
 
     ### Flow Description
 
-    1. Iterates over all target entities that are of type FILEHASH.
+    1. Initializes the McAfee ATD manager using the provided integration configuration
+    credentials.
 
-    2. For each entity, makes an API call (POST request) to the McAfee ATD `atdHashLookup.php`
-    endpoint to check if the MD5 hash is blacklisted.
+    2. Filters the target entities to include only File Hash entities.
 
-    3. Collects the blacklist status and populates a data table and JSON result with
-    the findings.
+    3. Iterates through the filtered entities and makes a POST request to the McAfee
+    ATD API (`atdHashLookup.php`) to determine if each hash is blacklisted.
+
+    4. Updates the entity's additional properties in memory with the blacklist status.
+
+    5. Outputs a data table and JSON results containing the blacklist status for each
+    processed hash.
 
 
     ### Additional Notes
 
-    - The action specifically requires MD5 hashes; other hash types will result in
-    an error.
+    While the script updates the entity's additional properties in memory, a bug in
+    the script (failing to append the entity to the `entities_to_update` list) prevents
+    these changes from being saved back to the platform.
   ai_short_description: >-
-    Checks if a file hash entity is blacklisted in McAfee ATD.
+    Checks if File Hash entities are blacklisted in McAfee Advanced Threat Defense
+    (ATD) and returns the status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -34,11 +41,11 @@ Check Hash:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by querying the McAfee ATD API to check if a hash is
-      blacklisted. It does not mutate external data (the POST request is a lookup,
-      not a state change). It does not update internal entities because the list of
-      entities to update is never populated in the code. It does not create insights,
-      modify alerts, or create case comments.
+      The action fetches data from McAfee ATD to check the blacklist status of hashes.
+      It does not mutate external data (the POST request is a lookup). Although it
+      modifies entity properties in memory, it fails to append them to the update
+      list, so it does not successfully update entities in the platform. It does not
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -90,9 +97,9 @@ Check Hash:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == EntityTypes.FILEHASH`. Therefore, it targets FILEHASH entities and filters
-      strictly by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      the condition `entity.entity_type == EntityTypes.FILEHASH`. Therefore, it targets
+      File Hash entities and filters strictly by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -108,10 +115,9 @@ Check Hash:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action queries McAfee ATD to determine if a file hash is blacklisted, returning
-      threat intelligence/reputation for the indicator. This matches the 'Enrich IOC'
-      expected outcome. It does not perform any containment, blocklist additions,
-      or other state-changing operations.
+      The action queries McAfee ATD to check if a file hash is blacklisted, which
+      provides threat intelligence about the indicator. This aligns with the 'Enrich
+      IOC' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -131,29 +137,35 @@ Get Analyzer Profiles:
   ai_description: >-
     ### General Description
 
-    Retrieves all analyzer profiles from McAfee ATD.
+    Retrieves a list of available analyzer profiles from McAfee Advanced Threat Defense
+    (ATD). This action is useful for identifying the available virtual machine profiles
+    that can be used for file or URL submission analysis.
 
 
     ### Flow Description
 
-    1. Establishes a session with the McAfee ATD API.
+    1. Initializes the connection to the McAfee ATD API using the provided integration
+    credentials.
 
-    2. Makes a GET request to the `vmprofiles.php` endpoint to retrieve the list of
-    available analyzer profiles.
+    2. Makes a GET request to the `/vmprofiles.php` endpoint to fetch the available
+    analyzer profiles.
 
-    3. Iterates through the profiles to map the `vmProfileid` to `Profile ID`.
+    3. Formats the retrieved profiles by mapping the `vmProfileid` to a `Profile ID`
+    key.
 
-    4. Attaches the retrieved profiles to the action's JSON result and outputs them
-    as a data table.
+    4. Attaches the profile data to the action's JSON result and creates a data table
+    named "Analyzer Profiles".
+
+    5. Logs out of the McAfee ATD session.
 
 
     ### Additional Notes
 
-    This action is typically used to retrieve profile IDs which are required when
-    submitting files or URLs for analysis in McAfee ATD.
+    This action does not require any specific entities or action-level parameters
+    to execute.
   ai_short_description: >-
-    Retrieves all analyzer profiles from McAfee ATD and attaches them as a JSON result
-    and data table.
+    Retrieves a list of available analyzer profiles from McAfee Advanced Threat Defense
+    (ATD).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -165,9 +177,10 @@ Get Analyzer Profiles:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (analyzer profiles) from McAfee ATD via a GET request.
-      It does not mutate external data, mutate internal data, update entities, create
-      insights, modify alert data, or create case comments.
+      The action makes a GET request to McAfee ATD to fetch analyzer profiles, so
+      it fetches data. It does not perform any state-changing operations on external
+      systems, nor does it update entities, create insights, modify alerts, or create
+      case comments within Google SecOps.
   entity_usage:
     entity_types:
       address: false
@@ -219,9 +232,8 @@ Get Analyzer Profiles:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It simply fetches global configuration
-      data (analyzer profiles) from the external system without referencing or iterating
-      over `siemplify.target_entities`. Therefore, all entity-related flags are false.
+      The action does not iterate over target entities or accept any entity-related
+      input parameters. It simply fetches configuration data from the external system.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -237,9 +249,9 @@ Get Analyzer Profiles:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches analyzer profiles from McAfee ATD. It does not interact with
-      alerts, IOCs, assets, tickets, identities, endpoints, emails, or files in a
-      way that matches any of the predefined outcome categories.
+      The action fetches configuration data (analyzer profiles) from McAfee ATD. It
+      does not enrich specific IOCs or assets, nor does it mutate any external or
+      internal state, meaning it does not match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -259,40 +271,36 @@ Get Report:
   ai_description: >-
     ### General Description
 
-    Retrieves analysis reports from McAfee ATD for specified task IDs. This action
-    checks the status of the provided tasks and, once completed, fetches the corresponding
-    JSON, PDF, and optionally TXT reports. It can attach the PDF report to the case
-    and create an insight with the text summary.
+    Retrieves analysis reports for specified task IDs from McAfee Advanced Threat
+    Defense (ATD). This action fetches the JSON, PDF, and optionally TXT reports for
+    tasks that have completed their analysis.
 
 
     ### Flow Description
 
-    1. Receives a comma-separated list of task IDs from the action parameters.
+    1. Accepts a comma-separated list of task IDs provided via the action parameters.
 
-    2. Initiates an asynchronous loop to check the status of each task ID via the
-    McAfee ATD API (`samplestatus.php`).
+    2. Queries the McAfee ATD API to check the analysis status of each task ID.
 
-    3. If any task is not yet completed, the action yields and waits.
+    3. If any task is still processing, the action reschedules itself (asynchronous
+    execution) until all tasks are completed.
 
-    4. Once all tasks are completed, the action fetches the JSON report (`showreport.php?iType=json`)
-    and PDF report (`showreport.php?iType=pdf`) for each task.
+    4. Once all tasks are ready, fetches the JSON and PDF reports for each task ID.
 
-    5. If the `Create Insight` parameter is enabled, it also fetches the TXT report
-    (`showreport.php?iType=txt`) and creates a case insight with its content.
+    5. Attaches the PDF report to the case and adds the JSON report to the action's
+    JSON results.
 
-    6. Attaches the retrieved PDF report to the action results.
-
-    7. Returns the JSON report data as the final action result.
+    6. If the `Create Insight` parameter is enabled, fetches the TXT report and creates
+    a case insight with the report summary.
 
 
     ### Additional Notes
 
-    This action runs asynchronously, meaning it will periodically check the task status
-    until the analysis is complete without blocking the execution thread.
+    This is an asynchronous action that will continue to poll the McAfee ATD server
+    until the analysis for all provided task IDs is complete or the action times out.
   ai_short_description: >-
-    Retrieves analysis reports (JSON, PDF, TXT) from McAfee ATD for specified task
-    IDs, attaches the PDF to the case, and optionally creates case insights with the
-    text summary.
+    Retrieves analysis reports (JSON, PDF, TXT) for specified task IDs from McAfee
+    ATD, attaching the results to the case and optionally creating a case insight.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -303,12 +311,13 @@ Get Report:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds PDF reports as attachments to the case and creates case insights with the
-      report summary.
+      Creates a case insight with the text report summary and attaches the PDF report
+      to the case.
     reasoning: >-
-      The action makes GET requests to McAfee ATD to fetch task status and report
-      data (JSON, PDF, TXT). It does not mutate external data. It mutates internal
-      data by adding attachments to the case and creating case insights.
+      The action fetches report data from McAfee ATD (fetches_data=true). It does
+      not mutate external data. It mutates internal data by attaching PDF reports
+      to the case and creating case insights (can_mutate_internal_data=true, can_create_insight=true).
+      It does not update entities or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -360,8 +369,8 @@ Get Report:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses the 'Task IDs' parameter to
-      fetch reports directly from McAfee ATD, without referencing or filtering `siemplify.target_entities`.
+      The action does not process any entities. It relies entirely on the 'Task IDs'
+      input parameter to fetch the corresponding reports from McAfee ATD.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -377,10 +386,9 @@ Get Report:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches analysis reports for specific task IDs from McAfee ATD. It
-      does not enrich specific IOCs or assets, modify alerts, manage tickets, or perform
-      containment actions. Therefore, it does not match any of the predefined outcome
-      categories.
+      The action retrieves analysis reports from a sandbox (McAfee ATD) based on task
+      IDs. It does not match any of the specific outcome categories such as enriching
+      IOCs, submitting files, or mutating external state.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -409,32 +417,31 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the McAfee ATD server. This action verifies that the integration
-    is configured correctly and can successfully authenticate and communicate with
-    the external service.
+    Tests connectivity to the McAfee ATD server to ensure the integration is configured
+    correctly.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters (API Root, Username, Password,
-    Verify SSL).
+    1. Initializes the connection to the McAfee ATD server using the provided integration
+    configuration parameters.
 
-    2. Initializes the McAfee ATD manager, which automatically attempts to obtain
-    an authentication token via a GET request to the login endpoint.
+    2. Authenticates and obtains a session token via a GET request to the `session.php`
+    endpoint.
 
-    3. Calls the logout API endpoint via a DELETE request to terminate the session,
-    confirming successful communication.
+    3. Immediately terminates the session via a DELETE request to the `session.php`
+    endpoint.
 
-    4. Returns a success message if the connection and logout are successful, otherwise
-    returns an error.
+    4. Outputs a success message if the connection and authentication were successful,
+    or an error message if it fails.
 
 
     ### Additional Notes
 
-    This action does not require any action-specific parameters or entities to run.
-    It relies entirely on the integration-level configuration.
+    This action is used solely for verifying the integration's connection settings
+    and does not interact with any entities or perform any operational tasks.
   ai_short_description: >-
-    Tests connectivity to the McAfee ATD server by authenticating and subsequently
+    Tests connectivity to the McAfee ATD server by authenticating and immediately
     terminating the session.
   capabilities:
     can_create_case_comments: false
@@ -447,10 +454,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action initializes a connection to the McAfee ATD server and immediately
-      logs out to test connectivity. It does not fetch contextual data, mutate external
-      or internal data, update entities, create insights, modify alerts, or create
-      case comments.
+      The action only performs authentication (GET) and logout (DELETE) to verify
+      connectivity. It does not fetch contextual data for alerts/entities, mutate
+      external business data, mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -502,8 +509,9 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or interact with any entities. It only tests connectivity
-      to the external service using integration configuration parameters.
+      The action does not process any entities from the case, nor does it accept any
+      entity-related input parameters. It solely tests connectivity to the external
+      service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -519,9 +527,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      The action is a simple connectivity test (Ping) that authenticates and logs
+      out. It does not enrich data, mutate external systems, update alerts, or perform
+      any operations that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -541,35 +549,35 @@ Submit File:
   ai_description: >-
     ### General Description
 
-    Submits one or more files to McAfee ATD for sandbox analysis using a specified
-    analyzer profile.
+    Submits one or more files to McAfee ATD for analysis using a specified analyzer
+    profile. This action initiates a new analysis task on the external sandbox and
+    returns the corresponding Task IDs for tracking.
 
 
     ### Flow Description
 
     1. Extracts the provided file paths and analyzer profile ID from the action parameters.
 
-    2. Initializes the connection to the McAfee ATD API.
+    2. Initializes an authenticated session with the McAfee ATD API.
 
-    3. Iterates through the list of file paths.
+    3. Iterates through the provided file paths and makes a POST request to the McAfee
+    ATD API (`fileupload.php`) to submit each file.
 
-    4. Makes a POST request to the McAfee ATD API (`fileupload.php`) to upload and
-    submit each file for analysis.
+    4. Collects the resulting Task IDs from the API response.
 
-    5. Collects the resulting Task IDs.
+    5. Logs out of the McAfee ATD session to close the connection.
 
-    6. Logs out of the McAfee ATD session.
-
-    7. Returns the Task IDs as a JSON result and populates a data table.
+    6. Returns the Task IDs as a JSON result and populates a data table with the submission
+    details.
 
 
     ### Additional Notes
 
-    The action requires valid file paths accessible to the execution environment.
+    The action requires the file paths to be accessible by the script execution environment.
     Some file types (e.g., CSV) may not be supported by McAfee ATD.
   ai_short_description: >-
-    Submits specified files to the McAfee ATD sandbox for analysis and retrieves the
-    corresponding task IDs.
+    Submits one or more files to McAfee ATD for analysis and retrieves the corresponding
+    Task IDs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -578,15 +586,13 @@ Submit File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Uploads a file to the McAfee ATD sandbox, creating a new analysis task on the
-      external system.
+      Uploads a file to McAfee ATD to initiate a new analysis task.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the McAfee ATD API to upload a file for analysis,
+      The action makes a POST request to McAfee ATD to upload a file for analysis,
       which mutates external data by creating a new analysis task. It does not fetch
-      contextual data, update internal entities, create insights, or modify alert
-      data.
+      enrichment data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -638,9 +644,9 @@ Submit File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided file paths parameter. Therefore,
-      all entity type and filter flags are set to false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on file paths
+      provided as a string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -656,10 +662,9 @@ Submit File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action uploads files to the McAfee ATD sandbox for analysis and returns
-      the resulting task IDs. This directly aligns with the 'Submit File' expected
-      outcome. It does not enrich IOCs, update alerts, or perform any other categorized
-      operations.
+      The action uploads a file to McAfee ATD (a sandbox/analysis engine) for analysis
+      and returns a task ID. This directly aligns with the 'Submit File' expected
+      outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -688,57 +693,55 @@ Submit URL:
   ai_description: >-
     ### General Description
 
-    Submits URL entities to McAfee ATD for analysis and asynchronously retrieves the
-    resulting scan reports. This action initiates a sandbox analysis for the specified
-    URLs and fetches the detailed behavior reports once the analysis is complete.
+    Submits URL entities to McAfee ATD for sandbox analysis and asynchronously retrieves
+    the analysis reports to enrich the entities.
 
 
     ### Flow Description
 
-    1. Filters the target entities to include only URL entities.
+    1. Extracts the Analyzer Profile ID and filters target entities for URLs.
 
-    2. Submits each URL to McAfee ATD for analysis using the provided Analyzer Profile
-    ID via an API call.
+    2. Submits each URL to McAfee ATD via a POST request to initiate the analysis
+    task.
 
-    3. Asynchronously polls the McAfee ATD API to check the status of the analysis
-    tasks.
+    3. Asynchronously polls McAfee ATD to check the status of the analysis tasks.
 
-    4. Once the analysis is complete, retrieves the JSON, PDF, and TXT reports for
-    each task via API calls.
+    4. Once completed, retrieves the JSON, PDF, and TXT reports for each URL via GET
+    requests.
 
-    5. Enriches the URL entities with the analysis summary and updates their suspicious
-    status if the severity exceeds the threshold.
+    5. Enriches the URL entities with the JSON report summary and updates their suspicious
+    status based on the severity threshold.
 
-    6. Optionally creates an insight for each entity using the TXT report.
-
-    7. Attaches the PDF report to the action's results.
+    6. Optionally creates an insight with the TXT report and attaches the PDF report
+    to the action results.
 
 
     ### Additional Notes
 
-    This action runs asynchronously, meaning it will pause and re-execute until the
-    analysis tasks are completed on the McAfee ATD side.
+    This action runs asynchronously, meaning it will pause and periodically wake up
+    to check the analysis status until the reports are ready.
   ai_short_description: >-
-    Submits URL entities to McAfee ATD for analysis and asynchronously retrieves the
-    resulting scan reports to enrich the entities.
+    Submits URL entities to McAfee ATD for sandbox analysis and asynchronously retrieves
+    the resulting threat reports to enrich the entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: true
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: >-
-      Submits a URL to the McAfee ATD sandbox for analysis, creating a new analysis
-      task.
+      Submits a URL to McAfee ATD for sandbox analysis, creating a new analysis task
+      on the external system.
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates URL entities with analysis results and creates insights based on the
+      text report.
     reasoning: >-
-      The action fetches analysis reports (JSON, PDF, TXT) from McAfee ATD (fetches_data=true).
-      It submits a URL to McAfee ATD, initiating an analysis task on the external
-      system (can_mutate_external_data=true). It updates entities with the analysis
-      summary (can_update_entities=true) and creates insights using the TXT report
-      if configured (can_create_insight=true).
+      The action makes a POST request to McAfee ATD to submit a URL for analysis,
+      mutating external data by creating a task. It then asynchronously fetches the
+      analysis reports (JSON, PDF, TXT). It updates the internal URL entities with
+      the results and optionally creates insights.
   entity_usage:
     entity_types:
       address: false
@@ -790,9 +793,9 @@ Submit URL:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == EntityTypes.URL`. Therefore, it specifically targets URL entities and filters
-      by entity type.
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.URL`. This means it targets URL entities, filtering strictly
+      by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -808,10 +811,10 @@ Submit URL:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action submits a URL sample to a sandbox (McAfee ATD) for analysis and retrieves
-      the behavior report, which aligns with the 'Submit File' category. It also enriches
-      the URL entity with the analysis results and updates its suspicious status,
-      aligning with the 'Enrich IOC' category.
+      The action submits a URL to McAfee ATD for sandbox analysis and retrieves the
+      behavior report, which aligns with the 'Submit File' category (as it uploads
+      a sample to a sandbox). It also enriches the URL entity with the analysis results
+      and threat intelligence, aligning with the 'Enrich IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

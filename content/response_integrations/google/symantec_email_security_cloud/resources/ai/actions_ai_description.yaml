@@ -2,38 +2,42 @@ Block Entities:
   ai_description: >-
     ### General Description
 
-    Blocks specified entities (such as IP addresses, hostnames, URLs, file hashes,
-    and email addresses) in Symantec Email Security.Cloud by adding them to the global
-    IOC list with a specified remediation action.
+    Blocks specific entities in Symantec Email Security.Cloud. Supported entities
+    include Hostname, IP address, URL, Filehash, Email Subject, and Email Address
+    (user entity that matches email regex).
 
 
     ### Flow Description
 
-    1. Extracts the action parameters: `Remediation Action` and `Description`.
+    1. Extracts the integration configuration and action parameters.
 
-    2. Iterates over the target entities and filters them based on supported types
-    (Address, Hostname, User, URL, Filehash, Email Message).
+    2. Iterates through the target entities provided in the case.
 
-    3. Validates the entities: ensures file hashes are either MD5 or SHA256, and verifies
-    that user entities are valid email addresses.
+    3. Filters entities to ensure they match the supported types (Address, Hostname,
+    User, URL, Filehash, Email Message).
 
-    4. Maps the validated entities to their corresponding Symantec Email Security.Cloud
+    4. Validates the format of Filehash (MD5 or SHA256) and User (valid email address)
+    entities.
+
+    5. Maps the supported entities to their corresponding Symantec Email Security.Cloud
     IOC types.
 
-    5. Makes a POST request to the Symantec Email Security.Cloud API (`/domains/global/iocs/upload?api-list-action=MERGE`)
+    6. Makes a POST request to the Symantec Email Security.Cloud API (`/domains/global/iocs/upload`)
     to block the mapped IOCs with the specified remediation action and description.
 
-    6. Returns a JSON result containing the success or failure status for each processed
-    entity.
+    7. Evaluates the API response and returns a JSON result indicating the success
+    or failure of the block action for each entity.
 
 
     ### Additional Notes
 
-    Only MD5 and SHA256 hashes are supported. All entities are treated as "sender
-    IOCs" during blocking.
+    - Only MD5 and SHA256 hashes are supported.
+
+    - All of the entities are treated as "sender IOCs" during blocking.
   ai_short_description: >-
-    Blocks specified entities in Symantec Email Security.Cloud by adding them to the
-    global IOC list with a specified remediation action.
+    Blocks specific entities (Hostname, IP address, URL, Filehash, Email Subject,
+    Email Address) in Symantec Email Security.Cloud by adding them to the blocklist
+    with a specified remediation action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -42,13 +46,14 @@ Block Entities:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds the specified entities to the global IOC blocklist in Symantec Email Security.Cloud.
+      Adds the provided entities to the blocklist in Symantec Email Security.Cloud
+      with the specified remediation action.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a POST request to an external API (`/domains/global/iocs/upload`)
+      The action executes a POST request to the Symantec Email Security.Cloud API
       to block entities, which mutates external data. It does not fetch enrichment
-      data, update internal entities, or create insights/case comments.
+      data, mutate internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -86,7 +91,7 @@ Block Entities:
       url: true
       usb: false
       user: true
-    filters_by_additional_properties: true
+    filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
@@ -101,11 +106,10 @@ Block Entities:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them by checking
-      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (ADDRESS, HOSTNAME, USER,
-      URL, FILEHASH, EMAILMESSAGE). It also extracts the original identifier using
-      `entity.additional_properties.get("OriginalIdentifier", entity.identifier)`,
-      meaning it filters by additional properties and identifier. It further validates
-      the identifier length for hashes and uses a regex for user entities.
+      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (Address, Hostname, User,
+      URL, Filehash, Email Message). It also filters Filehash entities by their identifier
+      length (MD5 or SHA256) and User entities by checking if their identifier is
+      a valid email address.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -121,9 +125,9 @@ Block Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action makes a POST request to Symantec Email Security.Cloud to upload IOCs
-      to a blocklist, effectively preventing future interaction with these indicators.
-      This directly matches the 'Add IOC To Blocklist' expected outcome.
+      The action makes a POST request to Symantec Email Security.Cloud to upload and
+      block specific IOCs (entities). This directly aligns with the 'Add IOC To Blocklist'
+      expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,8 +148,8 @@ Block Entities:
     | --- | --- | --- | --- |
 
     | Remediation Action | Dropdown | No | Specify the remediation action for the
-    entities (e.g., Block and Delete, Quarantine, Redirect, Tag Subject, Append Header).
-    Default is 'Block and Delete'. |
+    entities. Supported values: Block and Delete, Quarantine, Redirect, Tag Subject,
+    Append Header. |
 
     | Description | String | Yes | Specify a description that should be added to the
     blocked entities. |
@@ -153,20 +157,19 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Symantec Email Security.Cloud instance using the provided
-    integration configuration parameters. This action ensures that the API credentials
-    and network settings are valid.
+    Tests connectivity to the Symantec Email Security.Cloud platform to ensure that
+    the integration is configured correctly and can communicate with the API.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters (API Root, Username, Password,
-    Verify SSL).
+    1. Extracts the integration-level configuration parameters (API Root, Username,
+    Password, Verify SSL).
 
     2. Initializes the Symantec Email Security.Cloud manager.
 
     3. Makes an HTTP GET request to the `/domains/global/iocs/download` endpoint to
-    verify authentication and connectivity.
+    verify API access and credentials.
 
     4. Returns a success message if the connection is established, otherwise returns
     an error.
@@ -174,12 +177,11 @@ Ping:
 
     ### Additional Notes
 
-    This action is primarily used for diagnostic purposes to ensure the integration
-    is configured correctly and can communicate with the Symantec Email Security.Cloud
-    API.
+    This action is typically used to verify integration settings and does not process
+    any entities or alerts.
   ai_short_description: >-
-    Tests connectivity to the Symantec Email Security.Cloud instance to verify that
-    the integration is configured correctly and can communicate with the API.
+    Tests connectivity to the Symantec Email Security.Cloud platform to verify API
+    access and credentials.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -191,9 +193,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to test connectivity but does not fetch contextual
-      data for alerts/entities, nor does it mutate any external or internal data.
-      It does not update entities, create insights, or modify alert data.
+      The action only makes a GET request to test API connectivity. It does not fetch
+      contextual data for alerts/entities, mutate external data, mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -245,8 +247,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It simply tests connectivity
-      to the external API using integration-level configuration parameters.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely tests connectivity to the external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -262,9 +264,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      This is a diagnostic Ping action used solely to test API connectivity. It does
-      not enrich data, mutate external state, interact with alerts, or match any of
-      the specified outcome categories.
+      The action is a simple connectivity test (Ping) and does not perform any enrichment,
+      containment, ticketing, or other operations that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

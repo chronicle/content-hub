@@ -3,31 +3,26 @@ GetSystemInfo:
     ### General Description
 
     Retrieves detailed system and operating system information from a remote server
-    using Windows Management Instrumentation (WMI). This action connects to the specified
-    server and extracts contextual metadata about the machine's hardware and OS configuration.
+    using Windows Management Instrumentation (WMI).
 
 
     ### Flow Description
 
-    1. Initializes the WMI manager and connects to the target server using the provided
-    `Server Address`, `Username`, and `Password`.
+    1. Initializes the WMI manager using the provided server address and credentials.
 
-    2. Executes WQL queries against the `Win32_ComputerSystem` and `Win32_OperatingSystem`
-    classes to fetch system metadata.
+    2. Executes WMI queries to fetch data from `Win32_ComputerSystem` and `Win32_OperatingSystem`.
 
-    3. Parses and merges the retrieved data into a single dictionary.
+    3. Formats the retrieved information into a flat dictionary and converts it to
+    CSV format.
 
-    4. Formats the system information into a CSV and attaches it as a data table to
-    the action results.
-
-    5. Returns the raw system information as a JSON result.
+    4. Attaches the CSV data as a data table ("WMI System Info") and the raw JSON
+    to the action results.
 
 
     ### Additional Notes
 
-    Requires appropriate WMI access and credentials to the target server. If used
-    as an enrichment action in a playbook, the user must ensure the provided credentials
-    have WMI access to the target entities.
+    Requires WMI access to the target server. The action can be used to enrich asset
+    entities by mapping the entity identifier to the 'Server Address' parameter.
   ai_short_description: >-
     Retrieves detailed system and operating system information from a remote server
     using WMI.
@@ -42,13 +37,11 @@ GetSystemInfo:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches system information from a remote server via WMI (fetches_data=true).
-      It only executes SELECT queries and does not mutate external data. It also does
-      not update internal entities, create insights, modify alerts, or create case
-      comments.
+      The action fetches data from a remote server via WMI. It does not mutate external
+      data, update internal entities, or create insights.
   entity_usage:
     entity_types:
-      address: false
+      address: true
       alert: false
       application: false
       child_hash: false
@@ -67,7 +60,7 @@ GetSystemInfo:
       file_hash: false
       file_name: false
       generic: false
-      host_name: false
+      host_name: true
       ip_set: false
       mac_address: false
       parent_hash: false
@@ -97,10 +90,9 @@ GetSystemInfo:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers from the SOAR platform. It operates solely on the 'Server Address'
-      provided as an action parameter. Therefore, it does not run on entities and
-      all entity-related flags are false.
+      The action does not iterate over `target_entities` directly, but it accepts
+      a 'Server Address' input parameter which represents an Address or Hostname entity
+      identifier to be queried via WMI.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -116,10 +108,9 @@ GetSystemInfo:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action connects to a remote server via WMI and retrieves system and OS information
-      (contextual metadata). This matches the 'Enrich Asset' expected outcome of returning
-      contextual metadata for a resource. It does not execute arbitrary commands,
-      mutate data, or interact with alerts/tickets.
+      The action fetches system and OS information for a specific server address,
+      which aligns with the 'Enrich Asset' category as it returns contextual metadata
+      for a resource.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -148,33 +139,33 @@ ListServices:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of installed services from a specified remote system using Windows
-    Management Instrumentation (WMI). This action connects to the target server and
-    extracts details about all configured services.
+    Retrieves a list of installed services from a specified Windows system using Windows
+    Management Instrumentation (WMI).
 
 
     ### Flow Description
 
-    1. Retrieves the target server address, username, and password from the action
-    parameters.
+    1. Initializes a WMI connection to the target system using the provided `Server
+    Address`, `Username`, and `Password`.
 
-    2. Establishes a WMI connection to the target server using the provided credentials.
+    2. Executes a WMI query (`Win32_Service`) to fetch all configured services on
+    the remote system.
 
-    3. Executes a WMI query (`Win32_Service`) to fetch the list of configured services
-    on the system.
+    3. Parses the retrieved services and formats them into JSON and CSV structures.
 
-    4. Formats the retrieved services into a JSON object and a CSV data table.
-
-    5. Attaches the JSON result and the "WMI Services" data table to the action's
-    output.
+    4. Attaches the JSON results to the action's output and creates a data table named
+    "WMI Services" containing the service details.
 
 
     ### Additional Notes
 
-    Requires appropriate WMI access and valid credentials for the target server. The
-    action automatically handles connections from both Linux and Windows SOAR environments.
+    - The action requires appropriate WMI access and valid credentials on the target
+    server.
+
+    - The action automatically determines if the SOAR SDK is running on Linux and
+    uses a POSIX WMI client wrapper if necessary.
   ai_short_description: >-
-    Retrieves a list of installed services from a specified remote system using WMI.
+    Retrieves a list of installed services from a specified Windows system using WMI.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -186,9 +177,10 @@ ListServices:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by querying WMI for installed services on a remote host.
-      It does not mutate external data, mutate internal data, update entities, create
-      insights, modify alert data, or create case comments.
+      The action makes a WMI query to fetch installed services from a remote server
+      (fetches_data=true). It does not perform any state-changing operations on the
+      external system (can_mutate_external_data=false) and does not modify internal
+      SecOps data, entities, alerts, or cases.
   entity_usage:
     entity_types:
       address: false
@@ -240,10 +232,10 @@ ListServices:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers. It relies entirely on the `Server Address` parameter provided in
-      the action configuration. Therefore, it does not run on entities and all entity-related
-      flags are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any parameters that explicitly represent SecOps entities. It relies solely on
+      a string parameter (`Server Address`) to target a host, so all entity flags
+      are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -259,9 +251,10 @@ ListServices:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action queries a remote system via WMI to retrieve a list of installed services
-      based on a provided server address parameter. It does not enrich specific entities,
-      mutate external state, or match any of the predefined outcome categories.
+      The action retrieves a list of services from a remote server via WMI. It does
+      not enrich a specific SecOps entity, execute a shell command, contain a host,
+      or match any other predefined outcome category. Therefore, all outcome category
+      flags are false.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -290,31 +283,31 @@ ListUsers:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of all users configured on a specified remote system using Windows
-    Management Instrumentation (WMI).
+    Lists all users configured on a specified system using Windows Management Instrumentation
+    (WMI).
 
 
     ### Flow Description
 
-    1. Initializes the WMI manager using the provided `Server Address`, `Username`,
-    and `Password` parameters.
+    1. Retrieves the `Server Address`, `Username`, and `Password` from the action
+    parameters.
 
-    2. Connects to the target system and executes a WMI query (`SELECT * FROM Win32_UserAccount`)
-    to fetch all configured users.
+    2. Establishes a WMI connection to the target server using the provided credentials.
 
-    3. Formats the retrieved user data into a JSON structure and a CSV data table.
+    3. Executes a WMI query (`Win32_UserAccount`) to fetch all configured users on
+    the system.
 
-    4. Attaches the JSON result and the data table to the action's output.
+    4. Formats the retrieved user data into a JSON structure and a CSV data table.
+
+    5. Returns the results to the SOAR platform.
 
 
     ### Additional Notes
 
-    Requires appropriate WMI access and credentials for the target server. The action
-    will automatically determine whether to use a Windows or POSIX WMI client based
-    on the SOAR SDK configuration.
+    Requires appropriate WMI access and credentials for the target server.
   ai_short_description: >-
-    Retrieves a list of all users configured on a specified remote system using Windows
-    Management Instrumentation (WMI).
+    Lists all users configured on a specified system using Windows Management Instrumentation
+    (WMI).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -326,10 +319,10 @@ ListUsers:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from a remote server via WMI (fetches_data=true). It
-      does not perform any state-changing operations on the external system (can_mutate_external_data=false).
-      It also does not update entities, create insights, modify alerts, or create
-      case comments within Google SecOps.
+      The action establishes a WMI connection to fetch user data from a remote server
+      (fetches_data=true). It does not perform any state-changing operations on the
+      external system, nor does it update internal entities, create insights, or modify
+      alert data.
   entity_usage:
     entity_types:
       address: false
@@ -381,9 +374,9 @@ ListUsers:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It relies entirely on the provided
-      action parameters (Server Address, Username, Password) to connect to a remote
-      system and fetch data.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on the provided
+      Server Address parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -399,10 +392,10 @@ ListUsers:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action queries a remote system for a list of users. It does not enrich specific
-      IOCs or assets within the platform, nor does it mutate external state, manage
-      tickets, or execute arbitrary commands. Therefore, it does not match any of
-      the predefined outcome categories.
+      The action queries a remote system for a list of users via WMI. It does not
+      enrich a specific IOC or asset entity, nor does it execute a generic command,
+      mutate data, or interact with tickets/emails. Therefore, it does not match any
+      of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -422,36 +415,35 @@ ListUsers:
 
     | --- | --- | --- | --- |
 
-    | Server Address | String | Yes | The IP address or hostname of the target server
-    to query. |
+    | Server Address | String | Yes | Server Address |
 
-    | Username | String | No | The username to authenticate with the target server.
-    |
+    | Username | String | No | Username |
 
-    | Password | Password | No | The password to authenticate with the target server.
-    |
+    | Password | Password | No | Password |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity for the WMI integration.
+    Tests connectivity to the WMI integration by executing a simple ping action that
+    returns a success message.
 
 
     ### Flow Description
 
     1. Initializes the Siemplify action.
 
-    2. Sets a static success message indicating that the connection is established.
+    2. Sets the output message to "Connection Established".
 
-    3. Ends the execution and returns the result.
+    3. Returns a successful result value.
 
 
     ### Additional Notes
 
-    This action does not perform any actual external API calls or WMI queries; it
-    simply returns a static success message.
+    This action does not perform any actual WMI queries or external API calls; it
+    simply verifies that the integration action can execute successfully within the
+    SOAR platform.
   ai_short_description: >-
-    Tests connectivity for the WMI integration by returning a static success message.
+    Tests connectivity to the WMI integration by returning a success message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -464,8 +456,8 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action does not fetch data, mutate external or internal data, update entities,
-      create insights, modify alert data, or create case comments. It only returns
-      a static string.
+      create insights, modify alerts, or create case comments. It only returns a static
+      success message.
   entity_usage:
     entity_types:
       address: false
@@ -517,8 +509,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It simply returns a static success message.
+      The action does not process any entities from the case or accept any entity-related
+      parameters. It simply returns a static success message.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -534,9 +526,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action simply returns a static success message and does not interact with
-      any external systems, alerts, or entities. Therefore, it does not match any
-      of the specific outcome categories.
+      The action is a simple connectivity test that returns a static success message.
+      It does not interact with external systems, enrich data, modify alerts, or perform
+      any operations that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -556,35 +548,29 @@ RunQuery:
   ai_description: >-
     ### General Description
 
-    Executes an arbitrary Windows Management Instrumentation Query Language (WQL)
-    query on a specified remote system. This action allows analysts to retrieve specific
-    system information, configurations, or statuses directly from a remote Windows
-    machine using WMI.
+    Executes an arbitrary WMI Query Language (WQL) query on a specified remote system
+    using WMI. It connects to the target server using the provided credentials and
+    retrieves the query results.
 
 
     ### Flow Description
 
-    1. Extracts the target server address, credentials, and the WQL query from the
-    action parameters.
+    1. Connects to the target WMI server using the provided Server Address, Username,
+    and Password.
 
-    2. Establishes a WMI connection to the target server using the provided credentials
-    via the `WMIManager`.
+    2. Executes the specified WQL query on the remote system via the WMI protocol.
 
-    3. Executes the WQL query on the remote system.
+    3. Retrieves the query results and formats them into a JSON structure.
 
-    4. Formats the query results into a JSON object and constructs a CSV data table.
-
-    5. Returns the results to the Google SecOps platform, attaching the JSON and data
-    table to the action results.
+    4. If results are found, constructs a CSV and attaches it as a data table to the
+    action results.
 
 
     ### Additional Notes
 
-    The action supports execution from both Windows and Linux SOAR environments, utilizing
-    the appropriate underlying WMI client wrapper depending on the OS.
+    Requires appropriate WMI access and permissions on the target server.
   ai_short_description: >-
-    Executes an arbitrary WQL query on a specified remote system and returns the results
-    as JSON and a data table.
+    Executes an arbitrary WQL query on a specified remote system and returns the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -597,9 +583,8 @@ RunQuery:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action fetches data by executing a WQL query on a remote server. It does
-      not mutate external data (WQL queries are read-only in this context), nor does
-      it mutate internal data, update entities, create insights, modify alerts, or
-      create case comments.
+      not mutate external data, mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -651,10 +636,10 @@ RunQuery:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely based on the provided action parameters (Server
-      Address, WQL Query). Therefore, all entity type and filter flags are set to
-      false.
+      The action does not process any entities from the case, nor does it accept entity
+      identifiers as input parameters to act upon them. It strictly uses the provided
+      action parameters (Server Address, Username, Password, WQL Query) to connect
+      to a remote system and execute a query.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -667,14 +652,13 @@ RunQuery:
     enable_identity: false
     enrich_asset: false
     enrich_ioc: false
-    execute_command_on_the_host: true
+    execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action connects to a remote host and executes a WQL query, returning the
-      system data output. This aligns with the 'Execute Command on the Host' category,
-      as it runs a system query on a remote endpoint and returns the output. It does
-      not enrich specific IOCs or assets within the SOAR entity model, nor does it
-      mutate external state.
+      The action executes a WQL query on a remote server to retrieve management data.
+      This does not directly align with any of the predefined outcome categories such
+      as executing a shell command, enriching a specific SOAR entity, or modifying
+      external state.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

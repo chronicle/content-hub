@@ -7,17 +7,15 @@ Add Tags To Report:
 
     ### Flow Description
 
-    1. Retrieves the current tags associated with the specified Report ID from Cofense
-    Triage via a GET request.
+    1. Retrieves the current tags of the specified report from Cofense Triage via
+    an API request.
 
-    2. Combines the existing tags with the new tags provided in the input, ensuring
-    no duplicates.
+    2. Merges the existing tags with the new tags provided in the input parameters.
 
     3. Sends a PUT request to Cofense Triage to update the report with the combined
     list of tags.
 
-    4. Retrieves the updated report details via a GET request and returns them as
-    a JSON result.
+    4. Retrieves the updated report details and returns them as a JSON result.
 
 
     ### Additional Notes
@@ -33,15 +31,14 @@ Add Tags To Report:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates a report in Cofense Triage by appending new tags to it.
+      Updates the tags of a specific report in Cofense Triage.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches the current tags and the updated report from Cofense Triage
-      (fetches_data=true). It mutates external data by sending a PUT request to update
-      the report's tags in Cofense Triage (can_mutate_external_data=true). It does
-      not mutate internal SecOps data, update entities, create insights, or add case
-      comments.
+      The action fetches the current tags of a report, mutates external data by sending
+      a PUT request to update the report's tags in Cofense Triage, and fetches the
+      updated report. It does not mutate internal SecOps data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -93,8 +90,8 @@ Add Tags To Report:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses the explicitly provided 'Report
-      ID' parameter to perform its operations.
+      The action does not process any entities. It relies solely on the 'Report ID'
+      and 'Tags' parameters to perform its operations.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -110,9 +107,9 @@ Add Tags To Report:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates a report in Cofense Triage by adding tags. This does not
-      match any of the specific expected outcomes such as updating a SecOps alert,
-      creating/updating an ITSM ticket, or modifying an IOC blocklist.
+      The action updates tags on a report in Cofense Triage. This does not align with
+      any of the predefined outcome categories such as updating an alert in SecOps,
+      updating a ticket in an ITSM, or enriching an IOC.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -147,19 +144,20 @@ Categorize Report:
 
     ### Flow Description
 
-    1. Retrieves the category ID for the provided `Category Name` from Cofense Triage.
+    1. Retrieves the category ID for the provided category name from Cofense Triage
+    via a GET request.
 
-    2. If the category exists, makes an API call to update the report with the specified
-    `Report ID` to use this category.
+    2. If the category is found, sends a POST request to categorize the report with
+    the specified ID.
 
-    3. Fetches the updated report details from Cofense Triage.
+    3. Fetches the updated report details via a GET request.
 
     4. Returns the updated report as a JSON result.
 
 
     ### Additional Notes
 
-    Available categories can be found using the "List Categories" action.
+    If the category name is not found in Cofense Triage, the action will fail.
   ai_short_description: >-
     Categorizes a specific report in Cofense Triage by applying a specified category
     name.
@@ -175,9 +173,9 @@ Categorize Report:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches the category ID and the updated report from Cofense Triage
-      (fetches_data=true). It mutates external data by categorizing the report via
-      a POST request (can_mutate_external_data=true). It does not mutate internal
+      The action fetches the category ID and the updated report data (fetches_data=true).
+      It mutates external data by sending a POST request to categorize the report
+      in Cofense Triage (can_mutate_external_data=true). It does not mutate internal
       data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -230,8 +228,8 @@ Categorize Report:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided `Report ID` parameter.
+      The action does not process any entities. It relies solely on the provided Report
+      ID and Category Name parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -247,9 +245,10 @@ Categorize Report:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the category of a report in Cofense Triage. This does not
-      match any of the specific expected outcomes such as updating an alert within
-      the SecOps platform, updating an ITSM ticket, or modifying an email in a mailbox.
+      The action categorizes a report in Cofense Triage. This does not directly map
+      to updating an alert in SecOps, updating a ticket in an ITSM, or updating an
+      email state in a mailbox. Therefore, it does not match any of the predefined
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -273,29 +272,37 @@ Download Report Email:
   ai_description: >-
     ### General Description
 
-    Downloads the raw email (.eml) associated with a specific report from Cofense
-    Triage and saves it to a specified local folder.
+    Downloads the raw email associated with a specific report from Cofense Triage
+    and saves it to a specified local folder. It can also optionally create a case
+    insight containing the raw email content.
 
 
     ### Flow Description
 
-    1. Extracts the provided `Report ID` and `Download Folder` parameters.
+    1. Retrieves the `Report ID` and `Download Folder` parameters.
 
-    2. Checks if a file with the same name already exists in the target folder and
-    evaluates the `Overwrite` parameter.
+    2. Checks if the target file already exists in the specified folder and whether
+    overwriting is permitted.
 
-    3. Makes an API call (GET) to Cofense Triage to download the raw email content
-    for the specified report.
+    3. Makes a GET request to the Cofense Triage API (`/api/public/v2/reports/{report_id}/download`)
+    to retrieve the raw email content.
 
-    4. Saves the downloaded content as an `.eml` file in the specified local folder.
+    4. Saves the downloaded email content as an `.eml` file in the specified local
+    folder.
 
-    5. Optionally creates a case insight containing the raw email content if the `Create
-    Insight` parameter is enabled.
+    5. If the `Create Insight` parameter is enabled, creates a case insight containing
+    the transformed HTML content of the raw email.
+
+    6. Returns the absolute file path of the downloaded file in the JSON results.
 
 
     ### Additional Notes
 
-    The file name is constructed using the format `{report id}.eml`.
+    - The downloaded file name is automatically constructed using the Report ID (e.g.,
+    `{report_id}.eml`).
+
+    - Ensure the specified download folder path exists and is accessible by the execution
+    environment.
   ai_short_description: >-
     Downloads the raw email associated with a specific report from Cofense Triage
     and saves it to a specified local folder, optionally creating a case insight with
@@ -311,10 +318,10 @@ Download Report Email:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a GET request to Cofense Triage to download
-      the raw email. It does not mutate external data. It can create an insight with
-      the email content if the 'Create Insight' parameter is enabled. It does not
-      update entities or modify alert data.
+      The action fetches data (raw email content) from the Cofense Triage API via
+      a GET request. It does not mutate external data. It can create a case insight
+      if the 'Create Insight' parameter is enabled. It does not update entities, modify
+      alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -366,10 +373,8 @@ Download Report Email:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers. It relies entirely on the provided 'Report ID' parameter to fetch
-      the email. Therefore, it does not run on entities and all entity type flags
-      are false.
+      The action does not iterate over target entities and does not accept any entity-related
+      parameters. It operates solely based on the provided Report ID.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -385,9 +390,9 @@ Download Report Email:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action downloads a raw email file (.eml) from Cofense Triage and saves it
-      to a local folder. This aligns with the 'Download File' category, which involves
-      retrieving a specific file from a remote host.
+      The action downloads a raw email file from Cofense Triage and saves it locally.
+      This aligns with the 'Download File' expected outcome, as it retrieves a specific
+      file from a remote host for local analysis.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -423,39 +428,34 @@ Download Report Preview:
     ### General Description
 
     Downloads an image preview of an email related to a specific report from Cofense
-    Triage. The action retrieves the image in either PNG or JPG format, saves it to
-    a specified local directory, and can optionally attach the image as an insight
-    to the case.
+    Triage.
 
 
     ### Flow Description
 
-    1. Extracts the provided parameters, including the Report ID, Download Folder,
-    Image Format, and Overwrite preference.
+    1. Retrieves the Report ID, Download Folder, Image Format, Overwrite flag, and
+    Create Insight flag from the action parameters.
 
-    2. Validates the local file path and checks if a file with the same name already
-    exists (handling the overwrite logic accordingly).
+    2. Validates if the file already exists in the specified download folder and checks
+    the Overwrite flag.
 
     3. Makes an HTTP GET request to the Cofense Triage API to download the report
-    preview image.
+    preview in the specified image format (PNG or JPG).
 
-    4. Saves the downloaded image attachment to the specified local folder.
+    4. Saves the downloaded image to the local download folder.
 
-    5. If the `Create Insight` parameter is enabled, reads the saved image, encodes
-    it in base64, and creates a case insight in Google SecOps displaying the image.
+    5. If the `Create Insight` parameter is enabled, generates a case insight containing
+    the base64-encoded image preview.
 
     6. Returns the absolute file path of the downloaded image in the JSON results.
 
 
     ### Additional Notes
 
-    Ensure that the provided `Download Folder` is a valid, accessible absolute path
-    on the environment where the action is executed. The resulting file name will
-    be constructed using the Report ID and the selected Image Format (e.g., `{report_id}.png`).
+    None.
   ai_short_description: >-
     Downloads an image preview of an email related to a specific report from Cofense
-    Triage, saves it locally, and optionally creates a case insight displaying the
-    image.
+    Triage.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -467,9 +467,10 @@ Download Report Preview:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (an image file) from Cofense Triage via a GET request.
-      It does not mutate external data. It can create an insight in Google SecOps
-      if the 'Create Insight' parameter is enabled.
+      The action fetches data (image preview) from Cofense Triage via an HTTP GET
+      request. It does not mutate external data. It can create a case insight if the
+      'Create Insight' parameter is enabled. It does not update entities, modify alert
+      data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -521,9 +522,9 @@ Download Report Preview:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It relies entirely on the explicitly
-      provided 'Report ID' parameter to fetch the report preview and does not iterate
-      over or filter `siemplify.target_entities`.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on the provided
+      Report ID.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -537,11 +538,12 @@ Download Report Preview:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: false
+    get_alert_information: true
     reasoning: >-
-      The action retrieves a specific file (an image preview of a report) from the
-      remote Cofense Triage system and saves it locally. This aligns with the 'Download
-      File' outcome category.
+      The action downloads an image preview of a report from Cofense Triage to the
+      local SOAR server, which aligns with the 'Download File' category. It also fetches
+      information related to a report (alert) from a 3rd party product, aligning with
+      'Get Alert Information'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -570,7 +572,7 @@ Download Report Preview:
     | Overwrite | Boolean | No | If enabled, action will overwrite the file with the
     same name and filepath. |
 
-    | Image Format | DDL | Yes | Specify the format of the image. |
+    | Image Format | String | Yes | Specify the format of the image. |
 
     | Create Insight | Boolean | No | If enabled, action will create an insight that
     contains raw email of the report. |
@@ -578,44 +580,36 @@ EnrichURL:
   ai_description: >-
     ### General Description
 
-    Enriches URL entities using Cofense Triage. This action retrieves threat intelligence
-    and risk score information for the specified URLs. It evaluates the risk score
-    against a user-defined threshold, updates the entity's suspicious status if the
-    threshold is exceeded, and enriches the entity's additional properties with the
-    retrieved data.
+    Enriches URL entities using Cofense Triage. This action retrieves information
+    about the URL, including its risk score and related attributes, to provide additional
+    context for investigation.
 
 
     ### Flow Description
 
-    1. Extracts the `Risk Score Threshold` parameter.
+    1. Filters the target entities to include only those of type URL.
 
-    2. Filters the target entities to include only those of type `URL`.
+    2. Iterates over the filtered entities and makes a GET request to the Cofense
+    Triage API (`/api/public/v2/urls`) to fetch details for each URL.
 
-    3. Iterates over the filtered URL entities.
+    3. Evaluates the retrieved risk score against the provided `Risk Score Threshold`.
+    If the score exceeds the threshold, the entity is marked as suspicious.
 
-    4. Makes a GET request to the Cofense Triage API (`/api/public/v2/urls?filter[url]={url}`)
-    to fetch details for each URL.
+    4. Marks the entity as enriched and updates its additional properties with the
+    retrieved data.
 
-    5. Checks if the retrieved risk score is greater than the specified threshold.
-    If so, marks the entity as suspicious (`is_suspicious = True`).
-
-    6. Updates the entity's additional properties with the enrichment data and marks
-    it as enriched (`is_enriched = True`).
-
-    7. Adds a CSV table containing the URL details to the action results.
-
-    8. Updates the modified entities within the Google SecOps platform.
-
-    9. Returns a JSON result containing the enriched data for all processed URLs.
+    5. Updates the entities in the Google SecOps platform and attaches the results
+    as JSON and a table.
 
 
     ### Additional Notes
 
-    If the provided threshold is outside the allowed range (0-100), the action will
-    default to a threshold of 50.
+    The `Risk Score Threshold` must be between 0 and 100. If an invalid threshold
+    is provided, a default value of 50 is used.
   ai_short_description: >-
-    Enriches URL entities by retrieving risk scores and threat details from Cofense
-    Triage, and updates the entity's suspicious status based on a defined threshold.
+    Enriches URL entities by retrieving risk scores and related details from Cofense
+    Triage, updating the entities' properties and suspicious status based on a configurable
+    threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -628,288 +622,10 @@ EnrichURL:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Cofense Triage API to fetch URL details
-      (fetches_data=true). It does not mutate external data. It updates internal entities
-      using `siemplify.update_entities` (can_update_entities=true). It does not create
-      insights, modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: true
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == EntityTypes.URL`. Therefore, it targets URL entities and filters by entity_type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches risk scores and threat details for URL entities from Cofense
-      Triage, which aligns with the 'Enrich IOC' expected outcome. It does not mutate
-      external data or perform any other categorized actions.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Risk Score Threshold | String | Yes | Specify what should be the risk score
-    threshold for Siemplify to label that URL as suspicious. Maximum is 100. |
-Execute Playbook:
-  ai_description: >-
-    ### General Description
-
-    Initiates the execution of a specified playbook on a given report within Cofense
-    Triage.
-
-
-    ### Flow Description
-
-    1. Initializes the Cofense Triage client with the provided credentials.
-
-    2. Makes a GET request to retrieve the playbook details by its name to obtain
-    the internal playbook ID.
-
-    3. Makes a GET request to verify the existence of the specified report ID.
-
-    4. Makes a POST request to the Cofense Triage API to execute the playbook on the
-    target report.
-
-    5. Returns a success message upon successful execution.
-
-
-    ### Additional Notes
-
-    Ensure that the provided Playbook Name exactly matches the name configured in
-    Cofense Triage.
-  ai_short_description: >-
-    Initiates the execution of a specified playbook on a given report within Cofense
-    Triage.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Triggers the execution of a playbook on a specific report within Cofense Triage.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a POST request to Cofense Triage to execute a playbook, which
-      mutates external data. It does not fetch contextual data for enrichment, nor
-      does it mutate internal SecOps data, update entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers. It operates solely on the 'Report ID' and 'Playbook Name' provided
-      as action parameters. Therefore, all entity type flags and filter flags are
-      set to false.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action executes a playbook on a report in Cofense Triage. This is a custom
-      orchestration action that does not directly map to standard outcome categories
-      like enriching IOCs, updating alerts, or containing hosts.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Report ID | String | Yes | Specify the ID of the report on which you want to
-    execute the playbook. |
-
-    | Playbook Name | String | Yes | Specify the name of the playbook that needs to
-    be executed. |
-Get Domain Details:
-  ai_description: >-
-    ### General Description
-
-    Retrieves detailed information about a domain extracted from URL entities using
-    Cofense Triage. This action helps analysts gather threat intelligence and reputation
-    data for domains associated with suspicious URLs.
-
-
-    ### Flow Description
-
-    1. Iterates over the target entities and filters for entities of type `URL`.
-
-    2. Extracts the domain name from each valid URL entity.
-
-    3. Makes a GET request to the Cofense Triage API (`/api/public/v2/hostnames`)
-    to fetch details for the extracted domain.
-
-    4. Aggregates the retrieved domain details, including risk scores and attributes.
-
-    5. Outputs the collected data as a JSON result and attaches an entity table to
-    the action results.
-
-
-    ### Additional Notes
-
-    This action only retrieves data and does not automatically update the entity's
-    properties or create an insight on the case wall.
-  ai_short_description: >-
-    Retrieves detailed information about a domain extracted from URL entities using
-    Cofense Triage.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a GET request to the Cofense Triage API to fetch domain details.
-      It does not mutate external data, nor does it update internal entities, create
-      insights, or modify alert data.
+      (fetches_data=true). It does not mutate external data. It updates the internal
+      entities with the fetched data and marks them as suspicious if the risk score
+      exceeds the threshold (can_update_entities=true). It does not create insights,
+      modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -963,7 +679,7 @@ Get Domain Details:
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
       the condition `entity.entity_type == EntityTypes.URL`. Therefore, it targets
-      URL entities and filters them strictly by their entity type.
+      URL entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -979,140 +695,9 @@ Get Domain Details:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches domain details (such as risk score and attributes) from Cofense
-      Triage for a given URL/domain. This aligns with the 'Enrich IOC' category as
-      it returns threat intelligence and reputation data for an indicator.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Get Report Headers:
-  ai_description: >-
-    ### General Description
-
-    Retrieves header information related to a specific report from Cofense Triage.
-    It fetches the headers based on the provided Report ID and limits the results
-    to the specified maximum number. The retrieved headers are attached to the action's
-    results as JSON and an entity table.
-
-
-    ### Flow Description
-
-    1. Initializes the Cofense Triage manager with API credentials.
-
-    2. Extracts the `Report ID` and `Max Headers To Return` parameters.
-
-    3. Makes an HTTP GET request to the Cofense Triage API (`/api/public/v2/reports/{report_id}/headers`)
-    to fetch the report headers.
-
-    4. Parses the response and attaches the headers as a JSON result and an entity
-    table in the SecOps platform.
-
-
-    ### Additional Notes
-
-    This action requires a valid Report ID from Cofense Triage to function correctly.
-  ai_short_description: >-
-    Retrieves header information related to a specific report from Cofense Triage.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes an HTTP GET request to the Cofense Triage API to fetch report
-      headers, meaning it fetches data. It does not perform any POST/PUT/DELETE requests
-      to mutate external data. It also does not update entities, create insights,
-      modify alert data, or create case comments within Google SecOps.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not operate on any entities. It relies entirely on the `Report
-      ID` parameter provided by the user or playbook. Therefore, all entity-related
-      flags are false.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: true
-    reasoning: >-
-      The action retrieves header information for a specific report (which acts as
-      an alert in Cofense Triage) from the 3rd party product. This matches the 'Get
-      Alert Information' category. It does not enrich specific IOCs or assets, nor
-      does it perform any containment or remediation actions.
+      The action fetches threat intelligence and risk scores for URL entities from
+      Cofense Triage. This aligns with the 'Enrich IOC' expected outcome. It does
+      not perform any containment, blocklist, or ticketing operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1132,54 +717,46 @@ Get Report Headers:
 
     | --- | --- | --- | --- |
 
-    | Report ID | String | Yes | Specify the id of the report for which you want to
-    retrieve headers. |
-
-    | Max Headers To Return | String | No | Specify how many headers to return. |
-Get Report Reporters:
+    | Risk Score Threshold | String | Yes | Specify, what should be the risk score
+    threshold for Siemplify to label that URL as suspicious. Maximum is 100. |
+Execute Playbook:
   ai_description: >-
     ### General Description
 
-    Retrieves information about the reporter associated with a specific report from
-    Cofense Triage. This action fetches details such as the reporter's email, reports
-    count, reputation score, and VIP status.
+    Initiates a playbook execution on a specific report in Cofense Triage.
 
 
     ### Flow Description
 
-    1. Extracts the `Report ID` parameter provided by the user.
+    1. Retrieves the playbook details by its name from Cofense Triage.
 
-    2. Initializes the Cofense Triage API client using the provided integration configuration.
+    2. Verifies the existence of the specified report by fetching it from Cofense
+    Triage.
 
-    3. Makes an HTTP GET request to the Cofense Triage API (`/api/public/v2/reports/{report_id}/reporter`)
-    to fetch the reporter details for the specified report.
-
-    4. Parses the API response and attaches the reporter information to the action's
-    JSON result.
-
-    5. Constructs a table with the reporter details and adds it to the action's output.
+    3. Executes the playbook on the report via a POST request to the Cofense Triage
+    API.
 
 
     ### Additional Notes
 
-    This action does not operate on SecOps entities but relies entirely on the provided
-    `Report ID` parameter.
+    None.
   ai_short_description: >-
-    Retrieves information about the reporter associated with a specific report from
-    Cofense Triage.
+    Initiates a playbook execution on a specific report in Cofense Triage.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: false
+    can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: null
+    external_data_mutation_explanation: >-
+      Executes a playbook on a specific report in Cofense Triage.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the Cofense Triage API to fetch reporter
-      data for a given report ID. It does not mutate external data, update internal
+      The action fetches playbook and report data from Cofense Triage (fetches_data=true).
+      It then makes a POST request to execute the playbook, which mutates external
+      data (can_mutate_external_data=true). It does not mutate internal data, update
       entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -1232,9 +809,272 @@ Get Report Reporters:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies solely on the `Report ID` parameter provided in the action
-      configuration. Therefore, all entity type and filter flags are set to false.
+      The action does not iterate over target entities and does not accept any entity-related
+      parameters. It operates strictly on Report ID and Playbook Name.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a playbook on a report in Cofense Triage. This does not
+      match any of the predefined outcome categories such as enriching IOCs, updating
+      alerts, or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Report ID | String | Yes | Specify the ID of the report on which you want to
+    execute the playbook. |
+
+    | Playbook Name | String | Yes | Specify the name of the playbook that needs to
+    be executed. |
+Get Domain Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed information about domain entities from Cofense Triage.
+
+
+    ### Flow Description
+
+    1. Initializes the Cofense Triage API client using integration configurations.
+
+    2. Filters the provided target entities to include only URL entities.
+
+    3. Extracts the domain from each URL entity.
+
+    4. Makes a GET API call to Cofense Triage to fetch domain details.
+
+    5. Aggregates the retrieved data into JSON results and a summary table.
+
+    6. Returns the results to the SOAR platform.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Retrieves detailed information about domain entities from Cofense Triage.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to Cofense Triage to fetch domain details (fetches_data=true).
+      It does not mutate external data, update entities, create insights, modify alert
+      data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      the condition `entity.entity_type == EntityTypes.URL`. Therefore, it targets
+      URL entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches domain details from Cofense Triage, which provides threat
+      intelligence and contextual data for an indicator (domain extracted from URL).
+      This matches the 'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get Report Headers:
+  ai_description: >-
+    ### General Description
+
+    Retrieves header information related to a specific report from Cofense Triage.
+
+
+    ### Flow Description
+
+    1. Initializes the Cofense Triage manager with the provided API credentials.
+
+    2. Makes an HTTP GET request to the Cofense Triage API (`/api/public/v2/reports/{report_id}/headers`)
+    to fetch the headers associated with the specified Report ID.
+
+    3. Parses the returned data into report header objects.
+
+    4. Constructs a JSON result and an entity table containing the retrieved headers,
+    attaching them to the action's output.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Retrieves header information related to a specific report from Cofense Triage.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Cofense Triage API to fetch report headers,
+      so it fetches data. It does not perform any POST/PUT/DELETE requests to mutate
+      external data. It does not update entities, create insights, modify alert data,
+      or create case comments internally.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters that represent entities. Therefore, it does not run on
+      any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1250,10 +1090,147 @@ Get Report Reporters:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action fetches reporter information for a specific report (which acts as
-      an alert in Cofense Triage). This aligns with the 'Get Alert Information' category.
-      It does not enrich IOCs or assets, nor does it mutate any external or internal
-      state.
+      The action fetches header information for a specific report (which acts as an
+      alert in Cofense Triage) from the 3rd party product. This aligns with the 'Get
+      Alert Information' category. It does not enrich IOCs or assets, nor does it
+      mutate external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Report ID | String | Yes | Specify the id of the report for which you want to
+    retrieve headers. |
+
+    | Max Headers To Return | String | No | Specify how many headers to return. |
+Get Report Reporters:
+  ai_description: >-
+    ### General Description
+
+    Retrieves information about the reporters related to a specific report from Cofense
+    Triage.
+
+
+    ### Flow Description
+
+    1. Extracts the `Report ID` parameter.
+
+    2. Initializes the Cofense Triage API client.
+
+    3. Makes a GET request to the Cofense Triage API to fetch the reporters associated
+    with the specified report ID.
+
+    4. If successful, adds the raw JSON response to the action results and constructs
+    a table with the reporter details.
+
+
+    ### Additional Notes
+
+    This action does not operate on entities but requires a specific report ID to
+    fetch the relevant data.
+  ai_short_description: >-
+    Retrieves information about the reporters related to a specific report from Cofense
+    Triage.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Cofense Triage API using a GET request. It
+      does not mutate external data, update entities, create insights, modify alert
+      data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on a provided
+      Report ID.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches information about the reporters of a specific report (which
+      acts as an alert) from Cofense Triage. This aligns with the 'Get Alert Information'
+      category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1279,39 +1256,39 @@ Get Threat Indicator Details:
   ai_description: >-
     ### General Description
 
-    Retrieves threat indicator details from Cofense Triage for the target entities.
-    It enriches the entities with the retrieved threat intelligence and updates their
-    suspicious status based on the threat level.
+    Retrieves threat indicator details from Cofense Triage for the provided entities.
+    This action fetches threat intelligence data, evaluates the threat level, and
+    enriches the entities with the retrieved information.
 
 
     ### Flow Description
 
-    1. Initializes the Cofense Triage API client using integration-level credentials.
+    1. Initializes the Cofense Triage manager with the integration configuration parameters.
 
-    2. Iterates through the target entities.
+    2. Iterates over the target entities provided to the action.
 
-    3. Adjusts the search identifier for User (formats as `From:id,To:id`) and Email
-    Message (formats as `Subject:id`) entities.
+    3. Adjusts the entity identifier format if the entity is a User (email address)
+    or an Email Message.
 
     4. Makes a GET request to the Cofense Triage API to fetch threat indicator details
     for the entity identifier.
 
-    5. If the threat level is 'Malicious' or 'Suspicious', marks the entity as suspicious.
+    5. If threat details are found and the threat level is 'Malicious' or 'Suspicious',
+    marks the entity as suspicious.
 
-    6. Enriches the entity with the threat indicator details.
+    6. Enriches the entity with the retrieved threat indicator details.
 
-    7. Updates the entities in the platform and outputs the results as JSON and a
+    7. Updates the entities in the platform and attaches the results as JSON and a
     table.
 
 
     ### Additional Notes
 
-    Although the integration description mentions only MD5 and SHA256 hashes are supported,
-    the action processes all entity types and attempts to fetch threat indicator details
-    for their identifiers.
+    The action description notes that only MD5 and SHA256 hashes are supported, although
+    the code includes specific formatting logic for User and Email Message entities.
   ai_short_description: >-
-    Retrieves threat indicator details from Cofense Triage to enrich target entities
-    and update their suspicious status based on the threat level.
+    Retrieves threat indicator details from Cofense Triage for the provided entities,
+    evaluates their threat level, and enriches them with the retrieved information.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1323,10 +1300,9 @@ Get Threat Indicator Details:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from the Cofense Triage API (fetches_data=true). It
-      does not mutate external data or internal platform data. It updates the entities
-      with the retrieved enrichment data and suspicious status (can_update_entities=true).
-      It does not create insights, modify alert data, or create case comments.
+      The action fetches data from the Cofense Triage API using a GET request. It
+      does not mutate external data. It updates the entities in the platform with
+      the retrieved enrichment data and marks them as suspicious if applicable.
   entity_usage:
     entity_types:
       address: true
@@ -1379,9 +1355,9 @@ Get Threat Indicator Details:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` without filtering out any
-      specific entity types. It checks if the entity is a USER or EMAILMESSAGE to
-      adjust the identifier format, but it proceeds to process all entity types. Therefore,
-      all entity types are supported and no filtering flags are set to true.
+      specific entity types. It applies specific formatting for USER and EMAILMESSAGE
+      entities, but processes all entities passed to it. Therefore, it runs on all
+      supported entity types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1398,8 +1374,8 @@ Get Threat Indicator Details:
     get_alert_information: false
     reasoning: >-
       The action fetches threat indicator details from Cofense Triage and enriches
-      the entities with this threat intelligence. This aligns with the 'Enrich IOC'
-      expected outcome.
+      the entities with this threat intelligence data. This aligns with the 'Enrich
+      IOC' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1419,33 +1395,32 @@ List Categories:
   ai_description: >-
     ### General Description
 
-    This action retrieves a list of available categories from Cofense Triage based
-    on specified filtering criteria.
+    Lists available categories in Cofense Triage based on specified criteria such
+    as name, score, malicious status, and archived status.
 
 
     ### Flow Description
 
-    1. Validates the provided filtering parameters to ensure mutually exclusive options
-    (e.g., 'Only Malicious' and 'Only Non Malicious') are not selected simultaneously.
+    1. Extracts configuration and action parameters.
 
-    2. Initializes the Cofense Triage API client.
+    2. Validates mutually exclusive parameters (e.g., 'Only Malicious' and 'Only Non
+    Malicious').
 
-    3. Makes a GET request to the Cofense Triage API to fetch categories matching
-    the provided filters (such as name, score, malicious status, and archived status).
+    3. Makes a GET request to the Cofense Triage API (`/api/public/v2/categories`)
+    to fetch categories matching the provided filters.
 
-    4. Parses the returned categories and outputs them as a JSON result.
+    4. Parses the response and constructs a JSON result and a table of available categories.
 
-    5. Constructs and attaches a CSV table named "Available Categories" to the action
-    results.
+    5. Returns the results to the SecOps platform.
 
 
     ### Additional Notes
 
-    If mutually exclusive parameters are both enabled, the action will fail and return
-    an error message.
+    If parameters 'Only Malicious' or 'Only Archived' are checked, parameters 'Only
+    Non Archived' and 'Only Non Malicious' need to be unchecked, and vice-versa.
   ai_short_description: >-
-    Retrieves a list of available categories from Cofense Triage based on specified
-    filtering criteria.
+    Lists available categories in Cofense Triage based on specified criteria such
+    as name, score, malicious status, and archived status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1457,8 +1432,447 @@ List Categories:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Cofense Triage API to fetch categories
-      (fetches_data=true). It does not mutate external data, mutate internal data,
+      The action fetches data (categories) from the Cofense Triage API via a GET request.
+      It does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities and does not accept any entity
+      identifiers as input parameters. It operates independently of entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of categories from Cofense Triage. It does not enrich
+      specific IOCs or assets, nor does it perform any containment, ticketing, or
+      alert modification actions. Therefore, it does not match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Names | String | No | Specify a comma-separated list of category names, This
+    parameter is useful to check, whether a category with the specified name exists.
+    |
+
+    | Lowest Score To Fetch | String | No | Specify what should be the lowest accepted
+    score for the category. This parameter can work with negative values. |
+
+    | Only Malicious | Boolean | No | If enabled, action will only return malicious
+    categories. |
+
+    | Only Archived | Boolean | No | If enabled, action will only return archived
+    categories. |
+
+    | Only Non Archived | Boolean | No | If enabled, action will return only non-archived
+    categories. |
+
+    | Only Non Malicious | Boolean | No | If enabled, action will return only non-malicious
+    categories. |
+
+    | Max Categories To Return | String | No | Specify how many categories to return.
+    |
+List Playbooks:
+  ai_description: >-
+    ### General Description
+
+    Lists available playbooks in Cofense Triage based on specified filtering criteria.
+
+
+    ### Flow Description
+
+    1. Extracts configuration and action parameters.
+
+    2. Validates the limit and filter parameters.
+
+    3. Makes a GET request to the Cofense Triage API (`api/public/v2/playbooks`) to
+    fetch playbooks matching the criteria.
+
+    4. Parses the response and returns the playbooks as a JSON result and a data table.
+
+
+    ### Additional Notes
+
+    The action supports filtering by Name or Description using Equal or Contains logic.
+  ai_short_description: >-
+    Lists available playbooks in Cofense Triage based on specified filtering criteria.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (playbooks) from Cofense Triage via a GET request. It
+      does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. Therefore, it does not run on entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a list of playbooks from Cofense Triage. This does not match
+      any of the predefined outcome categories such as enriching IOCs, updating alerts,
+      or mutating external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Key | Dropdown | No | Specify the key that needs to be used to filter
+    playbooks. |
+
+    | Filter Logic | Dropdown | No | Specify what filter logic should be applied.
+    Filtering logic is working based on the value provided in the "Filter Key" parameter.
+    Note: "Equals" logic is case sensitive, while "Contains" is case insensitive.
+    |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    If "Equal" is selected, action will try to find the exact match among results
+    and if "Contains" is selected, action will try to find results that contain that
+    substring. If nothing is provided in this parameter, the filter will not be applied.
+    Filtering logic is working based on the value provided in the "Filter Key" parameter.
+    |
+
+    | Max Records To Return | String | No | Specify how many records to return. If
+    nothing is provided, action will return 50 records. Maximum: 200. |
+"List Reports Related To Threat Indicators":
+  ai_description: >-
+    ### General Description
+
+    Lists reports related to threat indicators in Cofense Triage based on the provided
+    entities.
+
+
+    ### Flow Description
+
+    1. Extracts the identifiers from all target entities in the case.
+
+    2. Makes a GET request to the Cofense Triage API to retrieve threat indicator
+    IDs that match the entity identifiers.
+
+    3. For each retrieved threat indicator ID, makes additional GET requests to fetch
+    the associated reports.
+
+    4. Aggregates the related reports and returns them as JSON results.
+
+    5. Optionally creates a case wall table containing the report details if configured
+    to do so.
+
+
+    ### Additional Notes
+
+    This action processes all target entities regardless of their entity type.
+  ai_short_description: >-
+    Lists reports related to threat indicators in Cofense Triage based on the provided
+    entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the Cofense Triage API to fetch threat indicator
+      IDs and their related reports. It does not mutate external data, update internal
+      entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and extracts their identifiers
+      without applying any type-based filtering. Therefore, it runs on all supported
+      entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches related reports for threat indicators (entities) from Cofense
+      Triage, which provides threat intelligence context for the indicators. This
+      matches the 'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Create Case Wall Table | Boolean | No | If enabled, action will create a case
+    wall table with information about reports. |
+
+    | Max Reports To Return | String | No | Specify how many reports to return. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Cofense Triage instance using the provided integration
+    configuration parameters.
+
+
+    ### Flow Description
+
+    1. Extracts the integration configuration parameters (API Root, Client ID, Client
+    Secret, Verify SSL).
+
+    2. Initializes the Cofense Triage manager.
+
+    3. Makes an API call (GET request) to the system status endpoint (`/api/public/v2/system/status`)
+    to verify connectivity.
+
+    4. Returns a success message if the connection is established, otherwise returns
+    an error.
+
+
+    ### Additional Notes
+
+    This action is primarily used for troubleshooting and verifying that the integration
+    is configured correctly.
+  ai_short_description: >-
+    Tests connectivity to the Cofense Triage instance to ensure the integration is
+    configured correctly.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the system status endpoint to verify connectivity.
+      It does not fetch contextual data, mutate external data, mutate internal data,
       update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -1511,8 +1925,7 @@ List Categories:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates independently of case entities.
+      The action does not take any entities as input or process any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1528,456 +1941,8 @@ List Categories:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches configuration/category data from Cofense Triage. It does
-      not enrich IOCs or assets, update alerts, manage tickets, modify blocklists/allowlists,
-      manage identities, search events, or perform any other operations defined in
-      the outcome categories. Therefore, no outcome categories apply.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Names | String | No | Specify a comma-separated list of category names, This
-    parameter is useful to check, whether a category with the specified name exists.
-    |
-
-    | Lowest Score To Fetch | String | No | Specify what should be the lowest accepted
-    score for the category. This parameter can work with negative values. |
-
-    | Only Malicious | Boolean | No | If enabled, action will only return malicious
-    categories. |
-
-    | Only Archived | Boolean | No | If enabled, action will only return archived
-    categories. |
-
-    | Only Non Archived | Boolean | No | If enabled, action will return only non-archived
-    categories. |
-
-    | Only Non Malicious | Boolean | No | If enabled, action will return only non-malicious
-    categories. |
-
-    | Max Categories To Return | String | No | Specify how many categories to return.
-    |
-List Playbooks:
-  ai_description: >-
-    ### General Description
-
-    Lists available playbooks in Cofense Triage based on specified filtering criteria.
-
-
-    ### Flow Description
-
-    1. Extracts configuration and action parameters (Filter Key, Filter Logic, Filter
-    Value, Max Records To Return).
-
-    2. Validates the limit and filter parameters to ensure they are within allowed
-    bounds and logically consistent.
-
-    3. Makes a GET request to the Cofense Triage API (`api/public/v2/playbooks`) to
-    fetch playbooks matching the filter criteria.
-
-    4. Formats the retrieved playbooks into JSON and CSV formats.
-
-    5. Returns the results to the Google SecOps platform as a data table and JSON
-    result.
-
-
-    ### Additional Notes
-
-    The action supports filtering by Name or Description using 'Equal' or 'Contains'
-    logic. If no filter is provided, it returns a list of playbooks up to the specified
-    limit.
-  ai_short_description: >-
-    Lists available playbooks in Cofense Triage based on specified filtering criteria.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a GET request to the Cofense Triage API to fetch playbooks.
-      It does not mutate external data, update internal entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not operate on entities. It fetches playbooks from the external
-      system without referencing any specific entity identifiers.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves a list of playbooks from Cofense Triage. This does not
-      match any of the specific outcome categories such as enriching IOCs, updating
-      alerts, or managing tickets.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Filter Key | String | No | Specify the key that needs to be used to filter playbooks.
-    |
-
-    | Filter Logic | String | No | Specify what filter logic should be applied. Filtering
-    logic is working based on the value provided in the "Filter Key" parameter. Note:
-    "Equals" logic is case sensitive, while "Contains" is case insensitive. |
-
-    | Filter Value | String | No | Specify what value should be used in the filter.
-    If "Equal" is selected, action will try to find the exact match among results
-    and if "Contains" is selected, action will try to find results that contain that
-    substring. If nothing is provided in this parameter, the filter will not be applied.
-    Filtering logic is working based on the value provided in the "Filter Key" parameter.
-    |
-
-    | Max Records To Return | String | No | Specify how many records to return. If
-    nothing is provided, action will return 50 records. Maximum: 200. |
-"List Reports Related To Threat Indicators":
-  ai_description: >-
-    ### General Description
-
-    Lists reports related to threat indicators in Cofense Triage.
-
-
-    ### Flow Description
-
-    1. Extracts configuration and action parameters.
-
-    2. Iterates over all target entities and extracts their identifiers.
-
-    3. Calls the Cofense Triage API (`GET /api/public/v2/threat_indicators`) to find
-    threat indicators matching the entity identifiers.
-
-    4. For each threat indicator found, calls the Cofense Triage API (`GET /api/public/v2/threat_indicators/{threat_id}/reports`)
-    to retrieve related reports.
-
-    5. Returns the related reports as JSON data attached to the action result.
-
-    6. Optionally creates a case wall table with the related reports information.
-
-
-    ### Additional Notes
-
-    The action uses the entity identifiers as threat values to search for threat indicators
-    and their related reports. It does not filter by entity type, so it will attempt
-    to find reports for all provided entities.
-  ai_short_description: >-
-    Lists reports related to threat indicators in Cofense Triage based on the provided
-    entities.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data (related reports) from Cofense Triage using GET requests.
-      It does not mutate external data, update internal entities, create insights,
-      modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: true
-      application: true
-      child_hash: true
-      child_process: true
-      cluster: true
-      container: true
-      credit_card: true
-      cve: true
-      cve_id: true
-      database: true
-      deployment: true
-      destination_domain: true
-      domain: true
-      email_message: true
-      event: true
-      file_hash: true
-      file_name: true
-      generic: true
-      host_name: true
-      ip_set: true
-      mac_address: true
-      parent_hash: true
-      parent_process: true
-      phone_number: true
-      pod: true
-      process: true
-      service: true
-      source_domain: true
-      threat_actor: true
-      threat_campaign: true
-      threat_signature: true
-      url: true
-      usb: true
-      user: true
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` without applying any filtering
-      conditions (e.g., by entity type or other properties). It extracts the identifier
-      of each entity to use in the API request. Therefore, it supports all entity
-      types.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches reports related to threat indicators (entities) from Cofense
-      Triage. This provides contextual threat intelligence for the indicators, aligning
-      with the 'Enrich IOC' category.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Create Case Wall Table | Boolean | No | If enabled, action will create a case
-    wall table with information about reports. |
-
-    | Max Reports To Return | Integer | No | Specify how many reports to return. |
-Ping:
-  ai_description: >-
-    ### General Description
-
-    Tests connectivity to the Cofense Triage instance using the provided connection
-    parameters.
-
-
-    ### Flow Description
-
-    1. Extracts the integration configuration parameters (API Root, Client ID, Client
-    Secret, Verify SSL).
-
-    2. Initializes the Cofense Triage API manager.
-
-    3. Makes a GET request to the `/api/public/v2/system/status` endpoint to verify
-    connectivity.
-
-    4. Returns a success message if the connection is established, or an error message
-    if it fails.
-
-
-    ### Additional Notes
-
-    This action is typically used to verify integration settings and does not require
-    any action-specific parameters.
-  ai_short_description: >-
-    Tests connectivity to the Cofense Triage instance using the provided connection
-    parameters.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action performs a GET request to a status endpoint to test connectivity.
-      It does not fetch contextual data for entities, mutate external or internal
-      data, update entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not process or filter any entities. It only tests connectivity
-      to the external service.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action is a simple connectivity test (Ping). It does not match any of the
-      expected outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      The action only tests connectivity to the Cofense Triage instance and does not
+      match any of the specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

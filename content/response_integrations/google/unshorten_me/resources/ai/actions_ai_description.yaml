@@ -7,23 +7,22 @@ Ping:
 
     ### Flow Description
 
-    1. Retrieves the integration configuration parameters.
+    1. Initializes the UnshortenMe manager using the integration's configuration.
 
-    2. Initializes the UnshortenMeManager.
+    2. Sends a test GET request to the UnshortenMe API (`https://unshorten.me/json/goo.gl/IGL1lE`)
+    to verify network connectivity and API access.
 
-    3. Makes a GET request to the UnshortenMe test URL (`https://unshorten.me/json/goo.gl/IGL1lE`)
-    to verify connectivity.
-
-    4. Returns a success message if the connection is established.
+    3. Returns a success message if the connection is established and the API responds
+    correctly.
 
 
     ### Additional Notes
 
-    This action is typically used to verify that the integration is configured correctly
-    and can communicate with the UnshortenMe API.
+    This action is typically used to verify integration settings and network access.
+    It does not process alerts or entities.
   ai_short_description: >-
     Tests connectivity to the UnshortenMe service to ensure the integration is configured
-    correctly.
+    correctly and the API is reachable.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -35,8 +34,8 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to a test URL to verify connectivity. It does
-      not fetch contextual data for entities, mutate external data, mutate internal
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for alerts/entities. It does not mutate external data, mutate internal
       data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -89,8 +88,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely tests connectivity
-      to the external service. Therefore, all entity-related flags are false.
+      The action does not iterate over target_entities or accept any entity identifiers
+      as input parameters. It is a simple connectivity test.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -106,9 +105,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not perform any enrichment,
-      containment, ticketing, or other operations that match the defined outcome categories.
-      Therefore, all outcome category flags are false.
+      The action is a simple Ping/connectivity test. It does not enrich IOCs, mutate
+      alerts, interact with tickets, modify blocklists, or perform any other operations
+      that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -128,33 +127,36 @@ Unshorten URL:
   ai_description: >-
     ### General Description
 
-    Resolves short URLs to their original long URLs using the Unshorten.me service.
+    Resolves short URL entities to their original long URLs using the Unshorten.me
+    service. This action enriches URL entities by providing the actual destination
+    URL, which is crucial for threat analysis and investigation.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities provided in the case.
+    1. Iterates through the target entities provided to the action.
 
-    2. Filters entities to process only those of type URL.
+    2. Filters the entities to process only those of type URL.
 
-    3. For each URL entity, makes a GET request to the Unshorten.me API to retrieve
-    the resolved long URL.
+    3. Makes an HTTP GET request to the Unshorten.me API (`https://unshorten.me/json/{short_url}`)
+    for each URL entity.
 
-    4. Updates the entity's additional properties with the resolved long URL and marks
-    the entity as enriched.
+    4. Retrieves the resolved long URL from the API response.
 
-    5. Updates the entities in the Google SecOps platform.
+    5. Updates the entity's additional properties with the `long_url` and marks the
+    entity as enriched.
 
-    6. Returns a JSON result containing the mapping of short URLs to long URLs.
+    6. Updates the entities within the Google SecOps platform and returns the resolved
+    URLs as a JSON result.
 
 
     ### Additional Notes
 
-    The Unshorten.me API has a limit of 10 requests per hour. If this limit is reached,
-    the action will raise an error.
+    The action will skip entities that are not URLs. It handles API rate limits by
+    raising an exception if the maximum requests per hour (10 requests) are exceeded.
   ai_short_description: >-
     Resolves short URL entities to their original long URLs using the Unshorten.me
-    API and enriches the entities with the resolved URLs.
+    API and enriches the entities with the resolved destination URLs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -166,10 +168,11 @@ Unshorten URL:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Unshorten.me API to fetch the resolved
-      long URL. It does not mutate external data. It updates internal entities by
-      calling `siemplify.update_entities` but does not create insights, modify alert
-      data, or create case comments.
+      The action fetches data from the Unshorten.me API via GET requests (fetches_data=true).
+      It does not mutate external data (can_mutate_external_data=false). It does not
+      mutate internal data outside of entities (can_mutate_internal_data=false). It
+      updates entities with the resolved URL using `siemplify.update_entities` (can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -221,9 +224,9 @@ Unshorten URL:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `if
-      entity.entity_type == EntityTypes.URL:`. This means it targets URL entities
-      and filters strictly by entity_type.
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      them using `if entity.entity_type == EntityTypes.URL:`. Therefore, it targets
+      URL entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -239,9 +242,10 @@ Unshorten URL:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches the resolved long URL for a given short URL entity, which
-      is a form of enriching an IOC (URL). It does not mutate external data, update
-      alerts, or perform other actions.
+      The action fetches the resolved long URL for a given short URL entity. This
+      provides contextual metadata and threat intelligence (the actual destination)
+      for an indicator (URL), which aligns with the 'Enrich IOC' category. It does
+      not mutate external data, update alerts, or perform other categorized actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

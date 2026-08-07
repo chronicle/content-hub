@@ -2,53 +2,55 @@ Get File References:
   ai_description: >-
     ### General Description
 
-    This action retrieves references for a file hash entity, specifically identifying
-    the agents on which the file was used, using McAfee Threat Intelligence Exchange
-    (TIE) and Data Exchange Layer (DXL).
+    Retrieves references for file hash entities from McAfee Threat Intelligence Exchange
+    (TIE) via DXL. This action identifies the agents or endpoints where a specific
+    file was used or observed, providing valuable prevalence and contextual data for
+    investigations.
 
 
     ### Flow Description
 
-    1. Initializes the connection to the McAfee TIE & DXL fabric using the provided
-    server address and certificates.
+    1. Iterates through the target entities provided in the case.
 
-    2. Iterates through the target entities, filtering for those of type `FILEHASH`.
+    2. Filters the entities to process only those of type `FILEHASH`.
 
-    3. For each valid file hash, makes a request to the McAfee TIE service via DXL
-    to fetch the file's first references (agents where it was seen).
+    3. For each valid file hash, queries McAfee TIE via the DXL broker to retrieve
+    file references (including Agent GUIDs and first contact dates).
 
-    4. If references are found, they are formatted into a CSV table and attached to
-    the entity as an entity table.
+    4. If references are found, formats the data into a CSV table and attaches it
+    to the corresponding entity in the SecOps platform.
 
-    5. The successfully processed entities are updated in the Google SecOps platform.
-
-    6. A summary message is generated indicating which entities had references found.
+    5. Updates the enriched entities to reflect the new data.
 
 
     ### Additional Notes
 
-    - The action requires DXL certificates to be properly configured in the integration
-    settings.
+    - The action automatically identifies the hash type (MD5, SHA1, or SHA256) based
+    on the length of the entity identifier.
 
-    - Only MD5, SHA1, and SHA256 hash types are supported.
+    - Entities that are not file hashes or for which no references are found will
+    be skipped without causing the action to fail.
   ai_short_description: >-
-    Retrieves references for file hash entities, identifying the agents on which the
-    file was used, using McAfee TIE & DXL.
+    Retrieves references for file hash entities from McAfee Threat Intelligence Exchange
+    (TIE) to identify the agents or endpoints where a specific file was observed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates entities and attaches a CSV table containing file references to the
+      entities.
     reasoning: >-
-      The action fetches data from McAfee TIE via DXL (fetches_data=true). It does
-      not mutate external data or internal data. It updates entities by calling `siemplify.update_entities`
-      (can_update_entities=true). It adds an entity table but does not create insights
-      or case comments.
+      The action fetches file references from McAfee TIE (fetches_data=true). It does
+      not mutate external data. It updates internal entities and adds entity tables
+      (can_mutate_internal_data=true, can_update_entities=true). It does not create
+      insights (uses add_entity_table instead), modify alert data, or create case
+      comments.
   entity_usage:
     entity_types:
       address: false
@@ -100,9 +102,9 @@ Get File References:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using the
-      condition `if entity.entity_type == EntityTypes.FILEHASH:`. Therefore, it targets
-      FILEHASH entities and filters by entity_type.
+      The script iterates over `siemplify.target_entities` and explicitly filters
+      them using the condition `entity.entity_type == EntityTypes.FILEHASH`. Therefore,
+      it targets File Hash entities and filters them strictly by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -118,9 +120,10 @@ Get File References:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches file references (agents where the file was seen) from McAfee
-      TIE, which provides prevalence and context for the file hash indicator. This
-      matches the 'Enrich IOC' expected outcome.
+      The action fetches file references (agents where the file was seen) for file
+      hash entities from McAfee TIE. This provides prevalence and contextual intelligence
+      for the indicator, matching the 'Enrich IOC' category. It does not mutate external
+      state or perform any containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -140,42 +143,41 @@ Get File Reputation:
   ai_description: >-
     ### General Description
 
-    Retrieves file reputation information for FileHash entities using McAfee Threat
-    Intelligence Exchange (TIE) and Data Exchange Layer (DXL). It enriches the entities
-    with the retrieved reputation data, providing threat intelligence context directly
-    within the platform.
+    Retrieves file reputation data for FileHash entities using McAfee Threat Intelligence
+    Exchange (TIE) over the Data Exchange Layer (DXL). The action fetches reputation
+    scores from various providers, evaluates the trust level, and enriches the entities
+    with the results.
 
 
     ### Flow Description
 
-    1. Iterates over all target entities provided in the case.
+    1. Iterates through all target entities and filters for FileHash entities.
 
-    2. Filters the entities to process only those of type `FILEHASH`.
+    2. Makes a request to McAfee TIE via the DXL client to fetch reputation data for
+    each file hash.
 
-    3. For each valid entity, calls the McAfee TIE API (`get_file_reputation`) to
-    fetch reputation details for the hash.
+    3. Parsed the returned reputation data from various providers (e.g., GTI, ATD,
+    MWG).
 
-    4. Depending on the `Enrich with all services` parameter, it either enriches the
-    entity with all returned services' reputations or just the worst trust level reputation.
+    4. Depending on the 'Enrich with all services' parameter, enriches the entity's
+    additional properties with either all returned reputations or only the one with
+    the worst trust level.
 
-    5. Updates the entity's `additional_properties` with the reputation data and marks
-    it as enriched.
+    5. Attaches the reputation data as an entity table and updates the entity's enrichment
+    status.
 
-    6. Attaches the reputation data as an entity table and adds the raw JSON results
-    to the action output.
-
-    7. Saves the updated entities back to the platform.
+    6. Returns the raw reputation data as a JSON result.
 
 
     ### Additional Notes
 
-    - The action supports MD5, SHA1, and SHA256 hash types.
+    - The action supports MD5, SHA1, and SHA256 hashes.
 
-    - If an error occurs while processing a specific entity, the action logs the error
-    and continues processing the remaining entities.
+    - If 'Enrich with all services' is false, the action calculates the worst trust
+    level among all providers and uses that for enrichment.
   ai_short_description: >-
-    Retrieves file reputation information for FileHash entities using McAfee TIE and
-    DXL, enriching the entities with the threat intelligence data.
+    Retrieves file reputation data for FileHash entities using McAfee Threat Intelligence
+    Exchange (TIE) and enriches the entities with the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -187,10 +189,10 @@ Get File Reputation:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an API call to McAfee TIE to fetch file reputation data (fetches_data=true).
-      It does not mutate any external data. It updates the internal entities with
-      the retrieved reputation data (can_update_entities=true). It does not create
-      insights, modify alert data, or create case comments.
+      The action fetches reputation data from McAfee TIE (fetches_data=true). It does
+      not mutate external data or internal case data. It updates entities with the
+      fetched reputation (can_update_entities=true). It does not create insights or
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -242,9 +244,9 @@ Get File Reputation:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The script iterates over `siemplify.target_entities` and explicitly checks `if
-      entity.entity_type == EntityTypes.FILEHASH:`. Therefore, it targets FILEHASH
-      entities and filters them by their entity_type.
+      The code iterates over `siemplify.target_entities` and explicitly filters them
+      using `if entity.entity_type == EntityTypes.FILEHASH:`. Therefore, it targets
+      FileHash entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -260,9 +262,9 @@ Get File Reputation:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches reputation data for a file hash (IOC) from McAfee TIE. This
-      matches the 'Enrich IOC' category. It does not mutate external data, update
-      alerts, or perform other actions.
+      The action fetches reputation data for a file hash (IOC) from McAfee TIE and
+      enriches the entity with this threat intelligence. This matches the 'Enrich
+      IOC' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -289,29 +291,30 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the McAfee TIE DXL server to ensure the integration is configured
-    correctly.
+    Tests connectivity to the McAfee TIE DXL server to verify that the integration
+    is configured correctly and can successfully communicate with the external service.
 
 
     ### Flow Description
 
-    1. Retrieves the integration configuration parameters (Server Address, certificates).
+    1. Retrieves the integration configuration parameters, including the Server Address,
+    Broker CA Bundle Path, Client Cert File Path, and Client Key File Path.
 
-    2. Initializes the `McAfeeTIEDXLManager` which attempts to establish a connection
+    2. Initializes the McAfee TIE DXL Manager, which attempts to establish a connection
     to the DXL fabric.
 
-    3. If the connection is successful without exceptions, the action completes and
-    returns a success message.
+    3. If the connection is successful without any exceptions, the action completes
+    and returns a success message.
 
 
     ### Additional Notes
 
     This action is typically used during the initial setup or troubleshooting of the
-    McAfee TIE DXL integration to verify that the provided credentials and server
-    address are valid.
+    integration to ensure that network connectivity and authentication credentials
+    are valid.
   ai_short_description: >-
     Tests connectivity to the McAfee TIE DXL server to verify integration settings
-    and ensure successful communication.
+    and network communication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -323,9 +326,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action initializes a connection to the McAfee TIE DXL server to test connectivity.
-      It does not fetch contextual data, mutate external or internal data, update
-      entities, create insights, modify alerts, or create case comments.
+      The action only establishes a connection to the McAfee TIE DXL server to verify
+      credentials and network access. It does not fetch contextual data, mutate external
+      or internal data, update entities, create insights, modify alerts, or create
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -377,9 +381,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code does not access `siemplify.target_entities` or perform any entity-specific
-      operations. It only tests connectivity using integration configurations, so
-      all entity type flags and filter flags are false.
+      The action does not process any entities. It simply tests connectivity to the
+      external service using integration configuration parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -395,9 +398,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple ping/connectivity test. It does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or modifying
-      external systems.
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, mutating external data,
+      or updating alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -419,27 +422,26 @@ Set File Reputation:
 
     Sets the enterprise reputation (trust level) for File Hash entities in McAfee
     Threat Intelligence Exchange (TIE) via DXL. This action allows analysts to manually
-    or automatically classify files as malicious, trusted, or other supported trust
-    levels within the McAfee ecosystem.
+    classify files as malicious, trusted, or unknown within the McAfee ecosystem.
 
 
     ### Flow Description
 
-    1. Retrieves the target trust level, file name, and comment from the action parameters.
+    1. Iterates through the target entities in the case.
 
-    2. Iterates through the target entities, specifically filtering for File Hash
-    entities.
+    2. Filters entities to include only those of type File Hash.
 
-    3. For each valid File Hash, makes an API call to McAfee TIE to set its reputation
-    to the specified trust level.
+    3. For each File Hash, makes a request to McAfee TIE via the DXL client to set
+    its reputation to the specified trust level, optionally including a file name
+    and comment.
 
-    4. Updates the successfully processed entities within the Google SecOps platform.
+    4. Updates the entities in Google SecOps if the reputation was successfully set.
 
 
     ### Additional Notes
 
-    The trust level parameter must match one of the supported McAfee TIE trust levels
-    (e.g., KNOWN_MALICIOUS, KNOWN_TRUSTED, UNKNOWN).
+    Supports MD5, SHA1, and SHA256 hashes. The trust level must be one of the supported
+    McAfee TIE trust levels (e.g., KNOWN_MALICIOUS, KNOWN_TRUSTED, UNKNOWN).
   ai_short_description: >-
     Sets the enterprise reputation (trust level) for File Hash entities in McAfee
     Threat Intelligence Exchange (TIE).
@@ -456,10 +458,10 @@ Set File Reputation:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action mutates external data by setting the file reputation in McAfee TIE
-      via the DXL client. It does not fetch data for enrichment. It updates internal
-      entities by calling `siemplify.update_entities` for the successfully processed
-      entities.
+      The action calls `mcafee_dxl_manager.set_file_reputation` which sends a request
+      to McAfee TIE to change the reputation of a file hash, mutating external data.
+      It also calls `siemplify.update_entities` to update the entities internally.
+      It does not fetch data or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -511,9 +513,9 @@ Set File Reputation:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == EntityTypes.FILEHASH`. Therefore, it targets File Hash entities and filters
-      by entity type.
+      The code iterates over `siemplify.target_entities` and filters them using `if
+      entity.entity_type == EntityTypes.FILEHASH:`. This means it targets File Hash
+      entities and filters strictly by their entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -529,12 +531,11 @@ Set File Reputation:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action sets the reputation of a file hash in McAfee TIE. While this affects
-      how the file is treated by McAfee (potentially blocking or allowing it), the
-      action itself is a generic 'Set Reputation' operation rather than explicitly
-      adding to a blocklist or allowlist. It does not fetch data for enrichment, nor
-      does it match any other specific outcome categories like updating alerts or
-      tickets.
+      The action sets the reputation of a file hash in McAfee TIE. While this can
+      effectively block or allow a file depending on the trust level chosen (e.g.,
+      KNOWN_MALICIOUS vs KNOWN_TRUSTED), it is a generic reputation-setting action
+      rather than a dedicated block/allow action. Therefore, it does not strictly
+      match the expected outcomes of the provided categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

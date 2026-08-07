@@ -2,29 +2,33 @@ Get Hash Report:
   ai_description: >-
     ### General Description
 
-    Retrieves sample reports for file hash entities (MD5 and SHA256) from Symantec
-    Content Analysis and enriches the entities with the retrieved data.
+    Retrieves sample reports for File Hash entities (MD5 and SHA256) using Symantec
+    Content Analysis. This action fetches threat intelligence data related to the
+    hashes and enriches the entities within the platform.
 
 
     ### Flow Description
 
-    1. Filters the target entities to include only File Hash entities.
+    1. Filters the target entities to include only those of type File Hash.
 
     2. Iterates through the filtered entities and makes a GET request to the Symantec
     Content Analysis API (`rapi/samples/basic`) to fetch sample reports for each hash.
 
-    3. If a report is found, it constructs a CSV table and attaches it to the entity.
+    3. If a report is successfully retrieved, it attaches the report data as an entity
+    table to the respective entity.
 
-    4. Enriches the entity's additional properties with the report data.
+    4. Enriches the entity by updating its `additional_properties` with the retrieved
+    report data.
 
-    5. Updates the entities in the Google SecOps platform.
+    5. Updates the enriched entities in the Google SecOps platform.
 
 
     ### Additional Notes
 
-    Supports MD5 and SHA256 hashes. Hashes of other lengths will result in an error.
+    - The action supports both MD5 (32 characters) and SHA256 (64 characters) hash
+    lengths. Hashes of other lengths will result in an error.
   ai_short_description: >-
-    Retrieves sample reports for file hash entities (MD5 and SHA256) from Symantec
+    Retrieves sample reports for File Hash entities (MD5 and SHA256) using Symantec
     Content Analysis and enriches the entities with the results.
   capabilities:
     can_create_case_comments: false
@@ -37,9 +41,11 @@ Get Hash Report:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Symantec Content Analysis API to fetch
-      file samples. It does not mutate external data but updates internal entities
-      with the fetched data.
+      The action fetches data by making a GET request to the Symantec Content Analysis
+      API to retrieve file samples. It does not mutate external data or internal platform
+      data (other than entities). It updates entities by modifying their `additional_properties`
+      and calling `siemplify.update_entities`. It does not create insights, modify
+      alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -91,9 +97,9 @@ Get Hash Report:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      == EntityTypes.FILEHASH`. This means it targets FILEHASH entities, filtering
-      strictly by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      the condition `entity.entity_type == EntityTypes.FILEHASH`. Therefore, it targets
+      File Hash entities and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -110,8 +116,8 @@ Get Hash Report:
     get_alert_information: false
     reasoning: >-
       The action fetches sample reports for file hashes from Symantec Content Analysis,
-      returning threat intelligence and enriching the entity. This matches the 'Enrich
-      IOC' expected outcome.
+      which provides threat intelligence and context for the indicator. This aligns
+      with the 'Enrich IOC' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -131,32 +137,28 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Symantec Content Analysis API. This action verifies
-    that the integration is configured correctly and can successfully communicate
-    with the external service.
+    Tests connectivity to the Symantec Content Analysis service to verify integration
+    credentials and network access.
 
 
     ### Flow Description
 
-    1. Retrieves the integration configuration parameters (API Root, API Key, Verify
-    SSL).
+    1. Initializes the Symantec Content Analysis manager using the provided integration
+    configuration.
 
-    2. Initializes the Symantec Content Analysis manager.
+    2. Makes a GET request to the `/rapi/pattern_groups` endpoint to verify API access.
 
-    3. Makes an HTTP GET request to the `rapi/pattern_groups` endpoint to verify API
-    access and credentials.
-
-    4. Returns a success message if the connection is established, or a failure message
-    if it is not.
+    3. Returns a success message if the connection is established, or a failure message
+    otherwise.
 
 
     ### Additional Notes
 
-    This action is typically used as a diagnostic tool to ensure that the integration's
-    connection settings are valid and the Symantec Content Analysis server is reachable.
+    This action is typically used as a diagnostic tool to ensure the SOAR platform
+    can successfully communicate with the Symantec Content Analysis API.
   ai_short_description: >-
-    Tests connectivity to the Symantec Content Analysis API to ensure the integration
-    is configured correctly and the service is reachable.
+    Tests connectivity to the Symantec Content Analysis service to verify integration
+    credentials and network access.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -168,9 +170,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to test connectivity but does not fetch contextual
-      data for entities or alerts. It does not mutate external data, nor does it modify
-      internal SecOps data, update entities, or create insights.
+      The action makes a simple GET request to verify connectivity. It does not fetch
+      contextual data for alerts/entities, mutate external data, mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -222,8 +224,9 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely tests connectivity
-      to the external service, so all entity-related flags are false.
+      The action does not process any entities from the case, nor does it accept any
+      entity identifiers as input parameters. It solely tests connectivity to the
+      external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -239,9 +242,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action only tests connectivity to the Symantec Content Analysis API. It
-      does not perform any enrichment, mutation, or specific operational tasks that
-      match the defined outcome categories.
+      The action is a simple connectivity test (ping) and does not perform any enrichment,
+      containment, ticketing, or other operations that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -261,37 +263,33 @@ Submit File:
   ai_description: >-
     ### General Description
 
-    Submits a file from a specified local path to Symantec Content Analysis for scanning
-    and retrieves its reputation score. Based on the returned score, the action can
-    automatically generate case insights to highlight suspicious or malicious files.
+    Uploads a specified file to Symantec Content Analysis for scanning and retrieves
+    its reputation score.
 
 
     ### Flow Description
 
-    1. Retrieves the `File Path` from the action parameters.
+    1. Retrieves the file path from the action parameters.
 
     2. Reads the file from the local file system.
 
-    3. Makes an HTTP POST request to the Symantec Content Analysis API (`rapi/cas/scan`)
-    to upload the file for analysis.
+    3. Makes a POST request to the Symantec Content Analysis API (`rapi/cas/scan`)
+    to submit the file for analysis.
 
     4. Parses the API response to extract the file reputation score.
 
-    5. Evaluates the score: if it falls between 2 and 6, a "File Found as Suspicious"
-    case insight is created. If it falls between 7 and 10, a "File Found as Malicious"
-    case insight is created.
+    5. Evaluates the score: if it is between 2 and 6, creates a "Suspicious" case
+    insight; if between 7 and 10, creates a "Malicious" case insight.
 
-    6. Completes the action by returning the reputation score and a summary message.
+    6. Returns the reputation score as the action result.
 
 
     ### Additional Notes
 
-    The action requires a valid file path that is accessible by the environment executing
-    the integration. The reputation score is also returned as dynamic result metadata
-    (`file_reputation_score`) for use in subsequent playbook steps.
+    The action requires a valid file path accessible by the SOAR platform.
   ai_short_description: >-
-    Uploads a file to Symantec Content Analysis for scanning, retrieves its reputation
-    score, and generates case insights based on the identified threat level.
+    Uploads a file to Symantec Content Analysis for scanning and retrieves its reputation
+    score, creating case insights based on the severity of the result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -300,15 +298,14 @@ Submit File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Uploads a file to the Symantec Content Analysis platform for scanning.
-    fetches_data: false
+      Uploads a file to the Symantec Content Analysis system for scanning.
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP POST request to upload a file to Symantec Content Analysis,
-      which mutates external data by submitting a new sample for analysis. It does
-      not fetch existing contextual data via GET. Internally, it evaluates the returned
-      score and calls `siemplify.create_case_insight` to generate insights on the
-      case.
+      The action makes a POST request to upload a file to Symantec Content Analysis
+      (mutates external data by submitting a sample). It retrieves the reputation
+      score (fetches data). It does not update entities, but it creates case insights
+      based on the reputation score.
   entity_usage:
     entity_types:
       address: false
@@ -360,9 +357,8 @@ Submit File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the provided `File Path` parameter to perform its operation.
-      Therefore, it does not run on entities, and all entity-related flags are false.
+      The action does not iterate over `siemplify.target_entities` nor does it accept
+      any entity-specific parameters. It operates solely on a provided file path string.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -378,9 +374,8 @@ Submit File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action uploads a file to Symantec Content Analysis and retrieves a reputation
-      score. This directly aligns with the 'Submit File' expected outcome. It does
-      not match any other categories.
+      The action uploads a file to Symantec Content Analysis to get a reputation score.
+      This directly aligns with the 'Submit File' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

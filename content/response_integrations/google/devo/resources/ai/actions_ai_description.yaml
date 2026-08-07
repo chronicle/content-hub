@@ -3,7 +3,7 @@ Advanced Query:
     ### General Description
 
     Executes an advanced query against a Devo instance based on the provided parameters
-    to retrieve historical logs or telemetry data.
+    and returns the results.
 
 
     ### Flow Description
@@ -12,22 +12,23 @@ Advanced Query:
 
     2. Validates the time frame and calculates the start and end timestamps.
 
-    3. Makes a POST request to the Devo API (`/search/query`) to execute the query.
+    3. Initializes the Devo API client.
 
-    4. Retrieves the query results and formats them.
+    4. Executes the advanced query against the Devo instance.
 
-    5. Returns the results as a JSON object and a CSV data table within the SecOps
-    platform.
+    5. If results are found, attaches them to the action result as JSON and a CSV
+    data table.
 
 
     ### Additional Notes
 
-    This action does not operate on Siemplify entities. If querying a table other
-    than `siem.logtrust.alert.info`, an additional token for that table must be specified
-    in the integration configuration.
+    This action does not operate on Google SecOps entities. If it is planned to query
+    a table other than `siem.logtrust.alert.info`, an additional token must be created
+    following the Devo documentation and specified on the integration configuration
+    page.
   ai_short_description: >-
-    Executes an advanced query against a Devo instance to retrieve historical logs
-    or telemetry data based on specified parameters and time frames.
+    Executes an advanced query against a Devo instance based on the provided parameters
+    and returns the results as JSON and a data table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -39,8 +40,9 @@ Advanced Query:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Devo API to fetch query results (fetches_data=true).
-      It does not mutate external data, update internal entities, or create insights.
+      The action fetches data by executing a query against the Devo API. It does not
+      mutate external data, update internal entities, create insights, modify alerts,
+      or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -92,8 +94,8 @@ Advanced Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It executes a query based on the provided
-      parameters without referencing specific entities, so all entity flags are false.
+      The action does not iterate over target entities and does not accept any entity-related
+      input parameters. It operates solely on the provided query string.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -109,8 +111,8 @@ Advanced Query:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a query against the Devo instance to retrieve logs and telemetry
-      data. This matches the 'Search Events' expected outcome.
+      The action executes a query against Devo to retrieve logs or telemetry data,
+      which directly aligns with the 'Search Events' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -133,7 +135,7 @@ Advanced Query:
     | Query | String | Yes | Specify a query to execute against Devo instance. Example
     format: 'from siem.logtrust.alert.info'. |
 
-    | Time Frame | String | No | Specify a time frame for the results. If 'Custom'
+    | Time Frame | DropDown | No | Specify a time frame for the results. If 'Custom'
     is selected, you also need to provide 'Start Time'. |
 
     | Start Time | String | No | Specify a time frame for the results. If 'Custom'
@@ -149,32 +151,31 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Devo instance using the provided integration configuration
-    parameters. This action ensures that the API credentials and network settings
-    are correctly configured to communicate with the Devo platform.
+    Tests connectivity to the Devo instance using the parameters provided in the integration
+    configuration.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters (API URL, API Token, API Key,
-    API Secret, Verify SSL).
+    1. Extracts the integration configuration parameters including API URL, API Token,
+    API Key, API Secret, and Verify SSL.
 
-    2. Initializes the DevoManager and triggers a connectivity test.
+    2. Initializes the Devo API client and triggers a connectivity test.
 
-    3. The connectivity test makes a POST request to the Devo `/search/query` API
-    endpoint with a basic query (`from siem.logtrust.alert.info`) to verify access.
+    3. Makes an API call to the Devo query endpoint (`/search/query`) with a basic
+    test query (`from siem.logtrust.alert.info`).
 
-    4. Returns a successful execution state if the API responds without errors, otherwise
-    returns a failure state with the error details.
+    4. Evaluates the response and returns a successful result if the connection is
+    established, or fails the action with an error message if the connection cannot
+    be made.
 
 
     ### Additional Notes
 
-    This action does not require any action-specific parameters or entities to run.
-    It relies entirely on the integration-level configuration.
+    This action does not require any action-specific parameters as it relies entirely
+    on the integration-level configuration.
   ai_short_description: >-
-    Tests connectivity to the Devo instance to verify integration configuration and
-    API access.
+    Tests connectivity to the Devo instance to verify integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -186,9 +187,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only performs a basic API request to verify connectivity. It does
-      not fetch contextual data for cases, mutate external data, update internal entities,
-      or create insights.
+      The action makes an API request to test connectivity but does not fetch contextual
+      data for alerts/entities, mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -240,8 +241,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely tests connectivity
-      to the external service.
+      The action does not process any entities. It only tests connectivity to the
+      external service using integration configuration parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -259,7 +260,7 @@ Ping:
     reasoning: >-
       The action is a simple connectivity test (Ping) and does not match any of the
       specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external state.
+      external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -279,36 +280,33 @@ Simple Query:
   ai_description: >-
     ### General Description
 
-    Executes a simple query in Devo based on the provided parameters. This action
-    allows users to query specific tables, filter results, and define timeframes to
-    retrieve historical logs or telemetry data.
+    Executes a simple query in Devo based on the provided parameters such as table
+    name, fields to return, and where filter. The action retrieves the matching records
+    and attaches them to the case as JSON and CSV data.
 
 
     ### Flow Description
 
-    1. Validates the provided time frame parameters (Start Time, End Time, or predefined
-    Time Frame).
+    1. Extracts the action parameters including table name, fields to return, where
+    filter, time frame, and max rows to return.
 
-    2. Constructs a Devo query string using the specified Table Name, Fields To Return,
-    and Where Filter.
+    2. Validates the provided time frame and constructs the Devo query string.
 
-    3. Makes a POST request to the Devo API (`/search/query`) to execute the constructed
-    query.
+    3. Makes an API call (POST request) to the Devo `/search/query` endpoint to execute
+    the query.
 
-    4. Retrieves the query results and attaches them to the action's JSON result.
-
-    5. Constructs a CSV data table from the results and adds it to the action's output.
+    4. Retrieves the query results and adds them to the action's JSON result and as
+    a CSV data table.
 
 
     ### Additional Notes
 
     This action does not operate on Google SecOps entities. If it is planned to query
     a table other than `siem.logtrust.alert.info`, an additional token for that table
-    must be created following the Devo documentation and specified on the integration
-    configuration page.
+    must be created and specified on the integration configuration page.
   ai_short_description: >-
-    Executes a simple query in Devo based on the provided parameters to retrieve historical
-    logs or telemetry data.
+    Executes a simple query in Devo based on the provided parameters and returns the
+    results as JSON and CSV.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -320,9 +318,9 @@ Simple Query:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a POST request to the Devo API to run a search
-      query. It does not mutate external data, mutate internal data, update entities,
-      create insights, modify alert data, or create case comments.
+      The action fetches data by executing a query against the Devo API. It does not
+      mutate external data, update entities, create insights, modify alert data, or
+      create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -374,8 +372,9 @@ Simple Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates purely on the provided action parameters to query Devo.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. The description explicitly states
+      that the action is not working on Siemplify entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -391,9 +390,9 @@ Simple Query:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a query in Devo to retrieve logs and telemetry data based
-      on specified parameters. This directly aligns with the 'Search Events' expected
-      outcome.
+      The action executes a query in Devo to retrieve historical logs or telemetry
+      data matching specific search parameters. This directly aligns with the 'Search
+      Events' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -418,10 +417,10 @@ Simple Query:
     | Fields To Return | String | No | Specify what fields to return. If nothing is
     provided, action will return all fields. |
 
-    | Where Filter | String | No | Specify the WHERE filter for the query  that needs
+    | Where Filter | String | No | Specify the WHERE filter for the query that needs
     to be executed. |
 
-    | Time Frame | DropDown | No | Specify a time frame for the results. If 'Custom'
+    | Time Frame | Dropdown | No | Specify a time frame for the results. If 'Custom'
     is selected, you also need to provide 'Start Time'. |
 
     | Start Time | String | No | Specify a time frame for the results. If 'Custom'

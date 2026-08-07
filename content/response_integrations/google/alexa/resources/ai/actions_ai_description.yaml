@@ -2,39 +2,40 @@ Get URL Rank:
   ai_description: >-
     ### General Description
 
-    Queries the Alexa Web Information Service to retrieve the global rank of URL entities.
-    This action enriches the entities with their Alexa rank and can optionally mark
-    them as suspicious if their rank exceeds a specified threshold.
+    Queries Alexa to retrieve rank information for URL entities. This action fetches
+    the global rank of the specified URLs, enriches the entities with this data, and
+    evaluates the rank against a provided threshold to determine if the URL should
+    be marked as suspicious.
 
 
     ### Flow Description
 
-    1. Iterates over the provided target entities and filters for those of type `URL`.
+    1. Iterates over the target entities and filters for those of type URL.
 
-    2. For each valid URL entity, makes an HTTP GET request to the Alexa API (`UrlInfo`
-    action) to fetch the URL's rank.
+    2. Makes an HTTP GET request to the Alexa Web Information Service (AWIS) API to
+    fetch the rank information for each URL.
 
-    3. Updates the entity's `additional_properties` with the retrieved `Alexa_Rank`
-    and marks the entity as enriched (`is_enriched = True`).
+    3. Extracts the rank from the API response and adds it to the entity's `additional_properties`
+    as `Alexa_Rank`.
 
-    4. Compares the retrieved rank against the provided `Threshold` parameter. If
-    the rank is greater than the threshold, the entity is marked as suspicious (`is_suspicious
-    = True`) and an insight is added to the entity.
+    4. Marks the entity as enriched.
 
-    5. Updates the modified entities within the Google SecOps platform and returns
-    the raw rank data as a JSON result.
+    5. Compares the retrieved rank against the provided `Threshold` parameter. If
+    the rank is greater than the threshold, the entity is marked as suspicious and
+    an insight is added to the entity.
+
+    6. Updates the entities within the Google SecOps platform and attaches the raw
+    JSON results to the action.
 
 
     ### Additional Notes
 
-    - The action requires valid AWS credentials (Access Key ID and Secret Access Key)
-    configured in the integration settings to authenticate with the Alexa Web Information
-    Service.
-
-    - If the API does not return a rank for a URL, the rank is recorded as 'None'.
+    Ensure that the Alexa integration is properly configured with the necessary Access
+    Key ID and Secret Access Key to authenticate with the AWS API.
   ai_short_description: >-
-    Queries the Alexa Web Information Service to retrieve the global rank of URL entities,
-    enriching them and optionally marking them as suspicious based on a defined threshold.
+    Queries Alexa to retrieve rank information for URL entities, enriches the entities
+    with the rank data, and optionally marks them as suspicious based on a provided
+    threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -46,9 +47,10 @@ Get URL Rank:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from the Alexa API using a GET request. It does not
-      mutate external data. It updates internal entities with the retrieved rank and
-      creates insights if the rank exceeds the threshold.
+      The action fetches data from the Alexa API (fetches_data=true). It does not
+      mutate any external data or internal platform data outside of entities and insights.
+      It updates the entities with the retrieved rank (can_update_entities=true) and
+      creates an insight if the rank exceeds the threshold (can_create_insight=true).
   entity_usage:
     entity_types:
       address: false
@@ -100,9 +102,9 @@ Get URL Rank:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and explicitly filters
-      them using `if entity.entity_type == EntityTypes.URL:`. Therefore, it targets
-      URL entities and filters by entity_type.
+      The code iterates over `siemplify.target_entities` and filters them using `if
+      entity.entity_type == EntityTypes.URL:`. This indicates that the action specifically
+      targets URL entities and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -118,9 +120,9 @@ Get URL Rank:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches the global rank of URL entities from the Alexa Web Information
-      Service, which is a form of threat intelligence and prevalence data. This aligns
-      with the 'Enrich IOC' expected outcome.
+      The action retrieves rank and prevalence information for URL indicators from
+      Alexa, which aligns with the 'Enrich IOC' expected outcome. It does not perform
+      any containment, ticketing, or external mutation operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -140,36 +142,35 @@ Get URL Rank:
 
     | --- | --- | --- | --- |
 
-    | Threshold | String | Yes | The rank threshold to determine if a URL is suspicious.
-    If the retrieved rank is greater than this value, the entity will be marked as
-    suspicious. Example: 5 |
+    | Threshold | String | Yes | Rank. e.g. 5 |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Alexa service to ensure the integration is configured
-    correctly and can communicate with the external API.
+    Tests connectivity to the Alexa service to ensure the integration is properly
+    configured.
 
 
     ### Flow Description
 
-    1. Initializes the Alexa manager using the provided integration credentials (Access
-    Key ID and Secret Access Key).
+    1. Retrieves the integration configuration credentials (Access Key ID and Secret
+    Access Key).
 
-    2. Makes an HTTP GET request to the Alexa API to retrieve URL information for
-    a test domain (`google.co.il`).
+    2. Initializes the AlexaManager.
 
-    3. Evaluates the response to confirm successful authentication and connectivity.
+    3. Makes an API call to the Alexa Web Information Service to retrieve URL information
+    for a test domain (`google.co.il`).
 
-    4. Returns a success message and a boolean indicating the connectivity status.
+    4. Returns a success message if the API call completes without errors.
 
 
     ### Additional Notes
 
-    This action does not process any entities or case data. It is solely used for
-    diagnostic purposes to verify the integration setup.
+    This action does not operate on entities or alerts and is solely used for diagnostic
+    purposes to verify API communication.
   ai_short_description: >-
-    Tests connectivity to the Alexa service by making a test API call.
+    Tests connectivity to the Alexa service to ensure the integration is properly
+    configured and can communicate with the API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -181,9 +182,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a test GET request to the Alexa API but does not fetch contextual
-      data for alerts/entities, mutate external data, mutate internal data, update
-      entities, create insights, modify alert data, or create case comments.
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for entities, mutate external or internal data, update entities, create
+      insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -235,8 +236,9 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It simply performs
-      a static API call to test connectivity.
+      The action does not process any entities from the case, nor does it accept any
+      entity-related parameters. It solely performs a connectivity test to the Alexa
+      API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -252,9 +254,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      The action is a simple connectivity test (Ping) and does not perform any enrichment,
+      containment, ticketing, or other operations that match the expected outcome
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

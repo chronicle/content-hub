@@ -2,31 +2,35 @@ DNS Resolve:
   ai_description: >-
     ### General Description
 
-    Resolves a list of Hostname entities to their corresponding IP addresses using
-    the Shodan API. This action helps analysts quickly identify the underlying infrastructure
-    associated with specific domains or hostnames.
+    Resolves IP addresses for a provided list of hostname entities using the Shodan
+    API. This action queries Shodan's DNS resolution endpoint to find the corresponding
+    IP addresses for the targeted hostnames and returns the results as a data table
+    and JSON object.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities provided in the case and filters for entities
-    of type `HOSTNAME`.
+    1. Iterates through the target entities provided to the action and filters for
+    entities of type `HOSTNAME`.
 
     2. Aggregates the identifiers of the filtered hostnames into a comma-separated
-    list.
+    string.
 
-    3. Makes a GET request to the Shodan API (`/dns/resolve`) to fetch the IP addresses
-    for the provided hostnames.
+    3. Makes a GET request to the Shodan API (`/dns/resolve`) to fetch the corresponding
+    IP addresses for the hostnames.
 
-    4. Parses the response and attaches the resolved IP addresses as a data table
-    and JSON result to the action output.
+    4. Formats the returned resolution data into a CSV table and attaches it to the
+    action's results.
+
+    5. Appends the raw JSON response to the action results for further playbook usage.
 
 
     ### Additional Notes
 
-    Requires a valid Shodan API key configured in the integration settings.
+    This action only processes entities of type `HOSTNAME`. Other entity types will
+    be ignored.
   ai_short_description: >-
-    Resolves Hostname entities to their corresponding IP addresses using the Shodan
+    Resolves IP addresses for a provided list of hostname entities using the Shodan
     API.
   capabilities:
     can_create_case_comments: false
@@ -40,10 +44,9 @@ DNS Resolve:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to the Shodan API to fetch DNS resolution data
-      (fetches_data=true). It does not perform any state-changing operations on external
-      systems (can_mutate_external_data=false). Internally, it only adds results and
-      data tables to the action output, without updating entities, creating insights,
-      or modifying case/alert data (can_mutate_internal_data=false).
+      for hostnames. It does not mutate external data, nor does it mutate internal
+      data (like updating entities or adding insights). It only returns the fetched
+      data as a JSON result and data table.
   entity_usage:
     entity_types:
       address: false
@@ -97,7 +100,7 @@ DNS Resolve:
     reasoning: >-
       The code iterates over `siemplify.target_entities` and explicitly filters them
       using the condition `if entity.entity_type == EntityTypes.HOSTNAME:`. Therefore,
-      it targets Hostname entities and filters strictly by entity_type.
+      it targets Hostname entities and filters them strictly by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -113,10 +116,10 @@ DNS Resolve:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches IP resolution data for hostname indicators from the Shodan
-      API. This aligns with the 'Enrich IOC' category as it retrieves contextual intelligence
-      for an indicator. It does not mutate external data, update alerts, or interact
-      with tickets/emails.
+      The action fetches IP addresses for given hostnames (DNS resolution) from Shodan.
+      This provides contextual metadata and intelligence for an indicator (hostname),
+      which aligns with the 'Enrich IOC' category. It does not mutate external state,
+      update alerts, or perform other actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -136,33 +139,28 @@ DNS Reverse:
   ai_description: >-
     ### General Description
 
-    Looks up the hostnames that have been defined for a given list of IP addresses
-    using the Shodan API. This action helps analysts identify domains associated with
-    specific IP addresses to enrich threat intelligence and context.
+    Performs a reverse DNS lookup on IP address entities using the Shodan API to retrieve
+    associated hostnames.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities provided in the case and filters for `ADDRESS`
-    (IP) entities.
+    1. Iterates through the target entities and filters for IP addresses (`ADDRESS`).
 
-    2. For each valid IP address, makes a GET request to the Shodan API (`/dns/reverse`)
-    to retrieve the associated hostnames.
+    2. Makes a GET request to the Shodan API (`/dns/reverse`) for each IP address
+    to retrieve its associated hostnames.
 
-    3. Aggregates the successful and unsuccessful lookups.
+    3. Aggregates the successful lookups into a data table and a JSON result.
 
-    4. Generates a CSV data table named "Shodan DNS Reverse Report" containing the
-    successful lookup results and attaches it to the action result.
-
-    5. Attaches the raw JSON response from Shodan to the action's JSON result.
+    4. Returns the results to the SecOps platform.
 
 
     ### Additional Notes
 
-    - This action requires a valid Shodan API key configured in the integration settings.
+    Requires a valid Shodan API key configured in the integration settings.
   ai_short_description: >-
-    Looks up the hostnames that have been defined for a given list of IP addresses
-    using the Shodan API to enrich threat intelligence.
+    Performs a reverse DNS lookup on IP address entities using the Shodan API to retrieve
+    associated hostnames.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -174,9 +172,8 @@ DNS Reverse:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Shodan API to fetch DNS reverse lookup
-      data for IP addresses. It does not mutate external data, nor does it update
-      internal entities, create insights, or modify alert data.
+      The action fetches data from the Shodan API via a GET request. It does not mutate
+      external data, update entities, create insights, or modify internal case data.
   entity_usage:
     entity_types:
       address: true
@@ -228,9 +225,9 @@ DNS Reverse:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `if
-      entity.entity_type == EntityTypes.ADDRESS:`. Therefore, it targets ADDRESS entities
-      and filters by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it targets Address entities
+      and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -246,9 +243,9 @@ DNS Reverse:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches hostnames associated with IP addresses from Shodan, which
-      enriches the IP indicator with additional context. This matches the 'Enrich
-      IOC' expected outcome.
+      The action fetches hostnames for IP addresses from Shodan, which provides contextual
+      threat intelligence and enrichment for the indicator. This matches the 'Enrich
+      IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -268,28 +265,30 @@ Get Api Info:
   ai_description: >-
     ### General Description
 
-    Retrieves information about the Shodan API plan associated with the configured
-    API key.
+    Retrieves information about the API plan associated with the configured Shodan
+    API key. This action is useful for checking the status, limits, and capabilities
+    of the current Shodan subscription.
 
 
     ### Flow Description
 
-    1. Initializes the Shodan manager using the integration configuration.
+    1. Initializes the Shodan manager using the integration's API key.
 
-    2. Makes an HTTP GET request to the Shodan API (`/api-info`) to fetch the API
-    plan details.
+    2. Makes a GET request to the Shodan API (`/api-info`) to fetch the API plan details.
 
-    3. Parses the response and attaches the API information as a data table and JSON
-    result to the action.
+    3. If successful, attaches the retrieved information as a data table and JSON
+    result to the action output.
+
+    4. Returns a success or failure message based on the API response.
 
 
     ### Additional Notes
 
-    This action does not operate on entities and is primarily used for diagnostic
-    or administrative purposes to check API limits and plan details.
+    This action does not require any specific input parameters as it relies entirely
+    on the integration-level configuration.
   ai_short_description: >-
-    Retrieves information about the Shodan API plan associated with the configured
-    API key.
+    Retrieves information about the API plan associated with the configured Shodan
+    API key, returning details such as limits and capabilities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -355,8 +354,9 @@ Get Api Info:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates independently of entities.
+      The action does not process any entities from the case, nor does it accept any
+      entity-related input parameters. It solely interacts with the Shodan API to
+      retrieve account-level information.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -372,10 +372,10 @@ Get Api Info:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves administrative information about the Shodan API plan. It
-      does not enrich IOCs or assets, update alerts, interact with tickets, modify
-      blocklists/allowlists, manage identities, contain hosts, search events, or perform
-      any other operations that match the defined outcome categories.
+      The action retrieves account-level API plan information from Shodan. It does
+      not interact with IOCs, assets, alerts, tickets, or perform any containment,
+      remediation, or communication tasks. Therefore, it does not match any of the
+      predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -395,36 +395,36 @@ Get Ip Info:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed information about IP address entities from Shodan. This action
-    fetches data such as historical banners, open ports, and general host information,
-    and uses it to enrich the entities within the platform.
+    Retrieves detailed information about IP address entities using Shodan. It fetches
+    data such as country, last updated timestamp, and associated domains to enrich
+    the entities within the platform.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities, filtering specifically for IP addresses
-    (ADDRESS).
+    1. Iterates through the target entities in the case.
 
-    2. Makes a GET request to the Shodan API (`/shodan/host/{ip}`) for each IP address
-    to retrieve host information.
+    2. Filters entities to process only those of type ADDRESS.
 
-    3. If data is found, creates a CSV table with the results and attaches it to the
-    entity.
+    3. For each valid entity, makes a GET request to the Shodan API (`/shodan/host/{ip}`)
+    to fetch IP information.
 
-    4. Enriches the entity's additional properties with the country, last updated
-    time, and associated domains.
+    4. If data is found, adds a CSV table to the entity with the retrieved information.
 
-    5. Updates the enriched entities in the Google SecOps platform and attaches the
-    raw JSON results to the action.
+    5. Enriches the entity's additional properties with Shodan Country, Last Updated,
+    and Domains.
+
+    6. Marks the entity as enriched and updates it in the platform.
+
+    7. Returns the raw JSON results.
 
 
     ### Additional Notes
 
-    The action can be configured to return historical banners or minify the results
-    to only include ports and general host information, reducing the payload size.
+    None.
   ai_short_description: >-
-    Retrieves detailed host information, open ports, and historical banners for IP
-    address entities from Shodan and enriches the entities with the findings.
+    Retrieves detailed information about IP address entities using Shodan, enriching
+    them with data such as country, last updated timestamp, and associated domains.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -436,10 +436,9 @@ Get Ip Info:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Shodan API to fetch IP data (fetches_data=true).
-      It does not mutate external data (can_mutate_external_data=false). It updates
-      the entities in the platform using `siemplify.update_entities` (can_update_entities=true).
-      It does not create insights, modify alert data, or create case comments.
+      The action makes a GET request to the Shodan API to fetch IP data. It does not
+      mutate external data. It updates internal entities with the fetched data but
+      does not create insights or case comments.
   entity_usage:
     entity_types:
       address: true
@@ -491,9 +490,8 @@ Get Ip Info:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using the
-      condition `if entity.entity_type == EntityTypes.ADDRESS:`. Therefore, it targets
-      ADDRESS entities and filters strictly by entity_type.
+      The script iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == EntityTypes.ADDRESS`.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -509,10 +507,8 @@ Get Ip Info:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches host information, domains, and country data for an IP address
-      from Shodan and enriches the entity. This directly aligns with the 'Enrich IOC'
-      expected outcome. It does not mutate external state, update alerts, or perform
-      other actions.
+      The action fetches threat intelligence and contextual data (country, domains,
+      ports) for an IP address (IOC) from Shodan. This matches the 'Enrich IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -533,7 +529,7 @@ Get Ip Info:
     | --- | --- | --- | --- |
 
     | Return Historical Banners | Boolean | No | True if all historical banners should
-    be returned. |
+    be returned |
 
     | Set Minify | Boolean | No | True to only return the list of ports and the general
     host information, no banners. |
@@ -541,28 +537,29 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Shodan API to ensure the integration is configured correctly
-    and the API key is valid.
+    Tests connectivity to the Shodan API to ensure the integration is configured correctly.
 
 
     ### Flow Description
 
-    1. Retrieves the Shodan API key and SSL verification settings from the integration
-    configuration.
+    1. Retrieves the Shodan integration configuration (API key and SSL verification
+    settings).
 
-    2. Makes a GET request to the Shodan `/api-info` endpoint to verify the API key
-    and connectivity.
+    2. Initializes the ShodanManager.
 
-    3. Returns a success message if the connection is established.
+    3. Calls the `test_connectivity` method, which makes a GET request to the `/api-info`
+    endpoint of the Shodan API.
+
+    4. Returns a success message if the connection is established.
 
 
     ### Additional Notes
 
-    This action is typically used to verify integration configuration and does not
-    process any specific entities or alerts.
+    This action is typically used for diagnostic purposes to verify that the provided
+    API key is valid and the service is reachable.
   ai_short_description: >-
-    Tests connectivity to the Shodan API to ensure the integration is configured correctly
-    and the API key is valid.
+    Tests connectivity to the Shodan API by verifying the provided API key and network
+    access.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -574,10 +571,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Shodan API to test connectivity. It does
-      not fetch contextual data for alerts or entities, nor does it mutate any external
-      or internal data, update entities, create insights, modify alerts, or create
-      case comments.
+      The action makes a GET request to the Shodan API to test connectivity, but it
+      does not fetch contextual data for alerts/entities, nor does it mutate any external
+      or internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -629,9 +625,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely relies on
-      integration configuration parameters to test connectivity to the Shodan API.
-      Therefore, all entity type and filter flags are set to false.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely tests connectivity to the external API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -647,10 +642,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) that verifies the API key against
-      the Shodan API. It does not perform any enrichment, containment, ticketing,
-      or other operational outcomes defined in the categories. Therefore, all outcome
-      category flags are set to false.
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -670,32 +664,32 @@ Scan A Network:
   ai_description: >-
     ### General Description
 
-    Initiates a network scan using Shodan for specified IP address entities. This
-    action triggers an active crawl of the provided IP addresses on the Shodan platform
-    and returns a scan ID to track the progress.
+    Initiates a network scan using Shodan for the provided IP address entities. This
+    action triggers Shodan's external scanning infrastructure and returns a unique
+    scan ID to track the progress of the scan.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities and filters for IP Address (`ADDRESS`)
-    entities.
+    1. Iterates through the target entities provided in the case.
 
-    2. Aggregates the identifiers of the filtered IP addresses into a comma-separated
-    string.
+    2. Filters the entities to include only those of type `ADDRESS`.
 
-    3. Makes a POST request to the Shodan API (`/shodan/scan`) to initiate the network
-    scan for the aggregated IPs.
+    3. Aggregates the valid IP addresses into a comma-separated list.
 
-    4. Retrieves the scan ID from the API response and outputs it as the result value.
+    4. Makes a POST request to the Shodan API (`/shodan/scan`) to initiate the network
+    scan.
+
+    5. Retrieves the scan ID from the response and outputs it as the result.
 
 
     ### Additional Notes
 
-    This action requires a paid Shodan API plan (either one-time payment or subscription)
-    as it consumes scan credits. Scanning one IP address consumes one scan credit.
+    This action uses Shodan API scan credits. One IP consumes one scan credit. A paid
+    API plan (either one-time payment or subscription) is required to use this method.
   ai_short_description: >-
-    Initiates an active network scan on the Shodan platform for specified IP address
-    entities and returns a scan ID.
+    Initiates a network scan using Shodan for the provided IP address entities and
+    returns a scan ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -704,15 +698,15 @@ Scan A Network:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates a network scan on the Shodan platform for the specified IP addresses,
-      which queues the scan and consumes API scan credits.
+      Initiates a network scan on the Shodan platform, which consumes API credits
+      and triggers external scanning infrastructure.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Shodan API to initiate a network scan,
-      which is a state-changing operation on the external system (consuming credits
-      and queuing a scan). It does not fetch enrichment data, update internal entities,
-      create insights, or modify alert data.
+      The action makes a POST request to the Shodan API to initiate a network scan
+      for the provided IP addresses. This triggers an external process and consumes
+      API credits, thus mutating external state. It does not fetch contextual data
+      for enrichment, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -765,8 +759,8 @@ Scan A Network:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using the
-      condition `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it strictly
-      targets ADDRESS entities and filters by entity_type.
+      condition `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it targets
+      Address entities and filters them strictly by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -782,10 +776,10 @@ Scan A Network:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action triggers a network scan on the Shodan platform for a set of IP addresses.
-      This does not directly enrich the IOC with data (it only returns a scan ID),
-      nor does it block/allow the IP, contain a host, or match any of the other specific
-      outcome categories.
+      The action initiates a network scan on Shodan for specific IP addresses. This
+      does not align with any of the predefined outcome categories such as enriching
+      an IOC (it doesn't return reputation/prevalence directly, just a scan ID), blocking
+      an IOC, or executing a command on a host.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -805,36 +799,31 @@ Search:
   ai_description: >-
     ### General Description
 
-    Searches the SHODAN database using a provided search query to retrieve information
-    about internet-connected devices and services. This action allows analysts to
-    query Shodan directly from the SOAR platform and returns the matching host data.
+    Searches the SHODAN database using a provided query to retrieve matching host
+    information and summary facets. This action allows analysts to query Shodan's
+    extensive database of internet-connected devices directly from the SecOps platform.
 
 
     ### Flow Description
 
-    1. Retrieves the `Search Query`, `Facets`, and `Set Minify` parameters from the
-    action configuration.
+    1. Retrieves the search query, facets, and minify parameters from the action configuration.
 
-    2. Executes a GET request to the Shodan API (`/shodan/host/search`) using the
-    provided query and parameters.
+    2. Makes an HTTP GET request to the Shodan API (`/shodan/host/search`) to execute
+    the search with the provided parameters.
 
-    3. Parses the JSON response containing the search matches, totals, and optional
-    facet summaries.
+    3. Parses the returned JSON response containing the search matches and total count.
 
-    4. Formats the retrieved data into a flat dictionary and attaches it as a CSV
-    data table to the action results.
-
-    5. Attaches the raw JSON response to the action results for further playbook processing.
+    4. If results are found, adds them as a JSON result and a formatted data table
+    to the action's output.
 
 
     ### Additional Notes
 
-    The search query syntax is identical to the Shodan website (e.g., `apache country:"DE",
-    city:"Berlin"`). If facets are provided, summary information on those properties
-    will be included in the results.
+    The search query syntax is identical to the Shodan website (e.g., `apache country:'DE',
+    city:'Berlin'`).
   ai_short_description: >-
-    Searches the SHODAN database using a provided query to retrieve information about
-    internet-connected devices, returning the results as a data table and JSON.
+    Searches the SHODAN database using a specified query to retrieve matching host
+    information and summary facets.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -846,9 +835,9 @@ Search:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a GET request to the Shodan API to search
-      for hosts matching the query. It does not mutate external data, update internal
-      entities, create insights, modify alerts, or create case comments.
+      The action fetches data by making a GET request to the Shodan API to perform
+      a search. It does not mutate external data, update internal entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -900,10 +889,9 @@ Search:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the provided `Search Query` parameter to perform the search.
-      Therefore, it does not run on any specific entities and all entity-related flags
-      are false.
+      The action does not process any entities from the case, nor does it accept any
+      entity-specific parameters. It relies solely on a generic search query provided
+      as an input parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -919,11 +907,10 @@ Search:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a general search query against the Shodan database based
-      on a user-provided string. It does not automatically enrich specific IOCs or
-      assets from the alert, nor does it mutate any internal or external state, manage
-      tickets, or interact with endpoints. Thus, it does not match any of the predefined
-      outcome categories.
+      The action performs a generic search query against the Shodan database. It does
+      not enrich specific IOCs or assets, nor does it search internal events, emails,
+      or modify any state. Therefore, it does not match any of the predefined outcome
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -958,8 +945,8 @@ SearchForExploits:
     ### General Description
 
     Searches across a variety of data sources for known exploits using the Shodan
-    API. It allows users to query the Shodan exploits database and retrieve summary
-    information using facets.
+    API. It allows users to query the Shodan exploits database and optionally use
+    facets to get summary information.
 
 
     ### Flow Description
@@ -969,20 +956,18 @@ SearchForExploits:
     2. Makes a GET request to the Shodan Exploits API (`https://exploits.shodan.io/api/search`)
     with the provided query and parameters.
 
-    3. Parses the returned JSON response containing the exploit search results.
+    3. Parses the JSON response containing the exploit search results.
 
-    4. Formats the results into a flat CSV table and attaches it to the action results.
-
-    5. Returns the raw JSON response as the action's result value.
+    4. Outputs the results as a JSON object and attaches a CSV data table to the action
+    results.
 
 
     ### Additional Notes
 
-    This action does not operate on specific entities but rather performs a global
-    search based on the provided query string.
+    Requires a valid Shodan API key configured in the integration settings.
   ai_short_description: >-
-    Searches the Shodan exploits database for known vulnerabilities and exploits based
-    on a provided query, returning detailed JSON results and a summary table.
+    Searches across a variety of data sources for known exploits using the Shodan
+    API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -994,9 +979,9 @@ SearchForExploits:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a GET request to the Shodan Exploits API to
-      search for exploits. It does not mutate external data, mutate internal data,
-      update entities, create insights, modify alert data, or create case comments.
+      The action fetches data by making a GET request to the Shodan Exploits API.
+      It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -1048,9 +1033,9 @@ SearchForExploits:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      relies entirely on the 'Search Query' parameter provided by the user to perform
-      a search against the Shodan API. Therefore, it does not use any entities.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity-specific input parameters. It performs a general search query against
+      the Shodan exploits database.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1066,10 +1051,10 @@ SearchForExploits:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a search for known exploits in the Shodan database based
-      on a free-text query. It does not enrich specific IOCs or assets, modify alerts,
-      manage tickets, or interact with endpoints/identities. Thus, it does not match
-      any of the predefined outcome categories.
+      The action performs a general search for known exploits in the Shodan database
+      based on a free-text query. It does not enrich specific IOCs or assets, nor
+      does it interact with alerts, tickets, or endpoints. Therefore, it does not
+      match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

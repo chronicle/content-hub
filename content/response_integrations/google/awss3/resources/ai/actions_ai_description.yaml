@@ -2,31 +2,31 @@ Download File From Bucket:
   ai_description: >-
     ### General Description
 
-    Downloads a specific file from an AWS S3 bucket to a specified local path on the
-    SOAR environment.
+    Downloads a specific file from an AWS S3 bucket to a local directory on the host
+    executing the action.
 
 
     ### Flow Description
 
-    1. Extracts the AWS credentials and region from the integration configuration.
+    1. Extracts the target bucket file path and the local download path from the action
+    parameters.
 
-    2. Extracts the target `Bucket File Path` and the local `Download Path` from the
-    action parameters.
+    2. Connects to the AWS S3 service using the `boto3` client and validates connectivity.
 
-    3. Connects to the AWS S3 service and validates the credentials.
+    3. Downloads the specified file from the S3 bucket to the local file system.
 
-    4. Calls the AWS S3 API to download the specified file from the bucket to the
-    local path.
-
-    5. Returns the bucket file path and download path in the JSON result.
+    4. Returns a JSON object containing the bucket file path and the local download
+    path.
 
 
     ### Additional Notes
 
-    Ensure the local download path is accessible and has the correct write permissions.
-    The bucket file path must follow the format `s3://{bucket_name}/{file_name}`.
+    The action requires valid AWS credentials with `s3:GetObject` permissions for
+    the target bucket. The local download path must be accessible and not already
+    contain a file with the same name.
   ai_short_description: >-
-    Downloads a specific file from an AWS S3 bucket to a local path.
+    Downloads a specified file from an AWS S3 bucket to a local path on the executing
+    host.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -38,9 +38,8 @@ Download File From Bucket:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches a file from an external source (AWS S3) to the local environment.
-      It does not mutate external data, update internal entities, create insights,
-      or modify alert data.
+      The action fetches a file from AWS S3 (fetches_data=true). It does not mutate
+      external data, update internal entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -92,8 +91,8 @@ Download File From Bucket:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use entity-specific identifiers.
-      It operates solely on the provided bucket and file paths.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any entity-specific input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -109,8 +108,8 @@ Download File From Bucket:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a specific file from an AWS S3 bucket and saves it to a
-      local path. This directly aligns with the 'Download File' expected outcome.
+      The action downloads a file from an AWS S3 bucket to the local file system.
+      This directly aligns with the 'Download File' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -139,31 +138,31 @@ Get Bucket Policy:
   ai_description: >-
     ### General Description
 
-    Retrieves information about a specific bucket policy from AWS S3. This action
-    connects to the AWS S3 service and fetches the policy configuration for the provided
-    bucket name, returning the details as a JSON object.
+    Retrieves the bucket policy for a specified AWS S3 bucket. It connects to the
+    AWS S3 service, fetches the policy details, and returns the information as a JSON
+    object for further use in the playbook.
 
 
     ### Flow Description
 
-    1. Extracts the `Bucket Name` parameter provided by the user.
+    1. Extracts the AWS credentials from the integration configuration and the target
+    bucket name from the action parameters.
 
-    2. Initializes the AWS S3 client using the integration's configuration credentials
-    and tests connectivity.
+    2. Initializes the AWS S3 client and tests connectivity to validate credentials.
 
-    3. Makes an API call (`get_bucket_policy`) to AWS S3 to fetch the policy of the
-    specified bucket.
+    3. Makes an API call (`get_bucket_policy`) to AWS S3 to retrieve the policy for
+    the specified bucket.
 
-    4. Parses the retrieved policy and appends it to the action's JSON results.
+    4. Parses the response and outputs the policy details as a JSON result.
 
 
     ### Additional Notes
 
-    Ensure that the provided AWS credentials have the necessary permissions (`s3:GetBucketPolicy`)
-    to read the policy of the target bucket.
+    The action requires valid AWS credentials with permissions to read S3 bucket policies
+    (`s3:GetBucketPolicy`).
   ai_short_description: >-
-    Retrieves the bucket policy for a specified AWS S3 bucket and returns it as a
-    JSON result.
+    Retrieves the bucket policy for a specified AWS S3 bucket and returns the details
+    as a JSON object.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -175,9 +174,10 @@ Get Bucket Policy:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from AWS S3 using a GET request (`get_bucket_policy`).
-      It does not mutate external data, nor does it update internal entities, create
-      insights, modify alerts, or add case comments.
+      The action makes a GET request to AWS S3 to fetch bucket policy data (fetches_data=true).
+      It does not perform any state-changing operations on external systems (can_mutate_external_data=false)
+      and does not modify internal SOAR data, update entities, create insights, or
+      add case comments.
   entity_usage:
     entity_types:
       address: false
@@ -229,9 +229,10 @@ Get Bucket Policy:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the explicitly provided 'Bucket Name' parameter. Therefore,
-      no entity types or filters are applicable.
+      The action does not iterate over `siemplify.target_entities` nor does it accept
+      any input parameters that represent standard entity types. It operates solely
+      on a provided string parameter (`Bucket Name`). Therefore, all entity type and
+      filter flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -247,10 +248,10 @@ Get Bucket Policy:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches configuration data (bucket policy) from AWS S3. It does not
-      enrich an IOC or Asset in the context of the predefined categories, nor does
-      it mutate external state, manage tickets, or interact with emails/messages.
-      Thus, it does not match any of the specified outcome categories.
+      The action fetches configuration data (a bucket policy) from AWS S3 based on
+      a provided bucket name string. It does not interact with standard IOCs, internal
+      assets, alerts, tickets, emails, or perform containment/remediation actions.
+      Thus, it does not match any of the predefined expected outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -276,31 +277,34 @@ List Bucket Objects:
   ai_description: >-
     ### General Description
 
-    Lists objects within a specified AWS S3 bucket. This action retrieves metadata
-    about the contents of a bucket, such as object keys, sizes, and last modified
-    dates, and returns them for further analysis or processing.
+    Retrieves a list of objects contained within a specified AWS S3 bucket. It connects
+    to the AWS S3 service and fetches the contents up to a specified maximum limit,
+    returning the data for further use in the playbook.
 
 
     ### Flow Description
 
-    1. Initializes the AWS S3 client using the provided integration credentials.
+    1. Extracts the AWS credentials and region from the integration configuration.
 
-    2. Validates connectivity to the AWS S3 service.
+    2. Retrieves the target `Bucket Name` and `Max Objects to Return` from the action
+    parameters.
 
-    3. Calls the AWS S3 API to list objects in the specified bucket, up to the maximum
-    number requested.
+    3. Authenticates and connects to the AWS S3 service.
 
-    4. Formats the retrieved objects into a JSON result and a CSV data table.
+    4. Executes an API call (`list_objects`) to AWS S3 to fetch the contents of the
+    specified bucket.
 
-    5. Returns the results to the SecOps platform.
+    5. Formats the retrieved objects into a JSON structure and a CSV data table.
+
+    6. Returns the results to the SecOps platform.
 
 
     ### Additional Notes
 
-    If the `Max Objects to Return` parameter is negative, it defaults to 50.
+    The action defaults to returning 50 objects if the `Max Objects to Return` parameter
+    is not specified or is provided as a negative number.
   ai_short_description: >-
-    Lists objects within a specified AWS S3 bucket and returns the contents as a JSON
-    result and data table.
+    Retrieves a list of objects contained within a specified AWS S3 bucket.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -312,9 +316,9 @@ List Bucket Objects:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (list of objects) from AWS S3 using a GET/List request.
-      It does not mutate external data, mutate internal data, update entities, create
-      insights, modify alert data, or create case comments.
+      The action makes a GET-equivalent request (`list_objects`) to the AWS S3 API
+      to fetch bucket contents (fetches_data=true). It does not mutate external data,
+      update internal entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -366,9 +370,9 @@ List Bucket Objects:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process any entities. It relies entirely
-      on the provided action parameters (Bucket Name and Max Objects to Return) to
-      execute its logic.
+      The action does not iterate over `siemplify.target_entities` nor does it accept
+      any entity identifiers via input parameters. It operates solely on the provided
+      AWS S3 bucket name. Therefore, all entity flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -384,9 +388,10 @@ List Bucket Objects:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action lists objects in an AWS S3 bucket. It does not match any of the predefined
-      outcome categories such as enriching IOCs/assets, managing tickets, modifying
-      alerts, or downloading files.
+      The action lists objects in an AWS S3 bucket. It does not enrich specific IOCs
+      or assets, modify alerts, manage tickets, block/allow indicators, or download
+      files for analysis. Therefore, it does not match any of the predefined outcome
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -414,28 +419,26 @@ List Buckets:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of available buckets from AWS S3. This action connects to the
-    AWS S3 service and fetches the details of all buckets associated with the configured
-    account, including the owner information.
+    Retrieves a list of available buckets and their owner information from AWS S3.
 
 
     ### Flow Description
 
-    1. Initializes the connection to the AWS S3 service using the provided integration
+    1. Initializes the connection to the AWS S3 service using the integration's configuration
     credentials.
 
-    2. Validates the connectivity to the AWS S3 API.
+    2. Executes an API call (`list_buckets`) to AWS S3 to fetch all available buckets.
 
-    3. Makes an API call to AWS S3 to retrieve the list of available buckets and their
-    owner.
+    3. Parses the response to extract the bucket owner and a list of bucket details
+    (such as name and creation date).
 
-    4. Formats the retrieved data and returns it as a JSON result.
+    4. Returns the extracted information as a JSON result to the SecOps platform.
 
 
     ### Additional Notes
 
-    This action does not require any specific entities to run and operates globally
-    based on the integration configuration.
+    This action does not require any action-specific parameters and operates globally
+    on the AWS account associated with the provided credentials.
   ai_short_description: >-
     Retrieves a list of available buckets and their owner information from AWS S3.
   capabilities:
@@ -449,9 +452,9 @@ List Buckets:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (list of buckets) from AWS S3 via an API call. It does
-      not mutate external data, mutate internal data, update entities, create insights,
-      modify alert data, or create case comments.
+      The action fetches data (list of buckets) from an external system (AWS S3) via
+      a GET-equivalent API call. It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -503,9 +506,9 @@ List Buckets:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It operates independently of entities to fetch a list of AWS S3
-      buckets.
+      The action does not iterate over target entities, nor does it accept any input
+      parameters representing entities. It simply queries the AWS S3 API for a list
+      of buckets. Therefore, all entity-related flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -521,9 +524,10 @@ List Buckets:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of AWS S3 buckets. It does not enrich specific IOCs
-      or assets, update alerts, mutate external systems, or perform any of the specific
-      expected outcomes listed in the outcome categories.
+      The action queries AWS S3 to list available buckets. This is a general infrastructure
+      query and does not match any of the specific expected outcomes such as enriching
+      IOCs/assets, updating alerts, managing tickets, modifying blocklists, or handling
+      emails.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -543,8 +547,8 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the AWS S3 service using the provided integration configuration
-    parameters.
+    Tests connectivity to the AWS S3 service using the credentials provided in the
+    integration configuration.
 
 
     ### Flow Description
@@ -552,19 +556,20 @@ Ping:
     1. Extracts the AWS Access Key ID, AWS Secret Key, and AWS Default Region from
     the integration configuration.
 
-    2. Initializes the AWS S3 client.
+    2. Initializes the AWS S3 client using the provided credentials.
 
     3. Makes an API call to AWS S3 (`list_buckets`) to verify connectivity.
 
-    4. Returns a success or failure message based on the API response.
+    4. Returns a success message if the connection is established, or a failure message
+    if an error occurs.
 
 
     ### Additional Notes
 
-    This action does not require any action-specific parameters.
+    This action does not require any action-specific parameters and is primarily used
+    to validate the integration setup.
   ai_short_description: >-
-    Tests connectivity to the AWS S3 service to ensure the integration is configured
-    correctly.
+    Tests connectivity to the AWS S3 service to verify integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -576,10 +581,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action initializes the AWS S3 client and calls the `list_buckets` API to
-      test connectivity. It does not fetch contextual data for entities, mutate external
-      or internal data, update entities, create insights, modify alert data, or create
-      case comments.
+      The action makes a request to AWS S3 to list buckets solely to test connectivity.
+      It does not fetch contextual data for alerts/entities, nor does it mutate any
+      external or internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -631,8 +635,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or interact with any entities. It solely tests connectivity
-      to the AWS S3 service.
+      The action does not process any entities. It does not iterate over `target_entities`
+      or accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -649,8 +653,7 @@ Ping:
     get_alert_information: false
     reasoning: >-
       The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      specific outcome categories such as enrichment, containment, ticketing, or blocklisting.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -670,31 +673,30 @@ Set Bucket Policy:
   ai_description: >-
     ### General Description
 
-    Sets a new policy for a specified AWS S3 bucket. This action allows users to programmatically
-    apply a JSON-formatted bucket policy to an existing AWS S3 bucket to manage access
-    permissions.
+    Sets a policy for a specified AWS S3 bucket. This action allows users to programmatically
+    apply access control policies to their S3 buckets using a JSON object.
 
 
     ### Flow Description
 
-    1. Extracts the target bucket name and the policy JSON object from the action
-    parameters.
+    1. Extracts the AWS credentials and region from the integration configuration.
 
-    2. Initializes the AWS S3 client using the provided integration credentials and
-    tests connectivity.
+    2. Extracts the `Bucket Name` and `Policy JSON Object` from the action parameters.
 
-    3. Makes an API call (`put_bucket_policy`) to AWS S3 to apply the provided JSON
-    policy to the specified bucket.
+    3. Initializes the AWS S3 client and tests connectivity.
 
-    4. Returns a success or failure message based on the API response.
+    4. Calls the AWS S3 API (`put_bucket_policy`) to apply the provided JSON policy
+    to the specified bucket.
+
+    5. Returns a success or failure message based on the API response.
 
 
     ### Additional Notes
 
-    Ensure that the provided policy JSON object is valid and adheres to AWS S3 bucket
-    policy syntax. Incorrectly formatted policies will result in an API error.
+    The policy must be provided as a valid JSON string. Examples of bucket policies
+    can be found in the AWS documentation.
   ai_short_description: >-
-    Sets a new policy for a specified AWS S3 bucket using a provided JSON object.
+    Sets a policy for a specified AWS S3 bucket using the provided JSON object.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -707,9 +709,9 @@ Set Bucket Policy:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a PUT request to AWS S3 to update a bucket policy, which mutates
-      external data. It does not fetch data for enrichment, nor does it mutate internal
-      SecOps data, update entities, create insights, or add case comments.
+      The action makes a PUT request (`put_bucket_policy`) to AWS S3 to update the
+      bucket policy, which mutates external data. It does not fetch data for enrichment,
+      nor does it mutate internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -761,8 +763,8 @@ Set Bucket Policy:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided bucket name parameter.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. It operates solely on the provided bucket name.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -779,8 +781,8 @@ Set Bucket Policy:
     get_alert_information: false
     reasoning: >-
       The action updates the policy of an AWS S3 bucket. This does not match any of
-      the predefined outcome categories such as enriching IOCs, updating alerts, containing
-      hosts, or managing tickets.
+      the predefined outcome categories such as enriching IOCs, updating alerts, creating
+      tickets, or containing hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -810,31 +812,33 @@ Upload File To Bucket:
   ai_description: >-
     ### General Description
 
-    Uploads a specified local file to an AWS S3 bucket. This action allows users to
-    transfer files from the local SOAR environment to an external AWS S3 storage bucket.
+    Uploads a specified local file to a target AWS S3 bucket. This action takes a
+    local file path from the SOAR environment and pushes it to a designated path within
+    an S3 bucket.
 
 
     ### Flow Description
 
-    1. Extracts the AWS credentials and region from the integration configuration.
+    1. Extracts the AWS S3 credentials and region from the integration configuration.
 
-    2. Retrieves the local `File Path` and the target `Bucket Upload Path` from the
+    2. Extracts the local `File Path` and the target `Bucket Upload Path` from the
     action parameters.
 
     3. Parses the target bucket path to identify the bucket name and destination filename.
 
-    4. Connects to the AWS S3 service and validates the credentials.
+    4. Authenticates and connects to the AWS S3 service using the `boto3` client.
 
-    5. Uploads the file to the specified AWS S3 bucket using the `boto3` client.
+    5. Uploads the local file to the specified AWS S3 bucket using the `upload_file`
+    API call.
 
-    6. Returns a JSON object containing the bucket upload path and the local file
-    path.
+    6. Returns the upload details (bucket path and file path) as a JSON result.
 
 
     ### Additional Notes
 
-    The action requires valid AWS credentials with permissions to write to the target
-    S3 bucket. The `Bucket Upload Path` must follow the format `s3://{bucket_name}/{file_name}`.
+    Requires valid AWS credentials with `s3:PutObject` permissions for the target
+    bucket. The local file must exist and be accessible by the SOAR agent executing
+    the action.
   ai_short_description: >-
     Uploads a specified local file to a target AWS S3 bucket.
   capabilities:
@@ -845,13 +849,13 @@ Upload File To Bucket:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Uploads a local file to a specified AWS S3 bucket.
+      Uploads a new file or overwrites an existing file in the specified AWS S3 bucket.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action connects to AWS S3 and uploads a file, which mutates data in an external
-      system (AWS S3). It does not fetch contextual data, mutate internal SecOps data,
-      update entities, create insights, modify alerts, or create case comments.
+      The action executes a PUT/upload operation to an external AWS S3 bucket, which
+      mutates external data by creating or overwriting a file. It does not fetch contextual
+      data, mutate internal SOAR data, update entities, or create insights/comments.
   entity_usage:
     entity_types:
       address: false
@@ -903,8 +907,9 @@ Upload File To Bucket:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided file paths.
+      The action does not iterate over `siemplify.target_entities` nor does it accept
+      any entity identifiers via input parameters. It strictly operates on file paths
+      and bucket paths provided as strings. Therefore, all entity flags are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -921,8 +926,9 @@ Upload File To Bucket:
     get_alert_information: false
     reasoning: >-
       The action uploads a file to an AWS S3 bucket. This does not match any of the
-      specific expected outcomes such as submitting a file to a sandbox, downloading
-      a file, or enriching an IOC. Therefore, all outcome categories are false.
+      predefined outcome categories. It is not 'Submit File' because it does not upload
+      to a sandbox/analysis engine for a threat score, nor is it 'Download File' as
+      it pushes data rather than retrieving it.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

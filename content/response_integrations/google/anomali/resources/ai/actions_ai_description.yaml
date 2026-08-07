@@ -2,10 +2,9 @@ Get Related Associations:
   ai_description: >-
     ### General Description
 
-    Retrieves related associations from Anomali ThreatStream for supported entities
-    (FileHash, Address, URL, and User/Email). This action fetches threat intelligence
-    context such as related campaigns, actors, vulnerabilities, and malware, and can
-    optionally create new entities in the case based on the retrieved associations.
+    Retrieves entity related associations from Anomali ThreatStream. This action fetches
+    threat intelligence details such as campaigns, actors, malware, and vulnerabilities
+    associated with specific indicators.
 
 
     ### Flow Description
@@ -13,30 +12,32 @@ Get Related Associations:
     1. Extracts action parameters to determine which association types to fetch and
     whether to create new entities.
 
-    2. Iterates over target entities and filters them by supported types (FileHash,
-    Address, URL, and User/Email).
+    2. Filters target entities to supported types (File Hash, Address, URL, and User/Email).
 
-    3. Queries Anomali ThreatStream to get indicators for the filtered entities.
+    3. Makes an API call to Anomali ThreatStream to fetch indicators for the target
+    entities.
 
-    4. For each indicator, fetches related associations based on the selected types
-    (e.g., Campaigns, Actors, Vulnerabilities).
+    4. For each requested association type, makes an API call to fetch related associations
+    for the retrieved indicators.
 
-    5. Asynchronously waits for all association details to be retrieved.
+    5. Asynchronously queries the operation status and makes API calls to retrieve
+    detailed information for each association.
 
     6. Adds the retrieved association details as JSON results and a data table to
     the case.
 
-    7. Optionally creates new entities in the case for specific association types
-    (Campaigns, Actors, Signatures, Vulnerabilities) if configured.
+    7. Optionally creates new entities (Campaign, Actor, Signature, Vulnerability)
+    in the case based on the retrieved associations.
 
 
     ### Additional Notes
 
-    This is an asynchronous action. It will periodically check the status of the association
-    details retrieval until all data is fetched.
+    This is an asynchronous action. It will run in the background and periodically
+    check for completion.
   ai_short_description: >-
-    Retrieves related associations from Anomali ThreatStream for supported entities
-    and optionally creates new entities based on the results.
+    Retrieves entity related associations from Anomali ThreatStream, fetching threat
+    intelligence details such as campaigns, actors, malware, and vulnerabilities associated
+    with specific indicators, and optionally creates new entities based on the findings.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -47,11 +48,12 @@ Get Related Associations:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds new entities to the case based on the retrieved associations if configured.
+      Creates new entities (Campaign, Actor, Signature, Vulnerability) in the case
+      based on the retrieved associations.
     reasoning: >-
-      The action makes GET requests to Anomali ThreatStream to fetch indicators and
-      their related associations (fetches_data=true). It does not mutate external
-      data. It can mutate internal data by adding new entities to the case (can_mutate_internal_data=true).
+      The action fetches data from Anomali ThreatStream via GET requests. It does
+      not mutate external data. It mutates internal data by creating new entities
+      (Campaign, Actor, Signature, Vulnerability) in the case using `siemplify.add_entity_to_case`.
       It does not update existing entities, create insights, modify alert data, or
       create case comments.
   entity_usage:
@@ -107,8 +109,10 @@ Get Related Associations:
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
       `get_entity_type(entity) in SUPPORTED_ENTITY_TYPES`. The supported types are
-      FILEHASH, ADDRESS, URL, and EMAIL_TYPE (which corresponds to USER entities where
-      the identifier is a valid email). Therefore, it filters by entity type and identifier.
+      FILEHASH, ADDRESS, URL, and EMAIL_TYPE. EMAIL_TYPE is determined by checking
+      if the entity is a USER and its identifier matches an email regex. Therefore,
+      it targets File Hash, Address, URL, and User entities, filtering by entity type
+      and identifier.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -124,9 +128,10 @@ Get Related Associations:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches related associations (such as campaigns, actors, vulnerabilities,
-      malware) for indicators from Anomali ThreatStream. This provides threat intelligence
-      and context for the indicators, matching the 'Enrich IOC' expected outcome.
+      The action fetches related associations (such as campaigns, actors, malware,
+      vulnerabilities) for specific indicators from Anomali ThreatStream. This aligns
+      with the 'Enrich IOC' expected outcome, as it returns threat intelligence for
+      the indicators.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -206,48 +211,46 @@ GetThreatInfo:
   ai_description: >-
     ### General Description
 
-    Enriches IP, URL, Hash, and Email entities using threat intelligence from Anomali
-    ThreatStream. This action retrieves threat records, evaluates risk based on severity
-    and confidence thresholds, updates the entity's suspicious status, and enriches
-    the entity's properties with the analysis results.
+    Enriches IP, URL, File Hash, and User (Email) entities using threat intelligence
+    from Anomali ThreatStream. This action retrieves threat records, evaluates them
+    against user-defined severity and confidence thresholds, and updates the entities'
+    suspicious status and enrichment properties accordingly.
 
 
     ### Flow Description
 
-    1. Extracts configuration and action parameters including Limit, Severity Threshold,
-    Confidence Threshold, and Ignore False Positive Status.
+    1. Filters the target entities to include only supported types: Address (IP),
+    URL, File Hash, and User (specifically those matching an email format).
 
-    2. Iterates over target entities and filters them by supported types (IP Address,
-    URL, File Hash, and User entities matching an email format).
+    2. Iterates through the filtered entities and makes a GET request to the Anomali
+    ThreatStream API (`v2/intelligence`) to fetch threat information for each entity
+    identifier.
 
-    3. For each suitable entity, queries the Anomali ThreatStream API (`v2/intelligence`)
-    to fetch threat information.
+    3. Processes the retrieved threat records. If multiple records exist, it prioritizes
+    active threats, calculating the highest severity and average confidence.
 
-    4. Evaluates the returned threats based on the configured severity and confidence
-    thresholds.
+    4. Evaluates the aggregated threat data against the provided `Severity Threshold`
+    and `Confidence Threshold`.
 
-    5. If the threat meets the criteria (and considering the false positive flag),
-    marks the entity as suspicious.
+    5. If the thresholds are met (and depending on the `Ignore False Positive Status`
+    parameter), marks the entity as suspicious (`is_suspicious = True`).
 
     6. Enriches the entity's additional properties with the threat data and marks
-    it as enriched.
+    it as enriched (`is_enriched = True`).
 
-    7. Updates the entities in the platform.
-
-    8. Adds a CSV table and JSON result containing the threat details for the enriched
-    entities.
+    7. Updates the entities within the Google SecOps platform and attaches the results
+    as CSV tables and JSON.
 
 
     ### Additional Notes
 
-    - The action handles multiple threats per entity by prioritizing active threats,
-    taking the highest severity and average confidence.
-
-    - If no active threats are found, it uses the newest threat for evaluation.
+    If multiple records are found for the same entity, the action takes the highest
+    severity and average confidence of active records. If no active records exist,
+    it uses the newest threat record.
   ai_short_description: >-
-    Enriches IP, URL, Hash, and Email entities with threat intelligence from Anomali
-    ThreatStream, updating their suspicious status and adding contextual data based
-    on severity and confidence thresholds.
+    Enriches IP, URL, File Hash, and User (Email) entities using threat intelligence
+    from Anomali ThreatStream, updating their suspicious status and enrichment properties
+    based on configurable thresholds.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -259,10 +262,10 @@ GetThreatInfo:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Anomali ThreatStream API to fetch threat
-      data (`fetches_data` is true). It does not mutate external data. It updates
-      internal entities with enrichment data and suspicious status (`can_update_entities`
-      is true). It does not create insights, modify alert data, or create case comments.
+      The action fetches data from Anomali ThreatStream via a GET request. It does
+      not mutate external data. It updates internal entities by modifying their suspicious
+      status and additional properties, and calls `siemplify.update_entities`. It
+      does not create insights or case comments.
   entity_usage:
     entity_types:
       address: true
@@ -305,7 +308,7 @@ GetThreatInfo:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: true
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -314,11 +317,10 @@ GetThreatInfo:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `get_entity_type(entity)
-      in SUPPORTED_ENTITY_TYPES`. The supported types are `EntityTypes.ADDRESS`, `EntityTypes.URL`,
-      `EntityTypes.FILEHASH`, and `EMAIL_TYPE` (which is a `USER` entity whose identifier
-      matches an email regex). Therefore, it targets Address, URL, File Hash, and
-      User entities, filtering by entity type and identifier.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `get_entity_type(entity) in SUPPORTED_ENTITY_TYPES`. The supported types map
+      to ADDRESS, URL, FILEHASH, and USER (specifically validated as emails). Therefore,
+      it filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -334,9 +336,10 @@ GetThreatInfo:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches threat intelligence data for IOCs (IP, URL, Hash, Email)
-      from Anomali ThreatStream, returning severity, confidence, and other threat
-      details. This directly aligns with the 'Enrich IOC' expected outcome.
+      The action fetches threat intelligence data for IOCs (IPs, URLs, Hashes, Emails)
+      from Anomali ThreatStream, which aligns with the 'Enrich IOC' category. It does
+      not perform any state-changing operations on external systems or fetch asset
+      context.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -358,7 +361,7 @@ GetThreatInfo:
 
     | Limit | String | Yes | Specify how many records to return per entity. |
 
-    | Severity Threshold | DDL | No | Specify what should be the severity threshold
+    | Severity Threshold | Dropdown | No | Specify what should be the severity threshold
     for the entity, in order to mark it as suspicious. If multiple records are found
     for the same entity, action will take the highest severity out of all available
     records. |
@@ -377,35 +380,29 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Anomali ThreatStream platform. This action verifies
-    that the provided API credentials and network configurations are correct and that
-    the Google SecOps platform can successfully communicate with the Anomali ThreatStream
-    API.
+    Tests connectivity to the Anomali ThreatStream platform.
 
 
     ### Flow Description
 
-    1. Initializes the connection to Anomali ThreatStream using the integration-level
-    API credentials.
+    1. Retrieves integration configuration parameters (API Root, Username, API Key).
 
-    2. Makes a GET request to the Anomali ThreatStream API (`v2/intelligence`) to
-    verify authentication and network connectivity.
+    2. Initializes the AnomaliManager with `force_check_connectivity=True`.
 
-    3. Returns a success message if the connection is established and the API responds
-    correctly.
+    3. The manager makes a GET request to the `v2/intelligence` endpoint with a limit
+    of 1 to verify authentication and network access.
 
-    4. Returns a failure message and logs the error if the connection or authentication
-    fails.
+    4. Returns a successful execution state if the request succeeds, or a failure
+    state with the error reason if it fails.
 
 
     ### Additional Notes
 
     This action is typically used for diagnostic purposes to ensure the integration
-    is configured correctly and does not interact with or modify any case data or
-    entities.
+    is correctly configured.
   ai_short_description: >-
-    Tests connectivity to the Anomali ThreatStream platform to verify API credentials
-    and network access.
+    Tests connectivity to the Anomali ThreatStream platform by making a lightweight
+    API request to verify credentials and network access.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -418,8 +415,8 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to test connectivity but does not fetch contextual
-      data for entities or alerts. It does not mutate external data, update internal
-      entities, or create insights.
+      data for entities, mutate external data, mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -471,8 +468,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely tests connectivity
-      to the external system.
+      The action does not process any entities. It only tests connectivity to the
+      Anomali ThreatStream API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -489,7 +486,8 @@ Ping:
     get_alert_information: false
     reasoning: >-
       The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enrichment, containment, or ticket management.
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

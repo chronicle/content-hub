@@ -2,31 +2,30 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Check Point SandBlast server to ensure the integration
-    is configured correctly.
+    Tests connectivity to the Check Point SandBlast server using the provided integration
+    configuration parameters.
 
 
     ### Flow Description
 
-    1. Retrieves the integration configuration parameters (API Root, API Key, Verify
-    SSL).
+    1. Extracts the API Root, API Key, and Verify SSL parameters from the integration
+    configuration.
 
     2. Initializes the SandBlastManager.
 
-    3. Executes a test query to the Check Point SandBlast API using a hardcoded hash
-    to verify connectivity.
+    3. Makes a test query API call (POST request to `/query`) to the Check Point SandBlast
+    server using a hardcoded hash to verify connectivity.
 
-    4. Returns a success message if the API responds correctly, or an error message
-    if the connection fails.
+    4. Returns a success message if the connection is established, or an error message
+    if it fails.
 
 
     ### Additional Notes
 
-    This action is typically used during the initial setup of the integration to validate
-    credentials and network access.
+    This action is primarily used for diagnostic purposes to ensure the integration
+    is correctly configured and can communicate with the Check Point SandBlast service.
   ai_short_description: >-
-    Tests connectivity to the Check Point SandBlast server to ensure the integration
-    is configured correctly.
+    Tests connectivity to the Check Point SandBlast server to verify integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -38,10 +37,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a test query to the Check Point SandBlast API to verify
-      connectivity. It does not fetch contextual data for entities, mutate external
-      data, mutate internal data, update entities, create insights, modify alert data,
-      or create case comments.
+      The action only performs a test API call to verify connectivity. It does not
+      fetch contextual data, mutate external or internal data, update entities, create
+      insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -93,9 +91,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It simply tests the connection to the
-      external service without referencing or iterating over any target entities.
-      Therefore, all entity type flags and filter flags are set to false.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely tests connectivity to the external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -111,9 +108,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      expected outcome categories such as enriching IOCs, updating alerts, or modifying
-      external systems. Therefore, all outcome category flags are set to false.
+      The action is a simple connectivity test (Ping) and does not perform any enrichment,
+      mutation, or specific operations that align with the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -133,42 +129,44 @@ Query:
   ai_description: >-
     ### General Description
 
-    Queries CheckPoint SandBlast to retrieve threat reputation and analysis information
-    for File Hash entities. This action fetches Threat Emulation and Anti-Virus reports
-    for the specified hashes, enriches the entities with the results, and updates
-    their suspicious status based on the findings.
+    Retrieves threat reputation information about FILEHASH entities from Check Point
+    SandBlast. The action queries the SandBlast service for Threat Emulation and Anti-Virus
+    data, enriches the entities with the findings, and updates their suspicious status
+    based on the results.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities and filters for File Hash entities.
+    1. Initializes a connection to the Check Point SandBlast API.
 
-    2. Validates the hash type (MD5, SHA1, or SHA256) for each entity.
+    2. Iterates over the target entities, filtering for those of type `FILEHASH`.
 
-    3. Makes an API call to the CheckPoint SandBlast `/query` endpoint to retrieve
-    the analysis status and reports for each hash.
+    3. Validates the hash format (MD5, SHA1, or SHA256) for each entity.
 
-    4. If the scan is still running, the action pauses and waits for completion (asynchronous
-    execution).
+    4. Makes a POST request to the SandBlast `/query` API endpoint to fetch Threat
+    Emulation and Anti-Virus information for the hash.
 
-    5. Once completed, it evaluates the Threat Emulation and Anti-Virus responses.
+    5. If the scan is still running on the SandBlast side, the action suspends and
+    waits for completion (asynchronous execution).
 
-    6. Enriches the entities with the retrieved data and marks them as suspicious
-    if the verdict is malicious or the severity meets the configured threshold.
+    6. Once the scan is completed, enriches the entity with the retrieved threat intelligence
+    data.
 
-    7. Updates the entities in the platform and attaches the raw JSON results.
+    7. Marks the entity as suspicious if the Threat Emulation verdict is malicious
+    or if the Anti-Virus severity meets or exceeds the configured `Threshold`.
+
+    8. Updates the entities in the SecOps platform with the new enrichment data and
+    status.
 
 
     ### Additional Notes
 
-    - The action runs asynchronously and will wait if the analysis is still in progress
-    on the CheckPoint SandBlast side.
-
-    - Supported hash types are MD5, SHA1, and SHA256.
+    This action operates asynchronously. If a scan is in progress, it will return
+    an 'In Progress' state and re-execute until the scan reaches a terminal state.
   ai_short_description: >-
-    Queries CheckPoint SandBlast to retrieve threat reputation and analysis reports
-    for File Hash entities, enriching them with Threat Emulation and Anti-Virus data
-    and updating their suspicious status based on the results.
+    Queries Check Point SandBlast to retrieve threat reputation, Threat Emulation,
+    and Anti-Virus information for FILEHASH entities, enriching them and updating
+    their suspicious status based on the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -180,10 +178,11 @@ Query:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches threat intelligence data from CheckPoint SandBlast using
-      a POST request to the `/query` endpoint. It does not mutate external data. It
-      updates internal entities with the retrieved enrichment data and suspicious
-      status by calling `siemplify.update_entities`.
+      The action makes a POST request to the Check Point SandBlast API (`/query`)
+      to fetch threat intelligence data for file hashes. It does not mutate external
+      data. It updates internal entities with the fetched enrichment data and suspicious
+      status using `siemplify.update_entities`. It does not create insights or case
+      comments.
   entity_usage:
     entity_types:
       address: false
@@ -237,8 +236,8 @@ Query:
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `if
       entity.entity_type not in SUPPORTED_ENTITIES:`, where `SUPPORTED_ENTITIES` is
-      `[EntityTypes.FILEHASH]`. This means it targets File Hash entities and filters
-      strictly by entity_type.
+      defined as `[EntityTypes.FILEHASH]`. Therefore, it targets FILEHASH entities
+      and filters strictly by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -254,10 +253,11 @@ Query:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action queries CheckPoint SandBlast for file hashes to retrieve reputation,
-      threat emulation, and antivirus data. This directly aligns with the 'Enrich
-      IOC' expected outcome. It does not upload a file payload, so it does not match
-      'Submit File'.
+      The action fetches threat intelligence (Threat Emulation and Anti-Virus data)
+      for file hashes from Check Point SandBlast. This matches the 'Enrich IOC' expected
+      outcome. It does not upload a file (it only queries hashes), so it does not
+      match 'Submit File'. It does not mutate external systems or perform other categorized
+      actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -283,40 +283,34 @@ Upload File:
   ai_description: >-
     ### General Description
 
-    Uploads one or more files to Check Point SandBlast for analysis. This action allows
-    users to submit files to the sandbox and specify which analysis features (Threat
-    Emulation, AntiVirus, Threat Extraction) should be applied.
+    Uploads one or more files to CheckPoint SandBlast for analysis. This action allows
+    users to submit files for Threat Emulation, AntiVirus scanning, and Threat Extraction.
 
 
     ### Flow Description
 
-    1. Extracts the provided file paths and the selected analysis feature flags.
+    1. Extracts the provided file paths and selected analysis features (Threat Emulation,
+    AntiVirus, Threat Extraction).
 
-    2. Validates each file path to ensure the file exists and does not exceed the
-    maximum allowed size.
+    2. Validates each file path to ensure it exists and does not exceed the maximum
+    allowed size (100MB).
 
-    3. Iterates through the valid files and makes a POST request to the Check Point
-    SandBlast API (`/upload` endpoint) to submit each file along with the requested
-    features.
+    3. Makes a POST request to the CheckPoint SandBlast API to upload each valid file
+    for analysis.
 
-    4. Collects the upload status and raw JSON response for each file.
+    4. Collects the upload status and raw response data for each file.
 
-    5. Returns a summary message indicating which files were successfully uploaded
-    and which failed, along with the raw JSON results.
+    5. Returns a JSON result containing the upload details and a summary message of
+    successful and failed uploads.
 
 
     ### Additional Notes
 
-    - The action supports uploading multiple files by providing a comma-separated
-    list of file paths in the 'File Path' parameter.
-
-    - A maximum of 5 files can be uploaded at a time. If more are provided, only the
-    first 5 will be processed.
-
-    - The maximum allowed file size is 100 MB.
+    A maximum of 5 files can be uploaded at a time. If no features are explicitly
+    selected, Threat Emulation is enabled by default.
   ai_short_description: >-
-    Uploads one or more files to Check Point SandBlast for analysis and returns the
-    upload status.
+    Uploads one or more files to CheckPoint SandBlast for analysis using selected
+    features such as Threat Emulation, AntiVirus, and Threat Extraction.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -325,14 +319,13 @@ Upload File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Uploads a file to the Check Point SandBlast sandbox for analysis.
+      Uploads a file to the CheckPoint SandBlast service for analysis.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to Check Point SandBlast to upload a file for
-      analysis, which mutates external data by submitting a new file to the sandbox.
-      It does not fetch data, update entities, create insights, modify alerts, or
-      create case comments.
+      The action makes a POST request to CheckPoint SandBlast to upload a file for
+      analysis, which mutates external data by submitting a new file to the service.
+      It does not fetch contextual data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -384,9 +377,8 @@ Upload File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the file paths provided in the action parameters.
-      Therefore, all entity type flags and filter flags are false.
+      The action does not process any entities. It relies solely on the provided file
+      paths as input parameters and does not interact with the case's target entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -402,9 +394,9 @@ Upload File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action uploads a file to Check Point SandBlast for analysis, which directly
-      aligns with the 'Submit File' expected outcome. It does not match any other
-      outcome categories.
+      The action uploads a file to a sandbox/analysis engine (CheckPoint SandBlast)
+      for threat emulation, antivirus scanning, or threat extraction. This directly
+      aligns with the 'Submit File' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -2,29 +2,34 @@ EnrichCVE:
   ai_description: >-
     ### General Description
 
-    Enriches CVE entities using Digital Shadows. It retrieves exploit and vulnerability
-    information from Digital Shadows and updates the entities with the gathered intelligence.
+    Enriches CVE entities using Digital Shadows. It retrieves vulnerability and exploit
+    information from the Digital Shadows platform to provide additional threat intelligence
+    context.
 
 
     ### Flow Description
 
-    1. Iterates over target entities, filtering for CVE entity types.
+    1. Iterates over the target entities provided in the case.
 
-    2. For each CVE, makes a POST request to the Digital Shadows API (`/api/search/find`)
-    to fetch exploit and vulnerability data.
+    2. Filters the entities to process only those of type `CVE`.
 
-    3. Updates the entity's additional properties with the enrichment data, sets `is_enriched`
-    to True, and adds entity tables and links.
+    3. For each suitable CVE entity, makes an API call to Digital Shadows to search
+    for exploit and vulnerability data.
 
-    4. Updates the entities in the platform and returns the JSON results.
+    4. Updates the entity's additional properties with the retrieved enrichment data.
+
+    5. Attaches an entity table and relevant links to the entity.
+
+    6. Marks the entity as enriched and saves the updates to the platform.
 
 
     ### Additional Notes
 
-    None.
+    This action requires a valid Digital Shadows API Key and Secret configured at
+    the integration level.
   ai_short_description: >-
-    Enriches CVE entities by retrieving exploit and vulnerability information from
-    Digital Shadows and updating the entities with the gathered intelligence.
+    Enriches CVE entities by retrieving vulnerability and exploit information from
+    Digital Shadows.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -36,10 +41,10 @@ EnrichCVE:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Digital Shadows API to fetch exploit
-      and vulnerability data for CVEs. It does not mutate external data. It updates
-      internal entities with the fetched data but does not create insights, modify
-      alert data, or create case comments.
+      The action fetches data from Digital Shadows via a POST request to the search
+      API (fetches_data=true). It does not mutate external data or internal data outside
+      of entities. It updates entities with the fetched data (can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -91,8 +96,9 @@ EnrichCVE:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      == EntityTypes.CVE`. Thus, it targets CVE entities and filters by entity type.
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == EntityTypes.CVE`. This means it specifically
+      targets CVE entities and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -108,9 +114,10 @@ EnrichCVE:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches exploit and vulnerability data for CVE entities from Digital
-      Shadows. This aligns with the 'Enrich IOC' category as it returns threat intelligence
-      for an indicator (CVE).
+      The action fetches vulnerability and exploit data for CVE entities from Digital
+      Shadows. This matches the 'Enrich IOC' expected outcome, as it returns threat
+      intelligence for the indicator (CVE). It does not mutate external data or perform
+      other categorized actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -130,32 +137,36 @@ EnrichHash:
   ai_description: >-
     ### General Description
 
-    Enriches File Hash entities using Digital Shadows. This action retrieves threat
-    intelligence and contextual data for the specified hashes, such as Cylance and
-    Webroot classifications, and updates the entities within the platform.
+    This action enriches File Hash entities using threat intelligence from Digital
+    Shadows. Note: This action is marked as deprecated.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities, filtering specifically for File Hash entities.
+    1. Initializes the Digital Shadows API client using the provided integration credentials.
 
-    2. For each suitable entity, makes an API call to the Digital Shadows `/api/search/find`
-    endpoint to retrieve threat intelligence data.
+    2. Filters the target entities to include only File Hash entities.
 
-    3. Parses the response to extract relevant scores, categories, and classifications.
+    3. Iterates through the filtered entities and queries the Digital Shadows API
+    for threat intelligence related to each hash (specifically retrieving Cylance
+    and Webroot file hash data).
 
-    4. Enriches the entity by updating its additional properties, adding an entity
-    table with the results, and attaching a link to the Digital Shadows portal.
+    4. If data is found, it enriches the entity by updating its additional properties,
+    setting its status to enriched, and attaching a data table and link to the action
+    results.
 
-    5. Updates the entity's status to enriched and saves the changes back to the case.
+    5. Updates the enriched entities within the Google SecOps platform.
+
+    6. Returns a JSON object containing the enrichment results for all successfully
+    processed hashes.
 
 
     ### Additional Notes
 
-    This action is marked as deprecated.
+    This action is deprecated and may be removed in future versions.
   ai_short_description: >-
-    Enriches File Hash entities by retrieving threat intelligence and contextual data
-    from Digital Shadows.
+    Enriches File Hash entities by retrieving threat intelligence data from Digital
+    Shadows, updating the entities' properties and attaching the results to the case.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -167,11 +178,9 @@ EnrichHash:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from Digital Shadows via a POST request to a search
-      endpoint (fetches_data=true). It does not mutate external data or internal case
-      data other than entities. It updates entities with the fetched enrichment data
-      (can_update_entities=true). It does not create insights, modify alert data,
-      or create case comments.
+      The action fetches data from the Digital Shadows API using a POST request to
+      a search endpoint. It does not mutate external data. It updates internal entities
+      using `siemplify.update_entities` but does not create insights or case comments.
   entity_usage:
     entity_types:
       address: false
@@ -224,8 +233,8 @@ EnrichHash:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      the condition `entity.entity_type == EntityTypes.FILEHASH`. Therefore, it targets
-      File Hash entities and filters by entity type.
+      the condition `entity.entity_type == EntityTypes.FILEHASH`. Therefore, it specifically
+      targets File Hash entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -243,7 +252,7 @@ EnrichHash:
     reasoning: >-
       The action fetches threat intelligence data for File Hash entities from Digital
       Shadows, which aligns with the 'Enrich IOC' expected outcome. It does not perform
-      any state-changing operations on external systems or modify alerts.
+      any containment, blocking, or ticketing operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -263,36 +272,33 @@ EnrichIP:
   ai_description: >-
     ### General Description
 
-    Enriches IP Address entities using Digital Shadows. This action retrieves threat
-    intelligence and reputation data for the specified IP addresses, updates the entities
-    with the enriched data, and attaches the results as JSON and entity tables.
+    Enriches IP address entities using Digital Shadows threat intelligence. It retrieves
+    contextual data such as reputation score, ASN, threat history, and geolocation
+    information. Note: This action is deprecated.
 
 
     ### Flow Description
 
-    1. Filters target entities to include only IP Addresses (`ADDRESS`).
+    1. Iterates through the target entities and filters for IP addresses (ADDRESS).
 
-    2. Iterates through the filtered entities.
+    2. For each IP address, makes an API call to Digital Shadows to retrieve enrichment
+    data.
 
-    3. Makes an API call to the Digital Shadows `/api/search/find` endpoint to fetch
-    threat intelligence data for each IP address.
+    3. Updates the entity's additional properties with the retrieved data and marks
+    it as enriched.
 
-    4. Updates the entity's additional properties with the retrieved enrichment data
-    and marks it as enriched.
+    4. Attaches the raw JSON results, an entity table, and a link to the Digital Shadows
+    portal to the action results.
 
-    5. Attaches the enrichment data as an entity table and adds a link to the Digital
-    Shadows portal.
-
-    6. Returns the raw JSON results and updates the entities in the Google SecOps
-    platform.
+    5. Updates the entities in the Google SecOps platform.
 
 
     ### Additional Notes
 
     This action is marked as deprecated.
   ai_short_description: >-
-    Enriches IP Address entities by retrieving threat intelligence and reputation
-    data from Digital Shadows.
+    Enriches IP address entities using Digital Shadows to retrieve threat intelligence
+    such as reputation score, ASN, and geolocation data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -304,9 +310,8 @@ EnrichIP:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a POST request to the Digital Shadows API
-      to search for IP information. It does not mutate external data or internal data
-      outside of standard entity updates. It updates entities using `siemplify.update_entities`
+      The action fetches data from Digital Shadows via an API request. It does not
+      mutate external data. It updates internal entities with the enrichment data
       but does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -361,7 +366,7 @@ EnrichIP:
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
       == EntityTypes.ADDRESS`. Therefore, it targets ADDRESS entities and filters
-      by entity_type.
+      by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -377,9 +382,9 @@ EnrichIP:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches threat intelligence and reputation data for IP addresses
-      from Digital Shadows. This directly aligns with the 'Enrich IOC' expected outcome.
-      It does not perform any containment, ticketing, or blocklist operations.
+      The action fetches threat intelligence data (reputation, ASN, threat history)
+      for an IP address from Digital Shadows. This aligns with the 'Enrich IOC' expected
+      outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -399,35 +404,37 @@ EnrichURL:
   ai_description: >-
     ### General Description
 
-    Enriches URL entities using Digital Shadows. This action retrieves threat intelligence,
-    domain WHOIS data, and reputation scores from Digital Shadows to provide additional
-    context for URL indicators.
+    Enriches URL entities using Digital Shadows. This action retrieves threat intelligence
+    and domain information for the specified URLs to provide additional context for
+    investigation.
 
 
     ### Flow Description
 
-    1. Iterates over the provided target entities and filters for those of type `URL`.
+    1. Initializes the Digital Shadows API client using the provided integration credentials.
 
-    2. For each suitable entity, makes an API call to the Digital Shadows search endpoint
-    (`/api/search/find`) to fetch domain information.
+    2. Iterates through the target entities, filtering specifically for URL entities.
 
-    3. If data is found, enriches the entity by adding an entity table, attaching
-    a link to the Digital Shadows portal, and updating the entity's `additional_properties`
-    with the retrieved threat data.
+    3. For each URL, makes a POST request to the Digital Shadows `/api/search/find`
+    endpoint to fetch `DOMAIN_WHOIS` information.
 
-    4. Marks the entity as enriched (`is_enriched = True`) and updates the entity
-    within the Google SecOps platform.
+    4. If data is found, enriches the entity by adding a data table, a link to the
+    Digital Shadows portal, and updating the entity's additional properties with the
+    retrieved data.
 
-    5. Aggregates the raw JSON results and returns them as part of the action's output.
+    5. Marks the entity as enriched and updates it within the platform.
+
+    6. Returns a JSON object containing the raw enrichment data for all successfully
+    processed URLs.
 
 
     ### Additional Notes
 
-    Entities that fail to be enriched or encounter an error during the API call are
-    logged and reported in the final output message.
+    Entities that do not return any content from Digital Shadows will be marked as
+    failed and will not be updated.
   ai_short_description: >-
-    Enriches URL entities with threat intelligence and domain information using Digital
-    Shadows.
+    Enriches URL entities by retrieving domain and threat intelligence information
+    from Digital Shadows.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -439,10 +446,10 @@ EnrichURL:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from the Digital Shadows API using a search endpoint
-      (fetches_data=true). It does not mutate external data or internal platform data
-      outside of entities. It updates the entities with the fetched data (can_update_entities=true)
-      but does not create insights, modify alert data, or create case comments.
+      The action fetches data from the Digital Shadows API via a POST request to a
+      search endpoint. It does not mutate external data. It updates internal entities
+      with the fetched data by calling `siemplify.update_entities`, but does not create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -494,9 +501,9 @@ EnrichURL:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using the
-      condition `entity.entity_type == EntityTypes.URL`. Therefore, it specifically
-      targets URL entities and filters them by their entity type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      the condition `entity.entity_type == EntityTypes.URL`. Therefore, it targets
+      URL entities and filters by the entity_type attribute.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -513,8 +520,7 @@ EnrichURL:
     get_alert_information: false
     reasoning: >-
       The action fetches threat intelligence and domain information for URL entities
-      from Digital Shadows. This directly aligns with the 'Enrich IOC' expected outcome,
-      as it returns reputation and contextual data for an indicator.
+      from Digital Shadows. This aligns with the 'Enrich IOC' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -539,21 +545,24 @@ Ping:
 
     ### Flow Description
 
-    1. Initializes the Digital Shadows manager with the provided API credentials.
+    1. Extracts the API Key and API Secret from the integration configuration.
 
-    2. Makes a test search API call (POST to `/api/search/find`) to the Digital Shadows
-    platform to verify authentication and connectivity.
+    2. Initializes the Digital Shadows manager, which automatically triggers a connectivity
+    test.
 
-    3. Returns a success message if the connection is established, or an error message
-    if it fails.
+    3. Makes a test search request (querying for "www.google.com") to the Digital
+    Shadows API (`/api/search/find`) to verify the connection.
+
+    4. Returns a success message if the connection is established, or an error message
+    if the request fails.
 
 
     ### Additional Notes
 
-    This action is typically used to verify integration configuration and does not
-    process any case entities.
+    This action is typically used to verify that the integration is configured correctly
+    and can successfully communicate with the Digital Shadows service.
   ai_short_description: >-
-    Tests connectivity to the Digital Shadows platform by verifying API credentials.
+    Tests connectivity to the Digital Shadows platform by making a test API request.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -565,9 +574,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only performs a test API call to verify connectivity. It does not
-      fetch contextual data for the case, mutate external data, update entities, or
-      create insights.
+      The action only performs a test API request to verify connectivity. It does
+      not fetch contextual data for entities, mutate external or internal data, update
+      entities, or create insights/comments.
   entity_usage:
     entity_types:
       address: false
@@ -637,8 +646,8 @@ Ping:
     get_alert_information: false
     reasoning: >-
       The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, modifying alerts, or executing
-      containment actions.
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

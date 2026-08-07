@@ -4,39 +4,45 @@ Enrich Entities:
 
     Enriches IP Address, Hostname, and MAC Address entities using information from
     Ivanti Endpoint Manager. This action retrieves contextual metadata about endpoints,
-    such as OS version, IP, MAC, and last login details, to provide better visibility
-    into the assets involved in an alert.
+    such as OS version, IP, MAC address, and last login details, to provide better
+    visibility into the assets involved in an alert.
 
 
     ### Flow Description
 
-    1. Retrieves action parameters, including the custom column set and the insight
-    creation flag.
+    1. Extracts configuration and action parameters, including the optional custom
+    column set and insight creation flag.
 
-    2. Filters target entities to include only supported types (IP Address, Hostname,
-    MAC Address).
+    2. Filters the target entities to include only supported types (Address, Hostname,
+    and MAC Address).
 
-    3. Makes an API call to Ivanti Endpoint Manager to fetch machine details for the
-    filtered entities.
+    3. Validates the provided custom column set against Ivanti Endpoint Manager, if
+    specified.
 
-    4. If a custom column set is specified, makes additional API calls to retrieve
-    extended machine details for each endpoint.
+    4. Queries Ivanti Endpoint Manager to retrieve machine records matching the identifiers
+    of the filtered entities.
 
-    5. Matches the retrieved machine data with the corresponding entities based on
-    device name, IP address, or MAC address.
+    5. If a custom column set is provided, fetches additional detailed machine data
+    for each matched endpoint.
 
-    6. Enriches the entities with the retrieved data, updates their status in the
-    platform, and optionally creates a case insight with the endpoint details.
+    6. Maps the retrieved machine data back to the corresponding entities.
+
+    7. Enriches the entities with the retrieved data, marks them as enriched, and
+    updates them in the platform.
+
+    8. Optionally creates a case insight containing the general information of the
+    successfully enriched endpoints.
+
+    9. Returns a JSON result containing the enriched data and a summary message.
 
 
     ### Additional Notes
 
-    The action supports custom column sets to retrieve extended information beyond
-    the basic endpoint details. If the custom column set is invalid, the action will
-    fail.
+    Supported entities are IP Address, Hostname, and MAC Address. If a custom column
+    set is specified but invalid, the action will fail.
   ai_short_description: >-
-    Enriches IP Address, Hostname, and MAC Address entities by retrieving endpoint
-    contextual metadata from Ivanti Endpoint Manager.
+    Enriches IP Address, Hostname, and MAC Address entities by retrieving machine
+    details and contextual metadata from Ivanti Endpoint Manager.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -48,12 +54,9 @@ Enrich Entities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches endpoint data from Ivanti Endpoint Manager via GET requests
-      (fetches_data=true). It does not perform any state-changing operations on the
-      external system (can_mutate_external_data=false). It updates the entities with
-      the retrieved data using `siemplify.update_entities` (can_update_entities=true)
-      and creates case insights using `siemplify.create_case_insight` (can_create_insight=true).
-      It does not modify alert data or create case comments.
+      The action fetches machine data from Ivanti Endpoint Manager via HTTP GET requests.
+      It does not mutate external data. It updates internal entities with the fetched
+      data using `siemplify.update_entities` and creates case insights using `siemplify.create_case_insight`.
   entity_usage:
     entity_types:
       address: true
@@ -105,11 +108,10 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.ADDRESS`,
-      `EntityTypes.HOSTNAME`, and `EntityTypes.MACADDRESS`. Therefore, it targets
-      Address, Hostname, and MAC Address entities, filtering strictly by the `entity_type`
-      attribute.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where the supported types are
+      ADDRESS, HOSTNAME, and MACADDRESS. Therefore, it targets these specific entity
+      types and filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -125,10 +127,9 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (such as OS version, IP, MAC, and last
-      login) for endpoints (IP, Hostname, MAC) from Ivanti Endpoint Manager. This
-      aligns perfectly with the 'Enrich Asset' expected outcome. It does not perform
-      any containment, blocklist, or ticketing operations.
+      The action fetches machine details (such as OS version, IP, MAC, Hostname, and
+      Last Login) from Ivanti Endpoint Manager for the given entities. This directly
+      aligns with the 'Enrich Asset' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -158,31 +159,29 @@ Execute Query:
   ai_description: >-
     ### General Description
 
-    Executes a specified predefined query in Ivanti Endpoint Manager and retrieves
-    the results.
+    Executes a specific query in Ivanti Endpoint Manager and retrieves the results.
+    This action allows users to run predefined queries on the Ivanti platform and
+    returns the output as a JSON object for further use in the playbook.
 
 
     ### Flow Description
 
-    1. Extracts the query name and the maximum number of results to return from the
-    action parameters.
+    1. Extracts the `Query` name and `Max Results To Return` parameters.
 
-    2. Initializes the Ivanti Endpoint Manager API client.
+    2. Makes an API call (GET request) to the Ivanti Endpoint Manager to execute the
+    specified query.
 
-    3. Makes an HTTP GET request to the `/MBSDKService/MsgSDK.asmx/RunQuery` endpoint
-    to execute the query.
-
-    4. Parses the returned XML response into JSON format.
-
-    5. Attaches the query results to the action's JSON result output.
+    3. Parses the returned results and appends them to the action's JSON result.
 
 
     ### Additional Notes
 
-    The action requires the exact name of a predefined query in Ivanti Endpoint Manager.
+    - This action does not operate on entities.
+
+    - The `Max Results To Return` parameter must be greater than 0.
   ai_short_description: >-
-    Executes a predefined query in Ivanti Endpoint Manager and returns the results
-    as JSON.
+    Executes a specific predefined query in Ivanti Endpoint Manager and retrieves
+    the results as a JSON object.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -194,9 +193,10 @@ Execute Query:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Ivanti Endpoint Manager API to fetch query
-      results. It does not mutate external data, update internal entities, create
-      insights, or modify alert data.
+      The action makes a GET request to fetch query results from Ivanti Endpoint Manager
+      (fetches_data=true). It does not perform any state-changing operations on external
+      systems or internal SecOps data. It does not update entities, create insights,
+      modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -248,8 +248,9 @@ Execute Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided query name parameter.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers via input parameters. Therefore, it does not run on entities
+      and all entity-related flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -265,10 +266,9 @@ Execute Query:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a generic predefined query in Ivanti Endpoint Manager and
-      returns the results. It does not specifically enrich IOCs/assets, mutate alerts/tickets,
-      block/allow IOCs, manage identities, or perform other specific outcome category
-      actions.
+      The action executes a predefined query in Ivanti Endpoint Manager to retrieve
+      a list of results (typically devices). It does not specifically enrich an IOC
+      or asset, mutate external state, or match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -297,40 +297,46 @@ Execute Task:
   ai_description: >-
     ### General Description
 
-    Executes a specified task on target endpoints using Ivanti Endpoint Manager. This
-    action allows for the deployment of packages or execution of tasks on specific
-    machines identified by their Hostname, IP Address, or MAC Address.
+    Executes a specified task or package on target endpoints using Ivanti Endpoint
+    Manager. This action allows analysts to deploy packages or run tasks on machines
+    associated with the provided entities (Hostname, IP Address, or MAC Address).
 
 
     ### Flow Description
 
-    1. Filters target entities to include only Hostname, IP Address, and MAC Address.
+    1. Extracts action parameters including the task name, delivery method, package,
+    and execution preferences.
 
-    2. Queries Ivanti Endpoint Manager via the `ListMachines` API to find matching
-    machines for the provided entities.
+    2. Filters the target entities to include only supported types (Hostname, IP Address,
+    MAC Address).
 
-    3. Creates a new task in Ivanti Endpoint Manager via the `CreateTask` API using
-    the specified delivery method and package.
+    3. Queries Ivanti Endpoint Manager via the `/MBSDKService/MsgSDK.asmx/ListMachines`
+    endpoint to find matching machines for the provided entities.
 
-    4. Adds the identified devices to the newly created task via the `AddDeviceToScheduledTask`
-    API.
+    4. Creates a new task in Ivanti Endpoint Manager by calling the `/MBSDKService/MsgSDK.asmx/CreateTask`
+    endpoint with the specified delivery method and package.
 
-    5. Initiates the task execution via the `StartTaskNow` API.
+    5. Adds the identified devices to the newly created task using the `/MBSDKService/MsgSDK.asmx/AddDeviceToScheduledTask`
+    endpoint.
 
-    6. If the `Only Initiate` parameter is false, the action runs asynchronously,
-    periodically checking the task status via the `GetTaskMachineStatus` API until
-    completion or timeout.
+    6. Starts the task execution by calling the `/MBSDKService/MsgSDK.asmx/StartTaskNow`
+    endpoint.
 
-    7. Returns the execution results as JSON.
+    7. If the "Only Initiate" parameter is false, the action runs asynchronously,
+    periodically checking the task status via the `/MBSDKService/MsgSDK.asmx/GetTaskMachineStatus`
+    endpoint until completion or timeout.
+
+    8. Returns the execution results and task status as JSON data.
 
 
     ### Additional Notes
 
-    This action runs asynchronously. Ensure the script timeout value in the IDE is
-    adjusted as needed to accommodate long-running tasks.
+    This action can run asynchronously. If "Only Initiate" is set to false, ensure
+    that the script timeout value in the IDE is adjusted appropriately to allow the
+    task enough time to complete on the endpoints.
   ai_short_description: >-
-    Executes a specified task or package on target endpoints via Ivanti Endpoint Manager,
-    optionally waiting for the execution to complete asynchronously.
+    Executes a specified task or package on target endpoints using Ivanti Endpoint
+    Manager.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -339,15 +345,14 @@ Execute Task:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new task, adds devices to it, and initiates the task execution in
-      Ivanti Endpoint Manager.
-    fetches_data: true
+      Creates a new task, adds devices to it, and starts the task execution in Ivanti
+      Endpoint Manager.
+    fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches machine data to map entities to devices (fetches_data=true).
-      It then makes API calls to create a task, add devices, and start the task in
-      Ivanti Endpoint Manager, which mutates external data (can_mutate_external_data=true).
-      It does not update internal entities, create insights, or add case comments.
+      The action makes API calls to Ivanti Endpoint Manager to create a task, add
+      devices to it, and start the task, which mutates external data. It does not
+      fetch contextual enrichment data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -390,7 +395,7 @@ Execute Task:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -399,9 +404,10 @@ Execute Task:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS, HOSTNAME, and
-      MACADDRESS.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS,
+      HOSTNAME, and MACADDRESS. It also uses `entity.identifier` and `get_entity_original_identifier`
+      to match entities to Ivanti machines and map results.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -417,9 +423,9 @@ Execute Task:
     execute_command_on_the_host: true
     get_alert_information: false
     reasoning: >-
-      The action creates and starts a task (which deploys a package) on target endpoints
-      via Ivanti Endpoint Manager. This aligns with executing a command or script
-      on the host.
+      The action creates and starts a task to deploy a package or execute an operation
+      on remote endpoints via Ivanti Endpoint Manager. This aligns with the 'Execute
+      Command on the Host' category, as it triggers execution on a remote machine.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -460,32 +466,34 @@ List Column Set Fields:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of available fields within a specified column set from Ivanti
-    Endpoint Manager.
+    Retrieves and lists available fields for a specified column set in Ivanti Endpoint
+    Manager. This action allows users to query the external system for column set
+    metadata and apply optional filtering to narrow down the returned fields.
 
 
     ### Flow Description
 
-    1. Extracts the action parameters including the column set name, filter logic,
-    filter value, and limit.
+    1. Extracts the provided column set name, filter logic, filter value, and the
+    maximum number of fields to return.
 
-    2. Initializes the Ivanti Endpoint Manager API client.
+    2. Makes an HTTP GET request to the Ivanti Endpoint Manager API (`/MBSDKService/MsgSDK.asmx/ListColumnSetColumns`)
+    to fetch the fields associated with the specified column set.
 
-    3. Makes a GET request to the `/MBSDKService/MsgSDK.asmx/ListColumnSetColumns`
-    endpoint to fetch the fields for the specified column set.
+    3. Applies the specified filter logic (e.g., 'Equal' or 'Contains') and filter
+    value to the retrieved fields, if provided.
 
-    4. Applies the specified filter logic (Equal, Contains) and limits the results.
+    4. Limits the results based on the 'Max Fields To Return' parameter.
 
-    5. Returns the fields as a JSON result.
+    5. Returns the resulting fields as a JSON object attached to the action's results.
 
 
     ### Additional Notes
 
-    If no filter value is provided, the filter will not be applied and all fields
-    up to the specified limit will be returned.
+    This action does not operate on or require any entities. It is primarily used
+    to fetch configuration or metadata from the Ivanti Endpoint Manager environment.
   ai_short_description: >-
-    Retrieves a list of available fields within a specified column set from Ivanti
-    Endpoint Manager.
+    Retrieves and lists available fields for a specified column set in Ivanti Endpoint
+    Manager, applying optional filtering criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -497,8 +505,8 @@ List Column Set Fields:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (column set fields) from Ivanti Endpoint Manager via
-      a GET request. It does not mutate external data, mutate internal data, update
+      The action fetches data (column set fields) from an external system via an HTTP
+      GET request. It does not mutate external data, mutate internal data, update
       entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -551,8 +559,9 @@ List Column Set Fields:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or filter any entities. It operates independently
-      of case entities and relies solely on the provided action parameters.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. It operates solely on the provided column set
+      name.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -568,10 +577,11 @@ List Column Set Fields:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action simply lists column set fields from Ivanti Endpoint Manager. It does
-      not enrich IOCs/assets, mutate alerts/tickets, block/allow IOCs, manage identities,
-      search events, execute commands, or perform any other operations defined in
-      the outcome categories.
+      The action fetches configuration/metadata (column set fields) from Ivanti Endpoint
+      Manager. It does not enrich IOCs or assets, update alerts, manage tickets, block/allow
+      IOCs, manage identities, contain hosts, search events, execute commands, download
+      files, manage emails, submit files, send messages, search assets, or get alert
+      information. Therefore, it does not match any of the specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -594,7 +604,7 @@ List Column Set Fields:
     | Column Set | String | Yes | Specify the name of the column set for which you
     want to return fields. |
 
-    | Filter Logic | DropDown | No | Specify what filter logic should be applied.
+    | Filter Logic | Dropdown | No | Specify what filter logic should be applied.
     |
 
     | Filter Value | String | No | Specify what value should be used in the filter.
@@ -608,34 +618,33 @@ List Column Sets:
   ai_description: >-
     ### General Description
 
-    Lists available column sets in Ivanti Endpoint Manager based on specified filter
-    criteria. This action retrieves the column sets and returns them as a JSON result
-    for further use in the playbook.
+    Lists available column sets in Ivanti Endpoint Manager based on provided filter
+    criteria.
 
 
     ### Flow Description
 
-    1. Extracts action parameters including `Filter Logic`, `Filter Value`, and `Max
-    Column Sets To Return`.
+    1. Extracts action parameters: `Filter Logic`, `Filter Value`, and `Max Column
+    Sets To Return`.
 
-    2. Initializes the Ivanti Endpoint Manager API client.
+    2. Initializes the `IvantiEndpointManagerManager` to handle API communication.
 
-    3. Makes an HTTP GET request to the `/MBSDKService/MsgSDK.asmx/ListColumnSets`
-    endpoint to retrieve the available column sets.
+    3. Makes a GET request to the `/MBSDKService/MsgSDK.asmx/ListColumnSets` API endpoint
+    to retrieve the available column sets.
 
-    4. Filters the retrieved column sets locally based on the provided logic (e.g.,
-    Equal, Contains) and value.
+    4. Filters the retrieved column sets based on the provided logic and value, up
+    to the specified limit.
 
-    5. Returns the filtered column sets as a JSON object in the action results.
+    5. Returns the filtered column sets as a JSON object attached to the action result.
 
 
     ### Additional Notes
 
-    This action does not operate on specific entities and is used purely for retrieving
-    configuration data (column sets) from the Ivanti Endpoint Manager.
+    If no filter value is provided, the filter will not be applied and all column
+    sets up to the maximum limit will be returned.
   ai_short_description: >-
-    Retrieves a list of available column sets from Ivanti Endpoint Manager, optionally
-    filtering the results based on user-defined criteria.
+    Retrieves a list of available column sets from Ivanti Endpoint Manager based on
+    specified filter criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -647,11 +656,9 @@ List Column Sets:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Ivanti Endpoint Manager API to fetch column
-      sets (fetches_data=true). It does not perform any state-changing operations
-      on external systems (can_mutate_external_data=false) and does not mutate internal
-      SecOps data, update entities, create insights, modify alerts, or create case
-      comments.
+      The action fetches data (column sets) from an external system (Ivanti Endpoint
+      Manager) using a GET request. It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -703,9 +710,8 @@ List Column Sets:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates independently of entities to fetch column sets, so
-      all entity type flags and filter flags are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. It operates independently of entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -721,11 +727,10 @@ List Column Sets:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of column sets from Ivanti Endpoint Manager. This
-      is a general data retrieval operation that does not match any of the specific
-      expected outcomes such as enriching IOCs/assets, modifying alerts, managing
-      tickets, or interacting with endpoints directly. Therefore, all outcome category
-      flags are false.
+      The action simply retrieves a list of column sets from Ivanti Endpoint Manager.
+      It does not enrich specific IOCs or assets, update alerts, manage tickets, or
+      perform any containment or remediation actions. Therefore, it does not match
+      any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -745,8 +750,7 @@ List Column Sets:
 
     | --- | --- | --- | --- |
 
-    | Filter Logic | String | No | Specify what filter logic should be applied (Equal,
-    Contains). |
+    | Filter Logic | String | No | Specify what filter logic should be applied. |
 
     | Filter Value | String | No | Specify what value should be used in the filter.
     If "Equal" is selected, action will try to find the exact match among items and
@@ -760,12 +764,14 @@ List Delivery Methods:
     ### General Description
 
     Lists available delivery methods in Ivanti Endpoint Manager based on specified
-    criteria.
+    criteria. This action retrieves delivery methods and allows filtering by type,
+    logic, and specific values.
 
 
     ### Flow Description
 
-    1. Extracts configuration and action parameters.
+    1. Extracts configuration and action parameters (Type, Filter Logic, Filter Value,
+    Max Delivery Methods To Return).
 
     2. Initializes the Ivanti Endpoint Manager API client.
 
@@ -775,7 +781,9 @@ List Delivery Methods:
     4. Filters the retrieved delivery methods based on the provided filter logic and
     value.
 
-    5. Returns the results as a JSON object and a data table.
+    5. Formats the results into a JSON object and a CSV table.
+
+    6. Returns the results to the Google SecOps platform.
 
 
     ### Additional Notes
@@ -795,9 +803,9 @@ List Delivery Methods:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to Ivanti Endpoint Manager to fetch available
-      delivery methods. It does not mutate external data, update internal entities,
-      or create insights.
+      The action makes a GET request to the Ivanti Endpoint Manager API to fetch delivery
+      methods (`fetches_data` = true). It does not mutate external data, update internal
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -849,8 +857,8 @@ List Delivery Methods:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process any entities. It operates independently
-      of case entities, so all entity flags are false.
+      The action does not process `siemplify.target_entities` and does not accept
+      any input parameters representing entities. Therefore, it does not run on entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -866,9 +874,9 @@ List Delivery Methods:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of delivery methods from Ivanti Endpoint Manager.
-      This does not match any of the predefined outcome categories such as enriching
-      IOCs, modifying alerts, or containing hosts.
+      The action fetches a list of delivery methods from Ivanti Endpoint Manager.
+      It does not enrich specific IOCs or assets, nor does it mutate any external
+      or internal state. It does not match any of the specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -888,55 +896,52 @@ List Delivery Methods:
 
     | --- | --- | --- | --- |
 
-    | Type | String | No | Specify the delivery type that needs to be returned. |
+    | Type | Dropdown | No | Specify the delivery type that needs to be returned.
+    |
 
-    | Filter Logic | String | No | Specify what filter logic should be applied. |
+    | Filter Logic | Dropdown | No | Specify what filter logic should be applied.
+    |
 
     | Filter Value | String | No | Specify what value should be used in the filter.
     If "Equal" is selected, action will try to find the exact match among items and
     if "Contains" is selected, action will try to find items that contain that substring.
     If nothing is provided in this parameter, the filter will not be applied. |
 
-    | Max Delivery Methods To Return | Integer | No | Specify how many delivery methods
+    | Max Delivery Methods To Return | String | No | Specify how many delivery methods
     to return. Default: 50. |
 List Endpoint Vulnerabilities:
   ai_description: >-
     ### General Description
 
-    Lists vulnerabilities on the endpoints in Ivanti Endpoint Manager. Supported entities:
-    IP Address, Mac Address, Hostname.
+    Lists vulnerabilities on endpoints in Ivanti Endpoint Manager. This action retrieves
+    vulnerability information for specific endpoints based on their IP Address, Hostname,
+    or MAC Address.
 
 
     ### Flow Description
 
-    1. Extracts configuration and action parameters, including the severity filter
-    and the maximum number of vulnerabilities to return.
+    1. Extracts action parameters and filters the target entities to include only
+    supported types (IP Address, Hostname, MAC Address).
 
-    2. Validates the provided severity filter against allowed values and ensures the
-    limit is valid.
+    2. Makes an API call to Ivanti Endpoint Manager to fetch machine details for the
+    filtered entities.
 
-    3. Initializes the Ivanti Endpoint Manager API client.
+    3. Iterates through the suitable entities, matching them to the retrieved machines
+    to obtain their unique GUIDs.
 
-    4. Fetches a list of machines from Ivanti Endpoint Manager that match the identifiers
-    of the target entities.
+    4. Makes an API call to fetch vulnerabilities for each matched GUID, applying
+    the specified severity and limit filters.
 
-    5. Iterates over the suitable entities and attempts to find a matching machine
-    GUID based on the entity's identifier (matching against device name, IP address,
-    or MAC address).
-
-    6. If a matching machine is found, fetches its vulnerabilities using the specified
-    severity filter and limit.
-
-    7. Appends the retrieved vulnerability data to the action's JSON result.
+    5. Returns the retrieved vulnerabilities as JSON results attached to the action.
 
 
     ### Additional Notes
 
-    - The action returns the vulnerabilities as a JSON result attached to the action
-    execution, rather than updating the entities or creating insights.
+    Supported entities: IP Address, Hostname, MAC Address. If no severity filter is
+    provided, all vulnerabilities up to the specified limit will be returned.
   ai_short_description: >-
-    Lists vulnerabilities on the endpoints in Ivanti Endpoint Manager for IP Address,
-    Mac Address, and Hostname entities.
+    Lists vulnerabilities on endpoints in Ivanti Endpoint Manager based on IP Address,
+    Hostname, or MAC Address.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -948,9 +953,9 @@ List Endpoint Vulnerabilities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from Ivanti Endpoint Manager (machines and vulnerabilities)
-      using GET requests. It does not mutate external data, nor does it mutate internal
-      data (no entity updates, no insights created, no case comments).
+      The action makes GET requests to Ivanti Endpoint Manager to fetch machine details
+      and vulnerabilities. It does not mutate external data, update internal entities,
+      or create insights. It only returns the fetched data as JSON results.
   entity_usage:
     entity_types:
       address: true
@@ -993,7 +998,7 @@ List Endpoint Vulnerabilities:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: true
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -1002,9 +1007,10 @@ List Endpoint Vulnerabilities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them by `entity_type`
-      (ADDRESS, HOSTNAME, MACADDRESS). It then uses `entity.identifier` to match against
-      the machine's device name, IP address, or MAC address.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS,
+      HOSTNAME, and MACADDRESS. Therefore, it targets Address, Host Name, and Mac
+      Address entities and filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1020,9 +1026,9 @@ List Endpoint Vulnerabilities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches vulnerability data for specific endpoint assets (IP, Hostname,
-      MAC Address) from Ivanti Endpoint Manager. This aligns with the 'Enrich Asset'
-      category as it retrieves contextual metadata (vulnerabilities) for a resource.
+      The action fetches vulnerability information for specific endpoints (assets)
+      from Ivanti Endpoint Manager. This aligns with the 'Enrich Asset' category as
+      it retrieves contextual metadata (vulnerabilities) for internal resources.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1053,33 +1059,33 @@ List Packages:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of available distribution packages from Ivanti Endpoint Manager.
+    Lists available packages in Ivanti Endpoint Manager based on specified filter
+    criteria.
 
 
     ### Flow Description
 
     1. Extracts configuration and action parameters.
 
-    2. Initializes the Ivanti Endpoint Manager API client.
+    2. Initializes the `IvantiEndpointManagerManager`.
 
-    3. Makes a GET request to the `/MBSDKService/MsgSDK.asmx/ListDistributionPackages`
-    endpoint to fetch all available packages.
+    3. Calls the `get_packages` method which makes a GET request to the `/MBSDKService/MsgSDK.asmx/ListDistributionPackages?PkgType=ALL`
+    endpoint.
 
     4. Filters the retrieved packages based on the provided `Filter Logic` and `Filter
     Value`.
 
-    5. Limits the results to the specified `Max Packages To Return`.
+    5. Limits the results to `Max Packages To Return`.
 
-    6. Returns the packages as JSON results and populates a data table named "Available
-    Packages".
+    6. Adds the results as JSON and a data table to the action output.
 
 
     ### Additional Notes
 
     None.
   ai_short_description: >-
-    Retrieves a list of available distribution packages from Ivanti Endpoint Manager
-    based on specified filtering criteria.
+    Lists available packages in Ivanti Endpoint Manager based on specified filter
+    criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1091,9 +1097,9 @@ List Packages:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to fetch package data from Ivanti Endpoint Manager.
-      It does not mutate external data, update internal entities, create insights,
-      or modify alert data.
+      The action fetches data (packages) from Ivanti Endpoint Manager. It does not
+      mutate external data, mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1145,8 +1151,8 @@ List Packages:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It simply fetches a list of packages
-      from the external system without referencing `siemplify.target_entities`.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. Therefore, it does not run on entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1162,9 +1168,9 @@ List Packages:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of available packages from Ivanti Endpoint Manager.
-      This does not align with any of the predefined outcome categories such as enriching
-      assets, containing hosts, or searching events.
+      The action simply lists available packages from Ivanti Endpoint Manager. It
+      does not enrich IOCs or assets, update alerts, create tickets, or perform any
+      other specific outcome category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1184,45 +1190,50 @@ List Packages:
 
     | --- | --- | --- | --- |
 
-    | Filter Logic | String | No | Specify what filter logic should be applied. |
+    | Filter Logic | Dropdown | No | Specify what filter logic should be applied.
+    |
 
     | Filter Value | String | No | Specify what value should be used in the filter.
     If "Equal" is selected, action will try to find the exact match among items and
     if "Contains" is selected, action will try to find items that contain that substring.
     If nothing is provided in this parameter, the filter will not be applied. |
 
-    | Max Packages To Return | Integer | No | Specify how many packages to return.
+    | Max Packages To Return | String | No | Specify how many packages to return.
     Default: 50. |
 List Queries:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of available queries from Ivanti Endpoint Manager.
+    This action connects to Ivanti Endpoint Manager to retrieve a list of available
+    queries. It allows users to filter the queries based on specific logic and values,
+    and limits the number of returned results.
 
 
     ### Flow Description
 
-    1. Extracts the action parameters: Filter Logic, Filter Value, and Max Queries
-    To Return.
+    1. The action initializes the connection to the Ivanti Endpoint Manager API using
+    the provided integration configurations.
 
-    2. Initializes the Ivanti Endpoint Manager API client.
+    2. It retrieves the action parameters: `Filter Logic`, `Filter Value`, and `Max
+    Queries To Return`.
 
-    3. Makes an API call to the `/MBSDKService/MsgSDK.asmx/ListQueries` endpoint to
-    fetch the available queries.
+    3. A GET request is made to the `/MBSDKService/MsgSDK.asmx/ListQueries` endpoint
+    to fetch the available queries.
 
-    4. Filters the retrieved queries based on the provided logic and value.
+    4. The retrieved queries are filtered locally based on the provided logic (Equal,
+    Contains) and value.
 
-    5. Limits the number of returned queries based on the specified maximum.
+    5. The final list of queries is truncated to the specified maximum limit.
 
-    6. Returns the filtered list of queries as a JSON object in the action results.
+    6. The results are formatted and added to the action's JSON result.
 
 
     ### Additional Notes
 
-    None.
+    If no filter value is provided, all queries up to the maximum limit will be returned.
   ai_short_description: >-
     Retrieves a list of available queries from Ivanti Endpoint Manager based on specified
-    filter criteria and returns them as a JSON object.
+    filter criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1234,9 +1245,10 @@ List Queries:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (queries) from Ivanti Endpoint Manager via a GET request.
-      It does not mutate any external data, nor does it mutate internal data, update
-      entities, create insights, modify alert data, or create case comments.
+      The action makes a GET request to the Ivanti Endpoint Manager API to fetch available
+      queries (`fetches_data` is true). It does not perform any state-changing operations
+      on external systems (`can_mutate_external_data` is false). It does not update
+      internal entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1288,9 +1300,8 @@ List Queries:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It simply fetches a list of queries
-      from the external system based on the provided parameters. Therefore, all entity-related
-      flags are set to false.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity-related input parameters. Therefore, it does not operate on any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1306,10 +1317,10 @@ List Queries:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of queries from Ivanti Endpoint Manager. This does
-      not align with any of the predefined outcome categories such as enriching IOCs/assets,
-      updating alerts, managing tickets, or modifying blocklists/allowlists. Therefore,
-      all outcome category flags are set to false.
+      The action retrieves a list of available queries from Ivanti Endpoint Manager.
+      It does not enrich entities, modify alerts, manage tickets, block/allow IOCs,
+      manage identities, contain hosts, search events/emails, or perform any other
+      operations that match the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1329,44 +1340,44 @@ List Queries:
 
     | --- | --- | --- | --- |
 
-    | Filter Logic | String | No | Specify what filter logic should be applied. |
+    | Filter Logic | ddl | No | Specify what filter logic should be applied. |
 
-    | Filter Value | String | No | Specify what value should be used in the filter.
+    | Filter Value | string | No | Specify what value should be used in the filter.
     If "Equal" is selected, action will try to find the exact match among items and
     if "Contains" is selected, action will try to find items that contain that substring.
     If nothing is provided in this parameter, the filter will not be applied. |
 
-    | Max Queries To Return | Integer | No | Specify how many queries to return. Default:
+    | Max Queries To Return | string | No | Specify how many queries to return. Default:
     50. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Ivanti Endpoint Manager server to ensure the integration
-    is configured correctly.
+    Tests connectivity to the Ivanti Endpoint Manager server using the provided integration
+    configuration parameters.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters (API Root, Username, Password,
+    1. Extracts the integration configuration parameters (API Root, Username, Password,
     Verify SSL).
 
     2. Initializes the Ivanti Endpoint Manager client.
 
     3. Makes a GET request to the `/MBSDKService/MsgSDK.asmx/WhoAmI` endpoint to verify
-    connectivity.
+    authentication and connectivity.
 
-    4. Returns a success message if the connection is established, otherwise returns
-    an error.
+    4. Returns a success message if the connection is established, or an error message
+    if it fails.
 
 
     ### Additional Notes
 
-    This action does not require any action-specific parameters and does not operate
-    on entities.
+    This action is typically used to verify that the integration is configured correctly
+    and can communicate with the Ivanti Endpoint Manager API.
   ai_short_description: >-
-    Tests connectivity to the Ivanti Endpoint Manager server to ensure the integration
-    is configured correctly.
+    Tests connectivity to the Ivanti Endpoint Manager server to verify integration
+    configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1378,9 +1389,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only makes a GET request to verify connectivity. It does not fetch
-      contextual data for alerts/entities, mutate external or internal data, update
-      entities, create insights, modify alert data, or create case comments.
+      The action only makes a GET request to a 'WhoAmI' endpoint to test connectivity.
+      It does not fetch contextual data for alerts, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1432,8 +1443,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not use or process any entities. It simply tests connectivity
-      to the external service.
+      The action does not process any entities or accept any entity-related parameters.
+      It only tests connectivity to the external server.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1449,9 +1460,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      The action is a simple connectivity test (Ping) and does not perform any operations
+      that match the expected outcomes of the available categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1471,40 +1481,40 @@ Scan Endpoints:
   ai_description: >-
     ### General Description
 
-    Scans endpoints for vulnerabilities using Ivanti Endpoint Manager. The action
-    targets IP Address, Hostname, and MAC Address entities, creating and initiating
-    a vulnerability scan task on the corresponding machines.
+    Initiates a vulnerability scan on specified endpoints (IP Address, Hostname, MAC
+    Address) using Ivanti Endpoint Manager. The action can either just trigger the
+    scan or wait asynchronously for the scan to complete and return the results.
 
 
     ### Flow Description
 
-    1. Filters the provided target entities to include only supported types (IP Address,
-    Hostname, MAC Address).
+    1. Filters the target entities to include only supported types: IP Address, Hostname,
+    and MAC Address.
 
-    2. Makes an API call to Ivanti Endpoint Manager to retrieve machine details that
-    match the identifiers of the filtered entities.
+    2. Makes an API call to Ivanti Endpoint Manager to retrieve machine details and
+    match the provided entities to their corresponding machine GUIDs.
 
     3. Makes an API call to create a new vulnerability scan task for the identified
     machines.
 
-    4. Makes an API call to initiate the newly created scan task.
+    4. Makes an API call to start the newly created scan task.
 
-    5. If the `Only Initiate` parameter is set to false, the action runs asynchronously
-    and periodically polls the API to check the task status until it completes or
-    times out.
+    5. If the 'Only Initiate' parameter is set to false, the action runs asynchronously
+    and periodically polls the Ivanti API to check the task status until it completes
+    or times out.
 
-    6. Returns the task status and execution details as JSON results.
+    6. Outputs the scan status and task details as JSON results.
 
 
     ### Additional Notes
 
-    This action can run asynchronously. If the `Only Initiate` parameter is enabled,
-    the action will start the scan task and finish immediately without waiting for
-    the scan to complete. Ensure the script timeout value in the IDE is adjusted appropriately
-    if waiting for results.
+    This action runs asynchronously. If 'Only Initiate' is enabled, the action will
+    finish immediately after starting the task without waiting for the scan results.
+    Ensure the script timeout value in the IDE is adjusted appropriately if waiting
+    for results.
   ai_short_description: >-
-    Creates and initiates a vulnerability scan task on specified endpoints in Ivanti
-    Endpoint Manager.
+    Initiates a vulnerability scan on specified endpoints (IP Address, Hostname, MAC
+    Address) using Ivanti Endpoint Manager.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1513,15 +1523,15 @@ Scan Endpoints:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates and initiates a vulnerability scan task on the specified endpoints in
-      Ivanti Endpoint Manager.
+      Creates and initiates a vulnerability scan task on the Ivanti Endpoint Manager
+      for the specified endpoints.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches machine data and task results from Ivanti Endpoint Manager
-      (fetches_data=true). It creates and starts a vulnerability scan task on the
-      external system (can_mutate_external_data=true). It does not update internal
-      entities, create insights, or modify internal case/alert data.
+      The action fetches machine data to map entities to GUIDs (fetches_data=True).
+      It then creates and starts a vulnerability scan task on the Ivanti Endpoint
+      Manager, which changes the state of the external system (can_mutate_external_data=True).
+      It does not update internal entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: true
@@ -1559,12 +1569,12 @@ Scan Endpoints:
       url: false
       usb: false
       user: false
-    filters_by_additional_properties: true
+    filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: true
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -1574,9 +1584,8 @@ Scan Endpoints:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, which includes ADDRESS, HOSTNAME,
-      and MACADDRESS. It uses `entity.identifier` to match against retrieved machine
-      details. It also uses `get_entity_original_identifier`, which accesses `entity.additional_properties.get('OriginalIdentifier')`.
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS,
+      HOSTNAME, and MACADDRESS. Therefore, it filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1592,10 +1601,10 @@ Scan Endpoints:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action initiates a vulnerability scan on endpoints via Ivanti Endpoint Manager.
-      This does not strictly match any of the predefined expected outcomes such as
-      enriching an asset, executing a raw command with STDOUT, containing a host,
-      or updating an alert. Therefore, all outcome categories are false.
+      The action initiates a vulnerability scan on endpoints via the Ivanti Endpoint
+      Manager. This specific operation does not align with any of the predefined outcome
+      categories such as enriching assets, containing hosts, or executing arbitrary
+      commands.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

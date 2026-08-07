@@ -2,40 +2,37 @@ Execute Custom Query:
   ai_description: >-
     ### General Description
 
-    Executes a custom query in Snowflake to retrieve data. This action allows users
-    to run specific SQL queries against a Snowflake database and schema, returning
-    the results as a data table and JSON object.
+    Executes a custom SQL query in Snowflake to retrieve data. This action allows
+    analysts to query Snowflake databases directly from the SOAR platform and returns
+    the results as a data table and JSON.
 
 
     ### Flow Description
 
-    1. Extracts the provided action parameters, including the query, database, schema,
-    and the maximum number of results to return.
+    1. Initializes the Snowflake manager with the provided integration credentials.
 
-    2. Initializes the Snowflake API client using the provided integration credentials
-    (API Root, Account, Username, Private Key).
+    2. Submits the custom query to Snowflake via a POST request to the `/api/v2/statements`
+    endpoint, automatically appending a LIMIT clause based on the `Max Results To
+    Return` parameter.
 
-    3. Submits the custom query to the Snowflake API for execution.
+    3. Checks the execution status of the query via a GET request to the `/api/v2/statements/{query_id}`
+    endpoint.
 
-    4. Checks the execution status of the query. Since this is an asynchronous action,
-    it may poll for results if the query is still in progress.
+    4. If the query is still running, the action suspends (runs asynchronously) and
+    waits for completion.
 
-    5. Once the query execution is finished, retrieves the results and attaches them
-    to the action as a JSON result and a CSV-formatted data table.
+    5. Once completed, retrieves the results, formats them, and attaches them to the
+    case as a JSON result and a data table.
 
 
     ### Additional Notes
 
-    - The action runs asynchronously; adjust the script timeout value in the IDE as
-    needed.
-
-    - The query should not contain the `LIMIT` keyword, as it is added automatically
-    by the action based on the 'Max Results To Return' parameter.
-
-    - Only single quotes are supported within the query string.
+    The action automatically appends a LIMIT keyword to the query, so the provided
+    query string should not contain one. Only single quotes are supported within the
+    query string.
   ai_short_description: >-
-    Executes a custom query in Snowflake and returns the results as a JSON object
-    and a data table.
+    Executes a custom SQL query in Snowflake and returns the results as a data table
+    and JSON.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -47,9 +44,10 @@ Execute Custom Query:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by submitting a query to the Snowflake API and retrieving
-      the results. It does not mutate external data, update internal entities, create
-      insights, or modify alert data.
+      The action fetches data by submitting a query to Snowflake and retrieving the
+      results. It does not mutate external data (the appended LIMIT clause restricts
+      it to SELECT queries), nor does it update internal entities, create insights,
+      modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -101,9 +99,9 @@ Execute Custom Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or perform any
-      entity-specific filtering. It executes a standalone query against Snowflake,
-      so all entity flags are set to false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It solely relies on the provided
+      custom query string to fetch data.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -119,9 +117,10 @@ Execute Custom Query:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a custom query in Snowflake to retrieve data. This aligns
-      with the 'Search Events' category, as it is typically used to query historical
-      logs, telemetry, or other datasets stored in the data warehouse.
+      The action executes a custom query to retrieve data from Snowflake, which acts
+      as a data lake or repository for telemetry and logs. This aligns with the 'Search
+      Events' expected outcome. It does not enrich specific IOCs or assets, nor does
+      it mutate external state.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -149,41 +148,38 @@ Execute Simple Query:
   ai_description: >-
     ### General Description
 
-    Executes a simple parameterized `SELECT` query in Snowflake and retrieves the
-    results. This action allows users to query specific tables and databases without
-    writing the full SQL statement manually, returning the output as a data table
-    and JSON.
+    Executes a simple SQL query in Snowflake based on provided parameters such as
+    database, table, schema, and filters. This action allows analysts to retrieve
+    specific records from Snowflake tables without writing the full SQL statement
+    manually.
 
 
     ### Flow Description
 
-    1. Initializes the Snowflake manager using the provided integration credentials.
+    1. Initializes the Snowflake manager with the provided integration credentials.
 
-    2. Constructs a `SELECT` query string based on the provided action parameters
-    (Database, Table, Schema, Where Filter, Fields To Return, Sort Field, and Sort
-    Order).
+    2. Constructs a SQL `SELECT` query string using the provided action parameters
+    (Fields To Return, Table, Where Filter, Sort Field, Sort Order).
 
-    3. Submits the query asynchronously to the Snowflake API via a POST request to
-    `/api/v2/statements?async=true`.
+    3. Submits the query to Snowflake asynchronously via a POST request to the `/api/v2/statements`
+    endpoint.
 
-    4. Checks the execution status of the query via a GET request to `/api/v2/statements/{query_id}`.
+    4. Checks the execution status of the query.
 
-    5. If the query is still processing, the action returns an in-progress state and
-    waits for the next execution cycle.
+    5. If the query is still in progress, the action pauses and waits for the next
+    asynchronous execution cycle.
 
-    6. Once the query finishes, it retrieves the results and attaches them to the
-    action's output as a data table and JSON result.
+    6. Once the query finishes, retrieves the results and attaches them to the case
+    as a JSON result and a data table.
 
 
     ### Additional Notes
 
-    This action runs asynchronously. It is designed specifically for `SELECT` queries,
-    as the underlying logic automatically constructs the query starting with `SELECT`.
-    Ensure the Siemplify IDE script timeout is adjusted appropriately for long-running
-    queries.
+    This action runs asynchronously. Ensure the script timeout value in the Siemplify
+    IDE is adjusted as needed.
   ai_short_description: >-
-    Executes a parameterized `SELECT` query in Snowflake and returns the results as
-    a data table and JSON.
+    Executes a simple SQL query in Snowflake based on provided parameters and returns
+    the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -196,9 +192,8 @@ Execute Simple Query:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action fetches data by executing a SELECT query in Snowflake. It does not
-      mutate external data (as it only performs SELECT operations), nor does it mutate
-      internal SecOps data, update entities, create insights, modify alerts, or create
-      case comments.
+      mutate external data (as it only performs a SELECT), nor does it mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -250,8 +245,9 @@ Execute Simple Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It executes a standalone
-      query against Snowflake based on the provided parameters.
+      The action does not iterate over target entities and does not accept any entity
+      identifiers as input parameters. It operates solely on the provided database,
+      table, and query parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -267,9 +263,9 @@ Execute Simple Query:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a query in Snowflake to retrieve data records, which aligns
-      with the 'Search Events' category as it returns a collection of historical logs
-      or telemetry data matching specific search parameters.
+      The action executes a SELECT query on a Snowflake database to retrieve records,
+      which aligns with the 'Search Events' category as it returns a collection of
+      data matching specific search parameters.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -295,36 +291,36 @@ Execute Simple Query:
     \ supported in the query. |\n| Fields To Return | String | No | Specify what fields\
     \ to return. If nothing is provided action will return all fields. Wildcard character\
     \ is supported. |\n| Sort Field | String | No | Specify what parameter should\
-    \ be used for sorting. |\n| Sort Order | DDL | No | Specify the order of sorting\
-    \ (ASC or DESC). |\n| Max Results To Return | String | No | Specify how many results\
-    \ to return. Default: 50. |"
+    \ be used for sorting. |\n| Sort Order | DDL | No | Specify the order of sorting.\
+    \ |\n| Max Results To Return | String | No | Specify how many results to return.\
+    \ Default: 50. |"
 Ping:
   ai_description: >-
     ### General Description
 
     Tests connectivity to the Snowflake instance using the provided integration configuration
-    parameters. It executes a simple query to verify access and authentication.
+    parameters.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters (API Root, Account, Username,
-    Private Key, Verify SSL).
+    1. Extracts the integration configuration parameters including API Root, Account,
+    Username, Private Key, and Verify SSL.
 
-    2. Initializes the SnowflakeManager and generates a JWT token for authentication.
+    2. Initializes the SnowflakeManager with the extracted parameters to generate
+    a JWT token for authentication.
 
-    3. Makes a POST request to the Snowflake API (`/api/v2/statements`) to execute
-    a basic query (`SHOW TABLES LIMIT 1`).
+    3. Calls the `test_connectivity` method which sends a POST request with a `SHOW
+    TABLES LIMIT 1` query to the Snowflake API.
 
-    4. Validates the response to confirm successful connectivity and returns a success
-    or failure message.
+    4. Returns a success message if the connection is established and the query succeeds,
+    or an error message if it fails.
 
 
     ### Additional Notes
 
-    This action is primarily used for integration setup and health checks. It does
-    not require any action-specific parameters as it relies entirely on the integration's
-    configuration.
+    This action is typically used to verify that the integration is configured correctly
+    and can successfully authenticate with the Snowflake service.
   ai_short_description: >-
     Tests connectivity to the Snowflake instance using the provided integration configuration
     parameters.
@@ -339,10 +335,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to Snowflake to run a read-only query ('SHOW
-      TABLES LIMIT 1') to test connectivity. It does not fetch contextual data for
-      alerts, mutate external data, mutate internal data, update entities, or create
-      insights.
+      The action only tests connectivity to the Snowflake instance by sending a basic
+      query. It does not fetch contextual data for entities, mutate external or internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -394,8 +389,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `target_entities` or use any entity-specific
-      identifiers. It is a generic connectivity test that does not operate on entities.
+      The action does not process any entities. It only tests connectivity to the
+      Snowflake instance using integration configuration parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -411,9 +406,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple Ping/connectivity test to verify integration settings.
-      It does not enrich IOCs, update alerts, mutate external state, or match any
-      of the specific outcome categories.
+      The action is a simple ping/connectivity test. It does not interact with alerts,
+      entities, tickets, or perform any security operations that match the expected
+      outcomes of the available categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

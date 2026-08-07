@@ -4,29 +4,38 @@ Add IP To Group:
 
     Adds IP Address entities to a specified address group in FortiManager. This action
     creates a firewall address object for the IP if it does not already exist, and
-    then appends it to the designated address group.
+    then appends it to the target address group to update security policies.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities, filtering for those of type `ADDRESS`.
+    1. Initializes the FortiManager client and establishes a session.
 
-    2. For each IP address, checks if a corresponding address object already exists
-    in FortiManager by making a GET request to the API.
+    2. Filters the target entities to include only those of type `ADDRESS`.
 
-    3. If the address object does not exist, makes a POST request to the FortiManager
-    API to create a new address object for the IP.
+    3. Locks the specified ADOM and starts a workflow session if workflow mode is
+    enabled.
 
-    4. Makes a POST request to the FortiManager API to update the specified address
-    group, adding the address object to its members.
+    4. Iterates over the filtered IP addresses.
+
+    5. For each IP, checks if a corresponding firewall address object already exists
+    in FortiManager via the API.
+
+    6. If the address object does not exist, makes an API call to create a new address
+    object for the IP.
+
+    7. Makes an API call to add the address object to the specified address group.
+
+    8. Submits, approves, and commits the workflow session changes, then unlocks the
+    ADOM.
 
 
     ### Additional Notes
 
-    - This action runs asynchronously. Ensure the script timeout value in the Chronicle
-    SOAR IDE is adjusted as needed.
+    This action runs asynchronously. Ensure the script timeout value in the IDE is
+    adjusted as needed to accommodate the workflow session locks and commits.
   ai_short_description: >-
-    Creates a firewall address object for IP entities and adds them to a specified
+    Creates a firewall address object for IP Address entities and adds them to a specified
     address group in FortiManager.
   capabilities:
     can_create_case_comments: false
@@ -36,15 +45,14 @@ Add IP To Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates firewall address objects and adds them to a specified address group
-      in FortiManager.
+      Creates a firewall address object for the IP and adds it to a specified address
+      group in FortiManager.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action mutates external data by creating address objects and adding them
-      to address groups in FortiManager via POST requests. It does not fetch contextual
-      enrichment data for the entities, nor does it mutate internal SecOps data, update
-      entities, or create insights.
+      The action makes POST requests to FortiManager to create address objects and
+      update address groups, which mutates external data. It does not fetch contextual
+      enrichment data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -97,12 +105,12 @@ Add IP To Group:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it targets ADDRESS entities
-      and filters strictly by entity_type.
+      the condition `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it explicitly
+      targets ADDRESS entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
+    add_ioc_to_blocklist: true
     contain_host: false
     create_ticket: false
     delete_email: false
@@ -114,11 +122,10 @@ Add IP To Group:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds an IP address to a generic address group in FortiManager. While
-      this could be used for blocking or allowing traffic depending on the group's
-      configuration in the firewall policies, the action itself does not explicitly
-      enforce a blocklist or allowlist outcome. It does not fetch enrichment data,
-      update alerts, or perform other categorized outcomes.
+      The action creates a firewall address object for an IP address and adds it to
+      a specified address group in FortiManager. This is the standard mechanism for
+      updating security controls on a firewall to block an IP address, aligning with
+      the 'Add IOC To Blocklist' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -140,42 +147,39 @@ Add IP To Group:
 
     | ADOM Name | String | Yes | The name of the ADOM. Default: root. |
 
-    | Address Group Name | String | Yes | The name of the address group to add the
+    | Address Group Name | String | Yes | The name of the address group to add to
     address object to. |
 Add URL To Url Filter:
   ai_description: >-
     ### General Description
 
-    Adds a URL entity to a specified URL filter blocklist in FortiManager. This action
-    initiates a state change on the external device to prevent network traffic to
-    the specified URL.
+    Adds a new block record to a specified URL filter in FortiManager for URL entities.
+    This action modifies the URL filter configuration to prevent access to the specified
+    URLs.
 
 
     ### Flow Description
 
-    1. Retrieves the specified `ADOM Name` and `Url Filter Name` parameters.
+    1. Retrieves the `ADOM Name` and `Url Filter Name` from the action parameters.
 
-    2. Filters the target entities to include only URL entities.
+    2. Iterates over the target entities, filtering for those of type URL.
 
-    3. Establishes a session with FortiManager and locks the ADOM if workflow mode
-    is enabled.
+    3. For each URL entity, fetches the URL filter ID using the provided URL filter
+    name via a GET request to the FortiManager API.
 
-    4. For each URL entity, retrieves the URL filter ID by its name using the FortiManager
-    API.
+    4. Adds the URL entity's identifier as a block record to the URL filter via a
+    POST request to the FortiManager API.
 
-    5. Adds a block record for the URL to the specified URL filter via a POST request
-    to the FortiManager API.
-
-    6. Commits the changes, approves the workflow session, and unlocks the ADOM.
+    5. Returns a success message with the list of URLs successfully added to the filter.
 
 
     ### Additional Notes
 
-    The action runs asynchronously. Ensure the script timeout value in the Chronicle
-    SOAR IDE is adjusted as needed to accommodate the workflow session locks and commits.
+    This action runs asynchronously. Ensure the script timeout value in the Chronicle
+    SOAR IDE is adjusted as needed.
   ai_short_description: >-
-    Adds a URL entity to a specified URL filter blocklist in FortiManager to prevent
-    access to the URL.
+    Adds a new block record to a specified URL filter in FortiManager for URL entities,
+    effectively blocking access to the URLs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -184,13 +188,13 @@ Add URL To Url Filter:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a URL to a specified URL filter blocklist in FortiManager.
+      Adds a URL block record to a URL filter in FortiManager.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to FortiManager to add a URL to a URL filter
-      blocklist, which mutates external data. It does not fetch contextual data for
-      enrichment, nor does it mutate internal data, update entities, or create insights.
+      The action makes a POST request to FortiManager to add a URL to a URL filter,
+      which mutates external data. It does not fetch contextual data for enrichment,
+      nor does it mutate internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -243,7 +247,8 @@ Add URL To Url Filter:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == EntityTypes.URL`. Therefore, it targets URL entities and filters by entity_type.
+      == EntityTypes.URL`. Therefore, it targets URL entities and filters strictly
+      by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -259,8 +264,9 @@ Add URL To Url Filter:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds a URL to a URL filter blocklist in FortiManager. This directly
-      aligns with the 'Add IOC To Blocklist' expected outcome.
+      The action adds a URL to a URL filter in FortiManager to block it. This aligns
+      with the 'Add IOC To Blocklist' expected outcome, as it updates security controls
+      to prevent interaction with the IOC (URL).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -288,31 +294,31 @@ Execute Script:
   ai_description: >-
     ### General Description
 
-    Executes an existing script on a FortiManager device or device group. This action
-    triggers a script execution on the target network device and returns the resulting
-    task ID for tracking.
+    Executes an existing script on a device or device group within Fortinet FortiManager.
+    This action allows analysts to trigger predefined scripts on network devices directly
+    from the SecOps platform.
 
 
     ### Flow Description
 
-    1. Retrieves the action parameters including the ADOM Name, Policy Package Name,
-    Script Name, Device Name, and optionally the VDOM.
+    1. Initializes the FortiManager client with the provided API credentials.
 
-    2. Initializes the connection to the FortiManager API.
+    2. Retrieves the ADOM Name, Policy Package Name, Script Name, Device Name, and
+    VDOM parameters.
 
-    3. Sends a POST request to the FortiManager API (`/dvmdb/adom/{adom_name}/script/execute`)
-    to execute the specified script on the target device or device group.
+    3. Makes an API call to FortiManager to execute the specified script on the target
+    device or device group.
 
-    4. Retrieves the task ID from the API response and returns it as the action result.
+    4. Returns the resulting task ID to the SecOps platform.
 
 
     ### Additional Notes
 
     The script can be executed on a single device if the VDOM parameter is provided.
-    If the VDOM is not provided, the script can be executed on a device group.
+    Otherwise, it can be executed on a device group.
   ai_short_description: >-
-    Executes an existing script on a FortiManager device or device group and returns
-    the task ID.
+    Executes an existing script on a device or device group within Fortinet FortiManager
+    and returns the task ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -321,15 +327,14 @@ Execute Script:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes a script on a FortiManager device or device group, which can modify
+      Executes a script on a device or device group in FortiManager, which may alter
       device configurations or state.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the FortiManager API to execute a script,
-      which can mutate the state or configuration of the external device. It does
-      not fetch enrichment data, update internal entities, create insights, or modify
-      alert data.
+      The action makes a POST request to FortiManager to execute a script, which mutates
+      external data by triggering an operation on a device. It does not fetch contextual
+      data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -381,8 +386,8 @@ Execute Script:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process any entities from `siemplify.target_entities`.
-      It relies entirely on the provided action parameters to execute the script.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. Therefore, it does not run on entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -398,11 +403,9 @@ Execute Script:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a script on a FortiManager device. While it runs a script,
-      it does not return STDOUT (it returns a task ID) and targets a network management
-      platform rather than a standard endpoint, so it does not strictly fit 'Execute
-      Command on the Host'. It does not match any other specific outcome categories
-      like blocking IOCs, enriching data, or managing tickets.
+      The action executes a script on a FortiManager device and returns a task ID.
+      It does not return STDOUT from an endpoint, so it does not match 'Execute Command
+      on the Host'. It does not match any other specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -422,44 +425,52 @@ Execute Script:
 
     | --- | --- | --- | --- |
 
-    | ADOM Name | String | Yes | The name of the ADOM. Default: root. |
+    | ADOM Name | string | Yes | The name of the ADOM. Default: root. |
 
-    | Policy Package Name | String | Yes | The full name of the package, including
+    | Policy Package Name | string | Yes | The full name of the package, including
     package name and any parent folders. |
 
-    | Script Name | String | Yes | The name of the script to execute. |
+    | Script Name | string | Yes | The name of the script to execute. |
 
-    | Device Name | String | Yes | The name of the device to execute the script on.
+    | Device Name | string | Yes | The name of the device to execute the script on.
     |
 
-    | VDOM | String | No | The virtual domain of the device. |
+    | VDOM | string | No | The virtual domain of the device. |
 Get Task Information:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed information about a specific task by its ID from FortiManager.
+    Retrieves detailed information about a specific task from FortiManager using its
+    Task ID. This action is useful for checking the status, progress, or results of
+    previously executed operations or scripts within the FortiManager environment.
 
 
     ### Flow Description
 
     1. Initializes the FortiManager client using the provided integration configuration.
 
-    2. Retrieves the `Task ID` parameter.
+    2. Retrieves the `Task ID` parameter provided by the user or previous playbook
+    steps.
 
-    3. Makes a GET request to the FortiManager API (`/task/task/{task_id}`) to fetch
-    the task details.
+    3. Makes an HTTP GET request to the FortiManager API (`/task/task/{Task ID}`)
+    to fetch the task details.
 
-    4. If the task is found, formats the task object into a CSV table and adds it
-    to the action result.
+    4. If the task is found, the action flattens the returned JSON object, converts
+    it to a CSV format, and attaches it as a data table to the action results.
 
-    5. Returns a success message and boolean result.
+    5. Returns a success message if the task information is found, or a failure message
+    if it is not.
 
 
     ### Additional Notes
 
-    None.
+    - This action does not operate on entities.
+
+    - The output data table provides a flattened view of the task object for easier
+    parsing in subsequent playbook steps.
   ai_short_description: >-
-    Retrieves detailed information about a specific task by its ID from FortiManager.
+    Retrieves detailed information about a specific task from FortiManager using its
+    Task ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -471,7 +482,7 @@ Get Task Information:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the FortiManager API to fetch task information.
+      The action makes a GET request to the FortiManager API to fetch task data (fetches_data=true).
       It does not mutate external data, mutate internal data, update entities, create
       insights, modify alert data, or create case comments.
   entity_usage:
@@ -525,8 +536,9 @@ Get Task Information:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process any entities. It relies solely on
-      the provided 'Task ID' parameter to fetch data.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It solely relies on the 'Task ID'
+      parameter. Therefore, it does not run on entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -542,10 +554,10 @@ Get Task Information:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves task information from FortiManager based on a task ID.
-      It does not enrich IOCs or assets, mutate alerts, create tickets, block/allow
-      IOCs, manage identities, contain hosts, or perform any other operations that
-      match the predefined outcome categories.
+      The action retrieves task information from FortiManager based on a Task ID.
+      It does not enrich IOCs or assets, update alerts, manage tickets, block/allow
+      IOCs, manage identities, contain hosts, search events, execute commands, or
+      perform any of the other specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -570,29 +582,24 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the FortiManager instance. This action verifies that the
-    integration is configured correctly by attempting to authenticate with the provided
-    credentials.
+    Tests connectivity to the FortiManager instance to ensure the integration is configured
+    correctly.
 
 
     ### Flow Description
 
-    1. Retrieves integration configuration parameters (API Root, Username, Password,
-    Verify SSL).
+    1. Initializes the FortiManager client using the provided integration configuration.
 
-    2. Initializes the FortiManager client.
+    2. Makes a POST request to the FortiManager login API endpoint (`/sys/login/user`)
+    to authenticate and obtain a session token.
 
-    3. Attempts to authenticate and obtain a session token via a POST request to the
-    `/sys/login/user` endpoint.
-
-    4. Returns a success message if the connection is established and authentication
-    is successful.
+    3. Outputs a success message if the connection and authentication are successful.
 
 
     ### Additional Notes
 
-    This action is typically used during the initial setup or troubleshooting of the
-    integration to ensure valid credentials and network access.
+    This action is typically used during the initial setup of the integration to verify
+    credentials and network connectivity.
   ai_short_description: >-
     Tests connectivity to the FortiManager instance by attempting to authenticate
     and obtain a session token.
@@ -607,10 +614,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action initializes a connection to FortiManager and attempts to log in to
-      verify connectivity. It does not fetch contextual data, mutate external data,
-      mutate internal data, update entities, create insights, modify alert data, or
-      create case comments.
+      The action only authenticates to the FortiManager API to verify connectivity.
+      It does not fetch contextual data, mutate external or internal data, update
+      entities, or create insights/comments.
   entity_usage:
     entity_types:
       address: false
@@ -662,8 +668,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or interact with any entities. It solely tests the
-      connection to the external service.
+      The action does not process any entities. It only tests connectivity to the
+      FortiManager instance.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -679,9 +685,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action only tests connectivity to the FortiManager instance by logging in.
-      It does not enrich data, mutate external systems, or perform any specific security
-      operations that match the outcome categories.
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -701,37 +706,36 @@ Remove IP From Group:
   ai_description: >-
     ### General Description
 
-    Removes a specific IP address (firewall address object) from a designated address
-    group on FortiManager and subsequently deletes the address object itself. This
-    action is typically used to unblock an IP or remove it from a specific policy
-    group.
+    Removes a specific IP address entity from a designated address group on FortiManager
+    and subsequently deletes the corresponding firewall address object. This action
+    is typically used to restore network connectivity or remove an IP from a restricted
+    list.
 
 
     ### Flow Description
 
-    1. Connects to the FortiManager API and initiates a session (locking the ADOM
-    if workflow mode is enabled).
+    1. Iterates through the target entities, filtering specifically for IP Address
+    entities.
 
-    2. Iterates over target IP Address entities.
+    2. For each valid IP address, constructs the corresponding firewall address object
+    name.
 
-    3. Constructs the corresponding firewall address object name for each IP.
+    3. Makes an API call to FortiManager to remove the address object from the specified
+    address group.
 
-    4. Removes the address object from the specified address group via an API update
-    request.
+    4. Makes a subsequent API call to FortiManager to delete the address object entirely.
 
-    5. Deletes the address object from the FortiManager configuration via an API delete
-    request.
-
-    6. Commits changes and unlocks the ADOM.
+    5. Returns a summary of the entities that were successfully removed from the group.
 
 
     ### Additional Notes
 
-    The action runs asynchronously. Ensure the script timeout value in the Chronicle
-    SOAR IDE is adjusted as needed.
+    This action runs asynchronously and may require adjusting the script timeout value
+    in the IDE. It also supports workflow sessions (locking, submitting, and approving
+    changes) if workflow mode is enabled in the integration configuration.
   ai_short_description: >-
-    Removes a firewall address object from a specified address group and deletes the
-    object in FortiManager.
+    Removes a specific IP address entity from a designated address group on FortiManager
+    and deletes the corresponding firewall address object.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -740,15 +744,15 @@ Remove IP From Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes an IP address object from a specified address group and deletes the
-      address object on the FortiManager device.
+      Removes a firewall address object from an address group and deletes the address
+      object on FortiManager.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes POST requests to update an address group and delete an address
-      object on the FortiManager device, which mutates external data. It does not
-      fetch contextual data for enrichment, nor does it mutate internal SecOps data,
-      update entities, or create insights.
+      The action makes POST requests to the FortiManager API to remove an address
+      object from an address group and then delete the address object. It mutates
+      external data but does not fetch contextual data, update internal entities,
+      or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -800,9 +804,9 @@ Remove IP From Group:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The script iterates over `siemplify.target_entities` and explicitly filters
-      for entities where `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it
-      targets ADDRESS entities and filters by entity_type.
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it targets
+      Address entities and filters strictly by the entity_type attribute.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -818,10 +822,10 @@ Remove IP From Group:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes an IP address object from a firewall address group and deletes
-      the object. This directly aligns with the 'Remove IOC From Blocklist' expected
-      outcome, as it is the standard procedure for unblocking an IP address or removing
-      it from a restricted policy group on a firewall.
+      The action removes an IP address from a firewall address group and deletes the
+      address object. This aligns with the 'Remove IOC From Blocklist' category, as
+      it removes an indicator from a potentially restricted list on a network security
+      device to restore connectivity.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: true
     reset_identity_password: false
@@ -849,32 +853,34 @@ Remove URL From Url Filter:
   ai_description: >-
     ### General Description
 
-    Removes a block record for URL entities from a specified URL filter in FortiManager.
-    This action initiates a state change on the external device to restore connectivity
-    or execution rights for the specified URL.
+    Removes a specific URL from a URL filter in FortiManager, effectively unblocking
+    it. This action initiates a state change on the external device to restore network
+    traffic to the specified URL entity.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities, filtering for those of type URL.
+    1. Establishes a connection to the FortiManager API and locks the ADOM if workflow
+    mode is enabled.
 
-    2. Retrieves the URL filter ID from FortiManager using the provided `ADOM Name`
-    and `Url Filter Name`.
+    2. Retrieves the URL filter ID based on the provided `Url Filter Name` and `ADOM
+    Name`.
 
-    3. Strips the 'http' or 'https' prefix from the URL entity identifier.
+    3. Iterates through the target URL entities.
 
-    4. Makes an API call to FortiManager to delete the block URL record from the URL
-    filter.
+    4. Strips the 'http' or 'https' prefix from the URL identifier.
 
-    5. Commits the changes and handles workflow sessions if enabled.
+    5. Makes an API call to delete the URL record from the specified URL filter.
+
+    6. Commits the changes and unlocks the ADOM.
 
 
     ### Additional Notes
 
-    The action runs asynchronously. Please adjust the script timeout value in the
-    Chronicle SOAR IDE for the action as needed.
+    This action runs asynchronously. Ensure the script timeout value in the Chronicle
+    SOAR IDE is adjusted as needed.
   ai_short_description: >-
-    Removes a block record for URL entities from a specified URL filter in FortiManager.
+    Removes a specified URL entity from a URL filter in FortiManager to unblock it.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -883,12 +889,12 @@ Remove URL From Url Filter:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a block record for the specified URL entities from a URL filter in FortiManager.
+      Deletes a URL record from a specified URL filter in FortiManager.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a DELETE request to FortiManager to remove a URL from a URL
-      filter (can_mutate_external_data=true). It does not fetch context data, update
+      The action makes a POST request to FortiManager to delete a URL entry from a
+      URL filter, mutating external data. It does not fetch enrichment data, update
       internal entities, or create insights.
   entity_usage:
     entity_types:
@@ -941,9 +947,9 @@ Remove URL From Url Filter:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      == EntityTypes.URL`. This means it targets URL entities, filtering strictly
-      by entity_type.
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.URL`. Therefore, it targets URL entities and filters strictly
+      by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -959,9 +965,9 @@ Remove URL From Url Filter:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a DELETE request to FortiManager to remove a URL from a
-      URL filter. This directly aligns with the 'Remove IOC From Blocklist' expected
-      outcome.
+      The action removes a URL from a URL filter in FortiManager, which restores connectivity
+      to the URL by removing it from a restricted list. This matches the 'Remove IOC
+      From Blocklist' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: true
     reset_identity_password: false
@@ -981,7 +987,7 @@ Remove URL From Url Filter:
 
     | --- | --- | --- | --- |
 
-    | ADOM Name | String | Yes | The name of the ADOM. Default: root. |
+    | ADOM Name | string | Yes | The name of the ADOM. Default: root. |
 
-    | Url Filter Name | String | Yes | The name of the URL filter to remove the record
+    | Url Filter Name | string | Yes | The name of the URL filter to remove the record
     from. |

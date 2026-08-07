@@ -3,25 +3,26 @@ Ping:
     ### General Description
 
     Tests connectivity to the Opswat Metadefender API to ensure the integration is
-    configured correctly.
+    configured correctly and can communicate with the service.
 
 
     ### Flow Description
 
-    1. Retrieves the integration configuration parameters (ApiRoot, ApiKey, Verify
+    1. Retrieves the integration configuration parameters (API Root, API Key, Verify
     SSL).
 
-    2. Makes a GET request to the Opswat Metadefender API key info endpoint to test
-    connectivity.
+    2. Makes an HTTP GET request to the Opswat Metadefender API key info endpoint
+    (`/apikey`).
 
-    3. Returns a success message if the connection is established, or a failure message
-    if the credentials or connection are invalid.
+    3. Evaluates the HTTP response to determine if the connection was successful.
+
+    4. Returns a success or failure message based on the response.
 
 
     ### Additional Notes
 
-    This action does not interact with any entities or alerts and is solely used for
-    verifying the integration setup.
+    This action does not require any action-specific parameters and does not operate
+    on entities.
   ai_short_description: >-
     Tests connectivity to the Opswat Metadefender API to verify integration configuration.
   capabilities:
@@ -35,9 +36,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only makes a GET request to verify API credentials. It does not fetch
-      contextual data for alerts/entities, mutate external or internal data, update
-      entities, create insights, modify alert data, or create case comments.
+      The action makes a simple GET request to the Opswat Metadefender API to test
+      connectivity. It does not fetch contextual data for entities, mutate external
+      data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -89,8 +90,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It only tests API connectivity.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely tests connectivity to the external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -107,8 +108,7 @@ Ping:
     get_alert_information: false
     reasoning: >-
       The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      specific outcome categories such as enrichment, containment, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -128,49 +128,48 @@ Scan Hash:
   ai_description: >-
     ### General Description
 
-    Scans file hash entities in Opswat Metadefender to retrieve reputation details
-    and previous scan results. The action evaluates the scan report, updates the entity's
-    suspicious status if an infection is detected, attaches an insight, and provides
-    a detailed data table of the scan results.
+    Scans file hash entities in Opswat Metadefender to retrieve reputation and threat
+    intelligence data.
 
 
     ### Flow Description
 
-    1. Filters target entities to include only File Hash entities.
+    1. Filters the target entities to include only File Hash entities.
 
     2. Iterates through the filtered entities and makes a GET request to the Opswat
-    Metadefender API to retrieve hash reputation and scan results.
+    Metadefender API to fetch the hash reputation report.
 
-    3. Evaluates the scan results; if the hash is marked as "Infected", updates the
-    entity's suspicious status to true and attaches an insight.
+    3. If the report indicates the hash is "Infected", the action marks the entity
+    as suspicious, updates the entity in Google SecOps, and attaches an insight.
 
-    4. Converts the scan report into a CSV format and attaches it as a data table
+    4. Converts the scan results into a CSV format and attaches it as a data table
     to the action results.
 
 
     ### Additional Notes
 
-    None.
+    This action relies on the Opswat Metadefender integration configuration for API
+    access.
   ai_short_description: >-
-    Scans file hash entities in Opswat Metadefender to retrieve reputation details,
-    updating the entity's suspicious status and attaching insights if an infection
-    is detected.
+    Scans file hash entities in Opswat Metadefender to retrieve reputation data, updating
+    entity status and attaching insights for infected hashes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates the suspicious status of file hash entities and adds insights if they
+      are found to be infected.
     reasoning: >-
-      The action fetches hash reputation data from Opswat Metadefender via a GET request
-      (fetches_data=true). It does not mutate external data. It updates the entity's
-      suspicious status (can_update_entities=true) and creates an insight if the hash
-      is infected (can_create_insight=true). It does not modify alert data or create
-      case comments.
+      The action makes a GET request to the Opswat Metadefender API to fetch hash
+      reputation data (fetches_data=true). It does not mutate external data. It updates
+      internal entities and creates insights if the hash is found to be infected (can_mutate_internal_data=true,
+      can_update_entities=true, can_create_insight=true).
   entity_usage:
     entity_types:
       address: false
@@ -222,9 +221,9 @@ Scan Hash:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      == FILEHASH`. Therefore, it targets File Hash entities and filters strictly
-      by the `entity_type` attribute.
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == FILEHASH`. This means it targets FILEHASH entities, filtering strictly by
+      the entity_type attribute.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -240,9 +239,10 @@ Scan Hash:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves reputation and threat intelligence for file hash indicators
-      from Opswat Metadefender. This directly matches the 'Enrich IOC' expected outcome.
-      It does not perform any containment, ticketing, or external state mutation.
+      The action fetches hash reputation data from Opswat Metadefender, returning
+      threat intelligence and evaluating risk. This matches the 'Enrich IOC' expected
+      outcome. It does not mutate data on external systems or perform any other categorized
+      actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -257,4 +257,4 @@ Scan Hash:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: There are no parameters for this action.
+  parameters_description: There are no parameters for this action

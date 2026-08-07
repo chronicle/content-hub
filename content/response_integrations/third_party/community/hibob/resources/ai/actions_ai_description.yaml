@@ -2,36 +2,36 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches USER entities with properties from Hibob. It retrieves user details from
-    the Hibob platform and appends them to the entity's additional properties within
-    Google SecOps.
+    Enriches User entities with details from Hibob. This action retrieves user information
+    from the Hibob API using the entity identifier, flattens the data, and appends
+    it to the entity's additional properties within Google SecOps.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities provided in the case.
+    1. Iterates through the target entities in the case.
 
-    2. Filters the entities to process only those of type `USER`.
+    2. Filters entities to process only those of type `USER`.
 
     3. Makes a GET request to the Hibob API (`/v1/people/{employee_identifier}`) to
     fetch user details.
 
-    4. Flattens the retrieved JSON data and prefixes keys with "Hibob".
+    4. Flattens the retrieved JSON data and adds a "Hibob" prefix to the keys.
 
-    5. Updates the entity's `additional_properties` with the flattened data and marks
-    the entity as enriched (`is_enriched = True`).
+    5. Updates the entity's additional properties with the flattened data and marks
+    the entity as enriched.
 
-    6. Saves the updated entities back to the platform using `siemplify.update_entities`
-    and returns the raw data as a JSON result.
+    6. Saves the updated entities back to the platform and outputs a JSON result containing
+    the raw user data.
 
 
     ### Additional Notes
 
-    The action expects the entity identifier to match the employee's ID or email in
-    Hibob.
+    The script extracts an action parameter named "Get User Image", but this parameter
+    is not utilized in the subsequent logic to fetch or attach the image.
   ai_short_description: >-
-    Enriches USER entities by retrieving employee details from Hibob and appending
-    the flattened data to the entity's additional properties.
+    Enriches User entities by retrieving and appending user details from Hibob to
+    the entity's additional properties.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -42,13 +42,14 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the additional_properties of the USER entities with data retrieved from
-      Hibob and sets is_enriched to True.
+      Updates the additional properties of User entities with data retrieved from
+      Hibob.
     reasoning: >-
-      The action fetches data by making a GET request to the Hibob API to retrieve
-      user details. It does not mutate external data. It mutates internal data by
-      updating the entity's additional properties and calling `siemplify.update_entities`.
-      It does not create insights, modify alert data, or create case comments.
+      The action makes a GET request to the Hibob API to fetch user details (fetches_data=true).
+      It does not mutate external data (can_mutate_external_data=false). It updates
+      the internal entity's additional properties and marks it as enriched (can_update_entities=true,
+      can_mutate_internal_data=true). It does not create insights, modify alert data,
+      or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -100,9 +101,10 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `if entity.entity_type == EntityTypes.USER:`. Therefore, it targets USER entities
-      and filters strictly by entity_type.
+      The script iterates over `siemplify.target_entities` and explicitly filters
+      them using `if entity.entity_type == EntityTypes.USER:`. It then uses the entity's
+      identifier to fetch data from the Hibob API. Therefore, it targets USER entities
+      and filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -118,9 +120,10 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches user details from Hibob and updates the USER entity's additional
-      properties. This matches the 'Enrich Asset' category, which includes returning
-      contextual metadata for a user or resource.
+      The action fetches contextual metadata (user details) for a User entity from
+      the Hibob HR system and updates the entity. This aligns perfectly with the 'Enrich
+      Asset' category, which includes returning contextual metadata for a user or
+      resource. It does not mutate external data or perform other operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -141,34 +144,32 @@ Get User Image:
     ### General Description
 
     Retrieves the profile image of a specific employee from Hibob using their email
-    address. The action fetches the employee's details to obtain their unique identifier,
-    then retrieves the image, returning it in both URL and Base64 encoded formats
-    within a JSON result.
+    address. It fetches the image content and returns it as a base64 encoded string
+    along with the image URL.
 
 
     ### Flow Description
 
-    1. Extracts the `Employee's Email` from the action parameters.
+    1. Extracts the employee's email from the action parameters.
 
     2. Makes a GET request to the Hibob API (`/v1/people/{email}`) to retrieve the
-    employee's details and unique ID.
+    employee's details and extract their unique identifier.
 
-    3. If the employee is found, makes a subsequent GET request to the Hibob API (`/v1/avatars/{id}`)
-    to fetch the user's profile image.
+    3. If the user exists, makes a subsequent GET request to the Hibob API (`/v1/avatars/{id}`)
+    to fetch the user's avatar image.
 
-    4. Converts the retrieved image into a Base64 string.
+    4. Converts the retrieved image content into a base64 encoded string.
 
-    5. Returns the image URL and Base64 string as a JSON result.
+    5. Returns the base64 string and image URL as a JSON result.
 
 
     ### Additional Notes
 
-    If the user is not found or does not have an image associated with their profile,
-    the action returns a JSON result indicating the absence of the image (`exists:
-    False` or `imageBase64: None`).
+    If the user or the user's image is not found, the action will return a JSON result
+    indicating that the image does not exist.
   ai_short_description: >-
-    Retrieves the profile image of a specific employee from Hibob in both URL and
-    Base64 formats using their email address.
+    Retrieves the profile image of a specific employee from Hibob using their email
+    address, returning the image as a base64 encoded string and its URL.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -181,9 +182,8 @@ Get User Image:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes GET requests to the Hibob API to fetch user details and their
-      avatar image (fetches_data=true). It does not perform any state-changing operations
-      on external systems (can_mutate_external_data=false). It also does not update
-      internal entities, create insights, modify alerts, or create case comments.
+      avatar image. It does not mutate external data, update internal entities, or
+      create insights.
   entity_usage:
     entity_types:
       address: false
@@ -220,7 +220,7 @@ Get User Image:
       threat_signature: false
       url: false
       usb: false
-      user: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -235,10 +235,9 @@ Get User Image:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with, iterate over, or filter any SOAR entities
-      (e.g., siemplify.target_entities). It relies entirely on the explicitly provided
-      'Employee's Email' action parameter to execute its logic. Therefore, all entity
-      types and filter flags are false.
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      an 'Employee's Email' parameter which represents a User entity identifier used
+      to fetch the user's image. It does not filter entities by any internal attributes.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -249,15 +248,15 @@ Get User Image:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: false
+    enrich_asset: true
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches a user's profile image from an HR system (Hibob) based on
-      an email parameter. It does not match any of the standard expected outcomes
-      such as enriching IOCs/assets, mutating identities, or downloading forensic
-      files.
+      The action fetches contextual metadata (a profile image) for a user from an
+      HR system (Hibob). This aligns with the 'Enrich Asset' category, which involves
+      returning contextual metadata for a user or resource. It does not mutate external
+      data or update internal alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -278,38 +277,34 @@ Get User Image:
     | --- | --- | --- | --- |
 
     | Employee's Email | String | Yes | The employee's email you want to upload a
-    photo. (Note: Despite the original parameter description mentioning 'upload',
-    this parameter is used to query the Hibob API to retrieve the user's image). |
+    photo. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Hibob API to ensure that the integration is configured
-    correctly with valid credentials.
+    Tests connectivity to the Hibob API to ensure the integration is configured correctly
+    and the provided credentials are valid.
 
 
     ### Flow Description
 
-    1. Retrieves the integration configuration, including the API Token.
+    1. Extracts the API token from the integration configuration.
 
-    2. Initializes the `HibobManager` with the provided credentials.
+    2. Initializes the HibobManager with the provided credentials.
 
-    3. Calls the `test_connectivity` method, which makes an HTTP GET request to the
-    `/api/user` endpoint on the Hibob API.
+    3. Makes an HTTP GET request to the `/api/user` endpoint to verify authentication
+    and connectivity.
 
-    4. Evaluates the HTTP response status code to determine if the connection was
-    successful.
-
-    5. Returns a boolean value and an output message indicating success or failure.
+    4. Returns a success message if the connection is established, or a failure message
+    if the connection fails.
 
 
     ### Additional Notes
 
-    This action is typically used during the initial setup or troubleshooting of the
-    Hibob integration to verify network reachability and authentication validity.
+    This action is typically used as a diagnostic tool to verify integration settings
+    and does not interact with alerts, entities, or case data.
   ai_short_description: >-
-    Tests connectivity to the Hibob API to verify that the integration is configured
-    correctly with valid credentials.
+    Tests connectivity to the Hibob API to ensure the integration is configured correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -321,9 +316,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Hibob API to test connectivity, but it
-      does not fetch contextual data for alerts or entities. It does not mutate external
-      data, update internal entities, create insights, or modify alert data.
+      The action only makes a GET request to test connectivity. It does not fetch
+      contextual data for alerts/entities, mutate external data, mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -375,8 +370,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely tests the
-      connection to the external API.
+      The action does not process any entities. It does not iterate over target_entities
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -392,9 +387,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping). It does not enrich data, mutate
-      external systems, manage tickets, or perform any of the specific operations
-      defined in the outcome categories.
+      The action is a simple connectivity test (ping) to the Hibob API. It does not
+      enrich data, mutate external systems, update alerts, or perform any operations
+      that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -414,36 +409,35 @@ Revoke Access:
   ai_description: >-
     ### General Description
 
-    Revokes an employee's access to Hibob based on their email address. This action
-    interacts with the Hibob API to check the user's current status and uninvites
-    them, effectively disabling their access to the platform.
+    Disables and revokes access for a specific employee in Hibob based on their email
+    address.
 
 
     ### Flow Description
 
-    1. Extracts the target employee's email address from the action parameters.
+    1. Extracts the target employee's email from the action parameters.
 
-    2. Makes a GET request to the Hibob API (`/v1/people/{email}`) to retrieve the
-    employee's current details and invitation state.
+    2. Makes a GET request to the Hibob API to retrieve the employee's current details
+    and status.
 
-    3. Evaluates the employee's existence and state. If the employee does not exist
-    or is already marked as 'uninvited', the action halts and returns a failure status.
+    3. Evaluates if the employee exists and checks if their invite status is already
+    set to "uninvited".
 
-    4. If the employee is active, makes a POST request to the Hibob API (`/v1/employees/{id}/uninvite`)
-    to revoke their access.
+    4. If the employee is active, makes a POST request to the Hibob API to revoke
+    their access (uninvite).
 
-    5. Returns a JSON result containing the execution status, including whether the
-    user existed and if the revocation was successfully performed.
+    5. Returns a JSON result indicating whether the employee exists and if the revocation
+    was successfully executed.
 
 
     ### Additional Notes
 
-    The action will fail gracefully (return False) if the provided email does not
-    correspond to an existing employee in Hibob or if the employee's access has already
-    been revoked.
+    If the employee does not exist in Hibob or their access has already been revoked,
+    the action will gracefully exit without making changes and indicate the status
+    in the output message.
   ai_short_description: >-
-    Revokes an employee's access to Hibob by uninviting them based on their email
-    address.
+    Revokes access for a specific employee in Hibob based on their email address by
+    uninviting them via the Hibob API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -452,153 +446,14 @@ Revoke Access:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Revokes the employee's access to Hibob by sending an uninvite POST request to
-      the Hibob API.
+      Revokes the employee's access in Hibob by sending a POST request to uninvite
+      them.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a GET request to retrieve user details. It
-      mutates external data by making a POST request to uninvite the user in Hibob.
-      It does not mutate internal data, update entities, create insights, modify alerts,
-      or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the explicitly provided 'Employee's Email' action parameter.
-      Therefore, no entity types or entity filters are used.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: true
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action makes a POST request to the Hibob API to uninvite an employee, which
-      effectively revokes their access to the platform. This aligns with the 'Disable
-      Identity' expected outcome, as it prevents a user from authenticating to the
-      service.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Employee's Email | String | Yes | The email of the employee you want to disable
-    the access to Hibob |
-Search User:
-  ai_description: >-
-    ### General Description
-
-    Searches for a specific user in Hibob using their email address to determine if
-    they exist in the system and retrieves their details.
-
-
-    ### Flow Description
-
-    1. Extracts the `Employee's Email` from the action parameters.
-
-    2. Makes a GET request to the Hibob API (`/v1/people/{employee_identifier}`) to
-    fetch the user's details.
-
-    3. If the user is found, the action adds the retrieved user details to the JSON
-    result and outputs a success message.
-
-    4. If the user is not found, the action outputs a failure message indicating the
-    user does not exist.
-
-
-    ### Additional Notes
-
-    This action does not modify any data within Hibob or Google SecOps; it is strictly
-    a read-only operation used to verify a user's existence and retrieve their profile
-    information.
-  ai_short_description: >-
-    Searches for a specific user in Hibob using their email address to determine if
-    they exist and retrieves their details.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a GET request to the Hibob API to fetch user details (fetches_data=true).
-      It does not perform any POST/PUT/DELETE requests to mutate external data. Internally,
-      it only adds a JSON result to the action output and does not update entities,
+      The action fetches data by making a GET request to retrieve user details from
+      Hibob. It mutates external data by making a POST request to uninvite (revoke
+      access for) the user in Hibob. It does not mutate internal data, update entities,
       create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
@@ -636,7 +491,7 @@ Search User:
       threat_signature: false
       url: false
       usb: false
-      user: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -651,9 +506,10 @@ Search User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or perform any
-      entity-based filtering. It operates entirely on the explicitly provided 'Employee's
-      Email' action parameter. Therefore, all entity type and filter flags are false.
+      The action does not iterate over `target_entities`. However, it accepts an input
+      parameter 'Employee's Email' which represents a User identity to be disabled
+      in Hibob. Therefore, the 'user' entity type flag is set to true. It does not
+      filter entities by any internal attributes.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -661,7 +517,7 @@ Search User:
     contain_host: false
     create_ticket: false
     delete_email: false
-    disable_identity: false
+    disable_identity: true
     download_file: false
     enable_identity: false
     enrich_asset: false
@@ -669,10 +525,9 @@ Search User:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for a user in an external system (Hibob) using an email
-      parameter. It does not enrich SOAR entities, mutate external state, interact
-      with tickets, or perform endpoint containment. Therefore, it does not match
-      any of the predefined outcome categories.
+      The action revokes an employee's access to Hibob by uninviting them, which directly
+      aligns with the 'Disable Identity' expected outcome of preventing a user from
+      authenticating. It does not match any other category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -692,60 +547,52 @@ Search User:
 
     | --- | --- | --- | --- |
 
-    | Employee's Email | String | Yes | The employee's email to check if it exists
-    |
-Send Invitation:
+    | Employee's Email | String | Yes | The email of the employee you want to disable
+    the access to Hibob |
+Search User:
   ai_description: >-
     ### General Description
 
-    Sends an invitation to a new or previously disabled employee in the Hibob system,
-    allowing them to log in and access the platform.
+    Searches for a specific user in Hibob using their email address. This action retrieves
+    the user's details from the Hibob platform and returns them as a JSON result for
+    further use in the playbook.
 
 
     ### Flow Description
 
-    1. Extracts the employee's email and welcome wizard name from the action parameters.
+    1. Extracts the target employee's email from the action parameters.
 
-    2. Calls the Hibob API to retrieve the employee's details and verify their existence
-    in the system.
+    2. Makes a GET request to the Hibob API (`/v1/people/{employee_identifier}`) to
+    fetch the user's details.
 
-    3. Checks the employee's current invitation status. If they are already in an
-    'invited' state, the action stops and reports this status.
+    3. If the user is found, appends the retrieved details to the action's JSON result.
 
-    4. If not invited, fetches all available welcome wizards from the Hibob API to
-    find the ID matching the provided wizard name.
-
-    5. Sends a POST request to the Hibob API to dispatch the invitation to the employee
-    using the resolved wizard ID.
-
-    6. Returns a JSON result containing the execution status, wizard name, and wizard
-    ID.
+    4. Returns a success status and a message indicating whether the user was found.
 
 
     ### Additional Notes
 
-    The action requires the exact, case-sensitive name of the welcome wizard as configured
-    in Hibob (Settings -> Flows).
+    The action does not mutate any data in Hibob; it only retrieves information. It
+    does not automatically update SOAR entities or create insights, but rather provides
+    the raw JSON data for subsequent playbook actions.
   ai_short_description: >-
-    Sends an invitation to an employee in the Hibob system to log in for the first
-    time or restores access for a previously disabled user.
+    Searches for a specific user in Hibob using their email address and retrieves
+    their details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Sends an invitation to an employee via the Hibob API, triggering an email and
-      updating their invitation status in the external system.
+    external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches user and wizard details from the Hibob API (fetches_data=true).
-      It then makes a POST request to send an invitation to the employee, which mutates
-      external state (can_mutate_external_data=true). It does not modify internal
-      SecOps data, update entities, create insights, or add case comments.
+      The action makes a GET request to the Hibob API to fetch user details, meaning
+      it fetches data. It does not perform any state-changing operations on external
+      systems (no POST/PUT/DELETE). It also does not mutate internal SOAR data, update
+      entities, create insights, or modify alerts.
   entity_usage:
     entity_types:
       address: false
@@ -782,7 +629,7 @@ Send Invitation:
       threat_signature: false
       url: false
       usb: false
-      user: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -797,8 +644,10 @@ Send Invitation:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses the 'Employee's Email' action
-      parameter to specify the target user, rather than iterating over `siemplify.target_entities`.
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      an input parameter 'Employee's Email' which represents a User entity identifier.
+      Therefore, the `user` entity type is marked as true. It does not filter entities
+      by any specific attributes.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -808,17 +657,16 @@ Send Invitation:
     delete_email: false
     disable_identity: false
     download_file: false
-    enable_identity: true
-    enrich_asset: false
+    enable_identity: false
+    enrich_asset: true
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action sends an invitation to a new employee or reinvites a previously disabled
-      user to the Hibob system. This aligns with the 'Enable Identity' category as
-      it restores or grants system access and authentication capabilities. It does
-      not match other categories like enriching IOCs, updating alerts, or containing
-      hosts.
+      The action retrieves contextual metadata (user details) for a specific user
+      from Hibob. This aligns with the 'Enrich Asset' category, which includes returning
+      contextual metadata for a user. It does not mutate external data, update alerts,
+      or perform containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -838,39 +686,44 @@ Send Invitation:
 
     | --- | --- | --- | --- |
 
-    | Employee's Email | String | Yes | The email of the employee that you want to
-    send the invitation in order to start using Hibob system. |
-
-    | Welcome Wizard Name | String | Yes | The wizard name found in Hibob (Setting->
-    Flows), for example: "Welcome!". Please note: this is case sensitive! |
-Upload User Image:
+    | Employee's Email | String | Yes | The employee's email to check if it exists
+    |
+Send Invitation:
   ai_description: >-
     ### General Description
 
-    Uploads an image to a specific employee's profile in Hibob using a provided image
-    URL. This action modifies the user's avatar in the external HR system.
+    Sends an invitation to an employee to log into the Hibob system for the first
+    time or reinvites a previously disabled user. The action verifies the employee's
+    existence and current invitation status before dispatching the invitation using
+    a specified welcome wizard.
 
 
     ### Flow Description
 
-    1. Extracts the target employee's email and the image URL from the action parameters.
+    1. Retrieves the employee's email and welcome wizard name from the action parameters.
 
-    2. Makes a GET request to the Hibob API (`/v1/people/{email}`) to retrieve the
-    employee's internal ID.
+    2. Makes a GET request to the Hibob API to fetch the employee's details and verify
+    their existence.
 
-    3. If the employee exists, makes a PUT request to the Hibob API (`/v1/avatars/{id}`)
-    to upload and set the new user image.
+    3. Checks the employee's current invitation status. If they are already invited,
+    the action halts.
 
-    4. Returns a success or failure message based on the API response.
+    4. If not invited, makes a GET request to retrieve all available welcome wizards
+    and matches the provided wizard name to its ID.
+
+    5. Makes a POST request to the Hibob API to send the invitation to the employee
+    using the matched wizard ID.
+
+    6. Returns a JSON result containing the execution status and details.
 
 
     ### Additional Notes
 
-    The action requires a valid image URL and an existing employee email in Hibob
-    to succeed. It does not operate on SecOps entities.
+    The "Welcome Wizard Name" parameter is case-sensitive and must exactly match the
+    name configured in Hibob (Settings -> Flows).
   ai_short_description: >-
-    Uploads and sets a new profile image for a specific employee in Hibob using a
-    provided image URL.
+    Sends an invitation or reinvitation to an employee to access the Hibob system
+    using a specified welcome wizard.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -879,14 +732,14 @@ Upload User Image:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the avatar image of a specific employee in Hibob using a provided image
-      URL.
+      Sends an invitation to an employee in the Hibob system, changing their invitation
+      state.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a GET request to retrieve the employee's ID
-      based on their email. It then mutates external data by making a PUT request
-      to update the user's avatar image in Hibob. It does not mutate internal SecOps
+      The action fetches user and wizard data from the Hibob API via GET requests
+      (fetches_data=true). It then makes a POST request to send an invitation, mutating
+      external data (can_mutate_external_data=true). It does not mutate internal SecOps
       data, update entities, or create insights.
   entity_usage:
     entity_types:
@@ -924,7 +777,7 @@ Upload User Image:
       threat_signature: false
       url: false
       usb: false
-      user: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -939,10 +792,150 @@ Upload User Image:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the explicitly provided 'Employee's Email'
-      parameter. Therefore, it does not run on entities and all entity type and filter
-      flags are false.
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      an 'Employee's Email' parameter which represents a User entity identifier. Therefore,
+      it is considered to process User entities. It does not filter entities by any
+      specific attributes.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: true
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action sends an invitation to an employee to access the Hibob system, which
+      can be used to grant initial access or restore access for a previously disabled
+      user. This aligns with the 'Enable Identity' category as it facilitates system
+      access and authentication capabilities.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Employee's Email | String | Yes | The email of the employee that you want to
+    send the invitation in order to start using Hibob system. |
+
+    | Welcome Wizard Name | String | Yes | The wizard name found in Hibob (Setting->
+    Flows), for example: "Welcome!". Please note: this is case sensitive! |
+Upload User Image:
+  ai_description: >-
+    ### General Description
+
+    Uploads a profile image for a specific employee in Hibob using an image URL. This
+    action updates the user's avatar in the external Hibob system.
+
+
+    ### Flow Description
+
+    1. Extracts the `Employee's Email` and `Url Image` from the action parameters.
+
+    2. Makes a GET request to the Hibob API (`/v1/people/{email}`) to retrieve the
+    employee's details and extract their unique internal identifier.
+
+    3. If the employee exists, makes a PUT request to the Hibob API (`/v1/avatars/{id}`)
+    to upload the new avatar image using the provided URL.
+
+    4. Returns a success or failure message based on the API response.
+
+
+    ### Additional Notes
+
+    Requires a valid Hibob API token configured in the integration settings.
+  ai_short_description: >-
+    Uploads a profile image for a specific employee in Hibob using an image URL.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the employee's profile avatar image in Hibob via a PUT request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to retrieve the user's internal
+      Hibob ID. It then mutates external data by making a PUT request to upload the
+      new avatar image. It does not mutate internal SOAR data, update entities, create
+      insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. However, it accepts
+      an input parameter 'Employee's Email' which represents a User entity. Therefore,
+      the `user` entity type is marked as true. No entity filtering properties are
+      used since it does not process the target entities array.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -958,10 +951,9 @@ Upload User Image:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies an employee's profile in Hibob by updating their avatar
-      image. This aligns with the 'Update Identity' category, which involves modifying
-      account metadata. It does not enrich IOCs, update alerts, or perform containment
-      actions.
+      The action updates a user's profile image in Hibob. This aligns with the 'Update
+      Identity' category, as it modifies account metadata (the user's avatar). It
+      does not match any other categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

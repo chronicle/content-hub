@@ -2,33 +2,32 @@ Block IP Address in iptables:
   ai_description: >-
     ### General Description
 
-    Connects to a remote server via SSH and adds an iptables rule to block a specified
-    IP address. This action initiates a state change on the external device to prevent
-    network traffic from the specified IP.
+    This action connects to a remote server via SSH and adds a rule to iptables to
+    block a specified IP address.
 
 
     ### Flow Description
 
-    1. Retrieves connection parameters (Server, Username, Password, Port) and the
-    target IP address to block from the action parameters.
+    1. Establishes an SSH connection to the remote server using the provided credentials
+    (server, username, password, and port).
 
-    2. Establishes an SSH connection to the remote server.
+    2. Checks if a block rule for the specified IP address already exists in the remote
+    server's iptables.
 
-    3. Checks if the block rule already exists for the specified IP address.
-
-    4. If the rule does not exist, executes the command `iptables -I INPUT -s <IP>
+    3. If the rule does not exist, executes the command `iptables -I INPUT -s <IP>
     -j DROP` to block the IP address.
 
-    5. Returns the execution status and output message.
+    4. Returns the execution status and an output message indicating whether the IP
+    was successfully blocked or if it was already blocked.
 
 
     ### Additional Notes
 
-    The provided credentials must have sufficient privileges (e.g., root access) on
-    the remote server to modify iptables rules.
+    The action requires valid SSH credentials and appropriate permissions (e.g., root
+    access) on the remote server to modify iptables.
   ai_short_description: >-
-    Connects to a remote server via SSH and adds an iptables rule to block a specified
-    IP address.
+    Connects to a remote server via SSH and adds a DROP rule to iptables to block
+    a specified IP address.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -37,16 +36,17 @@ Block IP Address in iptables:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a rule to iptables on the remote server to block a specific IP address.
+      Adds a DROP rule to the INPUT chain of iptables on the remote server for the
+      specified IP address.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action establishes an SSH connection and executes a command to modify iptables
-      rules on a remote server, mutating external data. It does not fetch data, update
-      internal entities, create insights, or modify alert data.
+      The action executes a command on a remote server via SSH to modify its iptables
+      configuration (mutating external data). It does not fetch data, update internal
+      entities, or create insights.
   entity_usage:
     entity_types:
-      address: false
+      address: true
       alert: false
       application: false
       child_hash: false
@@ -95,9 +95,9 @@ Block IP Address in iptables:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers from the case. It relies entirely on the 'Block IP Address' parameter
-      provided by the user. Therefore, it does not run on entities.
+      The action does not iterate over `target_entities`, but it accepts an input
+      parameter 'Block IP Address' which represents an Address entity. Therefore,
+      the 'address' entity type flag is set to true. No entity filtering is performed.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -113,9 +113,8 @@ Block IP Address in iptables:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a command on a remote server to add an IP address to the
-      iptables blocklist (`iptables -I INPUT -s {0} -j DROP`). This directly aligns
-      with the 'Add IOC To Blocklist' expected outcome.
+      The action modifies the iptables configuration on a remote server to block a
+      specific IP address, which aligns with the 'Add IOC To Blocklist' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -148,757 +147,32 @@ Delete Firewall Rule:
   ai_description: >-
     ### General Description
 
-    Deletes a specified iptables firewall rule on a remote server via SSH. This action
-    connects to the target machine and removes the exact rule provided from the active
-    iptables configuration.
+    Deletes a specified iptables firewall rule on a remote Linux server via SSH. This
+    action allows analysts to remotely modify firewall configurations by removing
+    existing rules.
 
 
     ### Flow Description
 
-    1. Establishes an SSH connection to the remote server using the provided IP address,
-    port, and credentials.
+    1. Establishes an SSH connection to the target remote server using the provided
+    credentials (username, password, and port).
 
-    2. Executes the `iptables -D` command appended with the specified rule string.
+    2. Executes the `iptables -D` command along with the provided rule string to delete
+    the specific firewall rule.
 
     3. Evaluates the exit status of the command to determine success or failure.
 
-    4. Returns `True` if the rule was successfully deleted, or `False` otherwise.
+    4. Returns a boolean result indicating whether the rule was successfully deleted.
 
 
     ### Additional Notes
 
-    The rule parameter must be formatted exactly as it would be passed to the iptables
-    command line (e.g., `INPUT -s 10.0.0.10 -j DROP`). Ensure the provided credentials
-    have sufficient privileges (e.g., root) to modify iptables rules on the remote
-    server.
-  ai_short_description: >-
-    Deletes a specified iptables firewall rule on a remote server via SSH.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Deletes a specified iptables firewall rule on a remote server via SSH.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action executes an SSH command (`iptables -D`) to delete a firewall rule
-      on a remote server, which mutates external data. It does not fetch contextual
-      data, mutate internal SecOps data, update entities, or create insights/comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates entirely on the provided action parameters (Remote
-      Server, IPtables Rule, etc.). Therefore, all entity type and filter flags are
-      false.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action deletes a specific iptables rule on a remote server. While it modifies
-      a firewall configuration, it does not strictly take an IOC to remove it from
-      a blocklist (it takes a raw iptables rule string, which could be an allow or
-      block rule). It also does not act as a generic 'Execute Command on the Host'
-      action since it is hardcoded to run `iptables -D`. Therefore, it does not perfectly
-      match any of the predefined outcome categories.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Remote Server | String | Yes | Remote server address(e.g: x.x.x.x). |
-
-    | Remote Username | String | Yes | Remote Username |
-
-    | Remote Password | Password | Yes | Remote Password |
-
-    | Remote Port | String | No | Remote Port. Defaults to 22 if not provided. |
-
-    | IPtables Rule | String | Yes | Rule value(e.g: INPUT -s 10.0.0.10 -j DROP) |
-Execute Program:
-  ai_description: >-
-    ### General Description
-
-    Executes a specified program or script on a remote machine via SSH. This action
-    connects to the target server using the provided credentials and runs the program
-    located at the specified path, returning its output.
-
-
-    ### Flow Description
-
-    1. Retrieves connection parameters (Remote Server, Username, Password, Port) and
-    the path to the program to be executed.
-
-    2. Establishes an SSH connection to the remote server using the provided credentials.
-
-    3. Executes the program at the specified path on the remote host.
-
-    4. Captures the standard output if the execution is successful, or the standard
-    error if it fails.
-
-    5. Returns the output or error message as the action result.
-
-
-    ### Additional Notes
-
-    The action requires valid SSH credentials and network access to the remote server.
-    The program path must be valid and executable on the remote host.
-  ai_short_description: >-
-    Executes a specified program or script on a remote machine via SSH and returns
-    the output.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Executes a specified program or script on the remote host, which may alter the
-      system's state or configuration.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action establishes an SSH connection to a remote server and executes a specified
-      program. This execution can mutate the external system's state depending on
-      the program being run. It does not fetch enrichment data, update internal entities,
-      or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over or process any entities. It relies entirely
-      on the provided action parameters to determine the target server and program
-      to execute. Therefore, all entity-related flags are set to false.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: true
-    get_alert_information: false
-    reasoning: >-
-      The action executes a program on a remote host via SSH and returns the standard
-      output or error. This directly aligns with the 'Execute Command on the Host'
-      expected outcome. It does not perform enrichment, ticket management, or specific
-      containment actions.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Remote Server | String | Yes | Remote server address(e.g: x.x.x.x). |
-
-    | Remote Username | String | Yes | Remote Username |
-
-    | Remote Password | Password | Yes | Remote Password |
-
-    | Remote Port | String | No | Remote Port |
-
-    | Remote Program Path | String | Yes | The path to the program in the remote host.
-    |
-List Connections:
-  ai_description: >-
-    ### General Description
-
-    This action connects to a remote server via SSH and retrieves a list of all active
-    network connections by executing a system command.
-
-
-    ### Flow Description
-
-    1. Retrieves the SSH connection parameters (Remote Server, Username, Password,
-    and Port) from the action configuration.
-
-    2. Establishes an SSH connection to the specified remote server.
-
-    3. Executes the `netstat -tnpa` command on the remote machine to list all active
-    network connections.
-
-    4. Parses the standard output of the command and formats it into a structured
-    data table.
-
-    5. Attaches the parsed data table and the raw JSON results to the action output.
-
-
-    ### Additional Notes
-
-    Ensure that the remote server allows SSH connections on the specified port and
-    that the provided credentials have sufficient permissions to execute the `netstat`
-    command.
-  ai_short_description: >-
-    Connects to a remote server via SSH and retrieves a list of all active network
-    connections using the `netstat` command.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data (network connections) from a remote server by executing
-      a read-only command. It does not mutate external data, update internal entities,
-      create insights, or modify alert data.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the action parameters to determine the target
-      server.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: true
-    get_alert_information: false
-    reasoning: >-
-      The action executes the `netstat -tnpa` command on a remote endpoint via SSH
-      and returns the standard output. This directly aligns with the 'Execute Command
-      on the Host' expected outcome. It does not enrich specific IOCs or assets, nor
-      does it mutate external or internal state.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Remote Server | String | Yes | Remote server address (e.g., x.x.x.x). |
-
-    | Remote Username | String | Yes | Remote Username. |
-
-    | Remote Password | Password | Yes | Remote Password. |
-
-    | Remote Port | String | No | Remote Port (defaults to 22 if not provided). |
-List Processes:
-  ai_description: >-
-    ### General Description
-
-    This action connects to a remote machine via SSH and retrieves a list of all currently
-    running processes.
-
-
-    ### Flow Description
-
-    1. Establishes an SSH connection to the specified remote server using the provided
-    username, password, and port.
-
-    2. Executes the `ps -aux` command on the remote host to list all running processes.
-
-    3. Parses the command output and formats it into a CSV-like structure.
-
-    4. Attaches the parsed process list as a data table to the action results and
-    returns the raw output in the JSON result.
-
-
-    ### Additional Notes
-
-    Ensure the provided credentials have sufficient permissions to execute the `ps`
-    command on the target machine.
-  ai_short_description: >-
-    Connects to a remote machine via SSH and retrieves a list of running processes
-    by executing the `ps -aux` command.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data (running processes) from an external system via SSH.
-      It does not mutate external data, update internal entities, create insights,
-      or modify alert data.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over or use `siemplify.target_entities`. It relies
-      entirely on the provided action parameters to connect to the remote server and
-      execute the command.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: true
-    get_alert_information: false
-    reasoning: >-
-      The action connects to a remote host and executes a specific command (`ps -aux`)
-      to retrieve running processes, which directly aligns with the 'Execute Command
-      on the Host' category.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Remote Server | String | Yes | Remote server address (e.g: x.x.x.x). |
-
-    | Remote Username | String | Yes | Remote Username |
-
-    | Remote Password | Password | Yes | Remote Password |
-
-    | Remote Port | String | No | The default port will be 22. |
-List iptables Rules:
-  ai_description: >-
-    ### General Description
-
-    This action connects to a remote server via SSH and retrieves the list of configured
-    iptables rules.
-
-
-    ### Flow Description
-
-    1. Retrieves connection parameters (Server, Username, Password, Port) and the
-    target iptables Chain.
-
-    2. Establishes an SSH connection to the remote server.
-
-    3. Executes the `iptables -S` command (optionally filtered by the specified chain)
-    on the remote host.
-
-    4. Parses the command output and returns it as a JSON object and a CSV data table.
-
-
-    ### Additional Notes
-
-    Requires appropriate SSH credentials and permissions to execute `iptables` on
-    the remote machine.
-  ai_short_description: >-
-    Connects to a remote server via SSH and retrieves the list of configured iptables
+    The `IPtables Rule` parameter must match the exact rule specification as it appears
+    in the iptables configuration (e.g., `INPUT -s 10.0.0.10 -j DROP`). Ensure the
+    provided credentials have sufficient privileges (e.g., root) to modify iptables
     rules.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data (iptables rules) from a remote machine via SSH. It does
-      not mutate external data, mutate internal data, update entities, create insights,
-      modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates purely on the provided action parameters (Remote Server,
-      etc.). Therefore, it does not run on entities.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: true
-    get_alert_information: false
-    reasoning: >-
-      The action executes a system command (`iptables -S`) on a remote endpoint via
-      SSH and returns the standard output. This directly aligns with the 'Execute
-      Command on the Host' expected outcome.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Remote Server | String | Yes | Remote server address(e.g: x.x.x.x) |
-
-    | Remote Username | String | Yes | Remote Username |
-
-    | Remote Password | Password | Yes | Remote Password |
-
-    | Remote Port | String | No | The default port will be 22. |
-
-    | Chain | String | No | The iptables chain that you wish to see (e.g: INPUT, OUTPUT,
-    etc.) |
-Logoff User:
-  ai_description: >-
-    ### General Description
-
-    Logs off a specified user from a remote server via SSH. This action connects to
-    the target server and forcefully terminates all processes owned by the specified
-    user, effectively revoking their active session.
-
-
-    ### Flow Description
-
-    1. Establishes an SSH connection to the remote server using the provided credentials
-    (server, username, password, and port).
-
-    2. Executes a system command (`pkill -KILL -u <username>`) to terminate all running
-    processes associated with the target user.
-
-    3. Evaluates the exit status of the command and returns a success or failure message
-    to the SOAR platform.
-
-
-    ### Additional Notes
-
-    This action forcefully terminates the user's processes using the `pkill` command.
-    It does not disable the user's account or prevent them from logging back in; it
-    only revokes their current active sessions.
   ai_short_description: >-
-    Logs off a specified user from a remote server via SSH by forcefully terminating
-    their active processes.
+    Deletes a specified iptables firewall rule on a remote Linux server via SSH.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -907,425 +181,12 @@ Logoff User:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes a command on the remote server to terminate all processes owned by
-      the specified user, effectively logging them off.
+      Deletes a specified iptables firewall rule on a remote Linux server via SSH.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a state-changing command (`pkill`) on an external server
-      via SSH to terminate user processes, meaning it mutates external data/state.
-      It does not fetch contextual data, update internal entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over or interact with `siemplify.target_entities`.
-      It relies entirely on the provided action parameters to determine which user
-      to log off on which server.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: true
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action connects to a remote server and terminates all processes for a specified
-      user, which effectively revokes their active sessions. This aligns with the
-      session revocation aspect of the 'Disable Identity' category. It does not return
-      STDOUT, so it does not match 'Execute Command on the Host'.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Remote Server | String | Yes | Remote server address(e.g: x.x.x.x) |
-
-    | Remote Username | String | Yes | Remote Username |
-
-    | Remote Password | Password | Yes | Remote Password |
-
-    | Remote Port | String | No | The default port will be 22. |
-
-    | Logoff Username | String | Yes | The username to log off. |
-Ping:
-  ai_description: >-
-    ### General Description
-
-    Tests connectivity for the SSH integration.
-
-
-    ### Flow Description
-
-    1. Initializes the Siemplify action.
-
-    2. Sets the output message to "Connection Established" and the result value to
-    "true".
-
-    3. Ends the execution and returns the successful result.
-
-
-    ### Additional Notes
-
-    This action does not perform any actual network operations, SSH connections, or
-    external API calls in its current implementation; it simply returns a static successful
-    execution status.
-  ai_short_description: >-
-    Tests connectivity for the SSH integration by returning a static success message.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action does not fetch data, mutate external or internal data, update entities,
-      create insights, modify alerts, or create case comments. It only returns a static
-      string.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It simply returns a static success message.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action is a simple connectivity test that returns a static success message.
-      It does not enrich data, mutate external systems, manage tickets, or perform
-      any operations that match the defined outcome categories.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Reboot Machine:
-  ai_description: >-
-    ### General Description
-
-    Reboots a specified remote server via SSH.
-
-
-    ### Flow Description
-
-    1. Retrieves connection parameters including the remote server address, username,
-    password, and port.
-
-    2. Establishes an SSH connection to the target remote server.
-
-    3. Executes the `reboot` command on the remote host.
-
-    4. Evaluates the execution status code and returns a success or failure message
-    to the SOAR platform.
-
-
-    ### Additional Notes
-
-    Ensure the provided credentials have the necessary privileges to execute the reboot
-    command on the target server. The action expects the connection to drop upon a
-    successful reboot, which is handled in the status code evaluation.
-  ai_short_description: >-
-    Reboots a specified remote server via SSH.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Executes a reboot command on the specified remote server via SSH, changing the
-      state of the external machine.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action executes a state-changing command (`reboot`) on an external system
-      via SSH, meaning it mutates external data/state. It does not fetch contextual
-      data, mutate internal SecOps data, update entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the explicitly provided action parameters to determine the
-      target server.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: true
-    get_alert_information: false
-    reasoning: >-
-      The action executes a system command (`reboot`) on a remote endpoint via SSH.
-      This aligns with the 'Execute Command on the Host' category. It does not perform
-      containment, enrichment, or ticketing operations.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Remote Server | String | Yes | Remote server address (e.g: x.x.x.x). |
-
-    | Remote Username | String | Yes | Remote Username |
-
-    | Remote Password | Password | Yes | Remote Password |
-
-    | Remote Port | String | No | The default port will be 22. |
-Run Command:
-  ai_description: >-
-    ### General Description
-
-    Executes an arbitrary command on a remote server via SSH and retrieves the standard
-    output or error message.
-
-
-    ### Flow Description
-
-    1. Retrieves connection parameters (Remote Server, Username, Password, Port) and
-    the command to execute from the action parameters.
-
-    2. Establishes an SSH connection to the remote server using the provided credentials.
-
-    3. Executes the specified command on the remote host.
-
-    4. Captures the standard output if successful, or the error message if the command
-    fails.
-
-    5. Returns the output as a JSON result and ends the action execution.
-
-
-    ### Additional Notes
-
-    Ensure the provided credentials have the necessary permissions to execute the
-    specified command on the remote server.
-  ai_short_description: >-
-    Executes an arbitrary command on a remote server via SSH and returns the output.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Executes an arbitrary command on a remote server via SSH, which can potentially
-      modify the system state or data.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action executes an arbitrary command on a remote server via SSH. This can
-      mutate external data depending on the command executed. It does not fetch specific
-      contextual data for entities, nor does it mutate internal SecOps data, update
+      The action executes an SSH command to delete an iptables rule on a remote server,
+      which mutates external data. It does not fetch data, mutate internal data, update
       entities, or create insights.
   entity_usage:
     entity_types:
@@ -1378,8 +239,9 @@ Run Command:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses action parameters to determine
-      the target server and command to execute.
+      The action does not iterate over target entities and does not accept any entity-related
+      input parameters. It operates solely on the provided remote server and rule
+      string.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1392,12 +254,15 @@ Run Command:
     enable_identity: false
     enrich_asset: false
     enrich_ioc: false
-    execute_command_on_the_host: true
+    execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action connects to a remote host via SSH and executes a specified command,
-      returning its output. This directly matches the 'Execute Command on the Host'
-      category.
+      The action deletes a generic iptables rule on a remote server. While it could
+      theoretically be used to remove an IOC from a blocklist, it is a generic rule
+      deletion command and does not strictly fit the 'Remove IOC From Blocklist' expected
+      outcome which focuses on indicators. It also does not return STDOUT, so it does
+      not fit 'Execute Command on the Host'. Therefore, it does not match any specific
+      outcome category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1419,43 +284,51 @@ Run Command:
 
     | Remote Server | String | Yes | Remote server address (e.g., x.x.x.x). |
 
-    | Remote Username | String | Yes | Remote Username. |
+    | Remote Username | String | Yes | The username used to authenticate to the remote
+    server. |
 
-    | Remote Password | Password | Yes | Remote Password. |
+    | Remote Password | Password | Yes | The password used to authenticate to the
+    remote server. |
 
-    | Remote Port | String | No | Remote Port (defaults to 22 if not provided). |
+    | Remote Port | String | No | The SSH port of the remote server. Defaults to 22
+    if not provided. |
 
-    | Command | String | Yes | Command content (e.g., ifconfig). |
-Shutdown Machine:
+    | IPtables Rule | String | Yes | The exact iptables rule value to delete (e.g.,
+    `INPUT -s 10.0.0.10 -j DROP`). |
+Execute Program:
   ai_description: >-
     ### General Description
 
-    Shuts down a remote machine via SSH. This action connects to a specified remote
-    server and executes a system shutdown command, allowing for an optional wait time
-    before the shutdown occurs.
+    Executes a specified program or script on a remote machine via SSH. This action
+    allows analysts to remotely trigger executables or scripts on a target server
+    and retrieve the resulting output or error messages directly within the SecOps
+    platform.
 
 
     ### Flow Description
 
-    1. Establishes an SSH connection to the target remote server using the provided
-    IP address, port, and credentials.
+    1. Retrieves the connection parameters (Remote Server, Username, Password, Port)
+    and the target program path from the action inputs.
 
-    2. Executes the `shutdown -h` command on the remote host, appending the specified
-    wait time.
+    2. Establishes an authenticated SSH connection to the specified remote server.
 
-    3. Evaluates the exit status of the command to determine if the shutdown was successfully
-    initiated.
+    3. Executes the program at the provided path on the remote host.
 
-    4. Returns a success or failure message to the SecOps platform based on the execution
-    result.
+    4. Captures the standard output (STDOUT) if successful, or standard error (STDERR)
+    if the execution fails.
+
+    5. Returns the captured output to the SecOps platform and marks the action as
+    successful or failed based on the exit status code.
 
 
     ### Additional Notes
 
-    Ensure that the provided credentials have the necessary privileges (e.g., root
-    or sudo access) to execute the shutdown command on the remote machine.
+    Ensure that the provided credentials have the necessary permissions to execute
+    the specified program on the remote host. The remote server must be accessible
+    over the network via the specified SSH port (default is 22).
   ai_short_description: >-
-    Connects to a remote server via SSH and executes a system shutdown command.
+    Executes a specified program or script on a remote machine via SSH and returns
+    the standard output or error.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1464,13 +337,15 @@ Shutdown Machine:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes a shutdown command on the remote server, changing its operational state.
+      Executes a specified program or script on a remote machine via SSH, which may
+      alter the state of the remote machine.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action connects to an external system (remote server) and executes a state-changing
-      command (shutdown). It does not fetch contextual data, mutate internal SecOps
-      data, update entities, or create insights.
+      The action executes an arbitrary program on a remote machine via SSH, which
+      has the capability to mutate the state of the external system depending on the
+      program executed. It does not fetch enrichment data, update internal entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -1522,9 +397,737 @@ Shutdown Machine:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It relies entirely on the explicitly
-      provided action parameters (Remote Server, Username, Password, etc.) to determine
-      the target machine.
+      The action does not iterate over `siemplify.target_entities` nor does it accept
+      any entity identifiers as input parameters. It operates solely based on the
+      provided remote server details and program path. Therefore, all entity-related
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action establishes an SSH connection to a remote host and executes a specified
+      program, returning its output. This directly aligns with the 'Execute Command
+      on the Host' expected outcome. It does not perform enrichment, containment,
+      or ticketing operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Remote Server | String | Yes | Remote server address(e.g: x.x.x.x). |
+
+    | Remote Username | String | Yes | Remote Username |
+
+    | Remote Password | Password | Yes | Remote Password |
+
+    | Remote Port | String | No | Remote Port |
+
+    | Remote Program Path | String | Yes | The path to the program in the remote host.
+    |
+List Connections:
+  ai_description: >-
+    ### General Description
+
+    Connects to a remote server via SSH and retrieves a list of all active network
+    connections by executing the `netstat -tnpa` command. The results are parsed and
+    returned as a data table and JSON object for further analysis within the SecOps
+    platform.
+
+
+    ### Flow Description
+
+    1. Retrieves connection parameters (Server, Username, Password, Port) from the
+    action configuration.
+
+    2. Establishes an SSH connection to the specified remote server.
+
+    3. Executes the `netstat -tnpa` command on the remote host to list all active
+    network connections.
+
+    4. Parses the command output into a structured CSV-like format.
+
+    5. Returns the parsed connections as a JSON object and attaches a data table to
+    the action results.
+
+
+    ### Additional Notes
+
+    Requires valid SSH credentials and network access to the target server. The remote
+    server must support the `netstat` command for this action to execute successfully.
+  ai_short_description: >-
+    Connects to a remote server via SSH and retrieves a list of all active network
+    connections using the `netstat` command.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (active network connections) from a remote server via
+      SSH. It does not mutate external data (it only runs a read-only netstat command),
+      nor does it mutate internal data, update entities, create insights, modify alerts,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or accept entity
+      identifiers as input parameters to process entities. It simply connects to a
+      remote server specified in the parameters and runs a command. Therefore, all
+      entity flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action executes the 'netstat -tnpa' command on a remote host via SSH and
+      returns the output. This directly aligns with the 'Execute Command on the Host'
+      expected outcome. It does not enrich specific IOCs or Assets in the SOAR context,
+      nor does it mutate external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Remote Server | String | Yes | Remote server address(e.g: x.x.x.x). |
+
+    | Remote Username | String | Yes | Remote Username |
+
+    | Remote Password | Password | Yes | Remote Password |
+
+    | Remote Port | String | No | Remote Port |
+List Processes:
+  ai_description: >-
+    ### General Description
+
+    Connects to a specified remote server via SSH to retrieve a list of all currently
+    running processes. This action is useful for investigating suspicious activity,
+    verifying the state of a remote endpoint, or gathering forensic data during an
+    incident response investigation.
+
+
+    ### Flow Description
+
+    1. Establishes an SSH connection to the target remote server using the provided
+    credentials (username, password, and port).
+
+    2. Executes the `ps -aux` command on the remote machine to list all running processes.
+
+    3. Parses the command output into a structured CSV format.
+
+    4. Returns the parsed process list as a JSON object and attaches it as a data
+    table to the action results.
+
+
+    ### Additional Notes
+
+    The action requires valid SSH credentials and network access to the target server
+    on the specified port (default is 22).
+  ai_short_description: >-
+    Connects to a remote machine via SSH and retrieves a list of all running processes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (a list of running processes) from an external remote
+      server via SSH. It does not mutate external data (it only runs a read-only command),
+      nor does it mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters that represent standard entity types. It operates strictly
+      based on the provided remote server connection parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action connects to a remote host via SSH and executes the 'ps -aux' command
+      to retrieve a list of running processes. This directly aligns with the 'Execute
+      Command on the Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Remote Server | String | Yes | Remote server address(e.g: x.x.x.x). |
+
+    | Remote Username | String | Yes | Remote Username |
+
+    | Remote Password | Password | Yes | Remote Password |
+
+    | Remote Port | String | No | The default port will be 22. |
+List iptables Rules:
+  ai_description: >-
+    ### General Description
+
+    Connects to a remote server via SSH to list the configured iptables rules. This
+    action provides visibility into the network filtering rules currently active on
+    the target machine.
+
+
+    ### Flow Description
+
+    1. Establishes an SSH connection to the specified remote server using the provided
+    credentials (username, password, and port).
+
+    2. Executes the `iptables -S` command on the remote host, optionally appending
+    a specific chain (e.g., INPUT, OUTPUT) if provided in the parameters.
+
+    3. Parses the standard output of the command to extract the iptables rules.
+
+    4. Formats the extracted rules into a data table and a JSON object, attaching
+    them to the action results in the SOAR platform.
+
+
+    ### Additional Notes
+
+    The provided credentials must have sufficient privileges (often root or sudo access,
+    depending on the system configuration) to execute the `iptables` command on the
+    remote server.
+  ai_short_description: >-
+    Connects to a remote server via SSH and retrieves the current iptables rules,
+    optionally filtered by a specific chain.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by running a read-only command (`iptables -S`) on a
+      remote server. It does not mutate external data (no rules are added or deleted),
+      nor does it mutate internal SOAR data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` nor does it accept
+      standard entity types as input parameters. It operates strictly on the provided
+      'Remote Server' parameter to establish an SSH connection.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action executes a system command (`iptables -S`) on a remote endpoint via
+      SSH and returns the standard output. This directly matches the 'Execute Command
+      on the Host' category. It does not enrich IOCs, mutate external state, or interact
+      with tickets/alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Remote Server | String | Yes | Remote server address(e.g: x.x.x.x) |
+
+    | Remote Username | String | Yes | Remote Username |
+
+    | Remote Password | Password | Yes | Remote Password |
+
+    | Remote Port | String | No | The default port will be 22. |
+
+    | Chain | String | No | The iptables chain that you wish to see (e.g: INPUT, OUTPUT,
+    etc.) |
+Logoff User:
+  ai_description: >-
+    ### General Description
+
+    Logs off a specified user from a remote server via SSH. It connects to the target
+    server using the provided credentials and executes a command to terminate all
+    processes owned by the specified user, effectively revoking their active sessions.
+
+
+    ### Flow Description
+
+    1. Extracts connection details (server, port, credentials) and the target username
+    from the action parameters.
+
+    2. Establishes an SSH connection to the remote server using the `paramiko` library.
+
+    3. Executes the `pkill -KILL -u <username>` command on the remote server to forcefully
+    terminate all processes associated with the target user.
+
+    4. Evaluates the command's exit status code to determine success or failure.
+
+    5. Returns a success or failure message to the SOAR platform based on the execution
+    result.
+
+
+    ### Additional Notes
+
+    The provided SSH credentials must have sufficient privileges (e.g., root or appropriate
+    sudo access) to terminate processes owned by the target user. If the credentials
+    lack these permissions, the action will fail to log the user off.
+  ai_short_description: >-
+    Logs off a specified user from a remote server via SSH by forcefully terminating
+    all of their active processes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Executes a command via SSH to forcefully terminate all processes owned by a
+      specific user on a remote server, effectively logging them off.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action establishes an SSH connection to an external server and executes
+      a state-changing command (`pkill`) to terminate user processes. Therefore, it
+      mutates external data/state. It does not fetch enrichment data, mutate internal
+      SOAR data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` nor does it accept
+      standard entity types as input parameters. It relies entirely on explicitly
+      provided string parameters (Remote Server, Logoff Username) to perform its operation,
+      meaning it does not operate within the standard SOAR entity framework.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: true
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action connects to a remote server and kills all processes for a specific
+      user, effectively revoking their active sessions. This aligns with the 'Disable
+      Identity' category, which involves revoking active sessions. It does not return
+      STDOUT for a generic command, so it does not match 'Execute Command on the Host'.
+      It does not enrich data, update alerts, or interact with blocklists.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Remote Server | String | Yes | Remote server address (e.g: x.x.x.x) |
+
+    | Remote Username | String | Yes | Remote Username |
+
+    | Remote Password | Password | Yes | Remote Password |
+
+    | Remote Port | String | No | The default port will be 22. |
+
+    | Logoff Username | String | Yes | The username to log off. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the SSH server. This action is used to verify that the integration
+    is configured correctly and can successfully communicate with the target system.
+
+
+    ### Flow Description
+
+    1. The action begins execution.
+
+    2. It immediately returns a success message and a 'true' result value, indicating
+    that the connection is established.
+
+
+    ### Additional Notes
+
+    This action does not perform any active SSH commands or queries; it serves as
+    a basic health check or ping for the integration.
+  ai_short_description: >-
+    Tests connectivity to the SSH server to verify integration configuration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action simply returns a hardcoded success message. It does not fetch data
+      from an external source, mutate external or internal data, update entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or accept any input parameters
+      representing entities. Therefore, it does not run on any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1540,10 +1143,576 @@ Shutdown Machine:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a specific shutdown command on a remote host via SSH. It
-      does not match 'Contain Host' as it does not isolate via EDR, nor does it match
-      'Execute Command on the Host' because it does not take an arbitrary command
-      or return STDOUT. It does not match any of the other specific outcome categories.
+      The action is a simple connectivity test (Ping) and does not perform any operations
+      that match the expected outcomes of the available categories, such as enriching
+      data, mutating external systems, or modifying alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Reboot Machine:
+  ai_description: >-
+    ### General Description
+
+    Reboots a specified remote server via SSH. This action establishes a secure shell
+    connection to the target machine and issues a system reboot command.
+
+
+    ### Flow Description
+
+    1. Retrieves the remote server address, credentials, and port from the action
+    parameters.
+
+    2. Establishes an SSH connection to the remote server using the provided credentials.
+
+    3. Executes the `reboot` command on the remote server.
+
+    4. Returns a success or failure message based on the command execution status.
+
+
+    ### Additional Notes
+
+    Ensure the provided credentials have the necessary privileges to execute the reboot
+    command on the target server.
+  ai_short_description: >-
+    Reboots a specified remote server via SSH by executing the system reboot command.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Executes a reboot command on the specified remote server via SSH, changing its
+      operational state.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a reboot command on a remote server via SSH, which mutates
+      the state of an external system (can_mutate_external_data=true). It does not
+      fetch contextual data, mutate internal SecOps data, update entities, or create
+      insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or accept any entity-specific
+      parameters. It operates solely based on the provided remote server address and
+      credentials.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action connects to a remote server via SSH and executes the 'reboot' system
+      command. This aligns with the 'Execute Command on the Host' category, as it
+      runs a system command on a remote endpoint.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Remote Server | String | Yes | Remote server address (e.g: x.x.x.x). |
+
+    | Remote Username | String | Yes | Remote Username |
+
+    | Remote Password | Password | Yes | Remote Password |
+
+    | Remote Port | String | No | The default port will be 22. |
+Run Command:
+  ai_description: >-
+    ### General Description
+
+    Executes an arbitrary command on a remote machine via SSH and returns the output.
+    This action allows analysts to interact directly with remote endpoints to run
+    system commands, scripts, or administrative tasks.
+
+
+    ### Flow Description
+
+    1. Retrieves the connection parameters (Remote Server, Username, Password, Port)
+    and the specific command to execute from the action inputs.
+
+    2. Establishes an SSH connection to the target remote server using the provided
+    credentials.
+
+    3. Executes the specified command on the remote host.
+
+    4. Captures the standard output (STDOUT) if the command is successful, or the
+    standard error (STDERR) if it fails.
+
+    5. Returns the command output as a JSON result to the SecOps platform.
+
+
+    ### Additional Notes
+
+    Ensure that the SecOps platform has network connectivity to the remote server
+    on the specified SSH port (default is 22) and that the provided credentials have
+    the necessary permissions to execute the desired command.
+  ai_short_description: >-
+    Executes a specified command on a remote machine via SSH and returns the standard
+    output or error.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Executes an arbitrary command on a remote host via SSH, which can potentially
+      modify the state, files, or configuration of the remote machine.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes an arbitrary command on a remote host via SSH. Because the
+      command is arbitrary, it has the potential to mutate external data (e.g., modifying
+      files, changing configurations, or stopping services on the remote machine).
+      It does not fetch contextual data for SecOps entities, nor does it mutate internal
+      SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or accept any entity identifiers
+      as input parameters. It operates solely based on the provided remote server
+      address and command parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action establishes an SSH connection to a remote host and executes a specified
+      command, returning the standard output. This directly matches the 'Execute Command
+      on the Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Remote Server | String | Yes | Remote server address(e.g: x.x.x.x). |
+
+    | Remote Username | String | Yes | Remote Username |
+
+    | Remote Password | Password | Yes | Remote Password |
+
+    | Remote Port | String | No | Remote Port |
+
+    | Command | String | Yes | Command content(e.g: ifconfig). |
+Shutdown Machine:
+  ai_description: >-
+    ### General Description
+
+    Shuts down a remote machine via SSH. This action connects to a specified remote
+    server using the provided credentials and executes a system shutdown command.
+
+
+    ### Flow Description
+
+    1. Retrieves connection parameters including the remote server address, username,
+    password, and port.
+
+    2. Retrieves the `Wait Time` parameter to determine when the shutdown should occur.
+
+    3. Establishes an SSH connection to the remote server.
+
+    4. Executes the `shutdown -h {wait_time}` command on the remote machine.
+
+    5. Returns a success or failure message based on the execution status of the command.
+
+
+    ### Additional Notes
+
+    - The default SSH port is 22 if not explicitly provided.
+
+    - The `Wait Time` parameter can be specified in minutes or as 'now' for an immediate
+    shutdown.
+  ai_short_description: >-
+    Connects to a remote server via SSH and executes a system shutdown command.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Executes a system shutdown command on the remote server via SSH.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action establishes an SSH connection and executes a shutdown command on
+      a remote server, which mutates the state of the external system (shutting it
+      down). It does not fetch data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or accept entity identifiers
+      as input parameters. It operates solely based on the provided remote server
+      connection parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a shutdown command on a remote machine. It does not return
+      STDOUT for a generic command execution, nor does it fit into standard containment
+      (which implies network isolation via EDR), enrichment, or ticketing categories.
+      Therefore, it does not strictly match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Remote Server | String | Yes | Remote server address(e.g: x.x.x.x) |
+
+    | Remote Username | String | Yes | Remote Username |
+
+    | Remote Password | Password | Yes | Remote Password |
+
+    | Remote Port | String | No | The default port will be 22. |
+
+    | Wait Time | String | Yes | Time to wait before shutdown in minutes(e.g: now).
+    |
+Terminate Process:
+  ai_description: >-
+    ### General Description
+
+    This action connects to a remote server via SSH and terminates a specified process.
+
+
+    ### Flow Description
+
+    1. Establishes an SSH connection to the remote server using the provided credentials
+    (server address, username, password, and port).
+
+    2. Executes a system command (`kill` or `pkill`) on the remote host to terminate
+    the specified process by its ID or name.
+
+    3. Evaluates the exit status of the command and returns a success or failure message
+    to the SecOps platform.
+
+
+    ### Additional Notes
+
+    The action requires valid SSH credentials and network access to the remote server.
+    If the process parameter is a digit, it uses `kill -9`, otherwise it uses `pkill`.
+  ai_short_description: >-
+    Connects to a remote server via SSH and terminates a specified process by its
+    ID or name.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Terminates a running process on the specified remote server via SSH.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action connects to a remote server and executes a command to terminate a
+      process, which mutates the state of the external system (the remote server).
+      It does not fetch contextual data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely based on the
+      provided remote server and process parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action executes a system command (`kill` or `pkill`) on a remote endpoint
+      via SSH to terminate a process. This aligns with the 'Execute Command on the
+      Host' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1565,158 +1734,11 @@ Shutdown Machine:
 
     | Remote Server | String | Yes | Remote server address (e.g., x.x.x.x) |
 
-    | Remote Username | String | Yes | The username used to authenticate to the remote
-    server |
+    | Remote Username | String | Yes | Remote Username for SSH authentication |
 
-    | Remote Password | Password | Yes | The password used to authenticate to the
-    remote server |
+    | Remote Password | Password | Yes | Remote Password for SSH authentication |
 
-    | Remote Port | String | No | The SSH port to connect to. The default port is
-    22. |
+    | Remote Port | String | No | Remote Port for SSH connection (defaults to 22)
+    |
 
-    | Wait Time | String | Yes | Time to wait before shutdown in minutes (e.g., 'now'
-    or '5'). |
-Terminate Process:
-  ai_description: >-
-    ### General Description
-
-    Terminates a specific process on a remote machine via SSH. This action connects
-    to the target server and executes a termination command to stop the specified
-    process by its ID or name.
-
-
-    ### Flow Description
-
-    1. Establishes an SSH connection to the remote server using the provided credentials
-    (server address, username, password, and port).
-
-    2. Evaluates the provided `PROCESS` parameter. If it is a digit, it executes a
-    `kill -9` command; otherwise, it executes a `pkill` command.
-
-    3. Returns a success or failure message based on the exit status code of the executed
-    command.
-
-
-    ### Additional Notes
-
-    The provided credentials must have sufficient privileges on the remote machine
-    to terminate the target process.
-  ai_short_description: >-
-    Terminates a specific process on a remote machine via SSH.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Terminates a running process on a remote machine via SSH.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action executes a command on a remote machine to terminate a process, which
-      mutates the state of the external system. It does not fetch contextual data,
-      update internal entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the action parameters to determine the target server and
-      process.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: true
-    get_alert_information: false
-    reasoning: >-
-      The action connects to a remote host via SSH and executes a system command (`kill`
-      or `pkill`) to terminate a process. This aligns with the 'Execute Command on
-      the Host' category.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Remote Server | String | Yes | Remote server address (e.g., x.x.x.x). |
-
-    | Remote Username | String | Yes | Remote Username for the SSH connection. |
-
-    | Remote Password | Password | Yes | Remote Password for the SSH connection. |
-
-    | Remote Port | String | No | Remote Port for the SSH connection. Defaults to
-    22 if not provided. |
-
-    | PROCESS | String | Yes | Process to terminate. Can be a Process ID (PID) or
-    a process name. |
+    | PROCESS | String | Yes | Process name or ID to terminate |

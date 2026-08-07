@@ -8,24 +8,23 @@ Deserialize A File:
 
     ### Flow Description
 
-    1. Retrieves the base64 encoded file content and the desired file name from the
-    action parameters.
+    1. Extracts the base64 string and target file name from the action parameters.
 
-    2. Verifies the existence of the target directory (`/opt/SiemplifyAgent/Files/`)
-    on the agent, creating it if necessary.
+    2. Verifies if the target directory (`/opt/SiemplifyAgent/Files/`) exists on the
+    host system, creating it if necessary.
 
-    3. Decodes the base64 string and writes the binary data to the specified file
+    3. Decodes the base64 string and writes the binary content to the specified file
     path.
 
-    4. Returns the path of the newly created file.
+    4. Returns the absolute path of the newly created file as the result value.
 
 
     ### Additional Notes
 
-    This action is typically used in conjunction with a previous action that retrieves
-    a file and outputs its content as a base64 string.
+    This action executes locally on the environment where the agent is running and
+    does not make external API calls.
   ai_short_description: >-
-    Deserializes a base64 encoded string into a file and saves it to the local disk
+    Deserializes a base64 encoded string and saves it as a file to the local disk
     of the Remote Agent.
   capabilities:
     can_create_case_comments: false
@@ -35,14 +34,14 @@ Deserialize A File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Writes a decoded file to the local disk of the agent host.
+      Writes a new file to the local file system of the host running the Remote Agent.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action does not fetch data from an external API. It mutates external data
-      by writing a file to the local file system of the agent host. It does not mutate
-      internal data, update entities, create insights, modify alert data, or create
-      case comments.
+      The action decodes a base64 string and writes it to the local file system of
+      the agent executing the script. It does not fetch data from an API, nor does
+      it update internal SecOps data like entities, alerts, or insights. It mutates
+      external data by creating a new file on the host OS.
   entity_usage:
     entity_types:
       address: false
@@ -94,8 +93,9 @@ Deserialize A File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely relies
-      on the provided action parameters.
+      The action does not iterate over `siemplify.target_entities` nor does it accept
+      any entity-specific input parameters. It operates strictly on the provided base64
+      string and file name.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -111,9 +111,10 @@ Deserialize A File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a utility function that decodes a base64 string and saves it as
-      a file on the agent's local disk. It does not match any of the specific security
-      or IT outcome categories provided.
+      The action performs a local file system operation (writing a file from a base64
+      string). It does not interact with external security tools, ticketing systems,
+      or directories, and therefore does not match any of the predefined outcome categories
+      such as Enrich IOC, Contain Host, or Create Ticket.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -150,18 +151,18 @@ Ping:
 
     1. Initializes the Siemplify action.
 
-    2. Sets a static success message ("Connection Established.").
+    2. Sets a static success message indicating that the connection is established.
 
-    3. Ends the execution and returns the result.
+    3. Ends the execution and returns the success result.
 
 
     ### Additional Notes
 
-    This action does not interact with any external APIs or process any entities.
-    It serves purely as a health check or ping mechanism.
+    This is a basic utility action that does not interact with external APIs, process
+    entities, or require any input parameters.
   ai_short_description: >-
     Tests connectivity for the Remote Agent Utilities integration by returning a static
-    success message to verify the agent is responsive.
+    success message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -173,9 +174,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action does not fetch data, mutate external data, mutate internal data,
-      update entities, create insights, modify alert data, or create case comments.
-      It only returns a static string to verify connectivity.
+      The action does not fetch data, mutate external or internal data, update entities,
+      create insights, modify alerts, or create case comments. It only returns a static
+      success message to verify connectivity.
   entity_usage:
     entity_types:
       address: false
@@ -227,8 +228,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code does not access `siemplify.target_entities` or process any entities.
-      It simply returns a static success message.
+      The action does not process any entities, iterate over target_entities, or accept
+      any entity-related parameters. It simply returns a static success message.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -244,9 +245,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action simply returns a static success message to test connectivity. It
-      does not enrich IOCs, update alerts, create tickets, block IPs, or perform any
-      other operations that match the expected outcome categories.
+      The action is a simple connectivity test (ping) and does not perform any operations
+      that match the defined outcome categories such as enrichment, containment, or
+      ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -266,32 +267,33 @@ Serialize A File:
   ai_description: >-
     ### General Description
 
-    Serializes a specified file from the local file system into a base64 encoded string.
-    This action is designed to read a file's contents and convert it into a format
-    suitable for JSON transmission or further processing within a playbook.
+    Serializes a specified local file into a base64 encoded string. This utility action
+    is designed to read a file from the local filesystem where the agent is running
+    and output its base64 representation along with the file name.
 
 
     ### Flow Description
 
-    1. Retrieves the `File Path` from the action parameters.
+    1. Validates that the provided file path exists and is accessible.
 
-    2. Validates that the file exists and is accessible on the local file system.
+    2. Checks if the file size is within the allowed limit (5MB).
 
-    3. Checks that the file size does not exceed the maximum allowed limit (5MB).
+    3. Reads the binary content of the file.
 
-    4. Reads the file content in binary mode and encodes it into a base64 string.
+    4. Encodes the file content into a base64 string.
 
     5. Returns the base64 string and the file name as a JSON result.
 
 
     ### Additional Notes
 
-    This action is typically executed on a Remote Agent to access files local to that
-    agent's environment. The maximum supported file size for serialization is 5MB.
-    If the file exceeds this limit or is inaccessible, the action will fail.
+    - The maximum allowed file size for serialization is 5MB.
+
+    - This action operates locally on the host/agent where it is executed and does
+    not make any external API calls.
   ai_short_description: >-
-    Serializes a specified file from the local file system into a base64 encoded string
-    and returns it as a JSON result.
+    Reads a local file from the provided path and serializes its content into a base64
+    encoded string.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -303,9 +305,9 @@ Serialize A File:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action reads a local file and encodes it. It does not fetch data from an
-      external API, mutate external data, mutate internal SecOps data, update entities,
-      create insights, modify alert data, or create case comments.
+      The action reads a local file and encodes it to base64. It does not fetch data
+      from external APIs, mutate external or internal data, update entities, create
+      insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -357,9 +359,9 @@ Serialize A File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided file path parameter. Therefore,
-      all entity type flags and filter flags must be false.
+      The action does not process or iterate over any entities, nor does it accept
+      entity identifiers as input parameters. It solely operates on a provided file
+      path.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -375,11 +377,9 @@ Serialize A File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action reads a local file and encodes it to base64. It does not enrich IOCs/assets,
-      update alerts, interact with tickets, block/allow IOCs, manage identities, contain
-      hosts, search events, execute commands, download files from remote hosts, send/search/delete/update
-      emails, submit files to sandboxes, send messages, search assets, or get alert
-      info. It does not match any of the specific expected outcomes.
+      The action is a local utility that reads a file from the disk and encodes it
+      to base64. It does not interact with external systems, enrich IOCs, modify alerts,
+      or perform any of the specific expected outcomes defined in the categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -399,4 +399,4 @@ Serialize A File:
 
     | --- | --- | --- | --- |
 
-    | File Path | String | Yes | Full path of the file |
+    | File Path | String | Yes | Full path of the file to be serialized. |

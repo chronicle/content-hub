@@ -2,37 +2,33 @@ Allow IP:
   ai_description: >-
     ### General Description
 
-    Creates a traffic change request in AlgoSec to allow traffic to specified IP address
-    entities. This action initiates a state change on the external firewall management
-    system to permit network traffic to the target IPs, which are treated as destinations
-    in the request.
+    Creates a traffic change request in AlgoSec FireFlow to allow traffic to specified
+    IP address entities. The action treats the target IP addresses as destinations
+    and allows specifying sources, services, and other request details.
 
 
     ### Flow Description
 
-    1. Extracts action parameters and filters the target entities to include only
-    IP addresses.
+    1. Extracts configuration and action parameters.
 
-    2. Initializes the AlgoSec API client with the provided credentials.
+    2. Filters target entities to identify supported IP addresses (`ADDRESS`).
 
-    3. Sends a POST request to AlgoSec to create a new traffic change request with
-    an "Allow" action, using the target IP addresses as destinations.
+    3. Makes a POST request to the AlgoSec API (`/FireFlow/api/change-requests/traffic`)
+    to create a traffic change request with the action set to "Allow".
 
-    4. Pauses briefly to allow the request to be processed, then retrieves the details
-    of the newly created request.
+    4. Waits for a brief period and makes a GET request to retrieve the newly created
+    request details.
 
-    5. Attaches the request details as a JSON result and provides a direct link to
-    the change request in the action results.
+    5. Attaches the request details as a JSON result and provides a link to the change
+    request in the SecOps platform.
 
 
     ### Additional Notes
 
-    IP address entities are strictly treated as destinations in the generated change
-    request. The source and service parameters must be provided to define the scope
-    of the allow rule.
+    IP address entities are treated as destinations in the change request.
   ai_short_description: >-
-    Creates a traffic change request in AlgoSec to allow traffic to specified IP address
-    entities.
+    Creates a traffic change request in AlgoSec FireFlow to allow traffic to specified
+    IP address entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -41,14 +37,13 @@ Allow IP:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new traffic change request in AlgoSec to allow traffic to the specified
-      IP addresses.
+      Creates a new traffic change request in AlgoSec FireFlow.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to AlgoSec to create a traffic change request,
-      which mutates external data. It does not fetch contextual enrichment data, nor
-      does it mutate internal SecOps data, update entities, or create insights.
+      The action makes a POST request to the AlgoSec API to create a traffic change
+      request, which mutates external data. It does not fetch enrichment data, update
+      internal entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -100,16 +95,16 @@ Allow IP:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
+      The script iterates over `siemplify.target_entities` and filters them using
       `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
-      is `[EntityTypes.ADDRESS]`. Therefore, it targets ADDRESS entities and filters
-      by entity_type.
+      contains `EntityTypes.ADDRESS`. Thus, it targets ADDRESS entities and filters
+      strictly by `entity_type`.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
     add_ioc_to_blocklist: false
     contain_host: false
-    create_ticket: false
+    create_ticket: true
     delete_email: false
     disable_identity: false
     download_file: false
@@ -119,13 +114,13 @@ Allow IP:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a traffic change request to allow traffic to specific IP
-      addresses. This aligns with restoring connectivity for an indicator, which matches
-      the 'Remove IOC From Blocklist' expected outcome (as it functionally unblocks
-      or allows the IP through the firewall). It does not enrich data, update alerts,
-      or manage tickets.
+      The action creates a new traffic change request in AlgoSec FireFlow, which acts
+      as a ticketing and change management system for firewalls. This aligns with
+      the 'Create Ticket' category. While the intent is to allow an IP, it creates
+      a request rather than directly modifying the blocklist/allowlist, making 'Create
+      Ticket' the most accurate outcome.
     remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: true
+    remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
@@ -166,38 +161,38 @@ Allow IP:
 
     | Custom Fields | String | No | Specify a JSON object containing information about
     all of the fields that need to be added to the change request. Note: this parameter
-    has a priority over other fields. |
+    has a priority over other fields |
 Block IP:
   ai_description: >-
     ### General Description
 
-    Creates a traffic change request in AlgoSec to block traffic to specific IP address
+    Creates a traffic change request in AlgoSec to block traffic to specified IP address
     entities. This action initiates a state change on the external device to prevent
     network traffic to the specified destinations.
 
 
     ### Flow Description
 
-    1. Extracts action parameters including template, source, service, and custom
-    fields.
+    1. Extracts action parameters including Template, Source, Service, Subject, Owner,
+    Due Date, Expiration Date, and Custom Fields.
 
-    2. Filters target entities to include only IP addresses (`ADDRESS`).
+    2. Iterates over the target entities and filters for IP addresses (`ADDRESS`).
 
-    3. Makes a POST request to the AlgoSec API to create a new traffic change request
-    with a `Drop` action for the specified IP addresses as destinations.
+    3. Makes a POST request to the AlgoSec API to create a traffic change request
+    with a "Drop" action, using the provided parameters and the IP addresses as destinations.
 
     4. Waits for a brief period and makes a GET request to retrieve the details of
     the newly created change request.
 
-    5. Adds the change request details as JSON results and provides a link to the
-    request in the SecOps platform.
+    5. Attaches the request details as JSON results and adds a link to the change
+    request in the case wall.
 
 
     ### Additional Notes
 
     IP address entities are treated as destinations in the change request.
   ai_short_description: >-
-    Creates a traffic change request in AlgoSec to block traffic to specific IP address
+    Creates a traffic change request in AlgoSec to block traffic to specified IP address
     entities.
   capabilities:
     can_create_case_comments: false
@@ -212,10 +207,9 @@ Block IP:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the AlgoSec API to create a traffic change
-      request (can_mutate_external_data=true). It does not fetch context data for
-      enrichment, nor does it update internal entities, create insights, or add case
-      comments.
+      The action makes a POST request to AlgoSec to create a traffic change request
+      (mutating external data). It does not fetch enrichment data, update internal
+      entities, create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -267,9 +261,9 @@ Block IP:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES` is `[EntityTypes.ADDRESS]`.
-      This means it targets ADDRESS entities, filtering strictly by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITY_TYPES` (which contains `EntityTypes.ADDRESS`).
+      Therefore, it targets Address entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -285,10 +279,9 @@ Block IP:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a POST request to AlgoSec to create a traffic change request
-      with a 'Drop' action for the specified IP addresses. This aligns with the 'Add
-      IOC To Blocklist' expected outcome, as it updates security controls to prevent
-      interaction with the IOC.
+      The action creates a traffic change request in AlgoSec to block traffic to specific
+      IP addresses. This aligns with the 'Add IOC To Blocklist' expected outcome,
+      as it updates security controls to prevent interaction with the IOC.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -319,40 +312,38 @@ Block IP:
     \ request. Format: ISO 8601. Example: 2021-08-13T08:16:10Z. |\n| Custom Fields\
     \ | String | No | Specify a JSON object containing information about all of the\
     \ fields that need to be added to the change request. Note: this parameter has\
-    \ a priority over other fields |"
+    \ a priority over other fields. |"
 List Templates:
   ai_description: >-
     ### General Description
 
-    Lists available templates in AlgoSec based on specified filter criteria.
+    Retrieves a list of available templates from AlgoSec based on specified filtering
+    criteria.
 
 
     ### Flow Description
 
-    1. Extracts configuration and action parameters.
+    1. Initializes the AlgoSec manager with the provided API credentials.
 
-    2. Initializes the `AlgoSecManager` to interact with the AlgoSec API.
+    2. Makes an HTTP GET request to the AlgoSec API (`/FireFlow/api/templates`) to
+    fetch all available templates.
 
-    3. Calls the AlgoSec API (`/FireFlow/api/templates`) to retrieve a list of available
-    templates.
+    3. Applies the specified `Filter Logic` (Equal or Contains) and `Filter Value`
+    to filter the templates by name.
 
-    4. Applies filtering logic (Equal or Contains) based on the provided `Filter Value`
-    against the template names.
+    4. Truncates the list of templates to the specified `Max Templates To Return`.
 
-    5. Limits the number of returned templates based on the `Max Templates To Return`
-    parameter.
-
-    6. Returns the results as a JSON object and populates a data table with the template
-    details.
+    5. Returns the filtered templates as a JSON result and populates a data table
+    in the case wall.
 
 
     ### Additional Notes
 
-    If no filter value is provided, all templates up to the specified limit will be
-    returned.
+    This action does not operate on entities and only retrieves configuration data
+    from the AlgoSec platform.
   ai_short_description: >-
-    Retrieves a list of available templates from AlgoSec, optionally filtering the
-    results by name and limiting the number of returned items.
+    Retrieves a list of available templates from AlgoSec, optionally filtering them
+    by name and limiting the number of results returned.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -364,8 +355,10 @@ List Templates:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the AlgoSec API to fetch available templates.
-      It does not mutate external data, update internal entities, or create insights.
+      The action makes an HTTP GET request to fetch template data from AlgoSec (`fetches_data`
+      = true). It does not perform any POST/PUT/DELETE operations to mutate external
+      data, nor does it update internal entities, create insights, modify alert data,
+      or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -417,8 +410,9 @@ List Templates:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates independently of case entities.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates independently of case
+      entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -434,9 +428,10 @@ List Templates:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of templates from AlgoSec. This does not match any
-      of the predefined outcome categories such as enriching IOCs, updating alerts,
-      or creating tickets.
+      The action simply lists available templates from the AlgoSec platform. It does
+      not enrich specific IOCs or assets, does not modify alerts or tickets, and does
+      not perform any containment, blocking, or identity management operations. Therefore,
+      it does not match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -456,43 +451,42 @@ List Templates:
 
     | --- | --- | --- | --- |
 
-    | Filter Logic | ddl | No | Specify what filter logic should be applied. |
+    | Filter Logic | String | No | Specify what filter logic should be applied. |
 
-    | Filter Value | string | No | Specify what value should be used in the filter.
+    | Filter Value | String | No | Specify what value should be used in the filter.
     If "Equal" is selected, action will try to find the exact match among record types
     and if "Contains" is selected, action will try to find items that contain that
     substring. If nothing is provided in this parameter, the filter will not be applied.
     |
 
-    | Max Templates To Return | string | No | Specify how many templates to return.
+    | Max Templates To Return | Integer | No | Specify how many templates to return.
     Default: 50. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the AlgoSec server using the parameters provided in the
-    integration configuration. This action ensures that the Google SecOps platform
-    can successfully authenticate and communicate with the AlgoSec instance.
+    Tests connectivity to the AlgoSec server to ensure the integration is configured
+    correctly.
 
 
     ### Flow Description
 
-    1. Extracts the integration-level configuration parameters (API Root, Username,
-    Password, Verify SSL).
+    1. Extracts integration configuration parameters including API Root, Username,
+    Password, and Verify SSL.
 
-    2. Initializes the connection manager with the provided credentials.
+    2. Initializes the AlgoSecManager with the provided credentials.
 
-    3. Makes an HTTP GET request to the AlgoSec API (specifically the `/FireFlow/api/templates`
-    endpoint) to verify connectivity and authentication.
+    3. Makes an HTTP GET request to the AlgoSec API (`/FireFlow/api/templates`) to
+    verify connectivity.
 
-    4. Returns a success message if the connection is established and authenticated,
-    or a failure message if an error occurs.
+    4. Returns a success message if the connection is established, or a failure message
+    if an error occurs.
 
 
     ### Additional Notes
 
-    This action does not require any action-specific parameters or entities to run.
-    It is primarily used for troubleshooting and verifying the integration setup.
+    This action does not require any action-specific parameters as it relies entirely
+    on the integration-level configuration.
   ai_short_description: >-
     Tests connectivity to the AlgoSec server using the provided integration configuration
     parameters.
@@ -507,9 +501,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only makes a GET request to test connectivity. It does not fetch
-      contextual data for alerts/entities, mutate external data, mutate internal data,
-      update entities, create insights, modify alert data, or create case comments.
+      The action only performs a GET request to test connectivity. It does not fetch
+      contextual data for entities, mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -561,8 +555,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely tests connectivity
-      to the external service.
+      The action does not process any entities. It does not iterate over target_entities
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -578,9 +572,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) to the AlgoSec server. It does
-      not enrich data, mutate external state, or interact with alerts, tickets, or
-      entities, so it does not match any of the specified outcome categories.
+      The action is a simple connectivity test (Ping) to the AlgoSec server. It does
+      not enrich data, mutate external systems, or interact with alerts, tickets,
+      or entities. Therefore, it does not match any of the specified outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -601,37 +595,38 @@ Wait for Change Request Status Update:
     ### General Description
 
     Waits for a specific change request status update in AlgoSec. This action runs
-    asynchronously and continuously checks if a given traffic change request has reached
-    one of the specified target statuses.
+    asynchronously and continuously checks the status of a given traffic change request
+    until it matches one of the specified target statuses or times out.
 
 
     ### Flow Description
 
-    1. Extracts the provided `Request ID` and target `Status` parameters.
+    1. Extracts the `Request ID` and target `Status` parameters.
 
-    2. Validates the provided statuses against the allowed list of AlgoSec statuses
-    (e.g., resolved, reconcile, open, check, implementation plan, implement, validate).
+    2. Validates the provided statuses against the allowed list of possible statuses.
 
-    3. Queries the AlgoSec API (via a GET request to the `/FireFlow/api/change-requests/traffic/{request_id}`
-    endpoint) to retrieve the current details and status of the specified change request.
+    3. Makes an API call to AlgoSec (`GET /FireFlow/api/change-requests/traffic/{request_id}`)
+    to retrieve the current details and status of the change request.
 
-    4. Evaluates the retrieved status against the target statuses.
+    4. Evaluates if the current status matches any of the target statuses.
 
-    5. If the current status matches one of the target statuses, the action completes
-    successfully and returns the request details as JSON.
+    5. If a match is found, the action completes successfully and returns the request
+    details as a JSON result.
 
-    6. If the status does not match, the action remains in an 'In Progress' state
-    and will be re-executed in the next cycle until the status matches or a timeout
-    occurs.
+    6. If a match is not found and the timeout is not approaching, the action suspends
+    itself (InProgress) to be re-executed later.
 
 
     ### Additional Notes
 
-    This action is designed to run asynchronously. Ensure the script timeout value
-    in the IDE is adjusted as needed. Only traffic change requests are supported.
+    - This action is designed to run asynchronously. Ensure the script timeout value
+    in the IDE is adjusted as needed.
+
+    - Only traffic change requests are supported.
   ai_short_description: >-
-    Asynchronously waits for a specific traffic change request in AlgoSec to reach
-    a designated status.
+    Waits asynchronously for a specific traffic change request in AlgoSec to reach
+    a desired status, periodically polling the API until the condition is met or a
+    timeout occurs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -643,9 +638,9 @@ Wait for Change Request Status Update:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by making a GET request to the AlgoSec API to retrieve
-      change request details. It does not mutate external data, mutate internal data,
-      update entities, create insights, modify alert data, or create case comments.
+      The action fetches data by making a GET request to AlgoSec to retrieve change
+      request details. It does not mutate external data, update internal entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -697,10 +692,8 @@ Wait for Change Request Status Update:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the `Request ID` parameter provided by the
-      user. Therefore, it does not run on entities and all entity-related flags are
-      false.
+      The action does not process any entities. It relies solely on the provided Request
+      ID parameter to fetch data from AlgoSec.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -716,10 +709,9 @@ Wait for Change Request Status Update:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action checks the status of a change request in AlgoSec. It does not enrich
-      IOCs or assets, update alerts, create or update tickets in an ITSM, block or
-      allow IOCs, or perform any other operations that match the predefined outcome
-      categories.
+      The action checks the status of a change request in AlgoSec. This does not align
+      with any of the predefined outcome categories such as enriching IOCs/assets,
+      updating alerts, managing tickets, or modifying blocklists.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
