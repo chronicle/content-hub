@@ -510,3 +510,105 @@ SONAR_OBJECT_DETAIL_QUERY = (
   }
 }"""
 )
+
+CLOSEST_SNAPSHOT_QUERY = (
+    """query GoogleSecOpsResolveSnapshot($snappableId: String!, $beforeTime: DateTime!) {"""
+    """allSnapshotsClosestToPointInTime(
+    snappableIds: [$snappableId]
+    beforeTime: $beforeTime
+  ) {
+    snappableId
+    error
+    snapshot {
+      id
+      date
+    }
+  }
+}"""
+)
+
+CLASSIFICATION_OBJECT_DETAIL_QUERY = (
+    """query GoogleSecOpsClassificationObjectDetail("""
+    """$snappableFid: String!, $snapshotFid: String!, $includeWhitelistedResults: Boolean) {"""
+    """policyObj(
+    snappableFid: $snappableFid
+    snapshotFid: $snapshotFid
+    includeWhitelistedResults: $includeWhitelistedResults
+  ) {
+    id
+    snapshotFid
+    snapshotTimestamp
+    riskLevel
+    objectStatus {
+      latestSnapshotResult {
+        snapshotTime
+        snapshotFid
+      }
+    }
+    rootFileResult {
+      hits {
+        totalHits
+        violations
+        violationsDelta
+        totalHitsDelta
+      }
+      analyzerGroupResults {
+        analyzerGroup {
+          groupType
+          id
+          name
+        }
+        hits {
+          totalHits
+          violations
+          violationsDelta
+          totalHitsDelta
+        }
+      }
+      analyzerResults {
+        analyzer {
+          id
+          name
+        }
+        hits {
+          totalHits
+          violations
+          violationsDelta
+          totalHitsDelta
+        }
+      }
+      sensitiveHits {
+        highRiskHits {
+          totalHits
+          violatedHits
+        }
+        mediumRiskHits {
+          totalHits
+          violatedHits
+        }
+        lowRiskHits {
+          totalHits
+          violatedHits
+        }
+        noRiskHits {
+          totalHits
+          violatedHits
+        }
+        totalHits {
+          totalHits
+          violatedHits
+        }
+      }
+    }
+    snappable {
+      id
+      name
+      objectType
+    }
+    policySummaries {
+      id
+      name
+    }
+  }
+}"""
+)

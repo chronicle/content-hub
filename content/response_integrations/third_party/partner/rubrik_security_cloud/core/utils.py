@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 from urllib.parse import urlparse
@@ -11,22 +12,43 @@ from TIPCommon.smp_time import unix_now
 from .constants import (
     ADVANCE_IOC_SCAN_ACTION_IDENTIFIER,
     DEFAULT_EXPIRY_SECONDS,
+    DEFAULT_IR_POLICY_TYPES,
+    DEFAULT_MAX_RESULTS,
     DEFAULT_SCAN_NAME,
+    DSPM_CATEGORY_MAP,
+    DSPM_OBJECT_TYPE_ENUM_MAP,
+    DSPM_SEVERITY_MAP,
+    DSPM_SORT_BY_MAP,
+    ERROR_INVALID_ENUM,
     EXPIRES_IN_KEY,
+    FILE_ACCESS_VIA_MAP,
+    FILE_EXPOSURE_MAP,
+    FILE_RISK_LEVEL_MAP,
+    FILE_SORT_BY_MAP,
     GET_CDM_CLUSTER_CONNECTION_STATE_ACTION_IDENTIFIER,
     GET_CDM_CLUSTER_LOCATION_ACTION_IDENTIFIER,
     GET_SONAR_SENSITIVE_HITS_ACTION_IDENTIFIER,
     INTEGRATION_NAME,
     IOC_SCAN_RESULTS_ACTION_IDENTIFIER,
+    IR_CATEGORY_MAP,
+    IR_IDENTITY_PROVIDER_ENUM_MAP,
+    IR_IDENTITY_TAG_ENUM_MAP,
+    IR_POLICY_TYPE_MAP,
+    IR_SORT_BY_MAP,
     LIST_EVENTS_ACTION_IDENTIFIER,
     LIST_OBJECT_SNAPSHOTS_ACTION_IDENTIFIER,
     LIST_SONAR_FILE_CONTEXTS_ACTION_IDENTIFIER,
+    MAX_VIOLATIONS,
     PING_ACTION_IDENTIFIER,
+    SENSITIVITY_LEVEL_MAP,
+    SORT_ORDER_MAP,
+    STATUS_ENUM_MAP,
     TURBO_IOC_SCAN_ACTION_IDENTIFIER,
 )
 from .rubrik_exceptions import (
     InternalSeverError,
     InvalidIntegerException,
+    InvalidValueException,
     ItemNotFoundException,
     RubrikException,
 )
@@ -97,6 +119,36 @@ def validate_required_string(value: Optional[str], param_name: str) -> str:
     if not value or not value.strip():
         raise ValueError(f"{param_name} must be a non-empty string.")
     return value.strip()
+
+
+_UUID_PATTERN = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+
+def validate_uuid_format(value: str, param_name: str) -> str:
+    """
+    Validate that a string parameter is a well-formed UUID (RSC violation/policy/
+    resource IDs all follow this format).
+
+    Shared across actions so any ID param can be format-checked identically.
+
+    Args:
+        value (str): The already-required, stripped value to validate.
+        param_name (str): The name of the parameter for error messages.
+
+    Returns:
+        str: The validated value, unchanged.
+
+    Raises:
+        ValueError: If the value does not match the UUID format.
+    """
+    if not _UUID_PATTERN.match(value):
+        raise ValueError(
+            f"{param_name} must be a valid UUID. "
+            f"Example: 1fa1bd94-0512-495c-a992-107c6f4e64aa. Received: {value}"
+        )
+    return value
 
 
 def validate_integer_param(
@@ -723,3 +775,388 @@ class HandleExceptions(object):
                 pass
 
         return self.common_exception()
+
+
+def parse_optional_datetime_param(
+    value: Optional[str], param_name: str = "parameter"
+) -> Optional[str]:
+    """Validate and return an optional datetime string parameter.
+
+    Args:
+        value: Raw datetime string value, coming from the action parameter.
+        param_name: Parameter name used in error messages.
+
+    Returns:
+        The datetime string, or None if empty.
+    """
+    if not value or not value.strip():
+        return None
+    return value.strip()
+
+
+def clean_none_values(d: Dict[str, Any]) -> Dict[str, Any]:
+    """Remove keys with None values from a dictionary."""
+    return {k: v for k, v in d.items() if v is not None}
+
+
+def format_authentication_failure_message(error: Exception) -> str:
+    """Build the standard 'Authentication failed: <detail>' case wall message.
+
+    Shared across actions so every action surfaces auth failures identically.
+    """
+    return f"Authentication failed: {error}"
+
+
+def format_graphql_error_message(message_prefix: str, error: Exception) -> str:
+    """Build a '<prefix>: GraphQL errors: <detail>' case wall message.
+
+    The ": GraphQL errors: <detail>" suffix is shared across every action's TDD spec;
+    the prefix wording varies per action (e.g. "API error during Search DSPM
+    Violations" vs. "Failed to update DSPM violation status"), so callers pass the
+    full prefix rather than just an action name.
+    """
+    return f"{message_prefix}: GraphQL errors: {error}"
+
+
+def string_to_multi_select(
+    items_str: Optional[str], enum_map: Dict[str, str], param_name: str
+) -> Optional[List[str]]:
+    """Convert a multi-select parameter value to a list of mapped enum values.
+
+    Chronicle SOAR multi-choice parameters deliver their selected values as
+    either a JSON array string (e.g. '["Low", "High"]') or a comma-separated
+    string, depending on how the value was set. Both formats are supported.
+
+    Args:
+        items_str: JSON array or comma-separated string of human-readable labels.
+        enum_map: Mapping of human-readable labels to API enum values.
+        param_name: Parameter name used in error messages.
+
+    Returns:
+        List of mapped API enum values, or None if items_str is empty.
+
+    Raises:
+        InvalidValueException: If any label is not a valid key in enum_map.
+    """
+    if not items_str or not items_str.strip():
+        return None
+
+    labels = None
+    try:
+        parsed = json.loads(items_str)
+        if isinstance(parsed, list):
+            labels = [str(item).strip() for item in parsed if str(item).strip()]
+    except (json.JSONDecodeError, TypeError):
+        pass
+    if labels is None:
+        labels = [item.strip() for item in items_str.split(",") if item.strip()]
+
+    mapped_values = []
+    for label in labels:
+        if label not in enum_map:
+            raise InvalidValueException(
+                ERROR_INVALID_ENUM.format(label, param_name, ", ".join(enum_map.keys()))
+            )
+        mapped_values.append(enum_map[label])
+    return mapped_values or None
+
+
+def map_enum_values(
+    value: Optional[str],
+    enum_map: Dict[str, str],
+    param_name: str,
+    default: Optional[str] = None,
+) -> Optional[str]:
+    """Map a single human-readable label to its API enum value.
+
+    Args:
+        value: Human-readable label to map.
+        enum_map: Mapping of human-readable labels to API enum values.
+        param_name: Parameter name used in error messages.
+        default: Value to return when value is empty (already an API enum value).
+
+    Returns:
+        The mapped API enum value, or default if value is empty.
+
+    Raises:
+        InvalidValueException: If value is not a valid key in enum_map.
+    """
+    if not value or not value.strip():
+        return default
+
+    value = value.strip()
+    if value not in enum_map:
+        raise InvalidValueException(
+            ERROR_INVALID_ENUM.format(value, param_name, ", ".join(enum_map.keys()))
+        )
+    return enum_map[value]
+
+
+# ---------------------------------------------------------------------------
+# Parameter parsing helpers used by action scripts
+# ---------------------------------------------------------------------------
+
+def parse_status_param(siemplify: Any, param_name: str = "Status") -> Optional[List[str]]:
+    """Extract and map the Status multi-select parameter."""
+    raw = siemplify.extract_action_param(
+        param_name=param_name, input_type=str, is_mandatory=False, print_value=True
+    )
+    return string_to_multi_select(raw, STATUS_ENUM_MAP, param_name)
+
+
+def parse_dspm_severity_param(siemplify: Any) -> Optional[List[str]]:
+    """Extract and map the Severity multi-select parameter for DSPM."""
+    raw = siemplify.extract_action_param(
+        param_name="Severity", input_type=str, is_mandatory=False, print_value=True
+    )
+    return string_to_multi_select(raw, DSPM_SEVERITY_MAP, "Severity")
+
+
+def parse_dspm_category_param(siemplify: Any) -> Optional[List[str]]:
+    """Extract and map the Category multi-select parameter for DSPM."""
+    raw = siemplify.extract_action_param(
+        param_name="Category", input_type=str, is_mandatory=False, print_value=True
+    )
+    return string_to_multi_select(raw, DSPM_CATEGORY_MAP, "Category")
+
+
+def parse_sensitivity_level_param(siemplify: Any) -> Optional[List[str]]:
+    """Extract and map the Sensitivity Level multi-select parameter for DSPM violations."""
+    raw = siemplify.extract_action_param(
+        param_name="Sensitivity Level", input_type=str, is_mandatory=False, print_value=True
+    )
+    return string_to_multi_select(raw, SENSITIVITY_LEVEL_MAP, "Sensitivity Level")
+
+
+def parse_dspm_object_type_param(siemplify: Any) -> Optional[List[str]]:
+    """Extract and validate the Object Type multi-select parameter for DSPM violations."""
+    raw = siemplify.extract_action_param(
+        param_name="Object Type", input_type=str, is_mandatory=False, print_value=True
+    )
+    return string_to_multi_select(raw, DSPM_OBJECT_TYPE_ENUM_MAP, "Object Type")
+
+
+def parse_dspm_sort_by_param(siemplify: Any, default: str = "SORT_DETECTION_TIME") -> str:
+    """Extract and map the Sort By parameter for DSPM violations."""
+    raw = siemplify.extract_action_param(
+        param_name="Sort By", input_type=str, is_mandatory=False, print_value=True
+    )
+    return map_enum_values(raw, DSPM_SORT_BY_MAP, "Sort By", default=default)
+
+
+def parse_ir_sort_by_param(siemplify: Any, default: str = "SORT_DETECTION_TIME") -> str:
+    """Extract and map the Sort By parameter for IR violations."""
+    raw = siemplify.extract_action_param(
+        param_name="Sort By", input_type=str, is_mandatory=False, print_value=True
+    )
+    return map_enum_values(raw, IR_SORT_BY_MAP, "Sort By", default=default)
+
+
+def parse_sort_order_param(siemplify: Any, default: str = "DESC") -> str:
+    """Extract and map the Sort Order parameter."""
+    raw = siemplify.extract_action_param(
+        param_name="Sort Order", input_type=str, is_mandatory=False, print_value=True
+    )
+    return map_enum_values(raw, SORT_ORDER_MAP, "Sort Order", default=default)
+
+
+def parse_ir_policy_types_param(siemplify: Any) -> List[str]:
+    """Extract and map the Policy Types multi-select parameter for IR actions.
+
+    Extracted as non-mandatory so an empty/unselected value falls back to the
+    documented default (Identity, IDP) instead of raising a raw "mandatory parameter
+    missing" error — the TDD marks Policy Types required but ships a default selection.
+
+    Robust against every form the platform may deliver the multi-select default in —
+    a proper JSON array (["Identity", "IDP"]), a single comma-joined chip
+    (["Identity, IDP"]), a plain comma-separated string (Identity, IDP), or an
+    unparseable raw default that gets naively comma-split into bracket/quote fragments
+    (e.g. '["Identity"' and '"IDP"]'). Policy-type labels never contain commas or
+    brackets, so flattening on commas and stripping stray [ ] " ' characters is always
+    safe for this parameter.
+    """
+    raw = siemplify.extract_action_param(
+        param_name="Policy Types", input_type=str, is_mandatory=False, print_value=True
+    )
+    if not raw or not raw.strip():
+        return list(DEFAULT_IR_POLICY_TYPES)
+
+    try:
+        parsed = json.loads(raw)
+        items = parsed if isinstance(parsed, list) else [parsed]
+    except (json.JSONDecodeError, TypeError):
+        items = [raw]
+
+    labels: List[str] = []
+    for item in items:
+        for part in str(item).split(","):
+            cleaned = part.strip().strip("[]\"'").strip()
+            if cleaned:
+                labels.append(cleaned)
+
+    mapped: List[str] = []
+    for label in labels:
+        if label not in IR_POLICY_TYPE_MAP:
+            raise InvalidValueException(
+                ERROR_INVALID_ENUM.format(
+                    label, "Policy Types", ", ".join(IR_POLICY_TYPE_MAP.keys())
+                )
+            )
+        mapped.append(IR_POLICY_TYPE_MAP[label])
+
+    return mapped or list(DEFAULT_IR_POLICY_TYPES)
+
+
+def parse_ir_category_param(siemplify: Any) -> Optional[List[str]]:
+    """Extract and map the Category multi-select parameter for IR violations."""
+    raw = siemplify.extract_action_param(
+        param_name="Category", input_type=str, is_mandatory=False, print_value=True
+    )
+    return string_to_multi_select(raw, IR_CATEGORY_MAP, "Category")
+
+
+def parse_ir_identity_provider_param(siemplify: Any) -> Optional[List[str]]:
+    """Extract and map the Identity Provider multi-select parameter for IR violations."""
+    raw = siemplify.extract_action_param(
+        param_name="Identity Provider", input_type=str, is_mandatory=False, print_value=True
+    )
+    return string_to_multi_select(raw, IR_IDENTITY_PROVIDER_ENUM_MAP, "Identity Provider")
+
+
+def parse_ir_identity_tag_param(siemplify: Any) -> Optional[List[str]]:
+    """Extract and map the Identity Tag multi-select parameter for IR violations."""
+    raw = siemplify.extract_action_param(
+        param_name="Identity Tag", input_type=str, is_mandatory=False, print_value=True
+    )
+    return string_to_multi_select(raw, IR_IDENTITY_TAG_ENUM_MAP, "Identity Tag")
+
+
+def parse_file_risk_level_param(siemplify: Any) -> Optional[List[str]]:
+    """Extract and map the Risk Level multi-select for file list."""
+    raw = siemplify.extract_action_param(
+        param_name="Risk Level", input_type=str, is_mandatory=False, print_value=True
+    )
+    return string_to_multi_select(raw, FILE_RISK_LEVEL_MAP, "Risk Level")
+
+
+def parse_file_exposure_param(siemplify: Any) -> Optional[List[str]]:
+    """Extract and map the Exposure multi-select for file list."""
+    raw = siemplify.extract_action_param(
+        param_name="Exposure", input_type=str, is_mandatory=False, print_value=True
+    )
+    return string_to_multi_select(raw, FILE_EXPOSURE_MAP, "Exposure")
+
+
+def parse_file_access_via_param(siemplify: Any, default: str = "ACCESS_TYPE_UNSPECIFIED") -> str:
+    """Extract and map the Access Via parameter for file list."""
+    raw = siemplify.extract_action_param(
+        param_name="Access Via", input_type=str, is_mandatory=False, print_value=True
+    )
+    return map_enum_values(raw, FILE_ACCESS_VIA_MAP, "Access Via", default=default)
+
+
+def parse_file_sort_by_param(siemplify: Any, default: str = "HITS") -> str:
+    """Extract and map the Sort By parameter for file list."""
+    raw = siemplify.extract_action_param(
+        param_name="Sort By", input_type=str, is_mandatory=False, print_value=True
+    )
+    return map_enum_values(raw, FILE_SORT_BY_MAP, "Sort By", default=default)
+
+
+def validate_max_results(
+    value: Optional[str],
+    default: int = DEFAULT_MAX_RESULTS,
+    max_allowed: int = MAX_VIOLATIONS,
+    param_name: str = "Max Results",
+) -> int:
+    """
+    Validate and return max_results as an integer within bounds.
+
+    Produces the exact wording required across the TDD's Case Wall Output
+    Message tables (e.g. Search DSPM Violations, Get Violation File List):
+    "{param_name} must be an integer. Got: <value>", "{param_name} must be
+    at least 1.", "{param_name} cannot exceed {max_allowed}. Got: <value>".
+
+    Args:
+        value: Raw string from action parameter.
+        default: Default value when value is empty.
+        max_allowed: Upper bound.
+        param_name: Parameter name used in error messages.
+
+    Returns:
+        Validated integer.
+
+    Raises:
+        InvalidIntegerException: If value is present but invalid.
+    """
+    if value is None or not str(value).strip():
+        return default
+
+    raw_value = str(value).strip()
+    try:
+        int_value = int(raw_value)
+    except ValueError:
+        raise InvalidIntegerException(f"{param_name} must be an integer. Got: {raw_value}")
+
+    if int_value < 1:
+        raise InvalidIntegerException(f"{param_name} must be at least 1.")
+    if int_value > max_allowed:
+        raise InvalidIntegerException(
+            f"{param_name} cannot exceed {max_allowed}. Got: {raw_value}"
+        )
+
+    return int_value
+
+
+def validate_iso_datetime(value: Optional[str], param_name: str) -> Optional[str]:
+    """Validate a date parameter against the single supported format: YYYY-MM-DDTHH:MM:SSZ.
+
+    Shared across actions so every date-range filter enforces the same format.
+
+    Raises:
+        InvalidValueException: If the value is non-empty and does not match the
+            required format.
+    """
+    if value is None or not str(value).strip():
+        return None
+
+    value = str(value).strip()
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        raise InvalidValueException(
+            f"{param_name} must be in YYYY-MM-DDTHH:MM:SSZ format. Received: {value}"
+        )
+    return value
+
+
+def validate_date_pair_required(
+    start_value: Optional[str], end_value: Optional[str], start_label: str, end_label: str
+) -> None:
+    """Ensure a date-range pair is either both provided or both empty.
+
+    Raises:
+        InvalidValueException: If exactly one of start_value/end_value is provided.
+    """
+    if bool(start_value) != bool(end_value):
+        raise InvalidValueException(
+            f"Both {start_label} and {end_label} must be provided together."
+        )
+
+
+def validate_date_order(start_value: Optional[str], end_value: Optional[str], error_message: str) -> None:
+    """Ensure end_value is chronologically after start_value, when both are present.
+
+    Assumes both values (if present) already match the YYYY-MM-DDTHH:MM:SSZ
+    format enforced by validate_iso_datetime.
+
+    Raises:
+        InvalidValueException: If end_value is not strictly after start_value.
+    """
+    if not start_value or not end_value:
+        return
+
+    start_dt = datetime.strptime(start_value, "%Y-%m-%dT%H:%M:%SZ")
+    end_dt = datetime.strptime(end_value, "%Y-%m-%dT%H:%M:%SZ")
+    if end_dt < start_dt:
+        raise InvalidValueException(error_message)

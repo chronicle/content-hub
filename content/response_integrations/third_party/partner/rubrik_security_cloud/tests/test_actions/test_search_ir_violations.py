@@ -1,0 +1,63 @@
+from __future__ import annotations
+
+from integration_testing.platform.script_output import MockActionOutput
+from integration_testing.set_meta import set_metadata
+
+from rubrik_security_cloud.actions import search_ir_violations
+from rubrik_security_cloud.tests.common import CONFIG_PATH, MOCK_SEARCH_IR_VIOLATIONS
+from rubrik_security_cloud.tests.core.product import RubrikSecurityCloud
+from rubrik_security_cloud.tests.core.session import RubrikSession
+
+DEFAULT_PARAMETERS = {
+    "Policy Types": "Identity,IDP",
+    "Statuses": "Open",
+    "Max Results": "50",
+}
+
+
+class TestSearchIRViolations:
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+    def test_search_ir_violations_success(
+        self,
+        script_session: RubrikSession,
+        action_output: MockActionOutput,
+        rubrik: RubrikSecurityCloud,
+    ) -> None:
+        rubrik.search_ir_violations_response = MOCK_SEARCH_IR_VIOLATIONS
+        success_output_msg_prefix = "Successfully retrieved 1 IR violation(s)"
+
+        search_ir_violations.main()
+
+        graphql_requests = [
+            req
+            for req in script_session.request_history
+            if req.request.url.path.endswith("/api/graphql")
+        ]
+        assert len(graphql_requests) >= 1
+
+        assert success_output_msg_prefix in action_output.results.output_message
+        assert action_output.results.result_value is True
+        assert action_output.results.execution_state.value == 0
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+    def test_search_ir_violations_no_results(
+        self,
+        script_session: RubrikSession,
+        action_output: MockActionOutput,
+        rubrik: RubrikSecurityCloud,
+    ) -> None:
+        rubrik.search_ir_violations_response = {
+            "data": {
+                "policyViolations": {
+                    "count": 0,
+                    "edges": [],
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                }
+            }
+        }
+
+        search_ir_violations.main()
+
+        assert "No IR violations found" in action_output.results.output_message
+        assert action_output.results.result_value is True
+        assert action_output.results.execution_state.value == 0

@@ -1,0 +1,61 @@
+"Generate Alert from Rubrik Classification Events":
+  ai_description: >-
+    ### General Description
+
+    This connector integrates with Rubrik Security Cloud to automatically fetch Sonar
+    classification events and generate alerts in Google SecOps. It queries the Rubrik
+    API for successful classification events, resolves the closest snapshot for each
+    affected object, retrieves policy violation details, and ingests an alert for
+    any object that has classification violations.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Search Time Period In Days | String | No | Number of past days to fetch classification
+    events from. Default is 1 day. |
+
+    | Service Account JSON | String | Yes | Rubrik Security Cloud service account
+    JSON (contains client_id, client_secret, access_token_uri). |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates when connecting
+    to Rubrik Security Cloud. |
+
+    | DeviceProductField | String | Yes | The product field name to use for the ingested
+    alerts. |
+
+    | EventClassId | String | Yes | The event field name to use for the ingested alerts.
+    |
+
+    | PythonProcessTimeout | String | Yes | Timeout in seconds for the Python process.
+    |
+
+
+    ### Flow Description
+
+    1. Connects to the Rubrik Security Cloud API using the provided Service Account
+    JSON.
+
+    2. Reads the local checkpoint to determine the start time for fetching events.
+    If no checkpoint exists, it defaults to the configured `Search Time Period In
+    Days`.
+
+    3. Fetches all successful classification events (`CLASSIFICATION/SUCCESS`) within
+    the time window.
+
+    4. Filters the events for those containing the "Results available" message and
+    deduplicates them by object ID, keeping the most recently updated event.
+
+    5. For each unique object, resolves the closest snapshot and retrieves its policy
+    violation details.
+
+    6. Checks if the object has any violations (violations > 0).
+
+    7. Maps the violating objects into Google SecOps alerts and ingests them into
+    the platform.
+
+    8. Updates the checkpoint with the current timestamp to ensure the next run fetches
+    only new events.

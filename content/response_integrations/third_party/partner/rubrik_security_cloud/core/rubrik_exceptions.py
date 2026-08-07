@@ -9,6 +9,16 @@ class RubrikException(Exception):
     pass
 
 
+class InternalServerError(RubrikException):
+    """Exception for server-side errors (5xx)."""
+
+    pass
+
+
+# Alias for backward compatibility (typo kept intentionally)
+InternalSeverError = InternalServerError
+
+
 class ItemNotFoundException(RubrikException):
     """
     Exception raised when a requested resource is not found.
@@ -25,9 +35,10 @@ class RateLimitException(RubrikException):
     pass
 
 
-class InternalSeverError(RubrikException):
+class ConnectionTimeoutException(RubrikException):
     """
-    Exception raised for internal server errors.
+    Exception raised when the Rubrik endpoint is unreachable or times out
+    (connection refused, DNS failure, connect/read timeout, invalid URL).
     """
 
     pass
@@ -55,5 +66,31 @@ class UnauthorizedErrorException(RubrikException):
     """
     Exception raised for authentication and authorization failures (401 status code).
     """
+
+    pass
+
+
+class TokenExpiredException(RubrikException):
+    """Exception raised when a token cannot be refreshed."""
+
+    pass
+
+
+class InvalidValueException(RubrikException):
+    """Exception for invalid enum or dropdown parameter values."""
+
+    pass
+
+
+class InvalidFormatException(RubrikException):
+    """Exception for invalid format of parameter values."""
+
+    pass
+
+
+class AmbiguousFileMatchException(RubrikException):
+    """Raised when more than one generated file matches the expected filename and
+    was created after the action started, so the correct file cannot be
+    determined with certainty."""
 
     pass
