@@ -16,7 +16,6 @@ from TIPCommon.data_models import AlertCard
 from TIPCommon.transformation import convert_comma_separated_to_list
 
 from ..core.constants import (
-    ALERT_ID_CONTEXT_KEY,
     CONTEXT_KEY,
     ENTITY_TYPE_ALERT,
     ENTITY_TYPE_TICKET,
@@ -62,9 +61,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         )
 
     def _get_cases_to_sync(self) -> list[JobCase]:
-        """Fetches cases to sync, filtering out cases that are already closed in SecOps."""
-        cases = super()._get_cases_to_sync()
-        return [case for case in cases if not case.case_detail.is_closed]
+        """Fetches cases to sync from SecOps and modified PagerDuty incidents."""
+        return super()._get_cases_to_sync()
 
     def modified_synced_case_ids_by_product(
         self,
@@ -176,36 +174,36 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
 
     def _extract_product_ids_from_case(self, job_case: JobCase) -> list[str]:
         """Extracts product incident IDs from the SecOps case alerts and context.
+
         Args:
             job_case: The SecOps case containing the alerts.
+
         Returns:
             A list of unique product incident IDs extracted from the case.
         """
         incident_ids: list[str] = []
-
-        for key in (CONTEXT_KEY, ALERT_ID_CONTEXT_KEY):
-            context_value: str | None = self.soar_job.get_context_property(
-                ENTITY_TYPE_TICKET,
-                str(job_case.case_detail.id_),
-                key,
-            )
-            if context_value:
-                ids = convert_comma_separated_to_list(context_value)
-                incident_ids.extend(ids)
-                first_alert = job_case.get_first_alert(open_only=False)
-                if first_alert:
-                    for incident_id in ids:
-                        job_case.product_ids_from_secops_alerts[incident_id] = first_alert
-                break
-
-        if incident_ids:
-            return sorted(set(incident_ids))
 
         for alert in job_case.case_detail.alerts:
             incident_id: str | None = self._extract_product_id_from_ticket(alert)
             if incident_id:
                 incident_ids.append(incident_id)
                 job_case.product_ids_from_secops_alerts[incident_id] = alert
+
+        if incident_ids:
+            return sorted(set(incident_ids))
+
+        context_value: str | None = self.soar_job.get_context_property(
+            ENTITY_TYPE_TICKET,
+            str(job_case.case_detail.id_),
+            CONTEXT_KEY,
+        )
+        if context_value:
+            ids = convert_comma_separated_to_list(context_value)
+            incident_ids.extend(ids)
+            first_alert = job_case.get_first_alert(open_only=False)
+            if first_alert:
+                for incident_id in ids:
+                    job_case.product_ids_from_secops_alerts[incident_id] = first_alert
 
         return sorted(set(incident_ids))
 
@@ -225,14 +223,13 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 return ticket.ticket_id
 
         if hasattr(ticket, "alert_group_identifier") and ticket.alert_group_identifier:
-            for key in (CONTEXT_KEY, ALERT_ID_CONTEXT_KEY):
-                val: str | None = self.soar_job.get_context_property(
-                    ENTITY_TYPE_ALERT,
-                    str(ticket.alert_group_identifier),
-                    key,
-                )
-                if val:
-                    return val
+            val: str | None = self.soar_job.get_context_property(
+                ENTITY_TYPE_ALERT,
+                str(ticket.alert_group_identifier),
+                CONTEXT_KEY,
+            )
+            if val:
+                return val
 
         return None
 
@@ -300,6 +297,12 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         case_id = str(job_case.case_detail.id_)
         mapped_ids = self.processed_items.get(case_id, [])
         for alert in job_case.case_detail.alerts:
+            alert_status_str = str(getattr(alert, "status", "")).strip().lower()
+            if alert_status_str in ["close", "closed", "2"]:
+                alert.status = "close"
+            else:
+                alert.status = "open"
+
             product_id = self._extract_product_id_from_ticket(alert)
             matching_product = None
             if product_id:
@@ -344,27 +347,28 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             open_alerts = [
                 a
                 for a in job_case.case_detail.alerts
-                if a.status.lower() not in ["close", "closed"]
+                if a.status.lower() != "close"
             ]
             comment = meta.closure_reason or "Ticket was closed"
+            case_id = str(job_case.case_detail.id_)
             if len(open_alerts) <= 1:
                 try:
                     self.soar_job.close_case(
                         root_cause=root_cause,
                         comment=comment,
                         reason=reason,
-                        case_id=job_case.case_detail.id_,
+                        case_id=case_id,
                         alert_identifier=alert.identifier,
                     )
-                    alert.status = "closed"
+                    alert.status = "close"
                     self.logger.info(
-                        f"Successfully closed case {job_case.case_detail.id_} "
+                        f"Successfully closed case {case_id} "
                         f"because alert {alert.identifier} was the last open alert "
                         f"and PagerDuty incident {meta.incident_number} was resolved."
                     )
                 except Exception as e:
                     self.logger.error(
-                        f"Failed to close case {job_case.case_detail.id_}: {e}"
+                        f"Failed to close case {case_id}: {e}"
                     )
             else:
                 try:
@@ -372,13 +376,13 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         root_cause=root_cause,
                         comment=comment,
                         reason=reason,
-                        case_id=job_case.case_detail.id_,
+                        case_id=case_id,
                         alert_id=alert.identifier,
                     )
-                    alert.status = "closed"
+                    alert.status = "close"
                     self.logger.info(
                         f"Successfully closed alert {alert.identifier} in case "
-                        f"{job_case.case_detail.id_} because PagerDuty incident "
+                        f"{case_id} because PagerDuty incident "
                         f"{meta.incident_number} was resolved."
                     )
                 except Exception as e:
@@ -497,13 +501,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         if not alert:
             return False
 
-        alert_status = getattr(alert, "status", "")
-        alert_closed = False
-        if isinstance(alert_status, str):
-            alert_closed = alert_status.lower() in ["close", "closed"]
-        else:
-            alert_closed = str(alert_status).lower() in ["close", "closed"]
-
+        alert_closed = alert.status.lower() == "close"
         product_closed = product.get("status") == "resolved"
 
         return alert_closed and product_closed
