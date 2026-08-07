@@ -16,23 +16,28 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, NamedTuple
+import pathlib
+import string
+from typing import TYPE_CHECKING, Any, NamedTuple
 
+import anyio
 import yaml
 
 from mp.core import constants
 from mp.core.data_models.integrations.action.ai.metadata import ActionAiMetadata
-from mp.describe.common.describe import DescribeBase, IntegrationStatus
+from mp.describe.common.describe import DescribeBase, DescriptionResult, IntegrationStatus
+from mp.describe.common.utils import llm
 
+from .metadata import FIELD_TO_OVERRIDE_MODEL, PromptOverrideConfig, PromptOverridesFile
 from .prompt_constructors.built import BuiltPromptConstructor
 from .prompt_constructors.source import SourcePromptConstructor
+from .utils import create_dynamic_field_model, format_display_value
 
 if TYPE_CHECKING:
     import asyncio
-    import pathlib
     from collections.abc import Callable
 
-    import anyio
+    from pydantic import BaseModel
     from rich.progress import Progress
 
     from mp.core.data_models.integrations.action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
@@ -163,3 +168,208 @@ def _create_prompt_constructor(
         params.action_file_name,
         params.status.out_path,
     )
+
+
+class MultiPromptDescribeAction(DescribeAction):
+    def __init__(  # ruff:ignore[too-many-arguments]
+        self,
+        integration: str,
+        actions: set[str],
+        *,
+        src: pathlib.Path | None = None,
+        dst: pathlib.Path | None = None,
+        override: bool = False,
+        prompt_overrides: pathlib.Path | None = None,
+    ) -> None:
+        super().__init__(integration, actions, src=src, dst=dst, override=override)
+        self.prompt_overrides_path: pathlib.Path | None = prompt_overrides
+
+    async def describe_bulk(
+        self,
+        resources: list[str],
+        status: IntegrationStatus,
+    ) -> list[DescriptionResult]:
+        """Describe multiple action resources in bulk with optional prompt overrides.
+
+        Args:
+            resources: Action resource names to describe.
+            status: Status of the integration content build.
+
+        Returns:
+            list[DescriptionResult]: The list of action description results.
+
+        """
+        baseline_results: list[DescriptionResult] = await super().describe_bulk(resources, status)
+
+        if not self.prompt_overrides_path:
+            return baseline_results
+
+        overrides: list[PromptOverrideConfig] = await self._load_prompt_overrides()
+        if not overrides:
+            return baseline_results
+
+        return await self._apply_prompt_overrides(resources, status, baseline_results, overrides)
+
+    async def _load_prompt_overrides(self) -> list[PromptOverrideConfig]:
+        """Load and parse prompt overrides configuration from JSON file.
+
+        Returns:
+            list[PromptOverrideConfig]: List of prompt override configuration items.
+
+        Raises:
+            FileNotFoundError: If the configured prompt overrides file does not exist.
+            ValueError: If the prompt overrides file contains invalid JSON.
+
+        """
+        if not self.prompt_overrides_path:
+            return []
+
+        path: anyio.Path = anyio.Path(self.prompt_overrides_path)
+        if not await path.exists():
+            error_msg = f"Prompt overrides file '{self.prompt_overrides_path}' does not exist."
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
+
+        try:
+            content: str = await path.read_text(encoding="utf-8")
+            if not content.strip():
+                return []
+            parsed = PromptOverridesFile.model_validate_json(content)
+        except Exception as exc:
+            error_msg = f"Failed to parse prompt overrides file '{self.prompt_overrides_path}': {exc}"
+            logger.exception(error_msg)
+            raise ValueError(error_msg) from exc
+        else:
+            return parsed.prompt_config
+
+    async def _construct_custom_prompts(
+        self, resources: list[str], status: IntegrationStatus, template: string.Template
+    ) -> list[str]:
+        """Construct custom prompts for actions using a custom template.
+
+        Args:
+            resources: Action resource names to construct prompts for.
+            status: Status of the integration content build.
+            template: Custom prompt string Template.
+
+        Returns:
+            list[str]: Formatted custom prompt strings for each action.
+
+        """
+        prompts: list[str] = []
+        for action_name in resources:
+            params = DescriptionParams(
+                self.integration,
+                self.integration_name,
+                action_name,
+                self._action_name_to_file_stem.get(action_name, action_name),
+                status,
+            )
+            constructor: BuiltPromptConstructor | SourcePromptConstructor = _create_prompt_constructor(params)
+            prompts.append(await constructor.construct(template=template))
+        return prompts
+
+    @staticmethod
+    async def _load_template_content(location_path: pathlib.Path) -> string.Template:
+        """Load prompt template content from a file path.
+
+        Args:
+            location_path: Absolute or resolved path to prompt template file.
+
+        Returns:
+            string.Template: Constructed string Template object.
+
+        Raises:
+            FileNotFoundError: If the prompt template file does not exist.
+
+        """
+        anyio_loc = anyio.Path(location_path)
+        if not await anyio_loc.exists():
+            error_msg = f"Custom prompt location '{location_path}' does not exist."
+            raise FileNotFoundError(error_msg)
+
+        return string.Template(await anyio_loc.read_text(encoding="utf-8"))
+
+    async def _apply_prompt_overrides(
+        self,
+        resources: list[str],
+        status: IntegrationStatus,
+        baseline_results: list[DescriptionResult],
+        overrides: list[PromptOverrideConfig],
+    ) -> list[DescriptionResult]:
+        """Apply custom prompt overrides sequentially to baseline description results.
+
+        Args:
+            resources: Action resource names to describe.
+            status: Status of the integration content build.
+            baseline_results: Baseline action description results.
+            overrides: Parsed list of prompt override configurations.
+
+        Returns:
+            list[DescriptionResult]: Updated action description results with field overrides applied.
+
+        """
+        name_to_idx: dict[str, int] = {res.name: i for i, res in enumerate(baseline_results)}
+        results: list[DescriptionResult] = list(baseline_results)
+
+        config_dir: pathlib.Path = (
+            self.prompt_overrides_path.parent if self.prompt_overrides_path else pathlib.Path.cwd()
+        )
+
+        for override in overrides:
+            location_path = override.resolve_location(config_dir)
+            template = await self._load_template_content(location_path)
+
+            target_model: type[BaseModel] | None = FIELD_TO_OVERRIDE_MODEL.get(override.field_name)
+            if target_model is None:
+                target_model = create_dynamic_field_model(override.field_name, override.schema_def)
+
+            logger.debug(
+                "Applying prompt override for field '%s' from template '%s'",
+                override.field_name,
+                location_path.name,
+            )
+
+            custom_prompts: list[str] = await self._construct_custom_prompts(resources, status, template)
+            valid_indices: list[int] = [i for i, prompt in enumerate(custom_prompts) if prompt]
+            valid_prompts: list[str] = [custom_prompts[i] for i in valid_indices]
+
+            if not valid_prompts:
+                continue
+
+            llm_results: list[Any | str] = await llm.call_gemini_bulk(valid_prompts, target_model)
+
+            for i, result in zip(valid_indices, llm_results, strict=True):
+                resource_name: str = resources[i]
+                if isinstance(result, str):
+                    logger.error(
+                        "Failed custom describe for action %s field %s: %s",
+                        resource_name,
+                        override.field_name,
+                        result,
+                    )
+                    continue
+
+                idx = name_to_idx.get(resource_name)
+                if idx is None:
+                    continue
+
+                curr_meta = results[idx].metadata
+                if curr_meta is None:
+                    continue
+
+                override_val = getattr(result, override.field_name, None)
+                if override_val is None:
+                    continue
+
+                logger.debug(
+                    "Successfully overridden field '%s' for action '%s' with LLM response:\n%s",
+                    override.field_name,
+                    resource_name,
+                    format_display_value(override_val),
+                )
+
+                updated_meta = curr_meta.model_copy(update={override.field_name: override_val})
+                results[idx] = DescriptionResult(resource_name, updated_meta)
+
+        return results
