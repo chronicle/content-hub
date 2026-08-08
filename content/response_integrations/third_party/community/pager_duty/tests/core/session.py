@@ -13,17 +13,28 @@ from .product import PagerDuty
 
 
 class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
+    """Mock session for PagerDuty integration tests, handling routing."""
+
     def get_routed_functions(self) -> Iterable[RouteFunction[Response]]:
+        """Get the list of routed functions."""
         return [
             self.list_incidents,
             self.test_connectivity,
             self.get_incident_by_key,
             self.list_users,
             self.snooze_incident,
+            self.get_incident_by_id,
+            self.resolve_incident_by_id,
+            self.add_incident_note,
+            self.create_incident,
+            self.get_user_by_id_endpoint,
+            self.list_oncalls,
+            self.run_response_play,
         ]
 
     @router.get(r"/incidents")
     def list_incidents(self, request: MockRequest) -> MockResponse:
+        """Mock for listing incidents."""
         auth_header = request.headers.get("Authorization", "")
         if "invalid_key" in auth_header:
             return MockResponse(
@@ -96,3 +107,65 @@ class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
                 )
 
         return MockResponse(content=self._product.snooze_incident(incident_id))
+
+    @router.get(r"/incidents/(?P<incident_id>[^/]+)")
+    def get_incident_by_id(self, request: MockRequest) -> MockResponse:
+        """Mock for getting a single incident by ID."""
+        incident_id = request.url.path.split("/")[-1]
+        incident = self._product.get_incident(incident_id)
+        if incident:
+            return MockResponse(content={"incident": incident})
+        return MockResponse(status_code=404, content={"error": {"message": "Incident not found"}})
+
+    @router.put(r"/incidents/(?P<incident_id>[^/]+)")
+    def resolve_incident_by_id(self, request: MockRequest) -> MockResponse:
+        """Mock for resolving an incident."""
+        incident_id = request.url.path.split("/")[-1]
+        res = self._product.resolve_incident(incident_id)
+        if res:
+            return MockResponse(content=res)
+        return MockResponse(status_code=404, content={"error": {"message": "Incident not found"}})
+
+    @router.post(r"/incidents/(?P<incident_id>[^/]+)/notes")
+    def add_incident_note(self, request: MockRequest) -> MockResponse:
+        """Mock for adding a note to an incident."""
+        incident_id = request.url.path.split("/")[-2]
+        payload = get_request_payload(request)
+        content = payload.get("note", {}).get("content", "")
+        res = self._product.add_incident_note(incident_id, content)
+        return MockResponse(content=res)
+
+    @router.post(r"/incidents")
+    def create_incident(self, request: MockRequest) -> MockResponse:
+        """Mock for creating an incident."""
+        from_header = request.headers.get("From", "")
+        if not from_header or from_header == "":
+            return MockResponse(status_code=400, content={"error": {"message": "Missing email"}})
+        return MockResponse(content={"incident": {"id": "INC123", "status": "triggered"}})
+
+    @router.get(r"/users/(?P<user_id>[^/]+)")
+    def get_user_by_id_endpoint(self, request: MockRequest) -> MockResponse:
+        """Mock for getting a user by ID."""
+        user_id = request.url.path.split("/")[-1]
+        if user_id == "NONEXISTENT_USER":
+            return MockResponse(status_code=404, content={"error": {"message": "User not found"}})
+        return MockResponse(content={"user": {"id": user_id, "name": "John Doe", "email": "john.doe@example.com"}})
+
+    @router.get(r"/oncalls")
+    def list_oncalls(self, request: MockRequest) -> MockResponse:
+        """Mock for listing oncalls."""
+        auth_header = request.headers.get("Authorization", "")
+        if "invalid_key" in auth_header:
+            return MockResponse(
+                status_code=500, content={"error": {"message": "Internal Server Error"}}
+            )
+        return MockResponse(content={"oncalls": []})
+
+    @router.post(r"/response_plays/(?P<play_id>[^/]+)/run")
+    def run_response_play(self, request: MockRequest) -> MockResponse:
+        """Mock for running a response play."""
+        play_id = request.url.path.split("/")[-2]
+        if play_id == "INVALID_PLAY_ID":
+            return MockResponse(status_code=404, content={"error": {"message": "Response play not found"}})
+        return MockResponse(content={"status": "ok"})
+
