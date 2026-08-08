@@ -1,24 +1,29 @@
 from __future__ import annotations
+
 import json
 import re
+from datetime import datetime
 
-from .InfobloxExceptions import (
-    InfobloxException,
-    InvalidIntegerException,
-    ItemNotFoundException,
-    InternalSeverError,
-)
 from .constants import (
+    EXECUTE_RECOMMENDATION_ACTIONS_ACTION_IDENTIFIER,
+    GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER,
+    GET_INSIGHT_DETAILS_ACTION_IDENTIFIER,
+    GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER,
+    GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER,
+    GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER,
+    INDICATOR_THREAT_LOOKUP_WITH_TIDE_ACTION_IDENTIFIER,
+    INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_ACTION_IDENTIFIER,
     INTEGRATION_NAME,
     MAX_JSON_CHARS,
     PING_ACTION_IDENTIFIER,
-    GET_SOC_INSIGHTS_COMMENTS_ACTION_IDENTIFIER,
-    GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER,
-    GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER,
-    GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER,
-    INDICATOR_THREAT_LOOKUP_WITH_TIDE_ACTION_IDENTIFIER,
-    GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER,
-    INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_ACTION_IDENTIFIER,
+    UNDO_RECOMMENDATION_ACTION_ACTION_IDENTIFIER,
+    UPDATE_STATUS_OF_INSIGHT_ACTION_IDENTIFIER,
+)
+from .InfobloxExceptions import (
+    InfobloxException,
+    InternalSeverError,
+    InvalidIntegerException,
+    ItemNotFoundException,
 )
 
 
@@ -32,9 +37,7 @@ def get_integration_params(siemplify):
     Returns:
         tuple: A tuple containing the integration parameters.
     """
-    api_root = siemplify.extract_configuration_param(
-        INTEGRATION_NAME, "API Root", input_type=str, is_mandatory=True
-    )
+    api_root = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Root", input_type=str, is_mandatory=True)
     api_key = siemplify.extract_configuration_param(
         INTEGRATION_NAME,
         "API Key",
@@ -75,9 +78,7 @@ def parse_and_validate_int_list(param_str, param_name):
         if is_empty_string(param_str):
             return []
         return [
-            validate_integer_param(
-                x, param_name, zero_allowed=False, allow_negative=False
-            )
+            validate_integer_param(x, param_name, zero_allowed=False, allow_negative=False)
             for x in string_to_list(param_str)
         ]
     return None
@@ -134,24 +135,12 @@ def add_additional_params_to_payload(payload, additional_params):
 
 
 def validate_indicators(items_list):
-    ip4_pattern = re.compile(
-        r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/([0-9]|[1-2][0-9]|3[0-2]))?$"
-    )
-    ip6_pattern = re.compile(
-        r"^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}(?:/[0-9]{1,3})?$"
-    )
-    domain_pattern = re.compile(
-        r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(?:\.[A-Za-z]{2,})+$"
-    )
+    ip4_pattern = re.compile(r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/([0-9]|[1-2][0-9]|3[0-2]))?$")
+    ip6_pattern = re.compile(r"^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}(?:/[0-9]{1,3})?$")
+    domain_pattern = re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(?:\.[A-Za-z]{2,})+$")
     for item in items_list:
-        if not (
-            ip4_pattern.match(item)
-            or ip6_pattern.match(item)
-            or domain_pattern.match(item)
-        ):
-            raise ValueError(
-                f"Item '{item}' is not a valid IPv4, IPv6, or domain name."
-            )
+        if not (ip4_pattern.match(item) or ip6_pattern.match(item) or domain_pattern.match(item)):
+            raise ValueError(f"Item '{item}' is not a valid IPv4, IPv6, or domain name.")
     return items_list
 
 
@@ -161,9 +150,7 @@ def validate_required_string(value, param_name):
     return value
 
 
-def validate_integer_param(
-    value, param_name, zero_allowed=False, allow_negative=False
-):
+def validate_integer_param(value, param_name, zero_allowed=False, allow_negative=False):
     """
     Validates if the given value is an integer and meets the specified requirements.
 
@@ -182,13 +169,9 @@ def validate_integer_param(
     except (ValueError, TypeError):
         raise InvalidIntegerException(f"{param_name} must be an integer.")
     if not allow_negative and int_value < 0:
-        raise InvalidIntegerException(
-            f"{param_name} must be a non-negative integer."
-        )
+        raise InvalidIntegerException(f"{param_name} must be a non-negative integer.")
     if not zero_allowed and int_value == 0:
-        raise InvalidIntegerException(
-            f"{param_name} must be greater than zero."
-        )
+        raise InvalidIntegerException(f"{param_name} must be greater than zero.")
     return int_value
 
 
@@ -227,10 +210,57 @@ def truncate_json_for_display(data, max_chars=MAX_JSON_CHARS):
 
 def validate_enum(value, allowed_values, param_name):
     if value is not None and value not in allowed_values:
-        raise ValueError(
-            f"{param_name} must be one of {allowed_values}. Got: {value}"
-        )
+        raise ValueError(f"{param_name} must be one of {allowed_values}. Got: {value}")
     return value
+
+
+def validate_datetimeformat(value, param_name):
+    """
+    Validate that value is an RFC 3339 date-time string (e.g. 2025-12-19T07:01:56Z).
+
+    Raises:
+        ValueError: If value is not None/empty and does not parse as RFC 3339.
+    Returns:
+        str: The original value, unchanged.
+    """
+    if not value:
+        return value
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        raise ValueError(f"{param_name} must be a valid RFC 3339 date-time (e.g. 2025-12-19T07:01:56Z). Got: {value}")
+    return value
+
+
+def convert_to_rfc3339(value, param_name):
+    """Convert a US-format date-time string to an RFC 3339 (UTC) string.
+
+    Parses ``value`` using the format ``MM/DD/YYYY HH:MM:SS`` (e.g.
+    ``"12/19/2025 07:01:56"``) and returns it formatted as an RFC 3339
+    UTC timestamp (e.g. ``"2025-12-19T07:01:56Z"``). Empty or falsy
+    values are returned unchanged.
+
+    Args:
+        value: The date-time string to convert, in ``MM/DD/YYYY HH:MM:SS``
+            format. Falsy values (``None``, ``""``) are passed through as-is.
+        param_name: Name of the parameter being converted, used only to
+            produce a clearer error message on failure.
+
+    Returns:
+        The RFC 3339 formatted string (``YYYY-MM-DDTHH:MM:SSZ``), or the
+        original ``value`` if it was falsy.
+
+    Raises:
+        ValueError: If ``value`` is non-empty but does not match the
+            expected ``MM/DD/YYYY HH:MM:SS`` input format.
+    """
+    if not value:
+        return value
+    try:
+        dt = datetime.strptime(value, "%m/%d/%Y %H:%M:%S")
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        raise ValueError(f"{param_name} must be a valid RFC 3339 date-time (e.g. 2025-12-19T07:01:56Z). Got: {value}")
 
 
 class HandleExceptions(object):
@@ -238,9 +268,7 @@ class HandleExceptions(object):
     A class to handle exceptions based on different actions.
     """
 
-    def __init__(
-        self, api_identifier, error, response, error_msg="An error occurred"
-    ):
+    def __init__(self, api_identifier, error, response, error_msg="An error occurred"):
         """
         Initializes the HandleExceptions class.
 
@@ -281,15 +309,16 @@ class HandleExceptions(object):
         """
         return {
             PING_ACTION_IDENTIFIER: self.ping,
-            GET_SOC_INSIGHTS_COMMENTS_ACTION_IDENTIFIER: self._handle_soc_insights_error,
-            GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER: self._handle_soc_insights_error,
-            GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER: self._handle_soc_insights_error,
-            GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER:
-                self.get_indicator_intel_lookup_result,
+            GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER: self._handle_infoblox_iq_for_threat_defense_error,
+            GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER: self._handle_infoblox_iq_for_threat_defense_error,
+            GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER: self.get_indicator_intel_lookup_result,
             INDICATOR_THREAT_LOOKUP_WITH_TIDE_ACTION_IDENTIFIER: self.get_indicator_tide_lookup,
-            GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER: self._handle_soc_insights_error,
-            INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_ACTION_IDENTIFIER:
-                self._handle_dossier_lookup_result,
+            GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER: self._handle_infoblox_iq_for_threat_defense_error,
+            INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_ACTION_IDENTIFIER: self._handle_dossier_lookup_result,
+            UPDATE_STATUS_OF_INSIGHT_ACTION_IDENTIFIER: self._handle_infoblox_iq_for_threat_defense_error,
+            GET_INSIGHT_DETAILS_ACTION_IDENTIFIER: self._handle_infoblox_iq_for_threat_defense_error,
+            EXECUTE_RECOMMENDATION_ACTIONS_ACTION_IDENTIFIER: self._handle_infoblox_iq_for_threat_defense_error,
+            UNDO_RECOMMENDATION_ACTION_ACTION_IDENTIFIER: self._handle_undo_recommendation_action_error,
         }.get(self.api_identifier, self.common_exception)
 
     def common_exception(self):
@@ -318,11 +347,7 @@ class HandleExceptions(object):
             if isinstance(error_json, dict) and "error" in error_json:
                 # error is usually a list of dicts with 'message'
                 error_list = error_json["error"]
-                if (
-                    isinstance(error_list, list)
-                    and error_list
-                    and "message" in error_list[0]
-                ):
+                if isinstance(error_list, list) and error_list and "message" in error_list[0]:
                     error_msg = error_list[0]["message"]
 
                     return InfobloxException, error_msg
@@ -351,7 +376,7 @@ class HandleExceptions(object):
     def ping(self):
         return self._handle_general_error()
 
-    def _handle_soc_insights_error(self):
+    def _handle_infoblox_iq_for_threat_defense_error(self):
         """
         Handle 404 errors for invalid insight IDs.
         Returns a tuple (ExceptionClass, message) as per project convention.
@@ -378,9 +403,7 @@ class HandleExceptions(object):
         status_code = self.response.status_code
         if status_code == 404:
             res = self.response.json()
-            error_msg = "Job ID does not exist. Error: " + (
-                res.get("error") or ""
-            )
+            error_msg = "Job ID does not exist. Error: " + (res.get("error") or "")
             return ItemNotFoundException, error_msg
 
         return self.common_exception()
@@ -397,6 +420,29 @@ class HandleExceptions(object):
             res = self.response.json()
             error_msg = res.get("message")
             return InfobloxException, error_msg
+
+        return self.common_exception()
+
+    def _handle_undo_recommendation_action_error(self):
+        """
+        Handle errors for the Undo a Recommendation Action action.
+
+        404 means the audit entry id does not exist; 400 means the action cannot
+        be undone (e.g., already undone, or not eligible for undo).
+
+        Returns:
+            tuple: (Exception class, error message)
+        """
+        status_code = self.response.status_code
+        if status_code == 404:
+            return InfobloxException, "Audit entry doesn't exist."
+
+        if status_code == 400:
+            res = self.response.json()
+            msg = res.get("message") or res.get("error")
+            if msg:
+                return InfobloxException, msg
+            return InfobloxException, "The action cannot be undone."
 
         return self.common_exception()
 

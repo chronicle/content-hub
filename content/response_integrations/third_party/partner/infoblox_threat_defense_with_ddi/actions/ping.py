@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.APIManager import APIManager
 from ..core.constants import PING_SCRIPT_NAME
 from ..core.utils import get_integration_params
@@ -23,9 +25,7 @@ def main():
         infoblox_manager.test_connectivity()
         output_message = "Successfully connected to the Infoblox server!"
         connectivity_result = True
-        siemplify.LOGGER.info(
-            f"Connection to API established, performing action {PING_SCRIPT_NAME}"
-        )
+        siemplify.LOGGER.info(f"Connection to API established, performing action {PING_SCRIPT_NAME}")
 
     except Exception as e:
         output_message = f"Failed to connect to the Infoblox server! {e}"
