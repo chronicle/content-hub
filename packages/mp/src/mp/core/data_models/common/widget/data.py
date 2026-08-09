@@ -45,6 +45,14 @@ class WidgetType(RepresentableEnum):
     CASE_IMPACTED_RESOURCES = 19
     FORM = 20
     QUICK_ACTIONS = 21
+    COMPOSITE_ALERT = 22
+    RULE_OVERVIEW = 23
+    CASE_DETECTIONS = 24
+    UDM_EVENTS = 25
+    UDM_ENTITIES = 26
+    EVENT_HIGHLIGHTS = 27
+    THREAT_HUNT = 28
+    THIRD_PARTY = 29
 
 
 class WidgetDefinitionScope(RepresentableEnum):
@@ -83,15 +91,15 @@ class HtmlWidgetDataDefinition(ComponentMetadata[BuiltWidgetDataDefinition, NonB
     html_content: str = ""
 
     @classmethod
-    def from_built_path(cls, path: Path) -> list[Self]:  # noqa: D102
+    def from_built_path(cls, path: Path) -> list[Self]:  # ruff:ignore[undocumented-public-method]
         raise NotImplementedError
 
     @classmethod
-    def from_non_built_path(cls, path: Path) -> list[Self]:  # noqa: D102
+    def from_non_built_path(cls, path: Path) -> list[Self]:  # ruff:ignore[undocumented-public-method]
         raise NotImplementedError
 
     @classmethod
-    def _from_built(cls, file_name: str, built: BuiltWidgetDataDefinition) -> Self:  # noqa: ARG003
+    def _from_built(cls, file_name: str, built: BuiltWidgetDataDefinition) -> Self:  # ruff:ignore[unused-class-method-argument]
         return cls(
             html_height=built["htmlHeight"],
             safe_rendering=built["safeRendering"],
@@ -101,7 +109,7 @@ class HtmlWidgetDataDefinition(ComponentMetadata[BuiltWidgetDataDefinition, NonB
         )
 
     @classmethod
-    def _from_non_built(cls, file_name: str, non_built: NonBuiltWidgetDataDefinition) -> Self:  # noqa: ARG003
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltWidgetDataDefinition) -> Self:  # ruff:ignore[unused-class-method-argument]
         return cls(
             html_height=non_built["html_height"],
             safe_rendering=non_built["safe_rendering"],

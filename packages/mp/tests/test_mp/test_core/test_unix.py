@@ -202,7 +202,7 @@ def test_add_dependencies_to_toml_empty(mock_subprocess_run: MagicMock, tmp_path
 
     assert "--group" in call_args
     assert "dev" in call_args
-    assert set(mp.core.unix._get_base_dev_dependencies()).issubset(call_args)  # noqa: SLF001
+    assert set(mp.core.unix._get_base_dev_dependencies()).issubset(call_args)  # ruff:ignore[private-member-access]
 
 
 def test_add_dependencies_to_toml_with_deps(mock_subprocess_run: MagicMock, tmp_path: Path) -> None:
@@ -223,4 +223,4 @@ def test_add_dependencies_to_toml_with_deps(mock_subprocess_run: MagicMock, tmp_
     assert "--group" in dev_call_args
     assert "dev" in dev_call_args
     assert "black" in dev_call_args
-    assert set(mp.core.unix._get_base_dev_dependencies()).issubset(dev_call_args)  # noqa: SLF001
+    assert set(mp.core.unix._get_base_dev_dependencies()).issubset(dev_call_args)  # ruff:ignore[private-member-access]

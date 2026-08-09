@@ -1,51 +1,33 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Disconnect Agent From Network:
   ai_description: >-
     ### General Description
 
-    Disconnects SentinelOne agents from the network to isolate them. This action is
-    primarily used for containment during incident response to prevent lateral movement
-    or further communication from a potentially compromised endpoint. It supports
-    both Hostname and IP Address entities.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
+    Disconnects a specific endpoint agent from the network using SentinelOne. This
+    action isolates the host to prevent further network communication, which is critical
+    for containing compromised endpoints during an incident response process.
 
 
     ### Flow Description
 
-    1. **Identify Entities**: The action filters the target entities to identify those
-    of type Hostname or IP Address.
+    1. Filters the target entities to include only IP Addresses and Hostnames.
 
-    2. **Lookup Agent ID**: For each identified entity, the action queries the SentinelOne
-    API to find the corresponding unique Agent ID. If the entity is an IP address,
-    it searches through the network interfaces of all agents; if it is a Hostname,
-    it matches against the computer name.
+    2. Iterates over the filtered entities and queries the SentinelOne API to find
+    the corresponding endpoint agent ID based on the entity's identifier.
 
-    3. **Execute Disconnect**: The action sends a POST request to the SentinelOne
-    API to trigger the network disconnect command for each retrieved Agent ID.
+    3. Makes a POST request to the SentinelOne API (`web/api/v1.6/agents/{agent_id}/disconnect`)
+    to disconnect the identified agent from the network.
 
-    4. **Handle Errors**: If an agent cannot be found for a specific entity, a `SentinelOneAgentNotFoundError`
-    is caught, and the error is logged.
+    4. Collects successful disconnections and errors, returning a summary message
+    and attaching a data table of unsuccessful attempts to the action results.
 
-    5. **Finalize**: The action provides a summary message of successfully disconnected
-    entities and generates a data table named 'Unsuccessful Attempts' if any errors
-    occurred during the process.
+
+    ### Additional Notes
+
+    This action effectively isolates the machine at the network level via the SentinelOne
+    agent, allowing communication only with the management console.
+  ai_short_description: >-
+    Disconnects a specific endpoint agent from the network using SentinelOne to isolate
+    the host and prevent further network communication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -54,16 +36,52 @@ Disconnect Agent From Network:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Isolates the endpoint from the network by sending a disconnect command (POST
-      request) to the SentinelOne agent via the management API.
-    fetches_data: true
+      Disconnects the endpoint agent from the network in SentinelOne, isolating the
+      host.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to the SentinelOne API to disconnect an agent
+      from the network, which mutates external data (can_mutate_external_data=true).
+      It does not fetch contextual enrichment data, update internal entities, create
+      insights, or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -77,102 +95,79 @@ Disconnect Agent From Network:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters them
+      using the condition `if entity.entity_type == ADDRESS or entity.entity_type
+      == HOSTNAME`. Therefore, it targets Address and Hostname entities and filters
+      them by their `entity_type` attribute.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a POST request to SentinelOne to disconnect an endpoint
+      agent from the network. This directly aligns with the 'Contain Host' expected
+      outcome, which isolates an endpoint from the network via EDR.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Enrich Endpoint:
   ai_description: >-
     ### General Description
 
-    Enriches endpoint entities (IP addresses or Hostnames) with detailed system information
-    retrieved from SentinelOne. This action helps analysts gain immediate context
-    about a machine's operating system, agent status, and network configuration directly
-    within the Google SecOps platform.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not require any input parameters. |
+    Enriches Hostname and IP Address entities with system information from SentinelOne.
+    This action retrieves endpoint details such as operating system, network interfaces,
+    and agent status, and appends this data to the entity's additional properties
+    within the SecOps platform.
 
 
     ### Flow Description
 
-    1. **Entity Filtering**: The action identifies all IP Address and Hostname entities
-    within the current context.
+    1. Filters the target entities to include only Hostname and IP Address types.
 
-    2. **Agent Identification**: For each entity, it queries the SentinelOne API to
-    find the unique Agent ID associated with that identifier.
+    2. Iterates through the filtered entities and queries the SentinelOne API (`GET
+    web/api/v1.6/agents`) to find the corresponding agent ID based on the entity's
+    identifier.
 
-    3. **Data Retrieval**: It fetches comprehensive system information for the identified
-    agent.
+    3. Retrieves system information for the identified agent via the SentinelOne API
+    (`GET web/api/v1.6/agents/{agent_id}`).
 
-    4. **Data Processing**: The retrieved system metadata is flattened and formatted.
+    4. Enriches the entity's additional properties with the retrieved system information,
+    prefixed with `SENO_`.
 
-    5. **Internal Enrichment**: The action updates the entity's additional properties
-    with the system data (prefixed with 'SENO_') and attaches a detailed data table
-    to the entity.
+    5. Attaches a data table to the entity containing the flattened system information.
 
-    6. **Error Handling**: If an agent cannot be found for a specific entity, the
-    error is captured and reported in an 'Unsuccessful Attempts' table.
+    6. Updates the successfully enriched entities in the Google SecOps platform.
 
 
     ### Additional Notes
 
-    This action is strictly for enrichment and does not modify any settings or states
-    within the SentinelOne environment.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity additional properties with SentinelOne system information and
-      adds data tables to the action results.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - HOSTNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Agent Status:
-  ai_description: >-
-    ### General Description\nRetrieves the current operational status (Active or Not
-    Active) of SentinelOne agents associated with Hostname or IP Address entities.
-    This action allows analysts to verify endpoint connectivity and agent health directly
-    within the Google SecOps platform, facilitating faster incident response and troubleshooting.\n\n###
-    Parameters\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- | :---
-    | :--- |\n| None | N/A | N/A | This action does not require any input parameters.
-    |\n\n### Additional Notes\n- The action identifies agents by matching the entity's
-    identifier against computer names (for Hostnames) or interface IP addresses (for
-    Address entities).\n- If an agent is not found in SentinelOne for a given entity,
-    the details are captured in an 'Unsuccessful Attempts' table.\n\n### Flow Description\n1.
-    **Initialization**: Connects to the SentinelOne instance using the integration's
-    API Root and credentials (Username and Password).\n2. **Entity Selection**: Filters
-    the target entities to process only those of type `HOSTNAME` or `ADDRESS`.\n3.
-    **Agent Lookup**: For each entity, it queries the SentinelOne API to find the
-    corresponding internal Agent ID.\n4. **Status Query**: Requests the `is_active`
-    status for each successfully identified Agent ID.\n5. **Reporting**: Compiles
-    a list of agent statuses into a data table named 'Agents Statuses' and lookup
-    failures into 'Unsuccessful Attempts'.\n6. **Entity Update**: Updates the entities
-    within the case context and concludes the action.
+    If the action fails to find an agent or retrieve information for specific entities,
+    it logs the errors and presents them in an "Unsuccessful Attempts" data table.
+  ai_short_description: >-
+    Enriches Hostname and IP Address entities with system information from SentinelOne.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -183,12 +178,49 @@ Get Agent Status:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action makes GET requests to the SentinelOne API to fetch agent IDs and
+      system information (fetches_data=true). It does not perform any state-changing
+      operations on external systems (can_mutate_external_data=false). It updates
+      the entities in the SecOps platform with the retrieved data (can_update_entities=true)
+      but does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -202,68 +234,272 @@ Get Agent Status:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters them
+      using the condition `if entity.entity_type == ADDRESS or entity.entity_type
+      == HOSTNAME`. Therefore, it targets ADDRESS and HOSTNAME entities and filters
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches system information for an endpoint (Hostname or IP Address)
+      from SentinelOne. This directly aligns with the 'Enrich Asset' expected outcome,
+      as it returns contextual metadata for a resource. It does not mutate external
+      data, update alerts, or perform containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get Agent Status:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the current status (active or inactive) of SentinelOne agents associated
+    with Hostname and IP Address entities. This action helps analysts determine if
+    an endpoint is currently protected and communicating with the SentinelOne management
+    console.
+
+
+    ### Flow Description
+
+    1. Filters the target entities to include only Hostname and IP Address entity
+    types.
+
+    2. For each valid entity, queries the SentinelOne API (`web/api/v1.6/agents`)
+    to find the corresponding endpoint agent ID.
+
+    3. Retrieves the agent's active status using the agent ID via the SentinelOne
+    API (`web/api/v1.6/agents/{agent_id}`).
+
+    4. Compiles the retrieved statuses into an "Agents Statuses" data table.
+
+    5. Updates the successful entities in the SecOps platform.
+
+    6. Logs any errors or unfound agents in an "Unsuccessful Attempts" data table.
+
+
+    ### Additional Notes
+
+    - The action relies on the SentinelOne API to match IP addresses or hostnames
+    to agent IDs.
+  ai_short_description: >-
+    Retrieves the current active or inactive status of SentinelOne agents for Hostname
+    and IP Address entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the SentinelOne API to fetch agent IDs and
+      their active statuses, meaning it fetches data. It does not mutate external
+      data or internal case data. It calls `siemplify.update_entities` to update the
+      successful entities in the platform. It does not create insights, modify alert
+      data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == ADDRESS or entity.entity_type == HOSTNAME`.
+      This means it specifically targets Address and Hostname entities, filtering
+      strictly by the `entity_type` attribute.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches the active status of a SentinelOne agent installed on an
+      endpoint (asset). This aligns with the 'Enrich Asset' category as it returns
+      contextual metadata (agent status) for a resource. It does not modify external
+      state or perform other actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Application List For Endpoint:
   ai_description: >-
     ### General Description
 
-    The **Get Application List For Endpoint** action retrieves a comprehensive list
-    of applications installed on a specific endpoint (identified by Hostname or IP
-    Address) via the SentinelOne platform. This is useful for vulnerability assessment,
-    compliance checking, and identifying unauthorized software during an investigation.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | This action does not require any input parameters. |
-
-
-    ### Additional Notes
-
-    This action relies entirely on the entities present in the scope. It specifically
-    targets IP Addresses and Hostnames to map them to SentinelOne agents. There are
-    no user-configurable parameters for this action.
+    Retrieves a list of installed applications for specific endpoint entities (IP
+    Addresses and Hostnames) using SentinelOne. This action helps analysts understand
+    the software footprint of a machine during an investigation.
 
 
     ### Flow Description
 
-    1. **Entity Filtering**: The action identifies all `ADDRESS` (IP) and `HOSTNAME`
-    entities within the current context.
+    1. Filters the target entities to include only IP Addresses and Hostnames.
 
-    2. **Agent Identification**: For each entity, it queries the SentinelOne API to
-    find the unique `Agent ID` associated with that endpoint.
+    2. Iterates through the filtered entities.
 
-    3. **Data Retrieval**: Once the Agent ID is found, the action fetches the list
-    of installed applications from SentinelOne.
+    3. For each entity, queries the SentinelOne API to find the corresponding endpoint
+    agent ID.
 
-    4. **Result Presentation**: The retrieved application list is formatted as a CSV
-    and attached as an entity-specific table in the SOAR interface.
+    4. Fetches the list of applications installed on the endpoint using the retrieved
+    agent ID.
 
-    5. **Error Handling**: If an agent cannot be found for a specific entity, the
-    error is captured and displayed in an "Unsuccessful Attempts" data table.
+    5. Attaches the retrieved application list as a data table to the entity in the
+    case wall.
 
-    6. **Entity Update**: Successfully enriched entities are updated within the system.
+    6. Updates the successful entities in the platform.
+
+
+    ### Additional Notes
+
+    Unsuccessful attempts to find an agent or retrieve applications are logged in
+    a separate "Unsuccessful Attempts" data table.
+  ai_short_description: >-
+    Retrieves a list of installed applications for specific endpoint entities (IP
+    Addresses and Hostnames) using SentinelOne and attaches the results as an entity
+    table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity records to mark them as enriched and attaches data tables containing
-      the application lists to the case.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from SentinelOne (agent ID and applications list) via
+      GET requests. It does not mutate external data. It updates entities internally
+      by calling `siemplify.update_entities` but does not create insights or modify
+      alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -277,126 +513,270 @@ Get Application List For Endpoint:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == ADDRESS or entity.entity_type == HOSTNAME`. Therefore, it targets Address
+      and Hostname entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a list of applications installed on an endpoint (hostname
+      or IP address). This aligns with the 'Enrich Asset' category, as it returns
+      contextual metadata about a resource.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Events For Endpoint By Time:
   ai_description: >-
     ### General Description
 
-    Retrieves historical event data for specific endpoints (Hostnames or IP Addresses)
-    from SentinelOne within a specified time window. This action is useful for forensic
-    investigation and understanding the activity on an endpoint around the time of
-    an alert.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Hours Back | Integer | Yes | The number of hours to look back from the current
-    time to fetch events. |
-
-    | Events Amount Limit | Integer | Yes | The maximum number of events to retrieve
-    for each endpoint. |
+    Retrieves historical events related to specific endpoint entities (IP addresses
+    or Hostnames) from SentinelOne within a specified timeframe.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the SentinelOne API using provided credentials.
+    1. Calculates the time range based on the 'Hours Back' parameter.
 
-    2. **Time Calculation**: Determines the start and end timestamps for the event
-    query based on the 'Hours Back' parameter.
+    2. Filters target entities for IP Addresses and Hostnames.
 
-    3. **Entity Filtering**: Identifies IP Address and Hostname entities from the
-    target list.
+    3. For each entity, queries SentinelOne to find the corresponding agent ID.
 
-    4. **Agent Resolution**: For each entity, queries SentinelOne to find the corresponding
-    SentinelOne Agent ID or UUID.
+    4. Fetches events for the identified agent ID using the SentinelOne API (`web/api/v1.6/events/process/{agent_uuid}`).
 
-    5. **Data Retrieval**: Fetches process events for the resolved Agent ID within
-    the specified time range, up to the defined limit.
+    5. Attaches the retrieved events as an entity-specific data table in the SecOps
+    platform.
 
-    6. **Enrichment**: Adds the retrieved events as a data table to the corresponding
-    entity in SecOps.
-
-    7. **Error Handling**: Collects any 'Agent Not Found' errors and displays them
-    in a summary table named 'Unsuccessful Attempts'.
-
-    8. **Entity Update**: Updates the status of successfully processed entities.
+    6. Updates the successful entities and provides a summary of any unsuccessful
+    attempts.
 
 
     ### Additional Notes
 
-    - The action specifically targets `ADDRESS` and `HOSTNAME` entity types.
+    The action relies on the SentinelOne agent ID resolution. If an agent is not found,
+    the entity is skipped and logged in an unsuccessful attempts table.
+  ai_short_description: >-
+    Retrieves historical events related to specific endpoint entities (IP addresses
+    or Hostnames) from SentinelOne within a specified timeframe.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches event data from SentinelOne (fetches_data=true). It does
+      not mutate external data (querying events is a read operation). It updates internal
+      entities by calling `siemplify.update_entities` (can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `if
+      entity.entity_type == ADDRESS or entity.entity_type == HOSTNAME`. Therefore,
+      it targets ADDRESS and HOSTNAME entities, filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches historical events/logs for a specific endpoint (host or IP)
+      from SentinelOne. This aligns perfectly with the 'Search Events' category, which
+      expects returning a collection of historical logs or telemetry data matching
+      specific search parameters.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
 
-    - If no events are found for any entities, the action will complete with a negative
-    result value but will still report on the attempts.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entities in Google SecOps and attaches event data tables to them.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - HOSTNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
+    | --- | --- | --- | --- |
+
+    | Hours Back | string | Yes | How match time back fetch events from. |
+
+    | Events Amount Limit | string | Yes | Events amount limit. |
 Get Hash Reputation:
-  ai_description: "### General Description\nEnriches File Hash entities by retrieving\
-    \ reputation data from the SentinelOne platform. This action specifically targets\
-    \ SHA1 hashes to provide security analysts with context regarding the known reputation\
-    \ and associated metadata of a file within the SentinelOne ecosystem.\n\n### Parameters\
-    \ Description\nThere are no parameters for this action.\n\n### Additional Notes\n\
-    - This action specifically filters for and processes entities of type `FILEHASH`.\n\
-    - The reputation data is added to the entity's additional data with the prefix\
-    \ `SENO_`.\n- A data table is attached to each processed entity containing the\
-    \ flattened reputation details.\n\n### Flow Description\n1. **Filter Entities**:\
-    \ The action identifies all `FILEHASH` entities within the current scope.\n2.\
-    \ **API Request**: For each identified hash, the action queries the SentinelOne\
-    \ API's reputation endpoint using the hash identifier.\n3. **Data Processing**:\
-    \ If reputation data is found, the JSON response is flattened and converted into\
-    \ a CSV format for display.\n4. **Internal Enrichment**: \n    - Adds a data table\
-    \ to the entity containing the reputation CSV.\n    - Updates the entity's `additional_data`\
-    \ with the flattened reputation attributes (prefixed with `SENO_`).\n5. **Finalize**:\
-    \ Updates the entities in Google SecOps and completes the action with a summary\
-    \ message of the results."
+  ai_description: >-
+    ### General Description
+
+    Retrieves reputation data for file hash entities (specifically SHA1) using SentinelOne.
+    This action fetches threat intelligence and enriches the entities within the platform
+    with the retrieved data.
+
+
+    ### Flow Description
+
+    1. Filters the target entities to include only those of type `FILEHASH`.
+
+    2. Iterates through the filtered entities and makes a GET request to the SentinelOne
+    API (`web/api/v1.6/hashes/{hash}/reputation`) to fetch reputation data for each
+    hash.
+
+    3. If reputation data is found, it flattens the JSON response and attaches it
+    as an entity table to the case.
+
+    4. Enriches the entity's `additional_data` with the retrieved reputation details.
+
+    5. Updates the successfully processed entities in the Google SecOps platform.
+
+
+    ### Additional Notes
+
+    The SentinelOne API endpoint used by this action specifically expects SHA1 hashes.
+  ai_short_description: >-
+    Retrieves reputation data for file hash entities (SHA1) using SentinelOne, enriching
+    the entities with the fetched threat intelligence and attaching the results as
+    an entity table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action updates the 'additional_data' attribute of File Hash entities and
-      attaches a result table to the entities within the Google SecOps case.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the SentinelOne API to fetch hash reputation
+      data (fetches_data=true). It does not mutate external data or internal system
+      data outside of standard entity updates. It updates entities with the fetched
+      data (can_update_entities=true) but does not create insights, modify alert data,
+      or create case comments.
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -410,69 +790,131 @@ Get Hash Reputation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == FILEHASH`. Therefore, it targets FILEHASH entities and filters strictly by
+      the `entity_type` attribute.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches reputation data for file hashes from SentinelOne and enriches
+      the entities with this threat intelligence. This directly aligns with the 'Enrich
+      IOC' expected outcome. It does not mutate external data, so it does not block/allowlist
+      or contain hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Process List For Endpoint:
   ai_description: >-
     ### General Description
 
-    The **Get Process List For Endpoint** action retrieves a comprehensive list of
-    currently running processes from endpoints managed by SentinelOne. It allows security
-    analysts to gain visibility into the execution state of a remote machine during
-    an investigation. The action supports both IP Address and Hostname entities and
-    outputs the results in a structured tabular format.
-
-
-    ### Parameters
-
-    There are no user-configurable parameters for this action.
+    Retrieves a list of running processes for a specific endpoint (IP address or hostname)
+    using SentinelOne. This action provides visibility into the current state of an
+    endpoint by fetching its active process list and attaching it as an entity table
+    for analyst review.
 
 
     ### Flow Description
 
-    1. **Entity Filtering**: The action identifies all `ADDRESS` (IP) and `HOSTNAME`
-    entities within the current alert or case scope.
+    1. Filters the target entities to include only IP Addresses and Hostnames.
 
-    2. **Agent Identification**: For each identified entity, the action queries the
-    SentinelOne API to find the corresponding `agent_id`. It searches by IP address
-    for `ADDRESS` entities and by computer name for `HOSTNAME` entities.
+    2. For each valid entity, queries the SentinelOne API to resolve the corresponding
+    endpoint agent ID.
 
-    3. **Process Retrieval**: Using the `agent_id`, the action requests the current
-    process list from the SentinelOne management console.
+    3. Makes a GET request to the SentinelOne API (`web/api/v1.6/agents/{agent_id}/processes`)
+    to fetch the list of running processes for the identified agent.
 
-    4. **Data Enrichment**: If processes are successfully retrieved, the action attaches
-    the process list to the specific entity as an **Entity Table** and marks the entity
-    for update.
+    4. Attaches the retrieved process list as an entity table to the respective entity
+    in the SecOps platform.
 
-    5. **Error Reporting**: If an agent cannot be found for a specific entity, the
-    error is logged. After processing all entities, any failures are summarized in
-    an "Unsuccessful Attempts" data table.
+    5. Updates the successful entities and generates a summary table for any unsuccessful
+    attempts.
 
 
     ### Additional Notes
 
-    - This action is read-only regarding the external SentinelOne system; it does
-    not kill processes or modify endpoint state.
-
-    - The action requires the SentinelOne integration to be properly configured with
-    API Root, Username, and Password.
+    The target endpoint must have an active SentinelOne agent installed and communicating
+    with the management console to successfully retrieve the process list.
+  ai_short_description: >-
+    Retrieves a list of running processes for a specific endpoint (IP address or hostname)
+    using SentinelOne and attaches the results as an entity table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action updates entities to include them in the success list and adds process
-      information to entity-specific tables. It also creates a data table to log unsuccessful
-      agent lookups.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the SentinelOne API to fetch the agent ID and
+      its running processes (fetches_data=true). It does not mutate external data
+      (no POST/PUT/DELETE for state changes). It updates internal entities by calling
+      `siemplify.update_entities` (can_update_entities=true) but does not create insights,
+      modify alert data, or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -486,40 +928,69 @@ Get Process List For Endpoint:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == ADDRESS or entity.entity_type == HOSTNAME`.
+      Therefore, it targets Address and Hostname entities and filters strictly by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a list of running processes from an endpoint (asset) via
+      the SentinelOne API. This provides contextual metadata about the resource, aligning
+      with the 'Enrich Asset' expected outcome. It does not execute commands, contain
+      hosts, or modify alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get System Status:
   ai_description: >-
     ### General Description
 
-    The **Get System Status** action retrieves the current health status of the SentinelOne
-    management console. It serves as a diagnostic tool to verify the operational state
-    of the SentinelOne environment and ensure connectivity between Google SecOps and
-    the SentinelOne API.
-
-
-    ### Parameters
-
-    There are no parameters for this action.
+    Retrieves the current system health status from SentinelOne.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action initializes a connection to the SentinelOne
-    API using the configured API Root, Username, and Password.
+    1. Initializes the SentinelOne manager using the provided integration configurations.
 
-    2. **Status Retrieval**: It performs a GET request to the SentinelOne status endpoint
-    (`web/api/v1.6/status`).
+    2. Makes an API GET request to the SentinelOne `/status` endpoint.
 
-    3. **Data Extraction**: The action parses the response to extract the system's
-    health status (e.g., 'healthy').
+    3. Retrieves the system health status from the response.
 
-    4. **Completion**: It returns a formatted message to the Google SecOps platform
-    indicating the current system status.
+    4. Returns the status in the action's output message.
 
 
     ### Additional Notes
 
-    This action does not process or require any entities. It is a system-level utility
-    action.
+    This action does not operate on entities and does not require any action-specific
+    parameters.
+  ai_short_description: >-
+    Retrieves the current system health status from SentinelOne.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -530,10 +1001,47 @@ Get System Status:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the SentinelOne API to fetch the system health
+      status (fetches_data=true). It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -547,35 +1055,66 @@ Get System Status:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use any entity-specific
+      identifiers. It only fetches the general system status from SentinelOne, so
+      all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves the general system health status of the SentinelOne platform.
+      It does not enrich specific IOCs or assets, nor does it mutate any data, manage
+      alerts, or interact with tickets. Therefore, it does not match any of the available
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get System Version:
   ai_description: >-
     ### General Description
 
-    Retrieves the current software version of the SentinelOne management console.
-    This utility action is primarily used to verify connectivity with the SentinelOne
-    API and to identify the specific version of the environment for troubleshooting
-    or compatibility checks.
-
-
-    ### Parameters
-
-    There are no parameters for this action.
+    Retrieves the current system version of the SentinelOne instance.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action initializes the SentinelOne manager using the
-    integration's configuration (API Root, Username, and Password) to establish a
-    session and retrieve an authentication token.
+    1. Initializes the SentinelOne manager using the integration configuration.
 
-    2. **API Request**: It performs a GET request to the SentinelOne system information
-    endpoint (`/web/api/v1.6/info`).
+    2. Makes an HTTP GET request to the SentinelOne API (`web/api/v1.6/info`) to fetch
+    the system version.
 
-    3. **Data Extraction**: The action parses the JSON response to extract the `version`
-    string.
+    3. Returns the system version as the action's output message.
 
-    4. **Output**: The retrieved version is formatted into an output message and returned
-    to the Google SecOps platform.
+
+    ### Additional Notes
+
+    This action does not require any specific parameters or entities to run.
+  ai_short_description: >-
+    Retrieves the current system version of the SentinelOne instance.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -586,10 +1125,47 @@ Get System Version:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the SentinelOne API to fetch the system version
+      (fetches_data=true). It does not mutate external data, mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -603,47 +1179,74 @@ Get System Version:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `target_entities` or use any entity-specific
+      identifiers. It only retrieves the system version of the SentinelOne instance,
+      so all entity type flags and filters are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves the system version of the SentinelOne instance. It does
+      not match any of the expected outcomes such as enriching IOCs/assets, updating
+      alerts, containing hosts, or managing tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Initiate Full Scan:
   ai_description: >-
     ### General Description
 
-    The **Initiate Full Scan** action triggers a comprehensive disk scan on endpoints
-    managed by SentinelOne. This action is primarily used for incident response and
-    forensic investigation to identify malicious files or artifacts across the entire
-    file system of a target host.
-
-
-    ### Parameters
-
-    This action does not require any additional input parameters. It operates based
-    on the entities provided in the current context.
+    Initiates a full disk scan on specific endpoints using SentinelOne. The action
+    targets IP Address and Hostname entities, retrieves their corresponding SentinelOne
+    agent IDs, and triggers a full disk scan on the identified agents to detect potential
+    threats.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action connects to the SentinelOne management console
-    using the API Root, Username, and Password defined in the integration settings.
+    1. Filters the target entities to include only IP Addresses and Hostnames.
 
-    2. **Agent Discovery**: For each **IP Address** or **Hostname** entity, the action
-    queries the SentinelOne API to resolve the specific Agent ID associated with that
-    endpoint.
+    2. Iterates through the filtered entities and queries the SentinelOne API to find
+    the corresponding endpoint agent ID for each entity.
 
-    3. **Scan Command**: The action issues a command to the SentinelOne API to initiate
-    a full disk scan for all successfully identified agents.
+    3. Makes a POST request to the SentinelOne API (`web/api/v1.6/agents/initiate-scan`)
+    to initiate a full disk scan on the identified agent.
 
-    4. **Error Handling**: If an agent cannot be found for a specific entity, the
-    action captures the error and presents a summary table of unsuccessful attempts.
-
-    5. **Completion**: The action concludes by providing a status message indicating
-    which entities have started the scan process.
+    4. Collects successful and failed attempts, returning a summary message and a
+    data table of errors if any occurred.
 
 
     ### Additional Notes
 
-    * The action supports both IP Address and Hostname entities.
-
-    * A successful result indicates that the scan command was accepted by the SentinelOne
-    console; it does not wait for the scan to complete.
+    Requires the SentinelOne agent to be active and reachable on the target endpoint
+    for the scan to be successfully initiated.
+  ai_short_description: >-
+    Initiates a full disk scan on specific endpoints (IP addresses and hostnames)
+    via SentinelOne.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -652,16 +1255,51 @@ Initiate Full Scan:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates a full disk scan operation on the remote endpoint via the SentinelOne
-      agent, which changes the operational state of the endpoint.
-    fetches_data: true
+      Initiates a full disk scan on the target endpoint via the SentinelOne API.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to the SentinelOne API to initiate a full disk
+      scan on an endpoint, which mutates external state by triggering a process on
+      the remote agent. It does not fetch contextual data for enrichment, nor does
+      it update internal entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -675,20 +1313,71 @@ Initiate Full Scan:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == ADDRESS or entity.entity_type == HOSTNAME`.
+      Therefore, it targets ADDRESS and HOSTNAME entities, filtering strictly by the
+      `entity_type` attribute.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action triggers a full disk scan on an endpoint via the SentinelOne API.
+      This does not match any of the specific expected outcomes such as containing
+      a host, executing an arbitrary command (which expects STDOUT), or enriching
+      an asset. Therefore, no outcome categories are applicable.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
-  ai_description: "### General Description\nThe **Ping** action is designed to verify\
-    \ the connectivity and authentication between Google SecOps and the SentinelOne\
-    \ platform. Its primary purpose is to ensure that the integration configuration\u2014\
-    specifically the API Root, Username, and Password\u2014is correct and that the\
-    \ SentinelOne service is reachable.\n\n### Parameters\nThere are no parameters\
-    \ for this action.\n\n### Flow Description\n1. **Configuration Retrieval**: The\
-    \ action fetches the SentinelOne integration settings, including the API Root\
-    \ and user credentials.\n2. **Manager Initialization**: It initializes the `SentinelOneManager`\
-    \ using the provided configuration.\n3. **Authentication Attempt**: The manager\
-    \ attempts to authenticate by making a POST request to the SentinelOne login endpoint\
-    \ (`web/api/v1.6/users/login`) to retrieve an access token.\n4. **Connectivity\
-    \ Confirmation**: If the authentication is successful and a token is returned,\
-    \ the action completes with a success status and a 'Connection Established' message."
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the SentinelOne platform.
+
+
+    ### Flow Description
+
+    1. Retrieves the integration configuration parameters (API Root, Username, Password).
+
+    2. Initializes the SentinelOneManager.
+
+    3. Makes a POST request to the SentinelOne login API endpoint (`web/api/v1.6/users/login`)
+    to authenticate and retrieve a token.
+
+    4. Returns a success message if the connection is established.
+
+
+    ### Additional Notes
+
+    This action is typically used to verify that the integration is configured correctly
+    with valid credentials.
+  ai_short_description: >-
+    Tests connectivity to the SentinelOne platform by attempting to authenticate and
+    retrieve an access token.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -699,10 +1388,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action only authenticates to the SentinelOne API to test connectivity. It
+      does not fetch contextual data, mutate external or internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -716,52 +1442,73 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It only tests connectivity
+      to the SentinelOne API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action only tests connectivity to the SentinelOne API and does not match
+      any of the specific outcome categories such as enriching IOCs, updating alerts,
+      or mutating external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Reconnect Agent To The Network:
   ai_description: >-
     ### General Description
 
-    The **Reconnect Agent To The Network** action is designed to restore network connectivity
-    for SentinelOne agents that have been previously isolated from the network. This
-    action is typically used as a remediation step to bring an endpoint back into
-    full operation after a security threat has been resolved or an investigation is
-    complete.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | This action does not require any input parameters; it operates
-    on the entities in the current scope. |
-
-
-    ### Additional Notes
-
-    - The action supports **HOSTNAME** and **ADDRESS** (IP) entities.
-
-    - It requires the SentinelOne agent to be installed and recognized by the management
-    console.
-
-    - If an agent cannot be found for a specific entity, the failure is logged in
-    an 'Unsuccessful Attempts' data table.
+    Reconnects a disconnected endpoint agent to the network using SentinelOne. This
+    action removes network isolation from the specified host or IP address entities,
+    restoring their communication capabilities.
 
 
     ### Flow Description
 
-    1. **Entity Filtering**: The action identifies all Hostname and IP Address entities
-    within the target scope.
+    1. Filters the target entities to include only IP Addresses and Hostnames.
 
-    2. **Agent Identification**: For each entity, it queries the SentinelOne API to
-    retrieve the unique Agent ID associated with the hostname or IP address.
+    2. Iterates over the filtered entities and queries the SentinelOne API to find
+    the corresponding endpoint agent ID.
 
-    3. **Reconnection Request**: It issues a POST request to the SentinelOne API to
-    reconnect the identified agent to the network.
+    3. Makes a POST request to the SentinelOne API (`web/api/v1.6/agents/{0}/connect`)
+    to reconnect the agent to the network.
 
-    4. **Result Aggregation**: The action tracks successful reconnections and captures
-    any errors (e.g., agent not found) to display in a summary message and a data
-    table.
+    4. Compiles a list of successfully reconnected entities and any errors encountered.
+
+    5. Returns a summary message and attaches a data table to the case for any unsuccessful
+    attempts.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Reconnects a disconnected endpoint agent to the network in SentinelOne, removing
+    network isolation for the specified IP address or hostname entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -770,16 +1517,51 @@ Reconnect Agent To The Network:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends a POST request to the SentinelOne API to reconnect a specific agent machine
-      to the network, changing its isolation state.
-    fetches_data: true
+      Reconnects a disconnected endpoint agent to the network in SentinelOne.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST request to SentinelOne to reconnect an agent to the
+      network, mutating external data. It does not fetch data for enrichment, mutate
+      internal SecOps data, update entities, create insights, modify alerts, or create
+      case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -793,54 +1575,76 @@ Reconnect Agent To The Network:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-"Update Exclusion List Add Path ":
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == ADDRESS or entity.entity_type == HOSTNAME`. Therefore, it targets Address
+      and Hostname entities, filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action makes a POST request to the SentinelOne API to reconnect an agent
+      to the network. This removes network isolation and restores the endpoint's communication
+      capabilities, which directly aligns with the 'Uncontain Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: true
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Update Exclusion List Add Path:
   ai_description: >-
     ### General Description
 
-    Adds a specific file or directory path to an existing exclusion list in SentinelOne.
-    This action is used to prevent the SentinelOne agent from monitoring or flagging
-    specific paths on endpoints, which is useful for excluding known safe applications,
-    databases, or specific system directories across different operating systems.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | List Name | String | Yes | The exact name of the exclusion list in SentinelOne
-    where the path should be added. |
-
-    | Path | String | Yes | The file or directory path to be excluded (e.g., 'C:\Program
-    Files\App' or '/var/log/app'). |
-
-    | Operation System | String | Yes | The target operating system for the exclusion.
-    Supported values: 'windows', 'osx', 'linux', or 'android'. |
-
-
-    ### Additional Notes
-
-    - The action first resolves the 'List Name' to an internal SentinelOne ID before
-    attempting to add the path.
-
-    - If the specified list name does not exist in the SentinelOne environment, the
-    action will fail with an error.
+    Adds a specified file path to an existing exclusion list in SentinelOne. This
+    action modifies the external system's configuration to prevent the specified path
+    from triggering security alerts or being scanned, effectively allowing it to operate
+    without interference.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the SentinelOne API using the configured credentials.
+    1. Retrieves the target exclusion list name, the file path to be excluded, and
+    the target operating system from the action parameters.
 
-    2. **List Resolution**: Retrieves all exclusion lists from the SentinelOne environment
-    to find the unique ID associated with the provided 'List Name'.
+    2. Makes a GET request to the SentinelOne API to retrieve all exclusion lists
+    and matches the provided list name to obtain its unique ID.
 
-    3. **Path Addition**: Sends a POST request to the SentinelOne API to add the specified
-    'Path' to the identified exclusion list, categorized by the provided 'Operation
-    System'.
+    3. Makes a POST request to the SentinelOne API (`web/api/v1.6/exclusion-lists/{list_id}/folders`)
+    to append the specified folder path to the exclusion list.
 
-    4. **Completion**: Returns a success message indicating the path has been added
-    to the list.
+    4. Returns a success message to the SecOps platform confirming the directory was
+    added to the exclusion list.
+
+
+    ### Additional Notes
+
+    Ensure that the provided 'List Name' exactly matches an existing exclusion list
+    in SentinelOne. The 'Operation System' parameter must be one of the supported
+    OS families (windows, osx, linux, or android).
+  ai_short_description: >-
+    Adds a specified file path to an existing exclusion list in SentinelOne to prevent
+    it from being scanned or triggering alerts.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -849,14 +1653,50 @@ Reconnect Agent To The Network:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a new file or directory path to a specified exclusion list in the SentinelOne
-      management console via a POST request.
-    fetches_data: true
+      Adds a specified file path to an exclusion list in SentinelOne.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to the SentinelOne API to add a new folder path
+      to an exclusion list, which mutates external data. It does not fetch enrichment
+      data for the platform, update internal entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -870,3 +1710,50 @@ Reconnect Agent To The Network:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It relies entirely
+      on explicitly provided parameters (List Name, Path, Operation System) to perform
+      its operation.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: true
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      By adding a file path to an exclusion list in SentinelOne, the action effectively
+      marks that path as 'known good' to prevent security alerts or false positives,
+      which directly aligns with the 'Add IOC To Allowlist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | List Name | String | Yes | Exclusion list name. |
+
+    | Path | String | Yes | Path to add to the list. |
+
+    | Operation System | String | Yes | Operation system, can be: windows, osx, linux
+    or android. |

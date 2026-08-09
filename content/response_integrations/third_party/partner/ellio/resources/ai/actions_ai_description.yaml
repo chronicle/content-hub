@@ -1,262 +1,36 @@
-# Copyright 2026 ELLIO Technology
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-Ping:
-  ai_description: >-
-    ### General Description
-
-    Validates the ELLIO integration configuration with a lightweight authenticated
-    call to the ELLIO API. Use it to confirm the API Root, API Key and SSL settings
-    are correct before running the other ELLIO actions. It is the mandatory
-    connectivity-test action and does not process case entities.
-
-
-    ### Parameters
-
-    This action has no parameters; it uses the integration configuration (ELLIO API
-    Root, API Key, Verify SSL).
-
-
-    ### Flow Description
-
-    1. Reads the integration configuration.
-
-    2. Sends an authenticated CTI lookup for a documentation IP to the ELLIO API.
-
-    3. Ends successfully on HTTP 200; on any connection or authentication error ends
-    as failed with the error detail.
-
-
-    ### Additional Notes
-
-    Read-only. Confirms connectivity and credentials only.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-
-Enrich IP:
-  ai_description: >-
-    ### General Description
-
-    Enriches IP Address entities (and/or IPs passed as a parameter) with ELLIO
-    threat-intelligence context from the ELLIO CTI API: classification (malicious /
-    promiscuous / unknown / benign), detection tags, exploited CVEs, MuonFP / JA3 /
-    JA4 fingerprints, observed ports, reverse DNS, country and first/last seen. For
-    each enriched entity it adds an insight card and marks malicious or promiscuous
-    IPs as suspicious. It returns a recommended case priority of "High" when a
-    malicious IP is found (for a playbook to apply) but does not change the case
-    priority itself.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | IP Addresses | String | No | Optional comma-separated IPs to enrich in addition to the IP Address entities in the case. |
-
-    | Create Insight | Boolean | No | If enabled (default), add an ELLIO threat-intelligence insight card to the case for each enriched IP. |
-
-
-    ### Flow Description
-
-    1. Collects the target IPs from IP Address entities and the optional parameter,
-    keeping only public / globally-routable addresses.
-
-    2. Looks each IP up via the ELLIO CTI extended-lookup API.
-
-    3. Writes the returned context onto the entity's additional_properties, flags
-    malicious/promiscuous IPs as suspicious, and (optionally) adds an insight card.
-
-    4. Adds the per-IP results to the action JSON result and returns "High" as the
-    recommended priority when any IP is malicious, otherwise "None".
-
-
-    ### Additional Notes
-
-    Only public IPs are processed. The action returns a recommendation only; a
-    playbook decides whether to apply it to the case.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Writes ELLIO threat-intelligence context onto matched IP Address entities'
-      additional_properties and marks malicious/promiscuous IPs as suspicious.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-
-CBS Lookup:
-  ai_description: >-
-    ### General Description
-
-    Classifies IP Address entities against ELLIO Common Business Services (CBS) via
-    the ELLIO API. For an IP that falls in a known cloud / CDN / SaaS / ISP / security
-    / crawler range, it enriches the entity with the provider, type, service, region,
-    CBS ids and matched CIDR, and adds a separate Common Business Services insight
-    card. This is service context (is-this-a-known-provider), distinct from the threat
-    verdict provided by Enrich IP.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | IP Addresses | String | No | Optional comma-separated IPs to look up in addition to the IP Address entities in the case. |
-
-    | Create Insight | Boolean | No | If enabled (default), add a Common Business Services insight card to the entity for each match. |
-
-
-    ### Flow Description
-
-    1. Collects target IPs from IP Address entities and the optional parameter.
-
-    2. Looks each IP up via the ELLIO CBS API.
-
-    3. For a match, writes provider/type/service/region/cbs_ids/cidr onto the entity's
-    additional_properties and (optionally) adds a CBS insight card.
-
-    4. Adds the per-IP results to the action JSON result; returns true when any IP
-    matched a CBS range.
-
-
-    ### Additional Notes
-
-    A CBS match means the IP belongs to a known service (for example AWS, Azure, a
-    CDN), not that it is malicious. Combine with Enrich IP for the threat verdict.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: true
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Writes ELLIO Common Business Services context (provider, type, service, region,
-      CIDR) onto matched IP Address entities' additional_properties.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-
 Add IP to Blocklist:
   ai_description: >-
     ### General Description
 
-    Adds IP addresses to an ELLIO Blocklist Automation (EDL) ruleset via the ELLIO
-    API, so they are distributed to the customer's enforcement points. Intended for
-    confirmed-malicious IPs as a response action. Only public, globally-routable IPs
-    are pushed; private / reserved / loopback / link-local addresses are skipped and
-    reported.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | IP Addresses | String | No | Optional comma-separated IPs to blocklist in addition to the IP Address entities in the case. |
-
-    | Rule Name | String | No | Optional rule-name override. When empty, a parsable name is auto-generated from the case, alert and ELLIO classification. |
-
-    | Conflict Resolution | String | No | How to handle an IP already in the ruleset: extend, override, skip, or fail. |
-
-    | Expires In Days | Integer | No | Rule expiry in days (default 14); 0 creates a permanent rule. |
+    Adds IP addresses to the ELLIO Blocklist Automation ruleset. This action pushes
+    confirmed-malicious IPs to enforcement points to block traffic. It processes both
+    IP Address entities from the case and manually provided IPs, ensuring that only
+    public, globally-routable IPs are pushed while skipping private or internal addresses.
 
 
     ### Flow Description
 
-    1. Collects target IPs from IP Address entities and the optional parameter.
+    1. Extracts configuration and action parameters, including the target IPs and
+    rule settings.
 
-    2. Filters to public / globally-routable IPs; skips and reports non-public ones.
+    2. Collects target IPs from the action parameters and the case's IP Address entities,
+    explicitly filtering out internal or non-public IPs.
 
-    3. For each IP, POSTs a rule to the configured ELLIO Blocklist Automation ruleset,
-    using the given or auto-generated rule name and conflict-resolution mode.
+    3. Iterates over the collected IPs and makes a POST request to the ELLIO API (`/v1/edl/ip-rulesets/{ruleset_id}/rules`)
+    to add each IP to the blocklist.
 
-    4. Reports added, failed (with the reason, for example a read-only key) and
-    skipped IPs in the output and JSON result.
+    4. Returns a JSON result containing the status of each IP (added, failed, or skipped)
+    and completes the action execution.
 
 
     ### Additional Notes
 
-    Requires a read-and-write ELLIO API key and the Blocklist Ruleset ID set in the
-    integration configuration. This action mutates external state in ELLIO.
+    Requires a read-write ELLIO API key and a configured Blocklist Ruleset ID. Private,
+    reserved, loopback, and link-local addresses are automatically skipped to prevent
+    self-inflicted outages.
+  ai_short_description: >-
+    Pushes IP addresses to the ELLIO Blocklist Automation ruleset to block traffic
+    at enforcement points.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -265,15 +39,501 @@ Add IP to Blocklist:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates IP block rules in an ELLIO Blocklist Automation (EDL) ruleset via the
-      ELLIO API, adding the IPs to the customer's external blocklist.
+      Adds the specified IP addresses to the ELLIO Blocklist Automation ruleset.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST request to the ELLIO API to add IP addresses to a
+      blocklist ruleset, which mutates external data. It does not fetch enrichment
+      data, update internal entities, or create insights.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` in the `collect_target_ips`
+      function. It explicitly filters entities by checking `entity.entity_type ==
+      EntityTypes.ADDRESS` and `entity.is_internal`. Therefore, it targets ADDRESS
+      entities and filters by entity_type and is_internal.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action makes a POST request to the ELLIO API to add IP addresses to a blocklist
+      ruleset. This directly matches the 'Add IOC To Blocklist' expected outcome,
+      which updates security controls to prevent future interaction with the IOC.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | IP Addresses | String | No | Comma-separated IPs to add to the blocklist in
+    addition to IP Address entities. Example: 27.43.204.10 |
+
+    | Rule Name | String | No | Optional override for the rule name. If empty, the
+    rule is auto-named as parsable key=value pairs, e.g. "secops_case=4711 \| alert=Suspicious
+    Inbound Connection \| ellio=malicious". |
+
+    | Expires In Days | String | No | Number of days after which the blocklist rule
+    expires. Set to 0 for a permanent rule. |
+
+    | Conflict Resolution | String | No | How to resolve a conflict with an existing
+    rule for the same IP/CIDR. extend = extend the existing rule; override = replace
+    it; skip = leave it; fail = error. |
+CBS Lookup:
+  ai_description: >-
+    ### General Description
+
+    Enriches IP Address entities by classifying them against ELLIO Common Business
+    Services (CBS) to identify cloud, CDN, SaaS, ISP, security, or crawler providers.
+    This helps analysts separate legitimate provider infrastructure from attacker-controlled
+    hosts to reduce false positives. Matched IPs are enriched with provider details,
+    service types, regions, and CIDR blocks.
+
+
+    ### Flow Description
+
+    1. Collects target IP addresses from the action parameters and the case's IP Address
+    entities, explicitly filtering out internal, private, reserved, and loopback addresses.
+
+    2. Makes a GET request to the ELLIO API (`/v1/cbs/lookup`) for each valid public
+    IP to retrieve CBS classification data.
+
+    3. If a match is found, enriches the entity's additional properties with the provider,
+    type, service, region, CBS IDs, and matched CIDR.
+
+    4. Marks the entity as enriched and, if configured, creates an insight card displaying
+    the CBS hierarchy and alert flow context.
+
+    5. Updates the entities within the SecOps platform and returns the JSON results.
+
+
+    ### Additional Notes
+
+    Only public (external) IPs are checked by this action. Private, reserved, loopback,
+    and SOAR-internal addresses are automatically skipped.
+  ai_short_description: >-
+    Enriches IP Address entities by querying the ELLIO API to determine if they belong
+    to known Common Business Services (such as cloud providers, CDNs, or SaaS), adding
+    contextual properties and insight cards to matched entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the ELLIO API to fetch CBS data for IP addresses
+      (fetches_data=true). It does not mutate external data. It updates internal entities
+      with the fetched data (can_update_entities=true) and creates insight cards (can_create_insight=true).
+      It does not modify alert data or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.ADDRESS` and `entity.is_internal` (skipping
+      internal IPs). It also evaluates `entity.identifier` to ensure the IP is a public,
+      globally routable address. Therefore, it targets ADDRESS entities and filters
+      by entity_type, is_internal, and identifier.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches contextual metadata about an IP address (provider, type,
+      service, region) from ELLIO to determine if it belongs to a Common Business
+      Service. This aligns with the 'Enrich IOC' expected outcome, as it returns prevalence
+      and intelligence context for the indicator.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | IP Addresses | String | No | Comma-separated IPs to look up in addition to IP
+    Address entities. Example: 13.107.42.14, 66.132.172.141 |
+
+    | Create Insight | Boolean | No | If enabled, add a Common Business Services insight
+    card to the entity for each match. |
+Enrich IP:
+  ai_description: >-
+    ### General Description
+
+    Enriches IP Address entities with ELLIO threat-intelligence context. This action
+    retrieves classification, detection tags, exploited CVEs, fingerprints, ports,
+    rDNS, country, and first/last seen data from the ELLIO CTI API. It updates the
+    entity's suspicious status based on the verdict, appends the data to the entity's
+    additional properties, and generates an insight card with the analysis results.
+
+
+    ### Flow Description
+
+    1. Extracts target IP addresses from the case's IP Address entities and the optional
+    `IP Addresses` parameter, filtering out private, reserved, and internal addresses.
+
+    2. Makes a GET request to the ELLIO CTI API (`/v1/cti/extended_lookup/{ip}`) for
+    each valid IP address to retrieve threat intelligence context.
+
+    3. Evaluates the classification verdict; if malicious or promiscuous, marks the
+    entity as suspicious.
+
+    4. Updates the entity's additional properties with the retrieved data and marks
+    it as enriched.
+
+    5. Generates an ELLIO threat-intelligence insight card for the entity if the `Create
+    Insight` parameter is enabled.
+
+    6. Returns a JSON result containing the enrichment data and a recommended case
+    priority.
+
+
+    ### Additional Notes
+
+    The action only recommends a case priority (e.g., High for malicious IPs) via
+    the script result `recommended_priority` and does not change the case priority
+    itself.
+  ai_short_description: >-
+    Enriches IP Address entities with ELLIO threat-intelligence context, updating
+    entity properties and generating insight cards.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to the ELLIO CTI API. It does
+      not mutate external data or internal case data. It updates entities with the
+      retrieved enrichment data and creates insights to display the threat intelligence.
+      It does not modify alert data or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.ADDRESS` and `entity.is_internal` (skipping
+      if true). Therefore, it targets ADDRESS entities, filtering by `entity_type`
+      and `is_internal`. It does not filter by identifier, creation time, modification
+      time, additional properties, case identifier, alert identifier, is_suspicious,
+      is_artifact, is_vulnerable, is_enriched, or is_pivot.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence data (classification, tags, CVEs, etc.)
+      for IP addresses from the ELLIO API. This matches the 'Enrich IOC' expected
+      outcome of returning reputation, prevalence, and threat intelligence for an
+      indicator. It does not modify external systems, update alerts, or perform other
+      categorized actions, so all other categories are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | IP Addresses | String | No | Optional comma-separated IPs to enrich in addition
+    to IP Address entities. Example: 27.43.204.10, 66.132.172.141 |
+
+    | Create Insight | Boolean | No | If enabled (default), add an ELLIO threat-intelligence
+    insight card to the case for each enriched IP. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Validates connectivity to the ELLIO API.
+
+
+    ### Flow Description
+
+    1. Initializes the ELLIO manager using the integration-level configuration (API
+    Root, API Key, and Verify SSL).
+
+    2. Executes a GET request to the ELLIO API (`/v1/cti/lookup/192.0.2.1`) to verify
+    authentication and network connectivity.
+
+    3. Outputs a success message if the API responds correctly, otherwise fails the
+    action with an error message.
+
+
+    ### Additional Notes
+
+    This action does not require any action-specific parameters and is typically used
+    during integration setup to ensure the provided credentials and network settings
+    are valid.
+  ai_short_description: >-
+    Validates connectivity to the ELLIO API by performing a test lookup.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only performs a GET request to a static test IP to verify API connectivity.
+      It does not fetch contextual data for alerts, mutate external or internal data,
+      update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -287,3 +547,39 @@ Add IP to Blocklist:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It only performs a
+      static connectivity test.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      expected outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

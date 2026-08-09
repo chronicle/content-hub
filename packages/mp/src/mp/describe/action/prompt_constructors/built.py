@@ -21,6 +21,10 @@ from typing import TYPE_CHECKING
 import toon_format
 
 from mp.core import constants
+from mp.core.data_models.integrations.action.ai.entity_types import (
+    build_dynamic_entity_prompt_rules,
+    get_all_entity_param_examples_string,
+)
 
 from .prompt_constructor import PromptConstructor
 
@@ -37,16 +41,22 @@ DEFAULT_FILE_CONTENT: str = "N/A"
 class BuiltPromptConstructor(PromptConstructor):
     __slots__: tuple[str, ...] = ()
 
-    async def construct(self) -> str:
+    async def construct(self, template: Template | None = None) -> str:
         """Construct the prompt for built actions.
+
+        Args:
+            template: Optional custom prompt template.
 
         Returns:
             str: The constructed prompt.
 
         """
         manager_names, manager_content = await self._get_managers_names_and_content()
-        template: Template = await self.task_prompt
+        if template is None:
+            template = await self.task_prompt
         return template.safe_substitute({
+            "all_entity_param_examples": get_all_entity_param_examples_string(),
+            "entity_type_mapping_rules": build_dynamic_entity_prompt_rules(),
             "json_file_name": f"{self.action_file_name}.yaml",
             "json_file_content": await self._get_built_action_def_content(),
             "python_file_name": f"{self.action_file_name}.py",
