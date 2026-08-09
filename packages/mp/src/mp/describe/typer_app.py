@@ -26,7 +26,7 @@ import mp.core.config
 from .action.typer_app import app as action_app
 from .all_content import describe_all_content
 from .connector.typer_app import app as connector_app
-from .evaluate.typer_app import app as evaluate_app
+# from .evaluate.typer_app import app as evaluate_app
 from .integration.typer_app import app as integration_app
 from .job.typer_app import app as job_app
 from .regression_test.accept_typer_app import app as accept_app
@@ -39,7 +39,7 @@ app: typer.Typer = typer.Typer(help="Commands for creating description for conte
 
 app.add_typer(action_app)
 app.add_typer(connector_app)
-app.add_typer(evaluate_app)
+# app.add_typer(evaluate_app)
 app.add_typer(integration_app)
 app.add_typer(job_app)
 app.add_typer(regression_test_app, name="describe-regression-test")
