@@ -189,24 +189,37 @@ class MultiPromptDescribeAction(DescribeAction):
         resources: list[str],
         status: IntegrationStatus,
     ) -> list[DescriptionResult]:
-        """Describe multiple action resources in bulk with optional prompt overrides.
-
-        Args:
-            resources: Action resource names to describe.
-            status: Status of the integration content build.
-
-        Returns:
-            list[DescriptionResult]: The list of action description results.
-
-        """
-        baseline_results: list[DescriptionResult] = await super().describe_bulk(resources, status)
-
+        """Describe multiple action resources in bulk with optional prompt overrides."""
+        
         if not self.prompt_overrides_path:
-            return baseline_results
+            return await super().describe_bulk(resources, status)
 
         overrides: list[PromptOverrideConfig] = await self._load_prompt_overrides()
         if not overrides:
-            return baseline_results
+            return await super().describe_bulk(resources, status)
+
+        # Optimization: Only load existing metadata instead of regenerating baseline
+        # to ensure that we ONLY update the overridden fields!
+        existing_metadata = await self._load_metadata()
+        baseline_results: list[DescriptionResult] = []
+        
+        for res in resources:
+            if res in existing_metadata:
+                try:
+                    meta_model = self.response_schema.model_validate(existing_metadata[res])
+                    baseline_results.append(DescriptionResult(res, meta_model))
+                except Exception:
+                    baseline_results.append(DescriptionResult(res, None))
+            else:
+                # If they don't exist, we fallback to generating the baseline anyway
+                # but for this PoC we assume they exist.
+                pass
+                
+        # If any didn't exist in metadata, generate the missing ones via super()
+        missing_resources = [r for r in resources if r not in existing_metadata]
+        if missing_resources:
+            missing_results = await super().describe_bulk(missing_resources, status)
+            baseline_results.extend(missing_results)
 
         return await self._apply_prompt_overrides(resources, status, baseline_results, overrides)
 
@@ -337,7 +350,12 @@ class MultiPromptDescribeAction(DescribeAction):
             if not valid_prompts:
                 continue
 
-            llm_results: list[Any | str] = await llm.call_gemini_bulk(valid_prompts, target_model)
+            if override.field_name == "parameters_description":
+                from mp.describe.action.parameter_agent_poc import generate_validated_parameters_description_bulk
+                logger.info("Routing `parameters_description` request to Agent PoC.")
+                llm_results: list[Any | str] = await generate_validated_parameters_description_bulk(valid_prompts, target_model)
+            else:
+                llm_results: list[Any | str] = await llm.call_gemini_bulk(valid_prompts, target_model)
 
             for i, result in zip(valid_indices, llm_results, strict=True):
                 resource_name: str = resources[i]
