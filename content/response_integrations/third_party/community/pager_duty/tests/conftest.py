@@ -129,6 +129,7 @@ def job_case_map():
     alert.ticket_id = "P123"
     job_case.case_detail.alerts = [alert]
     job_case.alert_metadata = {}
+    job_case.product_ids_from_secops_alerts = {}
     return job_case
 
 
