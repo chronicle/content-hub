@@ -134,39 +134,59 @@ def prevent_reverting_properties(entity: Any) -> None:
     if not hasattr(entity, "to_dict"):
         return
 
+    add_props = getattr(entity, "additional_properties", {}) or {}
+
     is_pivot = (
         getattr(entity, "is_pivot", False)
-        or str(entity.additional_properties.get("IsPivot", "")).lower() == "true"
+        or str(add_props.get("IsPivot", "")).lower() == "true"
+    )
+    is_attacker = (
+        getattr(entity, "is_attacker", False)
+        or getattr(entity, "attacker", False)
+        or str(add_props.get("IsAttacker", "")).lower() == "true"
+    )
+    is_vulnerable = (
+        getattr(entity, "is_vulnerable", False)
+        or str(add_props.get("IsVulnerable", "")).lower() == "true"
     )
 
-    if not is_pivot:
+    if not (is_pivot or is_attacker or is_vulnerable):
         return
 
     orig_to_dict = entity.to_dict
 
     def new_to_dict():
-        # Create a copy to prevent modifying self.__dict__ directly and including 'to_dict' function in the output dict
         d = orig_to_dict().copy()
         d.pop("to_dict", None)
 
-        # Helper to clean keys unconditionally in a dictionary
         def clean_key(target_dict, key):
             target_dict.pop(key, None)
 
-        # 1. Clean root level keys (snake_case/PascalCase format)
-        clean_key(d, "is_pivot")
-        clean_key(d, "IsPivot")
+        if is_pivot:
+            clean_key(d, "is_pivot")
+            clean_key(d, "IsPivot")
+        if is_attacker:
+            clean_key(d, "is_attacker")
+            clean_key(d, "attacker")
+            clean_key(d, "IsAttacker")
+        if is_vulnerable:
+            clean_key(d, "is_vulnerable")
+            clean_key(d, "IsVulnerable")
 
-        # 2. Clean additionalProperties
-        add_props = d.get("additional_properties") or d.get("additionalProperties")
-        if isinstance(add_props, dict):
-            # Create a copy of the additional properties dictionary to avoid mutation side-effects
-            add_props = add_props.copy()
-            clean_key(add_props, "IsPivot")
+        add_props_dict = d.get("additional_properties") or d.get("additionalProperties")
+        if isinstance(add_props_dict, dict):
+            add_props_dict = add_props_dict.copy()
+            if is_pivot:
+                clean_key(add_props_dict, "IsPivot")
+            if is_attacker:
+                clean_key(add_props_dict, "IsAttacker")
+            if is_vulnerable:
+                clean_key(add_props_dict, "IsVulnerable")
+
             if "additional_properties" in d:
-                d["additional_properties"] = add_props
+                d["additional_properties"] = add_props_dict
             if "additionalProperties" in d:
-                d["additionalProperties"] = add_props
+                d["additionalProperties"] = add_props_dict
 
         return d
 
