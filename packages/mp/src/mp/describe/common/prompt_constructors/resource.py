@@ -15,14 +15,15 @@
 from __future__ import annotations
 
 import abc
+import pathlib
 from typing import TYPE_CHECKING
+
+import anyio
 
 from .prompt_constructor import PromptConstructor as BasePromptConstructor
 
 if TYPE_CHECKING:
     from string import Template
-
-    import anyio
 
 
 class ResourcePromptConstructor(BasePromptConstructor, abc.ABC):
@@ -32,10 +33,16 @@ class ResourcePromptConstructor(BasePromptConstructor, abc.ABC):
         self,
         integration: anyio.Path,
         integration_name: str,
-        resource_name: str,
-        resource_file_name: str,
-        out_path: anyio.Path,
+        resource_name: str | anyio.Path | pathlib.Path = "",
+        resource_file_name: str = "",
+        out_path: anyio.Path | None = None,
     ) -> None:
+        if isinstance(resource_name, anyio.Path | pathlib.Path):
+            out_path = resource_name
+            resource_name = ""
+            resource_file_name = ""
+        if out_path is None:
+            out_path = integration
         super().__init__(integration, integration_name, out_path)
         self.resource_name: str = resource_name
         self.resource_file_name: str = resource_file_name

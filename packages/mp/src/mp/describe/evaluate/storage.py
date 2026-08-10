@@ -18,6 +18,7 @@ import sqlite3
 from pathlib import Path
 
 from .models import RuleEvaluationResult, VerdictEnum
+from .rules import EvaluationRule
 
 
 class EvaluationStorage:
@@ -45,10 +46,20 @@ class EvaluationStorage:
         return conn
 
     def _init_db(self) -> None:
-        """Create rule_evaluations table and index if they do not exist."""
+        """Create rules and rule_evaluations tables and index if they do not exist."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         with self._get_connection() as conn:
             cursor = conn.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS rules (
+                    rule_id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    target_field TEXT NOT NULL,
+                    criteria TEXT NOT NULL
+                );
+                """
+            )
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS rule_evaluations (
@@ -57,11 +68,13 @@ class EvaluationStorage:
                     action_id TEXT NOT NULL,
                     run_id TEXT NOT NULL,
                     evaluated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    rule_id TEXT DEFAULT '',
                     rule_title TEXT NOT NULL,
                     actual_value TEXT DEFAULT '',
                     verdict TEXT CHECK(verdict IN ('PASS', 'FAIL', 'PARTIAL')) NOT NULL,
                     reasoning TEXT NOT NULL,
-                    suggested_fix TEXT
+                    suggested_fix TEXT,
+                    FOREIGN KEY (rule_id) REFERENCES rules(rule_id)
                 );
                 """
             )
@@ -69,6 +82,8 @@ class EvaluationStorage:
             columns = {row["name"] for row in cursor.fetchall()}
             if "actual_value" not in columns:
                 cursor.execute("ALTER TABLE rule_evaluations ADD COLUMN actual_value TEXT DEFAULT '';")
+            if "rule_id" not in columns:
+                cursor.execute("ALTER TABLE rule_evaluations ADD COLUMN rule_id TEXT DEFAULT '';")
             if "rule_number" in columns:
                 cursor.execute("ALTER TABLE rule_evaluations RENAME TO rule_evaluations_old;")
                 cursor.execute(
@@ -79,11 +94,13 @@ class EvaluationStorage:
                         action_id TEXT NOT NULL,
                         run_id TEXT NOT NULL,
                         evaluated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        rule_id TEXT DEFAULT '',
                         rule_title TEXT NOT NULL,
                         actual_value TEXT DEFAULT '',
                         verdict TEXT CHECK(verdict IN ('PASS', 'FAIL', 'PARTIAL')) NOT NULL,
                         reasoning TEXT NOT NULL,
-                        suggested_fix TEXT
+                        suggested_fix TEXT,
+                        FOREIGN KEY (rule_id) REFERENCES rules(rule_id)
                     );
                     """
                 )
@@ -91,12 +108,12 @@ class EvaluationStorage:
                     """
                     INSERT OR IGNORE INTO rule_evaluations (
                         evaluation_id, integration_id, action_id, run_id,
-                        evaluated_at, rule_title, actual_value, verdict,
+                        evaluated_at, rule_id, rule_title, actual_value, verdict,
                         reasoning, suggested_fix
                     )
                     SELECT
                         evaluation_id, integration_id, action_id, run_id,
-                        evaluated_at, rule_title, actual_value, verdict,
+                        evaluated_at, '', rule_title, actual_value, verdict,
                         reasoning, suggested_fix
                     FROM rule_evaluations_old;
                     """
@@ -106,6 +123,48 @@ class EvaluationStorage:
                 "CREATE INDEX IF NOT EXISTS idx_eval_lookup ON rule_evaluations(integration_id, action_id, run_id);"
             )
             conn.commit()
+
+    def save_rules(self, rules: list[EvaluationRule]) -> None:
+        """Persist evaluation rules to the rules table.
+
+        Args:
+            rules: List of EvaluationRule objects to persist.
+
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            for rule in rules:
+                cursor.execute(
+                    """
+                    INSERT OR REPLACE INTO rules (
+                        rule_id, title, target_field, criteria
+                    ) VALUES (?, ?, ?, ?);
+                    """,
+                    (rule.rule_id, rule.title, rule.target_field, rule.criteria),
+                )
+            conn.commit()
+
+    def get_rules(self) -> list[EvaluationRule]:
+        """Fetch all rules from database.
+
+        Returns:
+            List of EvaluationRule objects.
+
+        """
+        with self._get_connection() as conn:
+
+            cursor = conn.cursor()
+            cursor.execute("SELECT rule_id, title, target_field, criteria FROM rules ORDER BY rule_id ASC;")
+            rows = cursor.fetchall()
+            return [
+                EvaluationRule(
+                    rule_id=row["rule_id"],
+                    title=row["title"],
+                    target_field=row["target_field"],
+                    criteria=row["criteria"],
+                )
+                for row in rows
+            ]
 
     def save_evaluation(self, result: RuleEvaluationResult) -> None:
         """Persist a single rule evaluation record to SQLite database.
@@ -120,9 +179,9 @@ class EvaluationStorage:
                 """
                 INSERT OR REPLACE INTO rule_evaluations (
                     evaluation_id, integration_id, action_id, run_id,
-                    evaluated_at, rule_title, actual_value, verdict,
+                    evaluated_at, rule_id, rule_title, actual_value, verdict,
                     reasoning, suggested_fix
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """,
                 (
                     result.evaluation_id,
@@ -130,6 +189,7 @@ class EvaluationStorage:
                     result.action_id,
                     result.run_id,
                     result.evaluated_at,
+                    result.rule_id,
                     result.rule_title,
                     result.actual_value,
                     result.verdict.value,
@@ -182,6 +242,7 @@ class EvaluationStorage:
                     action_id=row["action_id"],
                     run_id=row["run_id"],
                     evaluated_at=str(row["evaluated_at"]),
+                    rule_id=str(dict(row).get("rule_id", "")),
                     rule_title=row["rule_title"],
                     actual_value=str(dict(row).get("actual_value", "")),
                     verdict=VerdictEnum(row["verdict"]),

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 from dataclasses import dataclass
 
 import yaml
@@ -27,6 +28,7 @@ class EvaluationRule:
     title: str
     target_field: str
     criteria: str
+    rule_id: str = ""
 
 
 def load_rules_from_yaml(
@@ -69,10 +71,17 @@ def load_rules_from_yaml(
             or not item.get("criteria")
         ):
             continue
+        title = str(item["title"]).strip()
+        rule_id = str(item.get("rule_id") or item.get("id") or "").strip()
+        if not rule_id:
+            clean_title = re.sub(r"[^a-zA-Z0-9]+", "_", title.lower()).strip("_")
+            rule_id = f"rule_{clean_title}"
+
         rule = EvaluationRule(
-            title=str(item["title"]).strip(),
+            title=title,
             target_field=str(item["target_field"]).strip(),
             criteria=str(item["criteria"]).strip(),
+            rule_id=rule_id,
         )
         rules.append(rule)
 

@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import string
 from typing import TYPE_CHECKING, Any
 from unittest import mock
 
@@ -21,9 +22,11 @@ import anyio
 import pytest
 
 from mp.core.data_models.integrations.action.ai.metadata import ActionAiMetadata
-from mp.describe.action.describe import MultiPromptDescribeAction
+from mp.describe.action.describe import DescriptionParams, MultiPromptDescribeAction
+from mp.describe.action.prompt_constructors.source import SourcePromptConstructor
 from mp.describe.action.utils import create_nested_schema
 from mp.describe.common.describe import DescriptionResult, IntegrationStatus
+from mp.describe.common.metadata import PromptOverrideConfig
 
 if TYPE_CHECKING:
     import pathlib
@@ -59,13 +62,13 @@ async def test_multi_prompt_describe_action_no_overrides(
 
 
 @pytest.mark.anyio
-async def test_multi_prompt_describe_action_empty_config(
+async def test_multi_prompt_describe_action_empty_yaml_config(
     tmp_path: pathlib.Path, mock_action_ai_metadata: ActionAiMetadata
 ) -> None:
     int_dir = tmp_path / "test_int"
     int_dir.mkdir()
-    config_file = tmp_path / "prompt_overrides.json"
-    config_file.write_text('{"prompt_config": []}')
+    config_file = tmp_path / "prompt_overrides.yaml"
+    config_file.write_text("[]")
 
     describer = MultiPromptDescribeAction("test_int", {"Ping"}, src=tmp_path, prompt_overrides=config_file)
     status = IntegrationStatus(is_built=False, out_path=anyio.Path(int_dir))
@@ -80,23 +83,25 @@ async def test_multi_prompt_describe_action_empty_config(
 
 
 @pytest.mark.anyio
-async def test_multi_prompt_describe_action_with_overrides(
+async def test_multi_prompt_describe_action_with_yaml_ruleset_criteria(
     tmp_path: pathlib.Path, mock_action_ai_metadata: ActionAiMetadata
 ) -> None:
     int_dir = tmp_path / "test_int"
     int_dir.mkdir()
-    prompt_file = tmp_path / "custom_prompt.md"
-    prompt_file.write_text("Custom prompt for ${python_file_name}")
 
-    config_file = tmp_path / "prompt_overrides.json"
-    config_file.write_text(f"""{{
-      "prompt_config": [
-        {{
-          "location": "{prompt_file.as_posix()}",
-          "field_name": "ai_description"
-        }}
-      ]
-    }}""")
+    # Evaluation-like ruleset with multiple criteria targeting parameters_description
+    config_file = tmp_path / "parameters_ruleset.yaml"
+    config_file.write_text("""
+- title: "Mandatory Column Strict Value Constraint"
+  target_field: "parameters_description"
+  criteria: >
+    Does every row in the parameters table use exclusively 'Yes' or 'No'?
+
+- title: "Exhaustive Enum Choices"
+  target_field: "parameters_description"
+  criteria: >
+    Are all allowed choices explicitly listed in Description column?
+""")
 
     describer = MultiPromptDescribeAction("test_int", {"Ping"}, src=tmp_path, prompt_overrides=config_file)
     status = IntegrationStatus(is_built=False, out_path=anyio.Path(int_dir))
@@ -104,63 +109,133 @@ async def test_multi_prompt_describe_action_with_overrides(
     baseline_results = [DescriptionResult("Ping", mock_action_ai_metadata)]
 
     def mock_call_gemini_bulk(prompts: list[str], schema_type: type[BaseModel]) -> list[BaseModel]:
-        return [schema_type(ai_description="Overridden description from custom LLM")]  # ty: ignore[pydantic-discarded-extra-argument]
+        # Verify prompts contain the consolidated criteria
+        assert len(prompts) == 1
+        assert "Mandatory Column Strict Value Constraint" in prompts[0]
+        assert "Exhaustive Enum Choices" in prompts[0]
+        return [schema_type.model_construct(parameters_description="New generated parameters table")]
 
     with (
         mock.patch("mp.describe.action.describe.DescribeAction.describe_bulk", return_value=baseline_results),
         mock.patch(
             "mp.describe.action.describe.MultiPromptDescribeAction._construct_custom_prompts",
-            return_value=["Custom prompt content"],
+            return_value=[
+                "Consolidated prompt with Mandatory Column Strict Value Constraint and Exhaustive Enum Choices"
+            ],
         ),
         mock.patch("mp.describe.common.utils.llm.call_gemini_bulk", side_effect=mock_call_gemini_bulk),
     ):
         results = await describer.describe_bulk(["Ping"], status)
         assert len(results) == 1
         assert isinstance(results[0].metadata, ActionAiMetadata)
-        assert results[0].metadata.ai_description == "Overridden description from custom LLM"
-        assert results[0].metadata.ai_short_description == "Original short description"
+        assert results[0].metadata.parameters_description == "New generated parameters table"
+        assert results[0].metadata.ai_description == "Original description"
 
 
 @pytest.mark.anyio
-async def test_multi_prompt_describe_action_test_data_overrides(
+async def test_prompt_constructor_auto_appends_sources(tmp_path: pathlib.Path) -> None:
+    int_dir = tmp_path / "test_int"
+    int_dir.mkdir()
+    actions_dir = int_dir / "actions"
+    actions_dir.mkdir()
+    (actions_dir / "ping.py").write_text("def ping(): pass")
+    (actions_dir / "ping.yaml").write_text("name: Ping")
+
+    status = IntegrationStatus(is_built=False, out_path=anyio.Path(int_dir))
+    params = DescriptionParams(
+        anyio.Path(int_dir),
+        "test_int",
+        "Ping",
+        "ping",
+        status,
+    )
+    constructor = SourcePromptConstructor(
+        params.integration,
+        params.integration_name,
+        params.action_name,
+        params.action_file_name,
+        params.status.out_path,
+    )
+
+    # Custom template with NO placeholders
+    custom_template = string.Template("Generate parameters table strictly obeying rules.")
+    rendered = await constructor.construct(template=custom_template)
+
+    assert "Generate parameters table strictly obeying rules." in rendered
+    assert '<python_script filename="ping.py">' in rendered
+    assert "def ping(): pass" in rendered
+    assert '<action_definition filename="ping.yaml">' in rendered
+
+
+@pytest.mark.anyio
+async def test_source_prompt_constructor_construct_override(tmp_path: pathlib.Path) -> None:
+    int_dir = tmp_path / "test_int"
+    int_dir.mkdir()
+    actions_dir = int_dir / "actions"
+    actions_dir.mkdir()
+    (actions_dir / "ping.py").write_text("def ping(): pass")
+    (actions_dir / "ping.yaml").write_text("name: Ping")
+
+    status = IntegrationStatus(is_built=False, out_path=anyio.Path(int_dir))
+    params = DescriptionParams(
+        anyio.Path(int_dir),
+        "test_int",
+        "Ping",
+        "ping",
+        status,
+    )
+    constructor = SourcePromptConstructor(
+        params.integration,
+        params.integration_name,
+        params.action_name,
+        params.action_file_name,
+        params.status.out_path,
+    )
+
+    override = PromptOverrideConfig(
+        target_field="parameters_description",
+        criteria="Must be a valid markdown table.",
+    )
+    rendered = await constructor.construct_override(override)
+
+    assert "### SOURCE CODE & SPECIFICATIONS" in rendered
+    assert '<python_script filename="ping.py">' in rendered
+    assert "def ping(): pass" in rendered
+    assert '<action_definition filename="ping.yaml">' in rendered
+    assert "Must be a valid markdown table." in rendered
+    assert "'parameters_description'" in rendered
+
+
+@pytest.mark.anyio
+async def test_multi_prompt_describe_action_yaml_multiple_field_overrides(
     tmp_path: pathlib.Path, mock_action_ai_metadata: ActionAiMetadata
 ) -> None:
     int_dir = tmp_path / "test_int"
     int_dir.mkdir()
     status = IntegrationStatus(is_built=False, out_path=anyio.Path(int_dir))
 
-    params_prompt = tmp_path / "parameters_description_prompt.md"
-    params_prompt.write_text("Parameters prompt for ${python_file_name}")
+    override_all_config = tmp_path / "override_all.yaml"
+    override_all_config.write_text("""
+- title: "Parameters Description Rule"
+  target_field: "parameters_description"
+  criteria: >
+    Parameters criteria for ${python_file_name}
 
-    entity_prompt = tmp_path / "entity_usage_prompt.md"
-    entity_prompt.write_text("Entity usage prompt for ${python_file_name}")
+- title: "Entity Usage Rule"
+  target_field: "entity_usage"
+  criteria: >
+    Entity usage criteria for ${python_file_name}
 
-    outcome_prompt = tmp_path / "outcome_categories_prompt.md"
-    outcome_prompt.write_text("Outcome categories prompt for ${python_file_name}")
-
-    override_all_config = tmp_path / "override_all.json"
-    override_all_config.write_text(f"""{{
-      "prompt_config": [
-        {{
-          "location": "{params_prompt.as_posix()}",
-          "field_name": "parameters_description"
-        }},
-        {{
-          "location": "{entity_prompt.as_posix()}",
-          "field_name": "entity_usage"
-        }},
-        {{
-          "location": "{outcome_prompt.as_posix()}",
-          "field_name": "outcome_categories"
-        }}
-      ]
-    }}""")
+- title: "Outcome Categories Rule"
+  target_field: "outcome_categories"
+  criteria: >
+    Outcome categories criteria for ${python_file_name}
+""")
 
     describer = MultiPromptDescribeAction("test_int", {"Ping"}, src=tmp_path, prompt_overrides=override_all_config)
     baseline_results = [DescriptionResult("Ping", mock_action_ai_metadata)]
 
     def mock_call_gemini_bulk(prompts: list[str], schema_type: type[BaseModel]) -> list[BaseModel]:
-        # Handle parameter_description, entity_usage, or outcome_categories depending on model
         fields = schema_type.model_fields
         if "parameters_description" in fields:
             return [schema_type.model_construct(parameters_description="Custom parameters table")]
@@ -182,11 +257,9 @@ async def test_multi_prompt_describe_action_test_data_overrides(
         assert len(results) == 1
         meta = results[0].metadata
         assert isinstance(meta, ActionAiMetadata)
-        # Targeted fields are overridden
         assert meta.parameters_description == "Custom parameters table"
         assert meta.entity_usage == {"reasoning": "Custom entity usage"}
         assert meta.outcome_categories == {"reasoning": "Custom outcome categories"}
-        # Unrelated fields remain unchanged
         assert meta.ai_description == "Original description"
         assert meta.ai_short_description == "Original short description"
 
@@ -197,7 +270,7 @@ async def test_multi_prompt_describe_action_error_handling_missing_config(
 ) -> None:
     int_dir = tmp_path / "test_int"
     int_dir.mkdir()
-    non_existent_file = tmp_path / "missing_overrides.json"
+    non_existent_file = tmp_path / "missing_overrides.yaml"
 
     describer = MultiPromptDescribeAction("test_int", {"Ping"}, src=tmp_path, prompt_overrides=non_existent_file)
     status = IntegrationStatus(is_built=False, out_path=anyio.Path(int_dir))
@@ -217,8 +290,8 @@ async def test_multi_prompt_describe_action_error_handling_malformed_config(
 ) -> None:
     int_dir = tmp_path / "test_int"
     int_dir.mkdir()
-    malformed_file = tmp_path / "malformed.json"
-    malformed_file.write_text("{invalid json}")
+    malformed_file = tmp_path / "malformed.yaml"
+    malformed_file.write_text("invalid: [yaml: broken")
 
     describer = MultiPromptDescribeAction("test_int", {"Ping"}, src=tmp_path, prompt_overrides=malformed_file)
     status = IntegrationStatus(is_built=False, out_path=anyio.Path(int_dir))
@@ -227,35 +300,7 @@ async def test_multi_prompt_describe_action_error_handling_malformed_config(
 
     with (
         mock.patch("mp.describe.action.describe.DescribeAction.describe_bulk", return_value=baseline_results),
-        pytest.raises(ValueError, match="Failed to parse prompt overrides file"),
-    ):
-        await describer.describe_bulk(["Ping"], status)
-
-
-@pytest.mark.anyio
-async def test_multi_prompt_describe_action_error_handling_missing_prompt_template(
-    tmp_path: pathlib.Path, mock_action_ai_metadata: ActionAiMetadata
-) -> None:
-    int_dir = tmp_path / "test_int"
-    int_dir.mkdir()
-    config_file = tmp_path / "prompt_overrides.json"
-    config_file.write_text("""{
-      "prompt_config": [
-        {
-          "location": "non_existent_prompt.md",
-          "field_name": "ai_description"
-        }
-      ]
-    }""")
-
-    describer = MultiPromptDescribeAction("test_int", {"Ping"}, src=tmp_path, prompt_overrides=config_file)
-    status = IntegrationStatus(is_built=False, out_path=anyio.Path(int_dir))
-
-    baseline_results = [DescriptionResult("Ping", mock_action_ai_metadata)]
-
-    with (
-        mock.patch("mp.describe.action.describe.DescribeAction.describe_bulk", return_value=baseline_results),
-        pytest.raises(FileNotFoundError, match="Custom prompt location"),
+        pytest.raises(ValueError, match="Failed to parse prompt overrides"),
     ):
         await describer.describe_bulk(["Ping"], status)
 

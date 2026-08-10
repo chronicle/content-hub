@@ -51,13 +51,6 @@ def mock_describe_job() -> Generator[mock.MagicMock, None, None]:
 
 
 @pytest.fixture
-def mock_describe_integration() -> Generator[mock.MagicMock, None, None]:
-    with mock.patch("mp.describe.integration.typer_app.DescribeIntegration") as mock_class:
-        mock_class.return_value.describe = mock.AsyncMock()
-        yield mock_class
-
-
-@pytest.fixture
 def mock_describe_all_integrations() -> Generator[mock.MagicMock, None, None]:
     with mock.patch("mp.describe.integration.typer_app.describe_all_integrations") as mock_func:
         mock_func.return_value = mock.AsyncMock()
@@ -76,8 +69,8 @@ def test_describe_action_cli(mock_describe_action: mock.MagicMock) -> None:
 
 
 def test_describe_action_prompt_overrides_cli(mock_describe_action: mock.MagicMock, tmp_path: pathlib.Path) -> None:
-    config_file = tmp_path / "prompt_overrides.json"
-    config_file.write_text('{"prompt_config": []}')
+    config_file = tmp_path / "prompt_overrides.yaml"
+    config_file.write_text("[]")
     result = runner.invoke(app, ["action", "ping", "-i", "aws_ec2", "--prompt-overrides", str(config_file)])
     assert result.exit_code == 0
     mock_describe_action.assert_called_once()
@@ -113,7 +106,24 @@ def test_describe_integration_cli(mock_describe_all_integrations: mock.MagicMock
         src=None,
         dst=None,
         override=False,
+        prompt_overrides=None,
         integrations=["int1", "int2"],
+    )
+
+
+def test_describe_integration_prompt_overrides_cli(
+    mock_describe_all_integrations: mock.MagicMock, tmp_path: pathlib.Path
+) -> None:
+    config_file = tmp_path / "prompt_overrides.yaml"
+    config_file.write_text("[]")
+    result = runner.invoke(app, ["integration", "aws_ec2", "--prompt-overrides", str(config_file)])
+    assert result.exit_code == 0
+    mock_describe_all_integrations.assert_called_once_with(
+        src=None,
+        dst=None,
+        override=False,
+        prompt_overrides=config_file,
+        integrations=["aws_ec2"],
     )
 
 
@@ -121,7 +131,12 @@ def test_describe_integration_all_cli(mock_describe_all_integrations: mock.Magic
     # mp describe integration --all
     result = runner.invoke(app, ["integration", "--all"])
     assert result.exit_code == 0
-    mock_describe_all_integrations.assert_called_once_with(src=None, dst=None, override=False)
+    mock_describe_all_integrations.assert_called_once_with(
+        src=None,
+        dst=None,
+        override=False,
+        prompt_overrides=None,
+    )
 
 
 def test_all_content_cli() -> None:

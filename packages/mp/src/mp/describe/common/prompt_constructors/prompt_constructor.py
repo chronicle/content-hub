@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
     import anyio
 
+    from mp.describe.common.metadata import PromptOverrideConfig
+
 
 class PromptConstructor(abc.ABC):
     __slots__: tuple[str, ...] = ("integration", "integration_name", "out_path")
@@ -53,6 +55,19 @@ class PromptConstructor(abc.ABC):
 
         Returns:
             str: The constructed prompt.
+
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def construct_override(self, override: PromptOverrideConfig) -> str:
+        """Construct a prompt override for generating AI descriptions.
+
+        Args:
+            override: The prompt override configuration.
+
+        Returns:
+            str: The constructed prompt override.
 
         """
         raise NotImplementedError

@@ -35,6 +35,7 @@ from mp.describe.evaluate.models import (
 from mp.describe.evaluate.reporter import EvaluationReporter
 from mp.describe.evaluate.rules import (
     EVALUATION_RULES,
+    EvaluationRule,
     build_evaluation_prompt,
 )
 from mp.describe.evaluate.storage import EvaluationStorage
@@ -103,6 +104,69 @@ def test_storage_save_and_retrieve(tmp_path: pathlib.Path) -> None:
     assert records[0].verdict == VerdictEnum.PASS
 
 
+def test_storage_save_and_retrieve_rules(tmp_path: pathlib.Path) -> None:
+    """Test saving and retrieving rules in EvaluationStorage."""
+    db_file = tmp_path / "test_rules.db"
+    storage = EvaluationStorage(db_file)
+
+    rule1 = EvaluationRule(
+        title="Custom Rule 1",
+        target_field="ai_description",
+        criteria="Check description accuracy",
+        rule_id="rule_custom_1",
+    )
+    rule2 = EvaluationRule(
+        title="Custom Rule 2",
+        target_field="parameters_description",
+        criteria="Check table headers",
+        rule_id="rule_custom_2",
+    )
+
+    storage.save_rules([rule1, rule2])
+    saved_rules = storage.get_rules()
+
+    assert len(saved_rules) == 2
+    rule_ids = {r.rule_id for r in saved_rules}
+    assert "rule_custom_1" in rule_ids
+    assert "rule_custom_2" in rule_ids
+
+
+def test_engine_saves_rules_and_links_rule_id(tmp_path: pathlib.Path) -> None:
+    """Test that EvaluationEngine persists rules to SQLite DB and populates rule_id in results."""
+    db_file = tmp_path / "engine_eval.db"
+    (tmp_path / "mock_integration").mkdir()
+
+    engine = EvaluationEngine()
+    report = engine.evaluate_integration(
+        integration_id="mock_integration",
+        src=tmp_path,
+        db_path=db_file,
+        use_llm=False,
+    )
+
+    assert report.total_evaluations > 0
+    for res in report.results:
+        assert res.rule_id != "", f"Result for rule '{res.rule_title}' must have a non-empty rule_id"
+
+    storage = EvaluationStorage(db_file)
+    db_rules = storage.get_rules()
+    assert len(db_rules) == len(mp.describe.evaluate.rules.EVALUATION_RULES)
+
+    # Verify SQL join between rule_evaluations and rules table
+    with storage._get_connection() as conn:  # ruff: ignore[private-member-access]
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT e.evaluation_id, e.rule_id, r.title, r.target_field
+            FROM rule_evaluations e
+            JOIN rules r ON e.rule_id = r.rule_id
+            """
+        )
+        joined_rows = cursor.fetchall()
+        assert len(joined_rows) == len(report.results)
+
+
 def test_reporter_export(tmp_path: pathlib.Path) -> None:
     """Test EvaluationReporter exporting Markdown, JSON, and HTML."""
     res = RuleEvaluationResult(
@@ -167,6 +231,26 @@ def test_cli_defaults_to_bundled_ruleset(tmp_path: pathlib.Path) -> None:
     integration_dir = tmp_path / "mock_integration"
     integration_dir.mkdir(exist_ok=True)
     result = runner.invoke(app, ["evaluate", "mock_integration", "--src", str(tmp_path)])
+    assert result.exit_code == 0
+    assert "Evaluation report saved to:" in result.output
+
+
+def test_cli_evaluate_with_src_directly_to_integration_folder(tmp_path: pathlib.Path) -> None:
+    """Test mp describe evaluate when --src points directly to an integration folder without positional arg."""
+    integration_dir = tmp_path / "mock_integration"
+    integration_dir.mkdir(exist_ok=True)
+    (integration_dir / "pyproject.toml").write_text("[project]\nname = 'Mock Integration'\n", encoding="utf-8")
+    result = runner.invoke(app, ["evaluate", "--src", str(integration_dir)])
+    assert result.exit_code == 0
+    assert "Evaluation report saved to:" in result.output
+
+
+def test_cli_evaluate_with_integration_name_and_direct_src_folder(tmp_path: pathlib.Path) -> None:
+    """Test mp describe evaluate when positional integration is given and --src points directly to that folder."""
+    integration_dir = tmp_path / "mock_integration"
+    integration_dir.mkdir(exist_ok=True)
+    (integration_dir / "pyproject.toml").write_text("[project]\nname = 'Mock Integration'\n", encoding="utf-8")
+    result = runner.invoke(app, ["evaluate", "mock_integration", "--src", str(integration_dir)])
     assert result.exit_code == 0
     assert "Evaluation report saved to:" in result.output
 
@@ -268,12 +352,12 @@ def test_heuristic_evaluation_rules() -> None:
     assert verdict_1_fail == VerdictEnum.FAIL
 
     verdict_3_pass, _, _ = EvaluationEngine.heuristic_evaluate_rule(
-        "parameters_description Formatting", "parameters_description", "There are no parameters for this action"
+        "Parameters Table Header Formatting", "parameters_description", "There are no parameters for this action"
     )
     assert verdict_3_pass == VerdictEnum.PASS
 
     verdict_3_fail, _, _ = EvaluationEngine.heuristic_evaluate_rule(
-        "parameters_description Formatting", "parameters_description", "Some weird text"
+        "Parameters Table Header Formatting", "parameters_description", "Some weird text"
     )
     assert verdict_3_fail == VerdictEnum.FAIL
 
@@ -488,8 +572,9 @@ TestAction:
         use_llm=False,
     )
     r2 = next(r for r in report.results if r.rule_title == "ai_short_description Structure & Scope Constraint")
-    r3 = next(r for r in report.results if r.rule_title == "parameters_description Formatting")
+    r3 = next(r for r in report.results if r.rule_title == "Parameters Table Header Formatting")
     assert r2.verdict == VerdictEnum.FAIL
+
     assert "target field 'ai_short_description' is missing" in r2.reasoning
     assert r3.verdict == VerdictEnum.FAIL
     assert "target field 'parameters_description' is missing" in r3.reasoning
@@ -555,7 +640,7 @@ def test_empty_yaml_file_generates_failure_report(tmp_path: pathlib.Path) -> Non
         config_yaml=empty_yaml,
         use_llm=False,
     )
-    assert report.total_evaluations == 13
+    assert report.total_evaluations == len(mp.describe.evaluate.rules.EVALUATION_RULES)
     assert any(
         r.action_id == "Integration Actions (Missing or Empty YAML)" for r in report.results
     )
@@ -652,11 +737,12 @@ def test_action_name_matching_with_file_extension(tmp_path: pathlib.Path) -> Non
         use_llm=False,
     )
 
-    assert len(report.results) == 13
+    assert len(report.results) == len(mp.describe.evaluate.rules.EVALUATION_RULES)
     assert all(r.action_id == "Upload And Scan Files" for r in report.results)
     t2 = "ai_short_description Structure & Scope Constraint"
-    t3 = "parameters_description Formatting"
+    t3 = "Parameters Table Header Formatting"
     res_rule_2 = next(r for r in report.results if r.rule_title == t2)
+
     res_rule_3 = next(r for r in report.results if r.rule_title == t3)
     assert res_rule_2.verdict == "PASS"
     assert res_rule_3.verdict == "PASS"

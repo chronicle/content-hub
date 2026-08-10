@@ -1,27 +1,75 @@
+# ==============================================================================
+# AI Description Evaluation Ruleset
+# Segregated by Target Field / Parameter
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Target Field: ai_description
+# ------------------------------------------------------------------------------
 - title: "ai_description Accuracy & Traceability"
   target_field: "ai_description"
   criteria: >
     Does the AI description accurately reflect the code, and mathematically, can every
     single claim made in the description be traced back to a specific line in the
     provided Python script?
+
+# ------------------------------------------------------------------------------
+# Target Field: ai_short_description
+# ------------------------------------------------------------------------------
 - title: "ai_short_description Structure & Scope Constraint"
   target_field: "ai_short_description"
   criteria: >
     Is the ai_short_description string a direct, single-paragraph summary aligned
     with 'General Description' that is completely free of step-by-step flow overhead
     (no bulleted or numbered lists) and completely free of parameter names or tables?
-- title: "parameters_description Formatting"
+
+# ------------------------------------------------------------------------------
+# Target Field: parameters_description
+# ------------------------------------------------------------------------------
+- title: "Action-Specific Parameter Exclusivity"
   target_field: "parameters_description"
   criteria: >
-    Is the parameters_description string formatted either as a Markdown table with
-    exactly four columns (| Parameter | Type | Mandatory | Description |) or exactly as
-    the fallback string 'There are no parameters for this action'?
-- title: "Parameter Exclusion Constraint"
+    Does the parameters table exclusively list the action-specific parameters defined in the JSON file.
+
+- title: "Integration-Level Parameter Exclusion"
   target_field: "parameters_description"
   criteria: >
-    Does the parameters_description string successfully exclude all
-    integration-level/configuration parameters (e.g., those retrieved in the code via
-    siemplify.extract_configuration_param)?
+    Does the ai successfully avoid leaking any Integration-level parameters - (like API, base URL or others)?
+
+- title: "Parameter Definition Traceability"
+  target_field: "parameters_description"
+  criteria: >
+    For every single parameter listed in the generated markdown table, does an exact, corresponding parameter definition exist in the provided JSON settings file?
+
+- title: "Zero Parameters Fallback Integrity"
+  target_field: "parameters_description"
+  criteria: >
+    If the original action has zero parameters defined, did the AI output the exact string: 'There are no parameters for this action' instead of a table?
+
+- title: "Parameters Table Header Formatting"
+  target_field: "parameters_description"
+  criteria: >
+    Is the parameters description formatted precisely as a Markdown table with exactly these four column headers: | Parameter | Type | Mandatory | Description |?
+
+- title: "Bi-Directional Parameter Completeness (JSON to Table)"
+  target_field: "parameters_description"
+  criteria: >
+    Does the parameters description table document every single action-specific parameter declared in the provided JSON settings file, ensuring that zero required or optional action parameters are omitted from the Markdown table?
+
+- title: "Parameter Default Values and Formatting Constraints"
+  target_field: "parameters_description"
+  criteria: >
+    For every parameter listed in the Markdown table where the underlying JSON settings file or Python script defines a default value, enum choices, or specific formatting rules (such as CSV lists or integer ranges), are those default values and constraints explicitly stated in the Description column?
+
+- title: "Conditional Parameter Dependencies Documentation"
+  target_field: "parameters_description"
+  criteria: >
+    If the Python script or parameter metadata enforces conditional dependencies between parameters (e.g. 'Either Parameter A or Parameter B must be configured'), is this dependency explicitly documented within the specific parameter row description or notes?
+
+
+# ------------------------------------------------------------------------------
+# Target Field: capabilities
+# ------------------------------------------------------------------------------
 - title: "capabilities Reasoning & Flag Alignment"
   target_field: "capabilities"
   criteria: >
@@ -29,45 +77,38 @@
     step-by-step justification for each capability flag (fetches_data, external/internal
     data mutations, entity updates, insights, alert data, case comments) based on the
     Python code?
+
 - title: "Mutation Explanations Constraint"
   target_field: "capabilities"
   criteria: >
     Within the capabilities object, are the external_data_mutation_explanation and
     internal_data_mutation_explanation fields populated with text if their respective
     boolean flags are true, and strictly set to null if their boolean flags are false?
+
 - title: "Strict Capability Flags"
   target_field: "capabilities"
   criteria: >
     Are all true boolean flags within the capabilities object supported by actual,
     executable code (e.g., a real API request for fetches_data) rather than mere
     placeholders or print statements?
+
+# ------------------------------------------------------------------------------
+# Target Field: entity_usage
+# ------------------------------------------------------------------------------
 - title: "entity_usage Entity Type Logic"
   target_field: "entity_usage"
   criteria: >
     Within the entity_usage.entity_types object, do the boolean flags correctly reflect
     the code's scope (i.e., only specific types are true if filtered, all are true if
     iterating without a type filter, and all are false if target_entities is not used)?
+
 - title: "Filter Properties Logic"
   target_field: "entity_usage"
   criteria: >
     Within the entity_usage object, do the filters_by_* boolean flags (e.g.,
     filters_by_is_internal, filters_by_identifier) strictly match the explicit if
     conditions applied when the code iterates over siemplify.target_entities?
-- title: "outcome_categories Reasoning & Flag Alignment"
-  target_field: "outcome_categories"
-  criteria: >
-    Does the outcome_categories object contain a non-empty 'reasoning' string providing
-    step-by-step justification evaluating all potential outcome categories against the
-    Python code, AND do all true boolean flags strictly match their expected outcome
-    definitions based on the script's actual logic?
-- title: "parameters_description Table vs Fallback Integrity"
-  target_field: "parameters_description"
-  criteria: >
-    Does parameters_description correctly reflect whether action-specific parameters
-    exist in the integration metadata/code? If action-specific parameters are present,
-    is a 4-column Markdown table generated? If NO action-specific parameters are defined,
-    is the value set EXACTLY to: 'There are no parameters for this action' without
-    generating a table?
+
 - title: "entity_usage Reasoning Quality"
   target_field: "entity_usage"
   criteria: >
@@ -75,10 +116,15 @@
     details step-by-step how the Python code interacts with SecOps entities (e.g.
     iterating over target_entities), explaining which entity types are processed and
     why each filtering condition (filters_by_*) is met or not met?
-- title: "Conditional Parameter Dependency Documentation"
-  target_field: "parameters_description"
+
+# ------------------------------------------------------------------------------
+# Target Field: outcome_categories
+# ------------------------------------------------------------------------------
+- title: "outcome_categories Reasoning & Flag Alignment"
+  target_field: "outcome_categories"
   criteria: >
-    If the Python code or parameter metadata enforces conditional dependencies between
-    parameters (e.g., 'Either Parameter A or Parameter B must be configured'), is this
-    relationship explicitly documented within the specific parameter row description or
-    in a 'Parameter Notes' section below the table?
+    Does the outcome_categories object contain a non-empty 'reasoning' string providing
+    step-by-step justification evaluating all potential outcome categories against the
+    Python code, AND do all true boolean flags strictly match their expected outcome
+    definitions based on the script's actual logic?
+

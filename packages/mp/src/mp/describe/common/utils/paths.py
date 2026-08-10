@@ -25,7 +25,12 @@ import typer
 import yaml
 
 from mp.core import constants
-from mp.core.file_utils import create_or_get_out_integrations_dir, get_marketplace_integration_path, is_built
+from mp.core.file_utils import (
+    create_or_get_out_integrations_dir,
+    get_marketplace_integration_path,
+    is_built,
+    is_integration,
+)
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -41,12 +46,22 @@ def get_integration_path(name: str, *, src: pathlib.Path | None = None) -> anyio
         anyio.Path: The path to the integration.
 
     """
-    return _get_source_integration_path(name, src) if src else _get_marketplace_integration_path(name)
+    if src:
+        return _get_source_integration_path(name, src)
+
+    candidate_path = pathlib.Path(name)
+    if candidate_path.exists():
+        return anyio.Path(candidate_path)
+
+    return _get_marketplace_integration_path(name)
 
 
 def _get_source_integration_path(name: str, src: pathlib.Path) -> anyio.Path:
     if (path := src / name).exists():
         return anyio.Path(path)
+
+    if src.exists() and (src.name == name or is_integration(src)):
+        return anyio.Path(src)
 
     logger.error("Integration '%s' not found in source '%s'", name, src)
     raise typer.Exit(1)

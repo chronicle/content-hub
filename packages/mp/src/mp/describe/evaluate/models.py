@@ -45,6 +45,7 @@ class RuleEvaluationResult(BaseModel):
     action_id: str
     run_id: str
     evaluated_at: str
+    rule_id: str = ""
     rule_title: str
     actual_value: str = ""
     verdict: VerdictEnum
