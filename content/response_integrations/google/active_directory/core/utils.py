@@ -123,7 +123,7 @@ def is_action_approaching_iteration_run_timeout(action_start_time):
 
 def prevent_reverting_properties(entity: Any) -> None:
     """Monkeypatches the `to_dict` method on the given entity object to prevent
-    reverting read-only properties (IsPivot, IsAttacker, IsVulnerable) to False/False string.
+    reverting read-only properties (IsPivot) to False/False string.
 
     This is necessary because the SecOps SOAR platform does not allow changing these
     properties from True to False, resulting in a 400 Bad Request error.
@@ -140,17 +140,8 @@ def prevent_reverting_properties(entity: Any) -> None:
         getattr(entity, "is_pivot", False)
         or str(add_props.get("IsPivot", "")).lower() == "true"
     )
-    is_attacker = (
-        getattr(entity, "is_attacker", False)
-        or getattr(entity, "attacker", False)
-        or str(add_props.get("IsAttacker", "")).lower() == "true"
-    )
-    is_vulnerable = (
-        getattr(entity, "is_vulnerable", False)
-        or str(add_props.get("IsVulnerable", "")).lower() == "true"
-    )
 
-    if not (is_pivot or is_attacker or is_vulnerable):
+    if not is_pivot:
         return
 
     orig_to_dict = entity.to_dict
@@ -162,26 +153,13 @@ def prevent_reverting_properties(entity: Any) -> None:
         def clean_key(target_dict, key):
             target_dict.pop(key, None)
 
-        if is_pivot:
-            clean_key(d, "is_pivot")
-            clean_key(d, "IsPivot")
-        if is_attacker:
-            clean_key(d, "is_attacker")
-            clean_key(d, "attacker")
-            clean_key(d, "IsAttacker")
-        if is_vulnerable:
-            clean_key(d, "is_vulnerable")
-            clean_key(d, "IsVulnerable")
+        clean_key(d, "is_pivot")
+        clean_key(d, "IsPivot")
 
         add_props_dict = d.get("additional_properties") or d.get("additionalProperties")
         if isinstance(add_props_dict, dict):
             add_props_dict = add_props_dict.copy()
-            if is_pivot:
-                clean_key(add_props_dict, "IsPivot")
-            if is_attacker:
-                clean_key(add_props_dict, "IsAttacker")
-            if is_vulnerable:
-                clean_key(add_props_dict, "IsVulnerable")
+            clean_key(add_props_dict, "IsPivot")
 
             if "additional_properties" in d:
                 d["additional_properties"] = add_props_dict
