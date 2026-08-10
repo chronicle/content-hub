@@ -1,12 +1,14 @@
 import asyncio
 import logging
 from typing import Annotated, TypeVar
+import pathlib
 
 from pydantic import BaseModel, Field
 
 from mp.core.llm.gemini import Gemini, GeminiConfig
 
 logger = logging.getLogger(__name__)
+
 
 class ValidationResult(BaseModel):
     is_valid: Annotated[
@@ -18,7 +20,9 @@ class ValidationResult(BaseModel):
         Field(description="If is_valid is False, provide a detailed explanation of which questions failed and actionable steps to fix them. Start with checking each validation question.")
     ]
 
+
 T_Schema = TypeVar("T_Schema", bound=BaseModel)
+
 
 class AgentConfig(BaseModel):
     field_name: str
@@ -28,6 +32,7 @@ class AgentConfig(BaseModel):
     max_retries: int = 3
     draft_log_msg: str = "Generating initial draft..."
     refine_log_msg: str = "Refining draft based on feedback..."
+
 
 class FieldAgent:
     def __init__(self, config: AgentConfig):
@@ -61,7 +66,7 @@ class FieldAgent:
             logger.error(f"Validation step failed for {self.config.field_name}: {e}")
             return ValidationResult(is_valid=False, feedback=f"System error during validation: {e}")
 
-    async def generate(self, prompt_text: str, target_model: type[T_Schema]) -> T_Schema | str:
+    async def generate(self, prompt_text: str, target_model: type[T_Schema], context: dict) -> T_Schema | str:
         gemini_config = GeminiConfig(model_name=self.config.model_name, temperature=self.config.temperature)
         
         async with Gemini(config=gemini_config) as gemini:
@@ -71,7 +76,11 @@ class FieldAgent:
             if isinstance(draft_obj, str):
                 return draft_obj
                 
-            draft_content = getattr(draft_obj, self.config.field_name, "")
+            first_suggested_value = getattr(draft_obj, self.config.field_name, "")
+            draft_content = first_suggested_value
+            
+            feedbacks = []
+            final_value = first_suggested_value
             
             for attempt in range(self.config.max_retries):
                 logger.info(f"Agent [{self.config.field_name}]: Validating draft (Attempt {attempt + 1}/{self.config.max_retries})...")
@@ -79,8 +88,10 @@ class FieldAgent:
                 
                 if validation.is_valid:
                     logger.info(f"Agent [{self.config.field_name}]: Draft passed all validation checks. Submitting final response.")
-                    return draft_obj
+                    final_value = getattr(draft_obj, self.config.field_name, "")
+                    break
                 
+                feedbacks.append(f"Attempt {attempt + 1} Failure: {validation.feedback}")
                 logger.info(f"Agent [{self.config.field_name}]: Validation failed with feedback: {validation.feedback}")
                 logger.info(f"Agent [{self.config.field_name}]: {self.config.refine_log_msg}")
                 
@@ -99,10 +110,57 @@ class FieldAgent:
                 if isinstance(draft_obj, str):
                     return draft_obj
                 draft_content = getattr(draft_obj, self.config.field_name, "")
+                final_value = draft_content
+            else:
+                logger.warning(f"Agent [{self.config.field_name}]: Reached maximum retries. Returning last drafted content.")
+            
+            # Generate Report
+            try:
+                report_lines = [
+                    f"Integration: {context.get('integration', 'Unknown')}",
+                    f"Action: {context.get('action', 'Unknown')}",
+                    f"Version: {context.get('version', 'Unknown')}",
+                    f"Field: {self.config.field_name}",
+                    "---",
+                    f"First Suggested Value:\n{first_suggested_value}",
+                    "---",
+                    f"Reasoning for Validation Failure:\n" + ("\n".join(feedbacks) if feedbacks else "None - Validated on first attempt without failures."),
+                    "---",
+                    f"Final Change and Setting:\n{final_value}"
+                ]
                 
-            logger.warning(f"Agent [{self.config.field_name}]: Reached maximum retries. Returning last drafted content.")
+                report_dir = pathlib.Path("agent_reports")
+                report_dir.mkdir(exist_ok=True)
+                report_path = report_dir / f"{context.get('integration', 'Unknown')}_{context.get('action', 'Unknown')}_{self.config.field_name}.txt"
+                report_path.write_text("\n".join(report_lines))
+                logger.info(f"Agent [{self.config.field_name}]: Report generated at {report_path}")
+                
+                # Generate JSONL Metrics Ledger
+                import json
+                from datetime import datetime, timezone
+                metric = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "integration": str(context.get('integration', 'Unknown')),
+                    "action": str(context.get('action', 'Unknown')),
+                    "version": str(context.get('version', 'Unknown')),
+                    "field": self.config.field_name,
+                    "required_refinement": bool(len(feedbacks) > 0),
+                    "attempts_taken": len(feedbacks) + 1 if len(feedbacks) < self.config.max_retries else self.config.max_retries,
+                    "validation_feedbacks": feedbacks,
+                    "first_suggested_value": first_suggested_value,
+                    "final_value": final_value
+                }
+                ledger_path = report_dir / "agent_metrics_ledger.jsonl"
+                with open(ledger_path, "a") as ledger_file:
+                    ledger_file.write(json.dumps(metric) + "\n")
+                    
+            except Exception as e:
+                logger.error(f"Failed to generate feedback log report: {e}")
+                
             return draft_obj
 
-    async def generate_bulk(self, prompts: list[str], target_model: type[T_Schema]) -> list[T_Schema | str]:
-        tasks = [self.generate(p, target_model) for p in prompts]
+    async def generate_bulk(self, prompts: list[str], target_model: type[T_Schema], contexts: list[dict] = None) -> list[T_Schema | str]:
+        if contexts is None:
+            contexts = [{} for _ in prompts]
+        tasks = [self.generate(p, target_model, ctx) for p, ctx in zip(prompts, contexts)]
         return await asyncio.gather(*tasks)

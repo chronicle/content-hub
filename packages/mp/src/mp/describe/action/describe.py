@@ -359,7 +359,17 @@ class MultiPromptDescribeAction(DescribeAction):
                 agent = FieldAgent(agent_config)
                 
                 logger.info(f"Routing `{override.field_name}` request to Refactored Agent PoC.")
-                llm_results: list[Any | str] = await agent.generate_bulk(valid_prompts, target_model)
+                
+                # Build tracking contexts for reporting
+                contexts = []
+                for action_name in [resources[i] for i in valid_indices]:
+                    contexts.append({
+                        "integration": self.integration,
+                        "action": action_name,
+                        "version": getattr(status, "version", "N/A")
+                    })
+                    
+                llm_results: list[Any | str] = await agent.generate_bulk(valid_prompts, target_model, contexts)
             else:
                 llm_results: list[Any | str] = await llm.call_gemini_bulk(valid_prompts, target_model)
 
@@ -395,5 +405,11 @@ class MultiPromptDescribeAction(DescribeAction):
 
                 updated_meta = curr_meta.model_copy(update={override.field_name: override_val})
                 results[idx] = DescriptionResult(resource_name, updated_meta)
+
+        try:
+            from mp.describe.action.reporting import generate_validation_aggregation_report
+            generate_validation_aggregation_report()
+        except ImportError as e:
+            logger.warning(f"Could not aggregate metrics report: {e}")
 
         return results
