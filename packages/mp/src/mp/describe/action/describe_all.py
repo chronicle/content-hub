@@ -19,11 +19,16 @@ from pathlib import Path
 from mp.describe.common.describe_all import MarketplaceOrchestratorBase, get_all_integrations_paths
 from mp.describe.common.utils.paths import get_integration_path
 
-from .describe import DescribeAction
+from .describe import MultiPromptDescribeAction
 
 
 async def describe_all_actions(
-    src: Path | None = None, dst: Path | None = None, *, override: bool = False, integrations: list[str] | None = None
+    src: Path | None = None,
+    dst: Path | None = None,
+    *,
+    override: bool = False,
+    integrations: list[str] | None = None,
+    prompt_overrides: Path | None = None,
 ) -> None:
     """Describe all actions in all integrations in the marketplace or specific ones."""
     integrations_paths: list[Path]
@@ -32,16 +37,30 @@ async def describe_all_actions(
     else:
         integrations_paths = get_all_integrations_paths(src=src)
 
-    orchestrator = _MarketplaceOrchestrator(src, integrations_paths, dst=dst, override=override)
+    orchestrator = _MarketplaceOrchestrator(
+        src, integrations_paths, dst=dst, override=override, prompt_overrides=prompt_overrides
+    )
     await orchestrator.run()
 
 
 class _MarketplaceOrchestrator(MarketplaceOrchestratorBase):
-    def _create_describer(self, integration_name: str) -> DescribeAction:
-        return DescribeAction(
+    def __init__(
+        self,
+        src: Path | None,
+        integrations: list[Path],
+        dst: Path | None = None,
+        override: bool = False,  # ruff:ignore[boolean-type-hint-positional-argument,boolean-default-value-positional-argument]
+        prompt_overrides: Path | None = None,
+    ) -> None:
+        super().__init__(src, integrations, dst=dst, override=override)
+        self.prompt_overrides: Path | None = prompt_overrides
+
+    def _create_describer(self, integration_name: str) -> MultiPromptDescribeAction:
+        return MultiPromptDescribeAction(
             integration=integration_name,
             actions=set(),
             src=self.src,
             dst=self.dst,
             override=self.override,
+            prompt_overrides=self.prompt_overrides,
         )
