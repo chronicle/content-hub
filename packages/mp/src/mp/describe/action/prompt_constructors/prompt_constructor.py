@@ -34,8 +34,8 @@ class PromptConstructor(BasePromptConstructor, abc.ABC):
         action_file_name: str = "",
         out_path: anyio.Path | None = None,
     ) -> None:
-        if isinstance(action_name, anyio.Path | pathlib.Path):
-            out_path = action_name
+        if isinstance(action_name, (anyio.Path, pathlib.Path)):
+            out_path = anyio.Path(action_name)
             action_name = ""
             action_file_name = ""
         if out_path is None:

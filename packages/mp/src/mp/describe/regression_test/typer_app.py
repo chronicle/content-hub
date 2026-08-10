@@ -64,15 +64,11 @@ def describe_action(  # ruff:ignore[too-many-arguments]
     ] = True,
     use_llm_judge: Annotated[
         bool,
-        typer.Option(
-            "-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."
-        ),
+        typer.Option("-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."),
     ] = False,
     use_batch_api: Annotated[
         bool,
-        typer.Option(
-            "--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."
-        ),
+        typer.Option("--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."),
     ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
@@ -142,15 +138,11 @@ def describe_integration(  # ruff:ignore[too-many-arguments]
     ] = True,
     use_llm_judge: Annotated[
         bool,
-        typer.Option(
-            "-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."
-        ),
+        typer.Option("-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."),
     ] = False,
     use_batch_api: Annotated[
         bool,
-        typer.Option(
-            "--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."
-        ),
+        typer.Option("--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."),
     ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
@@ -221,15 +213,11 @@ def describe_connector(  # ruff:ignore[too-many-arguments]
     ] = True,
     use_llm_judge: Annotated[
         bool,
-        typer.Option(
-            "-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."
-        ),
+        typer.Option("-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."),
     ] = False,
     use_batch_api: Annotated[
         bool,
-        typer.Option(
-            "--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."
-        ),
+        typer.Option("--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."),
     ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
@@ -302,15 +290,11 @@ def describe_job(  # ruff:ignore[too-many-arguments]
     ] = True,
     use_llm_judge: Annotated[
         bool,
-        typer.Option(
-            "-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."
-        ),
+        typer.Option("-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."),
     ] = False,
     use_batch_api: Annotated[
         bool,
-        typer.Option(
-            "--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."
-        ),
+        typer.Option("--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."),
     ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
@@ -380,15 +364,11 @@ def describe_all_content(  # ruff:ignore[too-many-arguments]
     ] = True,
     use_llm_judge: Annotated[
         bool,
-        typer.Option(
-            "-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."
-        ),
+        typer.Option("-j", "--use-llm-judge", help="Use Gemini Judge to evaluate text field semantic equivalence."),
     ] = False,
     use_batch_api: Annotated[
         bool,
-        typer.Option(
-            "--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."
-        ),
+        typer.Option("--use-batch-api", help="Use Google GenAI Batch API for LLM Judge evaluation."),
     ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,

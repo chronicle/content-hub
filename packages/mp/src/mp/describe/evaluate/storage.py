@@ -152,7 +152,6 @@ class EvaluationStorage:
 
         """
         with self._get_connection() as conn:
-
             cursor = conn.cursor()
             cursor.execute("SELECT rule_id, title, target_field, criteria FROM rules ORDER BY rule_id ASC;")
             rows = cursor.fetchall()
@@ -242,9 +241,9 @@ class EvaluationStorage:
                     action_id=row["action_id"],
                     run_id=row["run_id"],
                     evaluated_at=str(row["evaluated_at"]),
-                    rule_id=str(dict(row).get("rule_id", "")),
+                    rule_id=str(row["rule_id"] or "") if "rule_id" in row else "",
                     rule_title=row["rule_title"],
-                    actual_value=str(dict(row).get("actual_value", "")),
+                    actual_value=str(row["actual_value"] or "") if "actual_value" in row else "",
                     verdict=VerdictEnum(row["verdict"]),
                     reasoning=row["reasoning"],
                     suggested_fix=row["suggested_fix"],

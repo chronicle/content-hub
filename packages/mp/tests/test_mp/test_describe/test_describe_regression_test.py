@@ -390,9 +390,7 @@ def test_compare_yaml_dicts_reasoning_ignored_by_judge() -> None:
     baseline = {"reasoning": "Old classifier scratchpad reasoning"}
     test_data = {"reasoning": "New classifier scratchpad reasoning"}
 
-    with mock.patch(
-        "mp.describe.regression_test.comparator.run_judge_evaluation_sync"
-    ) as mock_judge:
+    with mock.patch("mp.describe.regression_test.comparator.run_judge_evaluation_sync") as mock_judge:
         issues = compare_yaml_dicts(
             baseline_data=baseline,
             test_data=test_data,

@@ -83,9 +83,7 @@ def evaluate(  # ruff: ignore[too-many-arguments]
         bool, typer.Option("-a", "--all", help="Evaluate AI descriptions for all integrations in marketplace.")
     ] = False,
     src: Annotated[pathlib.Path | None, typer.Option(help="Customize source folder to evaluate from.")] = None,
-    action: Annotated[
-        str | None, typer.Option("--action", help="Name of a single action to evaluate.")
-    ] = None,
+    action: Annotated[str | None, typer.Option("--action", help="Name of a single action to evaluate.")] = None,
     config_yaml: Annotated[
         pathlib.Path | None, typer.Option("--config-yaml", help="Path to AI evaluation YAML configuration.")
     ] = None,
@@ -110,9 +108,7 @@ def evaluate(  # ruff: ignore[too-many-arguments]
     output_path: Annotated[
         pathlib.Path | None, typer.Option("--output-path", help="Destination file path for generated report.")
     ] = None,
-    add_prompt: Annotated[
-        bool, typer.Option("--add-prompt", help="Include prompt info in generated report.")
-    ] = False,
+    add_prompt: Annotated[bool, typer.Option("--add-prompt", help="Include prompt info in generated report.")] = False,
     use_batch_api: Annotated[
         bool, typer.Option("--use-batch-api", help="Use Google GenAI Batch API for rule evaluations.")
     ] = False,

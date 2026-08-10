@@ -252,11 +252,16 @@ def compare_yaml_dicts(  # ruff:ignore[complex-structure,too-many-arguments]
 
         # 3. Compare text fields using LLM as a Judge if requested
         if use_llm_judge and isinstance(b_val, str) and isinstance(t_val, str):
-            if b_val != t_val and len(key_path) > 0 and key_path[-1] in {
-                "ai_description",
-                "ai_short_description",
-                "parameters_description",
-            }:
+            if (
+                b_val != t_val
+                and len(key_path) > 0
+                and key_path[-1]
+                in {
+                    "ai_description",
+                    "ai_short_description",
+                    "parameters_description",
+                }
+            ):
                 text_candidates.append(
                     TextCandidate(
                         entry_path=entry_str,
@@ -281,9 +286,7 @@ def compare_yaml_dicts(  # ruff:ignore[complex-structure,too-many-arguments]
                     issue_type = f"text semantic mismatch ({res.verdict.change_type})"
                     missing_info = ""
                     if res.verdict.missing_operational_facts:
-                        missing_info = (
-                            f" | Missing facts: {', '.join(res.verdict.missing_operational_facts)}"
-                        )
+                        missing_info = f" | Missing facts: {', '.join(res.verdict.missing_operational_facts)}"
                     issues.append(
                         RegressionIssue(
                             path_of_files=path_of_files,

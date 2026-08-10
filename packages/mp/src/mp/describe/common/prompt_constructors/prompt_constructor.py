@@ -50,8 +50,11 @@ class PromptConstructor(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def construct(self) -> str:
+    async def construct(self, template: Template | None = None) -> str:
         """Construct a prompt for generating AI descriptions.
+
+        Args:
+            template: Optional custom prompt template to use.
 
         Returns:
             str: The constructed prompt.
@@ -59,7 +62,6 @@ class PromptConstructor(abc.ABC):
         """
         raise NotImplementedError
 
-    @abc.abstractmethod
     async def construct_override(self, override: PromptOverrideConfig) -> str:
         """Construct a prompt override for generating AI descriptions.
 

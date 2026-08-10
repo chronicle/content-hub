@@ -246,17 +246,11 @@ def run_regression_test(  # ruff:ignore[too-many-arguments,complex-structure,too
                 issue_type = f"text semantic mismatch ({res.verdict.change_type})"
                 details: list[str] = []
                 if res.verdict.missing_operational_facts:
-                    details.append(
-                        f"Missing facts: {', '.join(res.verdict.missing_operational_facts)}"
-                    )
+                    details.append(f"Missing facts: {', '.join(res.verdict.missing_operational_facts)}")
                 if getattr(res.verdict, "introduced_operational_facts", None):
-                    details.append(
-                        f"Introduced facts: {', '.join(res.verdict.introduced_operational_facts)}"
-                    )
+                    details.append(f"Introduced facts: {', '.join(res.verdict.introduced_operational_facts)}")
                 if getattr(res.verdict, "quality_failures", None):
-                    details.append(
-                        f"Quality failures: {', '.join(res.verdict.quality_failures)}"
-                    )
+                    details.append(f"Quality failures: {', '.join(res.verdict.quality_failures)}")
                 missing_info = (" | " + " | ".join(details)) if details else ""
                 all_issues.append(
                     RegressionIssue(

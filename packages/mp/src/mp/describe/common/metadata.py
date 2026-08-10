@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pathlib
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-_TYPE_MAPPING: dict[str, type[Any]] = {
+TYPE_MAPPING: dict[str, type[object]] = {
     "str": str,
     "string": str,
     "int": int,
@@ -71,9 +71,12 @@ class PromptOverrideConfig(BaseModel):
             object: Normalized data dictionary or original data object.
 
         """
-        if isinstance(data, dict) and "rule_id" not in data and "id" in data:
-            # Support rule_id / id
-            data["rule_id"] = data["id"]
+        if isinstance(data, dict):
+            normalized: dict[str, object] = {str(k): v for k, v in data.items()}
+            if "rule_id" not in normalized and "id" in normalized:
+                # Support rule_id / id
+                normalized["rule_id"] = normalized["id"]
+            return normalized
         return data
 
 
@@ -147,7 +150,7 @@ def parse_prompt_overrides_content(content: str) -> list[PromptOverrideConfig]:
         msg = f"Failed to parse prompt overrides YAML: {exc}"
         raise ValueError(msg) from exc
 
-    items: list[Any]
+    items: list[object]
     if isinstance(data, list):
         items = data
     elif isinstance(data, dict):
@@ -157,9 +160,7 @@ def parse_prompt_overrides_content(content: str) -> list[PromptOverrideConfig]:
         raise TypeError(msg)
 
     configs: list[PromptOverrideConfig] = [
-        PromptOverrideConfig.model_validate(item)
-        for item in items
-        if isinstance(item, dict)
+        PromptOverrideConfig.model_validate(item) for item in items if isinstance(item, dict)
     ]
 
     return group_prompt_overrides(configs)
@@ -233,9 +234,7 @@ def build_action_override_prompt(params: ActionOverridePromptParams) -> str:
     )
     if params.manager_content and params.manager_content != "N/A":
         source_block += (
-            f'\n<shared_modules filenames="{params.manager_names}">\n'
-            f"{params.manager_content}\n"
-            f"</shared_modules>\n"
+            f'\n<shared_modules filenames="{params.manager_names}">\n{params.manager_content}\n</shared_modules>\n'
         )
 
     return (
@@ -283,3 +282,17 @@ def build_integration_override_prompt(
         f"when generating the '{params.target_field}' field:\n\n"
         f"{params.criteria}"
     )
+
+
+__all__: list[str] = [
+    "TYPE_MAPPING",
+    "ActionOverridePromptParams",
+    "FieldSchemaConfig",
+    "IntegrationOverridePromptParams",
+    "PromptOverrideConfig",
+    "build_action_override_prompt",
+    "build_integration_override_prompt",
+    "group_prompt_overrides",
+    "load_prompt_overrides_from_yaml",
+    "parse_prompt_overrides_content",
+]

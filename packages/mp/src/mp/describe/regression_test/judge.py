@@ -95,9 +95,7 @@ You must output a strict JSON object based on the schema. Follow this logic:
 class SemanticAssessment(BaseModel):
     """Pydantic model for structured output from Gemini Judge evaluating text semantic equivalence."""
 
-    prompt_intent_analysis: str = Field(
-        default="", description="Brief analysis of what the baseline text describes."
-    )
+    prompt_intent_analysis: str = Field(default="", description="Brief analysis of what the baseline text describes.")
     field_1_core_claims: list[str] = Field(
         default_factory=list, description="List of core operational claims extracted from Field 1."
     )
@@ -115,8 +113,7 @@ class SemanticAssessment(BaseModel):
     quality_failures: list[str] = Field(
         default_factory=list,
         description=(
-            "Semantic typos, broken identifiers, destroyed mappings, "
-            "or severe grammar/readability failures in Field 2."
+            "Semantic typos, broken identifiers, destroyed mappings, or severe grammar/readability failures in Field 2."
         ),
     )
     comparison_reasoning: str = Field(
@@ -160,9 +157,7 @@ class SemanticAssessment(BaseModel):
 class JudgeVerdict(SemanticAssessment):
     """Structured schema for the LLM Judge verdict combining semantic assessment and provenance classification."""
 
-    change_type: Literal[
-        "EQUIVALENT", "GENERATOR_REGRESSION", "GENERATION_CONFLICT", "AMBIGUOUS_CHANGE"
-    ] = Field(
+    change_type: Literal["EQUIVALENT", "GENERATOR_REGRESSION", "GENERATION_CONFLICT", "AMBIGUOUS_CHANGE"] = Field(
         default="EQUIVALENT",
         description=(
             "Classification of the change: EQUIVALENT, GENERATOR_REGRESSION (critical operational fact lost), "
@@ -278,9 +273,7 @@ async def evaluate_text_equivalence_batch(
     try:
         # Override system prompt with our specialized Judge prompt protocol
         llm.system_prompt = JUDGE_SYSTEM_PROMPT
-        responses = await llm.send_bulk_messages(
-            prompts, response_json_schema=SemanticAssessment, use_batch=use_batch
-        )
+        responses = await llm.send_bulk_messages(prompts, response_json_schema=SemanticAssessment, use_batch=use_batch)
     except Exception:
         logger.exception("LLM Judge bulk evaluation failed")
         return []
@@ -338,6 +331,4 @@ def run_judge_evaluation_sync(
     except RuntimeError:
         # Handle cases where an event loop is already running
         loop = asyncio.get_event_loop()
-        return loop.run_until_complete(
-            evaluate_text_equivalence_batch(candidates, use_batch=use_batch)
-        )
+        return loop.run_until_complete(evaluate_text_equivalence_batch(candidates, use_batch=use_batch))

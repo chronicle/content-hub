@@ -233,8 +233,7 @@ def _match_action_files_by_yaml_name(
                     return [
                         f
                         for f in python_files
-                        if Path(f).stem == stem
-                        and not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)
+                        if Path(f).stem == stem and not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)
                     ]
     return []
 
@@ -256,21 +255,15 @@ def _match_action_files_by_normalization(
     norm_target = normalize_action_name(action_name)
     if not norm_target:
         return []
-    non_shared = [
-        f for f in python_files if not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)
-    ]
+    non_shared = [f for f in python_files if not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)]
     exact = [f for f in non_shared if norm_target == normalize_action_name(f)]
     fuzzy = [
-        f
-        for f in non_shared
-        if norm_target in normalize_action_name(f) or normalize_action_name(f) in norm_target
+        f for f in non_shared if norm_target in normalize_action_name(f) or normalize_action_name(f) in norm_target
     ]
     return exact or fuzzy
 
 
-def get_code_for_action(
-    action_name: str, python_files: dict[str, str]
-) -> tuple[str, list[str], list[str]]:
+def get_code_for_action(action_name: str, python_files: dict[str, str]) -> tuple[str, list[str], list[str]]:
     """Select Python source code and definition files relevant to a specific action.
 
     Args:
@@ -293,9 +286,7 @@ def get_code_for_action(
         "clients",
     }
 
-    shared_files = [
-        f for f in python_files if {p.lower() for p in f.split("/")[:-1]} & shared_dirs
-    ]
+    shared_files = [f for f in python_files if {p.lower() for p in f.split("/")[:-1]} & shared_dirs]
 
     action_files = _match_action_files_by_yaml_name(action_name, python_files, shared_dirs)
     if not action_files:
@@ -325,9 +316,7 @@ def get_code_for_action(
 _get_code_for_action = get_code_for_action
 
 
-async def _direct_evaluate_prompts(
-    prompts: list[str], *, use_batch: bool = False
-) -> list[RuleVerdict | str]:
+async def _direct_evaluate_prompts(prompts: list[str], *, use_batch: bool = False) -> list[RuleVerdict | str]:
     """Execute evaluation prompts via Gemini LLM session (streaming or Batch API).
 
     Args:
@@ -340,9 +329,7 @@ async def _direct_evaluate_prompts(
     """
     async with create_llm_session() as gemini:
         gemini.bulk_threshold = 0 if use_batch else 5000
-        return await gemini.send_bulk_messages(
-            prompts, response_json_schema=RuleVerdict, use_batch=use_batch
-        )
+        return await gemini.send_bulk_messages(prompts, response_json_schema=RuleVerdict, use_batch=use_batch)
 
 
 class EvaluationEngine:
@@ -637,9 +624,7 @@ class EvaluationEngine:
             )
 
     @staticmethod
-    def _dispatch_prompts(
-        prompts: list[str], *, use_batch: bool = False
-    ) -> list[RuleVerdict | str]:
+    def _dispatch_prompts(prompts: list[str], *, use_batch: bool = False) -> list[RuleVerdict | str]:
         """Dispatch prompts to Gemini API with event loop handling.
 
         Args:
@@ -655,9 +640,7 @@ class EvaluationEngine:
         except RuntimeError:
             loop = None
         if loop and loop.is_running():
-            return anyio.from_thread.run(
-                functools.partial(_direct_evaluate_prompts, prompts, use_batch=use_batch)
-            )
+            return anyio.from_thread.run(functools.partial(_direct_evaluate_prompts, prompts, use_batch=use_batch))
         return asyncio.run(_direct_evaluate_prompts(prompts, use_batch=use_batch))
 
     def evaluate_integration(  # ruff: ignore[complex-structure, too-many-branches, too-many-arguments, too-many-locals, too-many-statements, too-many-positional-arguments]
