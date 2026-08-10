@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0 .
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -68,7 +68,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         if raw_fields is None:
             raw_fields = "Status, Comments, Product Link, Severity"
 
-        fields_to_sync: list[str] = [f.strip().lower() for f in raw_fields.split(",")]
+        fields_to_sync: list[str] = [
+            f.strip().lower() for f in raw_fields.split(",")
+        ]
         self.sync_status_enabled = "status" in fields_to_sync
         self.sync_comments_enabled = "comments" in fields_to_sync
         self.sync_product_link_enabled = "product link" in fields_to_sync
@@ -86,7 +88,8 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             self._fetch_and_add_threats_to_case(job_case)
         except Exception:
             self.logger.exception(
-                f"Failed to map product data to case {job_case.case_detail.id_}."
+                f"Failed to map product data to case "
+                f"{job_case.case_detail.id_}."
             )
             self.failed_cases.add(job_case.case_detail.id_)
 
@@ -147,11 +150,15 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 threat_ids.append(threat_id)
         return sorted(set(threat_ids))
 
-    def _fetch_and_add_single_threat(self, job_case: JobCase, threat_id: str) -> None:
+    def _fetch_and_add_single_threat(
+        self, job_case: JobCase, threat_id: str
+    ) -> None:
         try:
             threat_issue: Issue = self.api_client.get_issue_details(threat_id)
             job_case.add_product_incident(threat_issue, product_key="issue_id")
-            self._register_alert_sync_metadata(job_case, threat_id, threat_issue)
+            self._register_alert_sync_metadata(
+                job_case, threat_id, threat_issue
+            )
         except Exception:
             self.logger.exception(
                 f"Failed to fetch or map Wiz threat {threat_id} details."
@@ -182,7 +189,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             self._case_threat_alerts = {}
         return self._case_threat_alerts
 
-    def is_alert_and_product_closed(self, job_case: JobCase, product: Issue) -> bool:
+    def is_alert_and_product_closed(
+        self, job_case: JobCase, product: Issue
+    ) -> bool:
         """Check if both the alert and the Wiz threat are closed.
 
         Args:
@@ -190,21 +199,26 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             product (Issue): The Wiz incident/issue object.
 
         Returns:
-            bool: True if both the alert and the Wiz threat are closed, False otherwise.
+            bool: True if both the alert and the Wiz threat are closed,
+                False otherwise.
 
         """
         alerts: list[AlertCard] = self.case_threat_alerts.get(
             job_case.case_detail.id_, {}
         ).get(product.issue_id, [])
         if not alerts:
-            alert: AlertCard | None = job_case.product_ids_from_secops_alerts.get(
-                product.issue_id
+            alert: AlertCard | None = (
+                job_case.product_ids_from_secops_alerts.get(product.issue_id)
             )
             alerts = [alert] if alert else []
         if not alerts:
             return False
-        alerts_closed: bool = all(alert.status.lower() in {"close", "closed"} for alert in alerts)
-        product_closed: bool = product.status.upper() in constants.WIZ_CLOSED_STATUSES
+        alerts_closed: bool = all(
+            alert.status.lower() in {"close", "closed"} for alert in alerts
+        )
+        product_closed: bool = (
+            product.status.upper() in constants.WIZ_CLOSED_STATUSES
+        )
         return alerts_closed and product_closed
 
     def sync_status(self, job_case: JobCase) -> None:
@@ -235,17 +249,23 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         if not full_mapping:
             full_mapping = {
                 tid: [alert]
-                for tid, alert in job_case.product_ids_from_secops_alerts.items()
+                for tid, alert in (
+                    job_case.product_ids_from_secops_alerts.items()
+                )
             }
         for threat_id, alerts in full_mapping.items():
             for alert in alerts:
-                self._sync_single_alert_status_inbound(job_case, threat_id, alert)
+                self._sync_single_alert_status_inbound(
+                    job_case, threat_id, alert
+                )
         self._evaluate_overall_case_closure(job_case)
 
     def _sync_single_alert_status_inbound(
         self, job_case: JobCase, threat_id: str, alert: AlertCard
     ) -> None:
-        meta: SyncMetadata | None = job_case.alert_metadata.get(alert.identifier)
+        meta: SyncMetadata | None = job_case.alert_metadata.get(
+            alert.identifier
+        )
         if not meta or not meta.status:
             return
         wiz_status: str = meta.status.upper()
@@ -255,13 +275,17 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             self._reopen_alert_inbound(job_case, threat_id, alert, wiz_status)
 
     def _close_alert_inbound(
-        self, job_case: JobCase, threat_id: str, alert: AlertCard, wiz_status: str
+        self,
+        job_case: JobCase,
+        threat_id: str,
+        alert: AlertCard,
+        wiz_status: str,
     ) -> None:
         if alert.status.lower() in {"close", "closed"}:
             return
         comment: str = (
-            f"[SecOps & Wiz Sync Job] {threat_id}: Alert was closed because the "
-            f"corresponding Wiz Threat was marked {wiz_status}."
+            f"[SecOps & Wiz Sync Job] {threat_id}: Alert was closed "
+            f"because the corresponding Wiz Threat was marked {wiz_status}."
         )
         self.sync_product_status_to_case(
             case_id=str(job_case.case_detail.id_),
@@ -272,25 +296,32 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         )
         self._wiz_alerts_closed_this_run = True
         self.logger.info(
-            f"Closed alert {alert.identifier} in case {job_case.case_detail.id_} "
-            f"due to Wiz threat closure"
+            f"Closed alert {alert.identifier} in case "
+            f"{job_case.case_detail.id_} due to Wiz threat closure"
         )
 
     def _reopen_alert_inbound(
-        self, job_case: JobCase, threat_id: str, alert: AlertCard, wiz_status: str
+        self,
+        job_case: JobCase,
+        threat_id: str,
+        alert: AlertCard,
+        wiz_status: str,
     ) -> None:
         if alert.status.lower() not in {"close", "closed"}:
             return
-        previous_status: str | None = self._get_last_synced_wiz_status_from_comments(
-            job_case, threat_id
+        previous_status: str | None = (
+            self._get_last_synced_wiz_status_from_comments(job_case, threat_id)
         )
         if previous_status not in constants.WIZ_CLOSED_STATUSES:
             return
-        self._reopen_alert_in_secops(str(job_case.case_detail.id_), alert.identifier)
+        self._reopen_alert_in_secops(
+            str(job_case.case_detail.id_), alert.identifier
+        )
         alert.status = "opened"
         comment: str = (
-            f"[SecOps & Wiz Sync Job] Alert {alert.name} was reopened because the corresponding "
-            f"Wiz Threat status was updated to {wiz_status}."
+            f"[SecOps & Wiz Sync Job] Alert {alert.name} was reopened "
+            f"because the corresponding Wiz Threat status was updated to "
+            f"{wiz_status}."
         )
         self.soar_job.add_comment(
             case_id=job_case.case_detail.id_,
@@ -298,8 +329,8 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             alert_identifier=alert.identifier,
         )
         self.logger.info(
-            f"Reopened alert {alert.identifier} in case {job_case.case_detail.id_} "
-            f"due to Wiz threat reopen"
+            f"Reopened alert {alert.identifier} in case "
+            f"{job_case.case_detail.id_} due to Wiz threat reopen"
         )
 
     def _get_last_synced_wiz_status_from_comments(
@@ -311,24 +342,34 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             if not comment.startswith(constants.SYNC_COMMENT_PREFIX):
                 continue
 
-            status: str | None = self._parse_wiz_status_from_closed_comment(comment, threat_id)
+            status: str | None = self._parse_wiz_status_from_closed_comment(
+                comment, threat_id
+            )
             if status:
                 return status
 
-            status = self._parse_wiz_status_from_reopen_comment(comment, threat_id, alerts)
+            status = self._parse_wiz_status_from_reopen_comment(
+                comment, threat_id, alerts
+            )
             if status:
                 return status
 
-            status = self._parse_wiz_status_from_auto_closed_comment(comment, threat_id)
+            status = self._parse_wiz_status_from_auto_closed_comment(
+                comment, threat_id
+            )
             if status:
                 return status
 
         return None
 
     @staticmethod
-    def _parse_wiz_status_from_closed_comment(comment: str, threat_id: str) -> str | None:
+    def _parse_wiz_status_from_closed_comment(
+        comment: str, threat_id: str
+    ) -> str | None:
         if f"{threat_id}: Alert was closed" in comment:
-            match: re.Match | None = re.search(r"marked\s+([A-Z_]+)", comment, re.IGNORECASE)
+            match: re.Match | None = re.search(
+                r"marked\s+([A-Z_]+)", comment, re.IGNORECASE
+            )
             if match:
                 return match.group(constants.STATUS_CAPTURE_GROUP).upper()
         return None
@@ -339,8 +380,12 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         if constants.WIZ_REOPENED_COMMENT_SUBSTRING in comment:
             alert: AlertCard | None = next(
                 (
-                    a for a in alerts
-                    if self._extract_clean_threat_id(self._get_wiz_threat_id(a)) == threat_id
+                    a
+                    for a in alerts
+                    if self._extract_clean_threat_id(
+                        self._get_wiz_threat_id(a)
+                    )
+                    == threat_id
                 ),
                 None,
             )
@@ -353,8 +398,13 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         return None
 
     @staticmethod
-    def _parse_wiz_status_from_auto_closed_comment(comment: str, threat_id: str) -> str | None:
-        if f"Wiz Threat {threat_id} status has been automatically updated to" in comment:
+    def _parse_wiz_status_from_auto_closed_comment(
+        comment: str, threat_id: str
+    ) -> str | None:
+        if (
+            f"Wiz Threat {threat_id} status has been automatically updated to"
+            in comment
+        ):
             match: re.Match | None = re.search(
                 r"automatically updated to\s+([A-Z_]+)", comment, re.IGNORECASE
             )
@@ -379,32 +429,44 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             raise
 
     def _reopen_case_in_secops(self, case_id: str) -> None:
-        url = f"{self.soar_job.API_ROOT}/external/v1/cases/ExecuteBulkReopenCase"
+        url = (
+            f"{self.soar_job.API_ROOT}/external/v1/cases/ExecuteBulkReopenCase"
+        )
         payload = [int(case_id)]
         response = self.soar_job.session.post(url, json=payload)
         response.raise_for_status()
 
     def _evaluate_overall_case_closure(self, job_case: JobCase) -> None:
         all_alerts_closed: bool = all(
-            alert.status.lower() in {"close", "closed"} for alert in job_case.case_detail.alerts
+            alert.status.lower() in {"close", "closed"}
+            for alert in job_case.case_detail.alerts
         )
-        if all_alerts_closed and job_case.case_detail.status != CaseDataStatus.CLOSED:
+        if (
+            all_alerts_closed
+            and job_case.case_detail.status != CaseDataStatus.CLOSED
+        ):
             self.soar_job.close_case(
                 root_cause="Other",
                 case_id=job_case.case_detail.id_,
                 reason="Closed by Wiz Sync",
-                comment="[SecOps & Wiz Sync Job] All alerts closed. Closing the case.",
+                comment=(
+                    "[SecOps & Wiz Sync Job] All alerts closed. "
+                    "Closing the case."
+                ),
                 alert_identifier=None,
             )
             self.logger.info(
-                f"Closed overall case {job_case.case_detail.id_} because all alerts "
-                f"are closed."
+                f"Closed overall case {job_case.case_detail.id_} "
+                f"because all alerts are closed."
             )
-        elif not all_alerts_closed and job_case.case_detail.status == CaseDataStatus.CLOSED:
+        elif (
+            not all_alerts_closed
+            and job_case.case_detail.status == CaseDataStatus.CLOSED
+        ):
             self._reopen_case_in_secops(str(job_case.case_detail.id_))
             self.logger.info(
-                f"Reopened overall case {job_case.case_detail.id_} because alert was "
-                f"reopened."
+                f"Reopened overall case {job_case.case_detail.id_} "
+                f"because alert was reopened."
             )
         elif not all_alerts_closed:
             self._handle_mixed_alert_comments(job_case)
@@ -414,22 +476,26 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             return
         active_non_wiz_alerts: bool = any(
             alert.status.lower() not in {"close", "closed"}
-            and not self._extract_clean_threat_id(self._get_wiz_threat_id(alert))
+            and not self._extract_clean_threat_id(
+                self._get_wiz_threat_id(alert)
+            )
             for alert in job_case.case_detail.alerts
         )
         if not active_non_wiz_alerts:
             return
         has_mixed_comment: bool = any(
-            "[SecOps & Wiz Sync Job] Mixed Alert Resolution" in c.get("comment", "")
+            "[SecOps & Wiz Sync Job] Mixed Alert Resolution"
+            in c.get("comment", "")
             for c in job_case.case_comments
         )
         if has_mixed_comment:
             return
         comment_text: str = (
-            "[SecOps & Wiz Sync Job] Mixed Alert Resolution. A mapped Wiz Threat "
-            "has been resolved. Mapped Wiz Alerts inside this case have been "
-            "automatically closed. The overall SecOps Case remains open because it "
-            "contains active alerts from other non-Wiz sources."
+            "[SecOps & Wiz Sync Job] Mixed Alert Resolution. "
+            "A mapped Wiz Threat has been resolved. Mapped Wiz Alerts "
+            "inside this case have been automatically closed. The overall "
+            "SecOps Case remains open because it contains active alerts "
+            "from other non-Wiz sources."
         )
         self.soar_job.add_comment(
             case_id=job_case.case_detail.id_,
@@ -445,7 +511,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         if not full_mapping:
             full_mapping = {
                 tid: [alert]
-                for tid, alert in job_case.product_ids_from_secops_alerts.items()
+                for tid, alert in (
+                    job_case.product_ids_from_secops_alerts.items()
+                )
             }
 
         for threat_id in threat_ids:
@@ -464,7 +532,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 continue
 
             wiz_reason: str = self._determine_wiz_resolution_reason(job_case)
-            self._sync_single_threat_status_outbound(job_case, threat_id, wiz_reason, alerts)
+            self._sync_single_threat_status_outbound(
+                job_case, threat_id, wiz_reason, alerts
+            )
 
     @staticmethod
     def _determine_wiz_resolution_reason(job_case: JobCase) -> str:
@@ -472,9 +542,14 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             getattr(job_case.case_detail, "close_reason", "REASON_UNSPECIFIED")
             or "REASON_UNSPECIFIED"
         )
-        close_verdict: int = getattr(
-            job_case.case_detail, "close_verdict", constants.DEFAULT_FALLBACK_VALUE
-        ) or constants.DEFAULT_FALLBACK_VALUE
+        close_verdict: int = (
+            getattr(
+                job_case.case_detail,
+                "close_verdict",
+                constants.DEFAULT_FALLBACK_VALUE,
+            )
+            or constants.DEFAULT_FALLBACK_VALUE
+        )
         if close_reason in constants.CLOSE_REASON_TO_WIZ_REASON:
             return constants.CLOSE_REASON_TO_WIZ_REASON[close_reason]
         if close_reason == "REASON_UNSPECIFIED":
@@ -483,8 +558,10 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             )
         return constants.WIZ_REASON_INCONCLUSIVE_THREAT
 
-    def _update_wiz_threat_status(self, threat_id: str, wiz_reason: str) -> tuple[str, str]:
-        """Update the threat status on Wiz according to the SecOps resolution reason.
+    def _update_wiz_threat_status(
+        self, threat_id: str, wiz_reason: str
+    ) -> tuple[str, str]:
+        """Update Wiz threat status based on SecOps resolution.
 
         Args:
             threat_id (str): The Wiz Threat ID.
@@ -500,7 +577,10 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 resolution_reason="False Positive",
                 note="Closed via SecOps Case Sync",
             )
-            return constants.STATUS_REJECTED, constants.WIZ_REASON_FALSE_POSITIVE
+            return (
+                constants.STATUS_REJECTED,
+                constants.WIZ_REASON_FALSE_POSITIVE,
+            )
 
         if wiz_reason == constants.WIZ_REASON_MALICIOUS_THREAT:
             self.api_client.resolve_issue(
@@ -508,7 +588,10 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 resolution_reason="Malicious Threat",
                 resolution_note="Closed via SecOps Case Sync",
             )
-            return constants.STATUS_RESOLVED, constants.WIZ_REASON_MALICIOUS_THREAT
+            return (
+                constants.STATUS_RESOLVED,
+                constants.WIZ_REASON_MALICIOUS_THREAT,
+            )
 
         if wiz_reason == constants.WIZ_REASON_PLANNED_ACTION_THREAT:
             self.api_client.resolve_issue(
@@ -516,21 +599,33 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 resolution_reason="Planned Action Threat",
                 resolution_note="Closed via SecOps Case Sync",
             )
-            return constants.STATUS_RESOLVED, constants.WIZ_REASON_PLANNED_ACTION_THREAT
+            return (
+                constants.STATUS_RESOLVED,
+                constants.WIZ_REASON_PLANNED_ACTION_THREAT,
+            )
 
         self.api_client.resolve_issue(
             issue_id=threat_id,
             resolution_reason="Inconclusive Threat",
             resolution_note="Closed via SecOps Case Sync",
         )
-        return constants.STATUS_RESOLVED, constants.WIZ_REASON_INCONCLUSIVE_THREAT
+        return (
+            constants.STATUS_RESOLVED,
+            constants.WIZ_REASON_INCONCLUSIVE_THREAT,
+        )
 
     def _sync_single_threat_status_outbound(
-        self, job_case: JobCase, threat_id: str, wiz_reason: str, alerts: list[AlertCard]
+        self,
+        job_case: JobCase,
+        threat_id: str,
+        wiz_reason: str,
+        alerts: list[AlertCard],
     ) -> None:
         meta: SyncMetadata | None = None
         if alerts:
-            meta = job_case.alert_metadata.get(alerts[constants.DEFAULT_FALLBACK_VALUE].identifier)
+            meta = job_case.alert_metadata.get(
+                alerts[constants.DEFAULT_FALLBACK_VALUE].identifier
+            )
         if (
             meta
             and meta.status
@@ -538,8 +633,8 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         ):
             return
         try:
-            target_status_log, target_reason_log = self._update_wiz_threat_status(
-                threat_id, wiz_reason
+            target_status_log, target_reason_log = (
+                self._update_wiz_threat_status(threat_id, wiz_reason)
             )
         except Exception:
             self.logger.exception(f"Failed to close Wiz threat {threat_id}.")
@@ -554,8 +649,8 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             f"[SecOps & Wiz Sync Job] SecOps Case {job_case.case_detail.id_} "
             f"status was updated to CLOSED on "
             f"{now_str} by system. Wiz Threat {threat_id} status has been "
-            f"automatically updated to {target_status_log} (Resolution Reason: {target_reason_log}) "
-            f"in response."
+            f"automatically updated to {target_status_log} "
+            f"(Resolution Reason: {target_reason_log}) in response."
         )
         try:
             self.soar_job.add_comment(
@@ -565,10 +660,12 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             )
             self._add_comment_to_wiz_issue(threat_id, comment_text)
         except Exception:
-            self.logger.exception(f"Failed to write closure comments for Wiz threat {threat_id}.")
+            self.logger.exception(
+                f"Failed to write closure comments for Wiz threat {threat_id}."
+            )
 
     def sync_severity(self, job_case: JobCase) -> None:
-        """Synchronize severity from Wiz to SecOps (strictly unidirectional escalation).
+        """Sync severity from Wiz to SecOps (unidirectional escalation).
 
         Args:
             job_case (JobCase): The SecOps case.
@@ -587,17 +684,23 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 f"Failed to sync severity for case {job_case.case_detail.id_}."
             )
 
-    def _sync_single_alert_severity(self, job_case: JobCase, alert: AlertCard) -> None:
+    def _sync_single_alert_severity(
+        self, job_case: JobCase, alert: AlertCard
+    ) -> None:
         threat_id: str | None = self._extract_clean_threat_id(
             self._get_wiz_threat_id(alert)
         )
         if not threat_id:
             return
-        meta: SyncMetadata | None = job_case.alert_metadata.get(alert.identifier)
+        meta: SyncMetadata | None = job_case.alert_metadata.get(
+            alert.identifier
+        )
         if not meta or not meta.severity:
             return
         wiz_severity: str = meta.severity.upper()
-        wiz_weight: int = constants.WIZ_SEVERITY_WEIGHTS.get(wiz_severity, constants.DEFAULT_FALLBACK_VALUE)
+        wiz_weight: int = constants.WIZ_SEVERITY_WEIGHTS.get(
+            wiz_severity, constants.DEFAULT_FALLBACK_VALUE
+        )
         current_priority: str = alert.priority or "Informational"
         secops_weight: int = constants.SECOPS_PRIORITY_WEIGHTS.get(
             current_priority.lower(), constants.DEFAULT_FALLBACK_VALUE
@@ -607,11 +710,19 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 job_case, threat_id, current_priority
             )
 
-        previous_wiz_severity = self._get_last_synced_wiz_severity_from_comments(job_case, threat_id)
+        previous_wiz_severity = (
+            self._get_last_synced_wiz_severity_from_comments(
+                job_case, threat_id
+            )
+        )
         if previous_wiz_severity == wiz_severity:
             if wiz_weight > secops_weight:
                 self._escalate_alert_priority(
-                    job_case, alert, threat_id, wiz_severity, previous_wiz_severity
+                    job_case,
+                    alert,
+                    threat_id,
+                    wiz_severity,
+                    previous_wiz_severity,
                 )
             return
 
@@ -655,7 +766,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         previous_wiz_severity: str | None,
         secops_priority: str,
     ) -> str:
-        wiz_weight = constants.WIZ_SEVERITY_WEIGHTS.get(wiz_severity, constants.DEFAULT_FALLBACK_VALUE)
+        wiz_weight = constants.WIZ_SEVERITY_WEIGHTS.get(
+            wiz_severity, constants.DEFAULT_FALLBACK_VALUE
+        )
         if not previous_wiz_severity:
             secops_weight = constants.SECOPS_PRIORITY_WEIGHTS.get(
                 secops_priority.lower(), constants.DEFAULT_FALLBACK_VALUE
@@ -689,7 +802,8 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             new_priority=target_priority,
         )
         self.logger.info(
-            f"Escalated priority of alert {alert.identifier} to {target_priority}"
+            f"Escalated priority of alert {alert.identifier} "
+            f"to {target_priority}"
         )
 
         key = (job_case.case_detail.id_, threat_id, target_priority)
@@ -699,12 +813,17 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         direction = self._get_severity_update_direction(
             wiz_severity, previous_wiz_severity, target_priority
         )
-        action_text = f"remains {wiz_severity}" if direction == "remains" else f"{direction} to {wiz_severity}"
+        action_text = (
+            f"remains {wiz_severity}"
+            if direction == "remains"
+            else f"{direction} to {wiz_severity}"
+        )
 
         comment: str = (
             f"[SecOps & Wiz Sync Job] Severity Update: Wiz Threat {threat_id} "
             f"severity {action_text}. SecOps priority has been "
-            f"escalated to {target_priority} to align with the higher risk level."
+            f"escalated to {target_priority} to align with "
+            f"the higher risk level."
         )
 
         if self._is_severity_comment_present(job_case, comment):
@@ -739,8 +858,8 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         action_text = f"{direction} to {wiz_severity}"
         comment: str = (
             f"[SecOps & Wiz Sync Job] Severity Update: Wiz Threat {threat_id} "
-            f"severity {action_text}. SecOps priority remains {current_priority} "
-            f"to preserve the established risk context."
+            f"severity {action_text}. SecOps priority remains "
+            f"{current_priority} to preserve the established risk context."
         )
 
         if self._is_severity_comment_present(job_case, comment):
@@ -753,8 +872,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         )
         self._escalated_threats.add(key)
         self.logger.info(
-            f"Ignored downgrade of alert {alert.identifier} priority from {current_priority} "
-            f"to Wiz severity {wiz_severity}."
+            f"Ignored downgrade of alert {alert.identifier} "
+            f"priority from {current_priority} to Wiz severity "
+            f"{wiz_severity}."
         )
 
     @staticmethod
@@ -762,8 +882,8 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         threat: Issue, current_priority: str
     ) -> bool:
         match_str = (
-            f"[SecOps & Wiz Sync Job] Severity Update: The associated SecOps case severity "
-            f"was increased to {current_priority}."
+            f"[SecOps & Wiz Sync Job] Severity Update: The associated "
+            f"SecOps case severity was increased to {current_priority}."
         )
         return any(
             comment.message.startswith(match_str)
@@ -775,10 +895,12 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
     ) -> None:
         alert = next(
             (
-                a for a in job_case.case_detail.alerts
-                if self._extract_clean_threat_id(self._get_wiz_threat_id(a)) == threat_id
+                a
+                for a in job_case.case_detail.alerts
+                if self._extract_clean_threat_id(self._get_wiz_threat_id(a))
+                == threat_id
             ),
-            None
+            None,
         )
         if not alert or not getattr(alert, "incident", None):
             return
@@ -789,18 +911,25 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             return
 
         comment = (
-            f"[SecOps & Wiz Sync Job] Severity Update: The associated SecOps case severity "
-            f"was increased to {current_priority}. Wiz severity remains unchanged to preserve "
-            f"the original finding context. SecOps updates do not override Wiz severity."
+            f"[SecOps & Wiz Sync Job] Severity Update: The associated "
+            f"SecOps case severity was increased to {current_priority}. "
+            f"Wiz severity remains unchanged to preserve the original "
+            f"finding context. SecOps updates do not override Wiz severity."
         )
         try:
             self._add_comment_to_wiz_issue(threat_id, comment)
-            self.logger.info(f"Successfully posted severity update comment to Wiz threat {threat_id}")
+            self.logger.info(
+                f"Successfully posted severity update comment "
+                f"to Wiz threat {threat_id}"
+            )
             if not hasattr(threat, "comments") or threat.comments is None:
                 threat.comments = []
             threat.comments.append(WizIncidentComment({"text": comment}))
         except Exception:
-            self.logger.exception(f"Failed to post severity update comment to Wiz threat {threat_id}")
+            self.logger.exception(
+                f"Failed to post severity update comment "
+                f"to Wiz threat {threat_id}"
+            )
 
     def sync_comments(self, job_case: JobCase) -> None:
         """Synchronize comments bidirectionally between Wiz and SecOps.
@@ -861,8 +990,8 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
     def _sync_single_comment_to_all_threats(
         self, job_case: JobCase, threat_ids: list[str], comment_str: str
     ) -> None:
-        original_comment: SingleJson | None = (
-            self._find_original_case_comment(job_case, comment_str)
+        original_comment: SingleJson | None = self._find_original_case_comment(
+            job_case, comment_str
         )
         if original_comment:
             comment_text: str = original_comment.get("comment", "")
@@ -878,7 +1007,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
     def _find_original_case_comment(
         job_case: JobCase, comment_str: str
     ) -> SingleJson | None:
-        prefix: str = f"{constants.SYNC_COMMENT_PREFIX} {job_case.case_detail.id_}: "
+        prefix: str = (
+            f"{constants.SYNC_COMMENT_PREFIX} {job_case.case_detail.id_}: "
+        )
         if comment_str.startswith(prefix):
             target_text: str = comment_str[len(prefix) :]
             for c in job_case.case_comments:
@@ -893,7 +1024,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 users = get_users_profile_cards_with_pagination(self.soar_job)
                 for u in users:
                     uuid_str: str = u.user_name
-                    email: str | None = u.raw_data.get("email") or u.raw_data.get("loginIdentifier")
+                    email: str | None = u.raw_data.get(
+                        "email"
+                    ) or u.raw_data.get("loginIdentifier")
                     if uuid_str and email:
                         self._secops_users_cache[uuid_str] = email
             except Exception:
@@ -908,7 +1041,11 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         creator_user_id: str | None = original_comment.get("creator_user_id")
         creator: str = (
             original_comment.get("creator_email_address")
-            or (self._get_secops_user_email(creator_user_id) if creator_user_id else None)
+            or (
+                self._get_secops_user_email(creator_user_id)
+                if creator_user_id
+                else None
+            )
             or original_comment.get("creator_full_name")
             or original_comment.get("creator_user_id")
             or "analyst@company.com"
@@ -920,14 +1057,19 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         creation_time_dt: datetime = datetime.fromtimestamp(
             creation_time_ms / constants.MS_TO_SEC_DIVISOR, tz=UTC
         )
-        creation_time_str: str = creation_time_dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+        creation_time_str: str = creation_time_dt.strftime(
+            "%Y-%m-%d %H:%M:%S UTC"
+        )
         comment_text: str = original_comment.get("comment", "")
         return (
-            f"{constants.SYNC_COMMENT_PREFIX} {creator}{constants.WROTE_IN_SECOPS_SIGNATURE}"
+            f"{constants.SYNC_COMMENT_PREFIX} {creator}"
+            f"{constants.WROTE_IN_SECOPS_SIGNATURE}"
             f"{creation_time_str}: {comment_text}"
         )
 
-    def _add_comment_to_wiz_issue(self, threat_id: str, formatted_text: str) -> None:
+    def _add_comment_to_wiz_issue(
+        self, threat_id: str, formatted_text: str
+    ) -> None:
         try:
             self.api_client.add_comment_to_issue(
                 issue_id=threat_id,
@@ -946,14 +1088,14 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             client_address: str = os.environ.get(
                 "CLIENT_ADDRESS", "https://backstory.chronicle.security"
             ).rstrip("/")
-            if not client_address.startswith("http://") and not client_address.startswith("https://"):
+            if not client_address.startswith(
+                "http://"
+            ) and not client_address.startswith("https://"):
                 client_address = f"https://{client_address}"
             for job_case in self.job_cases_to_sync:
                 self._finalize_single_case(job_case, client_address)
         except Exception:
-            self.logger.exception(
-                "Failed to perform link-back finalization."
-            )
+            self.logger.exception("Failed to perform link-back finalization.")
 
     def _finalize_single_case(
         self, job_case: JobCase, client_address: str
@@ -978,7 +1120,8 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             )
             if already_linked:
                 self.logger.info(
-                    f"SecOps case {ticket_id} is already associated to Wiz threat {threat_id}."
+                    f"SecOps case {ticket_id} is already associated "
+                    f"to Wiz threat {threat_id}."
                 )
                 return
         try:
@@ -988,20 +1131,24 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 ticket_url=ticket_url,
             )
             self.logger.info(
-                f"Successfully associated SecOps case {job_case.case_detail.id_} "
-                f"to Wiz threat {threat_id}"
+                f"Successfully associated SecOps case "
+                f"{job_case.case_detail.id_} to Wiz threat {threat_id}"
             )
         except Exception:
             self.logger.exception(
-                f"Failed to associate SecOps case link to Wiz threat {threat_id}."
+                f"Failed to associate SecOps case link to Wiz threat "
+                f"{threat_id}."
             )
 
-    def _map_threat_to_cases(self, threat: Issue, modified_cases: list[tuple[str, int]]) -> None:
+    def _map_threat_to_cases(
+        self, threat: Issue, modified_cases: list[tuple[str, int]]
+    ) -> None:
         """Map a modified threat to its corresponding SecOps cases.
 
         Args:
             threat (Issue): The threat issue.
-            modified_cases (list[tuple[str, int]]): The list of modified case tuples to append to.
+            modified_cases (list[tuple[str, int]]): The list of modified
+                case tuples to append to.
 
         """
         threat_id = threat.issue_id
@@ -1015,7 +1162,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         if latest_comment_dt:
             updated_at_dt = max(updated_at_dt, latest_comment_dt)
 
-        updated_at_ms = int(updated_at_dt.timestamp() * constants.MS_TO_S_FACTOR)
+        updated_at_ms = int(
+            updated_at_dt.timestamp() * constants.MS_TO_S_FACTOR
+        )
 
         for case_id, t_ids in self.processed_items.items():
             if threat_id in t_ids:
@@ -1024,28 +1173,33 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
     def _get_last_run_datetime(self) -> datetime:
         last_run_time_ms = self.last_run_time
         if last_run_time_ms <= constants.DEFAULT_FALLBACK_VALUE:
-            hours_back = getattr(self.params, "max_hours_backwards", constants.HOURS_BACK_24)
+            hours_back = getattr(
+                self.params, "max_hours_backwards", constants.HOURS_BACK_24
+            )
             try:
                 hours_back = int(hours_back)
             except ValueError:
                 hours_back = constants.HOURS_BACK_24
             return datetime.now(UTC) - timedelta(hours=hours_back)
         return datetime.fromtimestamp(
-            (last_run_time_ms + constants.MS_TO_S_FACTOR) / float(constants.MS_TO_S_FACTOR), tz=UTC
+            (last_run_time_ms + constants.MS_TO_S_FACTOR)
+            / float(constants.MS_TO_S_FACTOR),
+            tz=UTC,
         )
 
     @staticmethod
     def _get_latest_comment_details(
-        threat: Issue
+        threat: Issue,
     ) -> tuple[datetime | None, bool]:
-        """Get the latest comment's creation time and check if it is an automation comment.
+        """Get latest comment details.
 
         Args:
             threat (Issue): The threat issue.
 
         Returns:
-            tuple[datetime | None, bool]: A tuple containing the latest comment's datetime
-                (or None if no comments exist) and a boolean indicating if it is an automation comment.
+            tuple[datetime | None, bool]: A tuple containing the latest
+                comment's datetime (or None if no comments exist) and a
+                boolean indicating if it is an automation comment.
 
         """
         if not threat.comments:
@@ -1088,7 +1242,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             return []
 
         last_run_dt: datetime = self._get_last_run_datetime()
-        updated_threats: list[Issue] = self._get_updated_threats_since_last_run(last_run_dt)
+        updated_threats: list[Issue] = (
+            self._get_updated_threats_since_last_run(last_run_dt)
+        )
         if not updated_threats:
             return []
 
@@ -1102,15 +1258,21 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
 
         return modified_cases
 
-    def _get_updated_threats_since_last_run(self, last_run_dt: datetime) -> list[Issue]:
+    def _get_updated_threats_since_last_run(
+        self, last_run_dt: datetime
+    ) -> list[Issue]:
         updated_after_iso: str = last_run_dt.isoformat().replace("+00:00", "Z")
         try:
-            return self.api_client.get_updated_threats(updated_after=updated_after_iso)
+            return self.api_client.get_updated_threats(
+                updated_after=updated_after_iso
+            )
         except Exception:
             self.logger.exception("Failed to fetch updated threats from Wiz.")
             return []
 
-    def _is_threat_modified_since_last_run(self, threat: Issue, last_run_dt: datetime) -> bool:
+    def _is_threat_modified_since_last_run(
+        self, threat: Issue, last_run_dt: datetime
+    ) -> bool:
         try:
             clean_time: str = threat.updated_at.replace("Z", "+00:00")
             updated_at_dt: datetime = datetime.fromisoformat(clean_time)
@@ -1119,7 +1281,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
 
         latest_comment_dt: datetime | None
         is_latest_comment_automation: bool
-        latest_comment_dt, is_latest_comment_automation = self._get_latest_comment_details(threat)
+        latest_comment_dt, is_latest_comment_automation = (
+            self._get_latest_comment_details(threat)
+        )
 
         is_threat_updated: bool = updated_at_dt > last_run_dt
         is_comment_updated: bool = (
@@ -1135,7 +1299,7 @@ class WizJobCase(JobCase):
     __slots__ = ()
 
     def get_product_comments_hashes(self) -> list[str]:
-        """Get product comments hashes formatted as SecOps comments for deduplication check.
+        """Get product comments hashes for deduplication.
 
         Returns:
             list[str]: The list of formatted string hashes.
@@ -1145,7 +1309,9 @@ class WizJobCase(JobCase):
         for alert in self.case_detail.alerts:
             incident: Issue | None = getattr(alert, "incident", None)
             if incident:
-                self._collect_incident_comments_hashes(incident, comments_hashes)
+                self._collect_incident_comments_hashes(
+                    incident, comments_hashes
+                )
         return comments_hashes
 
     def _collect_incident_comments_hashes(
@@ -1165,8 +1331,13 @@ class WizJobCase(JobCase):
             idx: int = message.find(signature)
             header_end_idx: int = message.find(": ", idx)
             if header_end_idx != constants.NOT_FOUND_INDEX:
-                original_text: str = message[header_end_idx + constants.COLON_SPACE_OFFSET :]
-                return f"{constants.SYNC_COMMENT_PREFIX} {self.case_detail.id_}: {original_text}"
+                original_text: str = message[
+                    header_end_idx + constants.COLON_SPACE_OFFSET :
+                ]
+                return (
+                    f"{constants.SYNC_COMMENT_PREFIX} "
+                    f"{self.case_detail.id_}: {original_text}"
+                )
         return message
 
     @staticmethod
@@ -1203,7 +1374,9 @@ class WizJobCase(JobCase):
                 if text in existing_clean_texts:
                     continue
 
-                formatted: str = self._format_inbound_comment(product_comment, text)
+                formatted: str = self._format_inbound_comment(
+                    product_comment, text
+                )
                 if self._generate_string_hash(formatted) in case_hashes:
                     continue
 
@@ -1219,7 +1392,9 @@ class WizJobCase(JobCase):
 
         return results
 
-    def _format_inbound_comment(self, product_comment: WizIncidentComment, text: str) -> str:
+    def _format_inbound_comment(
+        self, product_comment: WizIncidentComment, text: str
+    ) -> str:
         raw: SingleJson = getattr(product_comment, "raw_comment", {})
         user: SingleJson = raw.get("user") or {}
         service_account: SingleJson = raw.get("serviceAccount") or {}
@@ -1230,8 +1405,13 @@ class WizJobCase(JobCase):
             or service_account.get("name")
             or "wiz_analyst@company.com"
         )
-        time_str: str = self._format_inbound_comment_timestamp(raw.get("createdAt"))
-        return f"{constants.SYNC_COMMENT_PREFIX} {creator}{constants.WROTE_IN_WIZ_SIGNATURE}{time_str}: {text}"
+        time_str: str = self._format_inbound_comment_timestamp(
+            raw.get("createdAt")
+        )
+        return (
+            f"{constants.SYNC_COMMENT_PREFIX} {creator}"
+            f"{constants.WROTE_IN_WIZ_SIGNATURE}{time_str}: {text}"
+        )
 
     @staticmethod
     def _format_inbound_comment_timestamp(created_at_str: str | None) -> str:
