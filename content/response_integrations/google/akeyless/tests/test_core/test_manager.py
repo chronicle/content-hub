@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 # ruff:file-ignore[hardcoded-password-string]
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -54,9 +54,33 @@ class TestAkeylessClient:
 
     def test_init_missing_access_id_raises(self, mock_akeyless_api: MagicMock) -> None:
         """Raises InvalidConfigurationError when access_id is missing."""
-        config = AkeylessClientConfig(access_id="")
+        config = AkeylessClientConfig(access_id="", access_key="test-access-key")
         with pytest.raises(InvalidConfigurationError, match="Access ID must be provided"):
             AkeylessClient(config)
+
+    def test_init_missing_access_key_raises(self, mock_akeyless_api: MagicMock) -> None:
+        """Raises InvalidConfigurationError when access_key is missing."""
+        config = AkeylessClientConfig(access_id="test-access-id", access_key="")
+        with pytest.raises(InvalidConfigurationError, match="Access Key must be provided"):
+            AkeylessClient(config)
+
+    def test_get_token_success(self, mock_akeyless_api: MagicMock) -> None:
+        """get_token returns token on successful auth and caches it."""
+        mock_auth_res = MagicMock()
+        mock_auth_res.token = "test-token"
+        mock_akeyless_api.auth.return_value = mock_auth_res
+
+        config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key")
+        client = AkeylessClient(config)
+        token = client.get_token()
+
+        assert token == "test-token"
+        mock_akeyless_api.auth.assert_called_once()
+
+        # Second call uses cache
+        token2 = client.get_token()
+        assert token2 == "test-token"
+        mock_akeyless_api.auth.assert_called_once()
 
     def test_test_connectivity_success(self, mock_akeyless_api: MagicMock) -> None:
         """test_connectivity returns True on successful auth."""
@@ -103,45 +127,3 @@ class TestAkeylessClient:
         client = AkeylessClient(config)
         with pytest.raises(SecretAccessError, match="not found in Akeyless response"):
             client.get_secret_value("my-secret")
-
-    @patch("akeyless.core.manager.AkeylessClient._fetch_gcp_id_token")
-    def test_gcp_auth_success(self, mock_fetch_gcp: MagicMock, mock_akeyless_api: MagicMock) -> None:
-        """GCP authentication succeeds when metadata server provides ID token."""
-        mock_fetch_gcp.return_value = "mock-gcp-id-token"
-        mock_auth_res = MagicMock()
-        mock_auth_res.token = "gcp-session-token"
-        mock_akeyless_api.auth.return_value = mock_auth_res
-
-        config = AkeylessClientConfig(access_id="test-access-id", access_type="gcp")
-        client = AkeylessClient(config)
-        token = client.get_token()
-
-        assert token == "gcp-session-token"
-        mock_fetch_gcp.assert_called_once_with("test-access-id")
-        mock_akeyless_api.auth.assert_called_once()
-
-    @patch("akeyless.core.manager.AkeylessClient._fetch_gcp_id_token")
-    def test_gcp_auth_fallback_to_access_key(self, mock_fetch_gcp: MagicMock, mock_akeyless_api: MagicMock) -> None:
-        """Falls back to access_key auth when GCP metadata server is not reachable but access_key is provided."""
-        mock_fetch_gcp.side_effect = Exception("Metadata server not reachable")
-        mock_auth_res = MagicMock()
-        mock_auth_res.token = "fallback-access-key-token"
-        mock_akeyless_api.auth.return_value = mock_auth_res
-
-        config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key", access_type="gcp")
-        client = AkeylessClient(config)
-        token = client.get_token()
-
-        assert token == "fallback-access-key-token"
-        mock_fetch_gcp.assert_called_once()
-        mock_akeyless_api.auth.assert_called_once()
-
-    @patch("akeyless.core.manager.AkeylessClient._fetch_gcp_id_token")
-    def test_gcp_auth_no_access_key_raises(self, mock_fetch_gcp: MagicMock, mock_akeyless_api: MagicMock) -> None:
-        """Raises ConnectivityError when GCP authentication fails and no access_key is provided."""
-        mock_fetch_gcp.side_effect = Exception("Metadata server not reachable")
-
-        config = AkeylessClientConfig(access_id="test-access-id", access_key=None, access_type="gcp")
-        client = AkeylessClient(config)
-        with pytest.raises(ConnectivityError, match="Failed to authenticate with Akeyless using GCP IAM"):
-            client.get_token()

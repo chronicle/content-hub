@@ -14,19 +14,17 @@
 
 from __future__ import annotations
 
-# ruff:file-ignore[module-import-not-at-top-of-file]
 import sys
 
-# Re-order sys.path to prioritize site-packages over the local integration folder.
-# This ensures that 'import akeyless' successfully resolves to the third-party akeyless SDK library
-# instead of shadowing to our local 'akeyless' integration module during unit tests execution.
-site_packages_paths = [p for p in sys.path if "site-packages" in p]
-for path in site_packages_paths:
-    if path in sys.path:
-        sys.path.remove(path)
-        sys.path.insert(0, path)
-
+# ruff:file-ignore[module-import-not-at-top-of-file]
+from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import soar_sdk
+
+soar_sdk_dir = str(Path(soar_sdk.__file__).parent)
+if soar_sdk_dir not in sys.path:
+    sys.path.insert(0, soar_sdk_dir)
 
 import pytest
 

@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import dataclasses
 import time
-import urllib.request
 from typing import TYPE_CHECKING
 
 import akeyless
@@ -24,11 +23,6 @@ import akeyless
 from .constants import (
     ACCESS_KEY_TYPE,
     DEFAULT_SECRET_VERSION,
-    GCP_ACCESS_TYPE,
-    GCP_METADATA_HEADER_NAME,
-    GCP_METADATA_HEADER_VALUE,
-    GCP_METADATA_TIMEOUT_SECONDS,
-    GCP_METADATA_URL_TEMPLATE,
     TOKEN_TTL_SECONDS,
 )
 from .exceptions import (
@@ -45,8 +39,7 @@ if TYPE_CHECKING:
 @dataclasses.dataclass(frozen=True)
 class AkeylessClientConfig:
     access_id: str
-    access_key: str | None = None
-    access_type: str = GCP_ACCESS_TYPE
+    access_key: str
     api_gateway_url: str = "https://api.akeyless.io"
     verify_ssl: bool = True
 
@@ -62,11 +55,14 @@ class AkeylessClient:
         """Initialize the Akeyless Client.
 
         Raises:
-            InvalidConfigurationError: If Access ID is not provided.
+            InvalidConfigurationError: If Access ID or Access Key is not provided.
 
         """
         if not config.access_id:
             msg = "Access ID must be provided."
+            raise InvalidConfigurationError(msg)
+        if not config.access_key:
+            msg = "Access Key must be provided."
             raise InvalidConfigurationError(msg)
 
         self.config = config
@@ -79,30 +75,6 @@ class AkeylessClient:
         self.api = akeyless.V2Api(self.api_client)
         self._token: str | None = None
         self._token_issued_at: float = 0.0
-
-    @staticmethod
-    def _fetch_gcp_id_token(audience: str) -> str:
-        """Fetch Google ID token from the GCP Metadata Server.
-
-        Args:
-            audience (str): The audience to request the token for (typically the Access ID).
-
-        Returns:
-            str: The Google ID token.
-
-        Raises:
-            RuntimeError: If GCP metadata server is not reachable or token request fails.
-
-        """
-        url = GCP_METADATA_URL_TEMPLATE.format(audience=audience)
-        req = urllib.request.Request(url)  # ruff:ignore[suspicious-url-open-usage]
-        req.add_header(GCP_METADATA_HEADER_NAME, GCP_METADATA_HEADER_VALUE)
-        try:
-            with urllib.request.urlopen(req, timeout=GCP_METADATA_TIMEOUT_SECONDS) as response:  # ruff:ignore[suspicious-url-open-usage]
-                return response.read().decode("utf-8")
-        except Exception as e:
-            msg = f"GCP Metadata server not reachable or token request failed: {e}"
-            raise RuntimeError(msg) from e
 
     def _is_token_expired(self) -> bool:
         """Check whether the cached token has exceeded its TTL.
@@ -129,8 +101,7 @@ class AkeylessClient:
         """Authenticate and return the active token.
 
         If a valid (non-expired) token is already cached, returns it.
-        Otherwise, authenticates and caches a new token.
-        Supports GCP IAM Authentication (primary) and API Key Authentication (fallback).
+        Otherwise, authenticates and caches a new token using Access ID and Access Key.
 
         Returns:
             str: The active authentication token.
@@ -143,25 +114,6 @@ class AkeylessClient:
             return self._token
 
         self._clear_token()
-
-        if self.config.access_type == GCP_ACCESS_TYPE:
-            try:
-                gcp_token = self._fetch_gcp_id_token(self.config.access_id)
-                auth_body = akeyless.Auth(
-                    access_id=self.config.access_id,
-                    access_type=GCP_ACCESS_TYPE,
-                    cloud_id=gcp_token,
-                )
-                auth_res = self.api.auth(auth_body)
-                self._set_token(auth_res.token)
-            except Exception as gcp_err:
-                if self.config.access_key:
-                    pass
-                else:
-                    msg = f"Failed to authenticate with Akeyless using GCP IAM: {gcp_err}"
-                    raise ConnectivityError(msg) from gcp_err
-            else:
-                return self._token
 
         try:
             auth_body = akeyless.Auth(

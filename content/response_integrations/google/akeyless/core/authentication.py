@@ -24,7 +24,6 @@ from TIPCommon.extraction import extract_script_param
 from .constants import (
     ACCESS_ID_PARAM,
     ACCESS_KEY_PARAM,
-    ACCESS_TYPE_PARAM,
     API_GATEWAY_URL_PARAM,
     INTEGRATION_IDENTIFIER,
     VERIFY_SSL_PARAM,
@@ -37,8 +36,7 @@ if TYPE_CHECKING:
 
 class IntegrationParameters(NamedTuple):
     access_id: str
-    access_key: str | None
-    access_type: str
+    access_key: str
     api_gateway_url: str
     verify_ssl: bool
 
@@ -83,20 +81,12 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
         is_mandatory=True,
         print_value=True,
     )
-    access_key: str | None = extract_script_param(
+    access_key: str = extract_script_param(
         soar_sdk_object,
         input_dictionary=input_dictionary,
         param_name=ACCESS_KEY_PARAM,
-        is_mandatory=False,
+        is_mandatory=True,
         print_value=False,
-    )
-    access_type: str = extract_script_param(
-        soar_sdk_object,
-        input_dictionary=input_dictionary,
-        param_name=ACCESS_TYPE_PARAM,
-        is_mandatory=False,
-        default_value="gcp",
-        print_value=True,
     )
     api_gateway_url: str = extract_script_param(
         soar_sdk_object,
@@ -119,7 +109,6 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
     return IntegrationParameters(
         access_id=access_id,
         access_key=access_key,
-        access_type=access_type,
         api_gateway_url=api_gateway_url,
         verify_ssl=verify_ssl,
     )

@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-# ruff:file-ignore[hardcoded-password-string]
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -34,36 +33,30 @@ class TestPing:
     """Tests for PingAction."""
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
-    @patch("akeyless.V2Api")
+    @patch("akeyless.core.manager.AkeylessClient.test_connectivity")
     def test_ping_success(
         self,
-        mock_api_cls: MagicMock,
+        mock_test_connectivity: MagicMock,
         action_output: MockActionOutput,
     ) -> None:
         """Ping succeeds when test_connectivity returns True."""
-        mock_instance = MagicMock()
-        mock_api_cls.return_value = mock_instance
-        mock_auth_res = MagicMock()
-        mock_auth_res.token = "test-token"
-        mock_instance.auth.return_value = mock_auth_res
+        mock_test_connectivity.return_value = True
 
         ping.main()
 
-        mock_instance.auth.assert_called_once()
+        mock_test_connectivity.assert_called_once()
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert "Successfully connected" in (action_output.results.output_message)
+        assert "Successfully connected" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
-    @patch("akeyless.V2Api")
+    @patch("akeyless.core.manager.AkeylessClient.test_connectivity")
     def test_ping_failure(
         self,
-        mock_api_cls: MagicMock,
+        mock_test_connectivity: MagicMock,
         action_output: MockActionOutput,
     ) -> None:
         """Ping reports failure when connectivity fails."""
-        mock_instance = MagicMock()
-        mock_api_cls.return_value = mock_instance
-        mock_instance.auth.side_effect = Exception("Connection refused")
+        mock_test_connectivity.side_effect = Exception("Connection refused")
 
         ping.main()
 

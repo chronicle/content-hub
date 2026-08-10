@@ -42,7 +42,6 @@ class AkeylessAction(Action, ABC):
         config = AkeylessClientConfig(
             access_id=auth_params.access_id,
             access_key=auth_params.access_key,
-            access_type=auth_params.access_type,
             api_gateway_url=auth_params.api_gateway_url,
             verify_ssl=auth_params.verify_ssl,
         )

@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 # ruff:file-ignore[hardcoded-password-string, hardcoded-password-func-arg]
+import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
@@ -27,25 +28,25 @@ from akeyless.core.exceptions import (
     IntegrationCredentialSyncError,
     InvalidConfigurationError,
 )
-from akeyless.jobs.sync_integration_credential_job import (
-    SyncIntegrationCredentialJob,
+from akeyless.jobs.sync_integration_credentials_job import (
+    SyncIntegrationCredentialsJob,
 )
 
 
-def _make_job() -> SyncIntegrationCredentialJob:
+def _make_job() -> SyncIntegrationCredentialsJob:
     """Create a job instance with mocked SOAR internals."""
-    job = SyncIntegrationCredentialJob.__new__(
-        SyncIntegrationCredentialJob,
+    job = SyncIntegrationCredentialsJob.__new__(
+        SyncIntegrationCredentialsJob,
     )
     job.akeyless_client = None
     job.credential_mapping = {}
+    job.environment_name = "Default Environment"
     job.instance_name_to_identifier = {}
     job.connector_name_to_identifier = {}
-    job.name_id = "SyncIntegrationCredentialJob"
-    job.state_context = {}
+    job.name_id = "SyncIntegrationCredentialsJob"
     job._secret_cache = {}
-    job._sync_errors = []
-    job._job_start_time = int(time.time() * 1000)
+    job.execution_errors = []
+    job.job_start_time = int(time.time() * 1000)
     type(job).logger = PropertyMock(return_value=MagicMock())
 
     # Mock self.params with attribute-style access.
@@ -53,6 +54,7 @@ def _make_job() -> SyncIntegrationCredentialJob:
     mock_params.environment_name = "Default Environment"
     mock_params.credential_mapping = "{}"
     type(job).params = PropertyMock(return_value=mock_params)
+    type(job).soar_job = PropertyMock(return_value=MagicMock())
 
     return job
 
@@ -72,15 +74,6 @@ class TestValidateParams:
             "inst1": {},
         }
 
-    def test_valid_yaml(self) -> None:
-        """Parses valid YAML credential mapping."""
-        job = _make_job()
-        job.params.credential_mapping = "integration_instances:\n  inst1: {}\n"
-
-        job._validate_params()
-
-        assert "integration_instances" in job.credential_mapping
-
     def test_empty_mapping(self) -> None:
         """Empty string results in empty dict."""
         job = _make_job()
@@ -90,14 +83,14 @@ class TestValidateParams:
 
         assert job.credential_mapping == {}
 
-    def test_invalid_yaml_raises(self) -> None:
-        """Raises InvalidConfigurationError on bad YAML."""
+    def test_invalid_json_raises(self) -> None:
+        """Raises InvalidConfigurationError on bad JSON."""
         job = _make_job()
-        job.params.credential_mapping = "{{invalid: yaml: ["
+        job.params.credential_mapping = "{invalid json: ["
 
         with pytest.raises(
             InvalidConfigurationError,
-            match="Invalid Credential Mapping",
+            match="Invalid Credential Mapping JSON syntax",
         ):
             job._validate_params()
 
@@ -161,7 +154,7 @@ class TestResolveSecretAndVersion:
         assert version_id == "5"
 
     def test_explicit_version_with_colon_in_id(self) -> None:
-        """Splits on first colon only: 'a:b:c' → ('a', 'b:c')."""
+        """Splits on first colon only: 'a:b:c' -> ('a', 'b:c')."""
         job = _make_job()
 
         secret_id, version_id = job._resolve_secret_and_version(
@@ -199,6 +192,171 @@ class TestResolveSecretAndVersion:
 
         assert secret_id == "my-secret"
         assert version_id == DEFAULT_SECRET_VERSION
+
+
+class TestPrefetchAllSecrets:
+    """Tests for _prefetch_all_secrets."""
+
+    @pytest.mark.anyio
+    async def test_prefetches_unique_secrets(self) -> None:
+        """Prefetches all unique secrets across mapping sections."""
+        job = _make_job()
+        job.credential_mapping = {
+            "integration_instances": {"inst1": {"p1": "secret-a:1", "p2": "secret-b:2"}},
+            "connectors": {"conn1": {"p1": "secret-a:1"}},
+            "jobs": {"job1": {"p1": "secret-c:3"}},
+        }
+        mock_client = MagicMock()
+        mock_client.get_secret_value.side_effect = lambda secret_id, version_id: f"val-{secret_id}-{version_id}"
+        job.akeyless_client = mock_client
+
+        semaphore = asyncio.Semaphore(5)
+        await job._prefetch_all_secrets(semaphore)
+
+        assert job._secret_cache["secret-a", "1"] == "val-secret-a-1"
+        assert job._secret_cache["secret-b", "2"] == "val-secret-b-2"
+        assert job._secret_cache["secret-c", "3"] == "val-secret-c-3"
+        assert mock_client.get_secret_value.call_count == 3
+
+
+class TestSyncIntegrationInstances:
+    """Tests for _sync_integration_instances."""
+
+    @pytest.mark.anyio
+    async def test_skips_when_empty_mapping(self) -> None:
+        """Logs skipping and returns when integration_instances is empty."""
+        job = _make_job()
+        job.credential_mapping = {}
+        mock_api = AsyncMock()
+        semaphore = asyncio.Semaphore(5)
+
+        await job._sync_integration_instances(mock_api, semaphore)
+
+        mock_api.get_installed_integrations_of_environment.assert_not_called()
+        job.logger.info.assert_called_with("No integration instances in credential mapping. Skipping.")
+
+    @pytest.mark.anyio
+    async def test_empty_instances_in_environment_records_error(self) -> None:
+        """Records error and returns without processing instances when instances_list is empty."""
+        job = _make_job()
+        job.credential_mapping = {"integration_instances": {"inst1": {"p1": "sec1"}}}
+        job.environment_name = "NonExistentEnv"
+
+        mock_api = AsyncMock()
+        mock_api.get_installed_integrations_of_environment.return_value = {"instances": []}
+        semaphore = asyncio.Semaphore(5)
+
+        await job._sync_integration_instances(mock_api, semaphore)
+
+        assert len(job.execution_errors) == 1
+        assert "Either the environment name 'NonExistentEnv' is invalid" in job.execution_errors[0]
+        job.logger.error.assert_called_with(
+            "Either the environment name 'NonExistentEnv' is invalid or no "
+            "integration instances are configured in that environment."
+        )
+
+    @pytest.mark.anyio
+    async def test_syncs_instances_success(self) -> None:
+        """Successfully syncs instance parameters."""
+        job = _make_job()
+        job.credential_mapping = {"integration_instances": {"inst1": {"p1": "sec1:1"}}}
+        job.environment_name = "Default Environment"
+        job._secret_cache["sec1", "1"] = "secret-val-1"
+
+        mock_api = AsyncMock()
+        mock_api.get_installed_integrations_of_environment.return_value = {
+            "instances": [{"displayName": "inst1", "identifier": "inst1-id"}]
+        }
+        semaphore = asyncio.Semaphore(5)
+
+        await job._sync_integration_instances(mock_api, semaphore)
+
+        mock_api.set_configuration_property.assert_called_once_with(
+            integration_instance_identifier="inst1-id",
+            property_name="p1",
+            property_value="secret-val-1",
+        )
+        assert len(job.execution_errors) == 0
+
+
+class TestSyncConnectors:
+    """Tests for _sync_connectors."""
+
+    @pytest.mark.anyio
+    async def test_skips_when_empty_mapping(self) -> None:
+        """Logs skipping when connectors mapping is empty."""
+        job = _make_job()
+        job.credential_mapping = {}
+        mock_api = AsyncMock()
+        semaphore = asyncio.Semaphore(5)
+
+        await job._sync_connectors(mock_api, semaphore)
+
+        mock_api.get_connector_cards.assert_not_called()
+        job.logger.info.assert_called_with("No connectors in credential mapping. Skipping.")
+
+    @pytest.mark.anyio
+    async def test_syncs_connectors_success(self) -> None:
+        """Successfully syncs connector parameters."""
+        job = _make_job()
+        job.credential_mapping = {"connectors": {"conn1": {"p1": "sec1:1"}}}
+        job._secret_cache["sec1", "1"] = "secret-val-1"
+
+        mock_api = AsyncMock()
+        mock_api.get_connector_cards.return_value = {
+            "connectorInstances": [{"displayName": "conn1", "identifier": "conn1-id"}]
+        }
+        semaphore = asyncio.Semaphore(5)
+
+        await job._sync_connectors(mock_api, semaphore)
+
+        mock_api.set_connector_parameter.assert_called_once_with(
+            connector_instance_identifier="conn1-id",
+            parameter_name="p1",
+            parameter_value="secret-val-1",
+        )
+        assert len(job.execution_errors) == 0
+
+
+class TestSyncJobs:
+    """Tests for _sync_jobs."""
+
+    @pytest.mark.anyio
+    async def test_skips_when_empty_mapping(self) -> None:
+        """Logs skipping when jobs mapping is empty."""
+        job = _make_job()
+        job.credential_mapping = {}
+        mock_api = AsyncMock()
+        semaphore = asyncio.Semaphore(5)
+
+        await job._sync_jobs(mock_api, semaphore)
+
+        mock_api.get_installed_jobs.assert_not_called()
+        job.logger.info.assert_called_with("No jobs in credential mapping. Skipping.")
+
+    @pytest.mark.anyio
+    async def test_syncs_jobs_success(self) -> None:
+        """Successfully syncs job parameters and saves."""
+        job = _make_job()
+        job.credential_mapping = {"jobs": {"Job A": {"API Key": "sec1:1"}}}
+        job._secret_cache["sec1", "1"] = "secret-val-1"
+
+        mock_api = AsyncMock()
+        mock_api.get_installed_jobs.return_value = {
+            "job_instances": [
+                {
+                    "displayName": "Job A",
+                    "id": "1",
+                    "parameters": [{"displayName": "API Key", "value": "old-val"}],
+                }
+            ]
+        }
+        semaphore = asyncio.Semaphore(5)
+
+        await job._sync_jobs(mock_api, semaphore)
+
+        mock_api.save_or_update_job.assert_called_once()
+        assert len(job.execution_errors) == 0
 
 
 class TestBuildJobNameLookup:
@@ -262,119 +420,6 @@ class TestBuildParamIndex:
         assert "legacy" not in index
 
 
-class TestStateContextRegistry:
-    """Tests for persistent state context registry and skipping logic."""
-
-    def test_load_context_success(self) -> None:
-        """Loads valid JSON context state from soar_job."""
-        job = _make_job()
-        mock_soar_job = MagicMock()
-        mock_soar_job.get_job_context_property.return_value = '{"instance:id1:p1": "secret:1::10"}'
-        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
-
-        job._load_context()
-
-        assert job.state_context == {"instance:id1:p1": "secret:1::10"}
-
-    def test_load_context_empty(self) -> None:
-        """Handles empty context state string gracefully."""
-        job = _make_job()
-        mock_soar_job = MagicMock()
-        mock_soar_job.get_job_context_property.return_value = ""
-        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
-
-        job._load_context()
-
-        assert job.state_context == {}
-
-    def test_load_context_invalid_json(self) -> None:
-        """Handles invalid JSON string gracefully."""
-        job = _make_job()
-        mock_soar_job = MagicMock()
-        mock_soar_job.get_job_context_property.return_value = "invalid-json-{"
-        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
-
-        job._load_context()
-
-        assert job.state_context == {}
-
-    def test_save_context_success(self) -> None:
-        """Saves state_context as JSON string successfully."""
-        job = _make_job()
-        mock_soar_job = MagicMock()
-        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
-        job.state_context = {"instance:id1:p1": "secret:1::10"}
-
-        job._save_context()
-
-        mock_soar_job.set_job_context_property.assert_called_once_with(
-            identifier=job.name_id,
-            property_key="sync_credentials_state",
-            property_value='{"instance:id1:p1": "secret:1::10"}',
-        )
-
-    @pytest.mark.anyio
-    async def test_set_integration_params_does_not_skip_when_up_to_date(self) -> None:
-        """Verify that we do not skip fetching and setting configuration when parameter is up-to-date."""
-        job = _make_job()
-        job.state_context = {"instance:inst_id:param_x": "my-secret::5"}
-
-        mock_client = MagicMock()
-        mock_client.resolve_latest_enabled_version.return_value = "5"
-        job.akeyless_client = mock_client
-
-        job._fetch_secret_value_pre_resolved = AsyncMock(return_value="cached-secret-val")
-
-        mock_api = AsyncMock()
-
-        await job._set_integration_params(
-            api=mock_api,
-            name="Instance A",
-            identifier="inst_id",
-            param_mapping={"param_x": "my-secret"},
-        )
-
-        job._fetch_secret_value_pre_resolved.assert_called_once_with(
-            "my-secret", "5", context_label="param 'param_x' on instance 'Instance A' (id: inst_id)"
-        )
-        mock_api.set_configuration_property.assert_called_once_with(
-            integration_instance_identifier="inst_id",
-            property_name="param_x",
-            property_value="cached-secret-val",
-        )
-
-    @pytest.mark.anyio
-    async def test_set_integration_params_updates_when_outdated(self) -> None:
-        """Updates and saves to context when parameter is outdated."""
-        job = _make_job()
-        job.state_context = {"instance:inst_id:param_x": "my-secret:latest::5"}
-
-        mock_client = MagicMock()
-        mock_client.resolve_latest_enabled_version.return_value = "6"
-        job.akeyless_client = mock_client
-
-        job._fetch_secret_value_pre_resolved = AsyncMock(return_value="new-secret-value")
-
-        mock_api = AsyncMock()
-
-        await job._set_integration_params(
-            api=mock_api,
-            name="Instance A",
-            identifier="inst_id",
-            param_mapping={"param_x": "my-secret"},
-        )
-
-        job._fetch_secret_value_pre_resolved.assert_called_once_with(
-            "my-secret", "6", context_label="param 'param_x' on instance 'Instance A' (id: inst_id)"
-        )
-        mock_api.set_configuration_property.assert_called_once_with(
-            integration_instance_identifier="inst_id",
-            property_name="param_x",
-            property_value="new-secret-value",
-        )
-        assert job.state_context["instance:inst_id:param_x"] == "my-secret::6"
-
-
 class TestSecretFetchCaching:
     """Tests for dictionary-based caching of secret fetches."""
 
@@ -417,16 +462,14 @@ class TestErrorAggregation:
 
     @pytest.mark.anyio
     async def test_async_main_raises_on_errors(self) -> None:
-        """Raises IntegrationCredentialSyncError if self._sync_errors is not empty."""
+        """Raises IntegrationCredentialSyncError if self.execution_errors is not empty."""
         job = _make_job()
-        job._sync_errors = ["Some error occurred"]
+        job.execution_errors = ["Some error occurred"]
 
         with (
             patch.object(job, "_init_akeyless_client"),
-            patch.object(job, "_load_context"),
-            patch.object(job, "_save_context"),
-            patch("akeyless.jobs.sync_integration_credential_job.AsyncChronicleSOAR") as mock_soar_cls,
-            patch("akeyless.jobs.sync_integration_credential_job.AsyncMarketplaceApi") as mock_market_cls,
+            patch("akeyless.jobs.sync_integration_credentials_job.AsyncChronicleSOAR") as mock_soar_cls,
+            patch("akeyless.jobs.sync_integration_credentials_job.AsyncMarketplaceApi") as mock_market_cls,
         ):
             mock_soar = AsyncMock()
             mock_soar_cls.return_value = mock_soar
@@ -434,12 +477,13 @@ class TestErrorAggregation:
             mock_market_cls.return_value = mock_market
 
             # Mock sync functions to do nothing
+            job._prefetch_all_secrets = AsyncMock()
             job._sync_integration_instances = AsyncMock()
             job._sync_connectors = AsyncMock()
             job._sync_jobs = AsyncMock()
 
             with pytest.raises(
                 IntegrationCredentialSyncError,
-                match="Credential synchronization completed with one or more errors",
+                match="Sync completed with errors",
             ):
                 await job._async_main()

@@ -27,7 +27,6 @@ from akeyless.core.authentication import (
 from akeyless.core.constants import (
     ACCESS_ID_PARAM,
     ACCESS_KEY_PARAM,
-    ACCESS_TYPE_PARAM,
     API_GATEWAY_URL_PARAM,
     INTEGRATION_IDENTIFIER,
     VERIFY_SSL_PARAM,
@@ -47,7 +46,6 @@ class TestBuildAuthParams:
         mock_action.get_configuration.return_value = {
             ACCESS_ID_PARAM: "test-access-id",
             ACCESS_KEY_PARAM: "test-access-key",
-            ACCESS_TYPE_PARAM: "access_key",
             API_GATEWAY_URL_PARAM: "https://api.akeyless.io",
             VERIFY_SSL_PARAM: "False",
         }
@@ -59,7 +57,6 @@ class TestBuildAuthParams:
         )
         assert result.access_id == "test-access-id"
         assert result.access_key == "test-access-key"
-        assert result.access_type == "access_key"
         assert result.api_gateway_url == "https://api.akeyless.io"
         assert result.verify_ssl is False
 
@@ -70,7 +67,6 @@ class TestBuildAuthParams:
         mock_job.parameters = {
             ACCESS_ID_PARAM: "test-access-id",
             ACCESS_KEY_PARAM: "test-access-key",
-            ACCESS_TYPE_PARAM: "access_key",
             API_GATEWAY_URL_PARAM: "https://api.akeyless.io",
             VERIFY_SSL_PARAM: "True",
         }
@@ -79,7 +75,6 @@ class TestBuildAuthParams:
 
         assert result.access_id == "test-access-id"
         assert result.access_key == "test-access-key"
-        assert result.access_type == "access_key"
         assert result.api_gateway_url == "https://api.akeyless.io"
         assert result.verify_ssl is True
 
@@ -90,7 +85,6 @@ class TestBuildAuthParams:
         mock_job.parameters = {
             ACCESS_ID_PARAM: "test-access-id",
             ACCESS_KEY_PARAM: "test-access-key",
-            ACCESS_TYPE_PARAM: "access_key",
             API_GATEWAY_URL_PARAM: "https://api.akeyless.io",
         }
 
