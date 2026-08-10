@@ -129,6 +129,68 @@ Manually update the patch target strings in the test files to point to the new m
 - **Old**: `@patch('Integrations.Okta.Managers.OktaManager.jwt.encode')`
 - **New**: `@patch('okta.core.OktaManager.jwt.encode')`
 
+#### 1.4.4 Missing `pytest-mock` Dependency
+When restoring custom fixtures in `conftest.py` (which might have been stripped by aggressive demolition patterns), you might introduce imports like `from pytest_mock import MockerFixture`. However, `pytest-mock` is **NOT** included in the standard dev dependencies injected by the refactoring tool.
+
+**Symptoms**:
+Tests fail during collection or conftest loading with:
+`ModuleNotFoundError: No module named 'pytest_mock'`
+
+**Required Action**:
+Manually add `pytest-mock` to the `dev` dependency group in `pyproject.toml` of the affected integration:
+```toml
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-json-report>=1.5.0",
+    "soar-sdk",
+    "pytest-mock", # Add this
+]
+```
+And run `uv sync` to install it.
+
+#### 1.4.5 Connector Definition Path Mismatch (Mock JSON vs YAML)
+**Symptoms**:
+Functional tests fail with errors like `Failed to create environment handle object: 'Container' object has no attribute 'environment_field_name'` because the real YAML definition is used instead of a mock definition with all parameters.
+
+**Required Action**:
+Update `DEF_PATH` in the test file to point to a local mock JSON file (e.g., `mock_google_forms_responses_connector.json`) instead of the integration's `.yaml` definition.
+
+#### 1.4.6 Legacy Flat Imports in `conftest.py`
+**Symptoms**:
+`ModuleNotFoundError` for modules that were moved (e.g., `auth`, `zscalerManager`) but are still imported flat in legacy code.
+
+**Required Action**:
+Explicitly import them from their new modernized location and register them in `sys.modules` in `conftest.py`:
+```python
+from zscaler.core import auth
+import sys
+sys.modules['auth'] = auth
+```
+
+#### 1.4.7 Internal Type Hints in Session Files
+**Symptoms**:
+`ImportError: cannot import name '_Request' from 'integration_testing.requests.session'`.
+
+**Required Action**:
+Replace internal/private type hints with public equivalents:
+- `_Request` -> `MockRequest` (from `integration_testing.request`)
+- `_Response` -> `MockResponse` (from `integration_testing.requests.response`)
+
+#### 1.4.8 Missing Third-Party Dependencies
+**Symptoms**:
+`ModuleNotFoundError: No module named 'xmltodict'` (or `defusedxml`, etc.).
+
+**Required Action**:
+Manually add the missing third-party packages to the `dev` dependency group in `pyproject.toml`.
+
+#### 1.4.9 Deprecated Utility Functions
+**Symptoms**:
+`ImportError: cannot import name 'get_empty_response' from 'integration_testing.common'`.
+
+**Required Action**:
+Replace deprecated utility function calls with explicit modern equivalents (e.g., `MockResponse(content={})`).
+
 ---
 
 ## Step 2: Run Tests

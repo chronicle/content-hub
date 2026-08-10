@@ -545,8 +545,9 @@ class ImportTransformer(cst.CSTTransformer):
 
     def _handle_mock_utility_imports(self, node: cst.ImportFrom, path: str) -> cst.ImportFrom:
         new_path = path.replace("Tests.mocks", "integration_testing")
-        for old, new in TESTS_PATH_MAPPING.items():
-            new_path = new_path.replace(old, new)
+        if "aiohttp" not in path:
+            for old, new in TESTS_PATH_MAPPING.items():
+                new_path = new_path.replace(old, new)
 
         logger.debug(f"Remapped mock utility import path: {path} -> {new_path}")
 
@@ -1117,12 +1118,147 @@ class IntegrationRefactorer:
                 transformed[new_key] = value
         return transformed
 
+    def _ensure_dependencies_healthy(self, deconstructed_path: Path, integration_name: str):
+        """
+        Ensures that the integration has all necessary dev dependencies, particularly integration-testing.
+        
+        This is implemented for cases where the TIPCommon version from the source tip-marketplace repo 
+        didn't have a local wheel file in the content hub, and after understanding that, the user 
+        copied the wheel to be local but an integration testing should be in a matching version 
+        according to the mp deconstruct.
+        """
+        pyproject_path = deconstructed_path / PYPROJECT_TOML
+        if not pyproject_path.exists():
+            return
+
+        with pyproject_path.open("r", encoding="utf-8") as f:
+            pyproject_data = toml.load(f)
+
+        dev_deps = pyproject_data.get("dependency-groups", {}).get("dev", [])
+        
+        if any("integration-testing" in d or "integration_testing" in d for d in dev_deps):
+            logger.debug(f"[{integration_name}] integration-testing dependency already present.")
+            return
+
+        logger.warning(f"[{integration_name}] integration-testing dependency missing! Attempting to fix...")
+
+        # Rescue EnvironmentCommon if missing from sources
+        local_packages_path = get_local_packages_path()
+        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+        if "environmentcommon" not in sources:
+            env_wheels_dir = local_packages_path / "envcommon" / "whls"
+            env_whls = list(env_wheels_dir.glob("EnvironmentCommon-*.whl"))
+            if env_whls:
+                from packaging.version import parse as parse_version
+                latest_env_whl = sorted(env_whls, key=lambda p: parse_version(re.search(r"EnvironmentCommon-([\d\.]+)", p.name).group(1)))[-1]
+                rel_path = os.path.relpath(latest_env_whl, deconstructed_path)
+                
+                if "tool" not in pyproject_data:
+                    pyproject_data["tool"] = {}
+                if "uv" not in pyproject_data["tool"]:
+                    pyproject_data["tool"]["uv"] = {}
+                if "sources" not in pyproject_data["tool"]["uv"]:
+                    pyproject_data["tool"]["uv"]["sources"] = {}
+                    
+                pyproject_data["tool"]["uv"]["sources"]["environmentcommon"] = {"path": rel_path}
+                
+                with open(pyproject_path, "w", encoding="utf-8") as f:
+                    toml.dump(pyproject_data, f)
+                logger.info(f"[{integration_name}] Rescued EnvironmentCommon to uv.sources: {latest_env_whl.name}")
+
+        # Find TIPCommon version to use as target
+        tipcommon_version = None
+        
+        # Check dependencies
+        deps = pyproject_data.get("project", {}).get("dependencies", [])
+        for dep in deps:
+            if dep.lower().startswith("tipcommon"):
+                if "==" in dep:
+                    tipcommon_version = dep.split("==")[1]
+                    break
+
+        # Check for TODO comments if not found in dependencies
+        if not tipcommon_version:
+            content = pyproject_path.read_text(encoding="utf-8")
+            match = re.search(r"#\s*TODO:.*TIPCommon==([\d\.]+)", content, re.IGNORECASE)
+            if match:
+                tipcommon_version = match.group(1)
+                logger.info(f"[{integration_name}] Found TIPCommon version in TODO comment: {tipcommon_version}")
+
+        # Check uv sources if not found yet
+        if not tipcommon_version:
+            sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+            tipcommon_source = sources.get("tipcommon", {})
+            if "path" in tipcommon_source:
+                path = tipcommon_source["path"]
+                match = re.search(r"TIPCommon-([\d\.]+)", path)
+                if match:
+                    tipcommon_version = match.group(1)
+
+        if not tipcommon_version:
+            logger.warning(f"[{integration_name}] Could not determine TIPCommon version. Falling back to latest integration-testing.")
+            tipcommon_version = "0.0.0"
+
+        # Find closest wheel
+        local_packages_path = get_local_packages_path()
+        it_wheels_dir = local_packages_path / "integration_testing_whls"
+        
+        try:
+            from packaging.version import parse as parse_version
+            target_version = parse_version(tipcommon_version)
+            
+            whls = list(it_wheels_dir.glob("integration_testing-*.whl"))
+            if not whls:
+                raise FileNotFoundError(f"No integration-testing wheels found in {it_wheels_dir}")
+                
+            version_whl_map = {}
+            for whl in whls:
+                match = re.search(r"integration_testing-([\d\.]+)", whl.name)
+                if match:
+                    version_whl_map[parse_version(match.group(1))] = whl
+                    
+            sorted_versions = sorted(version_whl_map.keys())
+            
+            best_wheel = None
+            # Try to find closest >= 
+            for v in sorted_versions:
+                if v >= target_version:
+                    best_wheel = version_whl_map[v]
+                    logger.info(f"[{integration_name}] Found integration-testing >= version: {v} for target {tipcommon_version}")
+                    break
+                    
+            if not best_wheel:
+                best_wheel = version_whl_map[sorted_versions[-1]]
+                logger.info(f"[{integration_name}] Fallback to highest integration-testing version: {sorted_versions[-1]} for target {tipcommon_version}")
+
+            # Rescue TIPCommon as well if it was dropped
+            tip_wheels_dir = local_packages_path / "tipcommon" / "whls"
+            tip_wheel = tip_wheels_dir / f"TIPCommon-{tipcommon_version}-py2.py3-none-any.whl"
+            if not tip_wheel.exists():
+                tip_wheel = tip_wheels_dir / f"TIPCommon-{tipcommon_version}-py3-none-any.whl"
+
+            reg_deps_to_add = []
+            if tip_wheel.exists():
+                logger.info(f"[{integration_name}] Rescuing TIPCommon wheel: {tip_wheel.name}")
+                reg_deps_to_add.append(str(tip_wheel))
+            else:
+                logger.warning(f"[{integration_name}] Could not find exact TIPCommon wheel {tipcommon_version} locally.")
+
+            # Install dependencies
+            add_dependencies_to_toml(deconstructed_path, reg_deps_to_add, [str(best_wheel)])
+            
+            logger.info(f"[{integration_name}] Successfully fixed dependencies.")
+
+        except Exception as e:
+            logger.error(f"[{integration_name}] Failed to fix dependencies: {e}")
+
     def convert_tests(self, integration_name: str, deconstructed_path: Path):
         tests_src_path = self.tests_dir / "integrations" / integration_name
         tests_dest_path = deconstructed_path / "tests"
         deconstructed_name = deconstructed_path.name
 
         tests_dest_path.mkdir(exist_ok=True, parents=True)
+        self._ensure_dependencies_healthy(deconstructed_path, integration_name)
 
         if tests_src_path.is_dir():
             logger.info(f"[{integration_name}] Copying tests from {tests_src_path}...")
