@@ -852,7 +852,7 @@ class ConftestTransformer(cst.CSTTransformer):
         # Clean up ALL existing patches and assignments
         cleaned_body = []
         patterns = [
-            "monkeypatch.setattr(", "requests.sessions.Session.request", "MARKETPLACE MIGRATION PATCHES",
+            "requests.sessions.Session.request", "MARKETPLACE MIGRATION PATCHES",
             "import Siemplify", "import requests", "from TIPCommon", "return ", "yield "
         ]
         
@@ -1287,7 +1287,7 @@ class IntegrationRefactorer:
             "import pkgutil\n"
             "import importlib\n"
             "import soar_sdk\n"
-            "sdk_dir = os.path.dirname(soar_sdk.__file__)\n"
+            "sdk_dir = soar_sdk.__path__[0]\n"
             "if sdk_dir not in sys.path:\n"
             "    sys.path.insert(0, sdk_dir)\n"
             "original_stdout = sys.stdout\n"
