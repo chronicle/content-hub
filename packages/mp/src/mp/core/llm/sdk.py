@@ -37,10 +37,19 @@ T_LlmConfig_co = TypeVar("T_LlmConfig_co", bound=LlmConfig, covariant=True)
 T_Schema = TypeVar("T_Schema", bound=BaseModel)
 
 
+DEFAULT_BULK_THRESHOLD: int = 4
+
+
 class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig_co]):
-    def __init__(self, config: T_LlmConfig_co) -> None:
+    def __init__(
+        self,
+        config: T_LlmConfig_co,
+        *,
+        bulk_threshold: int = DEFAULT_BULK_THRESHOLD,
+    ) -> None:
         self.system_prompt: str = ""
         self.config: T_LlmConfig_co = config
+        self.bulk_threshold: int = bulk_threshold
 
     @overload
     async def send_message(
