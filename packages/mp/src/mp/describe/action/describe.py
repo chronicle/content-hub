@@ -350,10 +350,16 @@ class MultiPromptDescribeAction(DescribeAction):
             if not valid_prompts:
                 continue
 
-            if override.field_name == "parameters_description":
-                from mp.describe.action.parameter_agent_poc import generate_validated_parameters_description_bulk
-                logger.info("Routing `parameters_description` request to Agent PoC.")
-                llm_results: list[Any | str] = await generate_validated_parameters_description_bulk(valid_prompts, target_model)
+            from mp.describe.action.agent_config import AGENTS_CONFIG
+            
+            if override.field_name in AGENTS_CONFIG:
+                from mp.describe.action.agent_factory import FieldAgent
+                
+                agent_config = AGENTS_CONFIG[override.field_name]
+                agent = FieldAgent(agent_config)
+                
+                logger.info(f"Routing `{override.field_name}` request to Refactored Agent PoC.")
+                llm_results: list[Any | str] = await agent.generate_bulk(valid_prompts, target_model)
             else:
                 llm_results: list[Any | str] = await llm.call_gemini_bulk(valid_prompts, target_model)
 
