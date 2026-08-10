@@ -43,7 +43,7 @@ class OutcomeCategories(BaseModel):
                 " (e.g., malware family, attribution) for the indicator."
             ),
         ),
-    ]
+    ] = False
     enrich_asset: Annotated[
         bool,
         Field(
@@ -55,7 +55,7 @@ class OutcomeCategories(BaseModel):
                 " for a user or resource."
             ),
         ),
-    ]
+    ] = False
     update_alert: Annotated[
         bool,
         Field(
@@ -67,7 +67,7 @@ class OutcomeCategories(BaseModel):
                 " platform."
             ),
         ),
-    ]
+    ] = False
     add_alert_comment: Annotated[
         bool,
         Field(
@@ -78,7 +78,7 @@ class OutcomeCategories(BaseModel):
                 " Appends analyst notes or automated log entries to the alert's activity timeline."
             ),
         ),
-    ]
+    ] = False
     create_ticket: Annotated[
         bool,
         Field(
@@ -90,7 +90,7 @@ class OutcomeCategories(BaseModel):
                 " the Ticket ID."
             ),
         ),
-    ]
+    ] = False
     update_ticket: Annotated[
         bool,
         Field(
@@ -102,7 +102,7 @@ class OutcomeCategories(BaseModel):
                 " ticketing system."
             ),
         ),
-    ]
+    ] = False
     add_ioc_to_blocklist: Annotated[
         bool,
         Field(
@@ -114,7 +114,7 @@ class OutcomeCategories(BaseModel):
                 " interaction with the IOC."
             ),
         ),
-    ]
+    ] = False
     remove_ioc_from_blocklist: Annotated[
         bool,
         Field(
@@ -126,7 +126,7 @@ class OutcomeCategories(BaseModel):
                 " restricted lists."
             ),
         ),
-    ]
+    ] = False
     add_ioc_to_allowlist: Annotated[
         bool,
         Field(
@@ -138,7 +138,7 @@ class OutcomeCategories(BaseModel):
                 " positives."
             ),
         ),
-    ]
+    ] = False
     remove_ioc_from_allowlist: Annotated[
         bool,
         Field(
@@ -150,7 +150,7 @@ class OutcomeCategories(BaseModel):
                 " indicator."
             ),
         ),
-    ]
+    ] = False
     disable_identity: Annotated[
         bool,
         Field(
@@ -162,7 +162,7 @@ class OutcomeCategories(BaseModel):
                 " authenticating to the network."
             ),
         ),
-    ]
+    ] = False
     enable_identity: Annotated[
         bool,
         Field(
@@ -174,7 +174,7 @@ class OutcomeCategories(BaseModel):
                 " account."
             ),
         ),
-    ]
+    ] = False
     contain_host: Annotated[
         bool,
         Field(
@@ -186,7 +186,7 @@ class OutcomeCategories(BaseModel):
                 " the management console."
             ),
         ),
-    ]
+    ] = False
     uncontain_host: Annotated[
         bool,
         Field(
@@ -198,7 +198,7 @@ class OutcomeCategories(BaseModel):
                 " capabilities."
             ),
         ),
-    ]
+    ] = False
     reset_identity_password: Annotated[
         bool,
         Field(
@@ -210,7 +210,7 @@ class OutcomeCategories(BaseModel):
                 " password generation."
             ),
         ),
-    ]
+    ] = False
     update_identity: Annotated[
         bool,
         Field(
@@ -222,7 +222,7 @@ class OutcomeCategories(BaseModel):
                 " information."
             ),
         ),
-    ]
+    ] = False
     search_events: Annotated[
         bool,
         Field(
@@ -234,7 +234,7 @@ class OutcomeCategories(BaseModel):
                 " search parameters."
             ),
         ),
-    ]
+    ] = False
     execute_command_on_the_host: Annotated[
         bool,
         Field(
@@ -246,7 +246,7 @@ class OutcomeCategories(BaseModel):
                 " output (STDOUT)."
             ),
         ),
-    ]
+    ] = False
     download_file: Annotated[
         bool,
         Field(
@@ -258,7 +258,7 @@ class OutcomeCategories(BaseModel):
                 " or sandboxing."
             ),
         ),
-    ]
+    ] = False
     send_email: Annotated[
         bool,
         Field(
@@ -269,7 +269,7 @@ class OutcomeCategories(BaseModel):
                 " Dispatches an outbound email notification or response to specified recipients."
             ),
         ),
-    ]
+    ] = False
     search_email: Annotated[
         bool,
         Field(
@@ -281,7 +281,7 @@ class OutcomeCategories(BaseModel):
                 " subject, or attachment."
             ),
         ),
-    ]
+    ] = False
     delete_email: Annotated[
         bool,
         Field(
@@ -293,7 +293,7 @@ class OutcomeCategories(BaseModel):
                 " (Purge/Withdraw)."
             ),
         ),
-    ]
+    ] = False
     update_email: Annotated[
         bool,
         Field(
@@ -305,7 +305,7 @@ class OutcomeCategories(BaseModel):
                 " or applying labels."
             ),
         ),
-    ]
+    ] = False
     submit_file: Annotated[
         bool,
         Field(
@@ -317,7 +317,7 @@ class OutcomeCategories(BaseModel):
                 " (e.g., VirusTotal, Joe Sandbox) and returns a behavior report or threat score."
             ),
         ),
-    ]
+    ] = False
     send_message: Annotated[
         bool,
         Field(
@@ -328,7 +328,7 @@ class OutcomeCategories(BaseModel):
                 " Sends a message to a communication app (e.g., Google Chat, Microsoft Teams)"
             ),
         ),
-    ]
+    ] = False
     search_asset: Annotated[
         bool,
         Field(
@@ -339,7 +339,7 @@ class OutcomeCategories(BaseModel):
                 " Searches for the asset associated with the alert within the product"
             ),
         ),
-    ]
+    ] = False
     get_alert_information: Annotated[
         bool,
         Field(
@@ -349,7 +349,7 @@ class OutcomeCategories(BaseModel):
                 " Expected Outcome: Fetches information about the alert from the 3rd party product"
             ),
         ),
-    ]
+    ] = False
 
 
 class OutcomeCategoriesEnum(enum.StrEnum):
