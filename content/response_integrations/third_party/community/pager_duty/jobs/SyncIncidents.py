@@ -477,15 +477,6 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             if self.is_alert_and_product_closed(job_case, product):
                 self._remove_synced_entries([(job_case.case_detail.id_, product_id)])
 
-    def sync_assignee(self, job_case: JobCase) -> None:
-        pass
-
-    def sync_severity(self, job_case: JobCase) -> None:
-        pass
-
-    def sync_tags(self, job_case: JobCase) -> None:
-        pass
-
 
 def main() -> None:
     SyncIncidents().start()
