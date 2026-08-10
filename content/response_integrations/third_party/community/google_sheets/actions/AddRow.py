@@ -45,10 +45,12 @@ def main():
     except Exception as err:
         siemplify.LOGGER.error(err)
         status = EXECUTION_STATE_FAILED
+        message = f"Failed to add row to the sheet. Error: {err}"
     else:
         status = EXECUTION_STATE_COMPLETED
+        message = "Row added to the sheet successfully"
 
-    siemplify.end("Row added to the sheet successfully", True, status)
+    siemplify.end(message, status is EXECUTION_STATE_COMPLETED, status)
 
 
 if __name__ == "__main__":
