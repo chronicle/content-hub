@@ -106,7 +106,9 @@ def assert_deconstruct_integration(
         marketplace.deconstruct_integration(integration)
 
         out_integration: Path = marketplace.out_dir / integration.name
-        actual_files: set[str] = {p.name for p in out_integration.rglob("*.*") if p.name != mp.core.constants.LOCK_FILE}
+        actual_files: set[str] = {
+            p.name for p in out_integration.rglob("*.*") if p.name != mp.core.constants.LOCK_FILE
+        }
         expected_files: set[str] = {
             p.name for p in non_built_integration.rglob("*.*") if p.name != mp.core.constants.LOCK_FILE
         }

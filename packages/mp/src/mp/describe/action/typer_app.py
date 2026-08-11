@@ -125,7 +125,9 @@ def describe(  # ruff:ignore[too-many-arguments]
             ).describe_actions(sem=sem)
         )
     elif all_marketplace:
-        asyncio.run(describe_all_actions(src=src, dst=dst, override=override, prompt_overrides=prompt_overrides))
+        asyncio.run(
+            describe_all_actions(src=src, dst=dst, override=override, prompt_overrides=prompt_overrides)
+        )
     else:
         logger.error("Please specify either --integration or --all")
         raise typer.Exit(code=1)

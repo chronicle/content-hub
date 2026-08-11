@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     import pathlib
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-TYPE_MAPPING: dict[str, type[object]] = {
+_TYPE_MAPPING: dict[str, type[Any]] = {
     "str": str,
     "string": str,
     "int": int,
@@ -61,22 +61,21 @@ class PromptOverrideConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def normalize_fields(cls, data: object) -> object:
+    def normalize_fields(cls, data: dict[str, object] | object) -> dict[str, object] | object:
         """Normalize field names in input data dictionary before model validation.
 
         Args:
             data: Raw input data to normalize.
 
         Returns:
-            object: Normalized data dictionary or original data object.
+            dict[str, object] | object: Normalized data dictionary or original data object.
 
         """
         if isinstance(data, dict):
-            normalized: dict[str, object] = {str(k): v for k, v in data.items()}
-            if "rule_id" not in normalized and "id" in normalized:
+            dict_data = cast("dict[str, object]", data)
+            if "rule_id" not in dict_data and "id" in dict_data:
                 # Support rule_id / id
-                normalized["rule_id"] = normalized["id"]
-            return normalized
+                dict_data["rule_id"] = dict_data["id"]
         return data
 
 
@@ -150,7 +149,7 @@ def parse_prompt_overrides_content(content: str) -> list[PromptOverrideConfig]:
         msg = f"Failed to parse prompt overrides YAML: {exc}"
         raise ValueError(msg) from exc
 
-    items: list[object]
+    items: list[Any]
     if isinstance(data, list):
         items = data
     elif isinstance(data, dict):
@@ -160,7 +159,9 @@ def parse_prompt_overrides_content(content: str) -> list[PromptOverrideConfig]:
         raise TypeError(msg)
 
     configs: list[PromptOverrideConfig] = [
-        PromptOverrideConfig.model_validate(item) for item in items if isinstance(item, dict)
+        PromptOverrideConfig.model_validate(item)
+        for item in items
+        if isinstance(item, dict)
     ]
 
     return group_prompt_overrides(configs)
@@ -234,7 +235,9 @@ def build_action_override_prompt(params: ActionOverridePromptParams) -> str:
     )
     if params.manager_content and params.manager_content != "N/A":
         source_block += (
-            f'\n<shared_modules filenames="{params.manager_names}">\n{params.manager_content}\n</shared_modules>\n'
+            f'\n<shared_modules filenames="{params.manager_names}">\n'
+            f"{params.manager_content}\n"
+            f"</shared_modules>\n"
         )
 
     return (
@@ -282,17 +285,3 @@ def build_integration_override_prompt(
         f"when generating the '{params.target_field}' field:\n\n"
         f"{params.criteria}"
     )
-
-
-__all__: list[str] = [
-    "TYPE_MAPPING",
-    "ActionOverridePromptParams",
-    "FieldSchemaConfig",
-    "IntegrationOverridePromptParams",
-    "PromptOverrideConfig",
-    "build_action_override_prompt",
-    "build_integration_override_prompt",
-    "group_prompt_overrides",
-    "load_prompt_overrides_from_yaml",
-    "parse_prompt_overrides_content",
-]

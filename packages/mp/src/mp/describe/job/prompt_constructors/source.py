@@ -32,19 +32,15 @@ DEFAULT_FILE_CONTENT: str = "N/A"
 class SourcePromptConstructor(JobPromptConstructor):
     __slots__: tuple[str, ...] = ()
 
-    async def construct(self, template: Template | None = None) -> str:
+    async def construct(self) -> str:
         """Construct the prompt for non-built jobs.
-
-        Args:
-            template: Optional custom prompt template.
 
         Returns:
             str: The constructed prompt.
 
         """
         core_names, core_content = await self._get_core_modules_names_and_content()
-        if template is None:
-            template = await self.task_prompt
+        template: Template = await self.task_prompt
         return template.safe_substitute({
             "json_file_name": f"{self.resource_file_name}.yaml",
             "json_file_content": await self._get_non_built_job_def_content(),

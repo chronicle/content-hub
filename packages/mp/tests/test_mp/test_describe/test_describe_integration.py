@@ -35,7 +35,9 @@ runner = CliRunner()
 
 
 def test_describe_integration_command(tmp_path: Path, non_built_integration: Path) -> None:
-    integration: Path = shutil.copytree(non_built_integration, tmp_path / non_built_integration.name)
+    integration: Path = (
+        shutil.copytree(non_built_integration, tmp_path, dirs_exist_ok=True) / non_built_integration.name
+    )
     integration_name = "mock_integration"
 
     # Create AI_DIR if it doesn't exist to avoid issues,

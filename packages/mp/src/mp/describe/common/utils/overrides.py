@@ -19,7 +19,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, create_model
 
-from mp.describe.common.metadata import TYPE_MAPPING, FieldSchemaConfig
+from mp.describe.common.metadata import _TYPE_MAPPING, FieldSchemaConfig
 
 
 def format_display_value(val: object) -> str:
@@ -59,7 +59,7 @@ def create_dynamic_field_model(
         schema_def.model_name if schema_def and schema_def.model_name else f"{target_field.title()}Override"
     )
     type_str: str = schema_def.type if schema_def and schema_def.type else "str"
-    py_type: Any = TYPE_MAPPING.get(type_str.lower(), str)
+    py_type: Any = _TYPE_MAPPING.get(type_str.lower(), str)
     is_req: bool = schema_def.required if schema_def and schema_def.required is not None else True
     desc: str = schema_def.description if schema_def and schema_def.description else ""
 
@@ -94,7 +94,7 @@ def create_nested_schema(model_name: str, schema_dict: dict[str, Any]) -> type[B
         elif isinstance(val, type):
             field_definitions[key] = (val, ...)
         elif isinstance(val, str):
-            mapped_type = TYPE_MAPPING.get(val.lower(), str)
+            mapped_type = _TYPE_MAPPING.get(val.lower(), str)
             field_definitions[key] = (mapped_type, ...)
         else:
             field_definitions[key] = (type(val) if val is not None else str, ...)

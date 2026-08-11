@@ -128,7 +128,8 @@ def build_evaluation_prompt(
         "You MUST quote exact code snippets or extracted values supporting your verdict."
     )
     fix_desc = (
-        "If verdict is FAIL or PARTIAL, provide exact code or payload modification. If PASS, set this field to null."
+        "If verdict is FAIL or PARTIAL, provide exact code or payload modification. "
+        "If PASS, set this field to null."
     )
 
     safe_prompt = original_prompt.replace("</original_prompt>", "&lt;/original_prompt&gt;")

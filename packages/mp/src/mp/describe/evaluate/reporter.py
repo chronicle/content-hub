@@ -106,8 +106,12 @@ class EvaluationReporter:
                 prompt_col = ""
                 if has_prompt:
                     if res.prompt:
-                        p_clean = html.escape(res.prompt).replace("\n", "<br/>").replace("|", "\\|")
-                        prompt_col = f" | <details><summary>Show Prompt</summary><code>{p_clean}</code></details>"
+                        p_clean = (
+                            html.escape(res.prompt).replace("\n", "<br/>").replace("|", "\\|")
+                        )
+                        prompt_col = (
+                            f" | <details><summary>Show Prompt</summary><code>{p_clean}</code></details>"
+                        )
                     else:
                         prompt_col = " | -"
 
@@ -162,7 +166,7 @@ class EvaluationReporter:
         return (
             f'<td><button onclick="{onclick_show}">Show/Hide Prompt</button>'
             f'<div id="{modal_id}" class="modal" '
-            "onclick=\"if(event.target===this)this.style.display='none'\">"
+            'onclick="if(event.target===this)this.style.display=\'none\'">'
             "<div class='modal-content'>"
             f'<span class="close-btn" onclick="{onclick_hide}">&times;</span>'
             f"<h3>Prompt for Rule: {title_esc}</h3>"
@@ -212,7 +216,9 @@ class EvaluationReporter:
             fix = f"<code>{fix_esc}</code>" if res.suggested_fix else "None"
             title_esc = html.escape(res.rule_title)
             reason_esc = html.escape(res.reasoning)
-            prompt_td = EvaluationReporter._render_prompt_modal_td(res, has_prompt=has_prompt, title_esc=title_esc)
+            prompt_td = EvaluationReporter._render_prompt_modal_td(
+                res, has_prompt=has_prompt, title_esc=title_esc
+            )
 
             rows.append(
                 f"<tr><td>{title_esc}</td>"

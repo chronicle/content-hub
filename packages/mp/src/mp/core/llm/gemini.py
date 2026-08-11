@@ -199,7 +199,9 @@ class Gemini(LlmSdk[GeminiConfig]):
             ValueError: If the JSON schema is invalid.
 
         """
-        config: GenerateContentConfig = self.create_generate_content_config(response_schema=response_json_schema)
+        config: GenerateContentConfig = self.create_generate_content_config(
+            response_schema=response_json_schema
+        )
         logger.debug("Sending prompt: %s", prompt)
         if not self.content.parts:
             self.content.parts = []
@@ -297,7 +299,9 @@ class Gemini(LlmSdk[GeminiConfig]):
             The LLM response.
 
         """
-        config: GenerateContentConfig = self.create_generate_content_config(response_schema=response_json_schema)
+        config: GenerateContentConfig = self.create_generate_content_config(
+            response_schema=response_json_schema
+        )
 
         parts: list[Part] = []
         if self.content.parts:
@@ -329,7 +333,9 @@ class Gemini(LlmSdk[GeminiConfig]):
             list[types.InlinedRequest]: The prepared requests.
 
         """
-        config: GenerateContentConfig = self.create_generate_content_config(response_schema=response_json_schema)
+        config: GenerateContentConfig = self.create_generate_content_config(
+            response_schema=response_json_schema
+        )
 
         inlined_requests: list[InlinedRequest] = []
         for prompt in prompts:

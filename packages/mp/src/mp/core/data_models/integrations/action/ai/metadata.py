@@ -79,7 +79,6 @@ CAPABILITIES_DESCRIPTION = (
 
 # --- Action AI Metadata Model ---
 
-
 class ActionAiMetadata(BaseModel):
     ai_description: Annotated[
         str,

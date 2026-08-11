@@ -32,19 +32,15 @@ DEFAULT_FILE_CONTENT: str = "N/A"
 class BuiltPromptConstructor(ConnectorPromptConstructor):
     __slots__: tuple[str, ...] = ()
 
-    async def construct(self, template: Template | None = None) -> str:
+    async def construct(self) -> str:
         """Construct the prompt for built connectors.
-
-        Args:
-            template: Optional custom prompt template.
 
         Returns:
             str: The constructed prompt.
 
         """
         manager_names, manager_content = await self._get_managers_names_and_content()
-        if template is None:
-            template = await self.task_prompt
+        template: Template = await self.task_prompt
         return template.safe_substitute({
             "json_file_name": f"{self.resource_file_name}.json",
             "json_file_content": await self._get_built_connector_def_content(),

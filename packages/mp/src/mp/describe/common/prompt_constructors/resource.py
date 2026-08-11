@@ -37,7 +37,7 @@ class ResourcePromptConstructor(BasePromptConstructor, abc.ABC):
         resource_file_name: str = "",
         out_path: anyio.Path | None = None,
     ) -> None:
-        if isinstance(resource_name, (anyio.Path, pathlib.Path)):
+        if isinstance(resource_name, anyio.Path | pathlib.Path):
             out_path = anyio.Path(resource_name)
             resource_name = ""
             resource_file_name = ""
@@ -59,11 +59,8 @@ class ResourcePromptConstructor(BasePromptConstructor, abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def construct(self, template: Template | None = None) -> str:
+    async def construct(self) -> str:
         """Construct a prompt for generating AI descriptions.
-
-        Args:
-            template: Optional custom prompt template to use.
 
         Returns:
             str: The constructed prompt.

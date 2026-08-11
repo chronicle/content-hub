@@ -42,7 +42,9 @@ from mp.describe.evaluate.storage import EvaluationStorage
 from mp.describe.typer_app import app
 
 runner = CliRunner()
-DEFAULT_RULESET_PATH = pathlib.Path(mp.describe.evaluate.rules.__file__).parent / "default_rules.yaml"
+DEFAULT_RULESET_PATH = (
+    pathlib.Path(mp.describe.evaluate.rules.__file__).parent / "default_rules.yaml"
+)
 
 
 def test_models_serialization() -> None:
@@ -151,7 +153,7 @@ def test_engine_saves_rules_and_links_rule_id(tmp_path: pathlib.Path) -> None:
     assert len(db_rules) == len(mp.describe.evaluate.rules.EVALUATION_RULES)
 
     # Verify SQL join between rule_evaluations and rules table
-    with storage._get_connection() as conn:  # ruff:ignore[private-member-access]
+    with storage._get_connection() as conn:  # ruff: ignore[private-member-access]
         cursor = conn.cursor()
 
         cursor.execute(
@@ -257,7 +259,9 @@ def test_load_rules_from_yaml_custom(tmp_path: pathlib.Path) -> None:
     """Test loading a custom ruleset YAML file."""
     custom_rules_file = tmp_path / "custom_rules.yaml"
     custom_rules_file.write_text(
-        "- title: 'Custom Test Rule'\n  target_field: 'ai_description'\n  criteria: 'Custom check criteria'\n",
+        "- title: 'Custom Test Rule'\n"
+        "  target_field: 'ai_description'\n"
+        "  criteria: 'Custom check criteria'\n",
         encoding="utf-8",
     )
     rules = mp.describe.evaluate.rules.load_rules_from_yaml(custom_rules_file)
@@ -611,8 +615,12 @@ ValidAction:
         use_llm=False,
     )
     rule_t = "ai_short_description Structure & Scope Constraint"
-    invalid_r2 = next(r for r in report.results if r.action_id == "InvalidAction" and r.rule_title == rule_t)
-    valid_r2 = next(r for r in report.results if r.action_id == "ValidAction" and r.rule_title == rule_t)
+    invalid_r2 = next(
+        r for r in report.results if r.action_id == "InvalidAction" and r.rule_title == rule_t
+    )
+    valid_r2 = next(
+        r for r in report.results if r.action_id == "ValidAction" and r.rule_title == rule_t
+    )
 
     assert invalid_r2.verdict == VerdictEnum.FAIL
     assert "target field 'ai_short_description' is missing" in invalid_r2.reasoning
@@ -633,7 +641,9 @@ def test_empty_yaml_file_generates_failure_report(tmp_path: pathlib.Path) -> Non
         use_llm=False,
     )
     assert report.total_evaluations == len(mp.describe.evaluate.rules.EVALUATION_RULES)
-    assert any(r.action_id == "Integration Actions (Missing or Empty YAML)" for r in report.results)
+    assert any(
+        r.action_id == "Integration Actions (Missing or Empty YAML)" for r in report.results
+    )
     for r in report.results:
         assert r.verdict == VerdictEnum.FAIL
         assert "target field" in r.reasoning
@@ -701,7 +711,9 @@ def test_action_name_matching_with_file_extension(tmp_path: pathlib.Path) -> Non
     integration_dir = tmp_path / "mock_vt"
     actions_dir = integration_dir / "actions"
     actions_dir.mkdir(parents=True)
-    (actions_dir / "UploadAndScanFile.py").write_text("def upload_and_scan_file(): pass\n", encoding="utf-8")
+    (actions_dir / "UploadAndScanFile.py").write_text(
+        "def upload_and_scan_file(): pass\n", encoding="utf-8"
+    )
 
     ai_dir = integration_dir / "resources" / "ai"
     ai_dir.mkdir(parents=True)

@@ -59,7 +59,7 @@ class BuiltPromptConstructor(PromptConstructor):
         manager_names, manager_content = await self._get_managers_names_and_content()
         if template is None:
             template = await self.task_prompt
-        json_file_name = f"{self.action_file_name}{constants.ACTIONS_META_SUFFIX}"
+        json_file_name = f"{self.action_file_name}.yaml"
         json_file_content = await self._get_built_action_def_content()
         python_file_name = f"{self.action_file_name}.py"
         python_file_content = await self._get_built_action_content()
@@ -98,7 +98,7 @@ class BuiltPromptConstructor(PromptConstructor):
 
         """
         manager_names, manager_content = await self._get_managers_names_and_content()
-        json_file_name = f"{self.action_file_name}{constants.ACTIONS_META_SUFFIX}"
+        json_file_name = f"{self.action_file_name}.yaml"
         json_file_content = await self._get_built_action_def_content()
         python_file_name = f"{self.action_file_name}.py"
         python_file_content = await self._get_built_action_content()

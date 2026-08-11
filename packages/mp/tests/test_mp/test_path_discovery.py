@@ -47,6 +47,7 @@ def test_get_integration_path_with_direct_src_dir(mock_integration: pathlib.Path
 
 
 def test_get_integration_path_by_relative_path(mock_integration: pathlib.Path, monkeypatch: MonkeyPatch) -> None:
+
     # Test that we can find an integration by its relative path from CWD
     monkeypatch.chdir(mock_integration.parent)
     path = paths.get_integration_path("mock_integration")
