@@ -2,13 +2,17 @@ from mp.describe.action.agent_factory import AgentConfig
 
 PARAMETERS_VALIDATION = """
 1. Does the parameters table exclusively list the action-specific parameters defined in the JSON file?
-2. Does the AI successfully avoid leaking any Integration-level parameters (like API, base URL or others)?
+2. Does the ai successfully avoid leaking any Integration-level parameters - (like API, base URL or others)?
 3. For every single parameter listed in the generated markdown table, does an exact, corresponding parameter definition exist in the provided JSON settings file?
-4. If the original action has zero parameters defined, did the AI output the exact string: 'There are no parameters for this action' instead of a table?
-5. Is the parameters description formatted precisely as a Markdown table with exactly these four column headers: | Parameter | Type | Mandatory | Description |?
-6. Does the parameters description table document every single action-specific parameter declared in the provided JSON settings file, ensuring that zero required or optional action parameters are omitted from the Markdown table?
-7. For every parameter listed in the Markdown table where the underlying JSON settings file or Python script defines a default value, enum choices, or specific formatting rules (such as CSV lists or integer ranges), are those default values and constraints explicitly stated in the Description column?
-8. If the Python script or parameter metadata enforces conditional dependencies between parameters (e.g. 'Either Parameter A or Parameter B must be configured'), is this dependency explicitly documented within the specific parameter row description or notes?
+4. Is the parameters description formatted precisely as a Markdown table with exactly these four column headers: | Parameter | Type | Mandatory | Description | Otherwise if the original action has zero parameters defined, does the AI output the exact string: 'There are no parameters for this action' instead of a table?
+5. Does the parameters description table document every single action-specific parameter declared in the provided JSON settings file, ensuring that zero required or optional action parameters are omitted from the Markdown table?
+6. For every parameter listed in the Markdown table where the underlying JSON settings file or Python script defines a default value, enum choices, or specific formatting rules (such as CSV lists or integer ranges), are those default values and constraints explicitly stated in the Description column?
+7. If the Python script or parameter metadata enforces conditional dependencies between parameters (e.g. 'Either Parameter A or Parameter B must be configured'), is this dependency explicitly documented within the specific parameter row description or notes?
+8. Does the 'Mandatory' column accurately reflect the integration definition's mandatory status for each parameter, using exclusively 'True' when required and 'False' when optional?
+9. For every parameter that has predefined dropdown/DDL options in the specification, or where the Python script evaluates the parameter against a fixed set of constants (such as enums, list membership tests like 'in [...]', or dictionary mappings), are all allowed choices explicitly listed in the Description column (e.g., 'Possible values: ...')?
+10. If a parameter requires a structured string format (e.g. key-value pairs, placeholder-separated tokens, timestamps, or JSON paths), does the Description column explicitly document the expected structure with concrete syntax examples?
+11. Does every entry in the 'Parameter' column use the exact technical parameter identifier (preserving real casing such as camelCase or snake_case matching the integration's definition file), rather than human-readable display names or arbitrary titles?
+12. Does every entry in the 'Type' column strictly use one of the valid SOAR parameter types from the approved closed list: 'Boolean', 'Int', 'String', 'Password', 'IP', 'Email', 'User_Repository', 'Stages_Repository', 'CloseCase_Reason_Repository', 'CloseCase_RootCause_Repository', 'Priorities_Repository', 'EmailContent', 'Content', 'Script', 'PlaybookNames', 'Entity_Type', 'List', 'TimeSpanSeconds', 'URL', 'Domain', 'Code', 'MultipleChoiceParameter', 'Other', accurately reflecting the type declared in the integration definition?
 """
 
 OUTCOME_CATEGORIES_VALIDATION = """
