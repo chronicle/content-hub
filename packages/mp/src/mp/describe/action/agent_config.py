@@ -12,10 +12,20 @@ PARAMETERS_VALIDATION = """
 """
 
 OUTCOME_CATEGORIES_VALIDATION = """
-1. For every outcome category flagged as True, does the Python script make an explicit, physical API call to execute that specific outcome, or did the AI hallucinate it based on the name of the action or assumptions about standard playbooks?
-2. Did the AI correctly respect the boundary between data enrichment (reading) and state mutation (writing)? (e.g. if add_ioc_to_blocklist or disable_identity is True, verify that a POST/PUT/PATCH request is sent; if it's only a GET request, these mutation categories must fail the evaluation)
+1. For every outcome category flagged as True, does the Python script make an explicit, physical API call
+    to execute that specific outcome, or did the AI hallucinate it based on the name of the action or
+    assumptions about standard playbooks?
+    Evaluate every `True` outcome category strictly against the provided Python code. Fail the response if the AI
+    awarded a `True` flag based on what an analyst "might do next" with the data rather than what the script actively executes.
+2. Did the AI correctly respect the boundary between data enrichment (reading) and state mutation (writing)?
+    If any mutating categories (e.g., contain_host, add_ioc_to_blocklist, disable_identity, update_alert, create_ticket, update_ticket)
+    are `True`, explicitly verify that the script performs an external write operation (POST/PUT/PATCH/DELETE) or internal platform update.
+    If it only performs a GET/read operation, these mutation categories must be `False` and fail the evaluation if flagged as `True`.
 3. Based on the provided outcome definitions, did the AI omit (flag as False) any category that is explicitly performed in the action code?
-4. Does the text provided in the reasoning field logically trace the True flags directly to specific functionalities, loops, or API endpoints found in the provided Python code snippet?
+    Ensure no valid outcomes were mistakenly flagged as `False` if the script demonstrably executes them.    
+4. Does the text provided in the reasoning field logically trace the True flags directly to specific functionalities,
+    loops, or API endpoints found in the provided Python code snippet?
+    Ensure the `reasoning` string explicitly cites mechanisms, methods, and endpoints in the Python code to justify the `True` categorizations.
 """
 
 ENTITY_USAGE_VALIDATION = """
