@@ -130,3 +130,17 @@ STATUS_CAPTURE_GROUP: int = 1
 COLON_SPACE_OFFSET: int = 2
 HOURS_BACK_24: int = 24
 MS_TO_S_FACTOR: int = 1000
+
+RETRY_TOTAL_ATTEMPTS: int = 5
+RETRY_BACKOFF_FACTOR: int = 2
+RETRY_STATUS_CODES: tuple[int, ...] = (429, 500, 502, 503, 504)
+RETRY_ALLOWED_METHODS: tuple[str, ...] = (
+    "GET",
+    "POST",
+    "PUT",
+    "DELETE",
+    "PATCH",
+    "OPTIONS",
+    "HEAD",
+)
+PRODUCT_ALERTS_LIMIT: int = 50

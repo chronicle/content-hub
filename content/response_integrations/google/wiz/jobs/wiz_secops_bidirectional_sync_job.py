@@ -47,6 +47,7 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         self.sync_comments_enabled: bool = True
         self.sync_product_link_enabled: bool = True
         self.sync_severity_enabled: bool = True
+        self.product_alerts_limit: int = constants.PRODUCT_ALERTS_LIMIT
         self.failed_cases: set[str] = set()
         self._escalated_threats: set[tuple[int, str, str]] = set()
 
