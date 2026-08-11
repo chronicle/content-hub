@@ -364,7 +364,7 @@ class MultiPromptDescribeAction(DescribeAction):
                 contexts = []
                 for action_name in [resources[i] for i in valid_indices]:
                     contexts.append({
-                        "integration": self.integration,
+                        "integration": self.integration_name,
                         "action": action_name,
                         "version": getattr(status, "version", "N/A")
                     })

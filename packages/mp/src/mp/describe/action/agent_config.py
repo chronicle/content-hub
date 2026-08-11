@@ -16,19 +16,52 @@ PARAMETERS_VALIDATION = """
 """
 
 OUTCOME_CATEGORIES_VALIDATION = """
-1. For every outcome category flagged as True, does the Python script make an explicit, physical API call to execute that specific outcome, or did the AI hallucinate it based on the name of the action or assumptions about standard playbooks?
-2. Did the AI correctly respect the boundary between data enrichment (reading) and state mutation (writing)? (e.g. if add_ioc_to_blocklist or disable_identity is True, verify that a POST/PUT/PATCH request is sent; if it's only a GET request, these mutation categories must fail the evaluation)
+1. For every outcome category flagged as True, does the Python script make an explicit, physical API call
+    to execute that specific outcome, or did the AI hallucinate it based on the name of the action or
+    assumptions about standard playbooks?
+    Evaluate every `True` outcome category strictly against the provided Python code. Fail the response if the AI
+    awarded a `True` flag based on what an analyst "might do next" with the data rather than what the script actively executes.
+2. Did the AI correctly respect the boundary between data enrichment (reading) and state mutation (writing)?
+    If any mutating categories (e.g., contain_host, add_ioc_to_blocklist, disable_identity, update_alert, create_ticket, update_ticket)
+    are `True`, explicitly verify that the script performs an external write operation (POST/PUT/PATCH/DELETE) or internal platform update.
+    If it only performs a GET/read operation, these mutation categories must be `False` and fail the evaluation if flagged as `True`.
 3. Based on the provided outcome definitions, did the AI omit (flag as False) any category that is explicitly performed in the action code?
-4. Does the text provided in the reasoning field logically trace the True flags directly to specific functionalities, loops, or API endpoints found in the provided Python code snippet?
+    Ensure no valid outcomes were mistakenly flagged as `False` if the script demonstrably executes them.    
+4. Does the text provided in the reasoning field logically trace the True flags directly to specific functionalities,
+    loops, or API endpoints found in the provided Python code snippet?
+    Ensure the `reasoning` string explicitly cites mechanisms, methods, and endpoints in the Python code to justify the `True` categorizations.
 """
 
 ENTITY_USAGE_VALIDATION = """
-1. Did the AI accurately verify if the action iterates over `target_entities` or uses entity-specific identifiers, as opposed to just looking at a variable named `entity` string matching?
-2. If the action does NOT work on entities (e.g. fetching a static URL or using unrelated data), are all flags across the entites properly set to False?
-3. If the action code specifically filters entities by type (e.g. `if entity.type == "USER"`), are only those specific flag types set to True? 
-4. Alternatively, if no type filtering is applied and the action processes the entire `target_entities` list, are ALL available entity types set to True?
-5. Did the AI correctly trace each true filter flag (like `filters_by_identifier`, `filters_by_entity_type`, `filters_by_is_suspicious` etc.) to an explicit conditional check (e.g. `if ...`) in the provided Python code?
-6. Does the reasoning step explicitly state why each filtering condition is met or not met based on the Python code snippet before setting the boolean flags?
+- title: "entity_usage - Active Processing of Target Entities"
+  target_field: "entity_usage"
+  criteria: >
+    Did the AI correctly identify whether the action processes platform target entities
+    (via siemplify.target_entities or input parameters representing entities)?
+
+- title: "entity_usage - Unused Entity Flags Set to False"
+  target_field: "entity_usage"
+  criteria: >
+    If the Python script does not process entities from the platform, are ALL entity
+    type flags correctly set to False?
+
+- title: "entity_usage - Specific Entity Type Conditional Filtering"
+  target_field: "entity_usage"
+  criteria: >
+    For every specific entity type flagged as True (e.g., address), is that entity type validly targeted
+    through at least one of the following mechanisms?
+    1. Explicit Code Filter: The Python code explicitly contains a programmatic conditional check or filter targeting that specific type (e.g., entity.entity_type == EntityTypes.ADDRESS or checking against a set/list of supported types).
+    2. Input Parameter Mapping: The action accepts or processes input parameters that explicitly target or represent that entity type.
+    3. Unfiltered (Global) Scope: The Python script iterates over target_entities without type-specific filtering, applying globally to all supported entity types (excluding any types explicitly omitted via negative exclusion filters, such as excluding ALERT pseudo-entities).
+    4. Dynamic Entity Resolution: The action dynamically resolves entities across case alerts (e.g., via alert.entities or _get_target_alerts()) and allows operating on any entity type via dynamic parameters.
+
+- title: "entity_usage - Unfiltered Entity Types Defaulting to True"
+  target_field: "entity_usage"
+  criteria: >
+    If the Python script iterates over target_entities without type-based filtering, did the AI
+    correctly set ALL supported entity type flags to True (excluding any specific pseudo-entity types
+    explicitly omitted via negative exclusion filters, such as setting alert: false)?
+
 """
 
 AGENTS_CONFIG = {
