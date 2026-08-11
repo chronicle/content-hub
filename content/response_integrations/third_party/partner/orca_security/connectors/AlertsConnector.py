@@ -7,23 +7,21 @@ from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
 from TIPCommon import (
-    UNIX_FORMAT,
     extract_connector_param,
-    filter_old_alerts,
-    get_last_success_time,
     is_approaching_timeout,
     is_overflowed,
     read_ids,
-    save_timestamp,
     write_ids,
 )
 
 from ..core.constants import (
     BLACKLIST_FILTER,
     CONNECTOR_NAME,
+    CREATED_AT_LOOKBACK_HOURS,
     DEFAULT_LIMIT,
     DEFAULT_TIME_FRAME,
     POSSIBLE_SEVERITIES,
+    STORED_IDS_LIMIT,
     WHITELIST_FILTER,
 )
 from ..core.OrcaSecurityExceptions import OrcaSecurityInvalidParameterException
@@ -191,85 +189,140 @@ def main(is_test_run):
             siemplify_logger=siemplify.LOGGER,
         )
 
+        # The watermark tracks last_sync (DB write time), so alerts that become
+        # visible or eligible after creation (e.g. Orca Score populated later) still
+        # enter the fetch window. The CreatedAt bound keeps updates of alerts older
+        # than the lookback out of the window, preserving "new alerts only" semantics.
+        lookback_ms = CREATED_AT_LOOKBACK_HOURS * 60 * 60 * 1000
+        saved_timestamp = siemplify.fetch_timestamp()
+        if saved_timestamp:
+            # Tolerate downtime up to the CreatedAt lookback - alerts older than
+            # that age out of the fetch window anyway
+            last_sync_cursor = max(saved_timestamp, unix_now() - lookback_ms)
+        else:
+            last_sync_cursor = unix_now() - hours_backwards * 60 * 60 * 1000
+        created_at_start = unix_now() - lookback_ms
+        siemplify.LOGGER.info(f"Fetching alerts from last_sync cursor {last_sync_cursor}")
+
+        existing_ids_set = set(existing_ids)
         fetched_alerts = []
-        alerts = manager.get_alerts(
-            start_timestamp=get_last_success_time(
-                siemplify=siemplify,
-                offset_with_metric={"hours": hours_backwards},
-                time_format=UNIX_FORMAT,
-            ),
-            limit=fetch_limit,
-            lowest_severity=lowest_severity,
-            categories=category_filter,
-            title_filter=siemplify.whitelist,
-            title_filter_type=(BLACKLIST_FILTER if whitelist_as_a_blacklist else WHITELIST_FILTER),
-            alert_types=alert_type_filter,
-            lowest_score=lowest_score,
-        )
+        watermark = 0
+        offset = 0
+        stop_fetching = False
 
-        filtered_alerts = filter_old_alerts(siemplify, alerts, existing_ids, "alert_id")
-        siemplify.LOGGER.info(f"Fetched {len(filtered_alerts)} alerts")
+        while not stop_fetching:
+            alerts = manager.get_alerts(
+                start_timestamp=created_at_start,
+                limit=fetch_limit,
+                lowest_severity=lowest_severity,
+                categories=category_filter,
+                title_filter=siemplify.whitelist,
+                title_filter_type=(BLACKLIST_FILTER if whitelist_as_a_blacklist else WHITELIST_FILTER),
+                alert_types=alert_type_filter,
+                lowest_score=lowest_score,
+                last_sync_start_timestamp=last_sync_cursor,
+                start_at_index=offset,
+            )
+            siemplify.LOGGER.info(
+                f"Fetched page of {len(alerts)} alerts from last_sync cursor {last_sync_cursor}, offset {offset}"
+            )
 
-        if is_test_run:
-            siemplify.LOGGER.info("This is a TEST run. Only 1 alert will be processed.")
-            filtered_alerts = filtered_alerts[:1]
+            if is_test_run:
+                siemplify.LOGGER.info("This is a TEST run. Only 1 alert will be processed.")
+                alerts = alerts[:1]
+                stop_fetching = True
 
-        for alert in filtered_alerts:
-            try:
-                if is_approaching_timeout(connector_starting_time, script_timeout):
-                    siemplify.LOGGER.info("Timeout is approaching. Connector will gracefully exit")
-                    break
+            for alert in alerts:
+                try:
+                    if is_approaching_timeout(connector_starting_time, script_timeout):
+                        siemplify.LOGGER.info("Timeout is approaching. Connector will gracefully exit")
+                        stop_fetching = True
+                        break
 
-                if len(processed_alerts) >= fetch_limit:
-                    # Provide slicing for the alerts amount.
-                    siemplify.LOGGER.info(
-                        "Reached max number of alerts cycle. No more alerts will be processed in this cycle."
+                    if alert.alert_id in existing_ids_set:
+                        # Already ingested in a previous run - advance the watermark
+                        # over it so the connector makes progress even when a page
+                        # contains only duplicates
+                        watermark = max(watermark, alert.last_sync_ms)
+                        continue
+
+                    if len(processed_alerts) >= fetch_limit:
+                        # Provide slicing for the alerts amount.
+                        siemplify.LOGGER.info(
+                            "Reached max number of alerts cycle. No more alerts will be processed in this cycle."
+                        )
+                        stop_fetching = True
+                        break
+
+                    siemplify.LOGGER.info(f"Started processing alert {alert.alert_id}")
+                    alert.set_events()
+
+                    # Update existing alerts
+                    existing_ids.append(alert.alert_id)
+                    existing_ids_set.add(alert.alert_id)
+                    fetched_alerts.append(alert)
+                    watermark = max(watermark, alert.last_sync_ms)
+
+                    alert_info = alert.get_alert_info(
+                        alert_info=AlertInfo(),
+                        environment_common=GetEnvironmentCommonFactory().create_environment_manager(
+                            siemplify, environment_field_name, environment_regex_pattern
+                        ),
+                        device_product_field=device_product_field,
                     )
-                    break
 
-                siemplify.LOGGER.info(f"Started processing alert {alert.alert_id}")
-                alert.set_events()
+                    if is_overflowed(siemplify, alert_info, is_test_run):
+                        siemplify.LOGGER.info(
+                            f"{alert_info.rule_generator}-{alert_info.ticket_id}-{alert_info.environment}"
+                            f"-{alert_info.device_product} found as overflow alert. Skipping..."
+                        )
+                        # If is overflowed we should skip
+                        continue
 
-                # Update existing alerts
-                existing_ids.append(alert.alert_id)
-                fetched_alerts.append(alert)
+                    processed_alerts.append(alert_info)
+                    siemplify.LOGGER.info(f"Alert {alert.alert_id} was created.")
 
-                alert_info = alert.get_alert_info(
-                    alert_info=AlertInfo(),
-                    environment_common=GetEnvironmentCommonFactory().create_environment_manager(
-                        siemplify, environment_field_name, environment_regex_pattern
-                    ),
-                    device_product_field=device_product_field,
-                )
+                except Exception as e:
+                    siemplify.LOGGER.error(f"Failed to process alert {alert.alert_id}")
+                    siemplify.LOGGER.exception(e)
 
-                if is_overflowed(siemplify, alert_info, is_test_run):
-                    siemplify.LOGGER.info(
-                        f"{alert_info.rule_generator}-{alert_info.ticket_id}-{alert_info.environment}"
-                        f"-{alert_info.device_product} found as overflow alert. Skipping..."
-                    )
-                    # If is overflowed we should skip
-                    continue
+                    if is_test_run:
+                        raise
 
-                processed_alerts.append(alert_info)
-                siemplify.LOGGER.info(f"Alert {alert.alert_id} was created.")
+                siemplify.LOGGER.info(f"Finished processing alert {alert.alert_id}")
 
-            except Exception as e:
-                siemplify.LOGGER.error(f"Failed to process alert {alert.alert_id}")
-                siemplify.LOGGER.exception(e)
+            if stop_fetching or len(alerts) < fetch_limit:
+                # A short page means there are no more alerts in the window
+                break
 
-                if is_test_run:
-                    raise
-
-            siemplify.LOGGER.info(f"Finished processing alert {alert.alert_id}")
+            next_cursor = alerts[-1].last_sync_ms
+            if next_cursor <= last_sync_cursor:
+                # A full page within a single last_sync second (second-resolution
+                # ties) - the range start can't move, so page deeper with an offset.
+                # Never skip past the tie: rows beyond this page may be unseen.
+                # Tie ordering has no secondary sort key, so offsets are only
+                # meaningful within this run's back-to-back requests - do not carry
+                # the offset across runs. A row that shuffles out of view returns on
+                # its next last_sync rewrite; dedup absorbs the rest.
+                offset += len(alerts)
+            else:
+                last_sync_cursor = next_cursor
+                offset = 0
 
         if not is_test_run:
             siemplify.LOGGER.info("Saving existing ids.")
-            write_ids(siemplify, existing_ids)
-            save_timestamp(
-                siemplify=siemplify,
-                alerts=fetched_alerts,
-                timestamp_key="created_at_ms",
-            )
+            if len(existing_ids) > STORED_IDS_LIMIT:
+                siemplify.LOGGER.info(
+                    f"Alert ids cache exceeded {STORED_IDS_LIMIT} entries, oldest ids will be evicted. "
+                    f"If this repeats every run, duplicate cases are possible for re-synced alerts."
+                )
+            write_ids(siemplify, existing_ids, stored_ids_limit=STORED_IDS_LIMIT)
+
+            if watermark:
+                siemplify.LOGGER.info(f"Saving last_sync watermark: {watermark}")
+                siemplify.save_timestamp(new_timestamp=watermark)
+            else:
+                siemplify.LOGGER.info("Timestamp is not updated since no alerts were handled")
 
         siemplify.LOGGER.info(
             f"Alerts processed: {len(processed_alerts)} out of {len(fetched_alerts)}"
