@@ -29,6 +29,11 @@ def main():
             worksheet = sheet.worksheet(worksheet_name)
         else:
             worksheet = sheet.sheet1
+
+        if query_range and "!" not in query_range:
+            escaped_title = worksheet.title.replace("'", "''")
+            query_range = f"'{escaped_title}'!{query_range}"
+
         data = sheet.values_batch_get(query_range)
         siemplify.result.add_result_json(data)
 
