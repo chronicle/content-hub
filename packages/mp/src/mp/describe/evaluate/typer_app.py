@@ -75,6 +75,9 @@ def evaluate(  # ruff: ignore[too-many-arguments]
     add_prompt: Annotated[
         bool, typer.Option("--add-prompt", help="Include prompt info in generated report.")
     ] = False,
+    use_batch_api: Annotated[
+        bool, typer.Option("--use-batch-api", help="Use Google GenAI Batch API for rule evaluations.")
+    ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
 ) -> None:
@@ -121,6 +124,7 @@ def evaluate(  # ruff: ignore[too-many-arguments]
             ruleset=ruleset,
             action=action,
             add_prompt=add_prompt,
+            use_batch=use_batch_api,
         )
 
         if not output_path:
