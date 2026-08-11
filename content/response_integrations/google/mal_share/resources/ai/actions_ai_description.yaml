@@ -2,36 +2,37 @@ Enrich Hash:
   ai_description: >-
     ### General Description
 
-    Enriches File Hash entities using MalShare. This action queries the MalShare API
-    to retrieve detailed threat intelligence and analysis information for specific
-    file hashes, updating the entities with the findings.
+    Enriches file hash entities by searching for them in MalShare. It retrieves detailed
+    threat intelligence information about the hash and updates the entity within Google
+    SecOps with the findings.
 
 
     ### Flow Description
 
-    1. Iterates through all target entities provided in the case.
+    1. Iterates through the target entities provided to the action.
 
-    2. Filters the entities to process only those of type File Hash.
+    2. Filters the entities to process only those of type `FILEHASH`.
 
-    3. Makes a GET request to the MalShare API (`details` action) for each file hash
-    to retrieve analysis details.
+    3. For each valid file hash, makes a GET request to the MalShare API (`/api.php?action=details&hash={hash}`)
+    to retrieve hash details.
 
-    4. If data is found, updates the entity's additional properties with the retrieved
-    data, marks the entity as enriched and suspicious, and attaches a CSV table with
-    the results to the entity.
+    4. If information is found, it adds a CSV table with the results to the entity,
+    updates the entity's additional properties with the retrieved data, and marks
+    the entity as enriched and suspicious.
 
-    5. Updates the entities within the Google SecOps platform and returns the raw
-    JSON results.
+    5. Updates the modified entities in the Google SecOps platform.
+
+    6. Returns a JSON object containing the retrieved hash information.
 
 
     ### Additional Notes
 
-    Entities that are not found in MalShare are skipped and reported in the final
-    output message. Any errors encountered during the API request for a specific entity
-    will be logged, and the script will continue processing the remaining entities.
+    Entities that are not found in MalShare or encounter errors during the search
+    are skipped, and the action continues processing the remaining entities.
   ai_short_description: >-
-    Enriches File Hash entities by querying the MalShare API for threat intelligence
-    and analysis details.
+    Enriches file hash entities by querying the MalShare API for hash details, updating
+    the entities with the retrieved information, and marking them as enriched and
+    suspicious.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -43,11 +44,10 @@ Enrich Hash:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the MalShare API to fetch hash details (fetches_data=true).
-      It does not mutate external data or internal system data outside of standard
-      entity updates. It updates entities by modifying their additional properties,
-      setting is_enriched and is_suspicious to True, and calling siemplify.update_entities
-      (can_update_entities=true). It does not create insights or case comments.
+      The action fetches data from the MalShare API (fetches_data=true). It does not
+      mutate external data (can_mutate_external_data=false). It updates internal entities
+      by adding tables, updating properties, and setting flags (can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -99,9 +99,9 @@ Enrich Hash:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The script iterates over `siemplify.target_entities` and explicitly filters
-      them using the condition `if entity.entity_type == EntityTypes.FILEHASH:`. Therefore,
-      it targets File Hash entities and filters strictly by entity type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      the condition `entity.entity_type == EntityTypes.FILEHASH`. Therefore, it targets
+      FILEHASH entities and filters them by their entity_type attribute.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -117,10 +117,9 @@ Enrich Hash:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action queries MalShare for file hash details, returning threat intelligence
-      and analysis data. This perfectly matches the 'Enrich IOC' expected outcome.
-      It does not modify external systems, update alerts, or perform any other categorized
-      actions.
+      The action fetches threat intelligence data for file hashes from MalShare, which
+      aligns with the 'Enrich IOC' category. It does not mutate external data, update
+      alerts, or perform other categorized actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -135,32 +134,35 @@ Enrich Hash:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: There are no parameters for this action
+  parameters_description: There are no parameters for this action.
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the MalShare service to ensure the integration is configured
+    Tests connectivity to the MalShare service to ensure that the integration is configured
     correctly.
 
 
     ### Flow Description
 
-    1. Retrieves the API key and SSL verification settings from the integration configuration.
+    1. Retrieves the integration configuration parameters, including the API Key and
+    SSL verification settings.
 
-    2. Initializes the MalShareManager.
+    2. Initializes the MalShare API manager.
 
-    3. Makes a GET request to the MalShare API (`action=getlist`) to validate connectivity.
+    3. Makes a GET request to the MalShare API using the `getlist` action to validate
+    the provided credentials and network connectivity.
 
-    4. Returns a success message if the connection is established without errors.
+    4. Outputs a success message if the API responds without errors.
 
 
     ### Additional Notes
 
-    This action does not interact with any entities or alerts and is solely used for
-    verifying the integration's connection to the MalShare API.
+    This action does not process any entities or alerts and is solely used for diagnostic
+    purposes.
   ai_short_description: >-
-    Tests connectivity to the MalShare service by making a test API call.
+    Tests connectivity to the MalShare service by making a test API call to validate
+    credentials and network access.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -172,9 +174,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to test connectivity but does not fetch contextual
-      data for alerts/entities, mutate external data, mutate internal data, update
-      entities, create insights, modify alert data, or create case comments.
+      The action makes a GET request to the MalShare API to test connectivity. It
+      does not fetch contextual data for alerts, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -226,8 +228,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It solely tests connectivity to the external service.
+      The action does not process any entities. It only tests connectivity to the
+      external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -265,34 +267,32 @@ Upload File:
   ai_description: >-
     ### General Description
 
-    Uploads a specified file to MalShare for malware analysis and scanning. This action
-    submits a local file to the MalShare service and retrieves the subsequent analysis
-    details associated with the file's hash.
+    Uploads a specified file to MalShare for malware scanning and retrieves the analysis
+    results.
 
 
     ### Flow Description
 
     1. Retrieves the `File Path` from the action parameters.
 
-    2. Initiates a POST request to the MalShare API (`/api.php?action=upload`) to
-    upload the file.
+    2. Makes a POST request to the MalShare API to upload the file for analysis.
 
-    3. If the upload is successful, extracts the file hash from the response.
+    3. Extracts the file hash from the upload response and makes a GET request to
+    the MalShare API to retrieve the analysis details.
 
-    4. Initiates a GET request to the MalShare API (`/api.php?action=details`) to
-    retrieve the scan details for the uploaded file hash.
+    4. Formats the retrieved hash information into a CSV table and attaches it to
+    the action results.
 
-    5. Attaches the scan results as a JSON object and a CSV table to the action results.
+    5. Returns the analysis details as a JSON object.
 
 
     ### Additional Notes
 
-    The action relies on a local file path accessible to the execution environment.
-    The action will return the hash details even if the file is still pending full
-    analysis on MalShare's side.
+    The action immediately fetches the hash details after uploading. If the file requires
+    extensive analysis, the returned results may indicate a pending status.
   ai_short_description: >-
-    Uploads a specified file to MalShare for scanning and retrieves the resulting
-    analysis details.
+    Uploads a file to MalShare for malware analysis and retrieves the resulting scan
+    details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -305,10 +305,9 @@ Upload File:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to upload a file to MalShare, which mutates
-      external data by adding the file to their database. It also fetches the resulting
-      scan data via a GET request. It does not update internal entities, create insights,
-      or modify alert data.
+      The action makes a POST request to upload a file to MalShare (mutating external
+      data) and a GET request to fetch the scan results (fetching data). It does not
+      update entities, create insights, or modify internal SecOps data.
   entity_usage:
     entity_types:
       address: false
@@ -360,9 +359,9 @@ Upload File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the 'File Path' parameter provided in the action configuration.
-      Therefore, it does not run on entities and all entity-related flags are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity types as input parameters. It operates solely on a file path provided
+      as a string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -378,8 +377,8 @@ Upload File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action uploads a file to MalShare (an analysis engine) and returns the behavior/scan
-      report. This directly aligns with the 'Submit File' expected outcome.
+      The action uploads a file to MalShare (an analysis engine) and returns the scan
+      details, which directly matches the 'Submit File' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

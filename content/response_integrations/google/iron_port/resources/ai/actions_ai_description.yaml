@@ -2,33 +2,37 @@ Get All Recipients By Sender:
   ai_description: >-
     ### General Description
 
-    Gets a list of recipients who received emails from a given sender using Cisco
-    IronPort.
+    Retrieves a list of recipients who received emails from a specified sender using
+    Cisco IronPort. This action queries the IronPort message tracking API to find
+    all messages originating from the given sender within a defined time frame and
+    extracts the recipient addresses.
 
 
     ### Flow Description
 
-    1. Initializes the connection to the Cisco IronPort API.
+    1. Initializes the connection to the Cisco IronPort API using the provided credentials.
 
-    2. Calculates the search time frame based on the provided parameters.
+    2. Calculates the search time window based on the `Search Emails for Last X` and
+    `Set Search Email Period in` parameters.
 
-    3. Makes a GET request to the IronPort API (`message-tracking/messages`) to fetch
-    messages filtered by the specified sender.
+    3. Iteratively sends GET requests to the IronPort `message-tracking/messages`
+    endpoint to fetch pages of messages matching the specified sender.
 
-    4. Iterates through the fetched messages and extracts the recipient email addresses.
+    4. Extracts and aggregates the recipient email addresses from the retrieved messages,
+    respecting the `Max Recipients to Return` limit.
 
-    5. Handles pagination to fetch all relevant messages up to the specified limit.
-
-    6. Returns the list of recipients as a JSON result.
+    5. Returns the aggregated list of recipients as a JSON object and completes the
+    action.
 
 
     ### Additional Notes
 
-    For this action to work, please make sure that message tracking is enabled in
-    IronPort, along with the AsyncOS API.
+    This action runs asynchronously to handle large volumes of messages and prevent
+    timeouts. Ensure that message tracking and the AsyncOS API are enabled in IronPort
+    for this action to function correctly.
   ai_short_description: >-
-    Gets a list of recipients who received emails from a given sender using Cisco
-    IronPort.
+    Retrieves a list of recipients who received emails from a specific sender within
+    a given time frame using Cisco IronPort.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,9 +44,9 @@ Get All Recipients By Sender:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from the IronPort API (messages and recipients). It
-      does not mutate external data, nor does it update internal entities, create
-      insights, or modify alerts.
+      The action fetches message data from the IronPort API using a GET request. It
+      does not mutate external data, update internal entities, create insights, or
+      modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -94,8 +98,9 @@ Get All Recipients By Sender:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses the 'Sender' parameter to search
-      for emails and extract recipients.
+      The action does not iterate over target entities nor does it accept entity identifiers
+      as input parameters. It operates solely based on the provided 'Sender' string
+      parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -111,8 +116,9 @@ Get All Recipients By Sender:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for emails based on a sender address to retrieve a list
-      of recipients. This aligns with the 'Search Email' category.
+      The action queries the mail server (IronPort) to identify emails based on a
+      specific sender and extracts the recipients. This aligns with the 'Search Email'
+      expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -152,37 +158,36 @@ Get All Recipients By Subject:
     ### General Description
 
     Retrieves a list of all recipients who received an email with a specific subject
-    from Cisco IronPort. This action is useful for identifying the scope of an email-based
-    threat or communication.
+    from Cisco IronPort.
 
 
     ### Flow Description
 
-    1. Initializes the connection to the Cisco IronPort AsyncOS API.
+    1. Initializes the connection to the Cisco IronPort AsyncOS API using the provided
+    credentials.
 
-    2. Calculates the search time range based on the `Search Emails for Last X` and
-    `Set Search Email Period in` parameters.
+    2. Calculates the search time frame based on the 'Search Emails for Last X' and
+    'Set Search Email Period in' parameters.
 
-    3. Makes a GET request to the IronPort API (`message-tracking/messages` endpoint)
-    to fetch messages matching the provided `Subject` within the calculated time range.
+    3. Iteratively fetches pages of messages matching the specified subject within
+    the calculated time frame.
 
-    4. Iterates through the paginated API responses, extracting the recipient email
-    addresses from each matching message.
+    4. Extracts the recipients from the fetched messages and aggregates them into
+    a list.
 
-    5. Aggregates the unique recipients up to the `Max Recipients to Return` limit.
+    5. Handles pagination and script timeouts, saving the current state if necessary
+    to continue fetching in subsequent asynchronous runs.
 
-    6. Returns the final list of recipients as a JSON result.
+    6. Returns the aggregated list of recipients as a JSON result.
 
 
     ### Additional Notes
 
-    This is an asynchronous action designed to handle large volumes of messages by
-    paginating through results across multiple execution cycles to prevent timeouts.
-    For this action to function correctly, message tracking and the AsyncOS API must
-    be enabled on the IronPort appliance.
+    For this action to work, message tracking must be enabled in IronPort, along with
+    the AsyncOS API.
   ai_short_description: >-
-    Searches Cisco IronPort for emails matching a specific subject and returns a list
-    of all recipients who received those emails.
+    Retrieves a list of all recipients who received an email with a specific subject
+    from Cisco IronPort.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -194,9 +199,9 @@ Get All Recipients By Subject:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches message tracking data from the IronPort API (fetches_data=true).
-      It does not perform any state-changing operations on external systems, nor does
-      it mutate internal SecOps data, update entities, or create insights.
+      The action makes GET requests to the IronPort API to fetch messages and extract
+      recipients. It does not mutate external data, update internal entities, or create
+      insights.
   entity_usage:
     entity_types:
       address: false
@@ -248,8 +253,9 @@ Get All Recipients By Subject:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses the explicitly provided 'Subject'
-      parameter to perform the search, rather than iterating over `siemplify.target_entities`.
+      The action does not process or iterate over `siemplify.target_entities`, nor
+      does it accept any entity identifiers as input parameters. It relies solely
+      on a string parameter ('Subject') to query the external system.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -265,9 +271,8 @@ Get All Recipients By Subject:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches the IronPort mail server for emails matching a specific
-      subject to extract their recipients. This aligns with the 'Search Email' outcome
-      category.
+      The action searches for emails matching a specific subject to extract their
+      recipients. This directly aligns with the 'Search Email' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -287,80 +292,73 @@ Get All Recipients By Subject:
 
     | --- | --- | --- | --- |
 
-    | Subject | String | Yes | The subject of the email to filter by. |
+    | Subject | String | Yes | The subject to filter by |
 
     | Search Emails for Last X | String | Yes | Specify a time frame for which to
     search for emails. Note that this value should be set accordingly to the amount
-    of emails processed by Ironport; if a very large value is provided, the action
-    can time out. |
+    of emails processed by Ironport, if big enough value will be provided action can
+    time out. |
 
-    | Set Search Email Period in | Dropdown | Yes | Specify if the search email period
-    should be evaluated in Days or Hours. |
+    | Set Search Email Period in | Choice | Yes | Specify if search emails should
+    be done with the period of days or hours. |
 
-    | Max Recipients to Return | String | No | Specify the maximum number of unique
-    recipients the action should return. |
+    | Max Recipients to Return | String | No | Specify how many recipients action
+    should return. |
 
     | Page Size | String | No | Specify the page size for the action to use when searching
-    for emails via the API. |
+    for emails. |
 Get Report:
   ai_description: >-
-    Fetches specific Ironport report information based on the selected report type
-    and time frame. Depending on the report type, the action can operate on specific
-    entities (User, IP Address, Hostname) to enrich them with the retrieved report
-    data, or it can run without entities to simply retrieve general report statistics.
+    ### General Description
+
+    Fetches specific Ironport report information from Cisco IronPort. Depending on
+    the selected report type, it can run on User, Address, or Hostname entities to
+    enrich them with report data, or it can run without entities to retrieve general
+    report data.
 
 
     ### Flow Description
 
-    1. Extracts the integration configurations and action parameters, including the
-    report type and time frame.
+    1. Initializes the IronPort API client with the provided credentials.
 
-    2. Determines the applicable entity types based on the selected report type (e.g.,
-    User for `mail_users_detail`, IP Address and Hostname for `mail_sender_ip_hostname_detail`).
+    2. Determines the applicable entity types based on the selected report type.
 
-    3. Filters the target entities to match the applicable entity types.
+    3. Fetches the report data from IronPort for the specified time frame and limit
+    via a GET request.
 
-    4. Calls the Ironport API (`/reporting/{report_type}`) to fetch the requested
-    report data for the specified time frame.
+    4. If entities are applicable, filters the retrieved reports by entity identifier,
+    enriches the entities with the report data, and attaches an entity-specific data
+    table.
 
-    5. If no applicable entities are found, outputs the retrieved reports as a general
-    data table.
-
-    6. If applicable entities are found, filters the retrieved reports to match each
-    entity's identifier.
-
-    7. Attaches an entity-specific data table with the matching report data and modifies
-    the entity's additional properties in memory.
+    5. If no entities are applicable, attaches a general data table containing the
+    report results.
 
 
     ### Additional Notes
 
-    - The `mail_sender_ip_hostname_detail` and `mail_incoming_ip_hostname_detail`
-    reports work with IP Address or Hostname entities.
-
-    - The `mail_users_detail` report works with User entities (using their email address).
-
-    - Other report types work independently of entities and will return general data
-    tables.
+    Supported entity types include User, Address, and Hostname. The `mail_sender_ip_hostname_detail`
+    and `mail_incoming_ip_hostname_detail` reports work based on Address or Hostname
+    entities, while `mail_users_detail` works on User entities. Other reports work
+    without entities.
   ai_short_description: >-
-    Fetches specific Ironport report information and optionally enriches associated
-    User, IP Address, or Hostname entities with the retrieved data.
+    Fetches specific Ironport report information from Cisco IronPort and enriches
+    applicable entities with the retrieved data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
     can_mutate_internal_data: false
-    can_update_entities: false
+    can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the Ironport API to fetch report data
-      (fetches_data=true). It does not mutate external data. While it modifies entity
-      objects in memory (updating additional_properties and is_enriched), it does
-      not call `siemplify.update_entities` to save these changes to the platform,
-      so can_update_entities is false. It does not create insights or case comments.
+      The action fetches report data from the IronPort API using a GET request (fetches_data=true).
+      It does not mutate any external data. It updates the internal entities by adding
+      the report data to their additional_properties and setting is_enriched to True
+      (can_update_entities=true). It does not create insights, modify alert data,
+      or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -412,9 +410,10 @@ Get Report:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action determines applicable entity types based on the selected report type
-      (User, Address, Hostname) and filters `siemplify.target_entities` by checking
-      if `entity.entity_type` is in the applicable types.
+      The action iterates over `siemplify.target_entities` and filters them based
+      on `entity.entity_type`. The allowed entity types are determined dynamically
+      based on the selected report type, mapping to User, Address, and Hostname entities.
+      Therefore, it targets these specific entity types and filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -430,10 +429,9 @@ Get Report:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches report data from Ironport. For IP and Hostname entities,
-      it retrieves sender/incoming details, aligning with 'Enrich IOC' and 'Enrich
-      Asset'. For User entities, it retrieves user email details, aligning with 'Enrich
-      Asset'. It does not mutate external data or perform containment/remediation.
+      The action fetches report data from IronPort and uses it to enrich User, Address,
+      and Hostname entities. This aligns with both 'Enrich IOC' (for IP addresses
+      and hostnames) and 'Enrich Asset' (for users and hostnames) expected outcomes.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -453,47 +451,46 @@ Get Report:
 
     | --- | --- | --- | --- |
 
-    | Report Type | Dropdown | Yes | The type of the report to fetch. Note: mail_sender_ip_hostname_detail
+    | Report Type | String | Yes | The type of the report to fetch. Note: mail_sender_ip_hostname_detail
     and mail_incoming_ip_hostname_detail reports work based on Siemplify IP or Host
-    entities;  mail_users_detail works on Siemplify User entity (with email address).
+    entities; mail_users_detail works on Siemplify User entity (with email address).
     Other reports are working without Siemplify entities. |
 
     | Search Reports Data for Last X Days | String | Yes | Specify a time frame in
     days for which to search for reports data. By default is set to last 7 days. |
 
-    | Max Records to Return | String | Yes | Specify a time frame in days for which
-    to search for reports data. By default is set to last 7 days. |
+    | Max Records to Return | String | Yes | Specify the maximum number of records
+    to return. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the IronPort server using the provided integration configuration
-    parameters. This action ensures that the credentials and network settings are
-    correct and that the SOAR platform can successfully communicate with the IronPort
-    API.
+    Tests connectivity to the Cisco IronPort server to ensure the integration is configured
+    correctly and authentication is successful.
 
 
     ### Flow Description
 
-    1. Extracts integration-level configuration parameters (e.g., Server Address,
-    Port, Username, Password).
+    1. Extracts the integration configuration parameters (Server Address, Port, Username,
+    Password, SSL settings, etc.).
 
-    2. Initializes the `IronportManagerAPI` client with the extracted parameters.
+    2. Initializes the IronPort API manager.
 
-    3. Makes an API call to authenticate and verify connectivity to the IronPort server.
+    3. Attempts to authenticate and retrieve a JWT token from the IronPort server
+    via a POST request to the login endpoint.
 
-    4. Returns a successful execution state if the connection is established, or a
-    failed state with an error message if the connection fails.
+    4. Returns a success message if the connection and authentication are successful,
+    or an error message if they fail.
 
 
     ### Additional Notes
 
-    This action does not require any specific entities or action-level parameters
-    to run. It is typically used during the initial setup or troubleshooting of the
-    IronPort integration.
+    This action is typically used for troubleshooting and verifying integration settings.
+    It does not require any action-specific parameters as it relies entirely on the
+    integration's configuration.
   ai_short_description: >-
-    Tests connectivity to the IronPort server to verify that the integration is configured
-    correctly and can communicate with the API.
+    Tests connectivity to the Cisco IronPort server to ensure the integration is configured
+    correctly and authentication is successful.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -505,9 +502,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only tests connectivity to the IronPort server. It does not fetch
-      contextual data for alerts/entities, mutate external or internal data, update
-      entities, or create insights/comments.
+      The action only attempts to authenticate to the IronPort server to verify connectivity.
+      It does not fetch contextual data, mutate external or internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -559,8 +556,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely relies on
-      integration configuration parameters to test connectivity.
+      The action does not process any entities. It only uses integration configuration
+      parameters to test connectivity to the external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -577,8 +574,8 @@ Ping:
     get_alert_information: false
     reasoning: >-
       The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, mutating external data,
-      or updating alerts.
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

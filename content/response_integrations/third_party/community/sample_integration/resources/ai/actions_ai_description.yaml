@@ -2,36 +2,39 @@ Async Action Example:
   ai_description: >-
     ### General Description
 
-    This asynchronous action monitors specified cases in Google SecOps and waits until
-    they are assigned a specific tag. It is designed to pause a playbook's execution
-    until a manual or automated tagging event occurs on the target cases.
+    This action is an asynchronous utility that pauses execution until specified cases
+    in Google SecOps are assigned a specific tag. It is designed to wait for a condition
+    to be met (the presence of a tag) before completing successfully, making it useful
+    for coordinating workflows that depend on manual analyst input or other automated
+    processes.
 
 
     ### Flow Description
 
-    1. Extracts the provided `Case IDs` or defaults to the current case ID if none
-    are provided.
+    1. Extracts the provided `Case IDs` and the `Case Tag To Wait For`. If no Case
+    IDs are provided, it defaults to the current case ID.
 
-    2. Retrieves the case overview details for each case using the internal SecOps
-    API (`get_case_overview_details`).
+    2. Fetches the case overview details for each specified case using the internal
+    SOAR API (`get_case_overview_details`).
 
-    3. Checks if the specified tag (`Case Tag To Wait For`) is present in the case's
-    tags.
+    3. Evaluates whether the target tag is present in the retrieved case tags.
 
-    4. If all cases have the required tag, the action completes successfully.
+    4. If all specified cases have the required tag, the action completes successfully
+    and outputs a success message.
 
-    5. If any cases are missing the tag, the action suspends itself and waits for
-    the next asynchronous iteration to check again, continuing until the timeout is
-    reached.
+    5. If any cases are missing the tag, the action suspends itself (returns an `IN_PROGRESS`
+    state) and will re-check the missing cases in the next asynchronous iteration
+    until the timeout is reached.
 
 
     ### Additional Notes
 
-    This action is asynchronous and will consume execution time until the condition
-    is met or the timeout threshold is reached.
+    This is an asynchronous action. It does not interact with external third-party
+    systems but relies entirely on internal Google SecOps case data.
   ai_short_description: >-
-    This asynchronous action monitors specified cases in Google SecOps and pauses
-    playbook execution until a specific tag is added to all target cases.
+    Asynchronously waits until specified cases in Google SecOps are assigned a specific
+    tag, suspending execution and re-checking periodically until the condition is
+    met or a timeout occurs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -43,11 +46,11 @@ Async Action Example:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action reads internal case data using `get_case_overview_details` to check
-      for tags, but it does not fetch external contextual data (`fetches_data`=false).
-      It does not mutate any external systems (`can_mutate_external_data`=false) or
-      internal systems (`can_mutate_internal_data`=false). It does not update entities,
-      create insights, modify alert data, or create case comments.
+      The action fetches internal case data using `get_case_overview_details` but
+      does not fetch contextual data from an external tool (fetches_data=false). It
+      does not mutate external data, nor does it mutate internal data (it only reads
+      case tags). It does not update entities, create insights, modify alert data,
+      or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -99,10 +102,8 @@ Async Action Example:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      operates exclusively on Case IDs provided via parameters or the current case
-      ID. Therefore, it does not run on entities and all entity-related flags are
-      false.
+      The action does not iterate over `target_entities` nor does it accept any entity
+      identifiers as input parameters. It operates exclusively on Case IDs.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -118,10 +119,9 @@ Async Action Example:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action's sole purpose is to wait asynchronously for a specific tag to be
-      applied to a case within Google SecOps. It does not enrich IOCs/assets, mutate
-      alerts, interact with external ticketing systems, modify blocklists/allowlists,
-      or perform any other operations that match the defined outcome categories.
+      The action is an internal utility that waits for a case tag to be applied. It
+      does not interact with external systems, enrich IOCs/assets, modify alerts,
+      or perform any of the specific operations defined in the outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -151,51 +151,47 @@ Enrich Entity Action Example:
   ai_description: >-
     ### General Description
 
-    Enriches specified entities within Google SecOps. This action processes entities
-    based on the selected entity type parameter and appends a timestamp and an enrichment
-    flag to their data. It serves as a sample action to demonstrate entity enrichment
-    and does not make external API calls.
+    Enriches selected entities with sample data. This action serves as an example
+    of how to process and enrich entities within Google SecOps without interacting
+    with external APIs.
 
 
     ### Flow Description
 
-    1. Extracts and validates the `Entity Type` parameter.
+    1. Extracts the target entity type from the action parameters.
 
-    2. Filters the target entities in the alert scope based on the selected entity
-    type.
+    2. Iterates over the eligible entities in the alert scope based on the selected
+    entity type.
 
-    3. Iterates over the eligible entities and generates enrichment data containing
-    a timestamp and an `enriched` status.
+    3. Generates sample enrichment data (timestamp and enriched status) for each entity.
 
-    4. Updates the entities with the generated enrichment data and creates a data
-    table for each processed entity.
-
-    5. Returns a success message detailing the enriched entities or a failure message
-    if no eligible entities were found.
+    4. Attaches the generated data as an entity insight and updates the entity within
+    the platform.
 
 
     ### Additional Notes
 
-    This is a sample action demonstrating entity enrichment and does not interact
-    with any external services or APIs.
+    This is a sample action intended for demonstration purposes and does not fetch
+    data from any external services.
   ai_short_description: >-
-    Enriches specified entities by appending a timestamp and an enrichment flag to
-    their data.
+    Enriches selected entities with sample data and attaches the results as entity
+    insights.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: false
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates entities with sample enrichment data and attaches insights.
     reasoning: >-
-      The action generates a local timestamp and enrichment flag without fetching
-      data from external sources (`fetches_data` is false). It does not mutate external
-      data. It updates internal entities with the enrichment data and creates data
-      tables which are used by the base `EnrichAction` to create insights.
+      The action does not fetch data from an external API; it generates sample data
+      internally. It does not mutate external data. It mutates internal data by updating
+      entities and creating insights (handled by the underlying EnrichAction base
+      class).
   entity_usage:
     entity_types:
       address: true
@@ -247,11 +243,11 @@ Enrich Entity Action Example:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` using the `EnrichAction`
-      base class. It filters the entities based on the 'Entity Type' parameter, which
-      can be set to specific types (IP, Hash, User) or 'All Entities'. Because 'All
-      Entities' is supported and is the default, the action can run on all entity
-      types. It explicitly filters by the `entity_type` attribute.
+      The action iterates over entities and filters them based on the 'Entity Type'
+      parameter. The parameter allows selecting specific types (IP, Hash, User) or
+      'All Entities'. Because 'All Entities' maps to all supported EntityTypesEnum
+      values, the action is capable of processing all entity types. It filters the
+      entities strictly by their 'entity_type' attribute.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -262,16 +258,15 @@ Enrich Entity Action Example:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
+    enrich_asset: true
+    enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a sample that appends a local timestamp to entities. It does not
-      interact with any external threat intelligence, ITSM, or security control systems,
-      and therefore does not match any of the specific outcome categories like Enrich
-      IOC or Enrich Asset which require returning contextual metadata or threat intelligence
-      from an external source.
+      The action generates sample enrichment data and attaches it to entities. Since
+      it can run on IOCs (like IP and Hash) and Assets (like User and Hostname), it
+      matches both the 'Enrich IOC' and 'Enrich Asset' expected outcomes. It does
+      not interact with external systems to mutate data or perform containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -292,31 +287,32 @@ Enrich Entity Action Example:
     | --- | --- | --- | --- |
 
     | Entity Type | String | Yes | Defines what entities from the scope of the alert
-    should be processed. Supported values are All Entities, IP, Hash, User. |
+    should be processed. Supported values: All Entities, IP, Hash, User. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Use the Ping action to test the connectivity to the API Service.
+    Tests the connectivity to the API Service.
 
 
     ### Flow Description
 
-    1. The action initializes the API client using the provided integration configuration
-    parameters.
+    1. Initializes the API client using the integration's configuration parameters.
 
-    2. It executes a connectivity test by calling the API Service.
+    2. Executes a connectivity test via the API client.
 
-    3. If successful, it returns a success message; otherwise, it returns an error
-    message.
+    3. Returns a success message if the connection is established, otherwise returns
+    an error message.
 
 
     ### Additional Notes
 
-    This action is typically used to verify that the integration is configured correctly
-    and can communicate with the external service.
+    This action is primarily used for diagnostic purposes to verify that the integration
+    is correctly configured and can successfully communicate with the external API
+    Service.
   ai_short_description: >-
-    Use the Ping action to test the connectivity to the API Service.
+    Tests the connectivity to the API Service to ensure the integration is configured
+    correctly and can communicate with the external service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -328,9 +324,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only tests connectivity to the API service. It does not fetch contextual
+      The action only tests connectivity to an external API. It does not fetch contextual
       data, mutate external or internal data, update entities, create insights, modify
-      alert data, or create case comments.
+      alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -382,8 +378,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It only tests connectivity
-      to the API service. Therefore, all entity types and filters are set to false.
+      The action does not operate on any entities. It does not iterate over `target_entities`
+      or accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -399,10 +395,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) to the API service. It does
-      not enrich IOCs/assets, update alerts, manage tickets, modify blocklists/allowlists,
-      manage identities, contain hosts, search events, execute commands, manage files,
-      or handle emails. Therefore, it does not match any of the expected outcome categories.
+      The action is a simple connectivity test (ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -422,31 +417,30 @@ Simple Action Example:
   ai_description: >-
     ### General Description
 
-    Fetches historical or current exchange rate data from the vatcomply.com API based
-    on specified currencies and time frames. The action retrieves the data and formats
-    it into data tables and case wall links for analyst review.
+    Retrieves exchange rate data from the api.vatcomply.com service based on specified
+    currencies and time frames. This action fetches financial data and attaches the
+    results to the case wall.
 
 
     ### Flow Description
 
-    1. Validates and extracts the provided currency and time frame parameters.
+    1. Extracts and validates the provided currency and time frame parameters.
 
-    2. Makes an HTTP GET request to the vatcomply.com API to retrieve exchange rates
-    for the specified dates and currencies.
+    2. Makes an API call (GET request) to the api.vatcomply.com service to fetch the
+    exchange rates for the specified dates and currencies.
 
-    3. Formats the retrieved data into data tables and case wall links.
+    3. Generates data tables and case wall links for the retrieved rates.
 
-    4. Optionally attaches the raw JSON response to the current case.
+    4. Optionally attaches the raw JSON results to the current case as a file attachment.
 
 
     ### Additional Notes
 
-    This action does not operate on Google SecOps entities and relies entirely on
-    the provided input parameters.
+    This action does not operate on Google SecOps entities and does not mutate any
+    external or internal state.
   ai_short_description: >-
-    Fetches historical or current exchange rate data from the vatcomply.com API based
-    on specified currencies and time frames, returning the results as data tables
-    and case attachments.
+    Retrieves exchange rate data from the api.vatcomply.com service based on specified
+    currencies and time frames.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -458,10 +452,10 @@ Simple Action Example:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to an external API (vatcomply.com) to fetch exchange
-      rate data, meaning it fetches data. It does not perform any state-changing operations
-      (POST/PUT/DELETE) on external systems. It does not update entities, create insights,
-      modify alert data, or create case comments.
+      The action makes a GET request to fetch exchange rate data (fetches_data=true).
+      It does not mutate external data, update internal entities, create insights,
+      modify alert data, or create case comments. It only adds data tables, links,
+      and attachments to the case wall.
   entity_usage:
     entity_types:
       address: false
@@ -513,10 +507,8 @@ Simple Action Example:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action explicitly states in its description that it DOES NOT work with Google
-      SecOps Entities. The code does not iterate over `siemplify.target_entities`
-      or apply any entity-based filtering. Therefore, all entity type and filter flags
-      are set to false.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity-related input parameters. It operates entirely independently of entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -532,10 +524,9 @@ Simple Action Example:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches exchange rate data from a public API. It does not enrich
-      security indicators (IOCs) or assets, nor does it interact with alerts, tickets,
-      blocklists, identities, endpoints, or emails. Therefore, it does not match any
-      of the predefined security outcome categories.
+      The action fetches financial exchange rates from an external API. This does
+      not align with any of the standard security outcome categories such as enriching
+      IOCs, updating alerts, or containing hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

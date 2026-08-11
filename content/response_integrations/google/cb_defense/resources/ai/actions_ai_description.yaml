@@ -2,32 +2,36 @@ Change Policy:
   ai_description: >-
     ### General Description
 
-    Changes the policy assigned to a device in Carbon Black Defense based on IP Address
-    or Hostname entities. This action allows analysts to dynamically reassign endpoints
+    Changes the policy assigned to a device in Carbon Black Defense based on IP address
+    or hostname entities. This action allows analysts to dynamically reassign endpoints
     to different security policies for remediation or management purposes.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities and filters for IP Address and Hostname
-    entity types.
+    1. Iterates over the target entities provided in the case.
 
-    2. For each valid entity, queries the Carbon Black Defense API (`/integrationServices/v3/device`)
-    to retrieve the associated device data.
+    2. Filters the entities to process only IP Addresses (`ADDRESS`) and Hostnames
+    (`HOSTNAME`).
 
-    3. Extracts the device ID from the retrieved data.
+    3. For each valid entity, makes a GET request to the Carbon Black Defense API
+    to fetch the associated device data and retrieve the internal device ID.
 
-    4. Makes an API call to Carbon Black Defense to update the device's assigned policy
-    to the specified `Policy Name`.
+    4. If a device is found, makes a state-changing API call to update the device's
+    assigned policy to the one specified in the `Policy Name` parameter.
+
+    5. Aggregates the results and returns a summary of successful, missing, and failed
+    entity updates.
 
 
     ### Additional Notes
 
-    If no device is found for a given entity in Carbon Black Defense, the action will
-    skip that entity and report it as missing in the final output.
+    The `Policy Name` provided must exactly match an existing policy in Carbon Black
+    Defense. If no device is found for a given IP or hostname, the action will skip
+    the entity and report it as missing.
   ai_short_description: >-
-    Changes the policy assigned to a device in Carbon Black Defense based on IP Address
-    or Hostname entities.
+    Changes the policy assigned to a device in Carbon Black Defense based on IP address
+    or hostname entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,10 +44,11 @@ Change Policy:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches device data from Carbon Black Defense using the entity identifier
-      (fetches_data=true). It then updates the policy of the device in the external
-      system (can_mutate_external_data=true). It does not modify internal SecOps data,
-      update entities, or create insights.
+      The action fetches device data from Carbon Black Defense to resolve the device
+      ID (fetches_data=true). It then uses the device ID to update the device's policy
+      in Carbon Black Defense (can_mutate_external_data=true). It does not modify
+      internal SecOps data, update entities, create insights, modify alerts, or create
+      case comments.
   entity_usage:
     entity_types:
       address: true
@@ -95,10 +100,10 @@ Change Policy:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and checks if `entity.entity_type
-      not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes `EntityTypes.ADDRESS`
-      and `EntityTypes.HOSTNAME`. Thus, it targets Address and Hostname entities and
-      filters by entity_type.
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      them using `if entity.entity_type not in SUPPORTED_ENTITIES:`, where `SUPPORTED_ENTITIES`
+      is defined as `[EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`. Thus, it targets
+      Address and Hostname entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -115,9 +120,10 @@ Change Policy:
     get_alert_information: false
     reasoning: >-
       The action changes the policy of a device in Carbon Black Defense. While this
-      could potentially be used to apply a stricter policy (like containment), it
-      is a generic device management action and does not strictly match any of the
-      predefined outcome categories such as Contain Host or Add IOC to Blocklist.
+      could theoretically be used to apply a restrictive policy (similar to containment),
+      it is a generic endpoint management action and does not strictly align with
+      the specific expected outcomes of 'Contain Host' or 'Add IOC To Blocklist'.
+      Therefore, it does not match any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -137,39 +143,37 @@ Change Policy:
 
     | --- | --- | --- | --- |
 
-    | Policy Name | String | Yes | The new policy name to assign to the device (e.g.,
-    TEST_Policy). |
+    | Policy Name | String | Yes | The new policy name. e.g. TEST_Policy |
 Create Policy:
   ai_description: >-
     ### General Description
 
-    Creates a new policy in Carbon Black Defense. This action allows users to define
-    and deploy a new security policy by providing its name, description, priority
-    level, and specific configuration details.
+    Creates a new policy in Carbon Black Defense using the provided policy details,
+    name, description, and priority level. This action initiates a state change on
+    the external Carbon Black Defense platform by configuring a new security policy.
 
 
     ### Flow Description
 
-    1. Extracts the policy name, description, priority level, and policy details from
-    the action parameters.
+    1. Extracts the necessary configuration and action parameters, including the policy
+    name, description, priority level, and details.
 
-    2. Parses the 'Policy Details' parameter as a JSON object.
+    2. Parses the 'Policy Details' parameter from a string into a valid JSON object.
 
     3. Establishes a connection to the Carbon Black Defense API.
 
-    4. Makes a POST request to the `/integrationServices/v3/policy/` endpoint with
-    the provided policy configuration to create the new policy.
+    4. Makes a POST request to the `/integrationServices/v3/policy/` endpoint to create
+    the new policy with the specified configuration.
 
-    5. Returns the newly created policy ID upon successful execution.
+    5. Retrieves the newly created Policy ID and returns it as the action's result.
 
 
     ### Additional Notes
 
-    The 'Policy Details' parameter must be a valid JSON string representing the policy
-    configuration expected by the Carbon Black Defense API.
+    The 'Policy Details' parameter must be provided as a valid JSON string, otherwise
+    the action will fail during the parsing stage.
   ai_short_description: >-
-    Creates a new policy in Carbon Black Defense using the provided policy details
-    and configuration.
+    Creates a new security policy in Carbon Black Defense.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -178,13 +182,14 @@ Create Policy:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new policy in Carbon Black Defense.
+      Creates a new security policy in the Carbon Black Defense platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Carbon Black Defense API to create a
-      new policy, which mutates external data. It does not fetch enrichment data,
-      update internal entities, modify alert data, or create insights.
+      new policy, which mutates external data. It does not fetch contextual data for
+      enrichment, nor does it mutate internal SecOps data, update entities, create
+      insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -236,8 +241,9 @@ Create Policy:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It relies solely on
-      the provided action parameters to create a policy in the external system.
+      The action does not process `siemplify.target_entities` and does not accept
+      any input parameters that represent entities. It operates entirely on policy
+      configuration data.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -253,9 +259,10 @@ Create Policy:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a new policy in Carbon Black Defense. This administrative
-      operation does not align with any of the predefined outcome categories such
-      as enriching IOCs, containing hosts, managing tickets, or updating alerts.
+      The action creates a new security policy in Carbon Black Defense. This does
+      not match any of the specific expected outcomes such as enriching an IOC, blocking
+      an IP, containing a host, or creating a ticket. Therefore, all outcome category
+      flags are false.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -282,26 +289,28 @@ Create Policy:
     | Priority Level | String | Yes | The priority score associated with sensors assigned
     to this policy. e.g. LOW |
 
-    | Policy Details | String | Yes | The policy details. This must be a valid JSON
-    string representing the policy configuration. |
+    | Policy Details | String | Yes | The policy details (must be a valid JSON string)
+    |
 Delete Policy:
   ai_description: >-
     ### General Description
 
-    Deletes a specific policy from Carbon Black Defense.
+    Deletes a specified policy from Carbon Black Defense.
 
 
     ### Flow Description
 
-    1. Connects to the Carbon Black Defense API.
+    1. Extracts the policy name from the action parameters.
 
-    2. Retrieves the list of all available policies to find the ID associated with
-    the provided `Policy Name`.
+    2. Connects to the Carbon Black Defense API.
 
-    3. Sends an HTTP DELETE request to the Carbon Black Defense API to remove the
-    specified policy.
+    3. Retrieves the policy ID associated with the provided policy name via an API
+    GET request.
 
-    4. Returns a success or failure message based on the API response.
+    4. Sends an HTTP DELETE request to the Carbon Black Defense API to remove the
+    policy.
+
+    5. Returns a success or failure message based on the API response.
 
 
     ### Additional Notes
@@ -318,14 +327,13 @@ Delete Policy:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes a specified policy from the Carbon Black Defense platform.
+      Deletes a specified policy from Carbon Black Defense.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes an HTTP DELETE request to the Carbon Black Defense API to remove
-      a policy, which mutates external data. It does not fetch contextual data for
-      entities, nor does it mutate internal SOAR data, update entities, or create
-      insights.
+      a policy, which mutates external data. It does not fetch enrichment data, update
+      internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -377,8 +385,8 @@ Delete Policy:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It relies solely on the provided 'Policy
-      Name' parameter to execute the deletion.
+      The action does not process any entities. It only takes a policy name as an
+      input parameter to delete a policy in Carbon Black Defense.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -394,9 +402,9 @@ Delete Policy:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action deletes a policy configuration in Carbon Black Defense. This administrative
-      action does not match any of the predefined expected outcomes such as enriching
-      IOCs, containing hosts, or managing tickets.
+      The action deletes a policy in Carbon Black Defense. This is a configuration
+      management operation and does not match any of the predefined outcome categories
+      such as enriching IOCs, containing hosts, or managing tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -421,34 +429,29 @@ Delete Rule From Policy:
   ai_description: >-
     ### General Description
 
-    Deletes a specific rule from an existing policy in Carbon Black Defense. This
-    action initiates a state change on the external system by removing a configured
-    rule, which may alter the protection or monitoring behavior of the associated
-    policy.
+    Removes a specific rule from an existing policy in Carbon Black Defense.
 
 
     ### Flow Description
 
-    1. Extracts the `Policy Name` and `Rule ID` parameters provided by the user.
+    1. Extracts the `Policy Name` and `Rule ID` parameters from the action configuration.
 
-    2. Establishes a connection to the Carbon Black Defense API.
+    2. Initializes a connection to the Carbon Black Defense API.
 
-    3. Fetches the list of available policies via an HTTP GET request to resolve the
-    provided `Policy Name` into its corresponding internal Policy ID.
+    3. Retrieves the internal policy ID associated with the provided policy name.
 
-    4. Sends an HTTP DELETE request to the Carbon Black Defense API (`/integrationServices/v3/policy/{policy_id}/rule/{rule_id}`)
-    to remove the specified rule.
+    4. Sends an HTTP DELETE request to the Carbon Black Defense API to remove the
+    specified rule from the policy.
 
     5. Returns a success or failure message based on the API response.
 
 
     ### Additional Notes
 
-    This action directly modifies policy configurations in Carbon Black Defense. Ensure
-    that the correct Rule ID and Policy Name are provided to avoid unintended changes
-    to endpoint protection policies.
+    Requires valid API credentials with sufficient permissions to modify policies
+    in Carbon Black Defense.
   ai_short_description: >-
-    Deletes a specific rule from an existing policy in Carbon Black Defense.
+    Removes a specific rule from an existing policy in Carbon Black Defense.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -457,14 +460,15 @@ Delete Rule From Policy:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes a specific rule from a policy in Carbon Black Defense.
+      Sends an HTTP DELETE request to Carbon Black Defense to remove a specific rule
+      from a policy.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP DELETE request to Carbon Black Defense to remove a
-      rule from a policy, which mutates external data. It does not fetch contextual
-      data for alerts/entities, nor does it update internal entities, create insights,
-      or modify alert data.
+      The action executes an HTTP DELETE request to the Carbon Black Defense API to
+      remove a rule from a policy, which mutates external data. It does not fetch
+      contextual data for enrichment, nor does it mutate internal SecOps data like
+      entities, insights, or case comments.
   entity_usage:
     entity_types:
       address: false
@@ -516,9 +520,8 @@ Delete Rule From Policy:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates entirely on the explicitly provided 'Policy Name' and
-      'Rule ID' parameters.
+      The action does not process any entities. It relies solely on the explicitly
+      provided 'Policy Name' and 'Rule ID' input parameters to perform its operation.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -534,10 +537,10 @@ Delete Rule From Policy:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action deletes a configuration rule from a policy in Carbon Black Defense.
-      This is a general configuration management operation and does not directly match
-      any of the predefined outcome categories such as enriching IOCs, containing
-      hosts, or modifying specific IOC blocklists/allowlists.
+      The action modifies a policy configuration in Carbon Black Defense by deleting
+      a rule. This administrative/configuration task does not align with any of the
+      specific expected outcomes such as enriching IOCs, containing hosts, managing
+      tickets, or directly blocking/allowing specific IOCs.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -557,44 +560,45 @@ Delete Rule From Policy:
 
     | --- | --- | --- | --- |
 
-    | Policy Name | String | Yes | The name of the policy from which the rule should
-    be deleted. |
+    | Policy Name | String | Yes | Policy name |
 
-    | Rule ID | String | Yes | The ID of the rule to delete (e.g., 1). |
+    | Rule ID | String | Yes | Rule ID. e.g. 1 |
 Get Device Info:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed device information from Carbon Black Defense for specified
-    IP Address and Hostname entities. This action fetches contextual metadata about
-    the device and enriches the entities within the SecOps platform.
+    Retrieves device information from Carbon Black Defense for given IP Address and
+    Hostname entities. This action enriches the entities with contextual metadata
+    about the device.
 
 
     ### Flow Description
 
-    1. Initializes a connection to the Carbon Black Defense API using integration-level
-    credentials.
+    1. Initializes the connection to the Carbon Black Defense API.
 
-    2. Iterates through the target entities, filtering specifically for IP Addresses
-    and Hostnames.
+    2. Iterates through the target entities, filtering specifically for IP Address
+    and Hostname entity types.
 
-    3. Queries Carbon Black Defense for device data using the entity's identifier
-    (IP or Hostname).
+    3. For each valid entity, makes a GET request to the `/integrationServices/v3/device`
+    API endpoint using the entity's identifier.
 
-    4. If device data is found, it enriches the entity with the retrieved metadata,
-    attaches a CSV table to the entity, and stores the raw JSON results.
+    4. If device data is found, extracts the information and enriches the entity's
+    additional properties.
 
-    5. Updates the successfully enriched entities within the SecOps platform.
+    5. Marks the entity as enriched and attaches the raw device data as a JSON result
+    and an entity table.
+
+    6. Updates the enriched entities within the Google SecOps platform.
 
 
     ### Additional Notes
 
-    Unsupported entity types are skipped during execution. If no device data is found
-    for a supported entity, it is logged and skipped without causing the action to
-    fail.
+    Entities that are not of type Address or Hostname are skipped. If no device data
+    is found for a valid entity, it is logged and skipped without causing the action
+    to fail.
   ai_short_description: >-
-    Retrieves detailed device information from Carbon Black Defense for IP Address
-    and Hostname entities, enriching them with the fetched metadata.
+    Retrieves device information from Carbon Black Defense for IP Address and Hostname
+    entities, enriching them with the retrieved contextual metadata.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -607,9 +611,11 @@ Get Device Info:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes GET requests to the Carbon Black Defense API to fetch device
-      data (fetches_data=true). It does not mutate external data or internal data
-      outside of entities. It updates entities with the fetched data (can_update_entities=true).
-      It does not create insights, modify alert data, or create case comments.
+      data (fetches_data=true). It does not perform any state-changing operations
+      on external systems (can_mutate_external_data=false). It updates the entities
+      in the platform with the fetched enrichment data using `siemplify.update_entities`
+      (can_update_entities=true). It does not create insights, modify alerts, or create
+      case comments.
   entity_usage:
     entity_types:
       address: true
@@ -661,10 +667,10 @@ Get Device Info:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `if
-      entity.entity_type not in SUPPORTED_ENTITIES:`, where `SUPPORTED_ENTITIES` is
-      defined as `[EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`. Therefore, it targets
-      Address and Hostname entities and filters by entity type.
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities
+      and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -680,9 +686,10 @@ Get Device Info:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches device data for IP and Hostname entities, returning contextual
-      metadata about the device. This directly aligns with the 'Enrich Asset' expected
-      outcome.
+      The action fetches device information from Carbon Black Defense based on IP
+      or Hostname, returning contextual metadata for the resource. This matches the
+      'Enrich Asset' expected outcome. It does not modify external systems or update
+      alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -702,31 +709,37 @@ Get Events:
   ai_description: >-
     ### General Description
 
-    Retrieves events associated with specific IP address or hostname entities from
-    Carbon Black Defense.
+    Retrieves events associated with specific IP Address and Hostname entities from
+    Carbon Black Defense. This action queries the Carbon Black Defense API to find
+    any recorded events involving the target entities within a specified timeframe.
 
 
     ### Flow Description
 
-    1. Extracts the `Timeframe` parameter to define the search window.
+    1. Initializes the connection to the Carbon Black Defense API using the provided
+    integration credentials.
 
-    2. Iterates over the target entities, filtering for IP addresses and hostnames.
+    2. Iterates through the target entities, filtering specifically for `ADDRESS`
+    (IP Address) and `HOSTNAME` entity types.
 
     3. For each valid entity, makes a GET request to the Carbon Black Defense API
-    (`/integrationServices/v3/event`) to fetch related events within the specified
-    timeframe.
+    (`/integrationServices/v3/event`) to fetch events matching the entity's identifier
+    and the specified `Timeframe` parameter.
 
     4. If events are found, they are formatted into a CSV table and attached to the
-    entity in the case wall.
+    entity's results in the SecOps platform.
 
-    5. Returns the raw event data as a JSON result.
+    5. Aggregates the raw event data into a JSON result object and returns a summary
+    message detailing which entities had events found, missing, or failed.
 
 
     ### Additional Notes
 
-    Unsupported entity types are skipped during execution.
+    Any entity types other than IP Addresses and Hostnames are explicitly skipped
+    during execution. If the action reaches its execution deadline, it will time out
+    and halt further processing.
   ai_short_description: >-
-    Retrieves events associated with specific IP address or hostname entities from
+    Retrieves events associated with specific IP Address and Hostname entities from
     Carbon Black Defense within a specified timeframe.
   capabilities:
     can_create_case_comments: false
@@ -741,8 +754,7 @@ Get Events:
     reasoning: >-
       The action makes GET requests to the Carbon Black Defense API to fetch event
       data for specific entities. It does not mutate external data, update internal
-      entities, create insights, or modify alert data. It only fetches data and attaches
-      it as a table/JSON result.
+      entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -794,10 +806,10 @@ Get Events:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and checks `if entity.entity_type
-      not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` contains `EntityTypes.ADDRESS`
-      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities
-      and filters them by their `entity_type` attribute.
+      The action iterates over `siemplify.target_entities` and explicitly checks if
+      `entity.entity_type` is in `SUPPORTED_ENTITIES`, which is defined as `[EntityTypes.ADDRESS,
+      EntityTypes.HOSTNAME]`. Therefore, it targets Address and Host Name entities
+      and filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -813,9 +825,10 @@ Get Events:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for and returns a collection of historical events/logs matching
-      specific IP addresses or hostnames from Carbon Black Defense. This aligns perfectly
-      with the 'Search Events' expected outcome.
+      The action fetches historical event logs from Carbon Black Defense for specific
+      IP and Hostname entities. This directly aligns with the 'Search Events' expected
+      outcome. It does not enrich the entities with threat intelligence or asset metadata,
+      nor does it perform any containment or blocklist operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -835,40 +848,43 @@ Get Events:
 
     | --- | --- | --- | --- |
 
-    | Timeframe | String | Yes | Timeframe of the search. e.g. 3h |
+    | Timeframe | String | Yes | Timeframe of the search (e.g., 3h, 1d, 2w). Determines
+    how far back to look for events associated with the entity. |
 Get Processes:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of processes running on specific devices (IP addresses or hostnames)
-    from Carbon Black Defense.
+    Retrieves a list of processes running on a specific device (identified by IP address
+    or hostname) within a given timeframe using Carbon Black Defense.
 
 
     ### Flow Description
 
-    1. Initializes the connection to the Carbon Black Defense API.
+    1. Initializes the connection to the Carbon Black Defense API using the provided
+    integration configuration.
 
-    2. Iterates over the target entities, filtering for IP Address and Hostname entity
-    types.
+    2. Iterates over the target entities, specifically looking for IP Address and
+    Hostname entity types.
 
     3. For each valid entity, makes a GET request to the Carbon Black Defense API
-    (`/integrationServices/v3/process`) to fetch processes associated with the entity's
-    identifier within the specified timeframe.
+    (`/integrationServices/v3/process`) to fetch process telemetry associated with
+    the entity's identifier and the specified timeframe.
 
-    4. Attaches the retrieved processes as a CSV table to the entity in the SecOps
-    platform.
+    4. If processes are found, the raw data is added to the action's JSON results,
+    and a CSV table containing the process details is attached to the entity in the
+    action results.
 
-    5. Aggregates the raw process data and returns it as a JSON result.
+    5. Skips unsupported entity types and reports on successful, missing, and failed
+    entities.
 
 
     ### Additional Notes
 
-    - Entities that are not of type Address or Hostname are skipped.
-
-    - The action will halt processing if the execution deadline is reached.
+    Ensure that the Carbon Black Defense API key has the necessary permissions to
+    query process data.
   ai_short_description: >-
-    Retrieves a list of processes running on specific devices (IP addresses or hostnames)
-    from Carbon Black Defense within a specified timeframe.
+    Retrieves a list of processes running on a specific device (IP address or hostname)
+    within a given timeframe using Carbon Black Defense.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -880,9 +896,10 @@ Get Processes:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes GET requests to the Carbon Black Defense API to fetch process
-      data for specific entities. It does not mutate external data, update entities,
-      create insights, or modify alert data.
+      The action makes a GET request to the Carbon Black Defense API to fetch process
+      data. It does not mutate external data, nor does it update internal entities,
+      create insights, or add case comments. It only attaches a table to the action
+      results.
   entity_usage:
     entity_types:
       address: true
@@ -934,10 +951,10 @@ Get Processes:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `if
-      entity.entity_type not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes
-      `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets Address
-      and Hostname entities and filters strictly by entity type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `if entity.entity_type not in SUPPORTED_ENTITIES:`, where `SUPPORTED_ENTITIES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets
+      Address and Hostname entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -953,10 +970,10 @@ Get Processes:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches process telemetry data for specific devices within a given
-      timeframe, which aligns with the 'Search Events' category as it retrieves historical
-      telemetry data matching search parameters. It does not enrich assets with static
-      metadata or mutate any state.
+      The action fetches process execution telemetry for a specific host within a
+      given timeframe. This aligns with the 'Search Events' category, which involves
+      returning a collection of historical logs or telemetry data matching specific
+      search parameters.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -982,17 +999,17 @@ Ping:
     ### General Description
 
     Tests connectivity to the Carbon Black Defense API to ensure the integration is
-    configured correctly.
+    configured correctly and the service is reachable.
 
 
     ### Flow Description
 
     1. Extracts the API Root and API Key from the integration configuration.
 
-    2. Initializes the Carbon Black Defense manager.
+    2. Initializes the Carbon Black Defense Manager.
 
     3. Makes a GET request to the `/integrationServices/v3/device` endpoint to verify
-    authentication and network access.
+    authentication and network connectivity.
 
     4. Returns a success message if the connection is established, or an error message
     if it fails.
@@ -1000,11 +1017,11 @@ Ping:
 
     ### Additional Notes
 
-    This action is typically used to verify integration configuration settings and
-    does not interact with case entities.
+    This action is typically used for diagnostic purposes and does not interact with
+    case entities or modify any data.
   ai_short_description: >-
     Tests connectivity to the Carbon Black Defense API to verify integration configuration
-    settings.
+    and network reachability.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1016,9 +1033,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to test API connectivity but does not fetch contextual
-      data for entities, mutate external or internal data, update entities, or create
-      insights/comments.
+      The action makes a simple GET request to test API connectivity. It does not
+      fetch contextual data for alerts/entities, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1070,8 +1087,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely tests the
-      connection to the Carbon Black Defense API.
+      The action does not process any entities. It simply tests the connection to
+      the Carbon Black Defense API using integration-level credentials.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1087,9 +1104,10 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      The action is a simple connectivity test (Ping). It does not enrich IOCs/assets,
+      update alerts, manage tickets, modify blocklists/allowlists, manage identities,
+      contain hosts, search/download files, or send emails. Therefore, it does not
+      match any of the expected outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

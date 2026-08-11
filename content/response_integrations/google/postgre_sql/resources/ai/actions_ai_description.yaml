@@ -2,29 +2,30 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to a PostgreSQL database to verify that the integration is
-    configured correctly and can communicate with the server.
+    Tests connectivity to the PostgreSQL database using the provided integration configuration.
+    This action verifies that the credentials and network settings are correct.
 
 
     ### Flow Description
 
-    1. Retrieves connection details (server address, username, password, port, and
-    database name) from the integration configuration.
+    1. Retrieves the PostgreSQL integration configuration parameters (Server Address,
+    Username, Password, Port, Database Name For Testing).
 
-    2. Attempts to establish a connection to the PostgreSQL database using the provided
-    credentials.
+    2. Attempts to establish a connection to the PostgreSQL database using the `psycopg2`
+    library.
 
-    3. Closes the connection immediately upon successful establishment.
+    3. Closes the connection immediately upon success.
 
-    4. Returns a success message if no exceptions occur during the connection process.
+    4. Returns a success message if the connection was established without errors.
 
 
     ### Additional Notes
 
-    This action is primarily used as a diagnostic tool to ensure the PostgreSQL integration
-    is properly set up and reachable.
+    This action is primarily used to verify that the integration is configured correctly
+    and can communicate with the PostgreSQL server. It does not perform any queries
+    or data manipulation.
   ai_short_description: >-
-    Tests connectivity to a PostgreSQL database to verify integration configuration.
+    Tests connectivity to the PostgreSQL database to verify integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -36,9 +37,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only establishes a connection to the PostgreSQL database and immediately
-      closes it. It does not fetch data, mutate external or internal data, update
-      entities, create insights, modify alerts, or create case comments.
+      The action establishes a connection to a PostgreSQL database and immediately
+      closes it to verify connectivity. It does not fetch contextual data, mutate
+      external data, mutate internal data, update entities, create insights, modify
+      alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -90,8 +92,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely relies
-      on integration configuration parameters to test connectivity.
+      The action does not process any entities. It does not iterate over target_entities
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -107,9 +109,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping). It does not enrich data, mutate
-      external systems, update alerts, or perform any operations that match the defined
-      outcome categories.
+      The action only tests connectivity to a PostgreSQL database. It does not fetch
+      threat intelligence, mutate external systems, update alerts, or perform any
+      other operations that match the expected outcomes of the available categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -130,36 +132,39 @@ Run SQL Query:
     ### General Description
 
     Executes a custom SQL query against a specified PostgreSQL database. This action
-    connects to the database, runs the provided query, and retrieves the results,
-    making it suitable for both data retrieval and data manipulation tasks.
+    allows analysts to interact directly with a PostgreSQL instance to retrieve data
+    or perform database operations.
 
 
     ### Flow Description
 
-    1. Retrieves the target database name and SQL query from the action parameters.
+    1. Retrieves configuration and action parameters, including the target database
+    name and the SQL query to be executed.
 
-    2. Establishes a connection to the external PostgreSQL database using the integration's
-    configured credentials and server address.
+    2. Establishes a connection to the PostgreSQL database using the provided credentials
+    and server details.
 
-    3. Executes the provided SQL query against the database.
+    3. Executes the provided SQL query via the `psycopg2` library and commits the
+    transaction.
 
-    4. Commits the transaction to ensure any data manipulation statements (e.g., INSERT,
-    UPDATE) are saved.
+    4. If the query returns data (e.g., a `SELECT` statement), it fetches the column
+    names and rows.
 
-    5. If the query returns a result set (e.g., a SELECT statement), it formats the
-    rows into a JSON structure and a CSV data table.
+    5. Formats the retrieved data into a JSON structure and constructs a CSV-formatted
+    data table.
 
-    6. Closes the database connection and returns the results to the SecOps platform.
+    6. Attaches the data table and JSON results to the action execution in the SecOps
+    platform.
 
 
     ### Additional Notes
 
-    Because this action executes arbitrary SQL queries and commits the transaction,
-    it can be used to mutate data in the target database. Ensure that the provided
-    query is safe and that the database user has appropriate permissions.
+    Because the action commits the transaction after executing the query, it can be
+    used to run data manipulation language (DML) statements such as `INSERT`, `UPDATE`,
+    or `DELETE`, in addition to standard `SELECT` queries.
   ai_short_description: >-
     Executes a custom SQL query against a specified PostgreSQL database and returns
-    the results.
+    the results as JSON and a data table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -168,16 +173,15 @@ Run SQL Query:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action can execute arbitrary SQL queries, including data manipulation statements
-      (INSERT, UPDATE, DELETE), which will modify records in the external PostgreSQL
-      database.
+      Executes arbitrary SQL queries which can include data manipulation statements
+      (INSERT, UPDATE, DELETE) that modify the PostgreSQL database.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes an arbitrary SQL query and commits the transaction. This
-      means it can fetch data (e.g., using SELECT) and mutate external data (e.g.,
-      using INSERT, UPDATE, DELETE). It does not mutate internal SecOps data, update
-      entities, create insights, modify alerts, or create case comments.
+      The action fetches data by executing SQL queries (like SELECT) and can mutate
+      external data because it executes arbitrary SQL queries and commits the transaction,
+      allowing for INSERT, UPDATE, or DELETE operations on the PostgreSQL database.
+      It does not mutate internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -229,8 +233,8 @@ Run SQL Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It relies entirely
-      on the provided action parameters to execute a standalone SQL query.
+      The action does not process or iterate over any entities. It relies entirely
+      on the provided database name and query parameters to execute its logic.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -246,10 +250,10 @@ Run SQL Query:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a generic SQL query against a PostgreSQL database. While
-      it can retrieve or modify data, it does not specifically align with any of the
-      predefined outcome categories such as enriching IOCs, managing tickets, blocking
-      indicators, or containing hosts.
+      The action executes a generic SQL query against a PostgreSQL database. It does
+      not specifically align with any of the predefined outcome categories such as
+      enriching IOCs, managing tickets, or containing hosts, as its purpose is generic
+      database interaction.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

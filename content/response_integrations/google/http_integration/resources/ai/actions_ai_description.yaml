@@ -2,33 +2,34 @@ Get Data:
   ai_description: >-
     ### General Description
 
-    Sends an HTTP GET request to a specified URL to retrieve data. This action acts
-    as a generic web client, allowing the SOAR platform to interact with external
-    REST APIs or web servers to fetch information.
+    Sends an HTTP GET request to a specified URL and retrieves the response. This
+    action is a generic utility for interacting with REST APIs or fetching web content
+    directly from a playbook.
 
 
     ### Flow Description
 
-    1. Extracts the target URL, optional authentication credentials (Username/Password),
-    custom HTTP headers (provided as a JSON string), and SSL verification preferences.
+    1. Extracts the target URL, authentication credentials (username/password), SSL
+    verification preference, and custom JSON headers from the action parameters.
 
-    2. Constructs and executes an HTTP GET request to the specified URL using the
-    `requests` library.
+    2. Constructs the HTTP GET request with the provided attributes.
 
-    3. Evaluates the HTTP response code. If the `Ignore HTTP Error Codes` parameter
-    is enabled, it bypasses exceptions for 4xx and 5xx status codes.
+    3. Executes the GET request using the `requests` library.
 
-    4. Parses the response body as JSON (if possible) or plain text, and outputs the
-    data, response code, and redirect history as a structured JSON result.
+    4. Evaluates the HTTP response code, raising an error for 4xx or 5xx status codes
+    unless the 'Ignore HTTP Error Codes' parameter is enabled.
+
+    5. Parses the response body as JSON (or plain text if JSON parsing fails) and
+    returns the data, response code, and redirect history as a JSON result.
 
 
     ### Additional Notes
 
-    This is a generic utility action. It is highly useful for interacting with custom
-    endpoints or services that do not have a dedicated integration within the platform.
+    This action does not operate on specific entities and relies entirely on the provided
+    URL parameter. It is useful for custom API integrations where a dedicated integration
+    might not exist.
   ai_short_description: >-
-    Sends an HTTP GET request to a specified URL and returns the response data, status
-    code, and redirect history.
+    Sends an HTTP GET request to a specified URL and returns the response data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,10 +41,9 @@ Get Data:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes an HTTP GET request to fetch data from an external URL (fetches_data=true).
-      It does not perform state-changing operations (POST/PUT/DELETE) on external
-      systems, so it does not mutate external data. It also does not call any SDK
-      methods to update entities, create insights, modify alerts, or add case comments.
+      The action fetches data by making an HTTP GET request to an external URL. It
+      does not mutate external data (GET is idempotent), nor does it mutate internal
+      data, update entities, create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -95,9 +95,9 @@ Get Data:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or process any
-      entity-specific data. It relies entirely on the provided URL parameter to execute
-      the HTTP request. Therefore, all entity types and filter flags are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-specific input parameters. It operates solely on the provided URL
+      parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -113,11 +113,10 @@ Get Data:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      This is a generic HTTP GET utility action. It does not inherently enrich specific
-      IOCs or assets with threat intelligence, nor does it update alerts, create tickets,
-      or perform containment actions. Its outcome depends entirely on the URL provided
-      by the user, so it does not strictly match any of the predefined specific outcome
-      categories.
+      The action is a generic HTTP GET request utility. It does not inherently match
+      any of the specific expected outcomes such as enriching an IOC, updating an
+      alert, or containing a host, as its purpose depends entirely on the user-provided
+      URL.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -155,34 +154,36 @@ Get URL Data:
   ai_description: >-
     ### General Description
 
-    Sends an HTTP GET request to URL entities to retrieve their content and redirect
-    history.
+    Sends an HTTP GET request to URL entities to retrieve their raw response content
+    and redirect history. This action is useful for safely inspecting the destination
+    and content of a URL without interacting with it via a standard browser.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities provided in the case.
+    1. Iterates through the target entities provided to the action.
 
-    2. Filters the entities to process only those of type URL.
+    2. Filters the entities to process only those of type `URL`.
 
-    3. Validates the URL schema, prepending `http://` if no schema is present.
+    3. Validates the URL schema, automatically prepending `http://` if a schema is
+    missing.
 
-    4. Sends an HTTP GET request to the URL using the `requests` library, applying
-    optional basic authentication and SSL verification settings.
+    4. Executes an HTTP GET request to the URL using the `requests` library. If provided,
+    it applies basic authentication (`Username` and `Password`) and respects the `SSL
+    Verification` setting.
 
-    5. Collects the response text and any redirect history from the HTTP response.
+    5. Collects the raw response text and the history of any HTTP redirects encountered.
 
-    6. Aggregates the results and returns them as a JSON object.
+    6. Aggregates the results for all processed URLs and outputs them as a JSON object.
 
 
     ### Additional Notes
 
-    - The action supports basic authentication via the `Username` and `Password` parameters.
-
-    - SSL verification can be toggled using the `SSL Verification` parameter.
+    This action only retrieves data and does not modify the entities, create insights,
+    or alter any external systems.
   ai_short_description: >-
-    Sends an HTTP GET request to URL entities to retrieve their content and redirect
-    history.
+    Sends an HTTP GET request to URL entities to retrieve their raw response content
+    and redirect history, optionally using basic authentication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -194,9 +195,10 @@ Get URL Data:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the URL entities to fetch their content.
-      It does not mutate external data, update internal entities, create insights,
-      or modify alert data.
+      The action fetches data by making an HTTP GET request to the provided URL entities.
+      It does not mutate external data (only GET requests are made). It does not mutate
+      internal data, update entities, create insights, modify alerts, or create case
+      comments.
   entity_usage:
     entity_types:
       address: false
@@ -248,9 +250,9 @@ Get URL Data:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `if
-      entity.entity_type == EntityTypes.URL:`. Therefore, it targets URL entities
-      and filters by entity_type.
+      The script iterates over `siemplify.target_entities` and explicitly filters
+      them using the condition `if entity.entity_type == EntityTypes.URL:`. Therefore,
+      it targets URL entities and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -266,11 +268,11 @@ Get URL Data:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a generic HTTP GET request to URL entities to retrieve their
-      raw content and redirect history. It does not return specific threat intelligence,
-      reputation, or prevalence data, nor does it perform any containment, ticketing,
-      or notification actions. Therefore, it does not strictly match any of the predefined
-      outcome categories.
+      The action performs a generic HTTP GET request to fetch raw response data and
+      redirect history from a URL. It does not return structured threat intelligence,
+      reputation, or prevalence data (Enrich IOC), nor does it mutate external state,
+      interact with tickets, or modify alerts. Therefore, it does not strictly match
+      any of the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -300,28 +302,28 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity for the HTTP integration. This action is typically used to
-    verify that the integration is configured correctly and can execute successfully
-    within the SOAR platform.
+    Tests connectivity for the HTTP integration. This action is used to verify that
+    the integration is properly configured and can execute successfully within the
+    Google SecOps platform.
 
 
     ### Flow Description
 
-    1. Initializes the Siemplify action environment.
+    1. Initializes the Siemplify action instance.
 
-    2. Generates a static success message ("Connected Successfully").
+    2. Generates a hardcoded success message ("Connected Successfully").
 
-    3. Ends the execution and returns the success message along with a "true" result.
+    3. Ends the action execution, returning the success message and a "true" result.
 
 
     ### Additional Notes
 
-    This specific Ping action does not perform an actual external HTTP request; it
-    simply returns a successful execution status to validate the integration's basic
-    operational state.
+    This specific Ping action does not perform an actual outbound HTTP request to
+    a third-party service; it serves as a basic execution test for the integration
+    environment.
   ai_short_description: >-
-    Tests connectivity for the HTTP integration by returning a successful execution
-    status.
+    Tests connectivity for the HTTP integration by executing a basic initialization
+    and returning a success message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -333,9 +335,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The script only initializes the SiemplifyAction and immediately ends with a
-      success message. It does not fetch data, mutate external/internal data, update
-      entities, create insights, modify alerts, or create case comments.
+      The action simply returns a hardcoded success message. It does not fetch data,
+      mutate external or internal data, update entities, create insights, modify alerts,
+      or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -387,8 +389,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not access `siemplify.target_entities` or perform any entity-specific
-      operations. It runs independently of any entity context.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any entity-related parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -404,10 +406,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) that returns a static success
-      message. It does not interact with external systems to enrich data, mutate state,
-      manage tickets, or perform any of the specific expected outcomes defined in
-      the categories.
+      The action is a simple connectivity test (Ping) that returns a hardcoded success
+      message. It does not interact with external systems to enrich data, update alerts,
+      block IOCs, or perform any other operations that match the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -428,31 +429,34 @@ Post Data:
     ### General Description
 
     Sends an HTTP POST request to a specified URL with custom data, headers, and authentication.
+    This is a generic utility action used to interact with external REST APIs or web
+    services that require POST methods.
 
 
     ### Flow Description
 
-    1. Extracts the target URL, payload data, and optional parameters like headers,
-    authentication credentials, and SSL verification settings.
+    1. Extracts action parameters including the target URL, payload Data, Headers,
+    and Authentication credentials.
 
-    2. Constructs the HTTP POST request, formatting the payload based on the specified
-    Content Type (e.g., `application/json`).
+    2. Constructs the HTTP POST request, applying basic authentication and custom
+    JSON headers if provided.
 
-    3. Executes the POST request against the target endpoint.
+    3. Formats the payload based on the specified Content Type (e.g., parsing as JSON
+    if `application/json` is selected).
 
-    4. Retrieves the response, parsing it as JSON if applicable, and captures any
-    redirect history.
+    4. Executes the POST request to the target URL.
 
-    5. Returns the response data and redirects as a JSON result to the playbook.
+    5. Captures the response data and any redirect history, returning them as a JSON
+    result to the SOAR platform.
 
 
     ### Additional Notes
 
-    This is a generic utility action for interacting with REST APIs or web services
-    that require POST requests.
+    Supports basic authentication and custom JSON headers. Ensure that the 'Data'
+    parameter is a valid JSON string if the 'Content Type' is set to `application/json`.
   ai_short_description: >-
-    Sends a customizable HTTP POST request to a specified URL and returns the response
-    data.
+    Sends an HTTP POST request to a specified URL with custom data, headers, and authentication,
+    returning the response data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -461,15 +465,15 @@ Post Data:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends an HTTP POST request which typically submits data to an external server,
-      potentially creating or updating resources depending on the target endpoint.
+      Executes an HTTP POST request with a data payload to an external server, which
+      typically alters state or submits data to the destination system.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes an HTTP POST request to a user-specified URL. While it returns
-      the response data, it is primarily designed to submit data to an external system,
-      which inherently can mutate external data depending on the endpoint. It does
-      not interact with internal SecOps data, update entities, or create insights.
+      The action executes an HTTP POST request to an external URL, which is a state-changing
+      operation on an external system (can_mutate_external_data=true). It does not
+      fetch contextual data for enrichment, mutate internal SecOps data, update entities,
+      create insights, or modify alerts.
   entity_usage:
     entity_types:
       address: false
@@ -521,9 +525,9 @@ Post Data:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It operates solely
-      on the provided input parameters (URL, Data, etc.) to construct and send an
-      HTTP request.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-specific input parameters. It operates entirely on the provided URL
+      and data payload parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -539,10 +543,10 @@ Post Data:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      This is a generic utility action designed to send HTTP POST requests. It does
-      not have a specific security outcome such as enriching an IOC, blocking an IP,
-      or managing tickets, and therefore does not match any of the predefined outcome
-      categories.
+      This is a generic HTTP POST utility action. It does not inherently match any
+      specific expected outcome category such as enriching an IOC, updating an alert,
+      creating a ticket, or blocking an IP, as the actual outcome depends entirely
+      on the user-provided URL and payload.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -566,9 +570,9 @@ Post Data:
 
     | Data | String | Yes | The data to send with the request. |
 
-    | Username | String | No | Username for basic authentication. |
+    | Username | String | No | Username |
 
-    | Password | Password | No | Password for basic authentication. |
+    | Password | Password | No | Password |
 
     | SSL Verification | Boolean | No | Whether to verify the SSL certificate of the
     destination server. |
@@ -576,5 +580,5 @@ Post Data:
     | Headers JSON | String | No | JSON object of HTTP headers to be sent with the
     request. |
 
-    | Content Type | DDL | No | Content Type. If set to application/json the input
-    data must be JSON string. |
+    | Content Type | Dropdown | No | Content Type. If set to application/json the
+    input data must be JSON string. |

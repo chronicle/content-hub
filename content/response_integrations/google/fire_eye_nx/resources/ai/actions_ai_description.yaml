@@ -2,34 +2,36 @@ Add IPS Policy Exception:
   ai_description: >-
     ### General Description
 
-    Adds an IPS policy exception in FireEye NX for specific IP address entities. The
-    IP entities are treated as the "Attacker IP Address" in the policy exception configuration.
+    Creates an IPS policy exception in FireEye NX for specified IP address entities.
+    The target IP entities are treated as the "Attacker IP Address" in the policy
+    configuration.
 
 
     ### Flow Description
 
-    1. Extracts action parameters including Victim IP Subnet, Interface, Mode, and
-    Name.
+    1. Extracts the necessary configuration and action parameters, including the victim
+    IP subnet, interface, and policy mode.
 
-    2. Filters target entities to include only IP addresses.
+    2. Filters the target entities to include only IP Addresses.
 
-    3. Iterates through the filtered IP entities and masks the IP address (appends
-    `/32` if it is a valid IPv4 address).
+    3. Iterates over the filtered entities and masks the IP address (e.g., appending
+    `/32` for IPv4 addresses).
 
     4. Makes a POST request to the FireEye NX API (`wsapis/v2.0.0/ips/policy_exceptions`)
-    to create the IPS policy exception for each IP.
+    to create the policy exception with the specified mode, interface, victim IP subnet,
+    and attacker IP.
 
-    5. Returns a summary message indicating successful and failed policy exception
-    creations.
+    5. Returns a summary message detailing which entities successfully had policy
+    exceptions created and which failed.
 
 
     ### Additional Notes
 
-    The action treats the target entity as the attacker IP. The mode parameter determines
-    the action taken by the IPS (e.g., Block, Unblock, Suppress).
+    The action supports different modes such as Block, Unblock, Suppress, and Suppress-unblock,
+    allowing it to be used for both blocking and unblocking operations.
   ai_short_description: >-
-    Adds an IPS policy exception in FireEye NX for specific IP address entities, treating
-    them as attacker IPs.
+    Creates an IPS policy exception in FireEye NX for specified IP address entities,
+    treating them as attacker IPs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -39,13 +41,14 @@ Add IPS Policy Exception:
     can_update_entities: false
     external_data_mutation_explanation: >-
       Creates a new IPS policy exception in FireEye NX for the specified attacker
-      IP and victim subnet.
+      IP and victim IP subnet.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the FireEye NX API to create an IPS policy
-      exception. It mutates external data by adding a new policy rule. It does not
-      fetch enrichment data, update internal entities, or create insights.
+      exception. It mutates external data by adding a new policy exception configuration.
+      It does not fetch contextual data, mutate internal data, update entities, or
+      create insights.
   entity_usage:
     entity_types:
       address: true
@@ -99,10 +102,10 @@ Add IPS Policy Exception:
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
       in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES` is `[EntityTypes.ADDRESS]`.
-      It does not filter by any other attributes.
+      This means it targets ADDRESS entities, filtering strictly by entity_type.
   outcome_categories:
     add_alert_comment: false
-    add_ioc_to_allowlist: true
+    add_ioc_to_allowlist: false
     add_ioc_to_blocklist: true
     contain_host: false
     create_ticket: false
@@ -115,10 +118,11 @@ Add IPS Policy Exception:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates an IPS policy exception in FireEye NX for an IP address.
-      Depending on the selected mode (Block, Unblock, Suppress), this action can block
-      the IP (Add IOC To Blocklist), unblock the IP (Remove IOC From Blocklist), or
-      suppress alerts for the IP (Add IOC To Allowlist).
+      The action performs a POST request to FireEye NX to create an IPS policy exception
+      for an IP address. Depending on the selected mode (Block, Unblock, etc.), this
+      updates security controls to either prevent interaction with the IOC or restore
+      connectivity. This aligns with the 'Add IOC To Blocklist' and 'Remove IOC From
+      Blocklist' expected outcomes.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: true
     reset_identity_password: false
@@ -142,10 +146,10 @@ Add IPS Policy Exception:
     be used to create a new policy exception. Format: x.x.x.x/xx Example: 10.0.0.1/24
     |
 
-    | Interface | Dropdown | Yes | Specify what interface should be used in policy
-    exceptions. |
+    | Interface | String | Yes | Specify what interface should be used in policy exceptions.
+    |
 
-    | Mode | Dropdown | Yes | Specify the mode that should be used in the policy exception.
+    | Mode | String | Yes | Specify the mode that should be used in the policy exception.
     |
 
     | Name | String | No | Specify the name for the policy exception. If nothing is
@@ -155,36 +159,32 @@ Download Alert Artifacts:
   ai_description: >-
     ### General Description
 
-    Downloads artifacts associated with a specific alert from FireEye NX and saves
-    them to a specified local directory. This action allows analysts to retrieve forensic
-    files and evidence related to an alert for further local analysis or sandboxing.
+    Downloads alert artifacts from FireEye NX based on a provided alert UUID and saves
+    them to a specified local path.
 
 
     ### Flow Description
 
-    1. Extracts the `Alert UUID` and `Download Path` parameters provided by the user.
+    1. Extracts the `Alert UUID` and `Download Path` parameters.
 
-    2. Authenticates with the FireEye NX API using the configured credentials.
+    2. Initializes the FireEye NX manager with the provided credentials.
 
-    3. Initiates an HTTP GET request to the FireEye NX `/artifacts/{alert_uuid}` endpoint
-    to retrieve the artifact data.
+    3. Makes a GET request to the FireEye NX API (`wsapis/v2.0.0/artifacts/{alert_uuid}`)
+    to download the artifacts.
 
-    4. Saves the retrieved data as a `.zip` file in the specified local download path.
+    4. Saves the downloaded artifacts as a ZIP file to the specified local path.
 
-    5. Returns the absolute file path of the downloaded artifacts in the action's
-    JSON result.
+    5. Returns the absolute file path in the action's JSON result.
 
 
     ### Additional Notes
 
-    - The action will fail to save the file if a file with the same name (e.g., `{alert_uuid}.zip`)
-    already exists at the specified download path.
-
-    - Ensure the SOAR platform has the necessary write permissions for the specified
-    download directory.
+    Ensure the download path exists and is accessible by the execution environment.
+    If a file with the same name already exists at the destination, the action will
+    fail to overwrite it.
   ai_short_description: >-
-    Downloads artifacts for a specific alert from FireEye NX and saves them as a ZIP
-    file to a specified local directory.
+    Downloads alert artifacts from FireEye NX for a specific alert UUID and saves
+    them as a ZIP file to a specified local path.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -196,10 +196,9 @@ Download Alert Artifacts:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches artifact data from FireEye NX via an HTTP GET request. It
-      does not mutate external data, nor does it mutate internal SOAR data (like entities,
-      insights, or case comments). It simply saves the downloaded file to the local
-      disk.
+      The action fetches data (downloads a file) from FireEye NX via a GET request.
+      It does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -251,8 +250,8 @@ Download Alert Artifacts:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It relies solely
-      on the explicitly provided 'Alert UUID' parameter to fetch data.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity-based parameters. It operates solely on the provided Alert UUID string.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -268,8 +267,9 @@ Download Alert Artifacts:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves an artifact file (ZIP) from the FireEye NX platform and
-      saves it locally. This directly aligns with the 'Download File' expected outcome.
+      The action makes a GET request to download a ZIP file containing alert artifacts
+      from FireEye NX and saves it locally. This aligns with the 'Download File' expected
+      outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -299,7 +299,8 @@ Ping:
     ### General Description
 
     Tests connectivity to the FireEye NX server using the provided integration configuration
-    parameters.
+    parameters. This action is used to verify that the integration is configured correctly
+    and can successfully communicate with the FireEye NX API.
 
 
     ### Flow Description
@@ -307,21 +308,22 @@ Ping:
     1. Extracts the integration configuration parameters (API Root, Username, Password,
     Verify SSL).
 
-    2. Initializes the FireEye NX manager and obtains an authentication token.
+    2. Initializes the FireEye NX manager with the provided credentials.
 
-    3. Makes an API call to the FireEye NX `health/system` endpoint to verify connectivity.
+    3. Makes a GET request to the `wsapis/v2.0.0/health/system` API endpoint to test
+    connectivity.
 
-    4. Returns a success message if the connection is established, otherwise returns
-    an error.
+    4. Returns a success message if the connection is established, or a failure message
+    if an error occurs.
 
 
     ### Additional Notes
 
-    This action is typically used to verify that the integration is configured correctly
-    and can communicate with the FireEye NX instance. It does not require any action-specific
-    parameters or entities to run.
+    This action does not require any action-specific parameters as it relies entirely
+    on the integration-level configuration.
   ai_short_description: >-
-    Tests connectivity to the FireEye NX server to verify integration configuration.
+    Tests connectivity to the FireEye NX server to ensure the integration is configured
+    correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -333,7 +335,7 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the health/system endpoint to verify connectivity.
+      The action only makes a GET request to a health check endpoint to verify connectivity.
       It does not fetch contextual data for alerts/entities, mutate external data,
       mutate internal data, update entities, create insights, modify alert data, or
       create case comments.
@@ -388,8 +390,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely tests connectivity
-      to the external system.
+      The action does not process any entities. It does not iterate over target_entities
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -405,8 +407,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) and does not match any of the
-      specific outcome categories such as enrichment, containment, or ticket creation.
+      This is a utility action designed solely to test API connectivity to the FireEye
+      NX server. It does not interact with alerts, entities, tickets, or perform any
+      security operations that match the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

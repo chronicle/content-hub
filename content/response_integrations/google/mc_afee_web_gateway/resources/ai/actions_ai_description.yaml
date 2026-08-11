@@ -3,28 +3,27 @@ Block IP:
     ### General Description
 
     Blocks specific IP address entities by adding them to an "IP range"-type group
-    on McAfee Web Gateway. This action initiates a state change on the external device
-    to prevent network traffic to or from the specified entity.
+    on McAfee Web Gateway.
 
 
     ### Flow Description
 
-    1. Initializes a connection to the McAfee Web Gateway using the provided credentials.
+    1. Connects to the McAfee Web Gateway using the provided credentials.
 
-    2. Iterates through the target entities, filtering specifically for IP addresses
-    (ADDRESS).
+    2. Iterates through the target entities and filters for IP Address entities.
 
-    3. For each valid IP address, makes an API call to insert the IP (formatted with
-    a /32 subnet mask) into the specified group list.
+    3. For each IP address, makes a POST request to the McAfee Web Gateway API to
+    insert the IP (with a /32 subnet mask) into the specified group list.
 
-    4. Collects successful and failed operations to construct the final output message
-    and result value.
+    4. Commits the changes to the gateway.
+
+    5. Returns a summary of successfully and unsuccessfully blocked IPs.
 
 
     ### Additional Notes
 
-    The target group specified in the parameters must be configured as part of a rule
-    used to block IP addresses within the McAfee Web Gateway for the block to be effective.
+    The target group must already exist and should be part of a rule used to block
+    IP addresses on the gateway.
   ai_short_description: >-
     Blocks specific IP address entities by adding them to a designated group list
     on McAfee Web Gateway.
@@ -41,10 +40,9 @@ Block IP:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action iterates over target entities and makes a POST request to McAfee
-      Web Gateway to insert an IP address into a list, which mutates external data.
-      It does not fetch data, update internal entities, create insights, or modify
-      alert data.
+      The action makes a POST request to McAfee Web Gateway to insert an entry into
+      a list and commit the changes. This mutates external data. It does not fetch
+      context data or update internal entities.
   entity_usage:
     entity_types:
       address: true
@@ -96,9 +94,9 @@ Block IP:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `if
-      entity.entity_type == EntityTypes.ADDRESS:`. Therefore, it targets ADDRESS entities
-      and filters strictly by entity_type.
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering strictly
+      by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -114,9 +112,9 @@ Block IP:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds an IP address to a group list on McAfee Web Gateway, which is
-      intended to be used in a blocking rule. This directly aligns with the 'Add IOC
-      To Blocklist' expected outcome.
+      The action performs a POST request to McAfee Web Gateway to add an IP address
+      to a blocklist group. This directly aligns with the 'Add IOC To Blocklist' expected
+      outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,35 +142,32 @@ Insert Item To Group:
     ### General Description
 
     Inserts a specified network object (such as an IP address or URL) into a designated
-    group or list within McAfee Web Gateway. This action allows analysts to dynamically
-    update gateway lists for policy enforcement or categorization.
+    group or list on the McAfee Web Gateway.
 
 
     ### Flow Description
 
-    1. Retrieves the target group name, the item to insert, and an optional description
-    from the action parameters.
+    1. Retrieves the target group name, item to insert, and description from the action
+    parameters.
 
     2. Authenticates with the McAfee Web Gateway API.
 
-    3. Makes a GET request to retrieve available lists and resolves the provided group
-    name to its corresponding list ID.
+    3. Retrieves the ID of the specified group by its name.
 
-    4. Makes a POST request to insert the new item into the resolved list.
+    4. Sends a POST request to the McAfee Web Gateway API to insert the item into
+    the group.
 
-    5. Makes a POST request to commit the configuration changes to the gateway.
+    5. Commits the changes to the gateway.
 
     6. Returns a success or failure message based on the API response.
 
 
     ### Additional Notes
 
-    Each group in McAfee Web Gateway is type-strict. Ensure that the item being inserted
-    matches the expected data type (e.g., IP, URL) of the target group, otherwise
-    the insertion will fail.
+    The group type is strict, so the item must match the expected format for that
+    group.
   ai_short_description: >-
-    Inserts a specified network object (such as an IP address or URL) into a designated
-    group or list within McAfee Web Gateway.
+    Inserts a network object into a specified group on the McAfee Web Gateway.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -181,15 +176,13 @@ Insert Item To Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Inserts a new network object (like an IP or URL) into a specified group or list
-      on the McAfee Web Gateway and commits the configuration change.
+      Adds a network object to a specified group or list on the McAfee Web Gateway.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes POST requests to the McAfee Web Gateway API to insert a new
-      entry into a list and commit the changes, which mutates external data. It does
-      not fetch contextual enrichment data, nor does it mutate internal SecOps data
-      like entities, insights, or case comments.
+      The action makes a POST request to the McAfee Web Gateway API to insert an item
+      into a list/group, which mutates external data. It does not fetch data, mutate
+      internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -241,14 +234,13 @@ Insert Item To Group:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. Instead,
-      it relies entirely on the explicitly provided 'Item To Insert' parameter to
-      determine what data is sent to the McAfee Web Gateway. Therefore, it does not
-      run on entities and all entity-related flags are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-specific parameters. It operates on a generic string provided in
+      the 'Item To Insert' parameter.
   outcome_categories:
     add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
+    add_ioc_to_allowlist: true
+    add_ioc_to_blocklist: true
     contain_host: false
     create_ticket: false
     delete_email: false
@@ -260,11 +252,10 @@ Insert Item To Group:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action inserts an item into a generic group on McAfee Web Gateway. While
-      this could be used to add an IOC to a blocklist or allowlist depending on the
-      group's configured policy in the gateway, the action itself is a generic list
-      modification and does not strictly guarantee a block or allow outcome by default.
-      It does not enrich data, update alerts, manage tickets, or interact with endpoints/emails.
+      The action inserts a network object into a group on the McAfee Web Gateway (a
+      proxy). Depending on the group's policy, this can effectively add an IOC to
+      a blocklist or an allowlist. Given the script result name 'is_blocked', it is
+      primarily used for blocklisting, but can functionally serve both purposes.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -284,19 +275,18 @@ Insert Item To Group:
 
     | --- | --- | --- | --- |
 
-    | Group Name | String | Yes | The group name to insert the item into. |
+    | Group Name | String | Yes | The group name |
 
-    | Item To Insert | String | Yes | The item to insert into the group (e.g., an
-    IP address or URL). Default: x.x.x.x/24 |
+    | Item To Insert | String | Yes | The item ot insert to the group. Default: x.x.x.x/24
+    |
 
-    | Description | String | No | The entry description. Defaults to 'Added by Siemplify'
-    if not provided. |
+    | Description | String | No | The entry description |
 Ping:
   ai_description: >-
     ### General Description
 
     Tests connectivity to the McAfee Web Gateway server by attempting to authenticate
-    using the provided integration configuration.
+    using the provided integration credentials.
 
 
     ### Flow Description
@@ -304,13 +294,13 @@ Ping:
     1. Retrieves the integration configuration parameters (Server Address, Username,
     Password).
 
-    2. Initializes the McAfee Web Gateway manager, which makes an API call to authenticate
-    with the server.
+    2. Initializes the McAfee Web Gateway manager, which automatically sends a POST
+    request to the `/login` endpoint to authenticate.
 
-    3. Makes an API call to log out of the server.
+    3. Sends a POST request to the `/logout` endpoint to terminate the session.
 
-    4. If no exceptions are raised during the process, it outputs a success message
-    indicating successful connectivity.
+    4. If no exceptions are raised during the login and logout process, the action
+    completes successfully and returns a success message.
 
 
     ### Additional Notes
@@ -319,7 +309,7 @@ Ping:
     and can communicate with the McAfee Web Gateway API.
   ai_short_description: >-
     Tests connectivity to the McAfee Web Gateway server by attempting to log in and
-    log out.
+    log out using the provided integration credentials.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -331,9 +321,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only attempts to log in and log out of the McAfee Web Gateway to
-      verify connectivity. It does not fetch contextual data, mutate external data,
-      update entities, or create insights.
+      The action initializes the McAfee Web Gateway manager which performs a login
+      request, and then immediately performs a logout request. It does not fetch contextual
+      data, mutate external data, or interact with internal SecOps data.
   entity_usage:
     entity_types:
       address: false
@@ -385,8 +375,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or interact with any entities. It solely tests the
-      connection to the external service.
+      The action does not process any entities. It solely tests connectivity to the
+      external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -402,9 +392,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple ping/connectivity test. It does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or modifying
-      blocklists.
+      The action is a simple connectivity test (Ping) and does not perform any enrichment,
+      containment, ticket management, or other operations that match the expected
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -425,27 +415,35 @@ Remove Item From Group:
     ### General Description
 
     Removes a specified network object (such as an IP address or URL) from a designated
-    group in McAfee Web Gateway.
+    group or list within McAfee Web Gateway. This action is typically used to manage
+    blocklists or allowlists by removing previously added items.
 
 
     ### Flow Description
 
-    1. Retrieves the `Group Name` and `Item To Delete` from the action parameters.
+    1. Initializes the connection to the McAfee Web Gateway using the provided integration
+    credentials.
 
-    2. Initializes the McAfee Web Gateway manager with the provided credentials.
+    2. Retrieves the target `Group Name` and the `Item To Delete` from the action
+    parameters.
 
-    3. Calls the McAfee Web Gateway API to delete the specified item from the given
-    group.
+    3. Makes an HTTP DELETE API call to McAfee Web Gateway to remove the specified
+    item from the target group.
 
-    4. Returns a success or failure message based on the API response.
+    4. Makes an HTTP POST API call to commit the changes to the gateway.
+
+    5. Logs out of the gateway and returns a success or failure message based on the
+    API response.
 
 
     ### Additional Notes
 
-    The script result name is `is_unblocked`, indicating this action is typically
-    used to remove an item from a blocklist.
+    Each group in McAfee Web Gateway is type-restricted. Ensure that the item being
+    removed matches the expected format of the target group (e.g., an IP address with
+    a subnet mask like `x.x.x.x/32`).
   ai_short_description: >-
-    Removes a specified network object from a designated group in McAfee Web Gateway.
+    Removes a specified network object (such as an IP address or URL) from a designated
+    group or list within McAfee Web Gateway.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -454,14 +452,14 @@ Remove Item From Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a specified network object (e.g., IP, URL) from a group/list in McAfee
-      Web Gateway.
+      Removes a specified item from a group/list in McAfee Web Gateway.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a DELETE request to the McAfee Web Gateway API to remove an
-      entry from a list (can_mutate_external_data=true). It does not fetch data, update
-      entities, or create insights.
+      The action makes an HTTP DELETE request to remove an item from a list and an
+      HTTP POST request to commit the changes, which mutates external data in McAfee
+      Web Gateway. It does not fetch contextual data, mutate internal SOAR data, update
+      entities, create insights, or add case comments.
   entity_usage:
     entity_types:
       address: false
@@ -513,8 +511,9 @@ Remove Item From Group:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the provided action parameters.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-specific input parameters. It operates solely on the provided string
+      parameters for the group name and item to delete.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -530,10 +529,12 @@ Remove Item From Group:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes an item from a group in McAfee Web Gateway. Given the script
-      result name 'is_unblocked', this action is intended to remove an IOC from a
-      blocklist, restoring connectivity.
-    remove_ioc_from_allowlist: false
+      The action removes a specified item (like an IP or URL) from a group in McAfee
+      Web Gateway. Depending on the group's purpose, this directly aligns with the
+      expected outcomes of 'Remove IOC From Blocklist' (restoring connectivity) or
+      'Remove IOC From Allowlist' (re-enabling blocking). It does not enrich data,
+      update alerts, or manage tickets.
+    remove_ioc_from_allowlist: true
     remove_ioc_from_blocklist: true
     reset_identity_password: false
     search_asset: false
@@ -561,33 +562,35 @@ Unblock IP:
     ### General Description
 
     Unblocks IP addresses by removing them from a specified "IP range"-type group
-    in McAfee Web Gateway. This action initiates a state change on the external device
-    to restore network traffic to or from the specified entity.
+    on McAfee Web Gateway. This action initiates a state change on the external device
+    to restore network traffic capabilities for the specified entities.
 
 
     ### Flow Description
 
-    1. Establishes a connection to the McAfee Web Gateway.
+    1. Initializes the McAfee Web Gateway manager with the provided server address
+    and credentials.
 
-    2. Iterates over the target entities provided in the case, filtering specifically
-    for IP Address entities.
+    2. Iterates through the target entities, filtering specifically for Address entities.
 
-    3. For each valid IP address, makes an API call to McAfee Web Gateway to delete
-    the IP (formatted with a `/32` CIDR) from the specified group list.
+    3. For each valid Address entity, makes an API call to delete the IP address (formatted
+    with a `/32` subnet mask) from the specified group list.
 
-    4. Aggregates the results into successful and failed lists.
+    4. Commits the changes to the McAfee Web Gateway.
 
-    5. Returns a summary message and a boolean result indicating the overall success
-    of the operation.
+    5. Collects successful and failed unblock operations to generate a summary message.
+
+    6. Returns the summary message and a boolean result indicating if any IPs were
+    successfully unblocked.
 
 
     ### Additional Notes
 
-    The specified group should be part of a rule used to block IP addresses in McAfee
-    Web Gateway.
+    The specified group should be part of a rule used to block IP addresses on the
+    McAfee Web Gateway.
   ai_short_description: >-
-    Unblocks specific IP address entities by removing them from a designated group
-    list in McAfee Web Gateway.
+    Removes specified IP address entities from a designated group list on McAfee Web
+    Gateway to unblock them.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -596,13 +599,13 @@ Unblock IP:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes an IP address from a specified group list in McAfee Web Gateway.
+      Removes IP addresses from a specified group list on the McAfee Web Gateway.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a DELETE request to McAfee Web Gateway to remove an IP address
-      from a list (can_mutate_external_data=true). It does not fetch context data
-      for enrichment, nor does it update internal entities or create insights.
+      The action makes a DELETE request to the McAfee Web Gateway API to remove an
+      IP address from a list, which mutates external data. It does not fetch contextual
+      data, mutate internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -654,9 +657,9 @@ Unblock IP:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `if entity.entity_type
-      == EntityTypes.ADDRESS:`. This means it targets ADDRESS entities, filtering
-      strictly by entity_type.
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS`. Therefore, it targets ADDRESS entities and filters
+      by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -672,9 +675,9 @@ Unblock IP:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a DELETE request to McAfee Web Gateway to remove an IP address
-      from a group list. This directly aligns with the 'Remove IOC From Blocklist'
-      expected outcome.
+      The action performs a DELETE request to the McAfee Web Gateway to remove an
+      IP address from a group list, which effectively unblocks it. This directly aligns
+      with the 'Remove IOC From Blocklist' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: true
     reset_identity_password: false

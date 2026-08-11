@@ -2,37 +2,43 @@ Analyze File:
   ai_description: >-
     ### General Description
 
-    Analyzes MD5 file hashes using a specified Carbon Black Protection connector to
-    determine if they are malicious or suspicious.
+    Analyzes file hash entities using a specified connector in Carbon Black Protection.
+    This action triggers a file analysis job on the external platform to determine
+    if the file is malicious or suspicious, and updates the entity's status in Google
+    SecOps based on the results.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities and filters for `FILEHASH` entities where
+    1. Retrieves the internal connector ID from Carbon Black Protection using the
+    provided `Connector Name`.
+
+    2. Iterates over the target entities, filtering for `FILEHASH` entities where
     the identifier is exactly 32 characters long (MD5).
 
-    2. For each valid hash, initiates a file analysis job in Carbon Black Protection
-    via a POST request to the API.
+    3. Submits a file analysis request to the Carbon Black Protection API (`POST /api/bit9platform/v1/fileAnalysis`)
+    for each valid hash.
 
-    3. Waits for the analysis to complete and retrieves the results via GET requests.
+    4. Waits for the analysis job to complete up to the specified `Timeout`.
 
-    4. Evaluates if the file is malicious or suspicious based on the analysis results.
+    5. Retrieves the analysis results and checks if the file is flagged as malicious
+    or suspicious.
 
-    5. If malicious or suspicious, updates the entity's `is_suspicious` status to
-    `True`.
+    6. Updates the entity's `is_suspicious` property to `True` if a threat is detected.
 
-    6. Returns the analysis details as a JSON result and updates the entities in Google
-    SecOps.
+    7. Aggregates the analysis data and attaches it to the action's JSON result, then
+    saves the updated entities back to the platform.
 
 
     ### Additional Notes
 
-    The file must already exist in the Carbon Black Protection file catalog and on
-    at least one computer for the analysis to be successfully initiated.
+    - The file hash must already exist in the Carbon Black Protection file catalog
+    and be present on at least one computer for the analysis to successfully trigger.
+
+    - The action specifically expects MD5 hashes (32 characters).
   ai_short_description: >-
-    Analyzes MD5 file hashes using a specified Carbon Black Protection connector to
-    determine if they are malicious or suspicious, updating the entities' suspicious
-    status accordingly.
+    Triggers a file analysis job in Carbon Black Protection for MD5 file hashes and
+    updates the entity's suspicious status based on the threat results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -41,599 +47,15 @@ Analyze File:
     can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: >-
-      Creates a file analysis job in Carbon Black Protection.
+      Submits a new file analysis job to the Carbon Black Protection platform.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to create a file analysis job in Carbon Black
-      Protection, which mutates external data. It then fetches the analysis results
-      (fetches data). It updates the internal entities' suspicious status using `siemplify.update_entities`.
-      It does not create insights or case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: true
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: true
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type == EntityTypes.FILEHASH` and `len(entity.identifier) ==
-      32`. Therefore, it targets FILEHASH entities and filters by entity type and
-      identifier length.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action analyzes a file hash to determine its threat level (malicious/suspicious)
-      and returns the analysis results, which aligns with the 'Enrich IOC' category.
-      It does not upload a file directly from the SOAR platform, so it does not strictly
-      fit 'Submit File'.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Connector Name | String | Yes | The name of the analyzing connector. e.g. Palo
-    Alto Networks |
-
-    | Priority | String | Yes | The priority of the analysis (-2 to 2) |
-
-    | Timeout | String | Yes | Wait timeout. e.g. 120 |
-Block Hash:
-  ai_description: >-
-    ### General Description
-
-    Blocks specific file hashes in Carbon Black Protection. The action can apply the
-    block globally or restrict it to specific policies provided as input.
-
-
-    ### Flow Description
-
-    1. Retrieves the list of policy names from the action parameters.
-
-    2. Fetches the corresponding policy IDs from Carbon Black Protection via API.
-
-    3. Iterates through the target entities, filtering for `FILEHASH` entity types.
-
-    4. For each valid file hash, sends a POST request to the Carbon Black Protection
-    API to create or update a file rule, setting its state to banned for the specified
-    policies.
-
-    5. Updates the successfully blocked entities within the SecOps platform.
-
-
-    ### Additional Notes
-
-    Ensure that the provided policy names exactly match those configured in Carbon
-    Black Protection to avoid execution errors.
-  ai_short_description: >-
-    Blocks file hash entities in Carbon Black Protection, either globally or across
-    specified policies.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: true
-    external_data_mutation_explanation: >-
-      Bans the specified file hashes in Carbon Black Protection by creating or updating
-      a file rule.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action mutates external data by sending a POST request to Carbon Black Protection
-      to ban a file hash. It updates internal entities to reflect the successful block
-      by calling `siemplify.update_entities`. It does not fetch enrichment data, create
-      insights, or modify alert data.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: true
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using the
-      condition `if entity.entity_type == EntityTypes.FILEHASH:`. This indicates that
-      the action specifically targets FILEHASH entities and filters by the entity_type
-      attribute.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: true
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action sends a POST request to Carbon Black Protection to ban a file hash,
-      which prevents its execution. This directly aligns with the 'Add IOC To Blocklist'
-      expected outcome.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Policy Names | String | No | Comma-separated list of policy names to apply the
-    block to (e.g., Default Policy, Local Approval Policy). |
-Change Computer Policy:
-  ai_description: >-
-    ### General Description
-
-    Changes the assigned policy of a computer in Carbon Black Protection. This action
-    allows analysts to dynamically move endpoints to different security policies based
-    on IP Address or Hostname entities.
-
-
-    ### Flow Description
-
-    1. Retrieves the target `Policy Name` from the action parameters.
-
-    2. Iterates through the target entities in the case, specifically filtering for
-    `ADDRESS` (IP) and `HOSTNAME` entity types.
-
-    3. For each valid entity, queries the Carbon Black Protection API (via GET request)
-    to resolve the entity identifier to a specific computer ID.
-
-    4. If a computer is found, sends a PUT request to the Carbon Black Protection
-    API to update the computer's assigned policy to the specified policy.
-
-    5. Appends successfully processed entities to a list and updates them within the
-    Google SecOps platform.
-
-    6. Returns a summary message detailing which computers were successfully moved
-    to the new policy and lists any errors encountered.
-
-
-    ### Additional Notes
-
-    Only IP Address and Hostname entities are processed by this action. Other entity
-    types will be ignored. The specified policy name must exactly match an existing
-    policy in Carbon Black Protection.
-  ai_short_description: >-
-    Changes the assigned security policy of a computer associated with Hostname or
-    IP Address entities in Carbon Black Protection.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: >-
-      Sends a PUT request to the Carbon Black Protection API to change the assigned
-      policy of a specific computer.
-    fetches_data: false
-    internal_data_mutation_explanation: >-
-      Calls siemplify.update_entities to update the entities that were successfully
-      moved to the new policy.
-    reasoning: >-
-      The action mutates external data by sending a PUT request to the Carbon Black
-      Protection API to change a computer's policy. It also mutates internal data
-      by calling `siemplify.update_entities` on the successfully processed entities.
-      It does not fetch data for the purpose of enrichment, nor does it create insights,
-      modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and explicitly checks `if
-      entity.entity_type == EntityTypes.ADDRESS` and `elif entity.entity_type == EntityTypes.HOSTNAME`.
-      Therefore, it targets ADDRESS and HOSTNAME entities and filters them by their
-      entity_type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action changes the policy of a computer in Carbon Black Protection. While
-      this is an endpoint management/remediation action, it does not strictly align
-      with 'Contain Host' (unless the specified policy is explicitly a containment
-      policy, which is parameter-dependent and not guaranteed). It does not enrich
-      IOCs/assets, update alerts, manage tickets, or modify blocklists/allowlists.
-      Therefore, no specific outcome category perfectly matches this generic policy
-      modification.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Policy Name | String | Yes | The new policy name to assign to the computer (e.g.,
-    Default Policy). |
-Find File:
-  ai_description: >-
-    ### General Description
-
-    Finds instances of a specific file hash across multiple computers using Carbon
-    Black Protection. This action helps analysts understand the prevalence and location
-    of a file within the environment by querying the endpoint protection platform.
-
-
-    ### Flow Description
-
-    1. Iterates over the target entities provided in the case.
-
-    2. Filters the entities to process only those of type `FILEHASH`.
-
-    3. Validates that the file hash identifier is exactly 32 characters long, ensuring
-    it is an MD5 hash.
-
-    4. Makes an API call to Carbon Black Protection to retrieve file instances associated
-    with the MD5 hash.
-
-    5. Flattens the retrieved file instance data and constructs a CSV table.
-
-    6. Attaches the CSV table to the entity's results and appends the raw data to
-    the action's JSON output.
-
-
-    ### Additional Notes
-
-    This action only supports MD5 file hashes. Hashes of other types (e.g., SHA1,
-    SHA256) will be ignored during execution.
-  ai_short_description: >-
-    Finds instances of a specific file hash across multiple computers using Carbon
-    Black Protection.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches file instance data from Carbon Black Protection for file
-      hash entities. It does not mutate any external data, nor does it update internal
-      entities, create insights, or modify alerts. It only adds the fetched data to
-      the action's JSON result and entity tables.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: true
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: true
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type == EntityTypes.FILEHASH`. It further filters the entities
-      by checking if the length of `entity.identifier` is exactly 32 (to ensure it
-      is an MD5 hash). Therefore, it targets FILEHASH entities and filters by entity
-      type and identifier.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action queries Carbon Black Protection to find instances of a specific file
-      hash across computers in the environment. This provides prevalence information
-      for the indicator, which aligns with the 'Enrich IOC' expected outcome. It does
-      not perform any containment, blocking, or ticketing actions.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Get Computers By File:
-  ai_description: >-
-    ### General Description
-
-    Retrieves a list of computers on which a specific file exists from Carbon Black
-    Protection. The action queries the external system using the file's hash to identify
-    all endpoints where the file has been seen, providing prevalence information for
-    the indicator.
-
-
-    ### Flow Description
-
-    1. Iterates over the target entities provided to the action.
-
-    2. Filters the entities to process only those of type `FILEHASH`.
-
-    3. Checks if the length of the entity's identifier is 32 characters (indicating
-    an MD5 hash).
-
-    4. Queries Carbon Black Protection via the API to find all computers running the
-    specified file hash.
-
-    5. Extracts relevant computer details (e.g., Hostname, IP Address, MAC Address,
-    OS, Policy Name).
-
-    6. Attaches the results as a CSV table to the entity and adds the raw data to
-    the JSON result.
-
-
-    ### Additional Notes
-
-    - Although the action description mentions SHA-256, the code explicitly checks
-    for a hash length of 32 characters, which corresponds to an MD5 hash.
-  ai_short_description: >-
-    Retrieves a list of computers on which a specific file hash exists from Carbon
-    Black Protection.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data from Carbon Black Protection using a GET request (via
-      the manager's `get_computers_running_hash` which queries `FileInstance` and
-      `Computer`). It does not mutate external data, update internal entities (no
-      `update_entities` call), or create insights.
+      The action fetches data by retrieving the analysis results from Carbon Black
+      Protection. It mutates external data by POSTing a new file analysis job to the
+      Carbon Black API. It updates internal entities by setting `is_suspicious = True`
+      and calling `siemplify.update_entities`. It does not create insights, modify
+      alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -687,9 +109,8 @@ Get Computers By File:
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
       `if entity.entity_type == EntityTypes.FILEHASH`. It further filters the entities
-      by checking if the length of their identifier is 32 (`if len(entity.identifier)
-      == 32:`). Therefore, it targets FILEHASH entities and filters by entity type
-      and identifier.
+      by checking the length of their identifier (`if len(entity.identifier) == 32`).
+      Therefore, it targets File Hash entities and filters by entity type and identifier.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -705,9 +126,10 @@ Get Computers By File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches a list of computers running a specific file hash, which provides
-      prevalence information for the IOC within the environment. This aligns with
-      the 'Enrich IOC' category.
+      The action submits a file hash to an analysis engine (via a Carbon Black connector)
+      and retrieves a threat score/behavior report, matching the 'Submit File' and
+      'Enrich IOC' categories. It does not perform containment, blocklist modifications,
+      or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -716,311 +138,53 @@ Get Computers By File:
     search_events: false
     send_email: false
     send_message: false
-    submit_file: false
+    submit_file: true
     uncontain_host: false
     update_alert: false
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: There are no parameters for this action
-Get System Info:
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Connector Name | String | Yes | The name of the analyzing connector. e.g. Palo
+    Alto Networks |
+
+    | Priority | String | Yes | The priority of the analysis (-2 to 2) |
+
+    | Timeout | String | Yes | Wait timeout. e.g. 120 |
+Block Hash:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed system information for specified IP addresses or hostnames
-    from Carbon Black Protection. This action enriches the entities with contextual
-    metadata such as MAC address, operating system, and policy name.
+    Blocks specific file hashes in Carbon Black Protection. The action can apply the
+    block globally or restrict it to specific policies.
 
 
     ### Flow Description
 
-    1. Initializes the Carbon Black Protection manager with API credentials.
+    1. Retrieves the list of policy names from the action parameters.
 
-    2. Iterates through the target entities, specifically looking for Address and
-    Hostname entity types.
+    2. Fetches the corresponding policy IDs from Carbon Black Protection via API.
 
-    3. For each valid entity, makes an API call to Carbon Black Protection to fetch
-    computer details by IP address or hostname.
+    3. Iterates through the target entities, filtering for those of type File Hash.
 
-    4. If a computer is found, enriches the entity's additional properties with the
-    retrieved data and marks it as enriched.
+    4. For each valid file hash, makes a POST request to the Carbon Black Protection
+    API to create or update a file rule, setting its state to banned for the specified
+    policies.
 
-    5. Attaches the computer information as a CSV table to the entity.
-
-    6. Appends the raw JSON response to the action's JSON result.
-
-    7. Updates the enriched entities in the SecOps platform.
+    5. Updates the successfully blocked entities in the SecOps platform.
 
 
     ### Additional Notes
 
-    - Supported entity types: Address, Hostname.
+    If the hash is already associated with a rule, the action will append the new
+    policies to the existing rule.
   ai_short_description: >-
-    Retrieves detailed system information for specified IP addresses or hostnames
-    from Carbon Black Protection.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes GET requests to the Carbon Black Protection API to fetch computer
-      information. It does not mutate external data. It updates internal entities
-      with the fetched data and adds CSV tables to the entities.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code iterates over `siemplify.target_entities` and checks `if entity.entity_type
-      == EntityTypes.ADDRESS` or `entity.entity_type == EntityTypes.HOSTNAME`. Therefore,
-      it targets Address and Hostname entities and filters by entity_type.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: true
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches contextual metadata (e.g., OS version, MAC address, policy
-      name) for a hostname or IP address from Carbon Black Protection. This matches
-      the 'Enrich Asset' expected outcome.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Ping:
-  ai_description: >-
-    ### General Description
-
-    Tests connectivity to the Carbon Black Protection server.
-
-
-    ### Flow Description
-
-    1. Retrieves the API Root and API Key from the integration configuration.
-
-    2. Initializes the Carbon Black Protection manager.
-
-    3. Returns a success message if the initialization is successful and no exceptions
-    are raised.
-
-
-    ### Additional Notes
-
-    This action is used to verify that the integration is configured correctly and
-    can communicate with the Carbon Black Protection server.
-  ai_short_description: >-
-    Tests connectivity to the Carbon Black Protection server to verify integration
-    configuration.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action initializes the Carbon Black Protection manager using the provided
-      configuration parameters. It does not fetch data, mutate external or internal
-      data, update entities, create insights, modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not process or interact with any entities. It only tests connectivity
-      to the external service.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Unblock Hash:
-  ai_description: >-
-    ### General Description
-
-    Unblocks specific file hashes in Carbon Black Protection. This action removes
-    the specified file hashes from the ban rules of designated policies, or deletes
-    the ban rule entirely if no policies remain, effectively restoring execution rights
-    for the file.
-
-
-    ### Flow Description
-
-    1. Retrieves the provided policy names from the action parameters.
-
-    2. Queries Carbon Black Protection to resolve the provided policy names into their
-    corresponding policy IDs.
-
-    3. Iterates through the target entities, specifically filtering for `FILEHASH`
-    entities.
-
-    4. For each valid file hash, calls the Carbon Black Protection API to remove the
-    hash from the specified policies' ban rules. If the hash is removed from all policies,
-    the ban rule is deleted globally.
-
-    5. Updates the successfully unblocked entities within Google SecOps and returns
-    a summary message.
-
-
-    ### Additional Notes
-
-    - The action expects the file hash to be a valid MD5 hash.
-
-    - If a rule does not exist for a specific hash, or if the hash is invalid, the
-    action will log an error for that entity and continue processing the remaining
-    entities.
-  ai_short_description: >-
-    Unblocks File Hash entities from specific policies or globally in Carbon Black
-    Protection by modifying or deleting their ban rules.
+    Blocks specific file hashes in Carbon Black Protection, either globally or across
+    specified policies.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1029,16 +193,15 @@ Unblock Hash:
     can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: >-
-      Removes the hash from the specified policies' ban rules or deletes the ban rule
-      entirely in Carbon Black Protection.
+      Adds a file rule to ban the specified file hashes in Carbon Black Protection,
+      either globally or for specific policies.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action mutates external data by updating or deleting a FileRule in Carbon
-      Black Protection to unban a hash. It does not fetch contextual data for enrichment
-      purposes. It updates internal entities by calling `siemplify.update_entities`
-      for the successfully unblocked hashes. It does not create insights, modify alert
-      data, or create case comments.
+      The action makes a POST request to Carbon Black Protection to ban a file hash
+      (can_mutate_external_data=true). It updates the entities in the SecOps platform
+      (can_update_entities=true). It does not fetch contextual data for enrichment,
+      mutate internal data, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1090,9 +253,152 @@ Unblock Hash:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using the
-      condition `if entity.entity_type == EntityTypes.FILEHASH:`. Therefore, it targets
-      FILEHASH entities and filters them strictly by their entity_type.
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.FILEHASH`. This means it targets FILEHASH entities, filtering
+      strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a POST request to Carbon Black Protection to ban a file
+      hash, which prevents its execution. This directly aligns with the 'Add IOC To
+      Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Policy Names | String | No | Comma-separated list of policy names to apply the
+    block to (e.g. Default Policy, Local Approval Policy). |
+Change Computer Policy:
+  ai_description: >-
+    ### General Description
+
+    Moves a specified computer to a new policy within Carbon Black Protection. This
+    action targets Hostname and IP Address entities to identify the corresponding
+    computer in the external system and updates its assigned policy.
+
+
+    ### Flow Description
+
+    1. Retrieves the target policy name from the action parameters.
+
+    2. Iterates through the target entities, specifically filtering for Hostname and
+    IP Address entity types.
+
+    3. For each valid entity, makes a GET request to the Carbon Black Protection API
+    to fetch the corresponding computer details and retrieve its unique ID.
+
+    4. Makes a PUT request to the Carbon Black Protection API to update the computer's
+    policy to the specified policy ID.
+
+    5. Updates the successfully processed entities within the Google SecOps platform.
+
+
+    ### Additional Notes
+
+    Only Hostname and IP Address entities are processed by this action. If a computer
+    cannot be found or the policy change fails, the action will continue processing
+    the remaining entities and report the errors in the final output message.
+  ai_short_description: >-
+    Moves a specified computer to a new policy within Carbon Black Protection based
+    on Hostname or IP Address entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Updates the assigned policy of a computer in Carbon Black Protection.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action mutates external data by making a PUT request to change a computer's
+      policy in Carbon Black Protection. It updates internal entities in Google SecOps
+      to reflect the successful execution by calling `siemplify.update_entities`.
+      It does not fetch contextual data for enrichment purposes, create insights,
+      or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks if
+      `entity.entity_type == EntityTypes.ADDRESS` or `entity.entity_type == EntityTypes.HOSTNAME`.
+      Therefore, it targets Address and Hostname entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1108,9 +414,681 @@ Unblock Hash:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes a file hash (an IOC) from a ban rule in Carbon Black Protection,
-      which restores its execution rights. This directly aligns with the 'Remove IOC
-      From Blocklist' expected outcome.
+      The action changes the policy of a computer in Carbon Black Protection. This
+      is a generic configuration change on an endpoint management system and does
+      not directly align with specific expected outcomes like 'Contain Host' (which
+      strictly implies network isolation) or 'Update Identity'. Therefore, it does
+      not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Policy Name | String | Yes | The new policy name. e.g. Default Policy |
+Find File:
+  ai_description: >-
+    ### General Description
+
+    Searches for instances of a specific file hash across multiple computers using
+    Carbon Black Protection. This action helps determine the prevalence and locations
+    of a file within the environment.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities provided in the case.
+
+    2. Filters entities to process only those of type File Hash (specifically MD5
+    hashes with a length of 32 characters).
+
+    3. Queries Carbon Black Protection to retrieve file instances associated with
+    each valid MD5 hash.
+
+    4. Formats the retrieved file instances into a CSV table and attaches it to the
+    respective entity.
+
+    5. Aggregates the results into a JSON object and returns a summary message indicating
+    which files were found.
+
+
+    ### Additional Notes
+
+    Only MD5 hashes (length of 32 characters) are processed by this action. Other
+    hash types will be ignored.
+  ai_short_description: >-
+    Searches for instances of a specific file hash across multiple computers using
+    Carbon Black Protection to determine its prevalence.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches file instance data from Carbon Black Protection using the
+      cbapi library. It does not mutate external data, update entities, create insights,
+      or modify internal case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters them
+      using `if entity.entity_type == EntityTypes.FILEHASH:`. Therefore, it targets
+      File Hash entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries Carbon Black Protection for instances of a specific file
+      hash, which provides prevalence information about the IOC within the environment.
+      This aligns with the 'Enrich IOC' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get Computers By File:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of computers running a specific file hash from Carbon Black Protection.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities and filters for `FileHash` entities.
+
+    2. Validates that the entity identifier is exactly 32 characters long (MD5 hash).
+
+    3. Makes an API call to Carbon Black Protection to fetch the computers on which
+    the file exists.
+
+    4. Extracts computer details such as Hostname, IP Address, MAC Address, Operating
+    System, and Agent Version.
+
+    5. Attaches the extracted information as a CSV table to the entity and adds the
+    raw data to the JSON result.
+
+
+    ### Additional Notes
+
+    Although the action description mentions SHA-256, the code explicitly checks for
+    a hash length of 32 characters, which corresponds to an MD5 hash.
+  ai_short_description: >-
+    Retrieves a list of computers running a specific file hash (MD5) from Carbon Black
+    Protection and attaches the results as an entity table.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes API requests to Carbon Black Protection to fetch computer data
+      based on a file hash. It does not mutate external data, update internal entities,
+      create insights, or add case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.FILEHASH`. It further filters the entities by checking if the
+      length of `entity.identifier` is exactly 32 characters (MD5 hash).
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries Carbon Black Protection to find computers running a specific
+      file hash. This provides prevalence information for the indicator, which aligns
+      with the 'Enrich IOC' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get System Info:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed system information for endpoint assets from Carbon Black Protection.
+    This action fetches contextual metadata about computers, such as operating system,
+    MAC address, and policy name, and enriches the corresponding entities within the
+    platform.
+
+
+    ### Flow Description
+
+    1. Iterates through the provided target entities.
+
+    2. Filters entities to process only those of type IP Address or Hostname.
+
+    3. Makes an API call to Carbon Black Protection (`cb_protection.select(Computer)`)
+    to fetch computer details based on the entity's identifier.
+
+    4. Enriches the entity's additional properties with the retrieved computer data
+    and marks it as enriched.
+
+    5. Attaches a CSV table containing key computer information (e.g., OS, MAC address,
+    connected status) to the entity.
+
+    6. Updates the enriched entities in the SecOps platform and returns the raw data
+    as a JSON result.
+
+
+    ### Additional Notes
+
+    This action specifically targets Address and Hostname entities. Entities of other
+    types will be ignored.
+  ai_short_description: >-
+    Retrieves detailed system information for endpoint assets (IP addresses and hostnames)
+    from Carbon Black Protection and enriches the corresponding entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Carbon Black Protection using GET requests (via
+      cbapi select). It does not mutate external data. It updates internal entities
+      with the fetched data using `siemplify.update_entities`, but does not create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == EntityTypes.ADDRESS:` and `elif entity.entity_type ==
+      EntityTypes.HOSTNAME:`. Therefore, it targets Address and Hostname entities
+      and filters them by their entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches contextual metadata (such as OS version, MAC address, and
+      policy name) for a resource (IP or hostname) from Carbon Black Protection. This
+      directly aligns with the 'Enrich Asset' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Carbon Black Protection server.
+
+
+    ### Flow Description
+
+    1. Retrieves the API Root and API Key from the integration configuration.
+
+    2. Initializes the Carbon Black Protection manager.
+
+    3. If no exceptions occur during initialization, returns a success message.
+
+
+    ### Additional Notes
+
+    This action is used to verify that the integration is configured correctly and
+    can communicate with the Carbon Black Protection API.
+  ai_short_description: >-
+    Tests connectivity to the Carbon Black Protection server.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only initializes a connection manager to test connectivity. It does
+      not fetch data, mutate external or internal data, update entities, create insights,
+      modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities or accept any entity-related parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Unblock Hash:
+  ai_description: >-
+    ### General Description
+
+    Unblocks specified file hash entities on specific policies or globally within
+    Carbon Black Protection. This action removes existing ban rules for the hashes,
+    allowing them to execute or be accessed again according to the specified policies.
+
+
+    ### Flow Description
+
+    1. Retrieves the list of policy names provided in the action parameters.
+
+    2. Makes API calls to Carbon Black Protection to resolve the provided policy names
+    into their corresponding policy IDs.
+
+    3. Iterates through the target entities provided in the case, filtering specifically
+    for `FILEHASH` entities.
+
+    4. For each valid file hash, calls the Carbon Black Protection API to retrieve
+    the existing file rule and removes the specified policy IDs from the ban rule.
+    If no policies remain on the rule, the rule is deleted entirely.
+
+    5. Updates the successfully unblocked entities within the SecOps platform.
+
+    6. Returns a summary message detailing the unblocked hashes and any errors encountered.
+
+
+    ### Additional Notes
+
+    - If the `Policy Names` parameter is left empty or if the removal of the specified
+    policies leaves the file rule with no associated policies, the ban rule for that
+    hash is completely deleted from Carbon Black Protection.
+  ai_short_description: >-
+    Unblocks specified file hash entities on specific policies or globally within
+    Carbon Black Protection.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Removes the ban rule for the specified file hashes from the configured policies
+      in Carbon Black Protection.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action calls the Carbon Black Protection API to unban file hashes, which
+      mutates external data by modifying or deleting file rules. It does not fetch
+      enrichment data for the entities or create insights. It calls `siemplify.update_entities`
+      to update the entities that were successfully processed.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters them
+      using the condition `if entity.entity_type == EntityTypes.FILEHASH:`. Therefore,
+      it targets File Hash entities and filters them by their entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes a ban rule for file hashes in Carbon Black Protection, effectively
+      restoring execution rights for the indicator. This directly matches the 'Remove
+      IOC From Blocklist' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: true
     reset_identity_password: false

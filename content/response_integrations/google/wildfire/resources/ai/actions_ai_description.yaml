@@ -2,34 +2,40 @@ DetonateFile:
   ai_description: >-
     ### General Description
 
-    Uploads one or more files to Palo Alto WildFire for detonation and retrieves the
-    resulting analysis reports.
+    Uploads specified files to Palo Alto WildFire for detonation and retrieves the
+    resulting analysis reports. This action allows analysts to automatically submit
+    suspicious files to the WildFire sandbox and receive detailed threat intelligence
+    and behavioral reports directly within the case.
 
 
     ### Flow Description
 
-    1. Parses the provided file paths from the action parameters.
+    1. Parses the provided comma-separated file paths from the action parameters.
 
-    2. Submits each file to the WildFire API for detonation.
+    2. Connects to the WildFire API and submits each file for analysis using the `submit`
+    API call.
 
-    3. Polls the WildFire API periodically to check if the analysis report is ready.
+    3. Enters a polling loop, periodically checking the WildFire service using the
+    `report` API call to see if the analysis tasks are complete.
 
-    4. Once the report is ready, evaluates the results. If the file is deemed malicious,
-    it creates a case insight.
+    4. Once the analysis is complete, retrieves the detailed XML and PDF reports for
+    each file.
 
-    5. Attaches the parsed report data as a CSV table to the action results.
+    5. Evaluates the report; if a file is identified as malware, it creates a case
+    insight with a warning severity.
 
-    6. Downloads the PDF version of the report from WildFire and attaches it to the
-    action results.
+    6. Attaches the parsed report data as a CSV table and the downloaded PDF report
+    as an attachment to the case results.
 
 
     ### Additional Notes
 
-    The action waits synchronously for the report to complete, which may take some
-    time depending on WildFire's queue.
+    The action requires local file paths accessible to the environment where the script
+    is executing. It will block execution while polling for the WildFire analysis
+    to complete.
   ai_short_description: >-
-    Uploads specified files to Palo Alto WildFire for detonation, waits for the analysis
-    to complete, and retrieves the resulting threat reports and PDF summaries.
+    Uploads specified files to Palo Alto WildFire for detonation, retrieves the analysis
+    reports, and attaches the results and insights to the case.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -38,16 +44,16 @@ DetonateFile:
     can_mutate_internal_data: true
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Uploads a file to the Palo Alto WildFire sandbox for detonation.
+      Uploads files to the external WildFire sandbox for detonation.
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Creates case insights if the file is malicious, and attaches CSV tables and
-      PDF reports to the case.
+      Creates case insights if malware is detected and attaches analysis reports (CSV
+      and PDF) to the case.
     reasoning: >-
-      The action uploads a file to an external sandbox (WildFire), which is an external
-      mutation. It then fetches the analysis report and PDF (fetches data). Internally,
-      it creates case insights if the file is malicious and attaches the results to
-      the case. It does not update entities or modify alert data.
+      The action fetches data by polling WildFire for analysis reports. It mutates
+      external data by uploading a file to the WildFire sandbox. It mutates internal
+      data by creating case insights and attaching reports/tables to the case results.
+      It does not update entities or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -99,10 +105,9 @@ DetonateFile:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates entirely on the file paths provided via the 'File Paths'
-      parameter. Therefore, it does not run on entities and all entity type flags
-      are false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any standard entity identifiers as input parameters. It only accepts local file
+      paths to upload to the sandbox. Therefore, it does not operate on entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -118,10 +123,9 @@ DetonateFile:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action uploads a file to a sandbox (WildFire) for analysis and retrieves
-      the behavior report and threat score. This perfectly matches the 'Submit File'
-      expected outcome. It does not enrich existing IOC entities, block IPs, or perform
-      other categorized outcomes.
+      The action uploads a file to the WildFire sandbox for analysis and retrieves
+      the resulting behavior report. This directly aligns with the 'Submit File' expected
+      outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -147,33 +151,40 @@ GetFile:
   ai_description: >-
     ### General Description
 
-    Downloads a malware sample from Palo Alto WildFire based on a provided file hash
-    and attaches it to the corresponding entity in Google SecOps.
+    Downloads and saves a malware sample from Palo Alto WildFire based on a file hash
+    entity. This action retrieves the actual file content associated with a known
+    hash and attaches it directly to the entity within Google SecOps for further analysis.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities provided in the case.
+    1. Initializes the connection to the WildFire API using the provided integration
+    API key.
 
-    2. Filters the entities to include only File Hash entities.
+    2. Iterates through the target entities associated with the case.
 
-    3. Further filters the hashes to ensure they are either MD5 (32 characters) or
+    3. Filters the entities to process only `File Hash` types.
+
+    4. Validates the hash length to ensure it is either an MD5 (32 characters) or
     SHA256 (64 characters).
 
-    4. Makes an API call to WildFire (`wfapi.sample`) to retrieve the sample file
+    5. Makes an API call to WildFire (`wfapi.sample`) to retrieve the sample file
     associated with the hash.
 
-    5. Attaches the downloaded sample to the corresponding entity in Google SecOps
-    using base64 encoding.
+    6. Base64 encodes the downloaded file content and attaches it to the corresponding
+    entity in Google SecOps.
+
+    7. Returns a summary message listing the entities for which files were successfully
+    downloaded.
 
 
     ### Additional Notes
 
-    This action only supports MD5 and SHA256 hashes. If a sample is not found in WildFire,
-    an error will be logged in the action's output.
+    Only MD5 and SHA256 file hashes are supported by this action. Hashes of other
+    lengths will be ignored.
   ai_short_description: >-
-    Downloads a malware sample from Palo Alto WildFire using a file hash and attaches
-    it to the entity in Google SecOps.
+    Downloads a malware sample from Palo Alto WildFire for specific file hash entities
+    and attaches the file to the entity within Google SecOps.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -184,14 +195,153 @@ GetFile:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds the downloaded sample as an attachment to the file hash entity within the
-      case.
+      Adds the downloaded sample as an attachment to the file hash entity within Google
+      SecOps.
     reasoning: >-
-      The action fetches a sample file from WildFire via API (fetches_data=true).
-      It does not mutate external data. It mutates internal data by adding the downloaded
-      sample as an attachment to the entity (can_mutate_internal_data=true). It does
-      not update entity properties, create insights, modify alerts, or create case
+      The action fetches data (a file sample) from the WildFire API. It does not mutate
+      external data. It mutates internal data by adding the downloaded file as an
+      attachment to the entity in Google SecOps using `siemplify.result.add_entity_attachment`.
+      It does not update entities, create insights, modify alert data, or create case
       comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == EntityTypes.FILEHASH`. It also checks
+      the length of the identifier to ensure it is 32 or 64 characters, but does not
+      filter by a specific identifier value. Therefore, it targets File Hash entities
+      and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a sample file from WildFire based on a file hash and attaches
+      it to the entity. This aligns with the 'Download File' expected outcome, as
+      it retrieves a specific file from a remote host/service for local forensic analysis.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+GetPcap:
+  ai_description: >-
+    ### General Description
+
+    Downloads and saves the PCAP file of a sample from Palo Alto WildFire. This action
+    retrieves network traffic captures associated with a previously analyzed file
+    hash and attaches them to the corresponding entity for further forensic analysis.
+
+
+    ### Flow Description
+
+    1. Initializes the connection to the WildFire API using the provided integration
+    configuration.
+
+    2. Iterates through the target entities provided in the case.
+
+    3. Filters for File Hash entities, specifically checking if the identifier length
+    matches MD5 (32 characters) or SHA256 (64 characters).
+
+    4. Makes an API call to WildFire (`wfapi.pcap`) to retrieve the PCAP file associated
+    with the hash.
+
+    5. Attaches the downloaded PCAP file to the corresponding entity in the Google
+    SecOps platform using base64 encoding.
+
+
+    ### Additional Notes
+
+    Only MD5 and SHA256 hashes are supported by this action. If a PCAP is not available
+    for a specific hash, the action will capture the error and continue processing
+    other entities.
+  ai_short_description: >-
+    Downloads and saves the PCAP file of a sample from Palo Alto WildFire and attaches
+    it to the corresponding File Hash entity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds the downloaded PCAP file as an attachment to the entity in the case.
+    reasoning: >-
+      The action fetches data (a PCAP file) from the WildFire API. It does not mutate
+      external data. It mutates internal data by adding the downloaded PCAP file as
+      an attachment to the entity in the case. It does not update the entity object
+      itself, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -244,8 +394,10 @@ GetFile:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type == EntityTypes.FILEHASH`. It also filters the entities by
-      checking if the length of `entity.identifier` is exactly 32 or 64 characters.
+      `entity.entity_type == EntityTypes.FILEHASH`. It also filters by the length
+      of the entity identifier (`len(entity.identifier) == 32 or len(entity.identifier)
+      == 64`). Therefore, it targets File Hash entities and filters by entity type
+      and identifier.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -261,148 +413,9 @@ GetFile:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a sample file from WildFire based on a file hash. This
-      aligns with the 'Download File' category, as it retrieves a specific file from
-      a remote source for local forensic analysis.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-GetPcap:
-  ai_description: >-
-    ### General Description
-
-    Downloads and saves the PCAP file of a sample from Palo Alto WildFire based on
-    file hash entities. The retrieved PCAP file is then attached directly to the corresponding
-    entity within the SecOps platform for further forensic analysis.
-
-
-    ### Flow Description
-
-    1. Iterates through the target entities provided in the case.
-
-    2. Filters for entities of type `FILEHASH`.
-
-    3. Further filters the hashes to ensure they are either MD5 (32 characters) or
-    SHA256 (64 characters) in length.
-
-    4. Makes an API call to Palo Alto WildFire (`get_pcap`) to retrieve the PCAP file
-    associated with the hash.
-
-    5. Attaches the downloaded PCAP file to the corresponding entity in the SecOps
-    platform.
-
-
-    ### Additional Notes
-
-    - The action only supports MD5 and SHA256 file hashes.
-
-    - If a PCAP file is not found for a specific hash, the action will capture the
-    error and continue processing the remaining entities.
-  ai_short_description: >-
-    Downloads and saves the PCAP file of a sample from Palo Alto WildFire for file
-    hash entities, attaching the result directly to the entity in the SecOps platform.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Attaches the downloaded PCAP file to the entity within the SecOps platform.
-    reasoning: >-
-      The action fetches PCAP data from WildFire via an API request. It does not mutate
-      external data in WildFire. It mutates internal data by attaching the downloaded
-      PCAP file to the entity using `siemplify.result.add_entity_attachment`. It does
-      not call `update_entities`, `add_entity_insight`, or `add_case_comment`.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: true
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: true
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The script iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type == EntityTypes.FILEHASH`. It also checks if the length of
-      `entity.identifier` is 32 or 64. Therefore, it targets FILEHASH entities and
-      filters by both entity type and identifier.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: true
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves a PCAP file from WildFire (a remote analysis engine) and
-      attaches it locally for forensic analysis. This aligns with the 'Download File'
-      expected outcome. It does not submit a file, nor does it return standard threat
-      intelligence enrichment data like reputation or malware family.
+      The action retrieves a PCAP file from WildFire for a specific file hash. This
+      aligns with the 'Download File' expected outcome, as it retrieves a specific
+      file from a remote host (the WildFire sandbox) for local forensic analysis.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -422,57 +435,62 @@ GetReport:
   ai_description: >-
     ### General Description
 
-    Retrieves a detonation report for FileHash entities from Palo Alto Networks WildFire.
-    This action fetches threat intelligence and file information, evaluates the malware
-    status, and attaches the detailed analysis report to the entity.
+    Retrieves a detonation report from Palo Alto WildFire for File Hash entities.
+    This action fetches both the structured report data and the PDF summary, enriching
+    the entities with threat intelligence and attaching the reports to the case.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities and filters for `FILEHASH` entities.
+    1. Connects to the WildFire API using the provided integration configuration.
 
-    2. Validates that the hash identifier is either MD5 (32 characters) or SHA256
-    (64 characters).
+    2. Iterates through the target entities, filtering for File Hash entities with
+    a length of 32 (MD5) or 64 (SHA256) characters.
 
-    3. Makes an API call to WildFire to retrieve the XML detonation report for the
-    hash.
+    3. Makes an API call to WildFire (`report` endpoint) to retrieve the XML report
+    for each valid hash.
 
-    4. Evaluates the report; if the file is identified as malware, marks the entity
-    as suspicious and creates an insight.
+    4. Enriches the entity's additional properties with file information extracted
+    from the report.
 
-    5. Enriches the entity's additional properties with the retrieved file information.
+    5. If the file is identified as malware in the report, marks the entity as suspicious
+    and creates an insight.
 
-    6. Attaches the task information as a CSV table to the entity.
+    6. Attaches the task information from the report as a CSV table to the entity.
 
-    7. Makes a second API call to WildFire to retrieve the PDF version of the report
-    and attaches it to the entity.
+    7. Makes another API call to WildFire to retrieve the PDF version of the report.
 
-    8. Updates the enriched entities within Google SecOps.
+    8. Attaches the PDF report to the entity in the SecOps platform.
+
+    9. Updates the entities with the enriched data and saves the changes.
 
 
     ### Additional Notes
 
-    - Only processes MD5 and SHA256 hashes.
-
-    - Requires a valid WildFire API key configured in the integration settings.
+    Only MD5 (32 characters) and SHA256 (64 characters) hashes are supported by this
+    action.
   ai_short_description: >-
-    Retrieves a detonation report for FileHash entities from Palo Alto Networks WildFire,
-    enriches the entities with threat intelligence, and attaches the report as a PDF.
+    Retrieves a detonation report and PDF summary from Palo Alto WildFire for File
+    Hash entities, enriching the entities with threat intelligence and marking them
+    as suspicious if malicious.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Updates entities with WildFire report data, marks them as suspicious if malicious,
+      adds insights, and attaches PDF reports and CSV tables to the case.
     reasoning: >-
-      The action makes API requests to WildFire to fetch XML and PDF reports for file
-      hashes. It does not mutate external data. It updates internal entities with
-      additional properties, marks them as suspicious if malicious, creates insights,
-      and attaches reports.
+      The action fetches report data from the WildFire API (fetches_data=true). It
+      does not modify data in WildFire (can_mutate_external_data=false). It updates
+      entities in Google SecOps with the report data, adds insights, and attaches
+      files and tables (can_mutate_internal_data=true, can_update_entities=true, can_create_insight=true).
+      It does not modify alerts or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -524,10 +542,11 @@ GetReport:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      == EntityTypes.FILEHASH`. It also filters by the length of the identifier (`len(entity.identifier)
-      == 32 or len(entity.identifier) == 64`). Therefore, it targets FILEHASH entities
-      and filters by entity_type and identifier.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.FILEHASH`. It also checks if the length of
+      the identifier is 32 or 64 characters (`len(entity.identifier) == 32 or len(entity.identifier)
+      == 64`). Therefore, it targets File Hash entities and filters by entity type
+      and identifier length.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -543,9 +562,10 @@ GetReport:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches detonation reports and threat intelligence for file hashes
-      from WildFire, which matches the 'Enrich IOC' expected outcome. It does not
-      submit files, mutate external state, or interact with assets/endpoints.
+      The action fetches threat intelligence (detonation reports and malware status)
+      for file hashes from WildFire, which aligns with the 'Enrich IOC' category.
+      It does not submit a file for analysis, but rather retrieves a report for an
+      existing hash.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -565,8 +585,8 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Palo Alto Wildfire service to ensure the integration
-    is configured correctly and can communicate with the API.
+    Tests connectivity to the Wildfire service to ensure the integration is configured
+    correctly and can communicate with the API.
 
 
     ### Flow Description
@@ -575,19 +595,17 @@ Ping:
 
     2. Initializes the Wildfire API client.
 
-    3. Makes an API call to submit predefined test URLs to the Wildfire service.
+    3. Submits hardcoded test URLs to the Wildfire API to verify connectivity.
 
-    4. Returns a successful result if the API accepts the submission without errors.
+    4. Returns a successful result if the connection is established without errors.
 
 
     ### Additional Notes
 
-    This action is primarily used for diagnostic purposes to verify that the provided
-    credentials and network settings allow successful communication with Palo Alto
-    Wildfire.
+    This action is typically used for health checks and does not process case entities
+    or perform any incident response operations.
   ai_short_description: >-
-    Tests connectivity to the Palo Alto Wildfire service by submitting predefined
-    test URLs.
+    Tests connectivity to the Wildfire service by submitting test URLs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -599,10 +617,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only tests connectivity by submitting predefined test URLs to the
-      Wildfire API. It does not fetch contextual data for alerts, mutate external
-      data in a meaningful administrative way, mutate internal data, update entities,
-      or create insights.
+      The action tests connectivity by submitting hardcoded test URLs to the Wildfire
+      API. It does not fetch contextual data for alerts, mutate meaningful external
+      data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -654,8 +671,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It simply tests connectivity
-      to the external service using predefined test URLs.
+      The action does not process any entities. It is a simple connectivity test that
+      does not iterate over target entities or accept entity-based parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -671,9 +688,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, mutating external state,
-      or managing cases.
+      The action is a simple ping/connectivity test. It does not enrich IOCs, mutate
+      external state, or perform any of the specific expected outcomes defined in
+      the categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

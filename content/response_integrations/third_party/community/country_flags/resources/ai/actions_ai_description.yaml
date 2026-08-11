@@ -3,37 +3,41 @@ Get Country Flag:
     ### General Description
 
     Retrieves the national flag of a specified country as a base64-encoded string.
-    It can fetch flags based on a direct country code input or by extracting country
-    codes from the additional properties of target entities.
+    It can fetch flags based on a direct two-digit country code input or by extracting
+    country codes from the additional properties of target entities. The action queries
+    `countryflags.io` to download the flag image and caches the results locally to
+    optimize future requests.
 
 
     ### Flow Description
 
-    1. Reads a local cache file (`flags.json`) to check for previously fetched flags.
+    1. Reads the local cache file to check for previously downloaded flags.
 
-    2. Iterates through target entities to extract country codes from specified fields
-    in their `additional_properties`.
+    2. Retrieves the `Country Code Two Digit` and `Country Code From Entity Field`
+    parameters.
 
-    3. If a country code is found and not cached, makes an HTTP GET request to `countryflags.io`
-    to download the flag image.
+    3. Iterates through target entities. If a specified field exists in an entity's
+    additional properties, it extracts the country code.
 
-    4. Converts the downloaded image to a base64-encoded string.
+    4. For each identified country code (from entities or direct input), checks if
+    the flag is already in the local cache.
 
-    5. Processes any directly provided country code parameter in the same manner.
+    5. If not cached, makes an HTTP GET request to `https://www.countryflags.io/{}/flat/64.png`
+    to fetch the flag image.
 
-    6. Aggregates the base64 strings into a JSON result object.
+    6. Encodes the retrieved image into a base64 string and updates the cache.
 
-    7. Updates the local cache file with any newly fetched flags.
+    7. Returns the base64 strings as a JSON result.
 
 
     ### Additional Notes
 
-    The action relies on the external service `countryflags.io` for fetching new flags.
-    It uses local file caching to optimize repeated requests.
+    The action relies on `countryflags.io` for fetching images. It uses a local JSON
+    file within the run folder to cache base64 strings of previously fetched flags,
+    reducing redundant API calls.
   ai_short_description: >-
-    Retrieves a country's flag as a base64-encoded string by querying countryflags.io,
-    using either a directly provided country code or extracting it from the additional
-    properties of target entities.
+    Retrieves a country's flag as a base64-encoded string from countryflags.io using
+    a direct country code or by extracting it from entity properties.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -45,11 +49,9 @@ Get Country Flag:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to 'countryflags.io' to fetch flag images,
-      meaning it fetches data. It does not perform any state-changing operations (POST/PUT/DELETE)
-      on external systems. Internally, it only adds a JSON result to the action execution;
-      it does not call methods to update entities, create insights, modify alert data,
-      or create case comments.
+      The action makes an HTTP GET request to countryflags.io to fetch flag images,
+      so it fetches data. It does not mutate external systems, update entities, create
+      insights, or modify internal case data.
   entity_usage:
     entity_types:
       address: true
@@ -101,11 +103,11 @@ Get Country Flag:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` without filtering by `entity_type`,
-      meaning it operates on an unfiltered global scope (all entity types are supported).
-      During the iteration, it checks if specific fields exist in `entity.additional_properties`
-      to extract the country code, meaning it filters/processes entities based on
-      their additional properties.
+      The code iterates over `siemplify.target_entities` without filtering by `entity_type`.
+      It checks if the field specified in the 'Country Code From Entity Field' parameter
+      exists in `entity.additional_properties`. Since it does not filter by specific
+      entity types, it runs on all supported entity types (global scope). It filters
+      entities by checking their `additional_properties`.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -121,12 +123,11 @@ Get Country Flag:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches a country flag image based on a country code and returns
-      it as a base64 string in the JSON result. It does not return threat intelligence,
-      reputation, or contextual asset metadata in the traditional sense of 'Enrich
-      IOC' or 'Enrich Asset'. It also does not mutate external state, update alerts,
-      or interact with ticketing/email systems. Therefore, it does not match any of
-      the predefined outcome categories.
+      The action fetches a country flag image based on a country code. This is a utility
+      function that does not strictly align with standard IOC enrichment (which expects
+      reputation/threat intel) or Asset enrichment (which expects OS/owner/MAC metadata).
+      It does not update alerts, create tickets, block IOCs, or perform any other
+      categorized outcomes.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -156,33 +157,33 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity with the Country Flags product by attempting to retrieve the
-    flag for a hardcoded country code ("us").
+    The Ping action tests connectivity to the Country Flags API. It verifies that
+    the integration can successfully communicate with the external service by attempting
+    to retrieve a sample country flag.
 
 
     ### Flow Description
 
-    1. Attempts to read a local cache file (`flags.json`) containing previously fetched
-    flags.
+    1. Initializes the action and attempts to load a local cache file (`flags.json`).
 
-    2. Checks if the flag for the United States ("us") is present in the cache.
+    2. Checks if the base64 encoded flag for the hardcoded country code ("us") exists
+    in the cache.
 
-    3. If not found, makes an HTTP GET request to the Country Flags API (`https://www.countryflags.io/us/flat/64.png`)
-    to fetch the flag image.
+    3. If the flag is not cached, makes an HTTP GET request to `https://www.countryflags.io/{country_code}/flat/64.png`.
 
-    4. Base64 encodes the retrieved image and updates the cache data in memory.
+    4. Base64 encodes the retrieved image content.
 
-    5. Returns a successful execution state if the flag is successfully retrieved.
+    5. Returns a successful execution state if the flag data is successfully retrieved,
+    otherwise fails.
 
 
     ### Additional Notes
 
-    This action is primarily used as a ping/connectivity test for the Country Flags
-    integration. It does not take any parameters and uses a hardcoded country code
-    for the test.
+    This action does not require any parameters and is primarily used to validate
+    the integration's network connectivity and configuration.
   ai_short_description: >-
-    Tests connectivity with the Country Flags product by fetching the flag for the
-    United States.
+    Tests connectivity to the Country Flags API by attempting to fetch and encode
+    a sample country flag.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -194,10 +195,10 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the Country Flags API to fetch an image,
-      so it fetches data. It does not perform any state-changing operations on external
-      systems, nor does it mutate internal SecOps data, update entities, create insights,
-      modify alerts, or create case comments.
+      The action makes an HTTP GET request to the Country Flags API to fetch a flag
+      image, so it fetches data. It does not perform any state-changing operations
+      on external systems (no POST/PUT/DELETE), nor does it mutate internal SecOps
+      data, update entities, create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -249,9 +250,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or process any
-      entity-specific data. It performs a static connectivity test. Therefore, all
-      entity type flags and filter flags are set to false.
+      The code does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related input parameters. It operates independently of any case entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -267,10 +267,10 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) that fetches a hardcoded country
-      flag to verify API access. It does not enrich specific IOCs or assets, nor does
-      it interact with alerts, tickets, blocklists, or identities. Therefore, it does
-      not match any of the predefined outcome categories.
+      This is a standard Ping action used solely to test connectivity to the Country
+      Flags API. It does not enrich IOCs or assets, update alerts, create tickets,
+      or perform any containment/remediation actions. Therefore, it does not match
+      any of the specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

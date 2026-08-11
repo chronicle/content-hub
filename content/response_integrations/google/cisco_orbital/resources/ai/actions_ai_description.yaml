@@ -2,9 +2,9 @@ Execute Query:
   ai_description: >-
     ### General Description
 
-    Executes osquery SQL queries on endpoints based on IP Address and Hostname entities
-    using Cisco Orbital. This action submits a query job to the Cisco Orbital platform
-    and retrieves the execution results from the targeted endpoints.
+    Executes custom osquery SQL queries on endpoints associated with IP Address and
+    Hostname entities using Cisco Orbital. This action allows analysts to retrieve
+    specific system state or telemetry data directly from the endpoints.
 
 
     ### Flow Description
@@ -14,41 +14,37 @@ Execute Query:
 
     2. Filters the target entities to include only IP Addresses and Hostnames.
 
-    3. Submits a new query job to Cisco Orbital for the targeted endpoints via a POST
-    request to the `v0/query` endpoint.
+    3. Submits an asynchronous query job to Cisco Orbital for the targeted endpoints.
 
-    4. Periodically checks the status of the query job using a GET request to the
-    `v0/jobs/{job_id}/results` endpoint (runs asynchronously).
+    4. Polls Cisco Orbital for the job status and retrieves the query results once
+    completed.
 
-    5. Once completed, retrieves the query results and attaches them to the action's
-    JSON result.
-
-    6. Optionally creates a case wall table displaying the query results for each
-    successful entity.
+    5. Attaches the query results to the action's JSON output and optionally creates
+    a case wall table with the retrieved data.
 
 
     ### Additional Notes
 
-    This action runs asynchronously. The maximum timeout allowed is 24 hours.
+    This is an asynchronous action. The maximum timeout is 24 hours, and it should
+    be adjusted in the IDE as needed.
   ai_short_description: >-
-    Executes osquery SQL queries on endpoints based on IP Address and Hostname entities
-    using Cisco Orbital, and retrieves the execution results.
+    Executes custom osquery SQL queries on endpoints associated with IP Address and
+    Hostname entities using Cisco Orbital and retrieves the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Submits a new query job to the Cisco Orbital platform.
+    external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data by retrieving query results from Cisco Orbital. It mutates
-      external data by submitting a new query job to the Cisco Orbital API (POST request).
-      It does not mutate internal data, update entities, create insights, modify alert
-      data, or create case comments.
+      The action fetches data by submitting a query job and retrieving the results
+      from Cisco Orbital. It does not mutate external data (as it performs a read-only
+      query on the endpoint), nor does it mutate internal data, update entities, create
+      insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -100,11 +96,10 @@ Execute Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES` (which includes ADDRESS and HOSTNAME). During the
-      async continuation, it also filters entities using `entity.identifier in entities_identifiers`.
-      Therefore, it targets Address and Hostname entities, filtering by entity type
-      and identifier.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS
+      and HOSTNAME. During the asynchronous polling phase and result matching, it
+      also filters entities by their `identifier`.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -120,9 +115,9 @@ Execute Query:
     execute_command_on_the_host: true
     get_alert_information: false
     reasoning: >-
-      The action executes an osquery SQL query on remote endpoints and retrieves the
-      results. This aligns with the 'Execute Command on the Host' category, as it
-      runs a query/command on the endpoint and returns the output.
+      The action submits an osquery SQL query to be executed on remote endpoints and
+      retrieves the results. This aligns with the 'Execute Command on the Host' category,
+      as it runs a system query on a remote endpoint and returns the output.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -160,29 +155,29 @@ Ping:
     ### General Description
 
     Tests connectivity to the Cisco Orbital server to ensure the integration is configured
-    correctly.
+    correctly and can communicate with the API.
 
 
     ### Flow Description
 
-    1. Extracts the integration configuration parameters (API Root, Client ID, Client
+    1. Extracts integration configuration parameters (API Root, Client ID, Client
     Secret, Verify SSL).
 
-    2. Initializes the Cisco Orbital API client.
+    2. Initializes the Cisco Orbital manager and authenticates to retrieve a token.
 
-    3. Makes an API call (GET request) to the `/v0/ok` endpoint to verify connectivity.
+    3. Makes a GET request to the `v0/ok` endpoint to verify connectivity.
 
-    4. Returns a success message if the connection is established, or an error message
-    if it fails.
+    4. Returns a success or failure message based on the HTTP response.
 
 
     ### Additional Notes
 
-    This action is intended for administrative purposes to validate integration settings
-    and does not process alerts or entities.
+    This action is typically used as a diagnostic tool to verify that the integration's
+    credentials and network settings are valid. It does not interact with cases or
+    entities.
   ai_short_description: >-
-    Tests connectivity to the Cisco Orbital server using the provided integration
-    configuration parameters.
+    Tests connectivity to the Cisco Orbital server to ensure the integration is configured
+    correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -194,10 +189,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Cisco Orbital API to test connectivity.
-      It does not fetch contextual data for alerts/entities, mutate external data,
-      mutate internal data, update entities, create insights, modify alert data, or
-      create case comments.
+      The action only makes a GET request to a health check/ping endpoint (`v0/ok`).
+      It does not fetch contextual data for alerts, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -249,8 +243,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or interact with any entities. It solely tests connectivity
-      to the external service.
+      The action does not process any entities. It only tests the connection to the
+      external service using integration-level configuration parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -266,9 +260,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not perform enrichment,
-      containment, ticket management, or any other operational security tasks defined
-      in the outcome categories.
+      The action is a simple connectivity test (Ping). It does not enrich data, mutate
+      external systems, interact with alerts, or perform any operations that match
+      the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -2,10 +2,9 @@ Get Reputation:
   ai_description: >-
     ### General Description
 
-    Enriches IP Address, Hostname, and URL entities using threat intelligence from
-    the Talos ThreatSource. The action retrieves reputation, category information,
-    and blocklist status for the supported entities to provide additional context
-    for analysts.
+    Enriches IP Address, Hostname, and URL entities using information from the Talos
+    ThreatSource. It retrieves reputation, category information, and blocklist status
+    for the supported entities to provide threat intelligence context.
 
 
     ### Flow Description
@@ -13,22 +12,21 @@ Get Reputation:
     1. Iterates over the target entities and filters for supported types (IP Address,
     Hostname, URL).
 
-    2. For URL entities, extracts the domain part to be used for querying.
+    2. For each supported entity, makes GET requests to the Talos API to fetch reputation,
+    category info, and blocked info.
 
-    3. Makes HTTP GET requests to the Talos API to fetch reputation, category info,
-    and blocked info based on the specific entity type.
+    3. Aggregates the retrieved data and updates the entity's additional properties
+    with the enrichment data.
 
-    4. Aggregates the retrieved data into JSON results and entity tables.
+    4. Marks the entity as enriched and saves the updates to the platform.
 
-    5. Updates the entities with the enrichment data and marks them as enriched.
+    5. Attaches the raw JSON results and entity tables to the action result.
 
 
     ### Additional Notes
 
-    - The action runs asynchronously. Between each submission, the action waits to
-    prevent access from being blocked.
-
-    - For URL entities, the action specifically extracts and queries the domain part.
+    The action runs asynchronously. For URL entities, it extracts and uses the domain
+    part for the query.
   ai_short_description: >-
     Enriches IP Address, Hostname, and URL entities by retrieving reputation, category,
     and blocklist information from the Talos ThreatSource.
@@ -43,11 +41,9 @@ Get Reputation:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches reputation data from Talos ThreatSource via HTTP GET requests
-      (fetches_data=true). It does not mutate external data. It updates the internal
-      entities with the fetched enrichment data using `siemplify.update_entities`
-      (can_update_entities=true). It does not create insights, modify alert data,
-      or create case comments.
+      The action fetches data from the Talos API via GET requests. It does not mutate
+      external data. It updates internal entities with the fetched enrichment data
+      but does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -90,7 +86,7 @@ Get Reputation:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: true
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -99,11 +95,11 @@ Get Reputation:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them during the
-      first run using `entity.entity_type in SUPPORTED_ENTITY_TYPES` (which includes
-      ADDRESS, HOSTNAME, and URL). In subsequent asynchronous runs, it filters entities
-      by checking if `entity.identifier` is in the list of initially suitable entity
-      identifiers.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.HOSTNAME`, `EntityTypes.ADDRESS`, and `EntityTypes.URL`.
+      Therefore, it targets Hostname, Address, and URL entities, filtering strictly
+      by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -119,10 +115,10 @@ Get Reputation:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves reputation, category, and blocklist information for IP
-      addresses, hostnames, and URLs from Talos ThreatSource. This directly aligns
-      with the 'Enrich IOC' expected outcome. It does not perform any state-changing
-      operations on external systems or modify alerts/tickets.
+      The action fetches reputation, category, and blocklist information for IP, Hostname,
+      and URL entities from Talos ThreatSource. This aligns with the 'Enrich IOC'
+      expected outcome. It does not modify external systems or perform other categorized
+      actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -142,28 +138,29 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Talos ThreatSource API to ensure the integration is
-    configured correctly and the service is reachable.
+    Tests connectivity to the Talos ThreatSource API. This action is used to verify
+    that the integration is configured correctly and that the SOAR platform can successfully
+    communicate with the Talos service.
 
 
     ### Flow Description
 
-    1. Initializes the TalosManager with the provided SSL configuration.
+    1. Initializes the TalosManager using the integration's SSL configuration.
 
-    2. Sends a GET request to the Talos API ping endpoint (using a test domain query).
+    2. Makes a test HTTP GET request to the Talos API (specifically querying a test
+    domain) to verify network connectivity and access.
 
-    3. Validates the HTTP response to confirm successful connectivity.
-
-    4. Returns a success or failure message based on the response.
+    3. Evaluates the HTTP response and returns a successful execution state if the
+    connection is established, or a failed state with an error message if it fails.
 
 
     ### Additional Notes
 
-    This action does not process any entities or alerts. It is strictly used for verifying
-    network access and integration settings.
+    This action does not process any entities or alerts and is strictly used for diagnostic
+    and configuration verification purposes.
   ai_short_description: >-
     Tests connectivity to the Talos ThreatSource API to ensure the integration is
-    configured correctly.
+    configured correctly and reachable.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -175,9 +172,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to a test endpoint to verify connectivity. It
-      does not fetch contextual data for entities, mutate external or internal data,
-      update entities, create insights, modify alert data, or create case comments.
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for alerts/entities, mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -229,8 +226,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process, iterate over, or filter any entities. It solely
-      tests connectivity to the external API.
+      The action does not iterate over target entities or accept any entity-related
+      input parameters. It solely performs a static connectivity check.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -246,9 +243,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      The action is a simple ping/connectivity test. It does not enrich data, mutate
+      state, interact with alerts, or perform any operations that match the defined
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -268,8 +265,8 @@ Whois:
   ai_description: >-
     ### General Description
 
-    Retrieves Whois information about entities using Talos ThreatSource. Supported
-    entities include IP Addresses, Hostnames, and URLs.
+    Retrieves Whois information for IP Address, Hostname, and URL entities using Talos
+    ThreatSource.
 
 
     ### Flow Description
@@ -278,16 +275,17 @@ Whois:
 
     2. For URL entities, extracts the domain part to be used for the query.
 
-    3. Makes a GET request to the Talos ThreatSource API (`/cloud_intel/whois`) to
-    fetch the Whois report for each valid entity.
+    3. Makes a GET request to the Talos ThreatSource API (`/cloud_intel/whois`) for
+    each valid entity to fetch its Whois report.
 
-    4. Attaches the retrieved Whois information as JSON results to the action.
+    4. Collects the retrieved Whois reports and attaches them as JSON results to the
+    action execution.
 
 
     ### Additional Notes
 
-    This action runs asynchronously. It waits between each submission to ensure access
-    is not blocked by the API.
+    This action runs asynchronously. Between each submission, the action waits to
+    ensure access is not blocked by the API rate limits.
   ai_short_description: >-
     Retrieves Whois information for IP Address, Hostname, and URL entities using Talos
     ThreatSource.
@@ -302,9 +300,9 @@ Whois:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Talos API to fetch Whois data. It does
-      not mutate external data. It does not update internal entities or create insights;
-      it only adds the fetched data as JSON results to the action.
+      The action makes a GET request to the Talos API to fetch Whois data for entities.
+      It does not mutate external data, nor does it update internal entities, create
+      insights, or modify alert data. It only returns the fetched data as a JSON result.
   entity_usage:
     entity_types:
       address: true
@@ -347,7 +345,7 @@ Whois:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -356,10 +354,11 @@ Whois:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES`, where the supported types are HOSTNAME, ADDRESS,
-      and URL. Therefore, it targets Address, Hostname, and URL entities, filtering
-      strictly by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them based
+      on `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are
+      HOSTNAME, ADDRESS, and URL. In subsequent asynchronous runs, it also filters
+      entities by checking if `entity.identifier` is in the list of initially suitable
+      identifiers.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -375,9 +374,10 @@ Whois:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches Whois information for IP, Hostname, and URL entities from
-      Talos ThreatSource. This aligns with the 'Enrich IOC' expected outcome as it
-      retrieves threat intelligence and context for indicators.
+      The action fetches Whois information for indicators (IP, Hostname, URL) from
+      Talos ThreatSource, which aligns with the 'Enrich IOC' expected outcome. It
+      does not perform any state-changing operations on external systems or internal
+      alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

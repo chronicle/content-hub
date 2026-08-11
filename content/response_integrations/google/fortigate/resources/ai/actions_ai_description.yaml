@@ -2,38 +2,38 @@ Add Entities To Address Group:
   ai_description: >-
     ### General Description
 
-    Adds entities to a specified address group in Fortigate. The action supports IP
-    Address and URL entities, extracting the domain part from URL entities before
-    processing.
+    Adds specified IP Address and URL entities to a designated address group in Fortigate.
+    If the entities do not already exist in Fortigate, the action will create them
+    before adding them to the group.
 
 
     ### Flow Description
 
-    1. Retrieves the specified address group from Fortigate to verify its existence.
+    1. Extracts the target address group name from the action parameters.
 
-    2. Iterates through the supported target entities (IP Address and URL).
+    2. Queries the Fortigate API (GET request) to verify the existence of the specified
+    address group.
 
-    3. Checks if each entity already exists as an address object in Fortigate.
+    3. Iterates through the supported target entities (IP Addresses and URLs). For
+    URLs, the domain part is extracted.
 
-    4. If the entity does not exist, it creates a new address object for it via the
-    Fortigate API.
+    4. For each entity, queries Fortigate (GET request) to check if it already exists.
+    If it does not exist, the action creates the entity in Fortigate (POST request).
 
-    5. Checks if the entity is already a member of the target address group.
+    5. Checks if the entity is already a member of the target address group. If not,
+    it updates the address group to include the new entity (PUT request).
 
-    6. If not, adds the entity to the address group by making a PUT request to the
-    Fortigate API.
-
-    7. Returns a summary message detailing which entities were successfully added,
-    which already existed in the group, and which failed.
+    6. Returns a summary message detailing the successfully added, already existing,
+    and failed entities.
 
 
     ### Additional Notes
 
-    Supported entities: IP Address, URL. The action extracts the domain part of URL
-    entities.
+    The action will automatically extract the domain part of URL entities before processing
+    them.
   ai_short_description: >-
     Adds IP Address and URL entities to a specified address group in Fortigate, creating
-    new address objects if they do not already exist.
+    the entities in the firewall if they do not already exist.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -42,16 +42,15 @@ Add Entities To Address Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates new address objects if they do not exist and adds them to the specified
-      address group in Fortigate.
+      Creates new address entities and updates address group memberships in Fortigate.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action interacts with the Fortigate API to check for the existence of address
-      objects and address groups. It mutates external data by creating new address
-      objects (POST request) if they do not exist and updating the address group (PUT
-      request) to include the entities. It does not fetch contextual data for enrichment,
-      nor does it mutate internal SecOps data, update entities, or create insights.
+      The action makes GET requests to check the existence of address groups and entities,
+      but this is for internal logic rather than fetching contextual enrichment data.
+      It makes POST and PUT requests to Fortigate to create entities and update address
+      group memberships, meaning it mutates external data. It does not mutate internal
+      SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -103,9 +102,10 @@ Add Entities To Address Group:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS and URL. Therefore,
-      it targets Address and URL entities, filtering strictly by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.URL`. Therefore, it targets
+      Address and URL entities and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -121,11 +121,12 @@ Add Entities To Address Group:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds entities to an address group in Fortigate. While this could
-      be part of a blocking or allowing workflow depending on how the address group
-      is used in firewall policies, the action itself does not explicitly block or
-      allow, nor does it fit any other specific outcome category like enriching IOCs
-      or updating alerts.
+      The action adds entities to an address group in Fortigate. While address groups
+      can be used in firewall policies for blocking or allowing traffic, the action
+      itself only modifies the group membership and does not explicitly block or allow
+      the IOCs. Therefore, it does not strictly match the 'Add IOC To Blocklist' or
+      'Add IOC To Allowlist' expected outcomes, nor does it match any other specific
+      category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -152,43 +153,43 @@ Add Entities To Policy:
     ### General Description
 
     Adds specified IP Address and URL entities to a designated policy in Fortigate.
-    This action ensures that the entities exist as address objects in Fortigate and
-    then appends them to either the source or destination of the specified firewall
-    policy.
+    The action extracts the domain part of URL entities before processing and ensures
+    the corresponding address objects exist in the firewall before associating them
+    with the policy.
 
 
     ### Flow Description
 
-    1. Extracts the target policy name and location (Source or Destination) from the
-    action parameters.
+    1. Extracts the provided policy name and location (Destination or Source) from
+    the action parameters.
 
-    2. Retrieves the specified policy from Fortigate via a GET request to verify its
-    existence.
+    2. Queries Fortigate via API to verify the existence of the specified policy.
 
-    3. Iterates over the supported entities (IP Address and URL) provided in the case.
+    3. Iterates through the supported target entities (IP Address and URL).
 
-    4. For each entity, checks if a corresponding address object already exists in
-    Fortigate using a GET request.
+    4. For each entity, queries Fortigate to check if it already exists as an address
+    object.
 
-    5. If the address object does not exist, creates it in Fortigate via a POST request.
+    5. If the entity does not exist, makes an API call to create a new address object
+    for it.
 
-    6. Checks if the entity is already part of the target policy's source or destination
+    6. Checks if the entity is already part of the specified policy's source or destination
     items.
 
-    7. If the entity is not in the policy, updates the policy to include the new entity
-    via a PUT request.
+    7. If not, makes an API call to update the policy, adding the entity to the specified
+    location.
+
+    8. Returns a summary message detailing successfully added, already existing, and
+    failed entities.
 
 
     ### Additional Notes
 
-    - The action automatically extracts the domain part of URL entities before processing
-    them.
-
-    - Subnets are removed from IP addresses when creating the address object name,
-    but the full subnet is used for the object's configuration.
+    The action only supports IP Address and URL entities. For URL entities, it automatically
+    extracts and uses the domain part for the address object.
   ai_short_description: >-
-    Adds IP Address and URL entities to a specified firewall policy in Fortigate,
-    automatically creating the necessary address objects if they do not already exist.
+    Adds specified IP Address and URL entities to a designated policy in Fortigate,
+    creating the necessary address objects if they do not already exist.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -197,15 +198,16 @@ Add Entities To Policy:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates address objects and updates firewall policies in Fortigate to include
-      the specified entities.
-    fetches_data: false
+      Creates new address objects and updates policy configurations in Fortigate to
+      include the specified entities.
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes GET requests to check for the existence of policies and entities,
-      POST requests to create new address entities, and PUT requests to update the
-      policy with the new entities. It mutates external data (Fortigate configuration)
-      but does not mutate internal SecOps data, update entities, or create insights.
+      The action fetches policy and entity data from Fortigate (fetches_data=true).
+      It mutates external data by creating new address objects and updating policy
+      configurations to include the entities (can_mutate_external_data=true). It does
+      not mutate internal data, update entities, create insights, modify alerts, or
+      create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -257,14 +259,14 @@ Add Entities To Policy:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.ADDRESS`
-      and `EntityTypes.URL`. Therefore, it targets IP Address and URL entities, filtering
-      strictly by the `entity_type` attribute.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      is defined as `[EntityTypes.ADDRESS, EntityTypes.URL]`. Therefore, it targets
+      Address and URL entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
-    add_ioc_to_allowlist: true
-    add_ioc_to_blocklist: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
     contain_host: false
     create_ticket: false
     delete_email: false
@@ -276,11 +278,11 @@ Add Entities To Policy:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds IP and URL entities to a specified firewall policy in Fortigate.
-      Depending on the nature of the target policy (e.g., a block policy or an allow
-      policy), this action functionally serves to add the IOC to a blocklist or an
-      allowlist. It does not enrich data, update alerts, or interact with ticketing
-      systems.
+      The action adds entities to a specified firewall policy. While this operation
+      is commonly used to block or allow traffic (depending on the policy's configuration),
+      the action itself is generic and does not explicitly enforce a block or allow
+      outcome. Therefore, it does not strictly match the 'Add IOC To Blocklist' or
+      'Add IOC To Allowlist' categories, nor does it match any other outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -303,39 +305,34 @@ Add Entities To Policy:
     | Policy Name | String | Yes | Specify the name of the policy to which action
     should add entities. |
 
-    | Location | String (Dropdown) | No | Specify the location for the entities (Destination
-    or Source). |
+    | Location | Dropdown | No | Specify the location for the entities. |
 List Address Groups:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of available address groups from Fortigate based on specified
-    filtering criteria. This action allows users to query the Fortigate firewall for
-    address groups, optionally filtering by name and limiting the number of results
-    returned.
+    Lists available address groups in Fortigate based on specified filtering criteria.
 
 
     ### Flow Description
 
-    1. Extracts the provided filter key, logic, value, and limit parameters.
+    1. Extracts configuration and action parameters.
 
-    2. Validates the filter parameters to ensure a valid combination is provided (e.g.,
-    if a filter logic is selected, a filter key must also be selected).
+    2. Validates the provided filter key, logic, and value.
 
-    3. Makes a GET request to the Fortigate API (`/api/v2/cmdb/firewall/addrgrp/`)
-    to fetch the address groups matching the criteria.
+    3. Makes a GET request to the Fortigate API to retrieve address groups matching
+    the criteria.
 
-    4. Parses the response and returns the address groups as a JSON result and populates
-    a data table with the findings.
+    4. Parses the response and adds the retrieved address groups to a data table and
+    JSON result.
 
 
     ### Additional Notes
 
-    If no filter value is provided, the filter will not be applied, and the action
-    will return up to the maximum number of records specified.
+    The action allows filtering by name using exact match or substring matching. If
+    no filter is provided, it returns a list of address groups up to the specified
+    maximum records limit.
   ai_short_description: >-
-    Retrieves a list of available address groups from Fortigate based on specified
-    filtering criteria.
+    Lists available address groups in Fortigate based on specified filtering criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -347,9 +344,9 @@ List Address Groups:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Fortigate API to fetch address groups.
-      It does not mutate external data, update internal entities, create insights,
-      or modify alert data.
+      The action fetches data (address groups) from Fortigate via a GET request. It
+      does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -401,8 +398,8 @@ List Address Groups:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates independently of any entities in the case.
+      The action does not iterate over target entities and does not accept any entity-related
+      parameters. It operates independently of entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -419,8 +416,8 @@ List Address Groups:
     get_alert_information: false
     reasoning: >-
       The action retrieves a list of address groups from Fortigate. It does not enrich
-      specific IOCs or assets, nor does it mutate external state, update alerts, or
-      perform any of the other specific outcome categories.
+      specific IOCs or assets, nor does it mutate any external or internal state.
+      Therefore, it does not match any of the specified outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -450,7 +447,7 @@ List Address Groups:
     If "Equal" is selected, action will try to find the exact match among results
     and if "Contains" is selected, action will try to find results that contain that
     substring. If nothing is provided in this parameter, the filter will not be applied.
-    Filtering logic is working based on the value provided in the "Filter Key" parameter.
+    Filtering logic is working based on the value  provided in the "Filter Key" parameter.
     |
 
     | Max Records To Return | String | No | Specify how many records to return. If
@@ -459,33 +456,32 @@ List Policies:
   ai_description: >-
     ### General Description
 
-    Lists available policies in Fortigate based on specified filtering criteria. This
-    action allows users to retrieve a subset or all of the configured firewall policies
-    from the Fortigate device.
+    Lists available policies in Fortigate based on specified filter criteria. This
+    action retrieves policy configurations from the Fortigate firewall, allowing users
+    to search for specific policies by name or other attributes.
 
 
     ### Flow Description
 
-    1. Extracts action parameters including the filter key, filter logic, filter value,
-    and the maximum number of records to return.
+    1. Extracts the action parameters: `Filter Key`, `Filter Logic`, `Filter Value`,
+    and `Max Records To Return`.
 
-    2. Validates the provided filtering parameters to ensure logical consistency (e.g.,
-    ensuring a filter key is selected if a filter logic is provided).
+    2. Validates the provided filter parameters to ensure a valid combination is used.
 
     3. Makes a GET request to the Fortigate API (`api/v2/cmdb/firewall/policy/`) to
-    retrieve the list of policies matching the criteria.
+    retrieve policies matching the specified criteria.
 
-    4. Parses the API response and constructs a data table and JSON result containing
-    the retrieved policies.
+    4. Parses the response and returns the retrieved policies as a data table and
+    JSON results.
 
 
     ### Additional Notes
 
-    If no filter value is provided, the filter will not be applied, and the action
-    will return all available policies up to the specified limit.
+    If a `Filter Key` and `Filter Logic` are selected but the `Filter Value` is left
+    empty, the filter will not be applied, and the action will return policies up
+    to the specified limit.
   ai_short_description: >-
-    Retrieves a list of available policies from Fortigate, optionally filtering the
-    results based on a specified key, logic, and value.
+    Lists available policies in Fortigate based on specified filter criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -497,9 +493,9 @@ List Policies:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Fortigate API to fetch a list of policies
-      (fetches_data=true). It does not mutate external data, update internal entities,
-      create insights, or modify alert data.
+      The action makes a GET request to the Fortigate API to fetch policy data. It
+      does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -551,8 +547,8 @@ List Policies:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It retrieves a list of policies based
-      on input parameters without referencing or iterating over any specific entities.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any entity identifiers as input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -568,9 +564,9 @@ List Policies:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of policies from Fortigate. This is a configuration
-      retrieval operation and does not match any of the predefined outcome categories
-      such as enriching IOCs, mutating alerts, or modifying external state.
+      The action retrieves a list of policies from the Fortigate firewall. It does
+      not enrich specific IOCs or assets, update alerts, modify blocklists/allowlists,
+      or perform any other operations that match the predefined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -590,11 +586,12 @@ List Policies:
 
     | --- | --- | --- | --- |
 
-    | Filter Key | String | No | Specify the key that needs to be used to filter policies.
-    |
+    | Filter Key | Dropdown | No | Specify the key that needs to be used to filter
+    policies. |
 
-    | Filter Logic | String | No | Specify what filter logic should be applied. Filtering
-    logic is working based on the value provided in the "Filter Key" parameter. |
+    | Filter Logic | Dropdown | No | Specify what filter logic should be applied.
+    Filtering logic is working based on the value provided in the "Filter Key" parameter.
+    |
 
     | Filter Value | String | No | Specify what value should be used in the filter.
     If "Equal" is selected, action will try to find the exact match among results
@@ -603,7 +600,7 @@ List Policies:
     Filtering logic is working based on the value provided in the "Filter Key" parameter.
     |
 
-    | Max Records To Return | Integer | No | Specify how many records to return. If
+    | Max Records To Return | String | No | Specify how many records to return. If
     nothing is provided, action will return 50 records. |
 Ping:
   ai_description: >-
@@ -622,8 +619,8 @@ Ping:
     3. Calls the `test_connectivity` method which makes a GET request to the `/api/v2/cmdb/firewall/addrgrp?count=1`
     endpoint.
 
-    4. Returns a success message if the connection is established, otherwise returns
-    an error.
+    4. Returns a success message if the connection is successful, otherwise returns
+    an error message.
 
 
     ### Additional Notes
@@ -631,7 +628,8 @@ Ping:
     This action is typically used to verify that the integration is configured correctly
     and can communicate with the Fortigate API.
   ai_short_description: >-
-    Tests connectivity to the Fortigate server to verify integration configuration.
+    Tests connectivity to the Fortigate server using the provided integration configuration
+    parameters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -643,9 +641,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only makes a GET request to verify connectivity. It does not fetch
-      contextual data for entities, mutate external or internal data, update entities,
-      or create insights.
+      The action makes a GET request to test connectivity. It does not fetch contextual
+      data, mutate external data, mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -697,8 +695,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely tests the
-      connection to the Fortigate server.
+      The action does not process any entities or accept any entity-related parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -714,8 +711,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) and does not match any of the
-      specific outcome categories such as enrichment, containment, or ticket management.
+      The action only tests connectivity to the Fortigate server and does not match
+      any of the specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -735,33 +732,28 @@ Remove Entities From Address Group:
   ai_description: >-
     ### General Description
 
-    Removes specified entities (IP Addresses and URLs) from a designated address group
-    in Fortigate. Note that for URL entities, the action will extract and use the
-    domain part.
+    Removes specified IP Address and URL entities from a designated address group
+    in Fortigate.
 
 
     ### Flow Description
 
-    1. Retrieves the specified address group from Fortigate using the provided address
-    group name.
+    1. Retrieves the specified address group from Fortigate using the provided `Address
+    Group Name`.
 
-    2. Iterates through the provided IP Address and URL entities.
+    2. Iterates through the target entities, filtering for IP Addresses and URLs.
 
-    3. Checks if each entity exists in Fortigate and is a member of the target address
-    group.
+    3. Checks if each entity exists in Fortigate via the API.
 
-    4. If the entity is part of the group, it sends a PUT request to the Fortigate
-    API to remove the entity from the address group.
+    4. If the entity exists and is a member of the address group, it sends a PUT request
+    to the Fortigate API to remove the entity from the group.
 
-    5. Returns a summary message detailing which entities were successfully removed,
-    which were not found in the group, and which failed to be processed.
+    5. Returns a summary of successful, non-existent, and failed entity removals.
 
 
     ### Additional Notes
 
-    - Supported entity types: IP Address, URL.
-
-    - The action extracts the domain part of URL entities before processing.
+    The action extracts the domain part of URL entities before processing.
   ai_short_description: >-
     Removes specified IP Address and URL entities from a designated address group
     in Fortigate.
@@ -773,14 +765,14 @@ Remove Entities From Address Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes specified entities from an address group in the Fortigate firewall.
+      Updates an address group in Fortigate by removing specified entities from its
+      members list.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a PUT request to the Fortigate API to remove entities from
-      an address group, which mutates external data. It does not fetch contextual
-      data for enrichment, nor does it update internal entities, create insights,
-      or add case comments.
+      The action mutates external data by sending a PUT request to Fortigate to update
+      the members of an address group. It does not fetch contextual data for enrichment,
+      nor does it mutate internal SOAR data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -851,13 +843,13 @@ Remove Entities From Address Group:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes an IP or URL from a Fortigate address group. Address groups
-      in firewalls are typically used in policies to block or allow traffic. Therefore,
-      removing an entity from an address group can effectively remove it from a blocklist
-      or an allowlist, depending on how the group is used in the firewall's policies.
-      It does not enrich data, update alerts, or manage tickets.
-    remove_ioc_from_allowlist: true
-    remove_ioc_from_blocklist: true
+      The action removes entities from an address group in Fortigate. While address
+      groups can be used in blocklists or allowlists, this action is a generic group
+      modification and does not explicitly match the strict definitions of removing
+      an IOC from a blocklist or allowlist without knowing the group's purpose. Therefore,
+      it does not strictly match any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
@@ -882,34 +874,38 @@ Remove Entities From Policy:
     ### General Description
 
     Removes specified IP Address and URL entities from a designated policy in Fortigate.
-    This action modifies the firewall configuration by detaching the entities from
-    either the source or destination items of the specified policy.
+    This action modifies the firewall policy by removing the entities from either
+    the source or destination items list.
 
 
     ### Flow Description
 
-    1. Retrieves the specified policy from Fortigate using the provided `Policy Name`.
+    1. Extracts the `Policy Name` and `Location` (Source or Destination) from the
+    action parameters.
 
-    2. Iterates through the target IP Address and URL entities.
+    2. Iterates over the target entities, filtering for IP Addresses and URLs.
 
-    3. Checks if each entity exists in the Fortigate environment via a GET request.
+    3. Queries the Fortigate API to verify that the specified policy exists.
 
-    4. Verifies if the entity is currently a part of the specified policy's source
-    or destination items (based on the `Location` parameter).
+    4. For each suitable entity, checks if the entity exists in Fortigate and if it
+    is currently a part of the specified policy.
 
-    5. If present, makes a PUT request to the Fortigate API to update the policy and
-    remove the entity.
+    5. If the entity is part of the policy, sends a PUT request to the Fortigate API
+    to remove the entity from the policy's source or destination items.
 
-    6. Returns a summary of successfully removed entities, entities not found in the
-    policy, and failed entities.
+    6. Compiles and returns a summary message detailing which entities were successfully
+    removed, which were not part of the policy, and which failed processing.
 
 
     ### Additional Notes
 
-    The action automatically extracts the domain part of URL entities before processing
-    them against the Fortigate API.
+    - The action automatically extracts the domain part of URL entities before processing
+    them.
+
+    - If the specified policy does not exist, the action will fail and raise an exception.
   ai_short_description: >-
-    Removes specified IP Address and URL entities from a designated policy in Fortigate.
+    Removes specified IP Address and URL entities from a designated policy's source
+    or destination items in Fortigate.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -918,13 +914,13 @@ Remove Entities From Policy:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes specified IP address and URL entities from a designated policy in Fortigate.
+      Removes specified entities from a policy in Fortigate.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a PUT request to the Fortigate API to remove entities from
-      a policy, which mutates external data. It does not fetch contextual enrichment
-      data, update internal entities, create insights, or modify alert data.
+      The action makes a PUT request to the Fortigate API to update a policy by removing
+      entities from it, which mutates external data. It does not update internal entities,
+      create insights, or fetch data for enrichment purposes.
   entity_usage:
     entity_types:
       address: true
@@ -976,10 +972,10 @@ Remove Entities From Policy:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES`, where supported types are `EntityTypes.ADDRESS`
-      and `EntityTypes.URL`. Thus, it targets Address and URL entities and filters
-      strictly by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are `EntityTypes.ADDRESS`
+      and `EntityTypes.URL`. Therefore, it targets Address and URL entities and filters
+      strictly by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -995,11 +991,10 @@ Remove Entities From Policy:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes entities from a generic firewall policy. Because the policy's
-      purpose (allow or block) is determined by the user-provided 'Policy Name' parameter
-      and the firewall's configuration, it does not explicitly guarantee the removal
-      of an IOC from a blocklist or allowlist. Therefore, it does not strictly match
-      any specific outcome category.
+      The action removes entities from a generic firewall policy. Since the policy
+      could be for any purpose (allow, block, route, etc.) and is not explicitly defined
+      as a blocklist or allowlist, it does not strictly match any of the specific
+      outcome categories like 'Remove IOC From Blocklist' or 'Remove IOC From Allowlist'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1022,5 +1017,5 @@ Remove Entities From Policy:
     | Policy Name | String | Yes | Specify the name of the policy from which action
     should remove entities. |
 
-    | Location | Dropdown | No | Specify the location for the entities (Destination
-    or Source). |
+    | Location | String | No | Specify the location for the entities (e.g., Destination,
+    Source). |

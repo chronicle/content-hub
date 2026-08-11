@@ -3,33 +3,31 @@ Get Alarm Details:
     ### General Description
 
     Retrieves detailed information for a specific alarm from AlienVault Anywhere using
-    its Alarm ID. This action fetches the alarm's metadata and raw data to provide
-    additional context for analysts.
+    the alarm's ID. This action fetches the alarm's metadata and raw data from the
+    external system and attaches it to the action's results.
 
 
     ### Flow Description
 
-    1. Extracts the `Alarm ID` parameter provided by the user or playbook.
+    1. Extracts the `Alarm ID` parameter provided by the user or a previous action.
 
-    2. Validates that the integration is configured to use version V2, as V1 is not
-    supported for this action.
+    2. Validates that the integration is configured to use API V2 (the action will
+    fail if V1 is used).
 
-    3. Initializes the AlienVault Anywhere manager and authenticates via the API.
-
-    4. Makes an HTTP GET request to the AlienVault Anywhere API (`/api/2.0/alarms/{alarm_id}`)
+    3. Makes an HTTP GET request to the AlienVault Anywhere API (`/api/2.0/alarms/{alarm_id}`)
     to fetch the alarm details.
 
-    5. Parses the returned data and attaches the alarm details to the action's JSON
-    results and a data table.
+    4. Parses the response and adds the alarm details to the action's JSON results
+    and a formatted data table.
 
 
     ### Additional Notes
 
-    This action only supports AlienVault Anywhere V2. If V1 is configured, the action
-    will fail immediately.
+    This action only supports the AlienVault Anywhere V2 integration. Attempting to
+    run it with V1 will result in an immediate failure.
   ai_short_description: >-
     Retrieves detailed information for a specific alarm from AlienVault Anywhere using
-    its Alarm ID.
+    the alarm's ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -41,10 +39,9 @@ Get Alarm Details:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP GET request to the AlienVault Anywhere API to fetch
-      alarm details (fetches_data=true). It does not perform any POST/PUT/DELETE requests
-      to mutate external data, nor does it update internal entities, create insights,
-      or modify alert data within Google SecOps.
+      The action fetches data by making an HTTP GET request to the AlienVault Anywhere
+      API to retrieve alarm details. It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -96,9 +93,9 @@ Get Alarm Details:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It relies entirely on the explicitly
-      provided 'Alarm ID' parameter to fetch data, without iterating over or filtering
-      `siemplify.target_entities`.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any standard entity types as input parameters. It solely relies on a string
+      `Alarm ID` to fetch data from the external system.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -114,10 +111,9 @@ Get Alarm Details:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action fetches information about a specific alarm (alert) from AlienVault
-      Anywhere using an Alarm ID. This directly aligns with the 'Get Alert Information'
-      expected outcome. It does not enrich IOCs or assets, nor does it mutate any
-      external or internal state.
+      The action makes a GET request to AlienVault Anywhere to retrieve details about
+      a specific alarm. This directly matches the 'Get Alert Information' expected
+      outcome, which fetches information about an alert from a 3rd party product.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,33 +140,33 @@ List Events:
     ### General Description
 
     Searches for and retrieves events from AlienVault Anywhere based on specified
-    criteria such as account name, event name, source name, and time range.
+    filtering criteria such as account name, event name, source name, and time range.
 
 
     ### Flow Description
 
-    1. Extracts configuration and action parameters.
+    1. Extracts action parameters including account name, event name, source name,
+    time ranges, and limits.
 
-    2. Validates the integration version (only V2 is supported).
+    2. Validates that the integration version is V2, as V1 is unsupported for this
+    action.
 
-    3. Parses the start and end times into Unix timestamps.
+    3. Parses the provided `Start Time` and `End Time` strings into Unix timestamps.
 
-    4. Initializes the AlienVaultManagerLoader to connect to the AlienVault Anywhere
-    API.
+    4. Makes a paginated GET request to the AlienVault Anywhere API (`/api/2.0/events`)
+    to fetch events matching the provided filters.
 
-    5. Calls the API to fetch events matching the provided filters.
-
-    6. Constructs a CSV table of the retrieved events and adds it to the action results.
-
-    7. Returns the raw JSON data of the events.
+    5. Formats the retrieved events into a CSV table and attaches the raw JSON data
+    to the action results.
 
 
     ### Additional Notes
 
-    This action is only supported for AlienVault Anywhere V2 integration.
+    This action is only supported for AlienVault Anywhere V2. If V1 is configured,
+    the action will fail immediately.
   ai_short_description: >-
     Searches for and retrieves events from AlienVault Anywhere based on specified
-    criteria.
+    filtering criteria such as account name, event name, source name, and time range.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -182,9 +178,10 @@ List Events:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches event data from AlienVault Anywhere via a GET request. It
-      does not mutate external data, update internal entities, create insights, or
-      modify alert data.
+      The action fetches data by making a GET request to the AlienVault Anywhere API
+      to retrieve events. It does not perform any state-changing operations (POST/PUT/DELETE)
+      on external systems, nor does it mutate internal SOAR data, update entities,
+      or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -236,8 +233,10 @@ List Events:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It relies entirely
-      on the provided action parameters to search for events.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters that represent standard SOAR entities. It operates purely
+      on string-based search filters (Account Name, Event Name, Source Name, etc.).
+      Therefore, all entity flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -253,9 +252,10 @@ List Events:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for events in AlienVault Anywhere based on specific parameters,
-      which aligns with the 'Search Events' category. It does not enrich IOCs/assets,
-      mutate alerts, or interact with tickets/blocklists.
+      The action searches for historical events/logs in AlienVault Anywhere based
+      on specific search parameters (Account Name, Event Name, Source Name, Time).
+      This directly aligns with the 'Search Events' expected outcome. It does not
+      enrich specific IOCs, mutate alerts, or interact with tickets or blocklists.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -295,32 +295,30 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the AlienVault Anywhere instance to verify credentials and
-    network access.
+    Tests connectivity to the AlienVault Anywhere API.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters (such as API Root, Username,
-    Password, and Product Version).
+    1. Extracts integration configuration parameters (API Root, Username, Password,
+    etc.).
 
-    2. Initializes the AlienVault Anywhere manager based on the configured version
-    (V1 or V2).
+    2. Initializes the AlienVault Anywhere manager based on the specified product
+    version (V1 or V2).
 
-    3. Makes an API call to test connectivity (fetching license information in V1
-    or retrieving a single alarm in V2).
+    3. Makes an API call to test connectivity (`/api/2.0/alarms` with limit 1 for
+    V2, or `/api/1.0/license` for V1).
 
-    4. Returns a success message if the connection is successfully established, or
-    an error message if it fails.
+    4. Returns a successful execution state if the connection is established, otherwise
+    returns a failure.
 
 
     ### Additional Notes
 
-    This action does not require any entities or action-specific parameters to run.
-    It is primarily used for troubleshooting and verifying integration setup.
+    This action is typically used to verify that the integration is configured correctly
+    and can communicate with the AlienVault Anywhere instance.
   ai_short_description: >-
-    Tests connectivity to the AlienVault Anywhere instance to verify credentials and
-    network access.
+    Tests connectivity to the AlienVault Anywhere API to verify integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -332,7 +330,7 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only performs a basic API request to verify connectivity. It does
+      The action only performs a basic GET request to verify connectivity. It does
       not fetch contextual data for entities, mutate external data, mutate internal
       data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
@@ -386,8 +384,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely tests connectivity
-      to the external system.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely tests connectivity to the external system.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -404,8 +402,8 @@ Ping:
     get_alert_information: false
     reasoning: >-
       The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, updating alerts, or mutating
-      external systems.
+      specific outcome categories such as enriching IOCs, mutating external systems,
+      or updating alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

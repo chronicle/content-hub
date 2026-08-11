@@ -2,8 +2,8 @@ Delete Quarantined Email:
   ai_description: >-
     ### General Description
 
-    The "Delete Quarantined Email" action is used to delete quarantined messages from
-    a specified folder in Proofpoint Protection Server.
+    Deletes quarantined email messages from a specified folder in Proofpoint Protection
+    Server.
 
 
     ### Flow Description
@@ -11,23 +11,21 @@ Delete Quarantined Email:
     1. Extracts the provided Message GUIDs, Folder Name, and optional Deleted Folder
     Name parameters.
 
-    2. Validates that the source folder and the deleted folder are not identical.
+    2. Validates that the specified folder exists and retrieves the message records
+    by making a GET request to the Proofpoint API.
 
-    3. Performs a search query via the Proofpoint API to validate the existence of
-    the provided GUIDs within the specified folder.
+    3. Iterates through the validated GUIDs and executes a POST request to the Proofpoint
+    API to delete the messages (or move them to the deleted folder).
 
-    4. Iterates through the validated GUIDs and sends a POST request to the Proofpoint
-    API to execute the delete action on each message.
-
-    5. Returns a JSON result containing the details of the successfully deleted records
-    and an output message summarizing the operation.
+    4. Returns the successful deletion records as JSON and outputs a summary message
+    indicating success or failure for each GUID.
 
 
     ### Additional Notes
 
     This action only works on messages that were created within the last 30 days.
   ai_short_description: >-
-    Deletes quarantined messages from a specified folder in Proofpoint Protection
+    Deletes quarantined email messages from a specified folder in Proofpoint Protection
     Server.
   capabilities:
     can_create_case_comments: false
@@ -37,14 +35,13 @@ Delete Quarantined Email:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes quarantined messages from a specified folder in Proofpoint Protection
-      Server.
+      Deletes quarantined email messages from a specified folder in Proofpoint.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes a POST request to the Proofpoint API to delete quarantined
-      emails, which mutates external data. It does not fetch contextual data for enrichment,
-      nor does it mutate internal SecOps data, update entities, or create insights.
+      The action makes a POST request to the Proofpoint API to delete a quarantined
+      email, which mutates external data. It does not fetch contextual data for entities,
+      mutate internal SecOps data, update entities, or create insights/comments.
   entity_usage:
     entity_types:
       address: false
@@ -96,9 +93,9 @@ Delete Quarantined Email:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on the provided 'Message GUIDs' parameter to identify which
-      emails to delete. Therefore, it does not use any entity types.
+      The action does not iterate over target entities and does not accept any input
+      parameters representing entities. It operates strictly on message GUIDs provided
+      as strings.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -114,8 +111,8 @@ Delete Quarantined Email:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action deletes specific quarantined emails from Proofpoint Protection Server
-      based on their GUIDs. This aligns with the 'Delete Email' expected outcome.
+      The action executes a POST request to delete a quarantined email message from
+      Proofpoint. This aligns with the 'Delete Email' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -143,41 +140,210 @@ Delete Quarantined Email:
 
     | Deleted Folder Name | String | No | Name of the folder to move the message to
     after deletion. |
-Enrich Entities:
+Download Quarantined Email:
   ai_description: >-
     ### General Description
 
-    Enriches Hostname and User entities with quarantine details from Proofpoint Email
-    Protection. This action searches for quarantined, spam, or virus emails associated
-    with the entities and appends the findings to the entities' additional properties.
+    Downloads the raw data of quarantined email messages from Proofpoint Protection
+    Server. This action retrieves the full `.eml` content of specified messages and
+    saves them to a local directory, with an option to attach them directly to the
+    case wall.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities, filtering for Hostname and User entity types.
+    1. Validates the provided destination folder path on the local system.
 
-    2. For Hostname entities, extracts the domain and makes an API call to Proofpoint
-    to search for emails where the sender or recipient matches the domain in the "Quarantine",
-    "Spam", and "Virus" folders.
+    2. Makes an API call to Proofpoint to search for records within the specified
+    folder from the last 30 days.
 
-    3. For User entities, validates the identifier as an email address and makes an
-    API call to Proofpoint to search for emails where the sender or recipient matches
-    the email address in the same folders.
+    3. Iterates through the provided Message GUIDs and verifies their existence in
+    the retrieved folder records.
 
-    4. If records are found, cleans up the data (removing DLP and message status details),
-    flattens the JSON, and updates the entity's additional properties with the retrieved
-    quarantine details.
+    4. Makes an API call to Proofpoint (`download_message`) to download the raw message
+    content for each valid GUID.
 
-    5. Returns the results as JSON and updates the entities in the platform.
+    5. Parses the raw email bytes to extract a safe subject line and saves the content
+    as an `.eml` file to the specified local directory.
+
+    6. If the 'Save To Case Wall' parameter is enabled, attaches the downloaded `.eml`
+    file to the SOAR case wall.
 
 
     ### Additional Notes
 
-    Only User entities with valid email address identifiers will be processed.
+    - The action only works on messages that were created in the last 30 days.
+
+    - If the 'Overwrite' parameter is set to false and a file with the same name already
+    exists in the destination folder, the download for that specific GUID will fail.
+  ai_short_description: >-
+    Downloads the raw `.eml` content of quarantined email messages from Proofpoint
+    Protection Server using their Message GUIDs, saving them locally and optionally
+    attaching them to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Attaches the downloaded raw email file to the case wall if the 'Save To Case
+      Wall' parameter is enabled.
+    reasoning: >-
+      The action fetches data by making GET requests to Proofpoint to search for records
+      and download raw message bytes. It does not mutate external data. It can mutate
+      internal data by attaching the downloaded file to the case wall if the 'Save
+      To Case Wall' parameter is enabled. It does not update entities, create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process SOAR entities. It relies entirely on the 'Message
+      GUIDs' input parameter to identify which emails to download and does not interact
+      with or filter `siemplify.target_entities`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action downloads raw email content from a quarantine folder based on specific
+      GUIDs. This does not match any of the predefined outcome categories such as
+      Search Email (which lists emails based on criteria) or Download File (which
+      targets remote hosts/endpoints for forensic files).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Message GUIDs | String | Yes | The unique Message GUIDs of the email(s) to download.
+    |
+
+    | Folder Name | String | No | Name of the folder where the message is stored.
+    If not specified, defaults to Quarantine. |
+
+    | Download Folder Path | String | Yes | Name of the folder, where the file needs
+    to be stored. |
+
+    | Overwrite | Boolean | Yes | If selected, the action overwrites the file with
+    the same name. |
+
+    | Save To Case Wall | Boolean | No | If enabled, action will save the file as
+    attachment on the case wall. |
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and User entities by querying Proofpoint Email Protection for
+    associated quarantined emails. The action searches the 'Quarantine', 'Spam', and
+    'Virus' folders for messages where the entity acts as either the sender or recipient,
+    and appends the retrieved email records to the entity's properties.
+
+
+    ### Flow Description
+
+    1. Iterates over the provided target entities, filtering for Hostname and User
+    types.
+
+    2. For Hostname entities, extracts the domain and searches Proofpoint via the
+    `/rest/v1/quarantine` API for emails where the sender or recipient matches `@domain`.
+
+    3. For User entities, validates the identifier as an email address and searches
+    Proofpoint for emails where the sender or recipient matches the email address.
+
+    4. Retrieves matching quarantine records from the 'Quarantine', 'Spam', and 'Virus'
+    folders.
+
+    5. Flattens the retrieved records, adds a 'ProofPointPS' prefix, and updates the
+    entity's `additional_properties`.
+
+    6. Attaches the raw JSON results of the found records to the action's output.
+
+
+    ### Additional Notes
+
+    - User entities must have a valid email address format as their identifier to
+    be processed.
+
+    - The action automatically searches across three specific folders: Quarantine,
+    Spam, and Virus.
   ai_short_description: >-
     Enriches Hostname and User entities by searching Proofpoint Email Protection for
-    associated quarantined, spam, or virus emails and appending the results to the
-    entities.
+    associated quarantined emails and appending the records to the entity properties.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -189,9 +355,10 @@ Enrich Entities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes GET requests to the Proofpoint API to fetch quarantine records
+      The action fetches data from Proofpoint PS by searching for quarantine records
       (fetches_data=true). It does not mutate external data. It updates the internal
-      entities with the fetched data by appending to their additional properties (can_update_entities=true).
+      entities with the retrieved records (can_update_entities=true). It does not
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -243,10 +410,9 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over entities and explicitly checks if `current_entity.entity_type`
-      is `EntityTypes.HOSTNAME` or `EntityTypes.USER`. It also uses `current_entity.identifier`
-      to extract the domain for hostnames or validate the email format for users before
-      searching.
+      The action iterates over target entities and filters them by entity type (HOSTNAME
+      and USER). For USER entities, it further filters by checking if the identifier
+      is a valid email address (`is_valid_email(current_entity.identifier)`).
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -262,10 +428,9 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches quarantine email records associated with Hostname and User
-      entities to enrich them with contextual metadata, matching the 'Enrich Asset'
-      category. Additionally, it searches for emails based on sender/recipient criteria
-      in Proofpoint, matching the 'Search Email' category.
+      The action searches for emails in quarantine folders based on the entity's domain
+      or email address, which aligns with 'Search Email'. It also enriches Hostname
+      and User entities with this contextual metadata, aligning with 'Enrich Asset'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -283,34 +448,36 @@ Enrich Entities:
   parameters_description: There are no parameters for this action
 Move Quarantined Email:
   ai_description: >-
-    ### General Description
+    **General Description**
 
-    Moves quarantined email messages to a specified target folder in ProofPoint Protection
+    The "Move Quarantined Email" action moves specified quarantined messages from
+    their current folder to a designated target folder within ProofPoint Protection
     Server.
 
 
-    ### Flow Description
+    **Flow Description**
 
-    1. Extracts the `Message GUIDs`, current `Folder Name`, and `Target Folder Name`
-    from the action parameters.
+    1. Extracts the provided Message GUIDs, source Folder Name, and Target Folder
+    Name parameters.
 
-    2. Validates that the current folder and target folder are not identical.
+    2. Validates that the source folder and target folder are not identical.
 
-    3. Validates the existence of the provided GUIDs in the specified current folder
-    by making a GET request to the ProofPoint quarantine search endpoint.
+    3. Searches ProofPoint for the specified GUIDs within the source folder over the
+    last 30 days to validate their existence.
 
-    4. Iterates through the validated GUIDs and executes a POST request to the ProofPoint
-    quarantine endpoint to move each message to the target folder.
+    4. Iterates through the validated GUIDs and makes a POST request to the ProofPoint
+    API to move each message to the target folder.
 
-    5. Returns a JSON result containing the details of the successfully moved messages.
+    5. Returns a success message and a JSON result containing the details of the successfully
+    moved messages.
 
 
-    ### Additional Notes
+    **Additional Notes**
 
-    The action only works on messages that were created in the last 30 days.
+    This action only works on messages that were created within the last 30 days.
   ai_short_description: >-
-    Moves specified quarantined email messages from their current folder to a target
-    folder in ProofPoint Protection Server.
+    Moves specified quarantined email messages from their current folder to a designated
+    target folder in ProofPoint Protection Server.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -319,14 +486,14 @@ Move Quarantined Email:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Moves quarantined emails to a specified target folder in ProofPoint.
-    fetches_data: false
+      Moves quarantined email messages to a specified target folder in ProofPoint.
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the ProofPoint API to move quarantined emails
-      to a different folder, which mutates external data. It does not fetch additional
-      contextual data for alerts/entities, nor does it mutate internal SecOps data,
-      update entities, or create insights.
+      The action fetches data by searching for the provided GUIDs to validate their
+      existence before moving them. It mutates external data by executing a POST request
+      to move the emails to a different folder in ProofPoint. It does not mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -378,10 +545,9 @@ Move Quarantined Email:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      relies entirely on the 'Message GUIDs' parameter provided by the user to identify
-      which emails to move. Therefore, it does not run on entities and all entity-related
-      flags are false.
+      The action does not process `siemplify.target_entities` and does not accept
+      any input parameters that represent standard entity types. It operates solely
+      on message GUIDs provided as strings.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -397,10 +563,9 @@ Move Quarantined Email:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action moves an email from one folder to another within the ProofPoint quarantine.
-      This matches the 'Update Email' category, which includes modifying the state
-      of an email such as moving it to quarantine, marking as read, or applying labels.
-      It does not match any other category.
+      The action moves an email from one folder to another within ProofPoint's quarantine
+      system. This aligns with the 'Update Email' category, which includes modifying
+      the state of an email such as moving it.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -433,31 +598,31 @@ Ping:
     ### General Description
 
     The Ping action is used to test and verify connectivity to the Proofpoint Email
-    Protection server using the provided integration configuration credentials.
+    Protection server using the configured integration parameters.
 
 
     ### Flow Description
 
-    1. Initializes the Proofpoint API client using the configured server address and
-    credentials.
+    1. Initializes the ProofPointPS API client using the provided integration configuration
+    (API Root, Username, Password, Verify SSL).
 
-    2. Executes a test connectivity request by making a GET request to the `/rest/v1/quarantine`
-    endpoint (searching for quarantined emails with a wildcard sender).
+    2. Executes a test API call (`test_connectivity`) which performs a basic search
+    query to validate authentication and network access.
 
-    3. Evaluates the response and returns a success message if the connection is successfully
-    established.
+    3. Returns a success message if the connection is established and authenticated
+    successfully.
 
-    4. If the connection fails, it catches the error and returns a failure message
-    detailing the issue.
+    4. Returns a failure message along with the specific error details if the connection
+    or authentication fails.
 
 
     ### Additional Notes
 
-    This action does not interact with any specific case entities or alerts. It is
-    primarily used by administrators to ensure the integration is configured correctly
-    and the external service is reachable.
+    This action does not process any entities or modify any data. It is primarily
+    used for troubleshooting and verifying that the integration is configured correctly.
   ai_short_description: >-
-    Tests and verifies connectivity to the Proofpoint Email Protection server.
+    Tests connectivity to the Proofpoint Email Protection server to verify integration
+    configuration and authentication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -469,143 +634,8 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to test connectivity but does not fetch contextual
-      data for alerts/entities. It does not mutate external or internal data, update
-      entities, create insights, modify alerts, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not process or iterate over any entities. It simply tests connectivity
-      to the external service.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action is a simple connectivity test (Ping). It does not enrich IOCs, mutate
-      external state, update alerts, or perform any of the specific outcome categories
-      listed.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Resubmit Quarantined Email:
-  ai_description: >-
-    ### General Description
-
-    The "Resubmit Quarantined Email" action is used to resubmit specified quarantined
-    messages in Proofpoint Protection Server. It processes messages that were created
-    within the last 30 days and returns the details of the successfully resubmitted
-    emails.
-
-
-    ### Flow Description
-
-    1. Extracts the `Message GUIDs` and `Folder Name` parameters.
-
-    2. Validates the provided GUIDs by searching the specified folder via the Proofpoint
-    API for messages created in the last 30 days.
-
-    3. Iterates through the validated GUIDs and executes a POST request to the Proofpoint
-    API (`/rest/v1/quarantine`) with the action set to `resubmit`.
-
-    4. Collects the successfully resubmitted message records and returns them as a
-    JSON result.
-
-
-    ### Additional Notes
-
-    - The action only works on messages that were created in the last 30 days.
-
-    - If a provided GUID is not found in the specified folder, the action will raise
-    an error and fail.
-  ai_short_description: >-
-    Resubmits specified quarantined emails in Proofpoint Protection Server based on
-    their Message GUIDs and folder name.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Resubmits quarantined emails in Proofpoint Protection Server.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data during the validation phase by searching for the provided
-      GUIDs in the specified folder. It mutates external data by executing a POST
-      request to resubmit the quarantined emails. It does not mutate internal data,
+      The action makes a basic GET request to test connectivity. It does not fetch
+      contextual data for alerts/entities, mutate external data, mutate internal data,
       update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
@@ -658,10 +688,8 @@ Resubmit Quarantined Email:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the provided 'Message GUIDs' parameter to
-      perform its operations. Therefore, all entity type and filter flags are set
-      to false.
+      The action does not iterate over target entities or accept any entity-based
+      input parameters. It solely tests connectivity to the external service.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -677,9 +705,11 @@ Resubmit Quarantined Email:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action resubmits a quarantined email, which modifies its state within the
-      email security platform. This aligns with the 'Update Email' category. It does
-      not enrich IOCs, manage tickets, or block/allowlist indicators.
+      The action is a simple connectivity test (Ping). It does not enrich IOCs or
+      assets, update alerts, manage tickets, modify blocklists/allowlists, manage
+      identities, contain hosts, search events, execute commands, download files,
+      manage emails, submit files, send messages, search assets, or get alert information.
+      Therefore, it does not match any of the specific outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -691,67 +721,59 @@ Resubmit Quarantined Email:
     submit_file: false
     uncontain_host: false
     update_alert: false
-    update_email: true
+    update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Message GUIDs | String | Yes | Comma-separated list of quarantined message GUIDs.
-    |
-
-    | Folder Name | String | Yes | Name of the folder where the message is stored.
-    |
-Search Quarantined Emails:
+  parameters_description: There are no parameters for this action
+Resubmit Quarantined Email:
   ai_description: >-
     ### General Description
 
-    Searches for quarantined emails in ProofPoint Protection Server based on specified
-    criteria such as sender, recipient, subject, and time frame.
+    Resubmits specified quarantined email messages in ProofPoint Protection Server.
+    This action allows analysts to release or resubmit emails that were previously
+    quarantined back into the mail flow.
 
 
     ### Flow Description
 
-    1. Extracts search criteria from the action parameters.
+    1. Extracts the provided `Message GUIDs` and `Folder Name` from the action parameters.
 
-    2. Calculates the time range for the search based on the provided time frame or
-    custom start/end times.
+    2. Validates the existence of the specified folder and GUIDs by performing a search
+    (HTTP GET request to `/rest/v1/quarantine`) for messages created in the last 30
+    days.
 
-    3. Makes a GET request to the ProofPoint Protection Server API (`/rest/v1/quarantine`)
-    to search for emails matching the criteria.
+    3. Iterates through the validated GUIDs and executes a resubmit action via an
+    HTTP POST request to the ProofPoint API (`/rest/v1/quarantine`).
 
-    4. Filters the retrieved records locally based on specific parameters like Message
-    GUID, Message ID, and DLP violation details.
-
-    5. Limits the number of results returned based on the 'Max Results To Return'
-    parameter.
-
-    6. Returns the matching quarantined emails as JSON results.
+    4. Collects the successfully resubmitted email records and returns them as a JSON
+    object.
 
 
     ### Additional Notes
 
-    The action does not operate on entities but relies entirely on the provided parameters
-    to perform the search.
+    This action only works on messages that were created within the last 30 days due
+    to the validation search window.
   ai_short_description: >-
-    Searches for quarantined emails in ProofPoint Protection Server based on specified
-    criteria and returns the matching records.
+    Resubmits specified quarantined email messages from a given folder in ProofPoint
+    Protection Server.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: false
+    can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: null
+    external_data_mutation_explanation: >-
+      Resubmits quarantined emails in ProofPoint Protection Server, altering their
+      state in the external system.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the ProofPoint Protection Server API to fetch
-      quarantined email records. It does not mutate external data, update internal
-      entities, or create insights.
+      The action fetches data (email records) via a GET request during the validation
+      phase (`_validate_folder_and_guids`). It mutates external data by sending a
+      POST request to resubmit the quarantined emails in ProofPoint. It does not mutate
+      internal SOAR data, update entities, create insights, modify alerts, or create
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -803,9 +825,9 @@ Search Quarantined Emails:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies solely on the provided action parameters to perform the
-      search.
+      The action does not process `siemplify.target_entities` and does not accept
+      any parameters that represent standard SOAR entities. It operates strictly on
+      string-based Message GUIDs provided as input.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -821,8 +843,157 @@ Search Quarantined Emails:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for quarantined emails in ProofPoint Protection Server based
-      on specified criteria, which aligns with the 'Search Email' expected outcome.
+      The action resubmits a quarantined email, which modifies its state within the
+      ProofPoint Protection Server. This aligns with the 'Update Email' category.
+      It does not enrich IOCs, update alerts, or perform other categorized operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: true
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Message GUIDs | String | Yes | Comma-separated list of quarantined message GUIDs.
+    |
+
+    | Folder Name | String | Yes | Name of the folder where the message is stored.
+    |
+Search Quarantined Emails:
+  ai_description: >-
+    ### General Description
+
+    Searches for quarantined emails in ProofPoint Protection Server based on specified
+    criteria such as sender, recipient, subject, and time frame. This action retrieves
+    detailed information about quarantined messages for analysis and tracing.
+
+
+    ### Flow Description
+
+    1. Extracts search parameters including Message GUID, Message ID, Sender, Recipient,
+    Subject, and Time Frame.
+
+    2. Calculates the start and end time for the search query based on the provided
+    time frame.
+
+    3. Makes a GET request to the ProofPoint API (`/rest/v1/quarantine`) to retrieve
+    matching quarantined records.
+
+    4. Filters the retrieved records locally based on Message GUID, Message ID, and
+    DLP violation settings.
+
+    5. Limits the final result set to the specified maximum number of results.
+
+    6. Returns the matching quarantined emails as JSON results.
+
+
+    ### Additional Notes
+
+    This action is read-only and does not modify any data on the ProofPoint server.
+    If "Custom" is selected for the Time Frame, the "Start Time" parameter becomes
+    mandatory.
+  ai_short_description: >-
+    Searches for quarantined emails in ProofPoint Protection Server based on specified
+    criteria such as sender, recipient, subject, and time frame, returning the matching
+    records as JSON data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to the ProofPoint API to search
+      for quarantined emails. It does not mutate external data, mutate internal data,
+      update entities, create insights, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any input parameters that represent standard SOAR entities. It operates purely
+      on string-based search criteria (like sender, recipient, subject) to query an
+      external system.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for quarantined emails based on criteria like sender, recipient,
+      and subject. This directly aligns with the 'Search Email' expected outcome.
+      It does not mutate external data, update alerts, or enrich specific IOCs/assets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

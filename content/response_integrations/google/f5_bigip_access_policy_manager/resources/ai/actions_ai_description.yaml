@@ -2,38 +2,49 @@ Disconnect Sessions:
   ai_description: >-
     ### General Description
 
-    Disconnects specified active sessions from the F5 BIG-IP instance. The action
-    can operate on provided parameters or dynamically extract target information from
-    case entities (Address and User) to identify which sessions to terminate.
+    The action disconnects specified active sessions from the F5 BIG-IP instance.
+    It can operate using entities from the case (Address and User) or using explicitly
+    provided parameters (Session IDs, Logon User Names, Client IPs). The action uses
+    an OR logic, meaning any session matching at least one of the provided criteria
+    will be disconnected.
 
 
     ### Flow Description
 
-    1. Extracts configuration and action parameters.
+    1. Extracts configuration parameters and action parameters.
 
-    2. Determines the target sessions based on either the provided action parameters
-    (Session IDs, Logon User Names, Client IPs) or the case entities (Address and
-    User) if the 'Use Case Entities' parameter is enabled.
+    2. Initializes the F5 BIG-IP Access Policy Manager with the provided credentials.
 
-    3. Makes a GET request to retrieve a list of all active sessions from the F5 BIG-IP
-    instance.
+    3. If `Use Case Entities` is enabled, it iterates over the target entities, extracting
+    identifiers from `ADDRESS` entities as Client IPs and `USER` entities as Logon
+    User Names.
 
-    4. Matches the target IPs, Usernames, and Session IDs against the retrieved active
-    sessions.
+    4. If `Use Case Entities` is disabled, it parses the provided `Session IDs`, `Logon
+    User Names`, and `Client IPs` parameters into lists.
 
-    5. Sends a DELETE request to the F5 BIG-IP API to disconnect the matched sessions.
+    5. Makes an API call to fetch all active sessions from the F5 BIG-IP instance.
 
-    6. Verifies the disconnection by re-fetching the active sessions and checking
-    if the targeted sessions were successfully removed.
+    6. Matches the fetched active sessions against the provided IPs, usernames, or
+    session IDs.
 
-    7. Returns a summary message detailing the successful disconnections, failed attempts,
-    and any targets not found.
+    7. Iterates over the matched session IDs and makes a DELETE API call to disconnect
+    each session.
+
+    8. Makes another API call to fetch the remaining active sessions to verify successful
+    disconnections.
+
+    9. Returns a summary message detailing successful disconnections, failed disconnections,
+    and any inputs that were not found in the active sessions list.
 
 
     ### Additional Notes
 
-    Filters are applied using OR logic, meaning any session matching at least one
-    of the provided parameters or entities will be disconnected.
+    - Filters are applied using an OR logic. A session matching any single parameter
+    or entity will be disconnected.
+
+    - The action verifies the disconnection by fetching the active sessions list again,
+    as the F5 API may return a success response even if the disconnect action fails
+    internally.
   ai_short_description: >-
     Disconnects specified active sessions from the F5 BIG-IP instance based on provided
     parameters or case entities.
@@ -50,8 +61,9 @@ Disconnect Sessions:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action fetches active sessions from the F5 BIG-IP instance (fetches_data=true)
-      and then sends a DELETE request to disconnect specific sessions (can_mutate_external_data=true).
-      It does not mutate internal SecOps data, update entities, or create insights.
+      and then sends DELETE requests to disconnect specific sessions (can_mutate_external_data=true).
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -103,10 +115,10 @@ Disconnect Sessions:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` if the 'Use Case Entities'
-      parameter is enabled. It filters the entities by checking `if entity.entity_type
+      The action iterates over `siemplify.target_entities` if the `Use Case Entities`
+      parameter is true. It filters the entities by checking `if entity.entity_type
       == EntityTypes.ADDRESS` and `if entity.entity_type == EntityTypes.USER`. Therefore,
-      it targets Address and User entities and filters by entity type.
+      it targets Address and User entities and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -122,8 +134,9 @@ Disconnect Sessions:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action disconnects active sessions on the F5 BIG-IP instance, which aligns
-      with the 'Disable Identity' expected outcome of revoking active sessions.
+      The action disconnects active sessions for specific users or IPs on the F5 BIG-IP
+      instance. This directly aligns with the 'Disable Identity' expected outcome,
+      which involves revoking active sessions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -162,9 +175,9 @@ List Active Sessions:
   ai_description: >-
     ### General Description
 
-    This action lists all currently active sessions in the F5 BIG-IP Access Policy
-    Manager. It retrieves the session details and outputs them as a JSON result for
-    further use in the playbook.
+    Lists all currently active sessions in the F5 BIG-IP Access Policy Manager. This
+    action retrieves session details, including session IDs, client IPs, and logon
+    users, to provide visibility into active connections.
 
 
     ### Flow Description
@@ -172,20 +185,18 @@ List Active Sessions:
     1. Extracts the `Limit` parameter to determine the maximum number of sessions
     to retrieve.
 
-    2. Initializes the F5 BIG-IP Access Policy Manager API client using the provided
-    integration configuration.
+    2. Authenticates with the F5 BIG-IP Access Policy Manager API.
 
-    3. Makes an HTTP GET request to the `/mgmt/tm/apm/access-info` endpoint to fetch
-    the active sessions.
+    3. Makes a GET request to the `/mgmt/tm/apm/access-info` endpoint to fetch active
+    sessions.
 
-    4. Parses the retrieved data and appends the session details to the action's JSON
-    result.
+    4. Parses the response and returns the session details as a JSON result.
 
 
     ### Additional Notes
 
-    - If no active sessions are found, the action will complete successfully but indicate
-    that no sessions were found in the output message.
+    If no active sessions are found, the action will return a false result value and
+    indicate that no sessions were found in the output message.
   ai_short_description: >-
     Lists all currently active sessions in the F5 BIG-IP Access Policy Manager.
   capabilities:
@@ -199,9 +210,9 @@ List Active Sessions:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the F5 BIG-IP API to fetch active sessions
-      (fetches_data=true). It does not mutate external data, update internal entities,
-      create insights, or modify alert data.
+      The action makes a GET request to the F5 BIG-IP API to fetch active sessions.
+      It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -253,9 +264,8 @@ List Active Sessions:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over `siemplify.target_entities`. It
-      operates independently of any specific entities, fetching a general list of
-      active sessions.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any entity identifiers as input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -271,10 +281,9 @@ List Active Sessions:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of active sessions from the F5 BIG-IP Access Policy
-      Manager. It does not enrich specific IOCs or assets, nor does it mutate any
-      external or internal state matching the predefined outcome categories. Thus,
-      all outcome category flags are false.
+      The action retrieves a list of currently active sessions from the F5 BIG-IP
+      Access Policy Manager. This does not align with any of the predefined outcome
+      categories such as enriching IOCs/assets, mutating tickets, or modifying identities.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -300,34 +309,35 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the F5 BIG-IP Access Policy Manager using the provided integration
-    configuration parameters. This action ensures that the integration is properly
-    configured and can successfully communicate with the F5 BIG-IP API.
+    Tests connectivity to the F5 BIG-IP Access Policy Manager instance. This action
+    verifies that the integration is configured correctly and can successfully communicate
+    with the F5 BIG-IP server.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration parameters including the API Root, Username,
-    Password, Token Timeout, and Verify SSL settings.
+    1. Extracts integration configuration parameters (such as API Root, Username,
+    and Password).
 
     2. Initializes the F5 BIG-IP Access Policy Manager client.
 
-    3. Authenticates to the F5 BIG-IP platform, generating a new access token or retrieving
-    an existing one from the local cache.
+    3. Authenticates and retrieves an access token, handling token generation and
+    caching.
 
-    4. Makes a GET request to the `/mgmt/shared/authz/tokens` endpoint to verify connectivity.
+    4. Makes an API GET request to the `/mgmt/shared/authz/tokens` endpoint to verify
+    connectivity.
 
     5. Returns a success message if the connection is established, or an error message
-    if the connection fails.
+    if it fails.
 
 
     ### Additional Notes
 
-    This action does not require any specific entities or action-level parameters
-    to run. It is primarily used for troubleshooting and verifying integration setup.
+    This action is primarily used as a diagnostic tool to ensure the integration's
+    credentials and network settings are valid.
   ai_short_description: >-
-    Tests connectivity to the F5 BIG-IP Access Policy Manager API to ensure the integration
-    is configured correctly.
+    Tests connectivity to the F5 BIG-IP Access Policy Manager instance to ensure proper
+    configuration and communication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -339,10 +349,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to test connectivity but does not fetch contextual
-      data for alerts or entities. It does not mutate external business data (only
-      authenticates), nor does it mutate internal data, update entities, create insights,
-      or add case comments.
+      The action initializes the F5 BIG-IP Access Policy Manager client and makes
+      a GET request to the /mgmt/shared/authz/tokens endpoint to test connectivity.
+      It does not fetch contextual data for entities, mutate external data, or update
+      internal SecOps data.
   entity_usage:
     entity_types:
       address: false
@@ -394,8 +404,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with, iterate over, or process any entities. It
-      solely tests connectivity to the external system using integration-level configuration.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      or accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -411,9 +421,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) to verify integration settings.
-      It does not enrich data, mutate external systems, update alerts, or perform
-      any operations that match the defined outcome categories.
+      The action is a simple ping/connectivity test. It does not match any of the
+      expected outcome categories such as enriching data, mutating external state,
+      or modifying internal case data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

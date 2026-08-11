@@ -2,36 +2,35 @@ Add IP To Address Set:
   ai_description: >-
     ### General Description
 
-    Adds specified IP Address entities to a designated address set on a Juniper VSRX
-    firewall. This action modifies the firewall's configuration to include the target
-    IPs in a specific address group, which is typically used to dynamically update
-    security policies such as blocklists or allowlists.
+    Adds specific IP address entities to a designated address set on a Juniper VSRX
+    device. This action modifies the firewall's configuration by creating an address
+    record for the IP and associating it with the specified address set, optionally
+    within a specific security zone.
 
 
     ### Flow Description
 
-    1. Retrieves the target `Address Set Name` and optional `Zone Name` from the action
-    parameters.
+    1. Establishes a connection to the Juniper VSRX device using the provided credentials.
 
-    2. Filters the target entities to include only those of type `ADDRESS`.
+    2. Iterates through the target entities, filtering for those of type `ADDRESS`.
 
-    3. Iterates through the filtered entities and executes a configuration command
-    via the Juniper VSRX API (using PyEZ) to create an address record and add the
-    IP address to the specified address set.
+    3. For each valid IP address entity, executes configuration commands on the Juniper
+    VSRX device to create an address record and add it to the specified `Address Set
+    Name` (and optionally `Zone Name`).
 
-    4. Commits the configuration changes to the firewall to apply the updates.
+    4. Commits the configuration changes to the device.
 
-    5. Closes the session and returns a success message detailing the entities added,
-    along with any errors encountered during the process.
+    5. Closes the connection session and returns a summary message indicating which
+    entities were successfully added.
 
 
     ### Additional Notes
 
-    If a `Zone Name` is provided, the IP is added to the address book of that specific
-    security zone. If omitted, the IP is added to the global address book.
+    Depending on the firewall policies associated with the target address set, this
+    action can be used to either block or allow network traffic for the specified
+    IP addresses.
   ai_short_description: >-
-    Adds specified IP Address entities to a designated address set on a Juniper VSRX
-    firewall to dynamically update security controls.
+    Adds IP address entities to a specified address set on a Juniper VSRX device.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,15 +39,14 @@ Add IP To Address Set:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Modifies the Juniper VSRX firewall configuration by adding IP addresses to a
-      specified address set.
+      Modifies the configuration of the Juniper VSRX device by adding an IP address
+      to a specified address set.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action does not fetch data from an external system for enrichment. It mutates
-      external data by executing configuration commands on the Juniper VSRX firewall
-      to add IP addresses to an address set and committing the changes. It does not
-      mutate internal SecOps data, update entities, or create insights.
+      The action executes configuration commands on the Juniper VSRX device to add
+      an IP address to an address set, which mutates external data. It does not fetch
+      data, mutate internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -101,8 +99,8 @@ Add IP To Address Set:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and explicitly filters
-      them using the condition `entity.entity_type == EntityTypes.ADDRESS`. Therefore,
-      it strictly targets ADDRESS entities and filters by the entity_type attribute.
+      them using `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it targets
+      Address entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: true
@@ -119,10 +117,10 @@ Add IP To Address Set:
     get_alert_information: false
     reasoning: >-
       The action adds an IP address to an address set on a Juniper VSRX firewall.
-      Because address sets are used in firewall policies to control network traffic,
-      this action functionally updates security controls. Depending on the firewall
-      rules applied to the target address set, this action can be used to either block
-      (add to blocklist) or allow (add to allowlist) the IOC.
+      Depending on the firewall rules associated with the target address set, this
+      operation can effectively block or allow traffic to/from the IP address. Therefore,
+      it matches the expected outcomes for both 'Add IOC To Blocklist' and 'Add IOC
+      To Allowlist'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -143,16 +141,16 @@ Add IP To Address Set:
     | --- | --- | --- | --- |
 
     | Address Set Name | String | Yes | The name of the address set on the Juniper
-    VSRX firewall to which the IP addresses will be added. |
+    VSRX device where the IP addresses will be added. |
 
-    | Zone Name | String | No | The specific security zone where the address set resides.
-    If not provided, the action defaults to the global address book. |
+    | Zone Name | String | No | The name of the security zone associated with the
+    address set. If not provided, the global address book is used. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Juniper VSRX instance to ensure the integration is configured
-    correctly and the device is reachable.
+    Tests connectivity to the JuniperVSRX integration to ensure the provided credentials
+    and network settings are valid.
 
 
     ### Flow Description
@@ -160,23 +158,19 @@ Ping:
     1. Retrieves the integration configuration parameters (Address, Port, Username,
     Password).
 
-    2. Initializes the Juniper VSRX manager with the provided credentials.
+    2. Initializes the JuniperVSRXManager.
 
-    3. Executes a probe/ping command to verify network connectivity and authentication.
+    3. Executes a probe command to the JuniperVSRX device to verify connectivity.
 
-    4. Returns a success message if the connection is established, or a failure message
-    otherwise.
-
-    5. Closes the connection session.
+    4. Returns a success or failure message based on the probe result.
 
 
     ### Additional Notes
 
-    This action is typically used as a diagnostic tool to verify integration configuration
-    and network access before running other actions.
+    This action does not interact with any entities or modify any data. It is primarily
+    used for integration health checks.
   ai_short_description: >-
-    Tests connectivity to the Juniper VSRX instance to ensure the integration is configured
-    correctly and the device is reachable.
+    Tests connectivity to the JuniperVSRX integration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -188,9 +182,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only probes the Juniper VSRX device to check connectivity. It does
-      not fetch contextual data, mutate external data, mutate internal data, update
-      entities, create insights, modify alert data, or create case comments.
+      The action probes the JuniperVSRX device to check connectivity. It does not
+      fetch contextual data for alerts/entities, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -242,8 +236,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely tests connectivity
-      to the configured Juniper VSRX instance.
+      The action does not iterate over target entities or accept any entity-related
+      input parameters. It solely tests connectivity to the external system.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -259,9 +253,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) and does not match any of the
-      specific outcome categories such as enriching IOCs, mutating external systems,
-      or updating alerts.
+      The action only tests connectivity to the JuniperVSRX device. It does not enrich
+      data, mutate external systems, or interact with alerts, tickets, or entities.
+      Therefore, it does not match any of the specified outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -281,35 +275,35 @@ Remove IP From Address Set:
   ai_description: >-
     ### General Description
 
-    Removes a specific IP address from an address set on a Juniper VSRX device. This
-    action modifies the device's configuration to delete the address record and remove
-    it from the specified address set, effectively altering the security policies
-    applied to that IP.
+    Removes specified IP address entities from a designated address set on a Juniper
+    VSRX device. This action modifies the firewall's configuration to remove the IP
+    address from the specified group, which can be used to remove an IP from a blocklist
+    or allowlist.
 
 
     ### Flow Description
 
-    1. Retrieves the `Address Set Name` and `Zone Name` parameters from the action
-    configuration.
+    1. Initializes a connection to the Juniper VSRX device using the provided credentials.
 
-    2. Filters the target entities to include only those of type `ADDRESS`.
+    2. Iterates through the target entities, filtering specifically for `ADDRESS`
+    entity types.
 
-    3. For each valid IP address entity, queries the Juniper VSRX device to retrieve
-    its corresponding address record name.
+    3. For each valid IP address, executes a command on the Juniper VSRX device to
+    remove the IP from the specified address set (and optionally, a specific zone).
 
-    4. Loads configuration commands onto the device to delete the address record and
-    remove it from the specified address set (and zone, if provided).
+    4. Commits the configuration changes to the device.
 
-    5. Commits the configuration changes to the Juniper VSRX device to apply the updates.
+    5. Closes the session and returns a summary message detailing the successfully
+    removed IP addresses.
 
 
     ### Additional Notes
 
-    This action is typically used to unblock an IP address or remove it from a specific
-    policy group on the firewall. Ensure that the provided `Address Set Name` exists
-    on the device.
+    Ensure that the specified Address Set Name exists on the Juniper VSRX device.
+    If a Zone Name is provided, the action will attempt to remove the IP from the
+    address set within that specific zone.
   ai_short_description: >-
-    Removes a specific IP address entity from a designated address set on a Juniper
+    Removes specified IP address entities from a designated address set on a Juniper
     VSRX device.
   capabilities:
     can_create_case_comments: false
@@ -319,14 +313,14 @@ Remove IP From Address Set:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes an IP address from a specified address set on the Juniper VSRX device.
+      Modifies the configuration of the Juniper VSRX device by removing an IP address
+      from a specified address set.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes configuration commands on a Juniper VSRX device to delete
-      an address record and remove it from an address set, which mutates external
-      data. It does not fetch contextual data for enrichment, nor does it mutate internal
-      SecOps data like entities, insights, or case comments.
+      The action executes configuration commands on a Juniper VSRX device to remove
+      an IP address from an address set, which mutates external data. It does not
+      fetch data, mutate internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -378,9 +372,9 @@ Remove IP From Address Set:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using the
-      condition `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it specifically
-      targets ADDRESS entities and filters by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it targets Address entities
+      and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -396,13 +390,10 @@ Remove IP From Address Set:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes an IP address from an address set on a firewall (Juniper
-      VSRX). Address sets are commonly used in firewall policies to block or allow
-      traffic. Removing an IP from such a set aligns with the 'Remove IOC From Blocklist'
-      or 'Remove IOC From Allowlist' outcomes depending on the set's purpose, but
-      in the context of SOAR, this is typically used to unblock an IP, matching 'Remove
-      IOC From Blocklist'.
-    remove_ioc_from_allowlist: false
+      The action removes an IP address from an address set on a firewall. Depending
+      on how the address set is used in firewall policies, this effectively removes
+      the IOC from a blocklist or an allowlist.
+    remove_ioc_from_allowlist: true
     remove_ioc_from_blocklist: true
     reset_identity_password: false
     search_asset: false
@@ -424,5 +415,5 @@ Remove IP From Address Set:
     | Address Set Name | String | Yes | The name of the address set from which the
     IP address should be removed. |
 
-    | Zone Name | String | No | The name of the security zone associated with the
-    address set. |
+    | Zone Name | String | No | The specific security zone where the address set is
+    located. |

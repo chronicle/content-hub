@@ -2,39 +2,33 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches entities using EclecticIQ by retrieving observable and entity information.
-    This action fetches threat intelligence data from EclecticIQ and updates the entities
-    within Google SecOps with the retrieved context.
+    Enriches entities using EclecticIQ. This action retrieves threat intelligence
+    data, such as observables and related entities, from the EclecticIQ platform to
+    provide additional context for the target entities within the case.
 
 
     ### Flow Description
 
-    1. Iterates through all target entities provided in the case.
+    1. Iterates through all target entities in the case.
 
-    2. Makes a GET request to the EclecticIQ API (`/api/v2/observables`) to fetch
-    observable information for the entity identifiers.
+    2. Makes a GET request to the EclecticIQ API to fetch observable information based
+    on the entity identifiers.
 
-    3. Makes a GET request to the EclecticIQ API (`/api/v2/entities`) to fetch related
-    entity information based on the retrieved observable IDs.
+    3. Makes a subsequent GET request to fetch related entities for the retrieved
+    observables.
 
-    4. Makes a GET request to the EclecticIQ API (`/api/v2/sources`) to fetch source
-    information and map it to the entities.
+    4. Parses the retrieved data and updates the entities in Google SecOps with the
+    enrichment information.
 
-    5. Parses the retrieved data and updates the entities' additional properties in
-    Google SecOps.
-
-    6. Adds entity links, tables, and JSON results to the case for analyst review.
+    5. Attaches entity links and data tables to the case wall for analyst review.
 
 
     ### Additional Notes
 
-    - Entities successfully enriched will have their `is_enriched` flag set to True.
-
-    - If an entity is not found in EclecticIQ, it will be reported in the output message.
+    Entities that are not found in EclecticIQ will be listed in the output message
+    but will not cause the action to fail.
   ai_short_description: >-
-    Enriches entities using EclecticIQ by retrieving observable and entity information,
-    updating the entities in Google SecOps with the retrieved threat intelligence
-    context.
+    Enriches entities by retrieving observable and threat intelligence data from EclecticIQ.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -45,14 +39,13 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entities with additional properties, sets the `is_enriched` flag, and
-      adds entity links, tables, and JSON results to the case.
+      Updates entities with enrichment data retrieved from EclecticIQ.
     reasoning: >-
-      The action fetches data from EclecticIQ via GET requests. It does not mutate
-      external data. It mutates internal data by updating entities with additional
-      properties, setting the `is_enriched` flag, and adding entity links, tables,
-      and JSON results to the case. It does not create insights, modify alert data,
-      or create case comments.
+      The action fetches data from the EclecticIQ API via GET requests (fetches_data=true).
+      It does not mutate external data (can_mutate_external_data=false). It updates
+      the entities within Google SecOps with the retrieved enrichment data (can_mutate_internal_data=true,
+      can_update_entities=true). It does not create insights, modify alert data, or
+      create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -104,9 +97,10 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` without applying any filters
-      based on entity type or other attributes. Therefore, it runs on all supported
-      entity types.
+      The action iterates over `siemplify.target_entities` without applying any entity
+      type filters. It extracts the identifier of each entity to query the EclecticIQ
+      API. Therefore, it supports all entity types and does not filter entities by
+      any specific attribute before processing.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -122,10 +116,10 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches observable and entity information from EclecticIQ for the
-      target entities, which provides threat intelligence and reputation data. This
-      matches the 'Enrich IOC' expected outcome. It does not mutate external data
-      or perform any other categorized actions.
+      The action fetches threat intelligence data (observables and entities) from
+      EclecticIQ for the target entities. This aligns with the 'Enrich IOC' expected
+      outcome. It does not perform any asset enrichment, containment, or ticketing
+      operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -145,33 +139,30 @@ Ping:
   ai_description: >-
     ### General Description
 
-    This action facilitates testing connectivity with the EclecticIQ platform. It
-    verifies that the provided integration credentials and network configurations
-    are valid and operational.
+    Tests connectivity to the EclecticIQ platform. This action verifies that the provided
+    integration credentials and network settings are valid and can successfully communicate
+    with the EclecticIQ API.
 
 
     ### Flow Description
 
-    1. Retrieves the integration configuration, including the EclecticIQ URL and API
-    Token.
+    1. Retrieves the integration configuration parameters (URL, API Token, Verify
+    SSL).
 
-    2. Initializes the EclecticIQ Manager and attempts to establish a connection.
+    2. Makes an HTTP GET request to the EclecticIQ `/api/v2/sources` endpoint to validate
+    the credentials.
 
-    3. Makes an HTTP GET request to the `/api/v2/sources` endpoint to validate authentication
-    and network access.
-
-    4. Returns a successful execution state if the request succeeds, or a failed state
-    with an error message if it fails.
+    3. Returns a success message if the connection is established and authenticated,
+    or an error message if the connection fails.
 
 
     ### Additional Notes
 
-    This action does not interact with case data, alerts, or entities. It is strictly
-    used as a health check or diagnostic tool to ensure the integration is properly
-    configured.
+    This action is primarily used for integration health checks and troubleshooting.
+    It does not process any entities, alerts, or case data.
   ai_short_description: >-
-    Tests connectivity to the EclecticIQ platform to ensure valid credentials and
-    network access.
+    Tests connectivity to the EclecticIQ platform by verifying the provided credentials
+    against the API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -183,9 +174,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the EclecticIQ API to test connectivity. It
-      does not fetch contextual data for entities, mutate external data, mutate internal
-      data, update entities, create insights, modify alert data, or create case comments.
+      The action makes a GET request to test API connectivity. It does not fetch contextual
+      data for alerts, mutate external data, mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -237,8 +228,9 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It solely performs
-      a connectivity check to the external service.
+      The action does not process any entities from the case, nor does it accept any
+      entity-related input parameters. It solely tests connectivity to the EclecticIQ
+      API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -254,9 +246,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (ping) to the EclecticIQ API. It does
-      not enrich data, mutate external systems, update alerts, or perform any of the
-      specific operations defined in the outcome categories.
+      The action is a simple connectivity test (ping) to verify API credentials. It
+      does not match any of the specific outcome categories such as enrichment, containment,
+      ticketing, or alert manipulation.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -276,34 +268,39 @@ Send Entities to EclecticIQ:
   ai_description: >-
     ### General Description
 
-    Sends case entities to EclecticIQ as sightings, with an option to also create
-    them as indicators. This action exports relevant case data and entity identifiers
-    to the EclecticIQ Threat Intelligence Platform.
+    Sends entities to EclecticIQ as sightings. By default, this action creates a sighting
+    in the EclecticIQ Intelligence Center based on the case and its associated entities.
+    Users also have the option to configure parameters to create an indicator entity
+    alongside the sighting.
 
 
     ### Flow Description
 
-    1. Retrieves the EclecticIQ group name and indicator creation preference from
-    the action parameters.
+    1. Extracts the `Group Name` and `Create Indicator` parameters.
 
-    2. Fetches the source ID for the specified group name from the EclecticIQ API.
+    2. Initializes the EclecticIQ manager with the provided API credentials.
 
-    3. Constructs a payload containing case details (e.g., title, description, priority)
-    and extracts from the target entities.
+    3. Fetches the source ID for the specified group name via a GET request to the
+    EclecticIQ API (`/private/groups/`).
 
-    4. Sends a PUT request to the EclecticIQ API (`/api/v2/entities`) to create the
-    sighting and, if configured, the indicator.
+    4. Constructs a payload containing a sighting (and optionally an indicator) with
+    extracts mapped from the target entities' types and identifiers.
 
-    5. Adds a comment to the case and attaches a link to the created entity in the
-    action results.
+    5. Sends a PUT request to the EclecticIQ API (`/api/v2/entities`) to create the
+    entities.
+
+    6. Adds a comment to the case and attaches an entity link to the action results
+    pointing to the created indicator in the EclecticIQ platform.
 
 
     ### Additional Notes
 
-    Only entities with types supported by EclecticIQ (e.g., Address, Hostname, FileHash,
-    URL, Domain) are included in the payload. Unsupported entity types are ignored.
+    The action maps specific Google SecOps entity types (e.g., Address, Hostname,
+    FileHash, URL) to their corresponding EclecticIQ kinds (e.g., ipv4, host, hash-sha256,
+    uri) before creating the extracts.
   ai_short_description: >-
-    Sends case entities to EclecticIQ to create sightings and optionally indicators.
+    Sends case entities to EclecticIQ to create a sighting, with an option to also
+    create an indicator entity.
   capabilities:
     can_create_case_comments: true
     can_create_insight: false
@@ -312,14 +309,14 @@ Send Entities to EclecticIQ:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates sightings and optionally indicators in the EclecticIQ platform.
+      Creates a sighting and optionally an indicator in the EclecticIQ platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a PUT request to the EclecticIQ API to create sightings and
-      indicators, which mutates external data. It does not fetch enrichment data,
-      update internal entities, or create insights. It does, however, add a comment
-      to the case upon successful execution.
+      indicators, mutating external data. It does not fetch contextual data for enrichment,
+      update internal entities, or create insights. It does create a case comment
+      indicating success.
   entity_usage:
     entity_types:
       address: true
@@ -371,12 +368,12 @@ Send Entities to EclecticIQ:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them by checking
-      if their `entity_type` is present in a predefined `ENTITY_MAP`. This map includes
-      types such as HOSTNAME, ADDRESS, PROCESS, PARENTPROCESS, CHILDPROCESS, FILENAME,
-      FILEHASH, PARENTHASH, CHILDHASH, URL, EMAILMESSAGE, CVEID, CREDITCARD, PHONENUMBER,
-      CVE, THREATACTOR, SOURCEDOMAIN, DESTINATIONDOMAIN, and DOMAIN. Therefore, it
-      targets these specific entity types and filters by `entity_type`.
+      The action iterates over `siemplify.target_entities` and filters them based
+      on whether their `entity_type` is present in the `ENTITY_MAP` dictionary. The
+      supported types include Hostname, Address, Process, Parent Process, Child Process,
+      File Name, File Hash, Parent Hash, Child Hash, URL, Email Message, CVE ID, Credit
+      Card, Phone Number, CVE, Threat Actor, Source Domain, Destination Domain, and
+      Domain.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -392,9 +389,9 @@ Send Entities to EclecticIQ:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action exports entities to a Threat Intelligence Platform (EclecticIQ) to
-      create sightings or indicators. This does not match any of the predefined outcome
-      categories such as Enrich IOC, Update Alert, Create Ticket, or Add IOC To Blocklist.
+      The action exports entities to EclecticIQ to create sightings and indicators.
+      This does not directly align with any of the predefined outcome categories such
+      as Enrich IOC, Create Ticket, or Add IOC to Blocklist.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -2,7 +2,10 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches User entities with contextual data extracted from the Full Contact product.
+    Enriches User entities with person and company data extracted from the Full Contact
+    product. This action retrieves contextual metadata such as company name, industry,
+    location, and person details (e.g., title, LinkedIn profile) to provide deeper
+    insights into the user identities involved in an alert.
 
 
     ### Flow Description
@@ -12,25 +15,23 @@ Enrich Entities:
     2. Extracts the email address and domain from the User entity's identifier.
 
     3. Makes a POST request to the Full Contact API (`/v3/company.enrich`) to retrieve
-    company details based on the domain.
+    company details based on the extracted domain.
 
     4. Makes a POST request to the Full Contact API (`/v3/person.enrich`) to retrieve
     person details based on the email address.
 
-    5. Updates the entity's additional properties with the retrieved company and person
-    information.
+    5. Updates the entity's additional properties with the retrieved enrichment data.
 
-    6. Saves the updated entities back to the platform and returns the enrichment
-    data as a JSON result.
+    6. Updates the entities within Google SecOps and attaches the enrichment data
+    as a JSON result.
 
 
     ### Additional Notes
 
-    The action expects User entities to be formatted as email addresses to successfully
+    The action expects User entities to be formatted as valid email addresses to successfully
     extract the domain and email for enrichment.
   ai_short_description: >-
-    Enriches User entities by retrieving company and person details from the Full
-    Contact API and updating the entities' additional properties.
+    Enriches User entities with person and company data using the Full Contact API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -42,10 +43,11 @@ Enrich Entities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes POST requests to Full Contact's enrichment endpoints to fetch
-      data. Although it uses POST, it does not mutate external data. It updates internal
-      entities with the fetched data but does not create insights or mutate other
-      internal data.
+      The action makes POST requests to the Full Contact API to fetch enrichment data
+      for domains and persons. It does not mutate external data (the POST requests
+      are for querying the API). It updates the internal entities with the fetched
+      data by calling `siemplify.update_entities`. It does not create insights, modify
+      alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -97,9 +99,9 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `ent.entity_type
-      == EntityTypes.USER`. This means it targets USER entities, filtering strictly
-      by entity_type.
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `ent.entity_type == EntityTypes.USER`. Therefore, it targets User
+      entities and filters them by their entity_type attribute.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -115,9 +117,11 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches contextual metadata (company and person details) for User
-      entities from Full Contact. This matches the 'Enrich Asset' expected outcome,
-      as it returns contextual metadata for a user.
+      The action fetches contextual metadata (such as company details, job title,
+      and LinkedIn profile) for User entities from Full Contact. This matches the
+      'Enrich Asset' expected outcome, which involves returning contextual metadata
+      for a user or resource. It does not enrich IOCs with threat intelligence or
+      perform any containment/remediation actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -137,31 +141,31 @@ Ping:
   ai_description: >-
     ### General Description
 
-    This action tests connectivity to the Full Contact API to ensure the integration
-    is configured correctly with valid credentials.
+    Tests connectivity with the Full Contact product to ensure the integration is
+    configured correctly.
 
 
     ### Flow Description
 
     1. Retrieves the API key from the integration configuration.
 
-    2. Makes a POST request to the Full Contact `company.enrich` API endpoint using
-    a hardcoded test domain (`google.com`).
+    2. Makes a POST request to the Full Contact API (`https://api.fullcontact.com/v3/company.enrich`)
+    using a hardcoded domain (`google.com`).
 
-    3. Evaluates the API response to ensure the provided API key is valid and does
-    not return a 401 Unauthorized status.
+    3. Evaluates the API response to verify authentication, raising an exception if
+    a 401 Unauthorized status is returned.
 
-    4. Returns a success message and a true result value if the connection is successfully
-    established and authenticated.
+    4. Outputs a success message if the connection is validated.
 
 
     ### Additional Notes
 
-    This is a utility action primarily used for verifying integration health and credentials.
-    It does not process case entities or return enrichment data to the case.
+    This action does not require any parameters and does not process any entities.
+    It is intended solely for testing the integration's connection to the Full Contact
+    service.
   ai_short_description: >-
-    Tests connectivity to the Full Contact API by attempting to enrich a hardcoded
-    test domain.
+    Tests connectivity with the Full Contact product by making a test API call to
+    verify authentication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -173,11 +177,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an HTTP POST request to the Full Contact API solely to test
-      connectivity. It does not fetch contextual data for alerts/entities, does not
-      mutate external data (the endpoint is for enrichment, not state change), and
-      does not mutate internal data, update entities, create insights, modify alert
-      data, or create case comments.
+      The action makes a test API call to verify connectivity but does not fetch or
+      return contextual data for alerts or entities. It does not mutate external data,
+      mutate internal data, update entities, create insights, modify alert data, or
+      create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -229,9 +232,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It uses a hardcoded domain to test connectivity, meaning it does
-      not run on or process any entities.
+      The action does not iterate over target entities or accept any entity-related
+      input parameters. It uses a hardcoded domain for testing connectivity.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -247,10 +249,10 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) that verifies API credentials by making
-      a test request. It does not perform any enrichment on case entities, mutate
-      external state, or interact with alerts, tickets, or emails. Therefore, it does
-      not match any of the expected outcome categories.
+      The action is a simple ping test to verify connectivity with the Full Contact
+      API. It does not return enrichment data, mutate external systems, or interact
+      with alerts, tickets, or entities. Therefore, it does not match any of the expected
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

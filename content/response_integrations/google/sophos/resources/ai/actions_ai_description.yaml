@@ -2,29 +2,28 @@ Add Entities To Allowlist:
   ai_description: >-
     ### General Description
 
-    Adds specified file hash entities to the allowlist in Sophos.
+    Adds specified SHA-256 file hash entities to the allowlist in Sophos.
 
 
     ### Flow Description
 
-    1. Extracts the action parameter (Comment).
+    1. Iterates over the target entities and filters for `FileHash` entities.
 
-    2. Filters the target entities to include only FileHash entities.
+    2. Validates that the entity identifier is a valid SHA-256 hash by checking its
+    length (64 characters).
 
-    3. Validates that the hash is a SHA-256 hash (length of 64 characters).
+    3. Makes a POST request to the Sophos API (`/endpoint/v1/settings/allowed-items`)
+    to add the valid hashes to the allowlist, including the provided comment.
 
-    4. Iterates over the valid entities and makes a POST request to the Sophos API
-    (`/endpoint/v1/settings/allowed-items`) to add each hash to the allowlist.
-
-    5. Collects successful, failed, and already added entities to construct the final
-    output message.
+    4. Collects the results and outputs a summary message detailing which entities
+    were successfully added, which failed, and which were already on the allowlist.
 
 
     ### Additional Notes
 
-    Only SHA-256 hashes are supported.
+    Only SHA-256 hashes are supported by this action. Other hash types will be skipped.
   ai_short_description: >-
-    Adds specified file hash entities to the allowlist in Sophos.
+    Adds specified SHA-256 file hash entities to the allowlist in Sophos.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -33,13 +32,13 @@ Add Entities To Allowlist:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds the specified file hash entities to the allowlist in Sophos.
+      Adds the specified SHA-256 file hash entities to the allowlist in Sophos.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action mutates external data by adding a file hash to the allowlist in Sophos
-      via a POST request. It does not fetch data, mutate internal data, update entities,
-      or create insights.
+      The action mutates external data by making a POST request to Sophos to add a
+      hash to the allowlist. It does not fetch contextual data, update internal entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -82,7 +81,7 @@ Add Entities To Allowlist:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -91,9 +90,10 @@ Add Entities To Allowlist:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` contains only `EntityTypes.FILEHASH`.
-      Therefore, it filters strictly by entity_type for file hashes.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES`
+      contains `EntityTypes.FILEHASH`. It also checks if `len(entity.identifier) !=
+      SHA256_LENGTH`, meaning it filters by the entity's identifier.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: true
@@ -109,8 +109,8 @@ Add Entities To Allowlist:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action makes a POST request to the Sophos API to add a file hash to the
-      allowlist. This directly aligns with the 'Add IOC To Allowlist' expected outcome.
+      The action makes a POST request to Sophos to add a file hash to the allowlist.
+      This directly aligns with the 'Add IOC To Allowlist' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -136,33 +136,36 @@ Add Entities To Blocklist:
   ai_description: >-
     ### General Description
 
-    Adds specified file hash entities to the blocklist in Sophos. This action initiates
-    a state change on the external Sophos platform to prevent the execution or presence
-    of the specified hashes.
+    Adds file hash entities to the blocklist in Sophos. This action initiates a state
+    change on the external Sophos platform to prevent execution or interaction with
+    the specified file hashes.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities provided in the case.
+    1. Extracts the action parameter `Comment`.
 
-    2. Filters the entities to include only `FileHash` types.
+    2. Filters the target entities to include only `FILEHASH` entities.
 
-    3. Validates that each hash is a SHA-256 hash by checking its length (64 characters).
+    3. Initializes the Sophos API client.
 
-    4. Makes a POST request to the Sophos API (`/endpoint/v1/settings/blocked-items`)
-    for each valid hash to add it to the blocklist, attaching the provided comment.
+    4. Iterates over the filtered entities and verifies that the hash is a valid SHA-256
+    hash (length of 64 characters).
 
-    5. Collects the results and returns a summary message detailing which entities
-    were successfully blocked, which failed, and which were already present on the
-    blocklist.
+    5. Makes a POST request to the Sophos API to add each valid hash to the blocklist
+    with the provided comment.
+
+    6. Handles cases where the hash is already on the blocklist.
+
+    7. Returns a summary message detailing which entities were successfully added,
+    which failed, and which were already on the blocklist.
 
 
     ### Additional Notes
 
-    Only SHA-256 hashes are supported by this action. Hashes of other types (e.g.,
-    MD5, SHA-1) will be skipped and logged as unsupported.
+    Only SHA-256 hashes are supported by this action.
   ai_short_description: >-
-    Adds specified SHA-256 file hash entities to the blocklist in Sophos.
+    Adds file hash entities to the blocklist in Sophos.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -171,13 +174,13 @@ Add Entities To Blocklist:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds the specified file hash entities to the blocklist in Sophos.
+      Adds the specified SHA-256 file hashes to the blocklist in Sophos.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action mutates external data by making a POST request to Sophos to add a
-      hash to the blocklist. It does not fetch additional contextual data, update
-      internal entities, create insights, or modify alert data.
+      The action makes a POST request to the Sophos API to add a file hash to the
+      blocklist, which mutates external data. It does not fetch data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -229,9 +232,10 @@ Add Entities To Blocklist:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` is defined as `[EntityTypes.FILEHASH]`.
-      Thus, it strictly filters by entity_type and targets FileHash entities.
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      is `[EntityTypes.FILEHASH]`. Therefore, it targets File Hash entities and filters
+      by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -274,58 +278,53 @@ Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches Hostname, IP Address, and File Hash entities using information from Sophos.
-    It retrieves endpoint details, isolation status, and blocked item information
-    to provide contextual threat intelligence and asset data.
+    Enriches Hostname, IP Address, and File Hash entities using Sophos. This action
+    retrieves endpoint details, isolation status, and blocked items information to
+    provide additional context for the entities.
 
 
     ### Flow Description
 
-    1. Initializes the Sophos API client using the provided integration credentials.
+    1. Initializes the connection to the Sophos API.
 
-    2. Iterates over the target entities, filtering for supported types (Hostname,
-    IP Address, File Hash).
+    2. Iterates over the target entities, filtering for Hostname, IP Address, and
+    File Hash types.
 
     3. For Hostname and IP Address entities, makes a GET request to the Sophos API
-    (`/endpoint/v1/endpoints`) to find the associated endpoint.
+    to find endpoint details and another GET request to check the endpoint's isolation
+    status.
 
-    4. If an endpoint is found, makes an additional GET request (`/endpoint/v1/endpoints/{endpoint_id}/isolation`)
-    to check its isolation status.
+    4. For File Hash entities, makes a GET request to the Sophos API to retrieve blocked
+    items information.
 
-    5. For File Hash entities, makes a GET request (`/endpoint/v1/settings/blocked-items`)
-    to retrieve blocked item details.
+    5. Updates the entities' additional properties with the retrieved data and marks
+    them as enriched. File Hash entities are also marked as suspicious if found.
 
-    6. Updates the entity's additional properties with the retrieved data and marks
-    it as enriched (and suspicious for file hashes).
+    6. Optionally creates an insight for each successfully enriched entity.
 
-    7. Optionally creates an insight with the retrieved information.
-
-    8. Updates the entities in the SecOps platform and attaches a JSON result and
-    entity table.
+    7. Updates the entities in the Google SecOps platform and returns the results.
 
 
     ### Additional Notes
 
-    File hashes found in the blocked items list will automatically be marked as suspicious.
+    None.
   ai_short_description: >-
-    Enriches Hostname, IP Address, and File Hash entities by retrieving endpoint details,
-    isolation status, and blocked item information from Sophos.
+    Enriches Hostname, IP Address, and File Hash entities using Sophos to retrieve
+    endpoint details, isolation status, and blocked items information.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity additional properties, marks entities as enriched (and suspicious
-      for file hashes), and creates insights.
+    internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from Sophos via GET requests. It does not mutate external
-      data. It mutates internal data by updating entities with additional properties,
-      marking them as enriched/suspicious, and creating insights.
+      The action fetches data from Sophos via GET requests to retrieve endpoint and
+      blocked items information. It does not mutate external data. It updates entities
+      in the platform and optionally creates insights.
   entity_usage:
     entity_types:
       address: true
@@ -378,9 +377,10 @@ Enrich Entities:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are HOSTNAME,
-      ADDRESS, and FILEHASH. Therefore, it targets these specific entity types and
-      filters by entity_type.
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.HOSTNAME`, `EntityTypes.ADDRESS`, and `EntityTypes.FILEHASH`.
+      Therefore, it targets Hostname, Address, and File Hash entities and filters
+      by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -396,9 +396,9 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches endpoint details for Hostnames (Enrich Asset) and IP Addresses/File
-      Hashes (Enrich IOC) from Sophos. It does not mutate external data or perform
-      containment/blocking operations.
+      The action retrieves contextual metadata for Hostname entities (Enrich Asset)
+      and threat intelligence/reputation for IP Address and File Hash entities (Enrich
+      IOC). It does not mutate external data or perform other actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -424,33 +424,29 @@ Execute Alert Actions:
   ai_description: >-
     ### General Description
 
-    This action executes a specified remediation or management action on an alert
-    within Sophos.
+    Initiates the execution of a specified action on an alert within Sophos.
 
 
     ### Flow Description
 
-    1. Retrieves the target `Alert ID`, the desired `Action`, and an optional `Message`
-    from the action parameters.
+    1. Extracts the Alert ID, Action, and an optional Message from the action parameters.
 
-    2. Maps the provided action name to the corresponding Sophos API action identifier.
+    2. Maps the selected action to the corresponding Sophos API action type.
 
     3. Makes a POST request to the Sophos API (`/common/v1/alerts/{alert_id}/actions`)
-    to initiate the action on the alert.
+    to execute the action on the specified alert.
 
-    4. Returns a success message upon successful execution or an error message if
-    the request fails.
+    4. Returns a success message if the action is initiated successfully, or an error
+    message if it fails.
 
 
     ### Additional Notes
 
-    Available actions include Acknowledge, Clean PUA, Clean Virus, Auth PUA, Clear
-    Threat, Clear HMPA, Send Message PUA, and Send Message Threats. To determine which
-    actions are available for a specific alert dynamically, you can use the "List
-    Alert Actions" action beforehand.
+    Use the "List Alert Actions" action to retrieve a list of available actions for
+    a specific alert before executing this action.
   ai_short_description: >-
-    Executes a specified remediation or management action (such as Acknowledge or
-    Clean Virus) on a specific alert in Sophos.
+    Initiates the execution of a specified action (such as Acknowledge, Clean PUA,
+    or Clear Threat) on an alert within Sophos.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -459,15 +455,13 @@ Execute Alert Actions:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes an action (e.g., Acknowledge, Clean Virus) on an alert in the Sophos
-      platform.
+      Executes a specified action (e.g., Acknowledge, Clean PUA) on an alert in Sophos.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a POST request to the Sophos API to execute an action on an
-      alert, which mutates data in the external system (can_mutate_external_data=true).
-      It does not fetch contextual data, update internal entities, create insights,
-      or modify internal SecOps alert data.
+      alert, which mutates external data. It does not fetch data, mutate internal
+      SecOps data, update entities, create insights, or add case comments.
   entity_usage:
     entity_types:
       address: false
@@ -519,9 +513,9 @@ Execute Alert Actions:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It relies entirely on the 'Alert ID'
-      parameter provided in the action configuration to target a specific alert in
-      Sophos.
+      The action does not process `siemplify.target_entities` and does not accept
+      any parameters representing SecOps entities. It operates solely on an external
+      Alert ID provided as a string parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -537,10 +531,9 @@ Execute Alert Actions:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a remediation or management action (like Acknowledge or
-      Clean Virus) on an alert in the external Sophos system. It does not update the
-      alert within the SecOps platform, nor does it fit into the other specific categories
-      like Contain Host or Update Ticket. Therefore, no outcome categories apply.
+      The action executes an action on a 3rd party alert in Sophos. It does not update
+      the alert within the SecOps platform, nor does it match any of the other specific
+      outcome categories such as blocking IOCs, containing hosts, or creating tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -564,8 +557,7 @@ Execute Alert Actions:
     the action. |
 
     | Action | String | Yes | Specify an action that should be executed on the alert.
-    Available options include Acknowledge, Clean PUA, Clean Virus, Auth PUA, Clear
-    Threat, Clear HMPA, Send Message PUA, and Send Message Threats. |
+    |
 
     | Message | String | No | Specify a message explaining why the action was executed.
     |
@@ -573,174 +565,36 @@ Get Events Log:
   ai_description: >-
     ### General Description
 
-    Retrieves historical event logs related to specific endpoint entities (IP Address,
-    Hostname) from Sophos.
+    Retrieves events and logs related to specific endpoints (IP Address, Hostname)
+    from Sophos.
 
 
     ### Flow Description
 
-    1. Iterates over the target entities, filtering for IP Address and Hostname types.
+    1. Initializes the Sophos API client with the provided configuration credentials.
 
-    2. For each valid entity, queries the Sophos API (`/endpoint/v1/endpoints`) to
-    find the corresponding endpoint ID using the entity's identifier.
+    2. Iterates through the target entities, filtering for supported types (IP Address
+    and Hostname).
 
-    3. If an endpoint is found, queries the Sophos SIEM API (`/siem/v1/events`) to
-    retrieve the event logs for that endpoint within the specified timeframe.
+    3. For each valid entity, makes an API call to Sophos to find the corresponding
+    endpoint using the entity's identifier.
 
-    4. Attaches the retrieved events as a CSV table to the entity and adds the raw
-    data to the action's JSON result.
+    4. If the endpoint is found, makes another API call to retrieve the events associated
+    with that endpoint within the specified timeframe.
+
+    5. Formats the retrieved events into a CSV table and attaches it to the entity
+    in the SecOps platform.
+
+    6. Aggregates the raw event data and returns it as a JSON result.
 
 
     ### Additional Notes
 
     Events are accessible from the Sophos API only for the last 24 hours. If a timeframe
-    greater than 24 hours is provided, the action will default to 24 hours.
+    greater than 24 hours is provided, the action will automatically cap it at 24
+    hours.
   ai_short_description: >-
-    Retrieves historical event logs related to specific endpoint entities (IP Address,
-    Hostname) from Sophos.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches event logs from Sophos using GET requests. It does not mutate
-      external data, update entities, create insights, or modify alert data.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: true
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them by `entity_type`
-      (ADDRESS, HOSTNAME). It then uses the entity's original identifier to search
-      for the endpoint in Sophos.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves historical event logs for specific endpoints from Sophos,
-      which directly matches the 'Search Events' category. It does not enrich the
-      entity itself with contextual metadata or threat intelligence, nor does it mutate
-      external state.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: true
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Timeframe | String | Yes | Specify how many hours backwards events should be
-    retrieved. Note: if the user provides more than 24 hours, action will still use
-    24. |
-
-    | Max Events To Return | String | No | Specify how many events to return per entity.
-    Maximum: 1000 |
-Get Services Status:
-  ai_description: >-
-    ### General Description
-
-    Retrieves information about services running on endpoints from Sophos. This action
-    queries the Sophos API to fetch service details for specific IP Address and Hostname
-    entities and attaches the results as a table to the respective entities.
-
-
-    ### Flow Description
-
-    1. Initializes the SophosManager with the provided API credentials.
-
-    2. Iterates over the target entities, filtering for supported types (IP Address,
-    Hostname).
-
-    3. For each suitable entity, makes a GET request to the Sophos API (`/endpoint/v1/endpoints`)
-    to find the associated endpoint using the entity's original identifier.
-
-    4. Extracts service details from the retrieved endpoint object.
-
-    5. Adds a CSV table containing the service details to the entity in the SecOps
-    platform.
-
-    6. Appends the JSON representation of the endpoint to the action's JSON results.
-
-
-    ### Additional Notes
-
-    Supported entities are IP Address and Hostname.
-  ai_short_description: >-
-    Retrieves information about services running on endpoints (IP Address, Hostname)
+    Retrieves events and logs related to specific endpoints (IP Address, Hostname)
     from Sophos.
   capabilities:
     can_create_case_comments: false
@@ -753,9 +607,9 @@ Get Services Status:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Sophos API to fetch endpoint service data.
-      It does not mutate external data. It adds a table to the entity and returns
-      JSON results, but does not update the entity object itself or create insights.
+      The action fetches event data from the Sophos API (fetches_data=true). It does
+      not mutate external data, update internal entities, create insights, or modify
+      alert data.
   entity_usage:
     entity_types:
       address: true
@@ -808,8 +662,155 @@ Get Services Status:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITIES`, where SUPPORTED_ENTITIES includes
-      ADDRESS and HOSTNAME. It does not filter by identifier or other properties.
+      `entity.entity_type in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes
+      `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. It then extracts the entity's
+      original identifier to query the Sophos API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches historical logs and events associated with specific endpoints
+      from Sophos. This directly aligns with the 'Search Events' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Timeframe | String | Yes | Specify how many hours backwards events should be
+    retrieved. Note: if the user provides more than 24 hours, action will still use
+    24. |
+
+    | Max Events To Return | String | No | Specify how many events to return per entity.
+    Maximum: 1000 |
+Get Services Status:
+  ai_description: >-
+    ### General Description
+
+    Retrieves information about services running on endpoints from Sophos. This action
+    queries the Sophos platform to find endpoints matching the provided IP Address
+    or Hostname entities and extracts their service health and status details.
+
+
+    ### Flow Description
+
+    1. Initializes the Sophos integration using the provided API credentials.
+
+    2. Iterates over the target entities, filtering for supported types (IP Address
+    and Hostname).
+
+    3. For each suitable entity, makes a GET request to the Sophos API (`/endpoint/v1/endpoints`)
+    to find the corresponding endpoint.
+
+    4. Extracts the service details and health status from the retrieved endpoint
+    data.
+
+    5. Attaches the service details as a CSV table to the entity and adds the raw
+    data to the action's JSON results.
+
+
+    ### Additional Notes
+
+    - Supported entity types are IP Address and Hostname.
+
+    - The action does not modify any external data or update the entity's core properties.
+  ai_short_description: >-
+    Retrieves information about services running on endpoints from Sophos and attaches
+    the details as an entity table.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Sophos API to fetch endpoint service data.
+      It does not mutate external data, update internal entities, create insights,
+      or add case comments. It only attaches an entity table and JSON results to the
+      action output.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes
+      `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets Address
+      and Hostname entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -825,9 +826,9 @@ Get Services Status:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches contextual metadata (service information) about an asset
-      (hostname or IP) from Sophos. This aligns with the 'Enrich Asset' category.
-      It does not mutate data or perform other actions.
+      The action retrieves contextual metadata (service details and health status)
+      for an internal resource (endpoint) based on its IP address or hostname. This
+      aligns with the 'Enrich Asset' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -845,34 +846,37 @@ Get Services Status:
   parameters_description: There are no parameters for this action
 Isolate Endpoint:
   ai_description: >-
-    **General Description**
+    ### General Description
 
-    This action isolates endpoints in Sophos based on IP Address or Hostname entities.
-
-
-    **Flow Description**
-
-    1. Iterates over the target entities provided in the case.
-
-    2. Filters entities to process only IP Addresses and Hostnames.
-
-    3. For each suitable entity, calls the Sophos API to find the corresponding endpoint.
-
-    4. Checks the current isolation status of the endpoint.
-
-    5. If the endpoint is not already isolated, it sends a POST request to isolate
-    the endpoint with the provided comment.
-
-    6. As an asynchronous action, it periodically queries the isolation status until
-    the endpoint is fully isolated or the action times out.
+    Isolates specific endpoints (IP Address or Hostname) in Sophos. This action initiates
+    a state change on the external device to prevent network traffic to or from the
+    specified entity.
 
 
-    **Additional Notes**
+    ### Flow Description
+
+    1. Iterates over the target entities and filters for supported types (IP Address,
+    Hostname).
+
+    2. For each suitable entity, queries Sophos via the `find_entities` API to retrieve
+    the corresponding endpoint details.
+
+    3. Checks the current isolation status of the endpoint using the `check_isolation_status`
+    API.
+
+    4. If the endpoint is not already isolated, sends a request to Sophos via the
+    `isolate_endpoint` API to isolate the endpoint, including the provided comment.
+
+    5. Periodically queries the isolation status until the operation completes or
+    times out, as this is an asynchronous action.
+
+
+    ### Additional Notes
 
     This action runs asynchronously. Ensure the script timeout value in the IDE is
-    adjusted as needed.
+    adjusted as needed to accommodate the isolation process.
   ai_short_description: >-
-    Isolates specific endpoints (IP Address, Hostname) in Sophos to prevent network
+    Isolates specific endpoints (IP Address or Hostname) in Sophos to prevent network
     communication.
   capabilities:
     can_create_case_comments: false
@@ -882,14 +886,558 @@ Isolate Endpoint:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Isolates the endpoint in Sophos, preventing network communication.
+      Isolates the specified endpoint in Sophos, preventing it from communicating
+      on the network.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to Sophos to isolate an endpoint, which mutates
+      external data. It does not fetch contextual data for enrichment, nor does it
+      mutate internal SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities
+      and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a POST request to Sophos to isolate an endpoint. This directly
+      aligns with the 'Contain Host' expected outcome of isolating an endpoint from
+      the network via EDR.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Comment | String | Yes | Specify the comment explaining why the isolation is
+    needed. |
+List Alert Actions:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of available actions that can be executed on a specific alert
+    within Sophos.
+
+
+    ### Flow Description
+
+    1. Extracts the `Alert ID` from the action parameters.
+
+    2. Initializes the Sophos API client with the provided integration configuration
+    credentials.
+
+    3. Makes a GET request to the Sophos API (`/common/v1/alerts/{alert_id}`) to fetch
+    the allowed actions for the specified alert.
+
+    4. If actions are found, they are returned and attached to the action's JSON result
+    under the `allowedActions` key.
+
+
+    ### Additional Notes
+
+    This action is useful for determining which remediation or response actions (e.g.,
+    Acknowledge, Clean Virus) are supported for a given alert before attempting to
+    execute them.
+  ai_short_description: >-
+    Retrieves a list of available actions that can be executed on a specific alert
+    within Sophos.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches endpoint data and isolation status from Sophos (fetches_data=true).
-      It then makes a POST request to isolate the endpoint, mutating external data
-      (can_mutate_external_data=true). It does not update internal entities, create
-      insights, or modify alert data.
+      The action fetches data from the Sophos API (available alert actions) using
+      a GET request. It does not mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It only accepts a string representing
+      a Sophos Alert ID, which is used to query the external API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches available actions for a specific alert from Sophos, which
+      aligns with the 'Get Alert Information' category. It does not modify alerts,
+      enrich IOCs/assets, or perform any containment/remediation actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | String | Yes | Specify the ID of the alert for which you want to
+    retrieve details. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Sophos server using the parameters provided at the integration
+    configuration page. This action ensures that the credentials and network settings
+    are correct and that the SOAR platform can successfully communicate with the Sophos
+    APIs.
+
+
+    ### Flow Description
+
+    1. Extracts integration configuration parameters such as API Root, Client ID,
+    Client Secret, SIEM API Root, API Key, and Base 64 Auth Payload.
+
+    2. Initializes the `SophosManager` with the `test_connectivity` flag set to `True`.
+
+    3. The manager authenticates and makes a test GET request to the Sophos endpoints
+    API (`/endpoint/v1/endpoints`).
+
+    4. If SIEM-specific credentials are provided, it makes an additional test GET
+    request to the SIEM events API (`/siem/v1/events`).
+
+    5. Returns a success message if the connections are established, otherwise catches
+    the exception and returns a failure message.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup or troubleshooting of the
+    Sophos integration to verify connectivity.
+  ai_short_description: >-
+    Tests connectivity to the Sophos server using the provided integration configuration
+    parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only makes test GET requests to verify API connectivity. It does
+      not fetch contextual data for entities, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities. It only uses integration configuration
+      parameters to test connectivity to the external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping). It does not enrich IOCs, update
+      alerts, mutate external state, or perform any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Scan Endpoints:
+  ai_description: >-
+    ### General Description
+
+    Initiates a scan on specific endpoint entities (IP Address, Hostname) within Sophos.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities provided in the case, filtering for IP Address
+    and Hostname entity types.
+
+    2. For each valid entity, queries the Sophos API (`/endpoint/v1/endpoints`) to
+    find the corresponding endpoint and retrieve its scan ID.
+
+    3. If the endpoint is found, sends a POST request to the Sophos API (`/endpoint/v1/endpoints/{scan_id}/scans`)
+    to initiate a scan on that endpoint.
+
+    4. Aggregates the results and returns a summary message indicating which entities
+    were successfully scanned and which failed or were not found.
+
+
+    ### Additional Notes
+
+    This action relies on the Sophos API to locate the endpoint by its identifier
+    before triggering the scan.
+  ai_short_description: >-
+    Initiates a scan on specific endpoint entities (IP Address, Hostname) within Sophos.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a scan on the specified endpoint in Sophos.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches endpoint data from Sophos using a GET request to find the
+      endpoint's scan ID. It then mutates external data by making a POST request to
+      initiate a scan on the endpoint. It does not mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes
+      `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets Address
+      and Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates an antivirus/malware scan on an endpoint in Sophos. This
+      specific operation does not match any of the predefined outcome categories such
+      as Contain Host, Execute Command on the Host (which expects STDOUT), or Enrichment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Unisolate Endpoint:
+  ai_description: >-
+    ### General Description
+
+    Unisolates specific endpoints in Sophos. This action restores network connectivity
+    for endpoints that were previously isolated, using the provided IP Address or
+    Hostname entities.
+
+
+    ### Flow Description
+
+    1. Filters the target entities to include only IP Addresses and Hostnames.
+
+    2. For each suitable entity, queries the Sophos API to find the corresponding
+    endpoint and retrieve its internal ID.
+
+    3. Checks the current isolation status of the endpoint.
+
+    4. If the endpoint is currently isolated, sends a POST request to the Sophos API
+    to unisolate the endpoint, including the provided comment.
+
+    5. Asynchronously monitors the unisolation status until the operation is completed
+    or a timeout is reached.
+
+
+    ### Additional Notes
+
+    - This action runs asynchronously. Ensure the script timeout value in the IDE
+    is adjusted as needed to allow for the unisolation process to complete.
+  ai_short_description: >-
+    Unisolates specific IP Address and Hostname entities in Sophos, restoring their
+    network connectivity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a request to Sophos to unisolate the specified endpoints, restoring their
+      network connectivity.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action mutates external data by sending a POST request to Sophos to unisolate
+      an endpoint. It does not fetch enrichment data to attach to the case, nor does
+      it update internal entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: true
@@ -949,272 +1497,6 @@ Isolate Endpoint:
     add_alert_comment: false
     add_ioc_to_allowlist: false
     add_ioc_to_blocklist: false
-    contain_host: true
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action isolates an endpoint in Sophos, which restricts its network communication.
-      This directly aligns with the 'Contain Host' expected outcome.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Comment | String | Yes | Specify the comment explaining why the isolation is
-    needed. |
-List Alert Actions:
-  ai_description: >-
-    ### General Description
-
-    Retrieves a list of available actions that can be executed on a specific alert
-    within Sophos.
-
-
-    ### Flow Description
-
-    1. Extracts the `Alert ID` parameter provided by the user.
-
-    2. Initializes the `SophosManager` with the necessary API credentials.
-
-    3. Makes a GET request to the Sophos API (`/common/v1/alerts/{alert_id}`) to retrieve
-    the available actions for the specified alert ID.
-
-    4. Returns the list of allowed actions as a JSON result to the SecOps platform.
-
-
-    ### Additional Notes
-
-    This action is useful for determining what remediation or response steps are supported
-    for a given alert before attempting to execute them.
-  ai_short_description: >-
-    Retrieves a list of available actions that can be executed on a specific alert
-    within Sophos.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data from Sophos via a GET request to retrieve alert actions.
-      It does not mutate external or internal data, update entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not operate on entities. It relies solely on the 'Alert ID'
-      parameter provided in the action configuration.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: true
-    reasoning: >-
-      The action fetches available actions for a specific alert from Sophos, which
-      aligns with the 'Get Alert Information' category. It does not modify the alert
-      or perform any other operations.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Alert ID | String | Yes | Specify the ID of the alert for which you want to
-    retrieve details. |
-Ping:
-  ai_description: >-
-    ### General Description
-
-    Tests connectivity to the Sophos platform using the provided integration configuration
-    parameters.
-
-
-    ### Flow Description
-
-    1. Extracts the integration configuration parameters (e.g., API Root, Client ID,
-    Client Secret).
-
-    2. Initializes the Sophos API client.
-
-    3. Makes a GET request to the Sophos API endpoints (`/endpoint/v1/endpoints` and
-    `/siem/v1/events`) to verify authentication and connectivity.
-
-    4. Returns a success message if the connection is established, or an error message
-    if it fails.
-
-
-    ### Additional Notes
-
-    This action does not require any action-specific parameters and is primarily used
-    to validate the integration setup.
-  ai_short_description: >-
-    Tests connectivity to the Sophos platform using the provided integration configuration
-    parameters.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action only makes a GET request to test connectivity. It does not fetch
-      contextual data for entities, mutate external data, mutate internal data, update
-      entities, create insights, modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over target entities or use any entity-specific
-      identifiers. It solely tests connectivity to the external API.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
     contain_host: false
     create_ticket: false
     delete_email: false
@@ -1226,274 +1508,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific outcome categories such as enrichment, containment, or ticketing.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Scan Endpoints:
-  ai_description: >-
-    ### General Description
-
-    Initiates a malware scan on endpoints in Sophos based on the provided IP Address
-    or Hostname entities.
-
-
-    ### Flow Description
-
-    1. Iterates over the target entities, filtering for supported types (IP Address
-    and Hostname).
-
-    2. For each entity, makes a GET request to the Sophos API to find the corresponding
-    endpoint.
-
-    3. If the endpoint is found, makes a POST request to the Sophos API to initiate
-    a scan on that specific endpoint.
-
-    4. Collects the successful and failed entities and returns a summary message.
-
-
-    ### Additional Notes
-
-    - Supported entity types are IP Address and Hostname.
-  ai_short_description: >-
-    Initiates a malware scan on endpoints in Sophos based on the provided IP Address
-    or Hostname entities.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Initiates a malware scan on the specified endpoint in Sophos.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a POST request to the Sophos API to initiate a scan on an endpoint,
-      which mutates external data. It does not fetch contextual data for enrichment,
-      nor does it mutate internal data, update entities, create insights, modify alert
-      data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: true
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: true
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them by checking
-      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (ADDRESS, HOSTNAME). It extracts
-      the entity identifier using `get_entity_original_identifier`, which checks the
-      entity's `additional_properties` for 'OriginalIdentifier' and falls back to
-      the entity's identifier.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action initiates a malware scan on an endpoint in Sophos. This does not
-      match any of the predefined outcome categories such as 'Execute Command on the
-      Host' (which expects STDOUT), 'Contain Host', or 'Enrich Asset'. Therefore,
-      all outcome categories are set to false.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: There are no parameters for this action
-Unisolate Endpoint:
-  ai_description: >-
-    ### General Description
-
-    Unisolates specific endpoint entities (IP Address, Hostname) in Sophos, restoring
-    their network connectivity.
-
-
-    ### Flow Description
-
-    1. Iterates over the target entities, filtering for supported types (IP Address,
-    Hostname).
-
-    2. Queries Sophos to find the corresponding endpoint ID for each entity identifier.
-
-    3. Checks the current isolation status of the endpoint.
-
-    4. If the endpoint is currently isolated, sends a POST request to Sophos to unisolate
-    the endpoint, including the provided comment.
-
-    5. Asynchronously monitors the unisolation status until the process completes
-    or times out.
-
-
-    ### Additional Notes
-
-    This action runs asynchronously. Ensure the script timeout value in the IDE is
-    adjusted as needed.
-  ai_short_description: >-
-    Unisolates specific IP Address and Hostname entities in Sophos, restoring their
-    network connectivity.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Unisolates the specified endpoint in Sophos, restoring its network connectivity.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action performs a POST request to Sophos to unisolate an endpoint, mutating
-      external data. It does not fetch contextual data for enrichment, nor does it
-      mutate internal data, update entities, or create insights.
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES` where supported types are ADDRESS
-      and HOSTNAME.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action unisolates an endpoint in Sophos, which directly aligns with the
-      'Uncontain Host' expected outcome.
+      The action makes a POST request to Sophos to unisolate an endpoint, which removes
+      network isolation and restores communication capabilities. This directly matches
+      the 'Uncontain Host' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

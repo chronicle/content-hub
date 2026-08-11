@@ -2,32 +2,33 @@ Add IP To IP Address Range:
   ai_description: >-
     ### General Description
 
-    Adds specified IP Address entities to an existing IP address range in Microsoft
-    Cloud App Security.
+    Adds IP address entities to a specified IP address range in Microsoft Cloud App
+    Security.
 
 
     ### Flow Description
 
-    1. Retrieves the list of existing IP address ranges from Microsoft Cloud App Security.
+    1. Retrieves the list of IP address ranges from Microsoft Cloud App Security.
 
-    2. Finds the target IP address range by the provided name.
+    2. Finds the specified IP address range by its name.
 
-    3. Iterates through the target IP Address entities.
+    3. Iterates through the target entities of type IP Address.
 
-    4. Checks if the IP is already in the range; if not, updates the IP address range
-    via the Microsoft Cloud App Security API to include the new IP.
+    4. Checks if the entity's IP address is already present in the IP address range.
 
-    5. Returns the updated IP address range data as a JSON result.
+    5. If not present, makes an API call to update the IP address range in Microsoft
+    Cloud App Security, adding the new IP address to the subnets list.
+
+    6. Returns the updated IP address range data as a JSON result.
 
 
     ### Additional Notes
 
-    The action temporarily renames the IP address range during the update process
-    to bypass potential API caching or naming conflicts, then restores the original
-    name.
+    The action uses the entity's original identifier if available, otherwise it falls
+    back to the entity identifier.
   ai_short_description: >-
-    Adds specified IP Address entities to a designated IP address range in Microsoft
-    Cloud App Security.
+    Adds IP address entities to a specified IP address range in Microsoft Cloud App
+    Security.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -36,14 +37,16 @@ Add IP To IP Address Range:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates an IP address range in Microsoft Cloud App Security by adding new IP
-      addresses to its subnets list.
+      Updates an IP address range in Microsoft Cloud App Security to include the target
+      IP addresses.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches existing IP address ranges (GET/POST to list) and then mutates
-      external data by updating the IP address range with new subnets (POST to update_rule).
-      It does not mutate internal data, update entities, or create insights.
+      The action fetches the existing IP address ranges to find the target range by
+      name (fetches_data=true). It then mutates external data by updating the IP address
+      range in Microsoft Cloud App Security to include the new IP addresses (can_mutate_external_data=true).
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -95,10 +98,9 @@ Add IP To IP Address Range:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
-      contains `EntityTypes.ADDRESS`. Therefore, it targets IP Address entities and
-      filters by entity type.
+      The action iterates over `siemplify.target_entities` and filters them by `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS]`.
+      It processes the entities to add their identifiers to the IP address range.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -114,11 +116,11 @@ Add IP To IP Address Range:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies an IP address range configuration in Microsoft Cloud App
-      Security. While this range could be used in blocklists or allowlists, the action
-      itself merely updates a network configuration object and does not directly enforce
-      a block or allow outcome. Thus, it does not strictly match any of the predefined
-      outcome categories.
+      The action adds an IP address to a generic IP address range in Microsoft Cloud
+      App Security. Since the range could be used for various purposes (e.g., corporate
+      IPs, risky IPs) and is not strictly defined as a blocklist or allowlist, it
+      does not definitively match any of the specific outcome categories like 'Add
+      IOC To Blocklist' or 'Add IOC To Allowlist'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,30 +146,28 @@ Bulk Resolve Alert:
   ai_description: >-
     ### General Description
 
-    Resolves one or more alerts in Microsoft Office 365 Cloud App Security. Note:
-    This action is deprecated; users should refer to the "Close Alert" action instead.
+    Resolves one or more alerts in Microsoft Office 365 Cloud App Security. This action
+    is deprecated and users should refer to the "Close Alert" action instead.
 
 
     ### Flow Description
 
-    1. Extracts the provided `Alert ID` (which can be a comma-separated list) and
-    an optional `Comment`.
+    1. Extracts the provided Alert IDs and optional comment from the action parameters.
 
-    2. Parses the comma-separated string into a list of individual alert identifiers.
+    2. Initializes the Office 365 Cloud App Security API client.
 
-    3. Makes a POST request to the Microsoft Office 365 Cloud App Security API (`/api/v1/alerts/resolve/`)
-    to resolve the specified alerts in bulk, appending the comment if provided.
+    3. Makes a POST request to the `/api/v1/alerts/resolve/` endpoint to bulk resolve
+    the specified alerts.
 
-    4. Returns a success message indicating the alerts were resolved.
+    4. Returns a success message if the alerts are resolved successfully, or an error
+    message if the operation fails.
 
 
     ### Additional Notes
 
-    This action is deprecated and may be removed in future versions. It does not operate
-    on SecOps entities but relies entirely on the provided alert identifiers.
+    This action is deprecated. Please refer to the "Close Alert" action.
   ai_short_description: >-
-    Resolves one or more alerts in Microsoft Office 365 Cloud App Security based on
-    provided Alert IDs.
+    Resolves one or more alerts in Microsoft Office 365 Cloud App Security.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -176,13 +176,295 @@ Bulk Resolve Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Resolves one or more alerts in the external Microsoft Office 365 Cloud App Security
-      platform.
+      Resolves alerts in Microsoft Office 365 Cloud App Security.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the external API to resolve alerts, which
-      mutates external data. It does not fetch contextual data, update internal entities,
+      The action makes a POST request to the Office 365 Cloud App Security API to
+      resolve alerts, which mutates external data. It does not fetch data for enrichment,
+      nor does it mutate internal SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process `siemplify.target_entities` and does not accept
+      any parameters that represent SOAR entities. It operates on external alert IDs
+      provided as a string.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action resolves alerts in an external system (Office 365 Cloud App Security).
+      It does not match any of the specific outcome categories such as updating internal
+      SecOps alerts, enriching IOCs, or modifying blocklists.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | String | Yes | Alert Unique Identifier. Can take multiple IDs which
+    are comma separated |
+
+    | Comment | String | No | A comment to explain why alerts are resolved |
+Close Alert:
+  ai_description: >-
+    ### General Description
+
+    Closes a specific alert in Microsoft Cloud App Security (MCAS) and marks it with
+    a specified state (True Positive, Benign, False Positive).
+
+
+    ### Flow Description
+
+    1. Extracts the Alert ID, State, Reason, and Comment from the action parameters.
+
+    2. Validates the provided Reason against the selected State to ensure it is a
+    valid combination.
+
+    3. Makes a POST request to the Microsoft Cloud App Security API to close the alert
+    with the specified state and reason.
+
+    4. Returns a success message if the alert is successfully closed, or an error
+    message if the operation fails.
+
+
+    ### Additional Notes
+
+    The "Reason" parameter is ignored if the state is set to "True Positive".
+  ai_short_description: >-
+    Closes a specific alert in Microsoft Cloud App Security and marks it with a specified
+    state and reason.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Closes an alert in Microsoft Cloud App Security by updating its state and reason.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Microsoft Cloud App Security API to close
+      an alert, which mutates external data. It does not fetch additional contextual
+      data, mutate internal SOAR data, update entities, create insights, modify internal
+      alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any input parameters that represent SOAR entities (the 'Alert
+      ID' parameter is a string identifier for an external system alert, not a SOAR
+      entity). Therefore, all entity flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a state change on an alert in an external system (Microsoft
+      Cloud App Security). It does not update the alert within the SecOps platform
+      itself, so it does not match 'Update Alert'. It also does not match any other
+      categories such as ticket creation, IOC enrichment, or host containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | String | Yes | Specify the ID of the alert that needs to be closed
+    and marked as benign. |
+
+    | Comment | String | No | Specify a comment about why the alerts are closed and
+    marked as benign. |
+
+    | State | DDL | Yes | Specify what should be the state of the alert. |
+
+    | Reason | DDL | No | Specify a reason why the alert should be closed. Note: this
+    parameter doesn't have an impact, if state is "True Positive". |
+Create IP Address Range:
+  ai_description: >-
+    ### General Description
+
+    Creates a new IP address range in Microsoft Cloud App Security.
+
+
+    ### Flow Description
+
+    1. Extracts the provided parameters: Name, Category, Organization, Subnets, and
+    Tags.
+
+    2. Makes a POST request to the Microsoft Cloud App Security API to create the
+    IP address range.
+
+    3. Makes a GET request to retrieve the newly created IP address range object.
+
+    4. Returns the JSON representation of the created IP address range.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Creates a new IP address range in Microsoft Cloud App Security.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new IP address range in Microsoft Cloud App Security.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Microsoft Cloud App Security API to create
+      a new IP address range, which mutates external data. It does not fetch contextual
+      data for enrichment, nor does it mutate internal SOAR data, update entities,
       or create insights.
   entity_usage:
     entity_types:
@@ -235,295 +517,9 @@ Bulk Resolve Alert:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      operates purely on the static 'Alert ID' parameter provided by the user or playbook.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action resolves alerts in the external Microsoft Office 365 Cloud App Security
-      platform. It does not update the alert within the SecOps platform, nor does
-      it match any other specific expected outcomes such as enriching IOCs, modifying
-      blocklists, or managing tickets.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Alert ID | String | Yes | Alert Unique Identifier. Can take multiple IDs which
-    are comma separated. |
-
-    | Comment | String | No | A comment to explain why alerts are resolved. |
-Close Alert:
-  ai_description: >-
-    ### General Description
-
-    Closes a specific alert in Microsoft Cloud App Security (MCAS) and marks it with
-    a specified state (True Positive, Benign, False Positive).
-
-
-    ### Flow Description
-
-    1. Extracts the `Alert ID`, `State`, `Reason`, and `Comment` parameters from the
-    action configuration.
-
-    2. Maps the provided `State` and `Reason` to the corresponding Microsoft Cloud
-    App Security API values.
-
-    3. Makes a POST request to the Microsoft Cloud App Security API to close the alert
-    with the specified state and reason.
-
-    4. Returns a success message if the alert is closed successfully, or an error
-    message if the operation fails.
-
-
-    ### Additional Notes
-
-    The "Reason" parameter is only applicable if the state is not set to "True Positive".
-  ai_short_description: >-
-    Closes a specific alert in Microsoft Cloud App Security and marks it with a specified
-    state and reason.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Closes an alert and updates its state and reason in Microsoft Cloud App Security.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a POST request to the Microsoft Cloud App Security API to close
-      an alert, which mutates external data. It does not fetch additional contextual
-      data for enrichment, nor does it mutate internal SecOps data, update entities,
-      create insights, modify internal alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the explicitly provided `Alert ID` parameter
-      to perform its operation. Therefore, it does not run on entities, and all entity-related
-      flags are false.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action closes an alert in an external system (Microsoft Cloud App Security).
-      It does not enrich IOCs/assets, update internal SecOps alerts, create/update
-      ITSM tickets, or perform containment/blocklist operations. Therefore, it does
-      not match any of the predefined outcome categories.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Alert ID | String | Yes | Specify the ID of the alert that needs to be closed
-    and marked as benign. |
-
-    | Comment | String | No | Specify a comment about why the alerts are closed and
-    marked as benign. |
-
-    | State | Dropdown | Yes | Specify what should be the state of the alert. |
-
-    | Reason | Dropdown | No | Specify a reason why the alert should be closed. Note:
-    this parameter doesn't have an impact, if state is "True Positive". |
-Create IP Address Range:
-  ai_description: >-
-    ### General Description
-
-    Creates a new IP address range in Microsoft Cloud App Security.
-
-
-    ### Flow Description
-
-    1. Extracts the action parameters including Name, Category, Organization, Subnets,
-    and Tags.
-
-    2. Calls the Microsoft Cloud App Security API via a POST request to create the
-    IP address range.
-
-    3. Retrieves the newly created IP address range details via a GET request.
-
-    4. Returns the created IP address range object as a JSON result.
-
-
-    ### Additional Notes
-
-    This action does not operate on entities and relies entirely on the provided input
-    parameters to create the IP address range.
-  ai_short_description: >-
-    Creates a new IP address range in Microsoft Cloud App Security.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new IP address range in Microsoft Cloud App Security.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a POST request to the Microsoft Cloud App Security API to create
-      a new IP address range, which mutates external data. It does not fetch contextual
-      data for enrichment, nor does it mutate internal data, update entities, create
-      insights, modify alert data, or create case comments.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on the provided action parameters to create
-      an IP address range. Therefore, all entity type flags and filter flags are set
-      to false.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity-related parameters. It operates solely on the provided string parameters
+      to create an IP address range.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -540,9 +536,9 @@ Create IP Address Range:
     get_alert_information: false
     reasoning: >-
       The action creates an IP address range in Microsoft Cloud App Security. This
-      does not directly match any of the specific expected outcomes such as adding
-      an IOC to a blocklist, enriching an IOC, or creating a ticket. Therefore, all
-      outcome category flags are set to false.
+      is a configuration management operation and does not directly match any of the
+      specific expected outcomes such as blocking an IOC, enriching an asset, or updating
+      an alert.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -576,28 +572,29 @@ Create IP Address Range:
     range. |
 Dismiss Alert:
   ai_description: >-
-    **General Description**
+    ### General Description
 
-    Dismisses a specific alert in Microsoft Office 365 Cloud App Security. Note: This
-    action is deprecated and users should refer to the "Close Alert" action instead.
+    Dismisses a specific alert in Microsoft Cloud App Security. This action initiates
+    a state change on the external system to mark the specified alert as dismissed.
 
 
-    **Flow Description**
+    ### Flow Description
 
-    1. Extracts the Alert ID and an optional comment from the action parameters.
+    1. Extracts the `Alert ID` and optional `Comment` from the action parameters.
 
-    2. Initiates a POST request to the Microsoft Office 365 Cloud App Security API
-    to dismiss the specified alert.
+    2. Initiates a POST request to the Microsoft Cloud App Security API (`/api/v1/alerts/{alert_id}/dismiss/`)
+    with the provided comment in the payload.
 
-    3. Returns a success message if the alert is dismissed successfully, or an error
+    3. Returns a success message if the alert is successfully dismissed, or an error
     message if the operation fails.
 
 
-    **Additional Notes**
+    ### Additional Notes
 
-    This action is deprecated.
+    This action is deprecated. Please refer to the "Close Alert" action for future
+    use.
   ai_short_description: >-
-    Dismisses a specific alert in Microsoft Office 365 Cloud App Security (Deprecated).
+    Dismisses a specific alert in Microsoft Cloud App Security.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -606,13 +603,13 @@ Dismiss Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Dismisses a specific alert in Microsoft Office 365 Cloud App Security.
+      Dismisses an alert in Microsoft Cloud App Security.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Microsoft Office 365 Cloud App Security
-      API to dismiss an alert, which mutates external data. It does not fetch data,
-      mutate internal data, update entities, or create insights.
+      The action makes a POST request to the Microsoft Cloud App Security API to dismiss
+      an alert, which mutates external data. It does not fetch data, update internal
+      entities, create insights, or modify internal SecOps alerts.
   entity_usage:
     entity_types:
       address: false
@@ -664,8 +661,9 @@ Dismiss Alert:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided Alert ID parameter.
+      The action does not process any entities. It relies solely on the provided Alert
+      ID parameter to interact with the external system. Therefore, all entity flags
+      are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -681,10 +679,10 @@ Dismiss Alert:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action dismisses an alert in an external system (Microsoft Office 365 Cloud
-      App Security). It does not update an internal SecOps alert, nor does it act
-      on a ticketing system, so it does not match 'Update Alert' or 'Update Ticket'.
-      It does not match any other outcome categories.
+      The action dismisses an alert in an external system (Microsoft Cloud App Security).
+      It does not match any of the specific outcome categories such as updating internal
+      SecOps alerts, enriching IOCs, or managing tickets. Therefore, all outcome category
+      flags are set to false.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -713,35 +711,37 @@ Enrich Entities:
     ### General Description
 
     Enriches User entities using information from Microsoft Cloud App Security. This
-    action retrieves contextual metadata for the specified users and updates the entities
-    within the SecOps platform with the fetched details.
+    action retrieves contextual metadata for users to provide better visibility into
+    their cloud app activities and attributes.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities provided in the case.
+    1. Iterates through the target entities provided to the action.
 
     2. Filters the entities to process only those of type User.
 
-    3. For each User entity, makes an API call (`GET /api/v1/entities/`) to Microsoft
-    Cloud App Security to fetch entity details.
+    3. For each valid User entity, makes a GET request to the Microsoft Cloud App
+    Security API (`/api/v1/entities/`) to fetch entity details.
 
-    4. Enriches the entity's additional properties with the retrieved data and marks
-    it as enriched.
+    4. Enriches the entity's additional properties with the retrieved data and sets
+    the `is_enriched` flag to true.
 
-    5. Generates a data table for the case wall and populates the JSON results with
-    the entity data.
+    5. Generates a data table containing the entity's information and attaches it
+    to the action results.
 
-    6. Updates the successfully processed entities in the SecOps platform.
+    6. Updates the enriched entities within the Google SecOps platform.
+
+    7. Returns a JSON object containing the raw data of all successfully processed
+    entities.
 
 
     ### Additional Notes
 
-    Only User entities are supported by this action. Entities of other types will
-    be skipped.
+    - This action only supports User entities. Other entity types will be skipped.
   ai_short_description: >-
-    Enriches User entities by retrieving contextual metadata from Microsoft Cloud
-    App Security and updating the entities in the SecOps platform.
+    Enriches User entities by retrieving contextual information from Microsoft Cloud
+    App Security.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -753,10 +753,10 @@ Enrich Entities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from Microsoft Cloud App Security via a GET request
-      to retrieve entity details. It does not mutate external data. It updates internal
-      entities with the fetched enrichment data and adds a data table, but does not
-      create insights, modify alert data, or create case comments.
+      The action fetches entity data from the Microsoft Cloud App Security API via
+      a GET request. It does not mutate any external data. Internally, it updates
+      the processed User entities with the fetched enrichment data and creates a data
+      table, but does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -810,7 +810,7 @@ Enrich Entities:
     reasoning: >-
       The action iterates over `siemplify.target_entities` and explicitly checks if
       `entity.entity_type == EntityTypes.USER`. Therefore, it targets User entities
-      and filters by entity type.
+      and filters them by their entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -826,9 +826,10 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches contextual data for User entities from Microsoft Cloud App
-      Security, which aligns with the 'Enrich Asset' category. It does not modify
-      external systems or perform other categorized operations.
+      The action retrieves contextual metadata for User entities from Microsoft Cloud
+      App Security and updates the entities in the platform. This aligns with the
+      'Enrich Asset' category, as it enriches user resources. It does not perform
+      any external state changes, IOC enrichment, or ticketing operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -849,32 +850,33 @@ Get IP related activities:
     ### General Description
 
     Retrieves activities related to specific IP addresses from Microsoft Office 365
-    Cloud App Security.
+    Cloud App Security. This action allows analysts to view historical events and
+    actions associated with an IP address within a specified time frame and optionally
+    filtered by a specific product.
 
 
     ### Flow Description
 
     1. Iterates through the target entities provided to the action.
 
-    2. Filters entities to process only those of type ADDRESS.
+    2. Filters the entities to process only those of type `ADDRESS` (IP addresses).
 
-    3. For each valid IP address, makes an API call to Microsoft Office 365 Cloud
-    App Security to fetch related activities based on the specified product name,
-    time frame, and display limit.
+    3. For each valid IP address, makes an API call (POST request) to the Office 365
+    Cloud App Security `/api/v1/activities/` endpoint to fetch related activities
+    based on the specified time frame and product name.
 
-    4. Formats the retrieved activities into a data table and attaches it to the action
-    results.
-
-    5. Returns the raw activity data as JSON results.
+    4. Compiles the retrieved activities into a data table and JSON results for each
+    entity.
 
 
     ### Additional Notes
 
-    The action relies on the `Time Frame` parameter to limit the historical search
-    window.
+    The action relies on the 'Time Frame' parameter to limit the historical search
+    and can optionally filter by a specific 'Product name'. If no activities are found
+    for an IP, it is logged and skipped.
   ai_short_description: >-
-    Retrieves historical activities and events related to specific IP address entities
-    from Microsoft Office 365 Cloud App Security.
+    Retrieves historical activities related to specific IP address entities from Microsoft
+    Office 365 Cloud App Security.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -886,9 +888,11 @@ Get IP related activities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (activities) from an external API. It does not mutate
-      external data, nor does it update internal entities, create insights, modify
-      alert data, or create case comments.
+      The action makes an API request to fetch activity data from Office 365 Cloud
+      App Security. It does not mutate any external data (the POST request is used
+      for querying/filtering). It does not update internal entities, create insights,
+      modify alerts, or create case comments; it only returns data tables and JSON
+      results.
   entity_usage:
     entity_types:
       address: true
@@ -940,9 +944,9 @@ Get IP related activities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `if
-      entity.entity_type == EntityTypes.ADDRESS:`. Therefore, it targets ADDRESS entities
-      and filters by entity_type.
+      The script iterates over `siemplify.target_entities` and explicitly filters
+      them using the condition `if entity.entity_type == EntityTypes.ADDRESS:`. Therefore,
+      it targets Address entities and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -958,10 +962,9 @@ Get IP related activities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches historical activities (events) related to an IP address from
-      Office 365 Cloud App Security. This aligns with the 'Search Events' category.
-      It does not enrich the IOC with reputation or threat intelligence, nor does
-      it mutate any external or internal state.
+      The action fetches historical activities (events/logs) related to an IP address
+      from Cloud App Security based on specific search parameters (time frame, product
+      name). This directly aligns with the 'Search Events' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -996,35 +999,38 @@ Get User related activities:
   ai_description: >-
     ### General Description
 
-    Fetches activities related to a specific user from Office 365 Cloud App Security.
-    This action retrieves historical activity logs for user entities based on a specified
-    time frame and product name, returning the results as a data table and JSON.
+    The action is used to view activities related to a specific user within Office
+    365 Cloud App Security. It retrieves historical activity logs based on the user's
+    identifier and a specified time frame.
 
 
     ### Flow Description
 
-    1. Iterates over the provided target entities, filtering for those of type `USER`.
+    1. The action iterates over the target entities provided in the case, specifically
+    filtering for entities of type `USER`.
 
-    2. For each valid user entity, extracts the `OriginalIdentifier` from the entity's
-    additional properties (falling back to the lowercased identifier if not found).
+    2. For each valid user entity, it extracts the username (using the `OriginalIdentifier`
+    from additional properties or the entity's identifier).
 
-    3. Makes an API call to Office 365 Cloud App Security (`POST /api/v1/activities/`)
-    via `cloud_app_manager.get_user_related_activities` to fetch activities matching
-    the user, time frame, and product name.
+    3. It makes a POST request to the Office 365 Cloud App Security API (`/api/v1/activities/`)
+    to fetch activities matching the username, time frame, and optional product name.
 
-    4. If activities are found, they are added to the JSON results and a CSV-formatted
-    data table is attached to the action result for the entity.
+    4. The retrieved activities are formatted into a CSV table and attached to the
+    case as a data table.
+
+    5. The raw activity data is also added to the action's JSON results.
 
 
     ### Additional Notes
 
-    - The action skips any entities that are not of type `USER`.
+    - The action relies on the `Time Frame` parameter to determine how far back to
+    search for activities.
 
-    - If no activities are found for a user, an error log is generated and the user
-    is skipped.
+    - If a `Product Name` is provided, the search is further filtered to activities
+    related to that specific application.
   ai_short_description: >-
-    Fetches historical activities related to a specific user from Office 365 Cloud
-    App Security.
+    Fetches historical activities and event logs related to a specific user from Office
+    365 Cloud App Security.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1036,9 +1042,10 @@ Get User related activities:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from an external API (Office 365 Cloud App Security)
-      using a POST request to retrieve user activities. It does not mutate external
-      data, nor does it update internal entities or create insights.
+      The action fetches data from the Office 365 Cloud App Security API (activities
+      related to a user). It does not mutate external data, nor does it update internal
+      entities, create insights, modify alerts, or create case comments. It only adds
+      data tables and JSON results to the action output.
   entity_usage:
     entity_types:
       address: false
@@ -1091,8 +1098,10 @@ Get User related activities:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
-      `entity.entity_type == EntityTypes.USER`. It uses the entity's identifier and
-      `OriginalIdentifier` from `additional_properties` to query the external API.
+      `entity.entity_type == EntityTypes.USER`. It then extracts the username using
+      `entity.additional_properties.get('OriginalIdentifier', entity.identifier.lower())`.
+      Therefore, it targets USER entities and filters by entity type, identifier,
+      and additional properties.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1110,7 +1119,8 @@ Get User related activities:
     reasoning: >-
       The action retrieves historical activity logs (events) related to a specific
       user from Office 365 Cloud App Security. This aligns with the 'Search Events'
-      category.
+      category, as it returns a collection of telemetry data matching specific search
+      parameters (username, time frame, product).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1131,15 +1141,15 @@ Get User related activities:
     | --- | --- | --- | --- |
 
     | Activity Display Limit | String | No | Limit on the number of activities to
-    display |
+    display. |
 
     | Time Frame | String | Yes | Specify the value to fetch the number of activities
-    that occurred according to the specified value of hours ago |
+    that occurred according to the specified value of hours ago. |
 
     | Product Name | String | No | Product list where the user can select an app connected
     to cloudapp security to enable them to get user related activities of a specific
     selected app. The product name is to be converted/mapped to the product code in
-    the action filters Eg. if Office 365 is selected should be converted to 11161
+    the action filters Eg. if Office 365 is selected should be converted to 11161.
     |
 List Files:
   ai_description: >-
@@ -1151,24 +1161,24 @@ List Files:
 
     ### Flow Description
 
-    1. Extracts the filter key, logic, value, and limit parameters from the action
-    configuration.
+    1. Extracts the integration configuration and action parameters (Filter Key, Filter
+    Logic, Filter Value, Max Records To Return).
 
-    2. Validates the provided filter parameters to ensure they are supported by the
-    API.
+    2. Validates the provided filter parameters to ensure they are compatible with
+    the API requirements.
 
-    3. Calls the Microsoft Cloud App Security API to retrieve a list of files matching
-    the criteria.
+    3. Makes an API call to Microsoft Cloud App Security to retrieve the list of files
+    matching the criteria.
 
-    4. Parses the returned file data and constructs a CSV data table and JSON result.
+    4. Parses the retrieved files and formats them into JSON and CSV structures.
 
-    5. Returns the results to the Google SecOps platform.
+    5. Outputs the results to the action's data table and JSON result.
 
 
     ### Additional Notes
 
-    The action supports filtering by ID, Filename, File Type, and Share Status. When
-    using the "Contains" filter logic, only File Name and ID are supported.
+    Supported filter keys include ID, Filename, File Type, and Share Status. The "Contains"
+    logic is only supported for ID and Filename.
   ai_short_description: >-
     Lists available files in Microsoft Cloud App Security based on specified filter
     criteria.
@@ -1183,9 +1193,10 @@ List Files:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches file metadata from Microsoft Cloud App Security based on
-      filter criteria. It does not mutate external data, update internal entities,
-      create insights, or modify alert data.
+      The action fetches file data from Microsoft Cloud App Security using a POST
+      request (used for querying/filtering). It does not mutate external data, mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1237,8 +1248,8 @@ List Files:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses action parameters to query
-      the external system directly and does not iterate over or filter `siemplify.target_entities`.
+      The action does not iterate over target entities or accept any entity identifiers
+      as input parameters. It operates independently of entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1254,10 +1265,10 @@ List Files:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for and lists files in Microsoft Cloud App Security. This
-      does not match any of the predefined outcome categories such as Enrich IOC,
-      Search Events, or Download File (as it only lists metadata, not the file content
-      itself).
+      The action retrieves a list of files from Microsoft Cloud App Security based
+      on filter criteria. This does not match any of the specific outcome categories
+      such as Enrich IOC, Search Events, or Download File (as it only lists metadata,
+      not the file content itself).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1277,14 +1288,14 @@ List Files:
 
     | --- | --- | --- | --- |
 
-    | Filter Key | String | No | Specify the key that needs to be used to filter files.
-    Possible values for "File Type": Other, Document, Spreadsheet, Presentation, Text,
-    Image, Folder. Possible values for "Share Status": Public (Internet), Public,
+    | Filter Key | Dropdown | No | Specify the key that needs to be used to filter
+    files. Possible values for "File Type": Other, Document, Spreadsheet, Presentation,
+    Text, Image, Folder. Possible values for "Share Status": Public (Internet), Public,
     External, Internal, Private. |
 
-    | Filter Logic | String | No | Specify what filter logic should be applied. Filtering
-    logic is working based on the value provided in the "Filter Key" parameter. Note:
-    only File Name and ID work with Contains logic. |
+    | Filter Logic | Dropdown | No | Specify what filter logic should be applied.
+    Filtering logic is working based on the value provided in the "Filter Key" parameter.
+    Note: only File Name and ID work with Contains logic. |
 
     | Filter Value | String | No | Specify what value should be used in the filter.
     If "Equal" is selected, action will try to find the exact match among results
@@ -1293,36 +1304,36 @@ List Files:
     Filtering logic is working based on the value provided in the "Filter Key" parameter.
     |
 
-    | Max Records To Return | Integer | No | Specify how many records to return. If
+    | Max Records To Return | String | No | Specify how many records to return. If
     nothing is provided, action will return 50 records. Note: for contains logic,
     action will only look at 1000 results for matching. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Office 365 Cloud App Security API to ensure that the
+    Tests connectivity to the Office 365 Cloud App Security API to verify that the
     integration is configured correctly and the provided credentials are valid.
 
 
     ### Flow Description
 
-    1. Initializes the Office 365 Cloud App Security manager using the provided API
-    root and token.
+    1. Initializes the `Office365CloudAppSecurityManager` using the integration-level
+    API root URL and API token.
 
-    2. Makes a POST request to the `activities` endpoint to verify connectivity and
-    authentication.
+    2. Executes the `test_connectivity` method, which sends a POST request to the
+    `/api/v1/activities/` endpoint with a limit of 1 to verify API access.
 
-    3. Returns a success message if the connection is established, or an error message
-    if it fails.
+    3. Evaluates the response and returns a success message if the connection is established,
+    or an error message if the request fails.
 
 
     ### Additional Notes
 
-    This action is typically used to verify integration configuration and does not
-    perform any operational tasks on alerts or entities.
+    This action does not interact with any entities or alerts and is solely used for
+    diagnostic and configuration verification purposes.
   ai_short_description: >-
     Tests connectivity to the Office 365 Cloud App Security API to verify integration
-    configuration.
+    configuration and credentials.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1334,9 +1345,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only performs a basic API request to test connectivity. It does not
-      fetch contextual data for entities, mutate external or internal data, update
-      entities, create insights, modify alerts, or create case comments.
+      The action only makes a test API call to verify connectivity. It does not fetch
+      contextual data for alerts/entities, mutate external data, mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -1388,8 +1399,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It solely tests the
-      connection to the external API.
+      The action does not process any entities. It does not iterate over target_entities
+      or accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1405,9 +1416,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not match any of the
-      specific operational outcome categories such as enriching IOCs, updating alerts,
-      or mutating external systems.
+      The action is a simple connectivity test (ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or containing
+      hosts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1429,35 +1440,33 @@ Remove IP From IP Address Range:
 
     Removes specific IP address entities from a designated IP address range in Microsoft
     Cloud App Security. This action modifies the configuration of an existing IP address
-    range by deleting the provided IP addresses from its subnets list.
+    range by removing the exact IP addresses provided as entities.
 
 
     ### Flow Description
 
-    1. Extracts the target IP address range name from the action parameters.
+    1. Retrieves the specified IP address range by name from Microsoft Cloud App Security.
 
-    2. Retrieves the list of existing IP address ranges from Microsoft Cloud App Security
-    to locate the matching range.
+    2. Iterates through the target IP address entities.
 
-    3. Iterates over the provided IP address entities.
-
-    4. Checks if each IP address exists within the subnets of the target IP address
-    range.
-
-    5. Removes the matching IP addresses from the range's subnets list (ensuring at
-    least one IP remains, as required by the API).
-
-    6. Sends an update request to Microsoft Cloud App Security to save the modified
+    3. Checks if the entity's IP address exists within the subnets of the retrieved
     IP address range.
 
-    7. Returns the updated IP address range details as JSON results and provides a
-    summary message.
+    4. Removes the IP address from the range's subnets if it exists and is not the
+    last IP in the range.
+
+    5. Updates the IP address range in Microsoft Cloud App Security with the modified
+    subnets list via an API request.
+
+    6. Returns a JSON result containing the updated IP address range details.
 
 
     ### Additional Notes
 
-    The action only removes exact matches. For example, it cannot remove `192.168.1.30`
-    if the range was defined as `192.168.1.1/24`.
+    The action requires an exact match to remove an IP address (e.g., it cannot remove
+    `192.168.1.30` if the range contains `192.168.1.1/24`). It will not remove an
+    IP if it is the last remaining IP in the address range, as Microsoft Cloud App
+    Security requires at least one IP in a range.
   ai_short_description: >-
     Removes specific IP address entities from a designated IP address range in Microsoft
     Cloud App Security.
@@ -1469,15 +1478,15 @@ Remove IP From IP Address Range:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates an IP address range in Microsoft Cloud App Security by removing the
-      specified IP addresses from its subnets.
+      Updates an IP address range in Microsoft Cloud App Security by removing specific
+      IP addresses from its subnets.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action modifies external data by sending a POST request to update an IP
-      address range in Microsoft Cloud App Security. It does not fetch contextual
-      data for enrichment, nor does it mutate internal SecOps data such as entities,
-      insights, or case comments.
+      The action makes a POST request to update an IP address range in Microsoft Cloud
+      App Security, which mutates external data. It does not fetch contextual enrichment
+      data for the entities, nor does it mutate internal SecOps data, update entities,
+      or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -1531,8 +1540,8 @@ Remove IP From IP Address Range:
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them using
       `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
-      contains `EntityTypes.ADDRESS`. Therefore, it targets Address entities and filters
-      by entity type.
+      is defined as `[EntityTypes.ADDRESS]`. Therefore, it targets Address entities
+      and filters by entity type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1549,11 +1558,11 @@ Remove IP From IP Address Range:
     get_alert_information: false
     reasoning: >-
       The action removes an IP address from a generic IP address range in Microsoft
-      Cloud App Security. While this could conceptually be used to remove an IP from
-      a blocklist or allowlist depending on how the range is used in policies, it
-      does not explicitly match the strict definitions of 'Remove IOC From Blocklist'
-      or 'Remove IOC From Allowlist' as it is a generic network object modification.
-      Therefore, it does not fit any specific outcome category.
+      Cloud App Security. Since IP address ranges in MCAS can be used for various
+      purposes (e.g., Corporate, VPN, Risky) and are not strictly blocklists or allowlists,
+      this action does not perfectly align with the 'Remove IOC From Blocklist' or
+      'Remove IOC From Allowlist' expected outcomes. It does not enrich data, update
+      alerts, or manage tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -2,39 +2,35 @@ Get Url Status:
   ai_description: >-
     ### General Description
 
-    Retrieves the status of URL entities using the Phishing Initiative API. It checks
-    if the URLs have been submitted to the service and whether they are classified
-    as phishing, enriching the entities with this threat intelligence.
+    Retrieves the current status of URL entities using the Phishing Initiative API
+    to determine if they are associated with phishing campaigns.
 
 
     ### Flow Description
 
     1. Iterates through the target entities and filters for URL entities.
 
-    2. Makes a GET request to the Phishing Initiative API (`/api/v1/urls/lookup/`)
-    for each URL to retrieve its current status.
+    2. For each URL, makes a GET request to the Phishing Initiative API (`/api/v1/urls/lookup/`)
+    to fetch its status.
 
-    3. If the URL has a status other than "not submitted", it enriches the entity
-    by adding the status to its `additional_properties` and marking it as enriched.
+    3. Evaluates the returned status tag. If the URL has been submitted and analyzed,
+    it updates the entity's additional properties with the status and marks it as
+    enriched.
 
-    4. If the status is explicitly identified as "phishing", it marks the entity as
-    suspicious.
+    4. If the status specifically indicates "phishing", the entity is marked as suspicious.
 
-    5. Updates the enriched entities in the Google SecOps platform.
-
-    6. Returns a JSON result containing the detailed API response for each processed
-    URL.
+    5. Updates the enriched entities within the Google SecOps platform and attaches
+    the raw API response as a JSON result.
 
 
     ### Additional Notes
 
-    The action updates the `is_enriched` and `is_suspicious` flags on the entities
-    based on the API response. It does not create insights but does attach the raw
-    JSON results to the action execution.
+    The action returns a result value of "true" if at least one URL is identified
+    as phishing, otherwise it returns "false".
   ai_short_description: >-
-    Retrieves the status of URL entities from the Phishing Initiative API, enriching
-    them with their current classification and marking them as suspicious if identified
-    as phishing.
+    Retrieves the current status of URL entities using the Phishing Initiative API
+    to determine if they are associated with phishing campaigns, updating the entities'
+    suspicious status and additional properties accordingly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -46,11 +42,11 @@ Get Url Status:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data via a GET request to the Phishing Initiative API (fetches_data=true).
-      It does not mutate external data (can_mutate_external_data=false) or internal
-      data outside of entities (can_mutate_internal_data=false). It updates entities
-      using `siemplify.update_entities` (can_update_entities=true). It does not create
-      insights, modify alert data, or create case comments.
+      The action fetches data by making a GET request to the Phishing Initiative API
+      to retrieve URL information. It does not mutate external data or internal system
+      data. It updates entities by calling `siemplify.update_entities` to save the
+      enrichment status and suspicious flags. It does not create insights, modify
+      alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -102,9 +98,10 @@ Get Url Status:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The script iterates over `siemplify.target_entities` and filters them using
-      the condition `if entity.entity_type == URL:` (where URL is mapped to EntityTypes.URL).
-      Therefore, it targets URL entities and filters strictly by entity_type.
+      The code iterates over `siemplify.target_entities` and explicitly filters them
+      using `if entity.entity_type == URL:` (where URL is mapped to `EntityTypes.URL`).
+      Therefore, it targets URL entities and filters them strictly by their entity
+      type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -121,9 +118,9 @@ Get Url Status:
     get_alert_information: false
     reasoning: >-
       The action fetches threat intelligence (phishing status) for URL indicators
-      from the Phishing Initiative API. This aligns perfectly with the 'Enrich IOC'
-      expected outcome. It does not mutate external data, update alerts, or perform
-      other actions.
+      from the Phishing Initiative API. This directly matches the 'Enrich IOC' expected
+      outcome. It does not modify external systems, alerts, or tickets, so it does
+      not match any mutation or containment categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,7 +141,7 @@ Ping:
     ### General Description
 
     Tests connectivity to the Phishing Initiative API to ensure the integration is
-    configured correctly and can communicate with the service.
+    configured correctly.
 
 
     ### Flow Description
@@ -153,19 +150,19 @@ Ping:
 
     2. Initializes the Phishing Initiative manager.
 
-    3. Sends a test request to the API using a dummy URL (`http://www.antiphishing.org/`).
+    3. Makes an HTTP GET request to the Phishing Initiative API (`/api/v1/urls/lookup/`)
+    using a dummy URL (`http://www.antiphishing.org/`).
 
-    4. Evaluates the response and returns a success message if the connection is established,
-    or a failure message otherwise.
+    4. Evaluates the response and outputs a success message if the connection is established.
 
 
     ### Additional Notes
 
-    This action is typically used for diagnostic purposes during the initial setup
-    or troubleshooting of the Phishing Initiative integration.
+    This action is primarily used for diagnostic purposes to verify credentials and
+    network access to the Phishing Initiative service.
   ai_short_description: >-
-    Tests connectivity to the Phishing Initiative API by sending a test request using
-    a dummy URL.
+    Tests connectivity to the Phishing Initiative API by attempting to retrieve information
+    for a dummy URL.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -178,8 +175,8 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a GET request to test connectivity but does not fetch contextual
-      data for alerts/entities, mutate external or internal data, update entities,
-      create insights, modify alert data, or create case comments.
+      data for alerts/entities. It does not mutate external or internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -231,8 +228,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It simply tests connectivity
-      using a hardcoded dummy URL.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -248,8 +245,10 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not perform any enrichment,
-      mutation, or specific operations that align with the defined outcome categories.
+      The action is a simple connectivity test (Ping) that makes a single GET request
+      for a dummy URL. It does not enrich IOCs, mutate data, or interact with alerts,
+      tickets, or assets. Therefore, it does not match any of the expected outcome
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

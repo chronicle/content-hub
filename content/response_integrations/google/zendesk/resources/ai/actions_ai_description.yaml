@@ -7,21 +7,26 @@ Add Comment To Ticket:
 
     ### Flow Description
 
-    1. Extracts the Ticket ID, Comment Body, Author Name, and Internal Note parameters.
+    1. Extracts the necessary configuration and action parameters, including the Ticket
+    ID and Comment Body.
 
-    2. Initializes the Zendesk API client.
+    2. Initializes the Zendesk API client with the provided credentials.
 
-    3. Retrieves the current ticket details via a GET request to the Zendesk API.
+    3. Makes a GET request to the Zendesk API to retrieve the current details of the
+    specified ticket.
 
-    4. Appends the new comment to the ticket data and sends a PUT request to the Zendesk
-    API to update the ticket.
+    4. Makes a PUT request to the Zendesk API to update the ticket, appending the
+    new comment.
 
-    5. Returns a success message if the comment was added successfully.
+    5. Returns a success message if the comment was added successfully, or an error
+    message if the operation fails.
 
 
     ### Additional Notes
 
-    The comment can be set as public or internal based on the 'Internal Note' parameter.
+    The comment can be configured to be public or internal based on the 'Internal
+    Note' parameter. If an 'Author Name' is provided, it must exist in Zendesk for
+    the action to succeed.
   ai_short_description: >-
     Adds a comment to an existing ticket in Zendesk.
   capabilities:
@@ -36,9 +41,11 @@ Add Comment To Ticket:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action mutates external data by sending a PUT request to the Zendesk API
-      to add a comment to a ticket. It does not fetch data for enrichment, mutate
-      internal data, update entities, or create insights.
+      The action makes a PUT request to the Zendesk API to update a ticket with a
+      new comment, which means it mutates external data (`can_mutate_external_data`
+      is true). It does not fetch contextual data for alerts/entities, nor does it
+      mutate internal SecOps data, update entities, create insights, modify alert
+      data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -90,8 +97,10 @@ Add Comment To Ticket:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It uses the provided Ticket ID
-      parameter to interact with the Zendesk API.
+      The action does not iterate over `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on a Zendesk
+      Ticket ID. Therefore, it does not run on any entities and all entity-related
+      flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -108,7 +117,10 @@ Add Comment To Ticket:
     get_alert_information: false
     reasoning: >-
       The action updates an existing ticket in Zendesk by adding a comment to it.
-      This aligns with the 'Update Ticket' category.
+      This directly aligns with the 'Update Ticket' expected outcome, which involves
+      synchronizing field changes or updates from SecOps to an external ticketing
+      system. It does not match any other categories such as enriching IOCs, containing
+      hosts, or sending emails.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,28 +156,34 @@ Apply Macros On Ticket:
   ai_description: >-
     ### General Description
 
-    Applies a specified macro to an existing Zendesk ticket. This action modifies
-    the ticket's properties or adds comments based on the predefined macro configuration
-    in Zendesk.
+    Applies a specified macro to an existing ticket in Zendesk. This action modifies
+    the ticket's properties based on the predefined actions configured within the
+    Zendesk macro.
 
 
     ### Flow Description
 
-    1. Retrieves the macro ID by its title from Zendesk.
+    1. Retrieves the `Ticket ID` and `Macro Title` from the action parameters.
 
-    2. Simulates applying the macro to the ticket to retrieve the updated ticket data
-    via a GET request to the Zendesk API.
+    2. Queries the Zendesk API to resolve the macro ID corresponding to the provided
+    `Macro Title`.
 
-    3. Updates the ticket with the new data via a PUT request to the Zendesk API to
-    finalize the macro application.
+    3. Makes a GET request to the Zendesk API (`/tickets/{ticket_id}/macros/{macro_id}/apply.json`)
+    to retrieve the resulting ticket state after applying the macro.
+
+    4. Makes a PUT request to the Zendesk API (`/tickets/{ticket_id}.json`) to update
+    the ticket with the new state, effectively applying the macro.
+
+    5. Returns a success or failure message based on the API response.
 
 
     ### Additional Notes
 
-    Requires a valid Ticket ID and Macro Title.
+    The action requires a valid Zendesk Ticket ID and an existing Macro Title. The
+    macro must be accessible to the user account configured in the integration.
   ai_short_description: >-
-    Applies a specified macro to an existing Zendesk ticket to update its properties
-    or add comments based on the macro's configuration.
+    Applies a specified macro to an existing ticket in Zendesk, updating its properties
+    based on the macro's configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -174,13 +192,13 @@ Apply Macros On Ticket:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates a Zendesk ticket by applying a specified macro to it.
+      Updates a ticket in Zendesk by applying a specified macro.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes a PUT request to the Zendesk API to update a ticket by applying
       a macro, which mutates external data. It does not fetch contextual data for
-      entities, nor does it mutate internal SecOps data, update entities, or create
+      enrichment, nor does it mutate internal SecOps data, update entities, or create
       insights.
   entity_usage:
     entity_types:
@@ -233,8 +251,8 @@ Apply Macros On Ticket:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It operates solely on the provided Ticket ID and Macro Title parameters.
+      The action does not process any entities. It relies solely on the provided Ticket
+      ID and Macro Title parameters to interact with the Zendesk API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -250,9 +268,9 @@ Apply Macros On Ticket:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action applies a macro to a Zendesk ticket, which modifies the ticket's
-      fields or state in the external ticketing system. This aligns with the 'Update
-      Ticket' expected outcome.
+      The action applies a macro to a ticket in Zendesk, which updates the ticket's
+      properties and state in the external ticketing system. This aligns with the
+      'Update Ticket' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -280,29 +298,32 @@ Create Ticket:
     ### General Description
 
     Creates a new ticket in Zendesk with specific properties such as subject, description,
-    assignee, priority, and tags.
+    assignee, priority, and tags. It allows for adding email CCs and optionally validating
+    their existence in Zendesk before ticket creation.
 
 
     ### Flow Description
 
-    1. Extracts action parameters including subject, description, and optional fields
-    like assigned user, priority, and email CCs.
+    1. Extracts the provided parameters including subject, description, and optional
+    fields like assigned user, priority, and email CCs.
 
-    2. Validates the format of the provided email CCs.
+    2. Validates the format of the provided email CCs using a regular expression.
 
     3. If the `Validate Email CCs` parameter is enabled, makes a GET request to the
-    Zendesk API to verify that the provided email addresses exist in the system.
+    Zendesk API to fetch existing users and ensures the provided email CCs exist in
+    the system.
 
-    4. Makes a POST request to the Zendesk API to create a new ticket with the specified
-    details.
+    4. Makes a POST request to the Zendesk API (`/api/v2/tickets.json`) to create
+    the ticket with the specified properties.
 
-    5. Returns the newly created ticket ID.
+    5. Returns the newly created ticket ID upon successful execution.
 
 
     ### Additional Notes
 
-    The action can optionally validate if the provided email CCs exist in Zendesk
-    before creating the ticket. If validation fails, the action will fail.
+    The action will fail if invalid email formats are provided in the `Email CCs`
+    parameter, or if email validation is enabled and the provided emails do not exist
+    in Zendesk.
   ai_short_description: >-
     Creates a new ticket in Zendesk with specified properties and returns the ticket
     ID.
@@ -313,13 +334,14 @@ Create Ticket:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: Creates a new ticket in Zendesk.
+    external_data_mutation_explanation: >-
+      Creates a new ticket in the external Zendesk system.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Zendesk API to create a new ticket, which
-      mutates external data. It does not fetch contextual data for entities, nor does
-      it mutate internal SecOps data, update entities, or create insights.
+      The action makes a POST request to the Zendesk API to create a ticket, which
+      mutates external data. It does not fetch contextual data for enrichment, nor
+      does it mutate internal SecOps data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -371,8 +393,9 @@ Create Ticket:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process any entities. It operates independently
-      of specific entities, relying solely on the provided action parameters.
+      The action does not iterate over target entities and does not accept any entity
+      identifiers as input parameters. It operates entirely on the provided action
+      parameters to create a ticket.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -388,8 +411,8 @@ Create Ticket:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a new ticket in Zendesk and returns the ticket ID. This directly
-      aligns with the 'Create Ticket' expected outcome.
+      The action makes a POST request to Zendesk to create a new ticket and returns
+      the ticket ID. This directly aligns with the 'Create Ticket' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -430,22 +453,22 @@ Get Ticket Details:
 
     ### Flow Description
 
-    1. Initializes the Zendesk manager with the provided credentials.
+    1. Initializes the Zendesk API client using the provided integration credentials.
 
-    2. Makes a GET request to the Zendesk API to fetch the ticket details using the
-    provided Ticket ID.
+    2. Fetches the ticket details from Zendesk using the provided `Ticket ID`.
 
-    3. Makes a GET request to fetch the ticket comments.
+    3. Retrieves all comments associated with the specified ticket.
 
-    4. Makes GET requests to download any attachments associated with the ticket comments.
+    4. Downloads any attachments linked to the ticket's comments.
 
-    5. Attaches the comments as a data table, the downloaded files as attachments,
-    and the ticket details as a JSON result in the SecOps platform.
+    5. Returns the ticket details as a JSON result, formats the comments into a CSV
+    data table, and attaches the downloaded files to the action's results.
 
 
     ### Additional Notes
 
-    The action requires a valid Ticket ID to successfully retrieve the information.
+    Ensure that the provided Ticket ID is valid and accessible by the configured Zendesk
+    user.
   ai_short_description: >-
     Retrieves detailed information, comments, and attachments for a specific ticket
     from Zendesk.
@@ -461,8 +484,9 @@ Get Ticket Details:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action makes GET requests to the Zendesk API to fetch ticket details, comments,
-      and attachments (fetches_data=true). It does not mutate external data, update
-      internal entities, create insights, or modify alert data.
+      and attachments (fetches_data=true). It does not perform any state-changing
+      operations on Zendesk (can_mutate_external_data=false) and does not update internal
+      entities, insights, or case comments.
   entity_usage:
     entity_types:
       address: false
@@ -514,8 +538,8 @@ Get Ticket Details:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses a specific 'Ticket ID' parameter
-      provided by the user or playbook to fetch data, rather than iterating over `siemplify.target_entities`.
+      The action does not iterate over target entities and does not accept any entity-related
+      input parameters. It operates solely on a provided Ticket ID.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -531,9 +555,9 @@ Get Ticket Details:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches ticket details, comments, and attachments from Zendesk. It
-      does not match any of the specific expected outcomes such as creating/updating
-      tickets, enriching IOCs/assets, or modifying alerts.
+      The action retrieves ticket details from an ITSM/ticketing system (Zendesk).
+      It does not match any of the specific expected outcomes such as creating/updating
+      tickets, enriching IOCs/assets, or fetching security alert information.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -558,32 +582,31 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Zendesk platform to ensure that the integration is configured
-    correctly and can communicate with the Zendesk API.
+    This action tests the connectivity to the Zendesk instance to ensure that the
+    integration is configured correctly and can successfully communicate with the
+    Zendesk API.
 
 
     ### Flow Description
 
-    1. Retrieves the Zendesk integration configuration parameters (User Email Address,
-    API Token, Server Address).
+    1. Initializes the Zendesk API client using the provided integration configuration
+    parameters.
 
-    2. Initializes the Zendesk API client.
+    2. Executes a test connectivity request by making an HTTP GET call to the `/api/v2/tickets.json`
+    endpoint.
 
-    3. Makes an HTTP GET request to the Zendesk `/api/v2/tickets.json` endpoint to
-    verify authentication and network connectivity.
+    3. Evaluates the response to determine if the connection was successful.
 
-    4. Returns a success message and a `true` result if the connection is established,
-    or a failure message and `false` otherwise.
+    4. Returns a success or failure message based on the result.
 
 
     ### Additional Notes
 
-    This action is typically used during the initial setup of the Zendesk integration
-    to validate credentials and network access.
+    This action is typically used during the initial setup or troubleshooting of the
+    Zendesk integration to verify credentials and network access.
   ai_short_description: >-
-    Tests connectivity to the Zendesk platform by attempting to retrieve tickets via
-    the API, verifying that the integration credentials and network access are correctly
-    configured.
+    Tests connectivity to the Zendesk instance by attempting to retrieve tickets via
+    the API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -595,10 +618,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action only performs a read-only API call to test connectivity. It does
-      not fetch contextual data for alerts/entities, mutate external data, mutate
-      internal data, update entities, create insights, modify alert data, or create
-      case comments.
+      The action makes a GET request to the Zendesk API to test connectivity. It does
+      not fetch contextual data for alerts or entities, nor does it mutate any external
+      or internal data.
   entity_usage:
     entity_types:
       address: false
@@ -650,8 +672,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or iterate over any entities. It is a generic connectivity
-      test that does not rely on entity data.
+      The action does not process any entities or accept any entity-related parameters.
+      It solely tests the connection to the Zendesk API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -667,8 +689,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a simple connectivity test (Ping) and does not perform any enrichment,
-      containment, ticketing, or other operations that match the defined outcome categories.
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or creating
+      tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -688,26 +711,29 @@ Search Tickets:
   ai_description: >-
     ### General Description
 
-    Searches for tickets in Zendesk based on a provided keyword or query string.
+    Searches for tickets in Zendesk based on a provided keyword or query string. This
+    action retrieves ticket details that match the specified criteria and attaches
+    them to the action results.
 
 
     ### Flow Description
 
-    1. Retrieves the search query parameter.
+    1. Retrieves the search query from the action parameters.
 
-    2. Makes a GET request to the Zendesk API to search for tickets matching the query.
+    2. Makes an HTTP GET request to the Zendesk `/api/v2/search.json` endpoint using
+    the provided query.
 
-    3. If tickets are found, iterates through the results and attaches each ticket's
-    details as a JSON result.
+    3. Parses the response to determine the number of matching tickets.
 
-    4. Attaches the complete search response as a JSON result to the action.
+    4. If matches are found, iterates through the results and attaches the JSON representation
+    of each ticket to the action results.
 
-    5. Returns the total count of matching tickets.
+    5. Returns the total count of matching tickets as the action's result value.
 
 
     ### Additional Notes
 
-    The search query can include specific filters supported by Zendesk (e.g., `type:ticket
+    The search query can include Zendesk-specific search syntax (e.g., `type:ticket
     status:pending`).
   ai_short_description: >-
     Searches for tickets in Zendesk based on a provided keyword or query string and
@@ -723,9 +749,9 @@ Search Tickets:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Zendesk API to fetch ticket data based
-      on a search query. It does not mutate external data, update internal entities,
-      create insights, or modify case data.
+      The action fetches data by making a GET request to the Zendesk search API. It
+      does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -777,8 +803,8 @@ Search Tickets:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It relies solely
-      on the provided search query parameter to fetch data from Zendesk.
+      The action does not iterate over target entities or accept any entity-related
+      input parameters. It operates solely on the provided search query string.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -794,9 +820,9 @@ Search Tickets:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for tickets in an external ITSM system (Zendesk). There
-      is no specific outcome category for searching tickets, as it does not create
-      or update tickets, nor does it enrich IOCs/assets or modify alerts.
+      The action searches for tickets in an external ITSM system (Zendesk). This does
+      not match any of the predefined outcome categories such as Create Ticket, Update
+      Ticket, or Search Events.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -822,34 +848,37 @@ Update Ticket:
   ai_description: >-
     ### General Description
 
-    Updates an existing ticket's details in Zendesk. This action allows users to modify
-    various ticket properties such as subject, assigned user, assignment group, priority,
-    ticket type, tags, and status. It also supports appending an additional public
-    or internal comment to the ticket.
+    Updates an existing ticket in Zendesk with new details such as subject, assignee,
+    priority, status, and tags. It can also append an additional comment (public or
+    internal) to the ticket.
 
 
     ### Flow Description
 
-    1. Extracts the provided ticket ID and the fields to be updated (e.g., Subject,
-    Priority, Status).
+    1. Extracts the Zendesk configuration and action parameters (Ticket ID, Subject,
+    Status, etc.).
 
     2. Initializes the Zendesk API client.
 
-    3. Makes a GET request to retrieve the current ticket details.
+    3. Calls the Zendesk API (`GET /api/v2/tickets/{ticket_id}.json`) to retrieve
+    the current ticket details.
 
-    4. Makes a PUT request to the Zendesk API to update the ticket with the new values.
+    4. Modifies the ticket payload with the provided updates and sends a `PUT` request
+    to `/api/v2/tickets/{ticket_id}.json` to update the ticket.
 
-    5. If an additional comment is provided, makes another PUT request to append the
-    comment to the ticket.
+    5. If an additional comment is provided, sends another `PUT` request to append
+    the comment to the ticket.
+
+    6. Returns a success or failure message based on the API response.
 
 
     ### Additional Notes
 
-    The action requires a valid Ticket ID. If an assigned user or assignment group
-    is provided, the action will first resolve their respective IDs via the Zendesk
-    API before updating the ticket.
+    The action requires a valid Ticket ID. If specific fields like Assigned User or
+    Assignment Group are provided, the action will first resolve their respective
+    IDs via additional API calls before updating the ticket.
   ai_short_description: >-
-    Updates an existing ticket's details and optionally appends a comment in Zendesk.
+    Updates an existing ticket in Zendesk with new properties and optional comments.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -858,14 +887,13 @@ Update Ticket:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the properties and optionally appends comments to an existing ticket
-      in Zendesk.
+      Updates the properties and comments of an existing ticket in Zendesk.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes PUT requests to the Zendesk API to update ticket properties
-      and add comments, mutating external data. It does not fetch contextual enrichment
-      data, nor does it mutate internal SecOps data like entities, alerts, or insights.
+      The action makes PUT requests to the Zendesk API to modify an existing ticket's
+      properties and add comments. It mutates external data but does not fetch enrichment
+      data, update internal entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -917,8 +945,9 @@ Update Ticket:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on or iterate over any entities. It relies entirely
-      on the explicitly provided 'Ticket ID' parameter to perform its operations.
+      The action does not process `siemplify.target_entities` and does not accept
+      any entity identifiers as input parameters. It operates solely on the provided
+      Ticket ID. Therefore, all entity flags are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -934,9 +963,9 @@ Update Ticket:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies an existing ticket in Zendesk, updating fields like status,
-      priority, and assignee, which directly aligns with the 'Update Ticket' expected
-      outcome.
+      The action updates an existing ticket in Zendesk, modifying its fields and appending
+      comments. This directly aligns with the 'Update Ticket' expected outcome. It
+      does not enrich IOCs, modify alerts, or perform containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

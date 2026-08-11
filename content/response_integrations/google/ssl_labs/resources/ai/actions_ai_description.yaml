@@ -2,41 +2,39 @@ Analyse Entity:
   ai_description: >-
     ### General Description
 
-    Analyzes URL and Hostname entities using the SSL Labs API to retrieve SSL/TLS
-    configuration grades and endpoint details. The action evaluates the security posture
-    of the provided endpoints and updates the entities with the findings.
+    Analyzes Hostname and URL entities using SSL Labs to retrieve SSL/TLS configuration
+    grades and endpoint details. It evaluates the lowest grade against a configured
+    warning threshold, updates the entity's suspicious status if the threshold is
+    exceeded, and enriches the entity's additional properties with the analysis results.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities associated with the case.
+    1. Iterates through the target entities in the case.
 
-    2. Filters the entities to process only those of type URL and Hostname.
+    2. Filters entities to process only those of type Hostname and URL.
 
-    3. Initiates an analysis request to the SSL Labs API (`https://api.ssllabs.com/api/v3/analyze`)
-    for each valid entity.
+    3. Makes a GET request to the SSL Labs API (`/analyze`) to initiate and fetch
+    the analysis report for each entity.
 
-    4. Polls the API periodically until the analysis is marked as complete.
+    4. Extracts the SSL grades for each endpoint and updates the entity's additional
+    properties.
 
-    5. Retrieves the full analysis report and extracts the SSL/TLS grades for each
-    endpoint.
-
-    6. Enriches the entity's additional properties with the retrieved grades.
-
-    7. Evaluates the lowest grade against a configured warning threshold and marks
+    5. Evaluates the lowest grade against the configured warning threshold and marks
     the entity as suspicious if the threshold is exceeded.
 
-    8. Updates the entities within Google SecOps and attaches the raw JSON results
-    to the action.
+    6. Updates the entities in the Google SecOps platform and attaches the raw JSON
+    results to the action output.
 
 
     ### Additional Notes
 
-    The action relies on integration-level configurations for the warning threshold
-    and SSL verification settings. It does not require any action-specific parameters.
+    The action relies on integration-level configurations (Warning Threshold, Verify
+    SSL) and does not require action-specific parameters.
   ai_short_description: >-
-    Analyzes URL and Hostname entities using the SSL Labs API to retrieve SSL/TLS
-    configuration grades and updates the entities with the results.
+    Analyzes Hostname and URL entities using SSL Labs to retrieve SSL/TLS configuration
+    grades and updates the entity's suspicious status based on a configured warning
+    threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -48,11 +46,11 @@ Analyse Entity:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes GET requests to the SSL Labs API to fetch SSL analysis data
-      for the entities. It does not mutate any external data. Internally, it updates
-      the entities with the analysis grades and marks them as suspicious if they exceed
-      a threshold, but it does not create insights, modify alert data, or create case
-      comments.
+      The action makes GET requests to the SSL Labs API to fetch analysis data for
+      URLs and Hostnames (fetches_data=true). It does not mutate external data or
+      internal case data other than entities. It updates the entities with the fetched
+      grades and suspicious status (can_update_entities=true). It does not create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -106,7 +104,7 @@ Analyse Entity:
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
       == EntityTypes.URL or entity.entity_type == EntityTypes.HOSTNAME`. Therefore,
-      it targets URL and Hostname entities, filtering strictly by the entity_type
+      it targets URL and HOSTNAME entities, filtering strictly by the entity_type
       attribute.
   outcome_categories:
     add_alert_comment: false
@@ -123,10 +121,11 @@ Analyse Entity:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches SSL analysis data for URL and Hostname entities, returning
-      security posture and configuration intelligence. This matches the 'Enrich IOC'
-      expected outcome. It does not perform any containment, ticketing, or external
-      mutation actions.
+      The action fetches SSL/TLS configuration data and grades for URL and Hostname
+      entities from SSL Labs. This aligns with the 'Enrich IOC' expected outcome,
+      as it provides threat intelligence and reputation-like data (grades) for the
+      indicator. It does not mutate external systems or perform other categorized
+      actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -146,27 +145,26 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the SSL Labs API to verify that the integration is configured
-    correctly and network access is available.
+    Tests connectivity to the SSL Labs API. This action verifies that the integration
+    is properly configured and can successfully communicate with the SSL Labs service.
 
 
     ### Flow Description
 
-    1. Extracts the integration-level configuration parameters (such as SSL verification
-    settings).
+    1. Extracts the integration-level configuration parameters (such as Verify SSL).
 
-    2. Initializes the SSL Labs manager.
+    2. Initializes the SSL Labs manager with the provided configuration.
 
-    3. Makes an HTTP GET request to the SSL Labs `/info` API endpoint.
+    3. Makes an HTTP GET request to the SSL Labs `/info` API endpoint to verify connectivity.
 
-    4. Evaluates the HTTP response and returns a success message if the connection
-    is established without errors.
+    4. Returns a success message to the SOAR platform if the connection is established
+    without errors.
 
 
     ### Additional Notes
 
-    This is a standard utility action primarily used during integration setup or troubleshooting
-    to ensure the SOAR platform can successfully communicate with the SSL Labs service.
+    This is a standard ping action used primarily for validating integration health,
+    network access, and credentials. It does not process alerts or entities.
   ai_short_description: >-
     Tests connectivity to the SSL Labs API to verify integration configuration and
     network access.
@@ -181,10 +179,10 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a single GET request to the SSL Labs `/info` endpoint to verify
-      connectivity. It does not fetch contextual data for entities, mutate any external
-      or internal data, update entities, create insights, modify alerts, or create
-      case comments.
+      The action makes a simple GET request to the SSL Labs API to test connectivity.
+      It does not fetch contextual data for alerts/entities, does not mutate external
+      data, does not mutate internal data, does not update entities, does not create
+      insights, and does not create case comments.
   entity_usage:
     entity_types:
       address: false
@@ -236,9 +234,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with, iterate over, or filter `siemplify.target_entities`.
-      It performs a generic API connectivity test independent of any case or entity
-      data.
+      The action does not process any entities. It does not iterate over `siemplify.target_entities`
+      nor does it accept any entity-related input parameters.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -255,9 +252,8 @@ Ping:
     get_alert_information: false
     reasoning: >-
       The action is a simple connectivity test (Ping) to the SSL Labs API. It does
-      not enrich IOCs or assets, update alerts, manage tickets, modify blocklists/allowlists,
-      manage identities, search events, execute commands, or interact with emails.
-      Therefore, it does not match any of the specified outcome categories.
+      not enrich IOCs, mutate alerts, interact with tickets, or perform any containment/remediation
+      actions. Therefore, it does not match any of the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
