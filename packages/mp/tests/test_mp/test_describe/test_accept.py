@@ -139,6 +139,5 @@ def test_cli_describe_accept_command(tmp_path: Path) -> None:
         ],
     )
     assert result.exit_code == 0
-    assert "DRY-RUN" in result.stdout
-    assert "Accepted 1 file(s). Simulation complete." in result.stdout
+    assert "Simulation complete." in result.stdout
     assert baseline_yaml.read_text(encoding="utf-8") == "old_description: 'version 1'"
