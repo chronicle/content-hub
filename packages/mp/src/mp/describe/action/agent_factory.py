@@ -1,7 +1,9 @@
 import asyncio
+import json
 import logging
-from typing import Annotated, TypeVar
 import pathlib
+from datetime import datetime, timezone
+from typing import Annotated, Any, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -116,17 +118,29 @@ class FieldAgent:
             
             # Generate Report
             try:
+                def _format_value(val: Any) -> str:
+                    if hasattr(val, "model_dump_json"):
+                        return val.model_dump_json(indent=2)
+                    if hasattr(val, "model_dump"):
+                        return json.dumps(val.model_dump(), indent=2)
+                    return str(val)
+
+                def _serialize_for_ledger(val: Any) -> Any:
+                    if hasattr(val, "model_dump"):
+                        return val.model_dump()
+                    return val
+
                 report_lines = [
                     f"Integration: {context.get('integration', 'Unknown')}",
                     f"Action: {context.get('action', 'Unknown')}",
                     f"Version: {context.get('version', 'Unknown')}",
                     f"Field: {self.config.field_name}",
                     "---",
-                    f"First Suggested Value:\n{first_suggested_value}",
+                    f"First Suggested Value:\n{_format_value(first_suggested_value)}",
                     "---",
                     f"Reasoning for Validation Failure:\n" + ("\n".join(feedbacks) if feedbacks else "None - Validated on first attempt without failures."),
                     "---",
-                    f"Final Change and Setting:\n{final_value}"
+                    f"Final Change and Setting:\n{_format_value(final_value)}"
                 ]
                 
                 report_dir = pathlib.Path("agent_reports")
@@ -136,8 +150,6 @@ class FieldAgent:
                 logger.info(f"Agent [{self.config.field_name}]: Report generated at {report_path}")
                 
                 # Generate JSONL Metrics Ledger
-                import json
-                from datetime import datetime, timezone
                 metric = {
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "integration": str(context.get('integration', 'Unknown')),
@@ -147,12 +159,12 @@ class FieldAgent:
                     "required_refinement": bool(len(feedbacks) > 0),
                     "attempts_taken": len(feedbacks) + 1 if len(feedbacks) < self.config.max_retries else self.config.max_retries,
                     "validation_feedbacks": feedbacks,
-                    "first_suggested_value": first_suggested_value,
-                    "final_value": final_value
+                    "first_suggested_value": _serialize_for_ledger(first_suggested_value),
+                    "final_value": _serialize_for_ledger(final_value)
                 }
                 ledger_path = report_dir / "agent_metrics_ledger.jsonl"
                 with open(ledger_path, "a") as ledger_file:
-                    ledger_file.write(json.dumps(metric) + "\n")
+                    ledger_file.write(json.dumps(metric, default=str) + "\n")
                     
             except Exception as e:
                 logger.error(f"Failed to generate feedback log report: {e}")
