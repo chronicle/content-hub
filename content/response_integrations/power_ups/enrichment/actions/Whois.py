@@ -103,6 +103,7 @@ def main():
 
     if not suitable_entities:
         siemplify.LOGGER.info("No suitable entities were found to enrich.")
+        output_message = "No suitable entities were found to enrich."
     for entity in suitable_entities:
         if entity.entity_type == EntityTypes.ADDRESS:
             try:
@@ -115,13 +116,10 @@ def main():
                 enriched_entities[entity.identifier] = ip_whois
                 result_value = "true"
             except Exception as e:
-                print(e)
-        elif entity.entity_type in [
-            EntityTypes.DOMAIN,
-            EntityTypes.HOSTNAME,
-            EntityTypes.URL,
-            EntityTypes.USER,
-        ]:
+                siemplify.LOGGER.error(
+                    f"Failed RDAP lookup for entity {entity.identifier}: {e}"
+                )
+        else:
             try:
                 domain = get_domain_from_string(entity.identifier)
                 if domain:
