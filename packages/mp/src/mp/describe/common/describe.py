@@ -110,6 +110,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         src: pathlib.Path | None = None,
         dst: pathlib.Path | None = None,
         override: bool = False,
+        use_batch: bool = False,
     ) -> None:
         self.integration_name: str = integration_name
         self.src: pathlib.Path | None = src
@@ -117,6 +118,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         self.resource_names: set[str] = resource_names
         self.override: bool = override
         self.dst: pathlib.Path | None = dst
+        self.use_batch: bool = use_batch
 
     @property
     @abc.abstractmethod
@@ -347,7 +349,11 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         if not valid_prompts:
             return [DescriptionResult(a, None) for a in resources]
 
-        llm_results: list[T_Metadata | str] = await llm.call_gemini_bulk(valid_prompts, self.response_schema)
+        llm_results: list[T_Metadata | str] = await llm.call_gemini_bulk(
+            valid_prompts,
+            self.response_schema,
+            use_batch=self.use_batch,
+        )
 
         return self._map_bulk_results_to_resources(resources, valid_indices, llm_results)
 
