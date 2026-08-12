@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from domain_tools.core.constants import (
     RISK_CATEGORY_HIGH,
     RISK_CATEGORY_LOW,
