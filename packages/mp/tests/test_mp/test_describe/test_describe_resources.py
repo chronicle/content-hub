@@ -158,3 +158,49 @@ async def test_describe_integration(tmp_path: Path, mock_integration_path: Path)
     content = yaml.safe_load(output_file.read_text(encoding="utf-8"))
     assert content["product_categories"] == ["SIEM"]
     assert content["summary"] == "Integration summary"
+
+
+@pytest.mark.anyio
+async def test_describe_single_resource_preserves_other_resources(
+    tmp_path: Path, mock_integration_path: Path
+) -> None:
+    # Add a second connector to the mock integration
+    connectors_dir = mock_integration_path / constants.CONNECTORS_DIR
+    (connectors_dir / "test_connector2.yaml").write_text(
+        yaml.safe_dump({"name": "Test Connector 2", "description": "Second connector"}),
+        encoding="utf-8",
+    )
+    (connectors_dir / "test_connector2.py").write_text("class TestConnector2: pass", encoding="utf-8")
+
+    src_dir = shutil.copytree(mock_integration_path, tmp_path, dirs_exist_ok=True)
+
+    # Pre-populate AI description file with an existing description for connector 1
+    ai_dir: Path = tmp_path / mock_integration_path.name / constants.RESOURCES_DIR / constants.AI_DIR
+    await anyio.Path(ai_dir).mkdir(parents=True, exist_ok=True)
+    output_file = ai_dir / constants.CONNECTORS_AI_DESCRIPTION_FILE
+    output_file.write_text(
+        yaml.safe_dump({"Test Connector": {"ai_description": "Existing description 1"}}),
+        encoding="utf-8",
+    )
+
+    # Describe ONLY connector 2 with override=True
+    describer = DescribeConnector(
+        integration="mock_integration",
+        connectors={"Test Connector 2"},
+        src=src_dir,
+        override=True,
+    )
+
+    mock_response = mock.Mock()
+    mock_response.ai_description = "AI-generated connector 2 description"
+    mock_response.model_dump.return_value = {"ai_description": "AI-generated connector 2 description"}
+
+    with mock.patch("mp.describe.common.utils.llm.call_gemini_bulk", return_value=[mock_response]):
+        await describer.describe()
+
+    # Both connector 1 and connector 2 must be present in the output file
+    content = yaml.safe_load(output_file.read_text(encoding="utf-8"))
+    assert "Test Connector" in content
+    assert content["Test Connector"]["ai_description"] == "Existing description 1"
+    assert "Test Connector 2" in content
+    assert content["Test Connector 2"]["ai_description"] == "AI-generated connector 2 description"
