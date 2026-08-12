@@ -62,8 +62,9 @@ class DescribeAction(DescribeBase[ActionAiMetadata]):
         src: pathlib.Path | None = None,
         dst: pathlib.Path | None = None,
         override: bool = False,
+        use_batch: bool = False,
     ) -> None:
-        super().__init__(integration, actions, src=src, dst=dst, override=override)
+        super().__init__(integration, actions, src=src, dst=dst, override=override, use_batch=use_batch)
         self._action_name_to_file_stem: dict[str, str] = {}
 
     @property
@@ -180,8 +181,9 @@ class MultiPromptDescribeAction(DescribeAction):
         dst: pathlib.Path | None = None,
         override: bool = False,
         prompt_overrides: pathlib.Path | None = None,
+        use_batch: bool = False,
     ) -> None:
-        super().__init__(integration, actions, src=src, dst=dst, override=override)
+        super().__init__(integration, actions, src=src, dst=dst, override=override, use_batch=use_batch)
         self.prompt_overrides_path: pathlib.Path | None = prompt_overrides
 
     async def describe_bulk(
