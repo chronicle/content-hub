@@ -8,7 +8,8 @@ from typing import Any
 from domaintools import API
 from domaintools.exceptions import NotFoundException
 
-from .datamodels import IrisInvestigateModel, ParsedDomainRDAPModel, WhoisHistoryModel
+from .datamodels import EnrichedDomainSummary, IrisInvestigateModel, ParsedDomainRDAPModel, WhoisHistoryModel
+from .UtilsManager import chunks
 from .DomainToolsParser import DomainToolsParser
 from .exceptions import DomainToolsManagerError
 
@@ -112,6 +113,25 @@ class DomainToolsManager:
             raise DomainToolsManagerError(
                 f"You don't have {product_name} - {self.available_api_calls} in your license."
             )
+
+    def enrich_domains_with_risk(self, domains: list[str]) -> list[EnrichedDomainSummary]:
+        from .constants import BULK_ENRICH_BATCH_SIZE, LICENSE_IRIS_ENRICH
+        try:
+            self._check_license(LICENSE_IRIS_ENRICH)
+            results = []
+            clean_domains = [d for d in domains if d and d.strip()]
+            if not clean_domains:
+                return results
+            for batch in chunks(clean_domains, BULK_ENRICH_BATCH_SIZE):
+                response = self._api.iris_enrich(*batch).response()
+                for raw in response.get("results", []):
+                    domain = raw.get("domain", "")
+                    results.append(self.parser.parse_iris_enrich_data(domain, raw))
+            return results
+        except DomainToolsManagerError:
+            raise
+        except Exception as e:
+            raise DomainToolsManagerError(f"Unable to enrich domains. Reason: {str(e)}")
 
     def investigate_domains(self, domains: list[str]) -> list[IrisInvestigateModel]:
         try:

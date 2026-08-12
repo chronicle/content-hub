@@ -1,0 +1,223 @@
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>DomainTools - Bulk Enrich Domains</title>
+  <style>
+    :root {
+      --widget-bg: #212c44;
+      --widget-font-family: 'Source Sans Pro', sans-serif;
+      --widget-text-color: #ffffff;
+      --scrollbar-bg-color: #6275a3;
+      --widget-row-highlight-bg: #2f3d5c;
+      --divider-border-color: #3a4a6c;
+      --divider-border-width: 1px;
+      --table-color-even-row: #26334f;
+      --sev-low: #78d9ec;
+      --sev-medium: #fff371;
+      --sev-high: #fa903e;
+      --sev-critical: #ec453b;
+      --sev-unspec: #b2b6bd;
+      --val-success: #99d7ca;
+    }
+    html.light-theme {
+      --widget-bg: #ffffff;
+      --widget-text-color: #0f1029;
+      --scrollbar-bg-color: #d3d8ea;
+      --widget-row-highlight-bg: #e5e8f2;
+      --divider-border-color: #d3d8ea;
+      --table-color-even-row: #f4f5fa;
+      --sev-low: #0088a5;
+      --sev-medium: #d6a000;
+      --sev-high: #d35400;
+      --sev-critical: #c0392b;
+      --sev-unspec: #95a5a6;
+      --val-success: #27ae60;
+    }
+    html.dark-theme {
+      --widget-bg: #232330;
+      --widget-text-color: #ffffff;
+      --widget-row-highlight-bg: #5f6368;
+      --divider-border-color: #303045;
+      --table-color-even-row: #3c4043;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--scrollbar-bg-color) transparent; }
+    body { font-family: var(--widget-font-family), sans-serif; color: var(--widget-text-color); background: var(--widget-bg); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: var(--divider-border-width) solid var(--divider-border-color); flex-shrink: 0; }
+    .header-title { font: 600 16px/22px var(--widget-font-family); }
+    .header-logo { font: 700 13px/18px var(--widget-font-family); opacity: 0.7; letter-spacing: 1px; }
+    .content { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 16px; }
+    .cards-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .card { flex: 1; min-width: 100px; background: var(--widget-row-highlight-bg); border-radius: 6px; padding: 12px 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; border-left: 3px solid transparent; }
+    .card.high { border-color: var(--sev-critical); }
+    .card.medium { border-color: var(--sev-high); }
+    .card.suspicious { border-color: var(--sev-medium); }
+    .card.young { border-color: var(--sev-low); }
+    .card.low { border-color: var(--sev-unspec); }
+    .card-count { font: 700 28px/32px var(--widget-font-family); }
+    .card.high .card-count { color: var(--sev-critical); }
+    .card.medium .card-count { color: var(--sev-high); }
+    .card.suspicious .card-count { color: var(--sev-medium); }
+    .card.young .card-count { color: var(--sev-low); }
+    .card.low .card-count { color: var(--sev-unspec); }
+    .card-label { font: 400 12px/16px var(--widget-font-family); text-transform: uppercase; opacity: 0.8; text-align: center; }
+    .section-title { font: 600 13px/18px var(--widget-font-family); text-transform: uppercase; opacity: 0.7; margin-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--widget-row-highlight-bg); padding: 6px 10px; text-align: left; font: 600 12px/16px var(--widget-font-family); text-transform: uppercase; position: sticky; top: 0; }
+    td { padding: 7px 10px; font-size: 13px; vertical-align: middle; }
+    tr:nth-child(even) td { background: var(--table-color-even-row); }
+    .risk-bar-wrap { display: flex; align-items: center; gap: 8px; }
+    .risk-bar { height: 8px; border-radius: 4px; background: var(--sev-unspec); min-width: 4px; }
+    .risk-score { font: 600 13px/18px var(--widget-font-family); min-width: 28px; }
+    a { color: var(--sev-low); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font: 600 11px/16px var(--widget-font-family); text-transform: uppercase; }
+    .badge.high_risk { background: rgba(236,69,59,0.2); color: var(--sev-critical); }
+    .badge.medium_risk { background: rgba(250,144,62,0.2); color: var(--sev-high); }
+    .badge.suspicious { background: rgba(255,243,113,0.2); color: var(--sev-medium); }
+    .badge.young_domain { background: rgba(120,217,236,0.2); color: var(--sev-low); }
+    .badge.low_risk { background: rgba(178,182,189,0.2); color: var(--sev-unspec); }
+    .no-data { opacity: 0.5; font-size: 13px; padding: 12px 0; }
+  </style>
+</head>
+<body>
+<div class="header">
+  <span class="header-title" id="headerTitle">DomainTools — Threat Intelligence Dashboard</span>
+  <span class="header-logo">DOMAINTOOLS</span>
+</div>
+<div class="content" id="content">
+  <div class="no-data">Loading...</div>
+</div>
+<script>
+  const LIGHT_THEME_HEX = "#bdc1c6";
+  const DARK_THEME_HEX = "#282837";
+  function handleThemeUpdate(event) {
+    if (event.source !== window.parent) return;
+    const styles = event.data;
+    if (typeof styles !== 'object' || styles === null) return;
+    const bg = (styles.background || styles.backgroundColor || '').toLowerCase().trim();
+    const html = document.documentElement;
+    if (bg === LIGHT_THEME_HEX) {
+      html.classList.add('light-theme'); html.classList.remove('dark-theme');
+    } else if (bg === DARK_THEME_HEX) {
+      html.classList.add('dark-theme'); html.classList.remove('light-theme');
+    } else {
+      html.classList.remove('light-theme', 'dark-theme');
+    }
+  }
+  window.addEventListener('message', handleThemeUpdate);
+
+  const rawData = [{stepInstanceName}.JsonResult];
+  const content = document.getElementById('content');
+
+  function riskColor(score) {
+    if (score >= 70) return 'var(--sev-critical)';
+    if (score >= 40) return 'var(--sev-high)';
+    if (score >= 20) return 'var(--sev-medium)';
+    return 'var(--sev-unspec)';
+  }
+
+  function render() {
+    const record = rawData && rawData[0];
+    if (!record || !record.EntityResult) {
+      content.innerHTML = '<div class="no-data">No enrichment data available.</div>';
+      return;
+    }
+    const result = record.EntityResult;
+    const summary = result.summary || {};
+    const domains = result.domains || [];
+
+    const high = summary.high_risk_count || 0;
+    const medium = summary.medium_risk_count || 0;
+    const suspicious = summary.suspicious_count || 0;
+    const young = summary.young_domain_count || 0;
+    const low = summary.low_risk_count || 0;
+    const total = summary.total_domains || domains.length;
+
+    document.getElementById('headerTitle').textContent =
+      `DomainTools — Threat Intelligence Dashboard (${total} domain${total !== 1 ? 's' : ''})`;
+
+    const cards = [
+      { cls: 'high', count: high, label: 'High Risk' },
+      { cls: 'medium', count: medium, label: 'Medium Risk' },
+      { cls: 'suspicious', count: suspicious, label: 'Suspicious' },
+      { cls: 'young', count: young, label: 'Young Domain' },
+      { cls: 'low', count: low, label: 'Low Risk' },
+    ];
+
+    const cardsRow = document.createElement('div');
+    cardsRow.className = 'cards-row';
+    cards.forEach(c => {
+      const card = document.createElement('div');
+      card.className = `card ${c.cls}`;
+      card.innerHTML = `<span class="card-count">${c.count}</span><span class="card-label">${c.label}</span>`;
+      cardsRow.appendChild(card);
+    });
+
+    const top5Title = document.createElement('div');
+    top5Title.className = 'section-title';
+    top5Title.textContent = 'Top Domains by Risk Score';
+
+    const sorted = [...domains].sort((a, b) => (b.overall_risk_score || 0) - (a.overall_risk_score || 0)).slice(0, 10);
+
+    const tableWrap = document.createElement('div');
+    tableWrap.style.overflowX = 'auto';
+
+    if (sorted.length === 0) {
+      tableWrap.innerHTML = '<div class="no-data">No domain data.</div>';
+    } else {
+      const table = document.createElement('table');
+      table.innerHTML = `<thead><tr>
+        <th>Domain</th><th>Risk Category</th><th>Overall Score</th><th>Threats</th><th>Country</th>
+      </tr></thead>`;
+      const tbody = document.createElement('tbody');
+      sorted.forEach(d => {
+        const tr = document.createElement('tr');
+        const threats = (d.threat_profile_threats || []).join(', ') || 'None';
+        const scoreColor = riskColor(d.overall_risk_score || 0);
+        const barWidth = Math.max(4, Math.min(100, d.overall_risk_score || 0));
+        const link = d.iris_investigate_link
+          ? `<a href="${d.iris_investigate_link}" target="_blank">${d.domain}</a>`
+          : d.domain;
+        const cat = d.risk_category || '';
+        tr.innerHTML = `
+          <td>${link}</td>
+          <td><span class="badge ${cat}">${cat.replace('_', ' ')}</span></td>
+          <td><div class="risk-bar-wrap">
+            <div class="risk-bar" style="width:${barWidth}px;background:${scoreColor}"></div>
+            <span class="risk-score">${d.overall_risk_score || 0}</span>
+          </div></td>
+          <td>${threats}</td>
+          <td>${(d.ip_country_code || '').toUpperCase() || '—'}</td>`;
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      tableWrap.appendChild(table);
+    }
+
+    content.innerHTML = '';
+    content.appendChild(cardsRow);
+    content.appendChild(top5Title);
+    content.appendChild(tableWrap);
+  }
+
+  render();
+</script>
+</body>
+</html>
