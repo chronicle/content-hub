@@ -208,16 +208,19 @@ class Gemini(LlmSdk[GeminiConfig]):
 
         self.content.parts.append(Part.from_text(text=prompt))
 
-        response: io.StringIO = io.StringIO()
-        async for chunk in await self.client.models.generate_content_stream(
-            model=self.config.model_name,
-            contents=self.content,
-            config=config,
-        ):
-            if chunk.text:
-                response.write(chunk.text)
+        async def _read_stream() -> str:
+            resp = io.StringIO()
+            stream = await self.client.models.generate_content_stream(
+                model=self.config.model_name,
+                contents=self.content,
+                config=config,
+            )
+            async for chunk in stream:
+                if chunk.text:
+                    resp.write(chunk.text)
+            return resp.getvalue()
 
-        text: str = response.getvalue()
+        text: str = await asyncio.wait_for(_read_stream(), timeout=90.0)
         logger.debug("Response text: %s", text)
         if raise_error_if_empty_response and not text:
             msg: str = f"Received {text!r} from the LLM as generation results"
