@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 
 from domain_tools.core.constants import (
     RISK_CATEGORY_HIGH,

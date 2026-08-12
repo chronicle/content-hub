@@ -9,9 +9,9 @@ from domaintools import API
 from domaintools.exceptions import NotFoundException
 
 from .datamodels import EnrichedDomainSummary, IrisInvestigateModel, ParsedDomainRDAPModel, WhoisHistoryModel
-from .UtilsManager import chunks
 from .DomainToolsParser import DomainToolsParser
 from .exceptions import DomainToolsManagerError
+from .UtilsManager import chunks
 
 APP_PARTNER_NAME: str = "Google SecOps SOAR"
 APP_VERSION: str = "12.0"

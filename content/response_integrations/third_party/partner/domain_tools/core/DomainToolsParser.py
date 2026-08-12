@@ -161,8 +161,16 @@ class DomainToolsParser:
 
         threats_raw = risk_details.get("threat_profile_threats", "")
         evidence_raw = risk_details.get("threat_profile_evidence", "")
-        threats = [t.strip() for t in threats_raw.split(",") if t.strip()] if isinstance(threats_raw, str) else (threats_raw or [])
-        evidence = [e.strip() for e in evidence_raw.split(",") if e.strip()] if isinstance(evidence_raw, str) else (evidence_raw or [])
+        threats = (
+            [t.strip() for t in threats_raw.split(",") if t.strip()]
+            if isinstance(threats_raw, str)
+            else (threats_raw or [])
+        )
+        evidence = (
+            [e.strip() for e in evidence_raw.split(",") if e.strip()]
+            if isinstance(evidence_raw, str)
+            else (evidence_raw or [])
+        )
 
         return EnrichedDomainSummary(
             domain=domain,

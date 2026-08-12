@@ -98,7 +98,9 @@ def main() -> None:
                     "risk": {
                         "overall_risk_score": overall_score,
                         "proximity_risk_score": iris_model.analytics.proximity_risk_score if iris_model else 0,
-                        "threat_profile_risk_score": iris_model.analytics.threat_profile_risk_score.risk_score if iris_model else 0,
+                        "threat_profile_risk_score": (
+                            iris_model.analytics.threat_profile_risk_score.risk_score if iris_model else 0
+                        ),
                         "malware_risk_score": iris_model.analytics.malware_risk_score if iris_model else 0,
                         "phishing_risk_score": iris_model.analytics.phishing_risk_score if iris_model else 0,
                         "spam_risk_score": iris_model.analytics.spam_risk_score if iris_model else 0,

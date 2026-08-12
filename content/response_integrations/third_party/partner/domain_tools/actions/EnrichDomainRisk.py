@@ -19,8 +19,6 @@ from TIPCommon.transformation import add_prefix_to_dict_keys, construct_csv, dic
 from ..core.constants import (
     ENRICH_DOMAIN_RISK_SCRIPT_NAME,
     INTEGRATION_NAME,
-    RISK_CATEGORY_HIGH,
-    RISK_CATEGORY_YOUNG,
     RISK_SCORE_HIGH,
 )
 from ..core.DomainToolsManager import DomainToolsManager
