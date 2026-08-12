@@ -102,7 +102,7 @@ async def _maybe_use_semaphore(sem: asyncio.Semaphore | None) -> AsyncGenerator[
 
 
 class DescribeBase(abc.ABC, Generic[T_Metadata]):
-    def __init__(
+    def __init__(  # ruff:ignore[too-many-arguments]
         self,
         integration_name: str,
         resource_names: set[str],
@@ -210,19 +210,20 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         return len(resources)
 
     async def _prepare_resources(self, status: IntegrationStatus, metadata: dict[str, Any]) -> set[str]:
-        if not self.resource_names:
-            self.resource_names = await self._get_all_resources(status)
+        all_resources: set[str] = await self._get_all_resources(status)
 
-        # Prune metadata for resources that no longer exist
+        # Prune metadata for resources that no longer exist in the integration
         # Only for non-integration types which use resource names as keys
         if self.resource_type_name != "integration":
             for key in list(metadata.keys()):
-                if key not in self.resource_names:
+                if key not in all_resources:
                     del metadata[key]
 
+        target_resources: set[str] = self.resource_names or all_resources
+
         if not self.override:
-            resources_to_process: set[str] = {res for res in self.resource_names if res not in metadata}
-            skipped_count: int = len(self.resource_names) - len(resources_to_process)
+            resources_to_process: set[str] = {res for res in target_resources if res not in metadata}
+            skipped_count: int = len(target_resources) - len(resources_to_process)
             if skipped_count > 0:
                 if skipped_count == 1:
                     logger.info(
@@ -239,7 +240,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
                     )
             return resources_to_process
 
-        return self.resource_names
+        return target_resources
 
     async def _execute_descriptions(
         self,
@@ -400,7 +401,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         if (await pyproject_file.exists() or await definition_file.exists()) and not getattr(self, "from_build", False):
             return IntegrationStatus(is_built=False, out_path=self.integration)
 
-        # Check if the integration itself is built (e.g. contains Integration-*.def directly in source, as in tip-marketplace)
+        # Check if the integration itself is built (e.g. contains Integration-*.def directly in source)
         async for _f in self.integration.glob("Integration-*.def"):
             return IntegrationStatus(is_built=True, out_path=self.integration)
 
