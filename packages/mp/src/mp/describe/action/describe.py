@@ -209,7 +209,10 @@ class MultiPromptDescribeAction(DescribeAction):
                     meta_model = self.response_schema.model_validate(existing_metadata[res])
                     baseline_results.append(DescriptionResult(res, meta_model))
                 except Exception:
-                    baseline_results.append(DescriptionResult(res, None))
+                    # Fallback to model_construct for legacy metadata structures
+                    raw_dict = existing_metadata[res] if isinstance(existing_metadata[res], dict) else {}
+                    meta_model = self.response_schema.model_construct(**raw_dict)
+                    baseline_results.append(DescriptionResult(res, meta_model))
             else:
                 # If they don't exist, we fallback to generating the baseline anyway
                 # but for this PoC we assume they exist.
