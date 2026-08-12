@@ -18,7 +18,6 @@ import pytest
 from integration_testing.requests.response import MockResponse
 from integration_testing.set_meta import set_metadata
 
-from ...core.definitions import File
 from ...jobs import PushPlaybook
 from ..common import CONFIG_PATH
 from ..core.product import GitSyncProduct
