@@ -1,6 +1,272 @@
 <!DOCTYPE html>
-<html>
-<body style="background:#212c44;color:#ffffff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-  <h1>Hello World — widget is working!</h1>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>DomainTools - Enrich Domain Risk</title>
+  <style>
+    :root {
+      --widget-bg: #212c44;
+      --widget-font-family: 'Source Sans Pro', sans-serif;
+      --widget-text-color: #ffffff;
+      --scrollbar-bg-color: #6275a3;
+      --widget-row-highlight-bg: #2f3d5c;
+      --divider-border-color: #3a4a6c;
+      --divider-border-width: 1px;
+      --table-color-even-row: #26334f;
+      --sev-low: #78d9ec;
+      --sev-medium: #fff371;
+      --sev-high: #fa903e;
+      --sev-critical: #ec453b;
+      --sev-unspec: #b2b6bd;
+    }
+
+    html.light-theme {
+      --widget-bg: #ffffff;
+      --widget-text-color: #0f1029;
+      --scrollbar-bg-color: #d3d8ea;
+      --widget-row-highlight-bg: #e5e8f2;
+      --divider-border-color: #d3d8ea;
+      --table-color-even-row: #f4f5fa;
+      --sev-low: #0088a5;
+      --sev-medium: #d6a000;
+      --sev-high: #d35400;
+      --sev-critical: #c0392b;
+      --sev-unspec: #95a5a6;
+    }
+
+    html.dark-theme {
+      --widget-bg: #232330;
+      --widget-text-color: #ffffff;
+      --widget-row-highlight-bg: #5f6368;
+      --divider-border-color: #303045;
+      --table-color-even-row: #3c4043;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-bg-color) transparent;
+    }
+
+    body {
+      font-family: var(--widget-font-family), sans-serif;
+      color: var(--widget-text-color);
+      background: var(--widget-bg);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: var(--divider-border-width) solid var(--divider-border-color);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font: 600 16px/22px var(--widget-font-family);
+    }
+
+    .header-logo {
+      font: 700 13px/18px var(--widget-font-family);
+      opacity: 0.7;
+      letter-spacing: 1px;
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: var(--widget-row-highlight-bg);
+      padding: 6px 10px;
+      text-align: left;
+      font: 600 12px/16px var(--widget-font-family);
+      text-transform: uppercase;
+      position: sticky;
+      top: 0;
+    }
+
+    td {
+      padding: 7px 10px;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    tr:nth-child(even) td {
+      background: var(--table-color-even-row);
+    }
+
+    .risk-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .risk-bar {
+      height: 7px;
+      border-radius: 3px;
+      min-width: 4px;
+    }
+
+    a {
+      color: var(--sev-low);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font: 600 11px/16px var(--widget-font-family);
+      text-transform: uppercase;
+    }
+
+    .badge.high_risk {
+      background: rgba(236, 69, 59, 0.2);
+      color: var(--sev-critical);
+    }
+
+    .badge.medium_risk {
+      background: rgba(250, 144, 62, 0.2);
+      color: var(--sev-high);
+    }
+
+    .badge.suspicious {
+      background: rgba(255, 243, 113, 0.2);
+      color: var(--sev-medium);
+    }
+
+    .badge.young_domain {
+      background: rgba(120, 217, 236, 0.2);
+      color: var(--sev-low);
+    }
+
+    .badge.low_risk {
+      background: rgba(178, 182, 189, 0.2);
+      color: var(--sev-unspec);
+    }
+
+    .no-data {
+      opacity: 0.5;
+      font-size: 13px;
+      padding: 12px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <span class="header-title" id="headerTitle">DomainTools — Domain Risk</span>
+    <span class="header-logo">DOMAINTOOLS</span>
+  </div>
+  <div class="content" id="content">
+    <div class="no-data">Loading...</div>
+  </div>
+  <script>
+    const LIGHT_THEME_HEX = "#bdc1c6";
+    const DARK_THEME_HEX = "#282837";
+    function handleThemeUpdate(event) {
+      if (event.source !== window.parent) return;
+      const styles = event.data;
+      if (typeof styles !== 'object' || styles === null) return;
+      const bg = (styles.background || styles.backgroundColor || '').toLowerCase().trim();
+      const html = document.documentElement;
+      if (bg === LIGHT_THEME_HEX) { html.classList.add('light-theme'); html.classList.remove('dark-theme'); }
+      else if (bg === DARK_THEME_HEX) { html.classList.add('dark-theme'); html.classList.remove('light-theme'); }
+      else { html.classList.remove('light-theme', 'dark-theme'); }
+    }
+    window.addEventListener('message', handleThemeUpdate);
+
+    const rawData = [{ stepInstanceName }.JsonResult];
+    const content = document.getElementById('content');
+
+    function riskColor(score) {
+      if (score >= 70) return 'var(--sev-critical)';
+      if (score >= 40) return 'var(--sev-high)';
+      if (score >= 20) return 'var(--sev-medium)';
+      return 'var(--sev-unspec)';
+    }
+
+    function scoreBar(score) {
+      const s = score || 0;
+      const w = Math.max(4, Math.min(80, s));
+      return `<div class="risk-bar-wrap">
+      <div class="risk-bar" style="width:${w}px;background:${riskColor(s)}"></div>
+      <span>${s}</span>
+    </div>`;
+    }
+
+    function render() {
+      const records = (rawData || []).filter(r => r && r.Entity && r.EntityResult);
+      if (records.length === 0) {
+        content.innerHTML = '<div class="no-data">No risk data available.</div>';
+        return;
+      }
+
+      document.getElementById('headerTitle').textContent =
+        `DomainTools — Domain Risk (${records.length} domain${records.length !== 1 ? 's' : ''})`;
+
+      const table = document.createElement('table');
+      table.innerHTML = `<thead><tr>
+      <th>Domain</th>
+      <th>Category</th>
+      <th>Overall</th>
+      <th>Proximity</th>
+      <th>Threat Profile</th>
+      <th>Threats</th>
+      <th>Age (days)</th>
+      <th>Country</th>
+    </tr></thead>`;
+
+      const tbody = document.createElement('tbody');
+      records.forEach(r => {
+        const d = r.EntityResult;
+        const cat = d.risk_category || '';
+        const link = d.iris_investigate_link
+          ? `<a href="${d.iris_investigate_link}" target="_blank">${r.Entity}</a>`
+          : r.Entity;
+        const threats = (d.threat_profile_threats || []).join(', ') || '—';
+        const age = (d.domain_age_days !== undefined && d.domain_age_days !== null) ? d.domain_age_days : '—';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+        <td>${link}</td>
+        <td><span class="badge ${cat}">${cat.replace('_', ' ')}</span></td>
+        <td>${scoreBar(d.overall_risk_score)}</td>
+        <td>${scoreBar(d.proximity_risk_score)}</td>
+        <td>${scoreBar(d.threat_profile_risk_score)}</td>
+        <td>${threats}</td>
+        <td>${age}</td>
+        <td>${(d.ip_country_code || '').toUpperCase() || '—'}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      content.innerHTML = '';
+      content.appendChild(table);
+    }
+
+    render();
+  </script>
 </body>
+
 </html>
