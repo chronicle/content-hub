@@ -12,10 +12,10 @@ Classify the provided Google SecOps SOAR action into the official **Outcome Cate
 
 ### Official Outcome Categories Taxonomy (27 Categories)
 
-An action belongs to a category ONLY IF it demonstrably executes the expected outcome through physical Python API calls. Unmatched categories default to `false`.
+An action belongs to a category ONLY IF it demonstrably executes the expected outcome through physical Python API calls. If an action's operations do not strictly match any of the canonical 27 categories (such as updating alerts in 3rd-party external platforms, performing technical DNS resolutions, administrative operations, or utility checks), all 27 boolean category flags must remain `false` (only the `reasoning` field is populated).
 
 #### Group 1: Enrichment, Search & Context (Read-Only Operations)
-- **`enrich_ioc`**: Queries external threat intelligence to retrieve reputation, threat scores, malware family, or context for external indicators (IP, domain, URL, hash, CVE). *(Technical DNS/IP lookups without reputation map to `Other` / all false).*
+- **`enrich_ioc`**: Queries external threat intelligence to retrieve reputation, threat scores, malware family, or context for external indicators (IP, domain, URL, hash, CVE). *(Technical DNS/IP lookups without reputation scoring are not enrichments and must leave all 27 category flags set to false).*
 - **`enrich_asset`**: Queries internal inventory, CMDB, or vulnerability databases to return contextual metadata, configuration, or vulnerability insights for specific internal entities (hosts, users, internal IPs).
 - **`search_asset`**: Queries directory services (LDAP/Active Directory), CMDBs, or device search engines to find users, hosts, devices, or group members matching search criteria or group filters.
 - **`search_events`**: Queries SIEM logs, data lakes, firewall traffic/threat logs, or endpoint telemetry repositories to return a collection of historical logs or events.
@@ -42,7 +42,7 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
 - **`submit_file`**: Uploads a file or sample to an external sandbox or analysis engine for dynamic detonation/scanning.
 
 #### Group 3: Platform Operations & Communication
-- **`update_alert`**: Modifies status, severity, assignee, dismissal state, or resolution of a security alert in SecOps or external security platform.
+- **`update_alert`**: Modifies the status, severity, or assignee of an alert/case strictly within the Google SecOps platform (e.g., using Siemplify internal alert/case manipulation methods). Actions updating alerts/issues/incidents in external 3rd-party security platforms (e.g., Azure Security Center, Defender, Sentinel, Orca, Wiz) do NOT match `update_alert` and must leave all 27 outcome category boolean flags set to `false`.
 - **`add_alert_comment`**: Appends analyst notes or comments to the alert activity timeline in SecOps or external security platform.
 - **`send_message`**: Dispatches a notification, card, or message to a chat/collaboration platform (e.g., Slack, Teams, Google Chat).
 - **`download_file`**: Retrieves any file, report artifact (PDF/XML/CSV), or sandbox dump from an external system and downloads/attaches it to the SOAR case via `siemplify.result.add_attachment` or file save.
@@ -87,7 +87,7 @@ siemplify.update_entities([entity])
 }
 ```
 
-#### Example 2: External Security Alert Status Update
+#### Example 2: External Security Alert Status Update vs. Internal SecOps Alert Update
 *Code Snippet:*
 ```python
 manager = SecurityAlertPlatformManager(client_id=client_id, secret=secret)
@@ -98,8 +98,7 @@ siemplify.result.add_result_json({"status": "success", "alert_id": alert_id})
 ```json
 {
   "outcome_categories": {
-    "reasoning": "Step 1 (State Boundary & Action Classification): The action executes an external state-mutating POST/PATCH operation on an external security system, so evaluate Group 2 and Group 3 platform operations. Step 2 (Physical Code Evidence): Calls `manager.update_alert_status(alert_id=alert_id, status=\"Resolved\", comment=\"Closed via SOAR\")` to update the state of an alert record in the external security platform. Step 3 (Taxonomy Mapping & Disambiguation): Matches 'Update Alert' because it modifies the lifecycle status of a security alert. Does not match 'Update Ticket' (which applies to ITSM systems like Jira/ServiceNow) or 'Contain Host' (which isolates endpoints via EDR).",
-    "update_alert": true
+    "reasoning": "Step 1 (State Boundary & Action Classification): The action executes an external state-mutating POST/PATCH operation to update the status of an alert in an external 3rd-party security platform (not internal Google SecOps). Step 2 (Physical Code Evidence): Calls `manager.update_alert_status(alert_id=alert_id, status=\"Resolved\", comment=\"Closed via SOAR\")` on the external platform API. Step 3 (Taxonomy Mapping & Disambiguation): Does not match 'Update Alert' because `update_alert` is strictly reserved for updating alerts within the Google SecOps platform itself. Does not match 'Update Ticket' (external system is a security platform, not an ITSM platform). All outcome categories are false."
   }
 }
 ```
