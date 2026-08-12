@@ -296,10 +296,6 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             comment=comment,
         )
         self._wiz_alerts_closed_this_run = True
-        self.logger.info(
-            f"Closed alert {alert.identifier} in case "
-            f"{job_case.case_detail.id_} due to Wiz threat closure"
-        )
 
     def _reopen_alert_inbound(
         self,
@@ -801,10 +797,6 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             alert_name=alert.name,
             case_id=str(job_case.case_detail.id_),
             new_priority=target_priority,
-        )
-        self.logger.info(
-            f"Escalated priority of alert {alert.identifier} "
-            f"to {target_priority}"
         )
 
         key = (job_case.case_detail.id_, threat_id, target_priority)
