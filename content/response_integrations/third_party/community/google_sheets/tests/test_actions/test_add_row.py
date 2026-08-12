@@ -71,3 +71,29 @@ def test_add_row_returns_failure_details_when_insert_fails(
     )
     assert action_output.results.result_value is False
     assert action_output.results.execution_state.value == EXECUTION_STATE_FAILED
+
+
+@set_metadata(
+    integration_config_file_path=CONFIG_PATH,
+    parameters={
+        **DEFAULT_PARAMETERS,
+        "Row Index": '[Get Tracking Column.JsonResult| "values" | count()]',
+    },
+)
+def test_add_row_returns_clear_failure_for_invalid_row_index(
+    action_output: MockActionOutput,
+) -> None:
+    fake_sheet = FakeSpreadsheet(FakeWorksheet())
+
+    with unittest.mock.patch(
+        CREATE_SPREADSHEET_PATH,
+        return_value=fake_sheet,
+    ) as create_spreadsheet:
+        AddRow.main()
+
+    create_spreadsheet.assert_not_called()
+    assert action_output.results.output_message == (
+        "Failed to add row to the sheet. Error: Row Index must be a positive integer."
+    )
+    assert action_output.results.result_value is False
+    assert action_output.results.execution_state.value == EXECUTION_STATE_FAILED
