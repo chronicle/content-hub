@@ -44,6 +44,13 @@ class FieldAgent:
         try:
             return await gemini.send_message(prompt_text, raise_error_if_empty_response=True, response_json_schema=target_model)
         except Exception as e:
+            try:
+                raw_text = await gemini.send_message(prompt_text, raise_error_if_empty_response=True, response_json_schema=None)
+                if isinstance(raw_text, str) and hasattr(target_model, "model_fields"):
+                    if self.config.field_name in target_model.model_fields:
+                        return target_model(**{self.config.field_name: raw_text.strip()})
+            except Exception as inner_e:
+                logger.error(f"Fallback text generation also failed for {self.config.field_name}: {inner_e}")
             logger.error(f"Failed to generate draft for {self.config.field_name}: {e}")
             return str(e)
 

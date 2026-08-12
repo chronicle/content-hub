@@ -387,16 +387,19 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         return final_results
 
     async def _get_integration_status(self) -> IntegrationStatus:
+        # Source integrations containing pyproject.toml or definition.yaml take precedence
+        # and must not resolve to stale external build directories in host out/ unless requested.
+        pyproject_file: anyio.Path = self.integration / constants.PROJECT_FILE
+        definition_file: anyio.Path = self.integration / constants.DEFINITION_FILE
+        if (await pyproject_file.exists() or await definition_file.exists()) and not getattr(self, "from_build", False):
+            return IntegrationStatus(is_built=False, out_path=self.integration)
+
+        # Check if the integration itself is built (e.g. contains Integration-*.def directly in source, as in tip-marketplace)
+        async for _f in self.integration.glob("Integration-*.def"):
+            return IntegrationStatus(is_built=True, out_path=self.integration)
+
         out_path: anyio.Path = paths.get_out_path(self.integration_name, src=self.src)
         is_built: bool = await out_path.exists()
-
-        # If it's not built in the out directory, check if the integration itself is built
-        if not is_built:
-            # Look for any .def file in the integration directory
-            async for _f in self.integration.glob("Integration-*.def"):
-                is_built = True
-                out_path = self.integration
-                break
 
         return IntegrationStatus(is_built=is_built, out_path=out_path)
 
