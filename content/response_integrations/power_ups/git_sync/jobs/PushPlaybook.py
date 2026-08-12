@@ -63,6 +63,14 @@ def main():
         pushed_playbooks = set()
 
         for playbook in installed_playbooks:
+            is_block = playbook.get("playbookType") == 1
+            if is_block and not include_blocks:
+                if playbook.get("name") in playbooks_allowlist or playbook.get("categoryName") in folders_allowlist:
+                    siemplify.LOGGER.info(
+                        f"Skipping Block '{playbook.get('name')}' because 'Include Playbook Blocks' is set to False."
+                    )
+                continue
+
             if (
                 playbook.get("name") in playbooks_allowlist
                 or playbook.get("categoryName") in folders_allowlist

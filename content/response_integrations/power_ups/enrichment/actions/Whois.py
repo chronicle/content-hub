@@ -22,6 +22,7 @@ import whois_alt
 from ipwhois import IPWhois
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import (
     add_prefix_to_dict,
     convert_dict_to_json_result_dict,
@@ -33,6 +34,14 @@ from TIPCommon.rest.soar_api import create_entity
 from tldextract import extract
 
 from ..core.IpLocation import DbIpCity
+
+SUPPORTED_ENTITY_TYPES = [
+    EntityTypes.ADDRESS,
+    EntityTypes.DOMAIN,
+    EntityTypes.HOSTNAME,
+    EntityTypes.URL,
+    EntityTypes.USER,
+]
 
 
 def create_entity_with_relation(siemplify, new_entity, linked_entity):
@@ -86,8 +95,17 @@ def main():
     json_result = {}
     updated_entities = []
     enriched_entities = {}
-    for entity in siemplify.target_entities:
-        if entity.entity_type == "ADDRESS":
+    suitable_entities = [
+        entity
+        for entity in siemplify.target_entities
+        if entity.entity_type in SUPPORTED_ENTITY_TYPES
+    ]
+
+    if not suitable_entities:
+        siemplify.LOGGER.info("No suitable entities were found to enrich.")
+        output_message = "No suitable entities were found to enrich."
+    for entity in suitable_entities:
+        if entity.entity_type == EntityTypes.ADDRESS:
             try:
                 obj = IPWhois(entity.identifier)
                 obj.lookup_rdap(depth=1)
@@ -98,7 +116,9 @@ def main():
                 enriched_entities[entity.identifier] = ip_whois
                 result_value = "true"
             except Exception as e:
-                print(e)
+                siemplify.LOGGER.error(
+                    f"Failed RDAP lookup for entity {entity.identifier}: {e}"
+                )
         else:
             try:
                 domain = get_domain_from_string(entity.identifier)
@@ -153,7 +173,7 @@ def main():
                         < int(age_threshold)
                         and int(age_threshold) != 0
                     ):
-                        if create_entities and entity.entity_type == "DOMAIN":
+                        if create_entities and entity.entity_type == EntityTypes.DOMAIN:
                             entity.is_suspicious = True
 
                         elif not create_entities:
