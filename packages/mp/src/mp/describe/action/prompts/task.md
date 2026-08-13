@@ -46,7 +46,7 @@ Review these categories carefully. An action can belong to one or more categorie
 - **Contain Host**: Isolates an endpoint from the network via EDR, allowing communication only with the management console.
 - **Uncontain Host**: Removes network isolation and restores the endpoint's full communication capabilities.
 - **Reset Identity Password (User, Account)**: Invalidates the current credentials and triggers a password change or temporary password generation.
-- **Update Identity (User, Account)**: Modifies account metadata, such as group memberships, permissions, or contact information.
+- **Update Identity (User, Account)**: Modifies account metadata, group memberships, Organizational Units (OU), roles, permissions, or contact info in directory/IAM services (applies to user accounts, service accounts, and computer/host accounts in Active Directory/LDAP).
 - **Search Events**: Returns a collection of historical logs or telemetry data matching specific search parameters.
 - **Execute Command on the Host**: Runs a script or system command on a remote endpoint and returns the standard output (STDOUT).
 - **Download File**: Retrieves a specific file from a remote host for local forensic analysis or sandboxing.
