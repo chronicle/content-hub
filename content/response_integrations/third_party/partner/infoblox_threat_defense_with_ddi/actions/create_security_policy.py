@@ -1,27 +1,28 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
-from TIPCommon import extract_action_param
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from TIPCommon.extraction import extract_action_param
 
-from ..core.datamodels import SecurityPolicy
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    CREATE_SECURITY_POLICY_SCRIPT_NAME,
-    RESULT_VALUE_TRUE,
-    RESULT_VALUE_FALSE,
     COMMON_ACTION_ERROR_MESSAGE,
+    CREATE_SECURITY_POLICY_SCRIPT_NAME,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
 )
+from ..core.datamodels import SecurityPolicy
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import (
-    get_integration_params,
-    validate_required_string,
-    parse_tags,
-    parse_and_validate_int_list,
     add_additional_params_to_payload,
+    get_integration_params,
+    parse_and_validate_int_list,
     parse_rules_param,
+    parse_tags,
+    validate_required_string,
 )
 
 
@@ -44,9 +45,7 @@ def create_payload_security_policy(
         "safe_search": safe_search.lower() == "true",
         "network_lists": parse_and_validate_int_list(network_lists, "Network Lists"),
         "dfps": parse_and_validate_int_list(dfps, "DFPS"),
-        "roaming_device_groups": parse_and_validate_int_list(
-            roaming_device_groups, "Roaming Device Groups"
-        ),
+        "roaming_device_groups": parse_and_validate_int_list(roaming_device_groups, "Roaming Device Groups"),
         "tags": parse_tags(tags),
         "rules": parse_rules_param(rules),
     }
@@ -65,16 +64,10 @@ def main():
     api_root, api_key, verify_ssl = get_integration_params(siemplify)
 
     # Action Parameters
-    policy_name = extract_action_param(
-        siemplify, param_name="Policy Name", input_type=str, is_mandatory=True
-    )
-    description = extract_action_param(
-        siemplify, param_name="Description", input_type=str, is_mandatory=False
-    )
+    policy_name = extract_action_param(siemplify, param_name="Policy Name", input_type=str, is_mandatory=True)
+    description = extract_action_param(siemplify, param_name="Description", input_type=str, is_mandatory=False)
     rules = extract_action_param(siemplify, param_name="Rules", input_type=str, is_mandatory=False)
-    network_lists = extract_action_param(
-        siemplify, param_name="Network Lists", input_type=str, is_mandatory=False
-    )
+    network_lists = extract_action_param(siemplify, param_name="Network Lists", input_type=str, is_mandatory=False)
     dfps = extract_action_param(siemplify, param_name="DFPS", input_type=str, is_mandatory=False)
     roaming_device_groups = extract_action_param(
         siemplify, param_name="Roaming Device Groups", input_type=str, is_mandatory=False
@@ -137,9 +130,7 @@ def main():
         siemplify.LOGGER.exception(e)
     except Exception as e:
         status = EXECUTION_STATE_FAILED
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            CREATE_SECURITY_POLICY_SCRIPT_NAME, str(e)
-        )
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(CREATE_SECURITY_POLICY_SCRIPT_NAME, str(e))
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
