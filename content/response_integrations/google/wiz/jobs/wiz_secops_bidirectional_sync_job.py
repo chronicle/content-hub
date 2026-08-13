@@ -24,6 +24,7 @@ from TIPCommon.base.job.base_sync_job import BaseSyncJob
 from TIPCommon.base.job.job_case import JobCase, SyncMetadata
 from TIPCommon.data_models import CaseDataStatus
 from TIPCommon.soar_ops import get_users_profile_cards_with_pagination
+from TIPCommon.validation import ParameterValidator
 
 from ..core import action_init, constants
 from ..core.api_client import WizApiClient
@@ -55,6 +56,19 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         self._parse_fields_to_sync()
         client: WizApiClient = action_init.create_api_client(self.soar_job)
         return client
+
+    def _validate_params(self) -> None:
+        if (
+            hasattr(self.params, "max_hours_backwards")
+            and self.params.max_hours_backwards is not None
+        ):
+            validator = ParameterValidator(self.soar_job)
+            self.params.max_hours_backwards = validator.validate_range(
+                param_name="Max Hours Backwards",
+                value=self.params.max_hours_backwards,
+                min_limit=constants.MIN_HOURS_BACKWARDS,
+                max_limit=constants.MAX_HOURS_BACKWARDS,
+            )
 
     def _parse_fields_to_sync(self) -> None:
         raw_fields: str | None = None
