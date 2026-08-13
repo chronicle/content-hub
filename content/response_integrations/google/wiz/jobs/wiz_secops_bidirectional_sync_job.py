@@ -771,7 +771,9 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             )
 
     def _sync_single_alert_severity(
-        self, job_case: JobCase, alert: AlertCard
+        self,
+        job_case: JobCase,
+        alert: AlertCard,
     ) -> None:
         threat_id: str | None = self._extract_clean_threat_id(
             self._get_wiz_threat_id(alert)
