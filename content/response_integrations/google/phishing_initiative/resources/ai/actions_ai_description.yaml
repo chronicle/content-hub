@@ -1,57 +1,40 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get Url Status:
   ai_description: >-
     ### General Description
 
-    Enriches URL entities by querying the Phishing Initiative API to determine their
-    reputation and status. This action helps security analysts identify known phishing
-    URLs by retrieving real-time data from the Phishing Initiative database.
-
-
-    ### Parameters Description
-
-    This action does not require any input parameters.
-
-
-    ### Additional Notes
-
-    The action specifically targets URL entities and will mark them as suspicious
-    if the Phishing Initiative service categorizes them as "phishing".
+    Retrieves the status of URL entities using the Phishing Initiative API. It checks
+    if the URLs have been submitted to the service and whether they are classified
+    as phishing, enriching the entities with this threat intelligence.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Phishing Initiative manager
-    using the API Root and API Token from the integration configuration.
+    1. Iterates through the target entities and filters for URL entities.
 
-    2. **Entity Filtering**: It iterates through the target entities, selecting only
-    those of type URL.
+    2. Makes a GET request to the Phishing Initiative API (`/api/v1/urls/lookup/`)
+    for each URL to retrieve its current status.
 
-    3. **API Query**: For each URL entity, it performs a lookup via the Phishing Initiative
-    API.
+    3. If the URL has a status other than "not submitted", it enriches the entity
+    by adding the status to its `additional_properties` and marking it as enriched.
 
-    4. **Data Processing**:
-       - If the URL is found (status is not "not submitted"), it adds the status to
-    the entity's additional properties and marks the entity as enriched.
-       - If the status is explicitly "phishing", the entity is marked as suspicious.
-    5. **Internal Updates**: The action updates the entities within Google SecOps
-    with the new metadata.
+    4. If the status is explicitly identified as "phishing", it marks the entity as
+    suspicious.
 
-    6. **Final Output**: It returns a summary message of the found URLs and their
-    statuses, along with a JSON result containing the raw API data.
+    5. Updates the enriched entities in the Google SecOps platform.
+
+    6. Returns a JSON result containing the detailed API response for each processed
+    URL.
+
+
+    ### Additional Notes
+
+    The action updates the `is_enriched` and `is_suspicious` flags on the entities
+    based on the API response. It does not create insights but does attach the raw
+    JSON results to the action execution.
+  ai_short_description: >-
+    Retrieves the status of URL entities from the Phishing Initiative API, enriching
+    them with their current classification and marking them as suspicious if identified
+    as phishing.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -62,11 +45,49 @@ Get Url Status:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches data via a GET request to the Phishing Initiative API (fetches_data=true).
+      It does not mutate external data (can_mutate_external_data=false) or internal
+      data outside of entities (can_mutate_internal_data=false). It updates entities
+      using `siemplify.update_entities` (can_update_entities=true). It does not create
+      insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -80,34 +101,71 @@ Get Url Status:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and filters them using
+      the condition `if entity.entity_type == URL:` (where URL is mapped to EntityTypes.URL).
+      Therefore, it targets URL entities and filters strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence (phishing status) for URL indicators
+      from the Phishing Initiative API. This aligns perfectly with the 'Enrich IOC'
+      expected outcome. It does not mutate external data, update alerts, or perform
+      other actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool used to verify the connectivity between
-    Google SecOps and the Phishing Initiative service. It validates that the integration's
-    configuration parameters, such as the API Root and API Token, are correct and
-    that the service is reachable over the network.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
+    Tests connectivity to the Phishing Initiative API to ensure the integration is
+    configured correctly and can communicate with the service.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action fetches the 'Api Root' and 'Api Token'
-    from the Phishing Initiative integration settings.
+    1. Retrieves the API Root and API Token from the integration configuration.
 
-    2. **Manager Initialization**: It initializes the Phishing Initiative API manager
-    with the provided credentials.
+    2. Initializes the Phishing Initiative manager.
 
-    3. **Connectivity Check**: The action executes a URL lookup request for a hardcoded
-    dummy URL (http://www.antiphishing.org/) to verify the API's responsiveness.
+    3. Sends a test request to the API using a dummy URL (`http://www.antiphishing.org/`).
 
-    4. **Status Reporting**: Based on the API response, the action returns a success
-    message ('Connection Established') or a failure message ('Connection Failed').
+    4. Evaluates the response and returns a success message if the connection is established,
+    or a failure message otherwise.
+
+
+    ### Additional Notes
+
+    This action is typically used for diagnostic purposes during the initial setup
+    or troubleshooting of the Phishing Initiative integration.
+  ai_short_description: >-
+    Tests connectivity to the Phishing Initiative API by sending a test request using
+    a dummy URL.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -116,12 +174,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for alerts/entities, mutate external or internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -135,3 +230,38 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It simply tests connectivity
+      using a hardcoded dummy URL.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not perform any enrichment,
+      mutation, or specific operations that align with the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

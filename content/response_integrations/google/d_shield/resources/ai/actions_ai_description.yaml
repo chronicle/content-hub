@@ -1,54 +1,88 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get Ip Info:
-  ai_description: "### General Description\nEnriches external IP Address entities\
-    \ using the DShield (SANS Internet Storm Center) API. This action retrieves threat\
-    \ intelligence and reputation data, such as the number of packets blocked from\
-    \ the IP, the number of unique targets attacked, ASN information, and geographic\
-    \ data. The retrieved information is used to populate entity attributes and provide\
-    \ a structured data table for analysts.\n\n### Parameters\nThere are no user-configurable\
-    \ parameters for this action.\n\n### Flow Description\n1. **Entity Filtering**:\
-    \ The action identifies all `ADDRESS` (IP) entities in the current scope that\
-    \ are not marked as internal.\n2. **Data Retrieval**: For each valid entity, it\
-    \ queries the DShield API using the IP address as the identifier.\n3. **Data Processing**:\
-    \ The API response is flattened and prefixed with 'DShield' for consistency.\n\
-    4. **Internal Enrichment**: \n    *   Adds a CSV-formatted table to the entity\
-    \ in the Google SecOps UI.\n    *   Updates the entity's additional properties\
-    \ with the DShield data.\n    *   Sets the `is_enriched` flag to `true` for the\
-    \ entity.\n5. **Finalization**: Updates the entities within the case and returns\
-    \ a summary of the enriched addresses.\n\n### Additional Notes\nThis action strictly\
-    \ processes external IP addresses. If an IP is marked as internal in the environment\
-    \ configuration, it will be skipped to avoid unnecessary API calls and potential\
-    \ false positives."
+  ai_description: >-
+    ### General Description
+
+    Queries DShield to retrieve threat intelligence and information regarding external
+    IP addresses. This action enriches IP entities with data such as packet block
+    counts and attack targets, appending the results directly to the entities.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities, filtering for IP addresses (ADDRESS entity
+    type) that are not marked as internal.
+
+    2. Makes a GET request to the DShield API (`/ip/{ip}`) for each valid IP address
+    to retrieve threat information.
+
+    3. Parses the retrieved data, converts it to a flat dictionary, and attaches it
+    to the entity as a CSV table.
+
+    4. Updates the entity's `additional_properties` with the retrieved data and marks
+    the entity as enriched (`is_enriched = True`).
+
+    5. Saves the updated entities back to the platform and returns the aggregated
+    data as a JSON result.
+
+
+    ### Additional Notes
+
+    Internal IP addresses are explicitly skipped during execution.
+  ai_short_description: >-
+    Queries DShield to retrieve threat intelligence and information about external
+    IP addresses, enriching the entities with the retrieved data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity additional properties with DShield reputation data and sets the
-      is_enriched flag to true.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the DShield API to fetch IP information (fetches_data=true).
+      It does not mutate external data. It updates internal entities by modifying
+      their additional_properties and calling `siemplify.update_entities` (can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -62,40 +96,72 @@ Get Ip Info:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and applies the filter
+      `if entity.entity_type == ADDRESS and not entity.is_internal:`. This means it
+      specifically targets ADDRESS entities and filters them based on their `entity_type`
+      and `is_internal` attributes.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence data (counts, attacks) for external IP
+      addresses from DShield. This directly aligns with the 'Enrich IOC' expected
+      outcome. It does not mutate external systems or perform containment/ticketing
+      operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility used to verify the connectivity between
-    Google SecOps and the DShield API. Its primary purpose is to ensure that the integration
-    is correctly configured and that the DShield service is reachable from the environment.
-
-
-    ### Parameters
-
-    There are no parameters for this action. It uses the global integration configuration
-    (Api Root) to perform the connectivity test.
-
-
-    ### Additional Notes
-
-    - This action does not interact with or process any entities.
-
-    - It is a standard 'Test Connectivity' action typically used during integration
-    setup or troubleshooting.
+    Tests connectivity to the DShield API to ensure the integration is configured
+    correctly and can communicate with the service.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the 'Api Root' parameter
-    from the DShield integration settings.
+    1. Retrieves the API Root URL from the integration configuration.
 
-    2. **Connectivity Test**: It attempts to establish a connection to the configured
-    API URL using the DShieldManager's `test_connectivity` method.
+    2. Initializes the DShieldManager.
 
-    3. **Status Reporting**: If the connection is successful, it returns a success
-    message ('Connection Established'). If the URL is malformed or unreachable, it
-    returns a failure message ('Connection Failed').
+    3. Executes a connectivity test by attempting to open the API URL using an HTTP
+    request.
+
+    4. Returns a success or failure message based on the connection result.
+
+
+    ### Additional Notes
+
+    This action is typically used as a diagnostic tool to verify network access and
+    configuration validity for the DShield integration.
+  ai_short_description: >-
+    Tests connectivity to the DShield API to ensure the integration is configured
+    correctly and can communicate with the service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -106,10 +172,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a basic HTTP request to the API root to verify connectivity.
+      It does not fetch contextual data, mutate external or internal data, update
+      entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -123,3 +226,38 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It solely tests connectivity
+      to the configured API endpoint.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticketing.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

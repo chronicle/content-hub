@@ -290,7 +290,10 @@ class Job(ABC, Generic[ApiClient]):
         self.logger.info("Setting parameters as variables")
         for param in params:
             is_password = param.type_ == JobParamType.PASSWORD
-            default_value = param.value
+            # For PASSWORD type parameters, default_value from GetInstalledJobs API
+            # will be masked (e.g. '*********') even when empty. We set it to None to avoid
+            # using masked default values for password fields.
+            default_value = None if is_password else param.value
 
             input_type = str
             if param.type_ == JobParamType.BOOLEAN:

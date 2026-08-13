@@ -1,80 +1,99 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 EnrichEntities:
   ai_description: >-
     ### General Description
 
-    The **Enrich Entities** action retrieves threat intelligence for IP Address and
-    Hostname entities from ThreatCrowd. It helps analysts identify related infrastructure,
-    malware associations, and community reputation to assess the risk level of entities
-    within a case.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies on the global
-    integration configuration for connectivity.
-
-
-    ### Additional Notes
-
-    - The action uses the 'Use SSL' configuration from the ThreatCrowd integration
-    settings to determine if API requests should be verified.
-
-    - Entities are marked as suspicious if the ThreatCrowd community vote is -1 (Malicious).
+    Enriches IP Address and Hostname entities using ThreatCrowd to quickly identify
+    related infrastructure and malware. The action retrieves threat intelligence reports
+    and updates the entities with the findings, including marking them as suspicious
+    if community votes indicate malicious activity.
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves the integration configuration and initializes
-    the ThreatCrowd API client.
+    1. Iterates through the target entities provided in the case.
 
-    2. **Entity Filtering**: Identifies all IP Address and Hostname entities in the
-    current scope.
+    2. Filters the entities to process only those of type `ADDRESS` (IP) and `HOSTNAME`
+    (Domain).
 
-    3. **Data Retrieval**: Queries the ThreatCrowd API for each identified entity
-    to obtain a reputation report.
+    3. Makes a GET request to the ThreatCrowd API to retrieve a threat report for
+    each valid entity.
 
-    4. **Enrichment**: For each successful query, the action:
-        - Populates the entity's additional properties with the report data.
-        - Adds a data table to the entity showing the flattened report.
-        - Adds a direct link to the ThreatCrowd report page.
-        - Updates the entity's suspicious status based on community votes.
-        - Marks the entity as enriched.
-    5. **Update**: Commits the changes to the entities in the Google SecOps platform.
+    4. If a report is successfully retrieved, enriches the entity by attaching a data
+    table, a web link to the full report, and updating the entity's additional properties
+    with the flattened report data.
 
-    6. **Results**: Returns a JSON object containing the raw data for all enriched
-    entities.
+    5. Evaluates the `votes` field from the ThreatCrowd report; if the vote is malicious
+    (-1), the entity's `is_suspicious` flag is set to true.
+
+    6. Marks the entity as enriched and updates the entities within the Google SecOps
+    platform.
+
+    7. Returns the raw report data as a JSON result.
+
+
+    ### Additional Notes
+
+    This action relies on ThreatCrowd's community voting system to determine the maliciousness
+    of an indicator. Ensure that the integration is properly configured to reach the
+    ThreatCrowd API.
+  ai_short_description: >-
+    Enriches IP Address and Hostname entities using ThreatCrowd to identify related
+    infrastructure and malware, updating entity properties and suspicious status based
+    on the retrieved threat intelligence.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes (additional_properties), sets the 'is_suspicious'
-      flag based on community votes, and adds data tables and links to the entities.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the ThreatCrowd API to fetch report data (fetches_data=true).
+      It does not perform any state-changing operations on external systems (can_mutate_external_data=false)
+      or internal systems outside of entities (can_mutate_internal_data=false). It
+      updates the entities with the retrieved data using `siemplify.update_entities`
+      (can_update_entities=true). It does not create insights, modify alert data,
+      or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -88,39 +107,72 @@ EnrichEntities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and explicitly filters
+      them using `if entity.entity_type == EntityTypes.ADDRESS` and `if entity.entity_type
+      == EntityTypes.HOSTNAME`. It does not filter by any other entity attributes.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence data (related infrastructure, malware,
+      and community votes) for IP addresses and hostnames from ThreatCrowd. This directly
+      aligns with the 'Enrich IOC' expected outcome. It does not mutate external state,
+      update alerts, or perform other actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a utility designed to verify the connectivity between Google
-    SecOps and the ThreatCrowd API. It ensures that the integration is correctly configured
-    and that the external service is reachable.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action uses a hardcoded dummy IP address (8.8.8.8) to perform a test lookup
-    against the ThreatCrowd API to validate the connection.
+    Tests connectivity to the ThreatCrowd API to ensure the integration is configured
+    correctly and can communicate with the service.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the integration configuration,
-    specifically the 'Use SSL' setting.
+    1. Retrieves the integration configuration (e.g., SSL verification settings).
 
-    2. **Manager Initialization**: It initializes the ThreatCrowdManager with the
-    SSL preference.
+    2. Initializes the ThreatCrowd manager.
 
-    3. **Connectivity Test**: It calls the test_connectivity method, which performs
-    a GET request for a report on the dummy IP 8.8.8.8.
+    3. Makes a test API call (GET request) to the ThreatCrowd API using a dummy IP
+    address (8.8.8.8) to verify connectivity.
 
-    4. **Result Handling**: If the API returns a valid response, the action concludes
-    with a 'Connection Established' message. Otherwise, it reports 'Connection Failed'.
+    4. Returns a success message if the connection is established, or a failure message
+    if it is not.
+
+
+    ### Additional Notes
+
+    This action is typically used for diagnostic purposes to verify that the SOAR
+    platform can successfully reach the ThreatCrowd service.
+  ai_short_description: >-
+    Tests connectivity to the ThreatCrowd API to ensure the integration is configured
+    correctly and can communicate with the service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -131,10 +183,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for alerts/entities. It does not mutate external data, internal data, update
+      entities, create insights, modify alerts, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -148,3 +237,39 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It simply performs
+      a static API call to test connectivity.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

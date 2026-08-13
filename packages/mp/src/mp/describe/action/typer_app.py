@@ -16,14 +16,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import pathlib  # noqa: TC003
+import pathlib  # ruff:ignore[typing-only-standard-library-import]
 from typing import Annotated
 
 import typer
 
 import mp.core.config
 
-from .describe import DescribeAction
+from .describe import MultiPromptDescribeAction
 from .describe_all import describe_all_actions
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -41,10 +41,32 @@ app = typer.Typer(help="Commands for describing actions")
         "    $ mp describe action -i aws_ec2 --all\n\n"
         "    $ mp describe action --all\n\n"
         "    $ mp describe action --all --src ./custom_folder\n\n"
+        "    $ mp describe action -i aws_ec2 --prompt-overrides /path/to/overrides.json\n\n"
+        "JSON Prompt Overrides Schema:\n\n"
+        "    The --prompt-overrides flag accepts a path to a JSON configuration file.\n"
+        "    Expected JSON structure:\n\n"
+        "    {\n"
+        '      "prompt_config": [\n'
+        "        {\n"
+        '          "location": "/path/to/ai_description.md",\n'
+        '          "field_name": "ai_description"\n'
+        "        },\n"
+        "        {\n"
+        '          "location": "/path/to/prompt.md",\n'
+        '          "field_name": "field_with_undefined_schema",\n'
+        '          "schema": {\n'
+        '            "model_name": "ModelName",\n'
+        '            "type": "string",\n'
+        '            "description": "Description of the field we do not have schema defined in code.",\n'
+        '            "required": true\n'
+        "          }\n"
+        "        }\n"
+        "      ]\n"
+        "    }\n"
     ),
     no_args_is_help=True,
 )
-def describe(  # noqa: PLR0913
+def describe(  # ruff:ignore[too-many-arguments]
     actions: Annotated[list[str] | None, typer.Argument(help="Action names")] = None,
     integration: Annotated[str | None, typer.Option("-i", "--integration", help="Integration name")] = None,
     *,
@@ -60,6 +82,13 @@ def describe(  # noqa: PLR0913
     dst: Annotated[
         pathlib.Path | None, typer.Option(help="Customize destination folder to save the AI descriptions.")
     ] = None,
+    prompt_overrides: Annotated[
+        pathlib.Path | None,
+        typer.Option(
+            "--prompt-overrides",
+            help="Path to JSON prompt configuration file to override prompts for specific fields.",
+        ),
+    ] = None,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
     override: Annotated[
@@ -74,6 +103,7 @@ def describe(  # noqa: PLR0913
         all_marketplace: Whether to describe all integrations in the marketplace.
         src: Customize the source folder to describe from.
         dst: Customize the destination folder to save the AI descriptions.
+        prompt_overrides: Path to JSON prompt configuration file.
         quiet: Quiet log options.
         verbose: Verbose log options.
         override: Whether to rewrite existing descriptions.
@@ -92,12 +122,19 @@ def describe(  # noqa: PLR0913
 
         sem: asyncio.Semaphore = asyncio.Semaphore(mp.core.config.get_gemini_concurrency())
         asyncio.run(
-            DescribeAction(integration, target_action_file_names, src=src, dst=dst, override=override).describe_actions(
-                sem=sem
-            )
+            MultiPromptDescribeAction(
+                integration,
+                target_action_file_names,
+                src=src,
+                dst=dst,
+                override=override,
+                prompt_overrides=prompt_overrides,
+            ).describe_actions(sem=sem)
         )
     elif all_marketplace:
-        asyncio.run(describe_all_actions(src=src, dst=dst, override=override))
+        asyncio.run(
+            describe_all_actions(src=src, dst=dst, override=override, prompt_overrides=prompt_overrides)
+        )
     else:
         logger.error("Please specify either --integration or --all")
         raise typer.Exit(code=1)

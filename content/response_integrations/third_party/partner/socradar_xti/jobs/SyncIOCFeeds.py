@@ -2,13 +2,18 @@
 Sync IOC Feeds Job
 ==================
 Scheduled job that fetches IOCs from configured SOCRadar Threat Feed
-collections and writes them to Chronicle SIEM reference lists.
+collections and writes them to Google SecOps SOAR Custom Lists.
 
 Runs daily (or at configured interval). Groups IOCs by type
-(ip, domain, hash, url) and updates one reference list per type.
+(ip, domain, hash, url) and writes one Custom List category per type.
+
+Note: the SOAR SDK (SiemplifyJob) exposes Custom Lists, not SIEM reference
+lists, so each IOC is stored as a Custom List entry (category = list name,
+identifier = IOC value) scoped to the configured environment.
 """
 from __future__ import annotations
 
+from soar_sdk.SiemplifyDataModel import CustomList
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
 
@@ -17,11 +22,26 @@ from ..core.SOCRadarManager import SOCRadarManager
 INTEGRATION_NAME = "SOCRadar"
 JOB_NAME = "SOCRadar - Sync IOC Feeds"
 
-# Reference list name prefix — creates lists like:
+# Custom List category prefix — creates categories like:
 # SOCRadar_IOC_ip, SOCRadar_IOC_domain, SOCRadar_IOC_hash, SOCRadar_IOC_url
 REFERENCE_LIST_PREFIX = "SOCRadar_IOC"
 
+# Max Custom List entries sent per API call (bounds request size for large feeds).
+CUSTOM_LIST_BATCH_SIZE = 1000
+
+# Default SOAR environment for Custom List entries when none is configured.
+DEFAULT_ENVIRONMENT = "Default Environment"
+
 IOC_TYPES = ["ip", "domain", "hash", "url"]
+
+# Map SOCRadar feed_type values to custom-list bucket names.
+# NOTE: the feed returns domain IOCs as "hostname" (OpenAPI docs are wrong).
+FEED_TYPE_MAP = {
+    "hostname": "domain", "domain": "domain",
+    "ip": "ip", "ipv4": "ip", "ipv6": "ip",
+    "url": "url",
+    "hash": "hash", "md5": "hash", "sha1": "hash", "sha256": "hash",
+}
 
 
 def _parse_uuids(raw: str | None) -> list[str]:
@@ -58,6 +78,8 @@ def main() -> None:
             max_iocs = 5000
         list_prefix = siemplify.extract_job_param("Reference List Prefix",
                                                    default_value=REFERENCE_LIST_PREFIX)
+        environment = siemplify.extract_job_param("Environment",
+                                                  default_value=DEFAULT_ENVIRONMENT)
 
         uuids = _parse_uuids(uuids_raw)
         uuids = list(dict.fromkeys(uuids))  # Deduplicate, preserve order
@@ -84,9 +106,9 @@ def main() -> None:
                 for ioc in feed_data[:max_iocs]:
                     if not isinstance(ioc, dict):
                         continue
-                    ioc_type = str(ioc.get("feed_type") or "").lower()
+                    ioc_type = FEED_TYPE_MAP.get(str(ioc.get("feed_type") or "").lower().strip())
                     ioc_value = str(ioc.get("feed") or "").strip()
-                    if ioc_type in iocs_by_type and ioc_value:
+                    if ioc_type and ioc_value:
                         iocs_by_type[ioc_type].add(ioc_value)
                         count += 1
 
@@ -98,24 +120,44 @@ def main() -> None:
                 siemplify.LOGGER.error(f"Failed to process UUID {uuid}: {e}")
                 feed_stats["error"] += 1
 
-        # Update Chronicle SIEM reference lists
+        # Write IOCs to SOAR Custom Lists (one category per IOC type).
+        lists_written = 0
+        lists_failed = 0
+        lists_with_values = 0
         for ioc_type in IOC_TYPES:
             values = sorted(iocs_by_type[ioc_type])
             if not values:
                 siemplify.LOGGER.info(f"No {ioc_type} IOCs to sync, skipping")
                 continue
 
+            lists_with_values += 1
             list_name = f"{list_prefix}_{ioc_type}"
             try:
-                siemplify.add_values_to_custom_list(list_name, values)
-                siemplify.LOGGER.info(f"Updated reference list '{list_name}' with {len(values)} entries")
+                for start in range(0, len(values), CUSTOM_LIST_BATCH_SIZE):
+                    batch = values[start:start + CUSTOM_LIST_BATCH_SIZE]
+                    custom_list_items = [
+                        CustomList(value, list_name, environment) for value in batch
+                    ]
+                    siemplify.add_entities_to_custom_list(custom_list_items)
+                lists_written += 1
+                siemplify.LOGGER.info(
+                    f"Updated custom list '{list_name}' with {len(values)} entries"
+                )
             except Exception as e:
-                siemplify.LOGGER.error(f"Failed to update reference list '{list_name}': {e}")
+                lists_failed += 1
+                siemplify.LOGGER.error(f"Failed to update custom list '{list_name}': {e}")
 
         siemplify.LOGGER.info(
             f"Sync complete. Feeds: {feed_stats['success']} OK / {feed_stats['error']} failed. "
+            f"Lists: {lists_written} written / {lists_failed} failed. "
             f"Total IOCs processed: {feed_stats['total_iocs']}"
         )
+
+        # A run that fetched IOCs but wrote none is a failure, not a success.
+        if lists_with_values and lists_written == 0:
+            raise RuntimeError(
+                f"All {lists_failed} custom list update(s) failed; no IOCs were written to SOAR."
+            )
 
     except Exception as e:
         siemplify.LOGGER.error(f"Job failed: {e}")

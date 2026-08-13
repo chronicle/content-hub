@@ -14,12 +14,13 @@
 
 import pytest
 import requests
+from TIPCommon.base.utils import CreateSession
+
 pytest_plugins = ("integration_testing.conftest",)
 
+
 @pytest.fixture(autouse=True)
-def script_session(monkeypatch):
-    from TIPCommon.base.utils import CreateSession
-    import requests
+def script_session(monkeypatch: pytest.MonkeyPatch) -> requests.Session:
     session = requests.Session()
-    monkeypatch.setattr(CreateSession, 'create_session', lambda *args, **kwargs: session)
+    monkeypatch.setattr(CreateSession, "create_session", lambda *args, **kwargs: session)
     return session

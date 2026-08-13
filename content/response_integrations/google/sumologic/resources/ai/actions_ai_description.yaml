@@ -1,74 +1,34 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool designed to verify the connectivity between
-    Google SecOps and the Sumo Logic instance. It ensures that the provided integration
-    parameters (Api Root, Access ID, and Access Key) are correct and that the network
-    path is open and functional.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Api Root** | String | Yes | The base URL of the Sumo Logic API (e.g., `https://api.eu.sumologic.com`).
-    |
-
-    | **Access ID** | String | Yes | The Access ID generated from the Sumo Logic console
-    for authentication. |
-
-    | **Access Key** | String | Yes | The Access Key associated with the Access ID.
-    |
-
-    | **Verify SSL** | Boolean | Yes | If set to `True`, the action will validate
-    the SSL certificate of the Sumo Logic server. Default is `False`. |
-
-
-    ### Additional Notes
-
-    - This action does not process any entities and is intended for system health
-    checks.
-
-    - It is primarily used during the initial setup or troubleshooting of the Sumo
-    Logic integration.
+    Tests connectivity to the Sumo Logic platform to ensure that the integration is
+    configured correctly and can communicate with the Sumo Logic API.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the connection details (Api
-    Root, Access ID, Access Key, and SSL verification preference) from the integration
-    configuration.
+    1. Retrieves the integration configuration parameters (API Root, Access ID, Access
+    Key, Verify SSL).
 
-    2. **Manager Initialization:** A `SumoLogicManager` instance is created to handle
-    communication with the Sumo Logic API.
+    2. Initializes the Sumo Logic manager with the provided credentials.
 
-    3. **Connectivity Test:** The action executes a minimal search query (`| count
-    _sourceCategory`) with a very narrow time range to confirm that the API is reachable
-    and the credentials have sufficient permissions to run jobs.
+    3. Executes a test search query (`| count _sourceCategory`) by making a POST request
+    to the Sumo Logic search jobs API.
 
-    4. **Cleanup:** Immediately after verifying the search job creation, the action
-    deletes the temporary search job to maintain a clean environment in Sumo Logic.
+    4. Deletes the test search job by making a DELETE request to the Sumo Logic API.
 
-    5. **Result Reporting:** If the search job is successfully created and deleted,
-    the action returns a success message. If any step fails, it captures the exception
-    and reports a failure status.
+    5. Returns a success message if the connection and test query are successful,
+    or a failure message if an error occurs.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup of the integration or for
+    troubleshooting connectivity issues. It does not require any action-specific parameters.
+  ai_short_description: >-
+    Tests connectivity to the Sumo Logic platform by executing and deleting a test
+    search job.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -79,10 +39,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action tests connectivity by creating and deleting a test search job. It
+      does not fetch contextual data for alerts, mutate persistent external business
+      data, update internal entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -96,86 +93,128 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process, iterate over, or filter any entities. It solely
+      tests connectivity to the external system.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or containing
+      hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Search:
   ai_description: >-
     ### General Description
 
-    Runs a search query in Sumo Logic and retrieves the results. This is an asynchronous
-    action that first initiates a search job and then polls for its completion. It
-    is designed to handle large datasets by allowing users to specify time ranges
-    and result limits.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Query** | String | Yes | The Sumo Logic query to execute (e.g., `_collector=*`).
-    |
-
-    | **Delete Search Job** | Boolean | No | If checked, the action will delete the
-    search job from Sumo Logic after the search is completed or fails. Default is
-    `False`. |
-
-    | **Since** | String | No | The start date of the search in ISO-8601 format or
-    unix timestamp (milliseconds). Defaults to the last 30 days if not provided. |
-
-    | **To** | String | No | The end date of the search in ISO-8601 format or unix
-    timestamp (milliseconds). Defaults to the current UTC time if not provided. |
-
-    | **Limit** | Integer | No | The maximum number of results to return. Default
-    is 25. |
-
-
-    ### Additional Notes
-
-    - This action is asynchronous and will run in multiple stages (initiation and
-    polling).
-
-    - The `Query` must be in a valid Sumo Logic format.
-
-    - If `Delete Search Job` is enabled, it helps in cleaning up the Sumo Logic environment
-    but prevents manual review of the job in the Sumo Logic UI later.
+    Executes a search query in Sumo Logic to retrieve log messages and telemetry data
+    matching specific criteria.
 
 
     ### Flow Description
 
-    1. **Initiation (First Run):** The action connects to Sumo Logic and creates a
-    search job using the provided `Query`, `Since`, and `To` parameters. It returns
-    the Job ID and sets the status to 'In Progress'.
+    1. Initiates a search job in Sumo Logic using the provided query, start time,
+    and end time via a POST request to the `api/v1/search/jobs` endpoint.
 
-    2. **Polling (Subsequent Runs):** The action checks the status of the search job
-    using the Job ID. If the job is still running, it remains 'In Progress'.
+    2. Polls the job status asynchronously until completion via a GET request to the
+    `api/v1/search/jobs/{job_id}` endpoint.
 
-    3. **Data Retrieval:** Once the job status is 'DONE GATHERING RESULTS', the action
-    fetches the messages (results) up to the specified `Limit`.
+    3. Once completed, retrieves the search results up to the specified limit via
+    a GET request to the `api/v1/search/jobs/{job_id}/messages` endpoint.
 
-    4. **Internal Mutation:** The retrieved results are formatted into a data table
-    and attached to the case. The raw JSON results are also added to the action's
-    output.
+    4. Optionally deletes the search job from Sumo Logic if configured to do so via
+    a DELETE request to the `api/v1/search/jobs/{job_id}` endpoint.
 
-    5. **Cleanup:** If the `Delete Search Job` parameter is set to `True`, the action
-    sends a request to Sumo Logic to delete the job after results are collected.
+    5. Returns the search results as a JSON object and populates a data table in the
+    SecOps platform.
+
+
+    ### Additional Notes
+
+    The action runs asynchronously. Time parameters can be provided in ISO-8601 format
+    or Unix timestamp (milliseconds).
+  ai_short_description: >-
+    Executes a search query in Sumo Logic to retrieve log messages and telemetry data
+    matching specific criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: true
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      If the 'Delete Search Job' parameter is enabled, the action performs a DELETE
-      request to Sumo Logic to remove the search job object after completion.
+      Creates a search job in Sumo Logic and optionally deletes it after completion.
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds a data table to the Google SecOps case containing the search
-      results retrieved from Sumo Logic.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving search results from Sumo Logic. It mutates
+      external data by creating a search job (POST) and optionally deleting it (DELETE).
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -189,3 +228,54 @@ Search:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use any entity-specific
+      identifiers. It operates solely on the provided query and time parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a query to retrieve log messages and telemetry data from
+      Sumo Logic, which directly aligns with the 'Search Events' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query | String | Yes | Sumologic query to run. e.g: _collector=* |
+
+    | Delete Search Job | Boolean | No | If checked, delete the jobs after a search
+    is completed. |
+
+    | Since | String | No | Start date of the search, ISO-8601 or unixtime (milliseconds).
+    e.g. 1970-01-01T00:00:00. Default: Last 30 days. |
+
+    | To | String | No | End date of the search, ISO-8601 or unixtime (milliseconds).
+    e.g. 1970-01-01T00:00:00. Default: now (current utc unixtime). |
+
+    | Limit | String | No | Number of results to return. e.g. 10. Default: 25. |

@@ -248,7 +248,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
         return metadata
 
     @classmethod
-    def _from_built(cls, file_name: str, built: BuiltIntegrationMetadata) -> Self:  # noqa: ARG003
+    def _from_built(cls, file_name: str, built: BuiltIntegrationMetadata) -> Self:  # ruff:ignore[unused-class-method-argument]
         feature_tags: FeatureTags | None = None
         raw_feature_tags: BuiltFeatureTags | None = built.get("FeatureTags")
         if raw_feature_tags is not None:
@@ -269,7 +269,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             name=built["DisplayName"],
             identifier=built["Identifier"],
             python_version=PythonVersion(built["PythonVersion"]),
-            documentation_link=built["DocumentationLink"],  # ty:ignore[invalid-argument-type]
+            documentation_link=built["DocumentationLink"],
             image_base64=image,
             parameters=[IntegrationParameter.from_built(p) for p in built["IntegrationProperties"]],
             should_install_in_system=built.get("ShouldInstalledInSystem", False),
@@ -285,7 +285,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
         )
 
     @classmethod
-    def _from_non_built(cls, file_name: str, non_built: NonBuiltIntegrationMetadata) -> Self:  # noqa: ARG003
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltIntegrationMetadata) -> Self:  # ruff:ignore[unused-class-method-argument]
         feature_tags: FeatureTags | None = None
         raw_feature_tags: NonBuiltFeatureTags | None = non_built.get("feature_tags")
         if raw_feature_tags is not None:
@@ -299,9 +299,9 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             feature_tags=feature_tags,
             name=name,
             identifier=non_built["identifier"],
-            documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
+            documentation_link=non_built.get("documentation_link"),
             description=non_built.get("description") or "",
-            image_base64=non_built.get("image_path"),  # ty:ignore[invalid-argument-type]
+            image_base64=non_built.get("image_path"),
             parameters=[IntegrationParameter.from_non_built(p) for p in non_built["parameters"]],
             should_install_in_system=non_built.get("should_install_in_system", False),
             is_custom=non_built.get("is_custom", False),

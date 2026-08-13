@@ -37,10 +37,19 @@ T_LlmConfig_co = TypeVar("T_LlmConfig_co", bound=LlmConfig, covariant=True)
 T_Schema = TypeVar("T_Schema", bound=BaseModel)
 
 
+DEFAULT_BULK_THRESHOLD: int = 4
+
+
 class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig_co]):
-    def __init__(self, config: T_LlmConfig_co) -> None:
+    def __init__(
+        self,
+        config: T_LlmConfig_co,
+        *,
+        bulk_threshold: int = DEFAULT_BULK_THRESHOLD,
+    ) -> None:
         self.system_prompt: str = ""
         self.config: T_LlmConfig_co = config
+        self.bulk_threshold: int = bulk_threshold
 
     @overload
     async def send_message(
@@ -100,12 +109,14 @@ class LlmSdk(AbstractAsyncContextManager, abc.ABC, Generic[T_LlmConfig_co]):
         /,
         *,
         response_json_schema: type[T_Schema] | None = None,
+        use_batch: bool = False,
     ) -> list[T_Schema | str]:
         """Send multiple messages to the LLM provider in bulk.
 
         Args:
             prompts: The prompts to send to the LLM provider.
             response_json_schema: The JSON schema to validate the responses against.
+            use_batch: Whether to use Google GenAI Batch API when count exceeds threshold.
 
         Returns:
             The responses from the LLM provider.

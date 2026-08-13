@@ -26,7 +26,7 @@ from mp.build_project.restructure.integrations.deconstruct_dependencies import (
     Dependencies,
     DependencyDeconstructor,
     DependencyResolutionResult,
-    _should_add_integration_testing,  # noqa: PLC2701
+    _should_add_integration_testing,  # ruff:ignore[import-private-name]
 )
 
 if TYPE_CHECKING:
