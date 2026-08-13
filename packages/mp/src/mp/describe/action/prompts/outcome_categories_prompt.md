@@ -32,7 +32,7 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
 - **`disable_identity`**: Revokes active sessions and prevents a user or service account from authenticating.
 - **`enable_identity`**: Restores authentication capabilities and system access for a disabled account.
 - **`reset_identity_password`**: Invalidates credentials and triggers a password change or temporary password generation.
-- **`update_identity`**: Modifies account metadata, group memberships, roles, permissions, or contact info in directory/IAM services.
+- **`update_identity`**: Modifies account metadata, group memberships, Organizational Units (OU), roles, permissions, or contact info in directory/IAM services (applies to user accounts, service accounts, and computer/host accounts in Active Directory/LDAP).
 - **`contain_host`**: Isolates an endpoint from the network via EDR agent (allowing communication only with management console).
 - **`uncontain_host`**: Lifts network isolation on an endpoint via EDR agent.
 - **`execute_command_on_the_host`**: Runs a script or system command on a remote endpoint/VM and returns output (STDOUT).
