@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import sys
 from typing import Any
+from urllib.parse import urlparse
 
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
@@ -64,7 +65,6 @@ def main(is_test_run: bool) -> None:
     if proxy_address:
         if "://" not in proxy_address:
             proxy_address = "http://" + proxy_address
-        from urllib.parse import urlparse
         server_url = urlparse(proxy_address)
         scheme: str = server_url.scheme
         hostname: str | None = server_url.hostname
@@ -107,9 +107,9 @@ def main(is_test_run: bool) -> None:
                 siemplify.LOGGER.info(f"Added incident {alert_id} to package results")
 
                 if acknowledge_enabled:
-                    incident_got = manager.acknowledge_incident(incident["id"])
+                    manager.acknowledge_incident(incident["id"])
                     siemplify.LOGGER.info(
-                        f"Incident {incident_got} acknowledged in PagerDuty",
+                        f"Incident {incident['id']} acknowledged in PagerDuty",
                     )
     except Exception as e:
         siemplify.LOGGER.error(

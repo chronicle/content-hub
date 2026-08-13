@@ -53,7 +53,7 @@ class PagerDutyManager:
         API Reference: https://developer.pagerduty.com/api-reference/8a0e1aa2ec666-update-an-incident
 
         Args:
-            incident_id (str): The ID of the incident to acknowledge.
+            incident_id: The ID of the incident to acknowledge.
 
         Returns:
             requests.Response: The API response.
@@ -150,7 +150,7 @@ class PagerDutyManager:
         """Gets an incident from PagerDuty by ID.
 
         Args:
-            incident_id (str): The ID of the incident to retrieve.
+            incident_id: The ID of the incident to retrieve.
 
         Returns:
             SingleJson: The incident details.
@@ -232,11 +232,11 @@ class PagerDutyManager:
         """Creates an incident.
 
         Args:
-            email_from (str): Email address of the user creating the incident.
-            title (str): Title of the incident.
-            service (str): Service ID.
-            urgency (str): Urgency level.
-            body (str): Incident details.
+            email_from: Email address of the user creating the incident.
+            title: Title of the incident.
+            service: Service ID.
+            urgency: Urgency level.
+            body: Incident details.
 
         Returns:
             SingleJson: The created incident or message.
@@ -320,7 +320,7 @@ class PagerDutyManager:
         """Gets user by ID.
 
         Args:
-            userID (str): User ID.
+            userID: User ID.
 
         Returns:
             SingleJson: User dict.
@@ -411,9 +411,9 @@ class PagerDutyManager:
         """Runs a response play.
 
         Args:
-            email (str): Email address.
-            response_plays_id (str): Response play ID.
-            user_id (str): User ID (used as incident ID in payload).
+            email: Email address.
+            response_plays_id: Response play ID.
+            user_id: User ID (used as incident ID in payload).
 
         Returns:
             SingleJson: API response message.

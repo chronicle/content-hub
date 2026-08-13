@@ -334,6 +334,9 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         f"because alert {alert.identifier} was the last open alert "
                         f"and PagerDuty incident {meta.incident_number} was resolved."
                     )
+                    self._remove_synced_entries(
+                        synced_list=[(job_case.case_detail.id_, f"{meta.incident_number}")],
+                    )
                 except Exception as e:
                     self.logger.error(
                         f"Failed to close case {case_id}: {e}"
@@ -353,12 +356,11 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         f"{case_id} because PagerDuty incident "
                         f"{meta.incident_number} was resolved."
                     )
+                    self._remove_synced_entries(
+                        synced_list=[(job_case.case_detail.id_, f"{meta.incident_number}")],
+                    )
                 except Exception as e:
                     self.logger.error(f"Failed to close alert {alert.identifier}: {e}")
-
-            self._remove_synced_entries(
-                synced_list=[(job_case.case_detail.id_, f"{meta.incident_number}")],
-            )
 
     def _sync_case_status_to_product(
         self, res: JobStatusResult, job_case: JobCase
@@ -435,7 +437,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         incident_id, comment
                     )
                     self.logger.info(
-                        f"Successfully synced comments to Secops to Pagerduty incident {incident_id}."
+                        f"Successfully synced comments from SecOps to PagerDuty incident {incident_id}."
                     )
                 except Exception as e:
                     self.logger.error(
