@@ -94,6 +94,13 @@ def describe(  # ruff:ignore[too-many-arguments]
     override: Annotated[
         bool, typer.Option("--override", "-o", help="Rewrite actions that already have their description.")
     ] = False,
+    use_batch: Annotated[
+        bool,
+        typer.Option(
+            "--use-batch",
+            help="Use Google GenAI Batch API for asynchronous batch processing.",
+        ),
+    ] = False,
 ) -> None:
     """Describe actions in a given integration.
 
@@ -107,6 +114,7 @@ def describe(  # ruff:ignore[too-many-arguments]
         quiet: Quiet log options.
         verbose: Verbose log options.
         override: Whether to rewrite existing descriptions.
+        use_batch: Whether to use GenAI Batch API.
 
     Raises:
         typer.Exit: If neither --integration nor --all is specified.
@@ -129,6 +137,7 @@ def describe(  # ruff:ignore[too-many-arguments]
                 dst=dst,
                 override=override,
                 prompt_overrides=prompt_overrides,
+                use_batch=use_batch,
             ).describe_actions(sem=sem)
         )
     elif all_marketplace:

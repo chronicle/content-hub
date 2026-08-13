@@ -102,7 +102,7 @@ async def _maybe_use_semaphore(sem: asyncio.Semaphore | None) -> AsyncGenerator[
 
 
 class DescribeBase(abc.ABC, Generic[T_Metadata]):
-    def __init__(
+    def __init__(  # ruff:ignore[too-many-arguments]
         self,
         integration_name: str,
         resource_names: set[str],
@@ -110,6 +110,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         src: pathlib.Path | None = None,
         dst: pathlib.Path | None = None,
         override: bool = False,
+        use_batch: bool = False,
     ) -> None:
         self.integration_name: str = integration_name
         self.src: pathlib.Path | None = src
@@ -117,6 +118,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         self.resource_names: set[str] = resource_names
         self.override: bool = override
         self.dst: pathlib.Path | None = dst
+        self.use_batch: bool = use_batch
 
     @property
     @abc.abstractmethod
@@ -208,19 +210,20 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         return len(resources)
 
     async def _prepare_resources(self, status: IntegrationStatus, metadata: dict[str, Any]) -> set[str]:
-        if not self.resource_names:
-            self.resource_names = await self._get_all_resources(status)
+        all_resources: set[str] = await self._get_all_resources(status)
 
-        # Prune metadata for resources that no longer exist
+        # Prune metadata for resources that no longer exist in the integration
         # Only for non-integration types which use resource names as keys
         if self.resource_type_name != "integration":
             for key in list(metadata.keys()):
-                if key not in self.resource_names:
+                if key not in all_resources:
                     del metadata[key]
 
+        target_resources: set[str] = self.resource_names or all_resources
+
         if not self.override:
-            resources_to_process: set[str] = {res for res in self.resource_names if res not in metadata}
-            skipped_count: int = len(self.resource_names) - len(resources_to_process)
+            resources_to_process: set[str] = {res for res in target_resources if res not in metadata}
+            skipped_count: int = len(target_resources) - len(resources_to_process)
             if skipped_count > 0:
                 if skipped_count == 1:
                     logger.info(
@@ -237,7 +240,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
                     )
             return resources_to_process
 
-        return self.resource_names
+        return target_resources
 
     async def _execute_descriptions(
         self,
@@ -347,7 +350,11 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         if not valid_prompts:
             return [DescriptionResult(a, None) for a in resources]
 
-        llm_results: list[T_Metadata | str] = await llm.call_gemini_bulk(valid_prompts, self.response_schema)
+        llm_results: list[T_Metadata | str] = await llm.call_gemini_bulk(
+            valid_prompts,
+            self.response_schema,
+            use_batch=self.use_batch,
+        )
 
         return self._map_bulk_results_to_resources(resources, valid_indices, llm_results)
 
@@ -387,16 +394,19 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         return final_results
 
     async def _get_integration_status(self) -> IntegrationStatus:
+        # Source integrations containing pyproject.toml or definition.yaml take precedence
+        # and must not resolve to stale external build directories in host out/ unless requested.
+        pyproject_file: anyio.Path = self.integration / constants.PROJECT_FILE
+        definition_file: anyio.Path = self.integration / constants.DEFINITION_FILE
+        if (await pyproject_file.exists() or await definition_file.exists()) and not getattr(self, "from_build", False):
+            return IntegrationStatus(is_built=False, out_path=self.integration)
+
+        # Check if the integration itself is built (e.g. contains Integration-*.def directly in source)
+        async for _f in self.integration.glob("Integration-*.def"):
+            return IntegrationStatus(is_built=True, out_path=self.integration)
+
         out_path: anyio.Path = paths.get_out_path(self.integration_name, src=self.src)
         is_built: bool = await out_path.exists()
-
-        # If it's not built in the out directory, check if the integration itself is built
-        if not is_built:
-            # Look for any .def file in the integration directory
-            async for _f in self.integration.glob("Integration-*.def"):
-                is_built = True
-                out_path = self.integration
-                break
 
         return IntegrationStatus(is_built=is_built, out_path=out_path)
 

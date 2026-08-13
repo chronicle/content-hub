@@ -34,12 +34,18 @@ DESCRIBE_BULK_SIZE: int = 4
 T_Schema = TypeVar("T_Schema", bound=BaseModel)
 
 
-async def call_gemini_bulk(prompts: list[str], response_json_schema: type[T_Schema]) -> list[T_Schema | str]:
+async def call_gemini_bulk(
+    prompts: list[str],
+    response_json_schema: type[T_Schema],
+    *,
+    use_batch: bool = False,
+) -> list[T_Schema | str]:
     """Call Gemini to describe multiple prompts in bulk.
 
     Args:
         prompts: The prompts to send.
         response_json_schema: The schema for the response.
+        use_batch: Whether to use GenAI Batch API (default: False).
 
     Returns:
         list[T_Schema | str]: The responses from Gemini.
@@ -49,27 +55,31 @@ async def call_gemini_bulk(prompts: list[str], response_json_schema: type[T_Sche
         return await gemini.send_bulk_messages(
             prompts,
             response_json_schema=response_json_schema,
-            use_batch=True,
+            use_batch=use_batch,
         )
 
 
 @contextlib.asynccontextmanager
-async def create_llm_session() -> AsyncGenerator[LlmSdk[LlmConfig], None]:
+async def create_llm_session(*, google_search: bool = True) -> AsyncGenerator[LlmSdk[LlmConfig], None]:
     """Create an LLM session with the system prompt configured.
 
     Yields:
         AsyncIterator[LlmSdk]: The LLM session.
 
     """
-    llm_config: GeminiConfig = _create_gemini_config()
+    llm_config: GeminiConfig = _create_gemini_config(google_search=google_search)
     async with Gemini(config=llm_config) as gemini:
         system_prompt: str = await _get_system_prompt()
         gemini.set_system_prompt_to_session(system_prompt)
         yield gemini
 
 
-def _create_gemini_config() -> GeminiConfig:
-    return GeminiConfig(model_name=GEMINI_MODEL_NAME, temperature=GEMINI_TEMPERATURE)
+def _create_gemini_config(*, google_search: bool = True) -> GeminiConfig:
+    return GeminiConfig(
+        model_name=GEMINI_MODEL_NAME,
+        temperature=GEMINI_TEMPERATURE,
+        google_search=google_search,
+    )
 
 
 async def _get_system_prompt() -> str:

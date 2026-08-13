@@ -62,8 +62,9 @@ class DescribeAction(DescribeBase[ActionAiMetadata]):
         src: pathlib.Path | None = None,
         dst: pathlib.Path | None = None,
         override: bool = False,
+        use_batch: bool = False,
     ) -> None:
-        super().__init__(integration, actions, src=src, dst=dst, override=override)
+        super().__init__(integration, actions, src=src, dst=dst, override=override, use_batch=use_batch)
         self._action_name_to_file_stem: dict[str, str] = {}
 
     @property
@@ -180,8 +181,9 @@ class MultiPromptDescribeAction(DescribeAction):
         dst: pathlib.Path | None = None,
         override: bool = False,
         prompt_overrides: pathlib.Path | None = None,
+        use_batch: bool = False,
     ) -> None:
-        super().__init__(integration, actions, src=src, dst=dst, override=override)
+        super().__init__(integration, actions, src=src, dst=dst, override=override, use_batch=use_batch)
         self.prompt_overrides_path: pathlib.Path | None = prompt_overrides
 
     async def describe_bulk(
@@ -189,24 +191,40 @@ class MultiPromptDescribeAction(DescribeAction):
         resources: list[str],
         status: IntegrationStatus,
     ) -> list[DescriptionResult]:
-        """Describe multiple action resources in bulk with optional prompt overrides.
-
-        Args:
-            resources: Action resource names to describe.
-            status: Status of the integration content build.
-
-        Returns:
-            list[DescriptionResult]: The list of action description results.
-
-        """
-        baseline_results: list[DescriptionResult] = await super().describe_bulk(resources, status)
-
+        """Describe multiple action resources in bulk with optional prompt overrides."""
+        
         if not self.prompt_overrides_path:
-            return baseline_results
+            return await super().describe_bulk(resources, status)
 
         overrides: list[PromptOverrideConfig] = await self._load_prompt_overrides()
         if not overrides:
-            return baseline_results
+            return await super().describe_bulk(resources, status)
+
+        # Optimization: Only load existing metadata instead of regenerating baseline
+        # to ensure that we ONLY update the overridden fields!
+        existing_metadata = await self._load_metadata()
+        baseline_results: list[DescriptionResult] = []
+        
+        for res in resources:
+            if res in existing_metadata:
+                try:
+                    meta_model = self.response_schema.model_validate(existing_metadata[res])
+                    baseline_results.append(DescriptionResult(res, meta_model))
+                except Exception:
+                    # Fallback to model_construct for legacy metadata structures
+                    raw_dict = existing_metadata[res] if isinstance(existing_metadata[res], dict) else {}
+                    meta_model = self.response_schema.model_construct(**raw_dict)
+                    baseline_results.append(DescriptionResult(res, meta_model))
+            else:
+                # If they don't exist, we fallback to generating the baseline anyway
+                # but for this PoC we assume they exist.
+                pass
+                
+        # If any didn't exist in metadata, generate the missing ones via super()
+        missing_resources = [r for r in resources if r not in existing_metadata]
+        if missing_resources:
+            missing_results = await super().describe_bulk(missing_resources, status)
+            baseline_results.extend(missing_results)
 
         return await self._apply_prompt_overrides(resources, status, baseline_results, overrides)
 
@@ -337,7 +355,28 @@ class MultiPromptDescribeAction(DescribeAction):
             if not valid_prompts:
                 continue
 
-            llm_results: list[Any | str] = await llm.call_gemini_bulk(valid_prompts, target_model)
+            from mp.describe.action.agent_config import AGENTS_CONFIG
+            
+            if override.field_name in AGENTS_CONFIG:
+                from mp.describe.action.agent_factory import FieldAgent
+                
+                agent_config = AGENTS_CONFIG[override.field_name]
+                agent = FieldAgent(agent_config)
+                
+                logger.info(f"Routing `{override.field_name}` request to Refactored Agent PoC.")
+                
+                # Build tracking contexts for reporting
+                contexts = []
+                for action_name in [resources[i] for i in valid_indices]:
+                    contexts.append({
+                        "integration": self.integration_name,
+                        "action": action_name,
+                        "version": getattr(status, "version", "N/A")
+                    })
+                    
+                llm_results: list[Any | str] = await agent.generate_bulk(valid_prompts, target_model, contexts)
+            else:
+                llm_results: list[Any | str] = await llm.call_gemini_bulk(valid_prompts, target_model)
 
             for i, result in zip(valid_indices, llm_results, strict=True):
                 resource_name: str = resources[i]
@@ -371,5 +410,11 @@ class MultiPromptDescribeAction(DescribeAction):
 
                 updated_meta = curr_meta.model_copy(update={override.field_name: override_val})
                 results[idx] = DescriptionResult(resource_name, updated_meta)
+
+        try:
+            from mp.describe.action.reporting import generate_validation_aggregation_report
+            generate_validation_aggregation_report()
+        except ImportError as e:
+            logger.warning(f"Could not aggregate metrics report: {e}")
 
         return results

@@ -1,0 +1,85 @@
+- title: "does the positive categories exist"
+
+
+  Based on the provided outcome definitions, did the AI omit (flag as False) any category that is explicitly performed in the action code?
+  Does the text provided in the reasoning field logically trace the True flags directly to specific functionalities, loops, or API endpoints found in the provided Python code snippet?
+
+  target_field: "outcome_categories"
+  criteria: >
+    For every outcome category flagged as True, does the Python script make an explicit, physical API call to execute that specific outcome, or did the AI hallucinate it based on the name of the action or assumptions about standard playbooks?
+- title: "ai_short_description Structure & Scope Constraint"
+  target_field: "ai_short_description"
+  criteria: >
+    Did the AI correctly respect the boundary between data enrichment (reading) and state mutation (writing)? (e.g. if add_ioc_to_blocklist or disable_identity is True, verify that a POST/PUT/PATCH request is sent; if it's only a GET request, these mutation categories must fail the evaluation)?
+- title: "parameters_description Formatting"
+  target_field: "parameters_description"
+  criteria: >
+    Is the parameters_description string formatted either as a Markdown table with
+    exactly four columns (| Parameter | Type | Mandatory | Description |) or exactly as
+    the fallback string 'There are no parameters for this action'?
+- title: "Parameter Exclusion Constraint"
+  target_field: "parameters_description"
+  criteria: >
+    Does the parameters_description string successfully exclude all
+    integration-level/configuration parameters (e.g., those retrieved in the code via
+    siemplify.extract_configuration_param)?
+- title: "capabilities Reasoning & Flag Alignment"
+  target_field: "capabilities"
+  criteria: >
+    Does the capabilities object contain a non-empty 'reasoning' string providing
+    step-by-step justification for each capability flag (fetches_data, external/internal
+    data mutations, entity updates, insights, alert data, case comments) based on the
+    Python code?
+- title: "Mutation Explanations Constraint"
+  target_field: "capabilities"
+  criteria: >
+    Within the capabilities object, are the external_data_mutation_explanation and
+    internal_data_mutation_explanation fields populated with text if their respective
+    boolean flags are true, and strictly set to null if their boolean flags are false?
+- title: "Strict Capability Flags"
+  target_field: "capabilities"
+  criteria: >
+    Are all true boolean flags within the capabilities object supported by actual,
+    executable code (e.g., a real API request for fetches_data) rather than mere
+    placeholders or print statements?
+- title: "entity_usage Entity Type Logic"
+  target_field: "entity_usage"
+  criteria: >
+    Within the entity_usage.entity_types object, do the boolean flags correctly reflect
+    the code's scope (i.e., only specific types are true if filtered, all are true if
+    iterating without a type filter, and all are false if target_entities is not used)?
+- title: "Filter Properties Logic"
+  target_field: "entity_usage"
+  criteria: >
+    Within the entity_usage object, do the filters_by_* boolean flags (e.g.,
+    filters_by_is_internal, filters_by_identifier) strictly match the explicit if
+    conditions applied when the code iterates over siemplify.target_entities?
+- title: "outcome_categories Reasoning & Flag Alignment"
+  target_field: "outcome_categories"
+  criteria: >
+    Does the outcome_categories object contain a non-empty 'reasoning' string providing
+    step-by-step justification evaluating all potential outcome categories against the
+    Python code, AND do all true boolean flags strictly match their expected outcome
+    definitions based on the script's actual logic?
+- title: "parameters_description Table vs Fallback Integrity"
+  target_field: "parameters_description"
+  criteria: >
+    Does parameters_description correctly reflect whether action-specific parameters
+    exist in the integration metadata/code? If action-specific parameters are present,
+    is a 4-column Markdown table generated? If NO action-specific parameters are defined,
+    is the value set EXACTLY to: 'There are no parameters for this action' without
+    generating a table?
+- title: "entity_usage Reasoning Quality"
+  target_field: "entity_usage"
+  criteria: >
+    Does the entity_usage object contain a non-empty 'reasoning' string that explicitly
+    details step-by-step how the Python code interacts with SecOps entities (e.g.
+    iterating over target_entities), explaining which entity types are processed and
+    why each filtering condition (filters_by_*) is met or not met?
+- title: "Conditional Parameter Dependency Documentation"
+  target_field: "parameters_description"
+  criteria: >
+    If the Python code or parameter metadata enforces conditional dependencies between
+    parameters (e.g., 'Either Parameter A or Parameter B must be configured'), is this
+    relationship explicitly documented within the specific parameter row description or
+    in a 'Parameter Notes' section below the table?

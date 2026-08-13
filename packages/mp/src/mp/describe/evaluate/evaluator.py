@@ -19,6 +19,7 @@ import contextlib
 import functools
 import json
 import logging
+import re
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -144,7 +145,7 @@ def load_integration_artifacts(
         "widgets",
     }
     candidate_source_files: list[Path] = []
-    for ext in ("*.py", "*.yaml", "*.json", "*.actiondef", "*.action_def"):
+    for ext in ("*.py", "*.yaml", "*.json", "*.actiondef", "*.action_def", "*.connectordef", "*.jobdef", "*.def"):
         candidate_source_files.extend(integration_path.rglob(ext))
 
     for file_path in candidate_source_files:
@@ -184,6 +185,10 @@ def load_integration_artifacts(
             ai_dir / constants.ACTIONS_AI_DESCRIPTION_FILE,
             ai_dir / "integration_ai_description.new.yaml",
             ai_dir / constants.INTEGRATIONS_AI_DESCRIPTION_FILE,
+            ai_dir / "connectors_ai_description.new.yaml",
+            ai_dir / constants.CONNECTORS_AI_DESCRIPTION_FILE,
+            ai_dir / "jobs_ai_description.new.yaml",
+            ai_dir / constants.JOBS_AI_DESCRIPTION_FILE,
         ]
 
     for yaml_file in candidate_files:
@@ -207,13 +212,15 @@ def normalize_action_name(raw_name: str) -> str:
     for ext in (".py", ".yaml", ".yml", ".json", ".actiondef", ".action_def"):
         if name.lower().endswith(ext):
             name = name[: -len(ext)]
-    return name.lower().replace(" ", "").replace("_", "").replace(":", "").replace("-", "").rstrip("s")
+    # Strip common stop words (a, an, the)
+    name = re.sub(r"\b(a|an|the)\b", "", name.lower())
+    return name.replace(" ", "").replace("_", "").replace(":", "").replace("-", "").rstrip("s")
 
 
 def _match_action_files_by_yaml_name(
     action_name: str, python_files: dict[str, str], shared_dirs: set[str]
 ) -> list[str]:
-    """Find action-specific files by inspecting 'name:' field in action definition YAMLs.
+    """Find action-specific files by inspecting 'name:' field in action definition YAMLs/JSONs/Actiondefs.
 
     Args:
         action_name: Name of the action.
@@ -225,17 +232,20 @@ def _match_action_files_by_yaml_name(
 
     """
     for filename, content in python_files.items():
-        if filename.endswith((".yaml", ".yml")) and action_name in content:
+        suffix = filename.lower()
+        is_def = suffix.endswith((".yaml", ".yml", ".json", ".actiondef", ".action_def"))
+        if is_def and action_name.lower() in content.lower():
             with contextlib.suppress(Exception):
-                parsed = yaml.safe_load(content)
-                if isinstance(parsed, dict) and parsed.get("name") == action_name:
-                    stem = Path(filename).stem
-                    return [
-                        f
-                        for f in python_files
-                        if Path(f).stem == stem
-                        and not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)
-                    ]
+                parsed = yaml.safe_load(content) if suffix.endswith((".yaml", ".yml")) else json.loads(content)
+                if isinstance(parsed, dict):
+                    name = parsed.get("name") or parsed.get("Name")
+                    if name and name.lower() == action_name.lower():
+                        stem = Path(filename).stem
+                        return [
+                            f
+                            for f in python_files
+                            if Path(f).stem == stem and not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)
+                        ]
     return []
 
 
@@ -256,21 +266,15 @@ def _match_action_files_by_normalization(
     norm_target = normalize_action_name(action_name)
     if not norm_target:
         return []
-    non_shared = [
-        f for f in python_files if not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)
-    ]
+    non_shared = [f for f in python_files if not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)]
     exact = [f for f in non_shared if norm_target == normalize_action_name(f)]
     fuzzy = [
-        f
-        for f in non_shared
-        if norm_target in normalize_action_name(f) or normalize_action_name(f) in norm_target
+        f for f in non_shared if norm_target in normalize_action_name(f) or normalize_action_name(f) in norm_target
     ]
     return exact or fuzzy
 
 
-def get_code_for_action(
-    action_name: str, python_files: dict[str, str]
-) -> tuple[str, list[str], list[str]]:
+def get_code_for_action(action_name: str, python_files: dict[str, str]) -> tuple[str, list[str], list[str]]:
     """Select Python source code and definition files relevant to a specific action.
 
     Args:
@@ -293,9 +297,7 @@ def get_code_for_action(
         "clients",
     }
 
-    shared_files = [
-        f for f in python_files if {p.lower() for p in f.split("/")[:-1]} & shared_dirs
-    ]
+    shared_files = [f for f in python_files if {p.lower() for p in f.split("/")[:-1]} & shared_dirs]
 
     action_files = _match_action_files_by_yaml_name(action_name, python_files, shared_dirs)
     if not action_files:
@@ -325,9 +327,7 @@ def get_code_for_action(
 _get_code_for_action = get_code_for_action
 
 
-async def _direct_evaluate_prompts(
-    prompts: list[str], *, use_batch: bool = False
-) -> list[RuleVerdict | str]:
+async def _direct_evaluate_prompts(prompts: list[str], *, use_batch: bool = False) -> list[RuleVerdict | str]:
     """Execute evaluation prompts via Gemini LLM session (streaming or Batch API).
 
     Args:
@@ -340,9 +340,7 @@ async def _direct_evaluate_prompts(
     """
     async with create_llm_session() as gemini:
         gemini.bulk_threshold = 0 if use_batch else 5000
-        return await gemini.send_bulk_messages(
-            prompts, response_json_schema=RuleVerdict, use_batch=use_batch
-        )
+        return await gemini.send_bulk_messages(prompts, response_json_schema=RuleVerdict, use_batch=use_batch)
 
 
 class EvaluationEngine:
@@ -637,9 +635,7 @@ class EvaluationEngine:
             )
 
     @staticmethod
-    def _dispatch_prompts(
-        prompts: list[str], *, use_batch: bool = False
-    ) -> list[RuleVerdict | str]:
+    def _dispatch_prompts(prompts: list[str], *, use_batch: bool = False) -> list[RuleVerdict | str]:
         """Dispatch prompts to Gemini API with event loop handling.
 
         Args:
@@ -655,9 +651,7 @@ class EvaluationEngine:
         except RuntimeError:
             loop = None
         if loop and loop.is_running():
-            return anyio.from_thread.run(
-                functools.partial(_direct_evaluate_prompts, prompts, use_batch=use_batch)
-            )
+            return anyio.from_thread.run(functools.partial(_direct_evaluate_prompts, prompts, use_batch=use_batch))
         return asyncio.run(_direct_evaluate_prompts(prompts, use_batch=use_batch))
 
     def evaluate_integration(  # ruff: ignore[complex-structure, too-many-branches, too-many-arguments, too-many-locals, too-many-statements, too-many-positional-arguments]
