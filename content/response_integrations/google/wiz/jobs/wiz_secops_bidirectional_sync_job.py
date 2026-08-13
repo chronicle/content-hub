@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 from TIPCommon.base.job.base_sync_job import BaseSyncJob
 from TIPCommon.base.job.job_case import JobCase, SyncMetadata
 from TIPCommon.data_models import CaseDataStatus
+from TIPCommon.rest.soar_api import get_case_overview_details
 from TIPCommon.soar_ops import get_users_profile_cards_with_pagination
 from TIPCommon.validation import ParameterValidator
 
@@ -514,6 +515,75 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             alert_identifier=None,
         )
 
+    def _is_linked_case_threat_open(
+        self, case_id: str, threat_id: str
+    ) -> bool:
+        """Check if a linked SecOps case has open alerts for the given threat.
+
+        Args:
+            case_id (str): The ID of the linked SecOps case.
+            threat_id (str): The Wiz threat ID.
+
+        Returns:
+            bool: True if the case has open alerts for the threat, False otherwise.
+
+        """
+        try:
+            other_case = get_case_overview_details(self.soar_job, case_id)
+            if other_case.status == CaseDataStatus.CLOSED:
+                return False
+
+            for alert in getattr(other_case, "alerts", []):
+                alert_threat_id: str | None = self._extract_clean_threat_id(
+                    self._get_wiz_threat_id(alert)
+                )
+                if (
+                    alert_threat_id == threat_id
+                    and alert.status.lower() not in {"close", "closed"}
+                ):
+                    self.logger.info(
+                        f"Wiz threat {threat_id} will not be closed yet "
+                        f"because alert {alert.identifier} in linked "
+                        f"SecOps case {case_id} is still open."
+                    )
+                    return True
+        except Exception as error:  # ruff: ignore[blind-except]
+            self.logger.warning(
+                f"Could not verify status of linked SecOps case {case_id}: {error}"
+            )
+        return False
+
+    def _are_all_linked_cases_closed(
+        self, threat_id: str, current_case_id: int
+    ) -> bool:
+        """Check whether all SecOps cases linked to this threat are closed.
+
+        Args:
+            threat_id (str): The Wiz threat ID.
+            current_case_id (int): The current SecOps case ID.
+
+        Returns:
+            bool: True if all other linked cases/alerts for this threat are closed,
+                False otherwise.
+
+        """
+        try:
+            threat_issue: Issue = self.api_client.get_issue_details(threat_id)
+        except Exception as error:  # ruff: ignore[blind-except]
+            self.logger.warning(
+                f"Could not fetch latest details for Wiz threat {threat_id}: {error}"
+            )
+            return True
+
+        for ticket in getattr(threat_issue, "service_tickets", []):
+            ticket_case_id: str = str(ticket.external_id)
+            if ticket_case_id != str(current_case_id) and self._is_linked_case_threat_open(
+                ticket_case_id, threat_id
+            ):
+                return False
+
+        return True
+
     def _sync_status_outbound(self, job_case: JobCase) -> None:
         threat_ids: list[str] = self._extract_product_ids_from_case(job_case)
         full_mapping: dict[str, list[AlertCard]] = self.case_threat_alerts.get(
@@ -540,6 +610,11 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                 )
             )
             if not all_threat_alerts_closed:
+                continue
+
+            if not self._are_all_linked_cases_closed(
+                threat_id, job_case.case_detail.id_
+            ):
                 continue
 
             wiz_reason: str = self._determine_wiz_resolution_reason(job_case)
