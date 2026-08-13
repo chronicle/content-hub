@@ -20,6 +20,7 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
+ACTION_NAME = "Get Current Time"
 
 @output_handler
 def main():
@@ -36,8 +37,8 @@ def main():
         output_message = f"{current_time}"
         status = EXECUTION_STATE_COMPLETED
     except Exception as e:
-        siemplify.LOGGER.error(f"Error: {e}")
-        output_message = f"ERROR: Failed to get current time - {e}"
+        siemplify.LOGGER.error(f'Error: {e}')
+        output_message = f'Error executing action "{ACTION_NAME}". Reason: {e}'
     
     siemplify.end(output_message, current_time, status)
 
