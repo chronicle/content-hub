@@ -28,10 +28,10 @@ from TIPCommon.rest.soar_api import create_entity
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.types import SingleJson
 
-from ..core.ToolsCommon import ExecutionScope
+from ..core.ToolsCommon import ExecutionScope, get_case_alerts
 
 if TYPE_CHECKING:
-    from typing import Never, NoReturn
+    from typing import Never
 
 ACTION_NAME: str = "Create Entity Relationships"
 
@@ -165,11 +165,7 @@ class CreateEntityRelationshipsAction(Action):
             return [self.soar_action.current_alert]
         
         self.output_message = ""
-        return getattr(
-            self.soar_action.case,
-            "open_alerts",
-            self.soar_action.case.alerts,
-        )
+        return get_case_alerts(self.soar_action)
 
     def _process_alert(
         self,
@@ -496,8 +492,8 @@ class CreateEntityRelationshipsAction(Action):
         entity_type: str,
         json_payload: SingleJson,
     ) -> None:
-        payload = json_payload.copy()
-        payload["typesToConnect"].append(entity_type)
+        payload = dict(json_payload)
+        payload["typesToConnect"] = (payload.get("typesToConnect") or []) + [entity_type]
         payload["entityIdentifier"] = new_entity
         entity_to_create: CreateEntity = CreateEntity(
             case_id=payload["caseId"],
@@ -505,7 +501,7 @@ class CreateEntityRelationshipsAction(Action):
             entity_type=payload["entityType"],
             entity_identifier=new_entity,
             entity_to_connect_regex=None,
-            types_to_connect=payload["typesToConnect"].append(entity_type),
+            types_to_connect=payload["typesToConnect"],
             is_primary_link=payload["isPrimaryLink"],
             is_directional=payload["isDirectional"],
         )
@@ -517,7 +513,7 @@ class CreateEntityRelationshipsAction(Action):
         linked_entity: str,
         json_payload: SingleJson,
     ) -> None:
-        payload = json_payload.copy()
+        payload = dict(json_payload)
         payload["entityToConnectRegEx"] = f"{re.escape(linked_entity)}$"
         payload["entityIdentifier"] = new_entity
         entity_to_create: CreateEntity = CreateEntity(
@@ -533,7 +529,7 @@ class CreateEntityRelationshipsAction(Action):
         create_entity(self.soar_action, entity_to_create)
 
 
-def main() -> NoReturn:
+def main() -> None:
     CreateEntityRelationshipsAction().run()
 
 

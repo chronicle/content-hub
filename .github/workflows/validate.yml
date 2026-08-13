@@ -38,7 +38,6 @@ jobs:
       uses: dorny/paths-filter@v3
       id: filter
       with:
-        list-files: csv
         # language=yaml
         filters: |
           mp:
@@ -64,13 +63,11 @@ jobs:
         FILTER_MP: ${{ steps.filter.outputs.mp }}
         FILTER_PACKAGES: ${{ steps.filter.outputs.integration_packages }}
         FILTER_THIRD_PARTY: ${{ steps.filter.outputs.response_integrations_third_party }}
-        FILTER_THIRD_PARTY_FILES: ${{ steps.filter.outputs.response_integrations_third_party_files }}
         FILTER_GOOGLE: ${{ steps.filter.outputs.response_integrations_google }}
-        FILTER_GOOGLE_FILES: ${{ steps.filter.outputs.response_integrations_google_files }}
         FILTER_PLAYBOOKS_THIRD_PARTY: ${{ steps.filter.outputs.playbooks_third_party }}
-        FILTER_PLAYBOOKS_THIRD_PARTY_FILES: ${{ steps.filter.outputs.playbooks_third_party_files }}
         FILTER_PLAYBOOKS_COMMERCIAL: ${{ steps.filter.outputs.playbooks_commercial }}
-        FILTER_PLAYBOOKS_COMMERCIAL_FILES: ${{ steps.filter.outputs.playbooks_commercial_files }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       # language=bash
       run: |
         # If shared packages or mp changed, validate everything
@@ -84,12 +81,20 @@ jobs:
         
         echo "test_all=false" >> $GITHUB_OUTPUT
         
+        # Get changed files directly from git to avoid environment variable limits
+        if [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || [[ -z "$BASE_SHA" ]]; then
+          # New branch or push without base, compare against parent
+          git diff --name-only --diff-filter=d HEAD~1 HEAD > changed_files.txt
+        else
+          # Use three-dot diff for PRs to get changes relative to the merge base
+          git diff --name-only --diff-filter=d "$BASE_SHA...$HEAD_SHA" > changed_files.txt || \
+          git diff --name-only --diff-filter=d "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
+        fi
+
         INTEGRATIONS=""
         # Extract unique integration names from changed file paths (Third-Party/Power-Ups)
         if [[ "$FILTER_THIRD_PARTY" == "true" ]]; then
-          THIRD_PARTY_INTS=$(echo "$FILTER_THIRD_PARTY_FILES" | tr ',' '\n' | \
-            sed 's/"//g' | \
-            grep "^content/response_integrations/" | \
+          THIRD_PARTY_INTS=$(grep "^content/response_integrations/third_party/\|^content/response_integrations/power_up[s]*/" changed_files.txt | \
             sed 's|content/response_integrations/third_party/[^/]*/||' | \
             sed 's|content/response_integrations/power_up[s]*/||' | \
             cut -d'/' -f1 | \
@@ -100,9 +105,7 @@ jobs:
         
         # Extract unique integration names from changed file paths (Google)
         if [[ "$FILTER_GOOGLE" == "true" ]]; then
-          GOOGLE_INTS=$(echo "$FILTER_GOOGLE_FILES" | tr ',' '\n' | \
-            sed 's/"//g' | \
-            grep "^content/response_integrations/google/" | \
+          GOOGLE_INTS=$(grep "^content/response_integrations/google/" changed_files.txt | \
             sed 's|content/response_integrations/google/||' | \
             cut -d'/' -f1 | \
             sort -u | \
@@ -115,9 +118,7 @@ jobs:
         PLAYBOOKS=""
         # Extract unique playbook names from changed file paths (Third-Party)
         if [[ "$FILTER_PLAYBOOKS_THIRD_PARTY" == "true" ]]; then
-          THIRD_PARTY_PBS=$(echo "$FILTER_PLAYBOOKS_THIRD_PARTY_FILES" | tr ',' '\n' | \
-            sed 's/"//g' | \
-            grep "^content/playbooks/third_party/" | \
+          THIRD_PARTY_PBS=$(grep "^content/playbooks/third_party/" changed_files.txt | \
             sed 's|content/playbooks/third_party/[^/]*/||' | \
             cut -d'/' -f1 | \
             sort -u | \
@@ -127,9 +128,7 @@ jobs:
         
         # Extract unique playbook names from changed file paths (Commercial)
         if [[ "$FILTER_PLAYBOOKS_COMMERCIAL" == "true" ]]; then
-          COMMERCIAL_PBS=$(echo "$FILTER_PLAYBOOKS_COMMERCIAL_FILES" | tr ',' '\n' | \
-            sed 's/"//g' | \
-            grep "^content/playbooks/commercial/" | \
+          COMMERCIAL_PBS=$(grep "^content/playbooks/commercial/" changed_files.txt | \
             sed 's|content/playbooks/commercial/||' | \
             cut -d'/' -f1 | \
             sed 's/\.json$//' | \

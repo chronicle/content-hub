@@ -23,6 +23,7 @@ from typer.testing import CliRunner
 from mp.describe.typer_app import app
 
 if TYPE_CHECKING:
+    import pathlib
     from collections.abc import Generator
 
 runner = CliRunner()
@@ -30,7 +31,7 @@ runner = CliRunner()
 
 @pytest.fixture
 def mock_describe_action() -> Generator[mock.MagicMock, None, None]:
-    with mock.patch("mp.describe.action.typer_app.DescribeAction") as mock_class:
+    with mock.patch("mp.describe.action.typer_app.MultiPromptDescribeAction") as mock_class:
         mock_class.return_value.describe_actions = mock.AsyncMock()
         yield mock_class
 
@@ -68,9 +69,20 @@ def test_describe_action_cli(mock_describe_action: mock.MagicMock) -> None:
     result = runner.invoke(app, ["action", "ping", "get_logs", "-i", "aws_ec2"])
     assert result.exit_code == 0
     mock_describe_action.assert_called_once()
-    args, _ = mock_describe_action.call_args
+    args, kwargs = mock_describe_action.call_args
     assert args[0] == "aws_ec2"
     assert args[1] == {"ping", "get_logs"}
+    assert kwargs.get("prompt_overrides") is None
+
+
+def test_describe_action_prompt_overrides_cli(mock_describe_action: mock.MagicMock, tmp_path: pathlib.Path) -> None:
+    config_file = tmp_path / "prompt_overrides.json"
+    config_file.write_text('{"prompt_config": []}')
+    result = runner.invoke(app, ["action", "ping", "-i", "aws_ec2", "--prompt-overrides", str(config_file)])
+    assert result.exit_code == 0
+    mock_describe_action.assert_called_once()
+    _, kwargs = mock_describe_action.call_args
+    assert kwargs.get("prompt_overrides") == config_file
 
 
 def test_describe_connector_cli(mock_describe_connector: mock.MagicMock) -> None:

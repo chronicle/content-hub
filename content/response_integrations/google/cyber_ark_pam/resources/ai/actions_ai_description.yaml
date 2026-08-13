@@ -1,78 +1,174 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+Change Account Password:
+  ai_description: >-
+    ### General Description
 
+    The 'Change Account Password' action is used to queue an immediate password change
+    task for specified accounts in CyberArk PAM.
+
+
+    ### Flow Description
+
+    1. Extracts the comma-separated list of Account IDs provided in the action parameters.
+
+    2. Iterates through each provided Account ID.
+
+    3. For each account, makes a POST request to the CyberArk PAM API (`/PasswordVault/API/Accounts/{account_id}/Change`)
+    to queue a password change task.
+
+    4. Records the success or failure of each API request, catching specific errors
+    like account not found or not managed by CPM.
+
+    5. Returns a summary message and a JSON object containing the lists of successfully
+    and unsuccessfully processed accounts.
+
+
+    ### Additional Notes
+
+    Note that there is a delay between the task being queued and it being executed
+    by the CyberArk PAM system.
+  ai_short_description: >-
+    Queues an immediate password change task for specified accounts in CyberArk PAM.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Queues a password change task for specified accounts in CyberArk PAM.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the CyberArk PAM API to queue a password
+      change task, which mutates external data (can_mutate_external_data=true). It
+      does not fetch contextual data, update internal entities, create insights, modify
+      alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It relies entirely on the 'Account
+      ID' parameter provided by the user to identify the target accounts in CyberArk
+      PAM. Therefore, all entity-related flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action makes a POST request to CyberArk PAM to queue a password change task
+      for specified accounts. This directly aligns with the 'Reset Identity Password'
+      expected outcome, as it triggers a password change for an account.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: true
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Account ID | String | Yes | A comma-separated list of the account IDs to queue
+    for an immediate password change task. Note: You can retrieve the account ID from
+    the List Accounts action. |
 Get Account Password Value:
   ai_description: >-
     ### General Description
 
-    This action retrieves the password or SSH key value for a specific account managed
-    within CyberArk Privileged Access Manager (PAM). It is designed to facilitate
-    automated credential retrieval for playbooks, allowing subsequent steps to use
-    these credentials for authentication or administrative tasks. Note that this action
-    does not operate on Google SecOps entities but instead uses a specific Account
-    ID provided as an input parameter.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Account | String | Yes | The unique identifier (Account ID) of the account in
-    CyberArk PAM from which to retrieve the password. |
-
-    | Reason | String | Yes | The justification for accessing the password. This is
-    typically required by CyberArk for auditing purposes. |
-
-    | Ticketing System Name | String | No | The name of the ticketing system associated
-    with the access request. |
-
-    | Ticket ID | Integer | No | The specific ticket ID from the ticketing system
-    associated with the access request. |
-
-    | Version | Integer | No | The specific version of the account password to retrieve.
-    If not specified, the current version is usually returned. |
-
-
-    ### Additional Notes
-
-    - This action performs a POST request to the CyberArk API's retrieve endpoint.
-    While it is a POST request, its primary purpose is data retrieval with an audit
-    trail (the 'Reason' parameter).
-
-    - The action returns the raw secret value in the JSON result under the `content`
-    key.
+    Retrieves an account password or SSH key value from CyberArk PAM based on a specified
+    account ID. This action is used to securely fetch credentials for use in automated
+    workflows or investigations.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the CyberArk PAM manager using integration
-    configuration parameters (API Root, credentials, and SSL/Certificate settings).
+    1. Extracts the provided action parameters, including the Account ID, Reason,
+    and optional ticketing information.
 
-    2. **Parameter Extraction**: It extracts the mandatory `Account` ID and `Reason`,
-    along with optional ticketing and version information.
+    2. Initializes the CyberArk PAM API client using the integration configuration.
 
-    3. **API Request**: It sends a POST request to the CyberArk `Password/Retrieve`
-    endpoint for the specified account, including the audit information in the request
-    body.
+    3. Makes a POST request to the CyberArk PAM API (`/PasswordVault/API/Accounts/{account_id}/Password/Retrieve/`)
+    to fetch the requested secret.
 
-    4. **Result Processing**: Upon a successful response, the retrieved password or
-    SSH key is captured and added to the action's JSON results.
+    4. Returns the retrieved password or SSH key as a JSON result within the SOAR
+    platform.
 
-    5. **Completion**: The action concludes by reporting success and providing the
-    secret value to the SOAR environment.
+
+    ### Additional Notes
+
+    This action does not run on Chronicle SOAR entities. Both passwords and SSH keys
+    can be retrieved using this action. The Account ID can typically be obtained using
+    the 'List Accounts' action.
+  ai_short_description: >-
+    Retrieves an account password or SSH key value from CyberArk PAM using a specific
+    account ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -83,10 +179,48 @@ Get Account Password Value:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data (a password/secret) from CyberArk PAM via a POST request
+      to the retrieve endpoint. It does not mutate external data (it only reads the
+      secret), nor does it mutate internal data, update entities, create insights,
+      or add case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -100,65 +234,95 @@ Get Account Password Value:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action explicitly states it does not run on entities, and the code does
+      not iterate over or reference `siemplify.target_entities`. Therefore, all entity
+      types and filters are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a password or SSH key from a PAM solution. This does not
+      match any of the predefined outcome categories such as enriching an IOC/Asset,
+      updating an alert, resetting a password (it only retrieves it), or containing
+      a host.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Account | String | Yes | Specify the account id to retrieve the password value
+    for. Note that you can get the account id from the List Accounts action. |
+
+    | Reason | String | Yes | Specify the reason that account password value is accessed.
+    |
+
+    | Ticketing System Name | String | No | Specify the name of the ticketing system.
+    |
+
+    | Ticket ID | String | No | Specify the ticketing system ticket id. |
+
+    | Version | String | No | Specify the account password value version to retrieve.
+    |
 List Accounts:
   ai_description: >-
     ### General Description
 
-    The **List Accounts** action retrieves a list of accounts from CyberArk Privileged
-    Access Manager (PAM) based on user-defined search and filter criteria. It is primarily
-    used for auditing, discovery, or identifying specific account IDs for subsequent
-    management actions. This action does not interact with Google SecOps entities.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Search Query** | String | No | The search string used to find accounts. |
-
-    | **Search operator** | Enum | No | Determines the search logic (`contains` or
-    `startswith`). Default is `contains`. |
-
-    | **Max Records To Return** | Integer | No | The maximum number of account records
-    to retrieve. Default is 50. Must be a positive integer. |
-
-    | **Records Offset** | Integer | No | The starting point (offset) for the result
-    set, used for pagination. Default is 0. |
-
-    | **Filter Query** | String | No | A query string to filter results by `safeName`
-    or `modificationTime`. |
-
-    | **Saved Filter** | String | No | A predefined filter name. If provided, it takes
-    precedence over the **Filter Query**. |
-
-
-    ### Additional Notes
-
-    - If both **Filter Query** and **Saved Filter** are provided, the **Saved Filter**
-    will be used.
-
-    - The action requires valid CyberArk PAM credentials and API root configuration.
+    Lists accounts available in CyberArk PAM based on provided search and filter criteria.
+    This action queries the CyberArk PAM instance and returns the matching accounts
+    as a JSON object and a data table.
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts integration configuration (API Root, Credentials,
-    SSL/Certificates) and action parameters.
+    1. Extracts action parameters including search query, search operator, max records
+    to return, records offset, filter query, and saved filter.
 
-    2. **Validation**: Checks that `Max Records To Return` is positive and `Records
-    Offset` is non-negative.
+    2. Validates the provided max records and offset values to ensure they are positive/non-negative
+    numbers.
 
-    3. **Authentication**: Establishes a session with CyberArk PAM and retrieves an
-    access token via a POST request.
+    3. Initializes the CyberArk PAM manager and authenticates using the integration
+    credentials.
 
-    4. **Data Retrieval**: Sends a GET request to the CyberArk API with the specified
-    search, filter, and pagination parameters.
+    4. Makes a GET request to the CyberArk PAM API (`PasswordVault/API/Accounts`)
+    to retrieve the list of accounts matching the specified criteria.
 
-    5. **Output Generation**: Parses the returned account data, converts it into a
-    flat JSON format, and populates a data table named "Available PAM Accounts" in
-    the SOAR interface.
+    5. Parses the API response and outputs the results as a JSON object and a data
+    table named 'Available PAM Accounts'.
+
+
+    ### Additional Notes
+
+    This action does not run on Chronicle SOAR entities. If both 'Filter Query' and
+    'Saved Filter' parameters are provided, the 'Saved Filter' takes priority.
+  ai_short_description: >-
+    Lists accounts available in CyberArk PAM based on provided search and filter criteria,
+    returning the results as a JSON object and a data table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -169,10 +333,47 @@ List Accounts:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data by making a GET request to the CyberArk PAM API to list
+      accounts. It does not mutate external data, update internal entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -186,64 +387,92 @@ List Accounts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates solely on the provided action parameters to query CyberArk
+      PAM. Therefore, all entity type and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries CyberArk PAM to list available accounts based on search criteria.
+      It does not enrich specific IOCs or assets, nor does it mutate external data,
+      update alerts, or perform any of the other specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Search Query | String | No | Specify the search query to use in action. |
+
+    | Search operator | Dropdown | No | Specify the search operator action should
+    use to search based on the provided search query. |
+
+    | Max Records To Return | String | No | Specify how many records to return. If
+    nothing is provided, action will return 50 records (API default). |
+
+    | Records Offset | String | No | Specify the offset the action should use to return
+    the values. |
+
+    | Filter Query | String | No | Specify the filter query action should use. Filter
+    can be based on safeName or modificationTime parameters. |
+
+    | Saved Filter | String | No | Specify the saved filter query action should use.
+    Takes priority over the Filter Query parameter. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility used to verify the connectivity and
-    authentication configuration between Google SecOps and a CyberArk PAM instance.
-    It ensures that the integration can successfully communicate with the CyberArk
-    API using the provided credentials and security settings.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api Root | String | Yes | The base URL of the CyberArk PAM API instance. |
-
-    | Username | String | Yes | The username used for authentication. |
-
-    | Password | String | Yes | The password used for authentication. |
-
-    | Verify SSL | Boolean | Yes | Determines whether to verify the SSL certificate
-    of the CyberArk server. |
-
-    | CA Certificate | String | No | Base64 encoded CA certificate for SSL validation.
-    |
-
-    | Client Certificate | String | No | Base64 encoded client certificate for mutual
-    TLS. |
-
-    | Client Certificate Passphrase | String | No | Passphrase for the client certificate.
-    |
+    Tests connectivity to the CyberArk PAM installation using the provided integration
+    configuration parameters.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts the integration configuration parameters
-    including API endpoints, credentials, and SSL/certificate settings.
+    1. Extracts integration configuration parameters including API Root, Username,
+    Password, and SSL certificates.
 
-    2. **Manager Setup**: It initializes the `CyberArkPamManager`, which configures
-    the HTTP session with the appropriate SSL verification and certificates.
+    2. Initializes the CyberArk PAM Manager.
 
-    3. **Authentication Test**: The action attempts to log in to the CyberArk PAM
-    API by sending a POST request to the logon endpoint (`/PasswordVault/API/Auth/CyberArk/Logon`).
+    3. Makes a POST request to the CyberArk PAM API (`/PasswordVault/API/Auth/CyberArk/Logon`)
+    to authenticate and retrieve an access token.
 
-    4. **Validation**: It validates the response from the server. If an access token
-    is successfully retrieved, the connection is considered valid.
-
-    5. **Completion**: The action returns a success status if authentication succeeds,
-    or a failure status with the error details if it fails.
+    4. Returns a success message if the connection and authentication are successful,
+    or an error message if they fail.
 
 
     ### Additional Notes
 
-    - This action does not process or require any entities.
-
-    - It is primarily used for initial setup and troubleshooting connectivity issues.
+    This action is primarily used to verify that the integration is configured correctly
+    and can communicate with the CyberArk PAM server.
+  ai_short_description: >-
+    Tests connectivity to the CyberArk PAM installation by attempting to authenticate
+    and retrieve an access token.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -252,12 +481,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action only attempts to authenticate with the CyberArk PAM API to verify
+      connectivity. It does not fetch contextual data, mutate external or internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -271,3 +537,38 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It only tests connectivity
+      to the external system.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticket management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

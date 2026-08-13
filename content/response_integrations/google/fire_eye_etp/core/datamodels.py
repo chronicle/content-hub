@@ -12,81 +12,127 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Datamodels for FireEye ETP integration."""
+
 from __future__ import annotations
+
 import copy
+from typing import Any
+
 from soar_sdk.SiemplifyUtils import convert_datetime_to_unix_time
-from .FireEyeETPConstants import ALERT_NAME
-from .UtilsManager import naive_time_converted_to_aware
+
+from .fire_eye_etp_constants import ALERT_NAME
+from .utils_manager import naive_time_converted_to_aware
 
 
 class BaseModel:
-    """
-    Base model for inheritance
-    """
+    """Base model for inheritance."""
 
-    def __init__(self, raw_data):
+    def __init__(self, raw_data: dict[str, Any]) -> None:
+        """Initialize the BaseModel.
+
+        Args:
+            raw_data: The raw JSON data.
+
+        """
         self.raw_data = raw_data
 
-    def to_json(self):
+    def to_json(self) -> dict[str, Any]:
+        """Convert the model to JSON.
+
+        Returns:
+            The raw JSON data.
+
+        """
         return self.raw_data
 
 
 class Alert(BaseModel):
+    """Represent a FireEye ETP Alert."""
+
     def __init__(
         self,
-        raw_data,
-        id=None,
-        timestamp=None,
-        severity=None,
-        etp_message_id=None,
-        malwares=None,
-        recipients=None,
-        timezone_offset=None,
-    ):
-        super(Alert, self).__init__(raw_data)
-        self.id = id
-        self.timestamp = timestamp
-        self.severity = severity
-        self.etp_message_id = etp_message_id
-        self.malwares = malwares if malwares else []
-        self.recipients = recipients if recipients else []
-        self.name = ALERT_NAME
-        self.timezone_offset = timezone_offset
+        raw_data: dict[str, Any],
+        timezone_offset: str | None = None,
+    ) -> None:
+        """Initialize the Alert.
+
+        Args:
+            raw_data: The raw JSON data.
+            timezone_offset: The timezone offset.
+
+        """
+        super().__init__(raw_data)
+        self.id: str | None = raw_data.get("id")
+        self.timestamp: str | None = (
+            raw_data.get("attributes", {}).get("email", {}).get("timestamp", {}).get("accepted")
+        )
+        self.severity: str | None = raw_data.get("attributes", {}).get("alert", {}).get("severity")
+        self.etp_message_id: str | None = raw_data.get("attributes", {}).get("email", {}).get("etp_message_id")
+        self.malwares: list[dict[str, Any]] = (
+            raw_data
+            .get("attributes", {})
+            .get("alert", {})
+            .get("explanation", {})
+            .get("malware_detected", {})
+            .get("malware", [])
+        )
+        self.recipients: list[str] = (
+            raw_data.get("attributes", {}).get("email", {}).get("smtp", {}).get("rcpt_to", "").split()
+        )
+        self.name: str = ALERT_NAME
+        self.timezone_offset: str | None = timezone_offset
 
     @property
-    def priority(self):
+    def priority(self) -> int:
+        """The priority of the alert.
+
+        Returns:
+            The priority value (60, 80, or 100).
+
+        """
         if self.severity == "majr":
             return 80
-        elif self.severity == "crit":
+        if self.severity == "crit":
             return 100
 
         return 60
 
     @property
-    def events(self):
-        events = []
+    def events(self) -> list[dict[str, Any]]:
+        """The events from the alert.
+
+        Returns:
+            The list of events.
+
+        """
+        events: list[dict[str, Any]] = []
 
         for malware in self.malwares:
             alert = copy.deepcopy(self.raw_data)
-            alert.get("attributes", {}).get("alert", {}).get("explanation", {}).pop(
-                "os_changes", None
+            alert.get("attributes", {}).get("alert", {}).get("explanation", {}).pop("os_changes", None)
+            alert.get("attributes", {}).get("alert", {}).get("explanation", {}).get("malware_detected", {}).pop(
+                "malware", None
             )
-            alert.get("attributes", {}).get("alert", {}).get("explanation", {}).get(
-                "malware_detected", {}
-            ).pop("malware", None)
             malware["alert"] = alert
             events.append(malware)
 
         return events
 
     @property
-    def recipient_events(self):
-        events = []
+    def recipient_events(self) -> list[dict[str, Any]]:
+        """The recipient events from the alert.
+
+        Returns:
+            The list of recipient events.
+
+        """
+        events: list[dict[str, Any]] = []
 
         for recipient in self.recipients:
             event = {
                 "event_name": "FireEye ETP Recipient",
-                "description": "This is a custom Siemplify Event created for mapping of the recipients",
+                "description": ("This is a custom Siemplify Event created for mapping of the recipients"),
                 "recipient": recipient,
             }
             events.append(event)
@@ -94,7 +140,11 @@ class Alert(BaseModel):
         return events
 
     @property
-    def occurred_time_unix(self):
-        return convert_datetime_to_unix_time(
-            naive_time_converted_to_aware(self.timestamp, self.timezone_offset)
-        )
+    def occurred_time_unix(self) -> int:
+        """The occurred time of the alert in Unix time.
+
+        Returns:
+            The occurred time in Unix time.
+
+        """
+        return convert_datetime_to_unix_time(naive_time_converted_to_aware(self.timestamp, self.timezone_offset))

@@ -23,7 +23,7 @@ DELAY_PLAYBOOK_SYNCHRONOUS_SCRIPT_NAME: str = (
 
 MAX_SYNC_DELAY_TIME_IN_SECONDS: int = 30
 MIN_SYNC_DELAY_TIME_IN_SECONDS: int = 0
-LABEL_REGEX: str = re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$")
+LABEL_REGEX = re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$")
 
 CASE_TYPE_MAP: dict[int, str] = {
     1: "EXTERNAL",

@@ -21,7 +21,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import get_workflow_instance_card
 
-from ..core.ToolsCommon import ExecutionScope
+from ..core.ToolsCommon import ExecutionScope, get_case_alerts
 
 WF_STATUS_NONE = 0
 WF_STATUS_INPROGRESS = 1
@@ -130,7 +130,7 @@ def main():
         completed_count: int = 0
         not_found_count: int = 0
 
-        case_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        case_alerts = get_case_alerts(siemplify)
         for alert in case_alerts:
             wf_status: int = get_wf_status(
                 siemplify,

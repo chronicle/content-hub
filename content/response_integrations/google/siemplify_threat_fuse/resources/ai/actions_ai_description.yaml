@@ -1,112 +1,108 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches entities including IP Addresses, URLs, File Hashes, and User (Email)
-    entities using threat intelligence from Siemplify ThreatFuse. The action retrieves
-    detailed indicator data, evaluates risk based on configurable severity and confidence
-    thresholds, and provides contextual insights and analysis links directly within
-    the case.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Severity Threshold | Enum | Yes | Specifies the minimum severity level (Low,
-    Medium, High, Very High) required to mark an entity as suspicious. |
-
-    | Confidence Threshold | Integer | Yes | Specifies the minimum confidence score
-    (0-100) required to mark an entity as suspicious. |
-
-    | Ignore False Positive Status | Boolean | No | If enabled, the action will evaluate
-    and potentially mark an entity as suspicious even if its status in ThreatFuse
-    is 'False Positive'. |
-
-    | Add Threat Type To Case | Boolean | No | If enabled, the action adds the threat
-    types (e.g., 'bot', 'apt') associated with the indicators as tags to the case.
-    |
-
-    | Create Insight | Boolean | No | If enabled, the action generates a detailed
-    case insight for each processed entity. |
-
-    | Only Suspicious Entity Insight | Boolean | No | If enabled, insights will only
-    be created for entities that exceed the specified severity and confidence thresholds.
-    |
+    Retrieves information about IPs, URLs, hashes, or User entities (with Email regexes)
+    from Siemplify ThreatFuse. If multiple records are found for the same entity,
+    the action will enrich using the latest record. It evaluates the severity and
+    confidence of the indicators to determine if the entity should be marked as suspicious.
 
 
     ### Flow Description
 
-    1. **Initialization:** The action extracts integration configuration (API keys,
-    roots) and user-defined parameters for thresholds and insight creation.
+    1. Extracts configuration and action parameters, including severity and confidence
+    thresholds.
 
-    2. **Entity Filtering:** It iterates through the target entities, filtering for
-    supported types (IP, URL, Hash, User) and validating identifiers (e.g., ensuring
-    no spaces are present).
+    2. Filters the target entities to process only supported types (FileHash, Address,
+    URL, User) and ignores entities with spaces in their identifiers.
 
-    3. **Data Retrieval:** It performs a batch query to the ThreatFuse API to retrieve
-    indicators for all supported entities.
+    3. Retrieves indicators for the supported entities from ThreatFuse via the `/api/v2/intelligence/`
+    endpoint.
 
-    4. **Enrichment:** For each entity with matching indicators, the action updates
-    the entity's additional properties with enrichment data, sets the enriched status,
-    and adds an entity data table.
+    4. Matches the retrieved indicators to their corresponding entities.
 
-    5. **Risk Evaluation:** It calculates whether the entity is suspicious by comparing
-    the indicator's severity and confidence against the user-provided thresholds.
+    5. Enriches the entities with indicator data, updating their additional properties
+    and marking them as enriched.
 
-    6. **Contextual Data:** The action fetches related analysis links and detailed
-    intelligence (e.g., VirusTotal or DomainTools classifications) for the entities.
+    6. Evaluates the indicators against the provided severity and confidence thresholds
+    to optionally mark the entities as suspicious.
 
-    7. **Internal Updates:** Based on configuration, it adds threat tags to the case,
-    creates detailed insights (IP, URL, Domain, Hash, or Email details), and updates
-    the entities in Google SecOps.
+    7. Fetches related analysis links for the entities.
+
+    8. Optionally adds the threat types of the indicators as tags to the case.
+
+    9. Optionally fetches further intel details and creates insights for the processed
+    entities.
+
+    10. Updates the enriched entities in the Google SecOps platform.
 
 
     ### Additional Notes
 
-    - If multiple records are found for the same entity, the action enriches using
-    the latest record but takes the highest severity and average confidence for risk
-    assessment.
+    - If the 'Ignore False Positive Status' parameter is enabled, the action will
+    ignore the false positive status and mark the entity as suspicious based solely
+    on the thresholds.
 
-    - The action supports specific logic for different URL indicator types, distinguishing
-    between 'URL' and 'Domain' for insight generation.
+    - The action will take the highest severity out of all available records if multiple
+    records are found for the same entity.
+  ai_short_description: >-
+    Retrieves threat intelligence information about IPs, URLs, hashes, or User entities
+    from Siemplify ThreatFuse, enriches the entities, and optionally marks them as
+    suspicious based on severity and confidence thresholds.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
-    can_modify_alert_data: true
+    can_modify_alert_data: false
     can_mutate_external_data: false
     can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action enriches entities with threat intelligence, updates their suspicious
-      status, adds threat-related tags to the case, and generates detailed entity
-      insights.
-  categories:
-    enrichment: false
+      Adds threat types of the indicators as tags to the case.
+    reasoning: >-
+      The action fetches data from ThreatFuse using GET requests (`get_indicators`,
+      `get_analysis_links`, `get_intel_details`). It mutates internal data by adding
+      tags to the case (`siemplify.add_tag`). It updates entities (`siemplify.update_entities`)
+      and creates insights (`siemplify.create_case_insight`). It does not mutate external
+      data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - FILEHASH
-    - DestinationURL
-    - USERUNIQNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -120,74 +116,110 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity.entity_type
+      in SUPPORTED_ENTITIES` (which includes FILEHASH, ADDRESS, URL, and USER). It
+      also filters out entities whose identifier contains a space character.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence data (indicators, analysis links, intel
+      details) for IOCs (IPs, URLs, Hashes, Users/Emails) from ThreatFuse, which aligns
+      with the 'Enrich IOC' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Severity Threshold | DropDown | Yes | Specify what should be the severity threshold
+    for the entity, in order to mark it as suspicious. If multiple records are found
+    for the same entity, action will take the highest severity out of all available
+    records. |
+
+    | Confidence Threshold | String | Yes | Specify what should be the confidence
+    threshold for the entity, in order to mark it as suspicious. Note: Maximum is
+    100. If multiple records are found for the entity, action will take the average.
+    Active records have priority. |
+
+    | Ignore False Positive Status | Boolean | No | If enabled, action will ignore
+    the false positive status and mark the entity as suspicious based on the "Severity
+    Threshold" and "Confidence Threshold". If disabled, action will never label false
+    positive entities as suspicious, regardless, if they pass the "Severity Threshold"
+    and "Confidence Threshold" conditions or not. |
+
+    | Add Threat Type To Case | Boolean | No | If enabled, action will add threat
+    types of the entity from all records as tags to the case. Example: apt |
+
+    | Create Insight | Boolean | No | If enabled, action will add an insight per processed
+    entity. |
+
+    | Only Suspicious Entity Insight | Boolean | No | If enabled, action will create
+    insight only for entities that exceeded the "Severity Threshold" and "Confidence
+    Threshold". |
 Get Related Associations:
   ai_description: >-
     ### General Description
 
-    The **Get Related Associations** action retrieves deep threat intelligence context
-    from Siemplify ThreatFuse for specific entities (IP Addresses, File Hashes, URLs,
-    and Users). It identifies related objects such as threat actors, malware families,
-    active campaigns, and vulnerabilities associated with the indicators in the case.
-    This action is designed to provide analysts with a comprehensive view of the threat
-    landscape surrounding the entities involved in an investigation.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Return [Type]** | Boolean | No | Toggles whether to fetch details for specific
-    association types (e.g., Campaigns, Actors, Malware, TTPs, Vulnerabilities). Default
-    values vary by type. |
-
-    | **Create [Type] Entity** | Boolean | No | If enabled, the action will automatically
-    add discovered associations (e.g., a specific Threat Actor or CVE) as new entities
-    to the current case. |
-
-    | **Create Case Tag** | Boolean | No | If enabled, adds the names of the discovered
-    associations as tags to the case for easier filtering and categorization. |
-
-    | **Create Insight** | Boolean | No | If enabled, generates a detailed Case Insight
-    summarizing the findings and providing direct links to the ThreatFuse portal.
-    |
-
-    | **Max Associations To Return** | Integer | No | Limits the number of related
-    objects retrieved per category. Default is 5. |
-
-    | **Max Statistics To Return** | Integer | No | Specifies the number of top IOC
-    statistics (countries, types, sources) to include for the associations. |
+    Retrieves entity-related associations from Siemplify ThreatFuse. This action fetches
+    detailed threat intelligence regarding campaigns, threat bulletins, actors, attack
+    patterns, courses of action, identities, incidents, infrastructure, intrusion
+    sets, malware, signatures, tools, TTPs, and vulnerabilities related to the provided
+    entities. It can also optionally create new entities, case tags, and case insights
+    based on the retrieved associations.
 
 
     ### Flow Description
 
-    1. **Entity Filtering:** The action identifies supported entities (IP, Hash, URL,
-    User) from the case and validates their format (e.g., checking for unsupported
-    spaces).
+    1. Iterates over the supported target entities (FileHash, Address, URL, User).
 
-    2. **Indicator Lookup:** It queries the ThreatFuse API to retrieve internal indicator
-    IDs for the identified entities.
+    2. Retrieves indicators for the supported entities from ThreatFuse.
 
-    3. **Association Discovery:** It searches for related association IDs (e.g., identifying
-    which Campaigns or Actors are linked to the indicator IDs) based on the enabled
-    categories.
+    3. Fetches related associations for each indicator based on the selected association
+    types in the action parameters.
 
-    4. **Detail Retrieval (Async):** The action enters an asynchronous execution state
-    to fetch full metadata and statistics for each discovered association ID, ensuring
-    it doesn't exceed script timeouts.
+    4. Retrieves detailed information for each found association.
 
-    5. **Case Enrichment:** Once all data is gathered, it populates the case with
-    Data Tables, JSON results, Case Insights, Tags, and new Case Entities as configured.
+    5. Optionally fetches statistics for the associations if configured.
+
+    6. Creates case insights, case tags, and new entities based on the retrieved data
+    and action parameters.
+
+    7. Returns a JSON result and a CSV table with the findings.
 
 
     ### Additional Notes
 
-    - This is an asynchronous action that may run across multiple cycles to handle
-    large volumes of intelligence data.
-
-    - New entities created by this action are marked with the property `is_new_entity:
-    True` and are set as vulnerable.
+    This action operates asynchronously to handle potentially large amounts of data
+    and pagination. It processes entities in batches and handles timeouts gracefully.
+  ai_short_description: >-
+    Retrieves entity-related associations from Siemplify ThreatFuse, fetching detailed
+    threat intelligence and optionally creating new entities, case tags, and insights.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -198,16 +230,625 @@ Get Related Associations:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action creates new entities within the case, adds case tags, and generates
-      case insights based on the retrieved threat intelligence.
-  categories:
-    enrichment: false
+      Creates new entities, case tags, and case insights based on the retrieved associations.
+    reasoning: >-
+      The action fetches data from ThreatFuse via GET requests (fetches_data=true).
+      It does not mutate external data. It mutates internal data by creating new entities,
+      case tags, and case insights (can_mutate_internal_data=true, can_create_insight=true).
+      It does not update existing entities via update_entities, but rather adds new
+      ones to the case.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - FILEHASH
-    - DestinationURL
-    - USERUNIQNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES`, where SUPPORTED_ENTITIES includes
+      FILEHASH, ADDRESS, URL, and USER. Therefore, it targets these specific entity
+      types and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence associations (such as campaigns, actors,
+      malware, and vulnerabilities) for the provided indicators from ThreatFuse. This
+      aligns with the 'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Return Campaigns | Boolean | No | If enabled, action will\
+    \ fetch related campaigns and details about them. |\n| Return Threat Bulletins\
+    \ | Boolean | No | If enabled, action will fetch related threat bulletins and\
+    \ details about them. |\n| Return Actors | Boolean | No | If enabled, action will\
+    \ fetch related actors and details about them. |\n| Return Attack Patterns | Boolean\
+    \ | No | If enabled, action will fetch related attack patterns and details about\
+    \ them. |\n| Return Courses Of Action | Boolean | No | If enabled, action will\
+    \ fetch related courses of action and details about them. |\n| Return Identities\
+    \ | Boolean | No | If enabled, action will fetch related identities and details\
+    \ about them. |\n| Return Incidents | Boolean | No | If enabled, action will fetch\
+    \ related incidents and details about them. |\n| Return Infrastructure | Boolean\
+    \ | No | If enabled, action will fetch related infrastructure and details about\
+    \ them. |\n| Return Intrusion Sets | Boolean | No | If enabled, action will fetch\
+    \ related intrusion sets and details about them. |\n| Return Malware | Boolean\
+    \ | No | If enabled, action will fetch related malware and details about them.\
+    \ |\n| Return Signatures | Boolean | No | If enabled, action will fetch related\
+    \ signatures and details about them. |\n| Return Tools | Boolean | No | If enabled,\
+    \ action will fetch related tools and details about them. |\n| Return TTPs | Boolean\
+    \ | No | If enabled, action will fetch related TTPs and details about them. |\n\
+    | Return Vulnerabilities | Boolean | No | If enabled, action will fetch related\
+    \ vulnerabilities and details about them. |\n| Create Campaign Entity | Boolean\
+    \ | No | If enabled, action will create an entity out of available \u201CCampaign\u201D\
+    \ associations. |\n| Create Actors Entity | Boolean | No | If enabled, action\
+    \ will create an entity out of available \u201CActor\u201D associations. |\n|\
+    \ Create Signature Entity | Boolean | No | If enabled, action will create an entity\
+    \ out of available \u201CSignature\u201D associations. |\n| Create Vulnerability\
+    \ Entity | Boolean | No | If enabled, action will create an entity out of available\
+    \ \u201CVulnerability\u201D associations. |\n| Create Case Tag | Boolean | No\
+    \ | If enabled, action will create case tags based on the results. |\n| Create\
+    \ Insight | Boolean | No | If enabled, action will create an insight base on the\
+    \ results. |\n| Max Associations To Return | String | No | Specify how many associations\
+    \ to return per type. Default: 5 |\n| Max Statistics To Return | String | No |\
+    \ Specify how many top statistics results regarding IOCs to return. Note: action\
+    \ will at max process 1000 IOCs related to the association. If you provide \"\
+    0\", action will not try to fetch statistics information. |"
+Get Related Domains:
+  ai_description: >-
+    ### General Description
+
+    Retrieves related domains for specific entities based on associations in Siemplify
+    ThreatFuse. The action supports Hash, URL, IP Address, Email Address (User), Threat
+    Actor, and CVE entities. It queries ThreatFuse for various association types (e.g.,
+    Actors, Campaigns, Malware) and extracts the associated domains, returning them
+    as a JSON result.
+
+
+    ### Flow Description
+
+    1. Extracts configuration and action parameters, including the confidence threshold
+    and the specific association types to search.
+
+    2. Validates the confidence threshold and the maximum number of domains to return.
+
+    3. Iterates over the target entities, filtering for supported types (File Hash,
+    Address, URL, User, CVE, Threat Actor).
+
+    4. Separates entities into two groups: actors/vulnerabilities and other supported
+    indicators.
+
+    5. For standard indicators, makes a GET request to the ThreatFuse API to fetch
+    their corresponding indicator IDs.
+
+    6. Makes subsequent GET requests to retrieve related associations for those indicator
+    IDs based on the selected association types.
+
+    7. For actors and vulnerabilities, makes a GET request to fetch related associations
+    directly by the entity's name.
+
+    8. For all retrieved associations, makes GET requests to fetch the associated
+    indicators of type 'domain' that meet the confidence threshold.
+
+    9. Aggregates the unique domains up to the specified maximum limit.
+
+    10. Attaches the aggregated list of domains to the action's JSON result.
+
+
+    ### Additional Notes
+
+    - Entities containing space characters in their identifiers are skipped.
+
+    - The action will stop querying once the `Max Domains To Return` limit is reached
+    or if the execution deadline is approaching.
+  ai_short_description: >-
+    Retrieves related domains for supported entities (Hash, URL, IP, User, Threat
+    Actor, CVE) based on associations in Siemplify ThreatFuse, returning the results
+    as JSON.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the ThreatFuse API (GET requests) to find related
+      domains. It does not mutate external data, update entities, create insights,
+      or add case comments. It only returns the findings as a JSON result.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: true
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: true
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES`. The supported entities are FILEHASH,
+      ADDRESS, URL, USER, CVE, and THREATACTOR. Therefore, it filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches related domains (threat intelligence context) for the provided
+      indicators and entities from ThreatFuse. This aligns with the 'Enrich IOC' category.
+      It does not mutate external state or update internal alerts/tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Confidence Threshold | String | Yes | Specify what should be the confidence
+    threshold. Note: Maximum is 100. |
+
+    | Search Threat Bulletins | Boolean | Yes | If enabled, action will search among
+    threat bulletins. |
+
+    | Search Actors | Boolean | Yes | If enabled, action will search among actors.
+    |
+
+    | Search Attack Patterns | Boolean | Yes | If enabled, action will search among
+    attack patterns. |
+
+    | Search Campaigns | Boolean | Yes | If enabled, action will search among campaigns.
+    |
+
+    | Search Courses Of Action | Boolean | Yes | If enabled, action will search among
+    courses of action. |
+
+    | Search Identities | Boolean | Yes | If enabled, action will search among identities.
+    |
+
+    | Search Incidents | Boolean | Yes | If enabled, action will search among incidents.
+    |
+
+    | Search Infrastructures | Boolean | Yes | If enabled, action will search among
+    infrastructures. |
+
+    | Search Intrusion Sets | Boolean | Yes | If enabled, action will search among
+    intrusion sets. |
+
+    | Search Malware | Boolean | Yes | If enabled, action will search among malware.
+    |
+
+    | Search Signatures | Boolean | Yes | If enabled, action will search among signatures.
+    |
+
+    | Search Tools | Boolean | Yes | If enabled, action will search among tools. |
+
+    | Search TTPs | Boolean | Yes | If enabled, action will search among TTPs. |
+
+    | Search Vulnerabilities | Boolean | Yes | If enabled, action will search among
+    vulnerabilities. |
+
+    | Max Domains To Return | String | No | Specify how many domains to return. Default:
+    50. |
+Get Related Email Addresses:
+  ai_description: >-
+    ### General Description
+
+    Retrieves entity-related email addresses based on associations in Siemplify ThreatFuse.
+    The action queries the ThreatFuse API to find related indicators of type 'email'
+    for the provided entities and returns the aggregated results as a JSON object.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities and filters them by supported types (File
+    Hash, IP Address, URL, User, CVE, Threat Actor).
+
+    2. Validates the entity identifiers to ensure they do not contain spaces.
+
+    3. Queries Siemplify ThreatFuse to retrieve indicators for the supported entities
+    (excluding CVEs and Threat Actors).
+
+    4. Fetches related associations for the retrieved indicators based on the selected
+    association types (e.g., Threat Bulletins, Actors, Campaigns).
+
+    5. Retrieves email indicators associated with the related associations, filtering
+    by the specified confidence threshold.
+
+    6. Processes Threat Actors and CVEs separately by querying their related associations
+    by name and fetching their associated email indicators.
+
+    7. Aggregates the retrieved email addresses and returns them as a JSON result.
+
+
+    ### Additional Notes
+
+    The action does not update the entities or create insights; it only returns the
+    related email addresses in the action's JSON result.
+  ai_short_description: >-
+    Retrieves entity-related email addresses based on associations in Siemplify ThreatFuse
+    and returns them as a JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the ThreatFuse API to fetch related email addresses
+      for the target entities. It does not perform any state-changing operations on
+      external systems. Internally, it only returns a JSON result and does not update
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: true
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: true
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      not in SUPPORTED_ENTITIES`. The supported entities are FILEHASH, ADDRESS, URL,
+      USER, CVE, and THREATACTOR. Therefore, it targets these specific entity types
+      and filters by `entity_type`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches related email addresses from ThreatFuse based on associations.
+      It does not return reputation or threat intelligence directly for the indicator
+      to enrich it, nor does it mutate any external or internal state. Therefore,
+      it does not match any of the expected outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Confidence Threshold | String | Yes | Specify what should be the confidence
+    threshold. Note: Maximum is 100. |
+
+    | Search Observables | Boolean | Yes | If enabled, action will search among observables.
+    |
+
+    | Search Threat Bulletins | Boolean | Yes | If enabled, action will search among
+    threat bulletins. |
+
+    | Search Actors | Boolean | Yes | If enabled, action will search among actors.
+    |
+
+    | Search Attack Patterns | Boolean | Yes | If enabled, action will search among
+    attack patterns. |
+
+    | Search Campaigns | Boolean | Yes | If enabled, action will search among campaigns.
+    |
+
+    | Search Courses Of Action | Boolean | Yes | If enabled, action will search among
+    courses of action. |
+
+    | Search Identities | Boolean | Yes | If enabled, action will search among identities.
+    |
+
+    | Search Incidents | Boolean | Yes | If enabled, action will search among incidents.
+    |
+
+    | Search Infrastructures | Boolean | Yes | If enabled, action will search among
+    infrastructures. |
+
+    | Search Intrusion Sets | Boolean | Yes | If enabled, action will search among
+    intrusion sets. |
+
+    | Search Malware | Boolean | Yes | If enabled, action will search among malware.
+    |
+
+    | Search Signatures | Boolean | Yes | If enabled, action will search among signatures.
+    |
+
+    | Search Tools | Boolean | Yes | If enabled, action will search among tools. |
+
+    | Search TTPs | Boolean | Yes | If enabled, action will search among TTPs. |
+
+    | Search Vulnerabilities | Boolean | Yes | If enabled, action will search among
+    vulnerabilities. |
+
+    | Max Email Addresses To Return | String | No | Specify how many email addresses
+    to return. Default: 50. |
+Get Related Hashes:
+  ai_description: >-
+    ### General Description
+
+    Retrieves related hashes for supported entities (File Hash, URL, IP Address, User,
+    Threat Actor, CVE) based on associations in Siemplify ThreatFuse. The action queries
+    the ThreatFuse API to find related threat models (such as campaigns, malware,
+    actors, etc.) and extracts the associated MD5 hashes, returning them as a JSON
+    result.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities and filters them to include only supported
+    types (`FILEHASH`, `ADDRESS`, `URL`, `USER`, `CVE`, `THREATACTOR`).
+
+    2. Excludes any entities that contain a space character in their identifier.
+
+    3. Separates the entities into two groups: actors/vulnerabilities (CVE, THREATACTOR)
+    and general indicators (others).
+
+    4. For general indicators, makes a GET request to the ThreatFuse API to fetch
+    indicator details, then retrieves related associations based on the selected association
+    types (e.g., Threat Bulletins, Malware, Campaigns).
+
+    5. For actors and vulnerabilities, makes a GET request to the ThreatFuse API to
+    retrieve related associations directly by name.
+
+    6. For all discovered associations, fetches the associated MD5 indicators (hashes)
+    that meet the specified `Confidence Threshold`.
+
+    7. Aggregates the retrieved hashes and returns them as a JSON result.
+
+
+    ### Additional Notes
+
+    This action does not update the entities or create insights in the platform; it
+    solely outputs the retrieved hashes into the action's JSON result for use in subsequent
+    playbook steps.
+  ai_short_description: >-
+    Retrieves related hashes for supported entities based on associations in Siemplify
+    ThreatFuse, returning the aggregated hashes as a JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the ThreatFuse API to fetch indicators and
+      related associations. It does not mutate external data. It does not mutate internal
+      data (no entity updates, no insights, no case comments). It only returns a JSON
+      result.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: true
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: true
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -221,409 +862,332 @@ Get Related Associations:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Get Related Domains:
-  ai_description: "Retrieves domains related to specific entities by querying associations\
-    \ within Siemplify ThreatFuse. This action allows analysts to discover infrastructure\
-    \ linked to known threats, such as malware, campaigns, or threat actors, by traversing\
-    \ the ThreatFuse relationship graph.\n\n### Parameters\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Confidence Threshold | Integer\
-    \ | Yes | The minimum confidence score (0-100) required for a related domain to\
-    \ be included in the results. |\n| Search Threat Bulletins | Boolean | Yes | If\
-    \ enabled, searches for domains associated with Threat Bulletins. |\n| Search\
-    \ Actors | Boolean | Yes | If enabled, searches for domains associated with Threat\
-    \ Actors. |\n| Search Attack Patterns | Boolean | Yes | If enabled, searches for\
-    \ domains associated with Attack Patterns. |\n| Search Campaigns | Boolean | Yes\
-    \ | If enabled, searches for domains associated with Campaigns. |\n| Search Courses\
-    \ Of Action | Boolean | Yes | If enabled, searches for domains associated with\
-    \ Courses of Action. |\n| Search Identities | Boolean | Yes | If enabled, searches\
-    \ for domains associated with Identities. |\n| Search Incidents | Boolean | Yes\
-    \ | If enabled, searches for domains associated with Incidents. |\n| Search Infrastructures\
-    \ | Boolean | Yes | If enabled, searches for domains associated with Infrastructures.\
-    \ |\n| Search Intrusion Sets | Boolean | Yes | If enabled, searches for domains\
-    \ associated with Intrusion Sets. |\n| Search Malware | Boolean | Yes | If enabled,\
-    \ searches for domains associated with Malware. |\n| Search Signatures | Boolean\
-    \ | Yes | If enabled, searches for domains associated with Signatures. |\n| Search\
-    \ Tools | Boolean | Yes | If enabled, searches for domains associated with Tools.\
-    \ |\n| Search TTPs | Boolean | Yes | If enabled, searches for domains associated\
-    \ with TTPs. |\n| Search Vulnerabilities | Boolean | Yes | If enabled, searches\
-    \ for domains associated with Vulnerabilities. |\n| Max Domains To Return | Integer\
-    \ | No | The maximum number of unique domains to return. Default is 50. |\n\n\
-    ### Additional Notes\n* The action supports a wide range of entity types including\
-    \ File Hashes, IP Addresses, URLs, Email Addresses (User entities), Threat Actors,\
-    \ and CVEs.\n* Results are aggregated into a unique set of domains to prevent\
-    \ duplicates.\n\n### Flow Description\n1. **Initialization**: Validates the `Confidence\
-    \ Threshold` and initializes the ThreatFuse manager using API credentials.\n2.\
-    \ **Entity Filtering**: Identifies supported entities from the target list and\
-    \ categorizes them into standard indicators (IP, Hash, URL, Email) or model-based\
-    \ entities (CVE, Threat Actor).\n3. **Association Mapping**: Determines which\
-    \ ThreatFuse association types to query based on the boolean 'Search' parameters\
-    \ provided by the user.\n4. **Indicator Retrieval**: For standard entities, the\
-    \ action first retrieves their corresponding indicator IDs from ThreatFuse.\n\
-    5. **Relationship Traversal**: \n    * For standard indicators: Finds related\
-    \ associations (e.g., Malware) and then queries those associations for linked\
-    \ Domain indicators.\n    * For CVEs and Threat Actors: Directly searches for\
-    \ the association by name and then queries for linked Domain indicators.\n6. **Filtering\
-    \ & Aggregation**: Filters domains based on the `Confidence Threshold` and `Max\
-    \ Domains To Return` limit.\n7. **Output**: Returns the list of discovered domains\
-    \ in the action's JSON result."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - FILEHASH
-    - ADDRESS
-    - DestinationURL
-    - USERUNIQNAME
-    - THREATACTOR
-    - CVEID
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Related Email Addresses:
-  ai_description: "### General Description\nRetrieves email addresses associated with\
-    \ specific entities (File Hashes, URLs, IP Addresses, Users, Threat Actors, or\
-    \ CVEs) from Siemplify ThreatFuse. This action performs a comprehensive search\
-    \ across various threat intelligence modules\u2014such as campaigns, malware,\
-    \ and actors\u2014to identify linked email indicators. It is primarily used to\
-    \ uncover related infrastructure or contact information associated with a threat.\n\
-    \n### Parameters Description\n\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| Confidence Threshold | Integer | Yes | The minimum\
-    \ confidence score (0-100) required for an email indicator to be included in the\
-    \ results. |\n| Search Observables | Boolean | Yes | If enabled, the action searches\
-    \ for related emails within the Observables module. |\n| Search Threat Bulletins\
-    \ | Boolean | Yes | If enabled, the action searches for related emails within\
-    \ Threat Bulletins. |\n| Search Actors | Boolean | Yes | If enabled, the action\
-    \ searches for related emails associated with Threat Actors. |\n| Search Attack\
-    \ Patterns | Boolean | Yes | If enabled, the action searches for related emails\
-    \ associated with Attack Patterns. |\n| Search Campaigns | Boolean | Yes | If\
-    \ enabled, the action searches for related emails associated with Campaigns. |\n\
-    | Search Courses Of Action | Boolean | Yes | If enabled, the action searches for\
-    \ related emails associated with Courses of Action. |\n| Search Identities | Boolean\
-    \ | Yes | If enabled, the action searches for related emails associated with Identities.\
-    \ |\n| Search Incidents | Boolean | Yes | If enabled, the action searches for\
-    \ related emails associated with Incidents. |\n| Search Infrastructures | Boolean\
-    \ | Yes | If enabled, the action searches for related emails associated with Infrastructures.\
-    \ |\n| Search Intrusion Sets | Boolean | Yes | If enabled, the action searches\
-    \ for related emails associated with Intrusion Sets. |\n| Search Malware | Boolean\
-    \ | Yes | If enabled, the action searches for related emails associated with Malware.\
-    \ |\n| Search Signatures | Boolean | Yes | If enabled, the action searches for\
-    \ related emails associated with Signatures. |\n| Search Tools | Boolean | Yes\
-    \ | If enabled, the action searches for related emails associated with Tools.\
-    \ |\n| Search TTPs | Boolean | Yes | If enabled, the action searches for related\
-    \ emails associated with TTPs. |\n| Search Vulnerabilities | Boolean | Yes | If\
-    \ enabled, the action searches for related emails associated with Vulnerabilities.\
-    \ |\n| Max Email Addresses To Return | Integer | No | Limits the number of unique\
-    \ email addresses returned. Default is 50. |\n\n### Additional Notes\n- The action\
-    \ filters out entities whose identifiers contain spaces.\n- For CVE and Threat\
-    \ Actor entities, the action performs a direct threat model search by name.\n\
-    - For other entities, it first retrieves the indicator ID before searching for\
-    \ associations.\n\n### Flow Description\n1. **Initialization**: Extracts configuration\
-    \ and action parameters, including the confidence threshold and the specific modules\
-    \ to search.\n2. **Entity Filtering**: Iterates through target entities, filtering\
-    \ for supported types (FILEHASH, ADDRESS, URL, USER, CVE, THREATACTOR) and validating\
-    \ that identifiers do not contain spaces.\n3. **Indicator Retrieval**: For standard\
-    \ entities (IP, Hash, URL, User), it fetches the corresponding indicator objects\
-    \ from the ThreatFuse API.\n4. **Association Discovery**: For each enabled search\
-    \ module (e.g., Malware, Campaigns), it identifies objects linked to the retrieved\
-    \ indicators.\n5. **Threat Model Search**: For CVE and Threat Actor entities,\
-    \ it directly queries the ThreatFuse threat model search endpoint to find relevant\
-    \ associations.\n6. **Email Extraction**: For every discovered association, it\
-    \ queries for related indicators specifically of type 'email' that meet the specified\
-    \ confidence threshold.\n7. **Result Aggregation**: Collects unique email addresses\
-    \ into a list, respecting the 'Max Email Addresses To Return' limit.\n8. **Output**:\
-    \ Returns the list of emails in the action's JSON results and provides a summary\
-    \ message."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types:
-    - FILEHASH
-    - ADDRESS
-    - DestinationURL
-    - USERUNIQNAME
-    - THREATACTOR
-    - CVE
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Related Hashes:
-  ai_description: >-
-    ### General Description
-
-    The **Get Related Hashes** action retrieves file hashes (MD5, SHA1, SHA256) associated
-    with specific entities from Siemplify ThreatFuse. It leverages ThreatFuse's threat
-    modeling and association engine to find related indicators across various categories
-    such as Malware, Campaigns, Actors, and Vulnerabilities. This action is primarily
-    used to expand the scope of an investigation by identifying related malicious
-    files based on a known indicator (IP, URL, Hash, etc.).
-
-
-    ### Parameters Description
-
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity_type`
+      (checking against `SUPPORTED_ENTITIES` which includes FILEHASH, ADDRESS, URL,
+      USER, CVE, THREATACTOR). It also filters by identifier, skipping entities where
+      `consts.SPACE_CHARACTER in entity.identifier.strip()`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches related hashes (threat intelligence) for the provided entities
+      (IOCs, Threat Actors, CVEs) from ThreatFuse. This aligns with the 'Enrich IOC'
+      category as it retrieves threat intelligence for the indicators.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Confidence Threshold | Integer | Yes | The minimum confidence score (0-100)
-    required for a related hash to be included in the results. |
+    | Confidence Threshold | String | Yes | Specify what should be the confidence
+    threshold. Note: Maximum is 100. |
 
-    | Search Threat Bulletins | Boolean | Yes | If enabled, the action will search
-    for hashes associated with threat bulletins. |
+    | Search Threat Bulletins | Boolean | Yes | If enabled, action will search among
+    threat bulletins. |
 
-    | Search Actors | Boolean | Yes | If enabled, the action will search for hashes
-    associated with threat actors. |
+    | Search Actors | Boolean | Yes | If enabled, action will search among actors.
+    |
 
-    | Search Attack Patterns | Boolean | Yes | If enabled, the action will search
-    for hashes associated with attack patterns. |
+    | Search Attack Patterns | Boolean | Yes | If enabled, action will search among
+    attack patterns. |
 
-    | Search Campaigns | Boolean | Yes | If enabled, the action will search for hashes
-    associated with campaigns. |
+    | Search Campaigns | Boolean | Yes | If enabled, action will search among campaigns.
+    |
 
-    | Search Courses Of Action | Boolean | Yes | If enabled, the action will search
-    for hashes associated with courses of action. |
+    | Search Courses Of Action | Boolean | Yes | If enabled, action will search among
+    courses of action. |
 
-    | Search Identities | Boolean | Yes | If enabled, the action will search for hashes
-    associated with identities. |
+    | Search Identities | Boolean | Yes | If enabled, action will search among identities.
+    |
 
-    | Search Incidents | Boolean | Yes | If enabled, the action will search for hashes
-    associated with incidents. |
+    | Search Incidents | Boolean | Yes | If enabled, action will search among incidents.
+    |
 
-    | Search Infrastructures | Boolean | Yes | If enabled, the action will search
-    for hashes associated with infrastructures. |
+    | Search Infrastructures | Boolean | Yes | If enabled, action will search among
+    infrastructures. |
 
-    | Search Intrusion Sets | Boolean | Yes | If enabled, the action will search for
-    hashes associated with intrusion sets. |
+    | Search Intrusion Sets | Boolean | Yes | If enabled, action will search among
+    intrusion sets. |
 
-    | Search Malware | Boolean | Yes | If enabled, the action will search for hashes
-    associated with malware. |
+    | Search Malware | Boolean | Yes | If enabled, action will search among malware.
+    |
 
-    | Search Signatures | Boolean | Yes | If enabled, the action will search for hashes
-    associated with signatures. |
+    | Search Signatures | Boolean | Yes | If enabled, action will search among signatures.
+    |
 
-    | Search Tools | Boolean | Yes | If enabled, the action will search for hashes
-    associated with tools. |
+    | Search Tools | Boolean | Yes | If enabled, action will search among tools. |
 
-    | Search TTPs | Boolean | Yes | If enabled, the action will search for hashes
-    associated with TTPs. |
+    | Search TTPs | Boolean | Yes | If enabled, action will search among TTPs. |
 
-    | Search Vulnerabilities | Boolean | Yes | If enabled, the action will search
-    for hashes associated with vulnerabilities. |
+    | Search Vulnerabilities | Boolean | Yes | If enabled, action will search among
+    vulnerabilities. |
 
-    | Max Hashes To Return | Integer | No | The maximum number of hashes to retrieve.
-    Defaults to 50 if not specified or if a negative value is provided. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts configuration parameters and validates
-    that the `Confidence Threshold` is between 0 and 100.
-
-    2. **Entity Scoping**: It identifies supported entities from the target list (IP,
-    URL, Hash, User, CVE, Threat Actor). It specifically separates `CVE` and `THREATACTOR`
-    entities for specialized lookup logic.
-
-    3. **Association Mapping**: It builds a list of association types to search based
-    on the enabled "Search" boolean parameters.
-
-    4. **Indicator Retrieval**: For standard indicators (IP, URL, Hash, User), it
-    fetches corresponding indicator IDs from the ThreatFuse API.
-
-    5. **Association Querying**: It iterates through the selected association types
-    to find objects linked to the identified indicators.
-
-    6. **Hash Extraction**: For each found association (or directly for CVE/Actor
-    entities), it queries for related MD5/SHA hashes that meet the confidence threshold.
-
-    7. **Aggregation**: The action collects all unique hashes, categorizes them by
-    type (MD5, SHA1, SHA256), and returns them as a JSON result.
-
-
-    ### Additional Notes
-
-    - The action will skip entities containing spaces as they are not supported by
-    the underlying API for these lookups.
-
-    - Email addresses are supported when provided as User entities that match standard
-    email regex.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - FILEHASH
-    - ADDRESS
-    - DestinationURL
-    - USERUNIQNAME
-    - THREATACTOR
-    - CVE
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
+    | Max Hashes To Return | String | No | Specify how many hashes to return. Default:
+    50. |
 Get Related IPs:
   ai_description: >-
     ### General Description
 
-    The **Get Related IPs** action retrieves IP addresses associated with specific
-    entities from the Siemplify ThreatFuse platform. It allows analysts to discover
-    connected infrastructure by exploring relationships across various threat intelligence
-    categories such as Malware, Campaigns, Threat Actors, and Vulnerabilities. This
-    action is primarily used for infrastructure pivoting and expanding the scope of
-    an investigation based on known indicators.
+    Retrieves related IP addresses for specific entities (Hash, URL, IP Address, Email
+    Address, Threat Actor, CVE) based on associations in Siemplify ThreatFuse. The
+    action queries the ThreatFuse API to find related infrastructure and threat intelligence
+    data, returning the discovered IP addresses as a JSON result.
 
 
-    ### Parameters Description
+    ### Flow Description
 
-    | Parameter | Type | Mandatory | Description |
+    1. Initializes the ThreatFuseManager with API credentials.
 
-    | :--- | :--- | :--- | :--- |
+    2. Iterates through the target entities and filters for supported types (FILEHASH,
+    ADDRESS, URL, USER, CVE, THREATACTOR).
 
-    | Confidence Threshold | Integer | Yes | Specifies the minimum confidence level
-    (0-100) required for a related IP to be included in the results. |
+    3. Determines which association types to search based on the action parameters
+    (e.g., Threat Bulletins, Actors, Attack Patterns).
 
-    | Search Observables | Boolean | Yes | If enabled, the action searches for IPs
-    related to observables. |
+    4. For standard entities (Hash, URL, IP, Email), fetches indicators from ThreatFuse.
 
-    | Search Threat Bulletins | Boolean | Yes | If enabled, the action searches for
-    IPs related to threat bulletins. |
+    5. Retrieves related associations for these indicators.
 
-    | Search Actors | Boolean | Yes | If enabled, the action searches for IPs related
-    to threat actors. |
+    6. Fetches association type indicators (specifically IP indicators) for the retrieved
+    associations, filtering by the specified confidence threshold.
 
-    | Search Attack Patterns | Boolean | Yes | If enabled, the action searches for
-    IPs related to attack patterns. |
+    7. For Threat Actor and CVE entities, directly fetches related associations by
+    name.
 
-    | Search Campaigns | Boolean | Yes | If enabled, the action searches for IPs related
-    to campaigns. |
+    8. Fetches association type indicators (IP indicators) for these associations.
 
-    | Search Courses Of Action | Boolean | Yes | If enabled, the action searches for
-    IPs related to courses of action. |
+    9. Aggregates the retrieved IP addresses up to the specified maximum limit.
 
-    | Search Identities | Boolean | Yes | If enabled, the action searches for IPs
-    related to identities. |
-
-    | Search Incidents | Boolean | Yes | If enabled, the action searches for IPs related
-    to incidents. |
-
-    | Search Infrastructures | Boolean | Yes | If enabled, the action searches for
-    IPs related to infrastructures. |
-
-    | Search Intrusion Sets | Boolean | Yes | If enabled, the action searches for
-    IPs related to intrusion sets. |
-
-    | Search Malware | Boolean | Yes | If enabled, the action searches for IPs related
-    to malware. |
-
-    | Search Signatures | Boolean | Yes | If enabled, the action searches for IPs
-    related to signatures. |
-
-    | Search Tools | Boolean | Yes | If enabled, the action searches for IPs related
-    to tools. |
-
-    | Search TTPs | Boolean | Yes | If enabled, the action searches for IPs related
-    to TTPs. |
-
-    | Search Vulnerabilities | Boolean | Yes | If enabled, the action searches for
-    IPs related to vulnerabilities. |
-
-    | Max IPs To Return | Integer | No | The maximum number of unique IP addresses
-    to return in the result (Default: 50). |
+    10. Returns the list of related IPs as a JSON result attached to the action.
 
 
     ### Additional Notes
 
-    - The action supports the following entity types: **FileHash**, **Address (IP)**,
-    **DestinationURL**, **UserUniqName (Email)**, **ThreatActor**, and **CVEID**.
+    The action supports various association types which can be toggled via parameters
+    to broaden or narrow the search scope.
+  ai_short_description: >-
+    Retrieves related IP addresses for specific entities based on associations in
+    Siemplify ThreatFuse.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the ThreatFuse API using GET requests. It does
+      not mutate external data. Internally, it only adds a JSON result to the action
+      execution and does not update entities, create insights, or add case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: true
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: true
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      not in SUPPORTED_ENTITIES`, where supported entities are FILEHASH, ADDRESS,
+      URL, USER, CVE, and THREATACTOR. It also uses `entity.identifier` to query the
+      ThreatFuse API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches related IP addresses for various IOCs (Hash, URL, IP, Email,
+      CVE, Threat Actor) from ThreatFuse, which aligns with the 'Enrich IOC' category
+      by providing threat intelligence and related infrastructure context. It does
+      not mutate external state or perform other categorized actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
 
-    - For User entities, the identifier must match a standard email regex to be processed.
+    | --- | --- | --- | --- |
 
-    - The action performs a multi-stage lookup: first identifying the indicator in
-    ThreatFuse, then finding its associations, and finally extracting IP-type indicators
-    from those associations.
+    | Confidence Threshold | String | Yes | Specify what should be the confidence
+    threshold. Note: Maximum is 100. |
+
+    | Search Observables | Boolean | Yes | If enabled, action will search among observables.
+    |
+
+    | Search Threat Bulletins | Boolean | Yes | If enabled, action will search among
+    threat bulletins. |
+
+    | Search Actors | Boolean | Yes | If enabled, action will search among actors.
+    |
+
+    | Search Attack Patterns | Boolean | Yes | If enabled, action will search among
+    attack patterns. |
+
+    | Search Campaigns | Boolean | Yes | If enabled, action will search among campaigns.
+    |
+
+    | Search Courses Of Action | Boolean | Yes | If enabled, action will search among
+    courses of action. |
+
+    | Search Identities | Boolean | Yes | If enabled, action will search among identities.
+    |
+
+    | Search Incidents | Boolean | Yes | If enabled, action will search among incidents.
+    |
+
+    | Search Infrastructures | Boolean | Yes | If enabled, action will search among
+    infrastructures. |
+
+    | Search Intrusion Sets | Boolean | Yes | If enabled, action will search among
+    intrusion sets. |
+
+    | Search Malware | Boolean | Yes | If enabled, action will search among malware.
+    |
+
+    | Search Signatures | Boolean | Yes | If enabled, action will search among signatures.
+    |
+
+    | Search Tools | Boolean | Yes | If enabled, action will search among tools. |
+
+    | Search TTPs | Boolean | Yes | If enabled, action will search among TTPs. |
+
+    | Search Vulnerabilities | Boolean | Yes | If enabled, action will search among
+    vulnerabilities. |
+
+    | Max IPs To Return | String | No | Specify how many IPs to return. Default: 50.
+    |
+Get Related URLs:
+  ai_description: >-
+    ### General Description
+
+    Retrieves related URLs based on associations in Siemplify ThreatFuse for supported
+    entities (Hash, URL, IP Address, User, Threat Actor, CVE). The action queries
+    the ThreatFuse API to find related indicators and associations, extracting the
+    associated URLs and returning them as a JSON result.
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts configuration and action parameters, validating
-    that the confidence threshold is within the 0-100 range.
+    1. Iterates over the target entities and filters them by supported types (Hash,
+    URL, IP Address, User, Threat Actor, CVE).
 
-    2. **Entity Filtering**: Iterates through target entities and filters for supported
-    types (Hash, IP, URL, User, Actor, CVE). It also excludes identifiers containing
-    spaces.
+    2. Skips any entities whose identifiers contain space characters.
 
-    3. **Association Mapping**: Determines which association types (e.g., Malware,
-    Campaigns) to query based on the boolean toggle parameters.
+    3. Separates the entities into general indicators and actors/vulnerabilities.
 
-    4. **Standard Entity Processing**: For IP, Hash, URL, and User entities, the action
-    retrieves their internal indicator IDs from ThreatFuse and then queries for related
-    associations of the enabled types.
+    4. For general indicators, queries ThreatFuse to retrieve their indicator IDs.
 
-    5. **Threat Model Processing**: For Actor and CVE entities, it performs a direct
-    search for the threat model association by name.
+    5. Retrieves related associations for the indicators based on the selected association
+    types (e.g., Threat Bulletins, Actors, Campaigns).
 
-    6. **IP Extraction**: For every discovered association, the action fetches linked
-    indicators of type 'IP' that meet the specified confidence threshold.
+    6. Fetches URL indicators for the retrieved associations.
 
-    7. **Aggregation**: Collects unique IP addresses up to the `Max IPs To Return`
-    limit and attaches them to the action's JSON result.
+    7. For actors and vulnerabilities, queries ThreatFuse directly by name to get
+    related associations and their URL indicators.
+
+    8. Aggregates all retrieved URLs and returns them as a JSON result.
+
+
+    ### Additional Notes
+
+    The action allows filtering by a confidence threshold and limits the maximum number
+    of URLs returned. It supports a wide range of association types that can be toggled
+    on or off via action parameters.
+  ai_short_description: >-
+    Retrieves related URLs from Siemplify ThreatFuse based on various association
+    types for supported entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -634,22 +1198,53 @@ Get Related IPs:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches data from the ThreatFuse API using GET requests. It does
+      not mutate external data, update entities, create insights, or modify alert
+      data. It only returns the fetched URLs as a JSON result.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - FILEHASH
-    - DestinationURL
-    - USERUNIQNAME
-    - THREATACTOR
-    - CVEID
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: true
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: true
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -657,117 +1252,122 @@ Get Related IPs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Get Related URLs:
-  ai_description: "### General Description\nRetrieves unique URLs associated with\
-    \ specific entities by traversing threat intelligence relationships in Siemplify\
-    \ ThreatFuse. This action allows analysts to discover related infrastructure,\
-    \ phishing links, or distribution sites linked to indicators like IPs, Hashes,\
-    \ or Threat Actors.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Confidence Threshold | Integer\
-    \ | Yes | Filters related indicators by a minimum confidence score (0-100). |\n\
-    | Search [Category] | Boolean | Yes | A series of flags (e.g., Search Actors,\
-    \ Search Malware, Search TTPs) that determine which association types in ThreatFuse\
-    \ are traversed to find related URLs. |\n| Max URLs To Return | Integer | No |\
-    \ Limits the total number of unique URLs returned in the result. Default is 50.\
-    \ |\n\n### Additional Notes\n- The action supports a wide range of entity types\
-    \ including standard indicators (IP, Hash, URL, Email) and threat model objects\
-    \ (CVE, Threat Actor).\n- Entities containing space characters are automatically\
-    \ skipped as they are not supported by the underlying API.\n\n### Flow Description\n\
-    1. **Initialization**: Validates the confidence threshold and initializes the\
-    \ ThreatFuse manager with API credentials.\n2. **Entity Filtering**: Iterates\
-    \ through target entities, filtering for supported types (ADDRESS, FILEHASH, DestinationURL,\
-    \ USERUNIQNAME, CVE, THREATACTOR) and ensuring identifiers do not contain spaces.\n\
-    3. **Association Traversal**: \n    - For standard indicators (IP, Hash, URL,\
-    \ Email), it fetches the indicator ID and then searches for related associations\
-    \ (e.g., Malware, Campaigns) based on the enabled search parameters.\n    - For\
-    \ CVE and Threat Actor entities, it directly identifies the corresponding threat\
-    \ model object in ThreatFuse.\n4. **URL Extraction**: Queries the identified associations\
-    \ for linked indicators of type 'URL' that meet the specified confidence threshold.\n\
-    5. **Aggregation**: Collects all discovered URLs into a unique set, respecting\
-    \ the 'Max URLs To Return' limit.\n6. **Output**: Returns the list of unique URLs\
-    \ as a JSON result for use in subsequent playbook steps."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - FILEHASH
-    - DestinationURL
-    - USERUNIQNAME
-    - THREATACTOR
-    - CVE
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity.entity_type
+      in SUPPORTED_ENTITIES` (FILEHASH, ADDRESS, URL, USER, CVE, THREATACTOR). It
+      also filters out entities whose identifiers contain a space character.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches related URLs (threat intelligence context) for IOCs and threat
+      actors/vulnerabilities from ThreatFuse, which aligns with the 'Enrich IOC' category.
+      It does not mutate external state or internal case data.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Confidence Threshold | String | Yes | Specify what should be the confidence
+    threshold. Note: Maximum is 100. |
+
+    | Search Threat Bulletins | Boolean | Yes | If enabled, action will search among
+    threat bulletins. |
+
+    | Search Actors | Boolean | Yes | If enabled, action will search among actors.
+    |
+
+    | Search Attack Patterns | Boolean | Yes | If enabled, action will search among
+    attack patterns. |
+
+    | Search Campaigns | Boolean | Yes | If enabled, action will search among campaigns.
+    |
+
+    | Search Courses Of Action | Boolean | Yes | If enabled, action will search among
+    courses of action. |
+
+    | Search Identities | Boolean | Yes | If enabled, action will search among identities.
+    |
+
+    | Search Incidents | Boolean | Yes | If enabled, action will search among incidents.
+    |
+
+    | Search Infrastructures | Boolean | Yes | If enabled, action will search among
+    infrastructures. |
+
+    | Search Intrusion Sets | Boolean | Yes | If enabled, action will search among
+    intrusion sets. |
+
+    | Search Malware | Boolean | Yes | If enabled, action will search among malware.
+    |
+
+    | Search Signatures | Boolean | Yes | If enabled, action will search among signatures.
+    |
+
+    | Search Tools | Boolean | Yes | If enabled, action will search among tools. |
+
+    | Search TTPs | Boolean | Yes | If enabled, action will search among TTPs. |
+
+    | Search Vulnerabilities | Boolean | Yes | If enabled, action will search among
+    vulnerabilities. |
+
+    | Max URLs To Return | String | No | Specify how many hashes to return. Default:
+    50. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool designed to verify the connectivity between
-    Google SecOps and the Siemplify ThreatFuse server. It ensures that the provided
-    configuration parameters, such as the API Root, Web Root, and authentication credentials,
-    are correct and that the server is reachable.
-
-
-    ### Parameters Description
-
-    This action does not take any input parameters directly from the playbook. Instead,
-    it utilizes the following configuration parameters defined at the integration
-    level:
-
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Web Root | String | Yes | The base URL for the ThreatFuse web interface. |
-
-    | API Root | String | Yes | The base URL for the ThreatFuse API. |
-
-    | Email Address | String | Yes | The email address associated with the ThreatFuse
-    account. |
-
-    | API Key | String | Yes | The API key used for authentication. |
-
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    of the ThreatFuse server. |
+    Tests connectivity to the Siemplify ThreatFuse server using the provided integration
+    configuration parameters. This action is used to verify that the API credentials
+    and network settings are correct.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the connection details (URLs
-    and credentials) from the integration's configuration.
+    1. Extracts the integration-level configuration parameters (API Root, API Key,
+    Email Address, etc.).
 
-    2. **Manager Initialization:** It initializes the `ThreatFuseManager` with the
-    extracted settings.
+    2. Initializes the `ThreatFuseManager` with the provided credentials.
 
-    3. **Connectivity Test:** The action performs a `GET` request to the ThreatFuse
-    intelligence endpoint (`/api/v2/intelligence/`) with a minimal limit to validate
-    that the credentials are valid and the server responds correctly.
+    3. Calls the `test_connectivity` method, which sends a GET request to the `/api/v2/intelligence/`
+    endpoint with a limit of 1 to validate the credentials.
 
-    4. **Result Reporting:** If the request is successful, it returns a success message
-    and sets the execution state to completed. If an exception occurs (e.g., timeout,
-    invalid credentials), it logs the error and reports a failure.
+    4. Returns a success message if the connection is established and the response
+    is valid, otherwise returns an error message and fails the action.
+
+
+    ### Additional Notes
+
+    This action does not interact with any case data or entities. It is strictly for
+    administrative validation of the integration setup.
+  ai_short_description: >-
+    Tests connectivity to the Siemplify ThreatFuse server to validate the integration
+    configuration parameters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -776,12 +1376,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action only tests connectivity to the Siemplify ThreatFuse server by making
+      a simple GET request. It does not fetch contextual data for entities, mutate
+      any external or internal data, update entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -795,84 +1432,80 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It simply tests the
+      connection to the external service using integration configuration parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple ping/connectivity test. It does not match any of the
+      expected outcomes such as enriching IOCs, modifying alerts, creating tickets,
+      or interacting with endpoints.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Submit Observables:
   ai_description: >-
     ### General Description
 
-    The **Submit Observables** action allows users to submit threat intelligence data
-    (observables) to the Siemplify ThreatFuse (Anomali) platform. It supports IP addresses,
-    URLs, File Hashes, and User entities. This action is used to contribute local
-    intelligence to the ThreatFuse ecosystem, allowing for classification, threat
-    typing, and sharing within trusted circles.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Classification** | String | Yes | Defines the visibility of the observable.
-    Options: `Public`, `Private`. |
-
-    | **Threat Type** | String | Yes | Categorizes the threat (e.g., `APT`, `Malware`,
-    `Phish`, `C2`). |
-
-    | **Source** | String | No | The source of the intelligence. Defaults to `Siemplify`.
-    |
-
-    | **Expiration Date** | Integer | No | Number of days until the observable expires.
-    If left blank, the observable will never expire. |
-
-    | **Trusted Circle IDs** | String | No | A comma-separated list of IDs for specific
-    trusted circles to share the observable with. |
-
-    | **TLP** | String | Yes | Traffic Light Protocol level (e.g., `Red`, `Amber`,
-    `Green`, `White`). |
-
-    | **Confidence** | Integer | No | A confidence score between 0 and 100. Only applied
-    if `Override System Confidence` is enabled. |
-
-    | **Override System Confidence** | Boolean | No | If enabled, the system will
-    use the value provided in the `Confidence` parameter instead of the default system
-    confidence. |
-
-    | **Anonymous Submission** | Boolean | No | If enabled, the submission will be
-    made without revealing the submitter's identity. |
-
-    | **Tags** | String | No | A comma-separated list of tags to associate with the
-    observable. |
+    Submits observables (IP, URL, Hash, or User entities) to Siemplify ThreatFuse.
+    This action allows analysts to contribute threat intelligence back to the ThreatFuse
+    platform by importing indicators with specific classifications, threat types,
+    and confidence levels.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts configuration settings (API keys, roots)
-    and action parameters, validating that mandatory fields like `Classification`
-    and `TLP` are present.
+    1. Iterates over the supported target entities (Address, File Hash, URL, User).
 
-    2. **Entity Filtering**: It iterates through the target entities in the case,
-    filtering for supported types: `ADDRESS` (IP), `FILEHASH`, `DestinationURL`, and
-    `USERUNIQNAME`. It also excludes entities containing spaces in their identifiers.
+    2. Validates the entity identifiers, skipping any that contain unsupported characters
+    like spaces.
 
-    3. **Submission**: For each valid entity, it sends a POST request to the ThreatFuse
-    API to import the observable with the specified metadata (TLP, Threat Type, Tags,
-    etc.).
+    3. Makes a POST request to the ThreatFuse API (`/api/v1/intelligence/import/`)
+    to submit the observable with the configured parameters (e.g., classification,
+    threat type, expiration date, tags).
 
-    4. **Approval Polling**: The action enters a polling loop, checking the status
-    of the submitted jobs. It waits for the platform to approve the submission before
-    proceeding.
+    4. Polls the ThreatFuse API periodically to check the status of the submission
+    job until it is approved.
 
-    5. **Finalization**: Once all jobs are processed, the action returns a JSON summary
-    of approved jobs and any entities that failed the submission or approval process.
+    5. Returns a JSON result containing the details of the approved jobs and any jobs
+    with excluded entities.
 
 
     ### Additional Notes
 
-    * **Permissions**: This action requires the following permissions in ThreatFuse:
-    `Org admin`, `Create Anomali Community Intel`, and `Approve Intel`.
+    - This action requires 'Org admin', 'Create Anomali Community Intel', and 'Approve
+    Intel' permissions in Siemplify ThreatFuse.
 
-    * **Validation**: The `Confidence` parameter must be between 0 and 100, and the
-    `Expiration Date` must be a positive integer.
+    - If the 'Expiration Date' parameter is left empty, the action will create an
+    observable that never expires.
+  ai_short_description: >-
+    Submits observable entities (IP, URL, Hash, User) to Siemplify ThreatFuse and
+    waits for the submission job to be approved.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -881,24 +1514,56 @@ Submit Observables:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits new threat intelligence observables (IPs, URLs, Hashes, or Users) to
-      the Siemplify ThreatFuse platform, creating new records in the external system.
-    fetches_data: true
+      Submits new observables (indicators) to the Siemplify ThreatFuse platform.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to the ThreatFuse API to submit observables,
+      which mutates external data. It does not fetch contextual data for enrichment,
+      update internal entities, or create insights.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - FILEHASH
-    - DestinationURL
-    - USERUNIQNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: true
+    filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -906,3 +1571,77 @@ Submit Observables:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `if
+      entity.entity_type not in SUPPORTED_ENTITIES`. The supported entities are defined
+      as `EntityTypes.FILEHASH`, `EntityTypes.ADDRESS`, `EntityTypes.URL`, and `EntityTypes.USER`.
+      Therefore, it targets File Hash, Address, URL, and User entities, filtering
+      strictly by `entity_type`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits observables (indicators) to a Threat Intelligence Platform
+      (ThreatFuse). It does not fetch enrichment data, update alerts, block IOCs on
+      security controls, or submit files to a sandbox. Therefore, it does not match
+      any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Classification | String | Yes | Specify the classification of the observable.
+    |
+
+    | Threat Type | String | Yes | Specify the threat type of the observables. |
+
+    | Source | String | No | Specify the intelligence source for the observable. |
+
+    | Expiration Date | String | No | Specify the expiration date in days for the
+    observable. If nothing is specified here, action will create an observable that
+    will never expire. |
+
+    | Trusted Circle IDs | String | No | Specify the comma-separated list of trusted
+    circle ids. Observables will be shared with those trusted circles. |
+
+    | TLP | String | No | Specify the TLP for your observables. |
+
+    | Confidence | String | No | Specify what should be the confidence for the observable.
+    Note: this parameter will only work, if you create observables in your organization
+    and requires 'Override System Confidence' to be enabled. |
+
+    | Override System Confidence | Boolean | No | If enabled, created observables
+    will have the confidence specified in the 'Confidence' parameter. Note: you can't
+    share observables in trusted circles and publicly, when this parameter is enabled.
+    |
+
+    | Anonymous Submission | Boolean | No | If enabled, action will make an anonymous
+    submission. |
+
+    | Tags | String | No | Specify a comma-separated list of tags that you want to
+    add to observable. |

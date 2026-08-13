@@ -1,59 +1,36 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 GetSystemInfo:
   ai_description: >-
     ### General Description
 
-    Retrieves comprehensive system and operating system information from a remote
-    Windows machine using Windows Management Instrumentation (WMI). This action is
-    designed to gather technical details about a host, including hardware specifications,
-    OS version, memory usage, and domain membership, which are essential for host-based
-    investigations.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Server Address | String | Yes | The IP address or hostname of the target system
-    to query via WMI. |
-
-    | Username | String | No | The username used to authenticate with the remote system.
-    |
-
-    | Password | Password | No | The password used to authenticate with the remote
-    system. |
+    Retrieves detailed system and operating system information from a remote server
+    using Windows Management Instrumentation (WMI). This action connects to the specified
+    server and extracts contextual metadata about the machine's hardware and OS configuration.
 
 
     ### Flow Description
 
-    1. **Connection**: Establishes a WMI connection to the target server using the
-    provided address and credentials. It supports both Windows and Linux-based execution
-    environments.
+    1. Initializes the WMI manager and connects to the target server using the provided
+    `Server Address`, `Username`, and `Password`.
 
-    2. **Data Retrieval**: Executes queries against the `Win32_ComputerSystem` class
-    (for hardware/system info) and the `Win32_OperatingSystem` class (for OS-specific
-    details).
+    2. Executes WQL queries against the `Win32_ComputerSystem` and `Win32_OperatingSystem`
+    classes to fetch system metadata.
 
-    3. **Processing**: Merges the retrieved properties from both WMI classes into
-    a single dataset and flattens the dictionary structure for easier consumption.
+    3. Parses and merges the retrieved data into a single dictionary.
 
-    4. **Output**: Generates a CSV-formatted data table titled 'WMI System Info' for
-    the case wall and attaches the full raw JSON result to the action output.
+    4. Formats the system information into a CSV and attaches it as a data table to
+    the action results.
+
+    5. Returns the raw system information as a JSON result.
+
+
+    ### Additional Notes
+
+    Requires appropriate WMI access and credentials to the target server. If used
+    as an enrichment action in a playbook, the user must ensure the provided credentials
+    have WMI access to the target entities.
+  ai_short_description: >-
+    Retrieves detailed system and operating system information from a remote server
+    using WMI.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -64,10 +41,48 @@ GetSystemInfo:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches system information from a remote server via WMI (fetches_data=true).
+      It only executes SELECT queries and does not mutate external data. It also does
+      not update internal entities, create insights, modify alerts, or create case
+      comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -81,56 +96,85 @@ GetSystemInfo:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers from the SOAR platform. It operates solely on the 'Server Address'
+      provided as an action parameter. Therefore, it does not run on entities and
+      all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action connects to a remote server via WMI and retrieves system and OS information
+      (contextual metadata). This matches the 'Enrich Asset' expected outcome of returning
+      contextual metadata for a resource. It does not execute arbitrary commands,
+      mutate data, or interact with alerts/tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Server Address | String | Yes | Server Address |
+
+    | Username | String | No | Username |
+
+    | Password | Password | No | Password |
 ListServices:
   ai_description: >-
     ### General Description
 
-    The **ListServices** action retrieves a comprehensive list of all installed services
-    on a target system using the Windows Management Instrumentation (WMI) protocol.
-    This action is primarily used for forensic investigations and system auditing
-    to identify potentially malicious services, unauthorized software, or to verify
-    system configurations on remote Windows hosts.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Server Address** | String | Yes | The IP address or hostname of the remote
-    system to query. |
-
-    | **Username** | String | No | The username used to authenticate with the remote
-    system. |
-
-    | **Password** | Password | No | The password used to authenticate with the remote
-    system. |
+    Retrieves a list of installed services from a specified remote system using Windows
+    Management Instrumentation (WMI). This action connects to the target server and
+    extracts details about all configured services.
 
 
     ### Flow Description
 
-    1. **Connection Establishment**: The action initializes a WMI connection to the
-    target host using the provided `Server Address` and credentials (`Username` and
-    `Password`). It dynamically selects the appropriate WMI manager based on whether
-    the execution environment is Linux or Windows.
+    1. Retrieves the target server address, username, and password from the action
+    parameters.
 
-    2. **Data Retrieval**: It executes a query against the `Win32_Service` class to
-    collect details about all configured services, including their display names,
-    states, paths, and start modes.
+    2. Establishes a WMI connection to the target server using the provided credentials.
 
-    3. **Data Processing**: The retrieved service objects are parsed into a list of
-    dictionaries, capturing all available properties for each service.
+    3. Executes a WMI query (`Win32_Service`) to fetch the list of configured services
+    on the system.
 
-    4. **Output Generation**: The action produces a JSON result containing the raw
-    service data and constructs a CSV-formatted data table named "WMI Services" for
-    display within the Google SecOps case wall.
+    4. Formats the retrieved services into a JSON object and a CSV data table.
+
+    5. Attaches the JSON result and the "WMI Services" data table to the action's
+    output.
 
 
     ### Additional Notes
 
-    This action does not operate on specific entities within the case; it relies entirely
-    on the `Server Address` parameter provided in the action configuration.
+    Requires appropriate WMI access and valid credentials for the target server. The
+    action automatically handles connections from both Linux and Windows SOAR environments.
+  ai_short_description: >-
+    Retrieves a list of installed services from a specified remote system using WMI.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -141,10 +185,47 @@ ListServices:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data by querying WMI for installed services on a remote host.
+      It does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -158,75 +239,134 @@ ListServices:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It relies entirely on the `Server Address` parameter provided in
+      the action configuration. Therefore, it does not run on entities and all entity-related
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries a remote system via WMI to retrieve a list of installed services
+      based on a provided server address parameter. It does not enrich specific entities,
+      mutate external state, or match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Server Address | String | Yes | Server Address |
+
+    | Username | String | No | Username |
+
+    | Password | Password | No | Password |
 ListUsers:
   ai_description: >-
     ### General Description
 
-
-    The **ListUsers** action retrieves a list of all user accounts configured on a
-    target system using Windows Management Instrumentation (WMI). This action is primarily
-    used for system auditing and discovery, allowing security analysts to identify
-    local and domain accounts present on a specific host.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Server Address** | String | Yes | The IP address or hostname of the remote
-    system to query. |
-
-    | **Username** | String | No | The username for WMI authentication. |
-
-    | **Password** | Password | No | The password for WMI authentication. |
+    Retrieves a list of all users configured on a specified remote system using Windows
+    Management Instrumentation (WMI).
 
 
     ### Flow Description
 
+    1. Initializes the WMI manager using the provided `Server Address`, `Username`,
+    and `Password` parameters.
 
-    1. **Setup**: The action extracts the server address and credentials from the
-    input parameters.
+    2. Connects to the target system and executes a WMI query (`SELECT * FROM Win32_UserAccount`)
+    to fetch all configured users.
 
-    2. **Connection**: It initializes a WMI connection to the target server. The logic
-    handles both Windows and Linux execution environments via the `WMIManagerBuilder`.
+    3. Formats the retrieved user data into a JSON structure and a CSV data table.
 
-    3. **Query**: It queries the `Win32_UserAccount` WMI class to retrieve account
-    details such as Name, Domain, SID, and Status.
-
-    4. **Data Formatting**: The results are converted into a JSON format and a CSV-formatted
-    data table.
-
-    5. **Completion**: The action attaches the JSON results and the 'WMI Users' data
-    table to the case, concluding with a message stating the number of users found.
+    4. Attaches the JSON result and the data table to the action's output.
 
 
     ### Additional Notes
 
-
-    * This action does not operate on entities within the case; it requires a specific
-    server address as a parameter.
-
-    * If no users are found, the action will report success but indicate that no data
-    was retrieved.
+    Requires appropriate WMI access and credentials for the target server. The action
+    will automatically determine whether to use a Windows or POSIX WMI client based
+    on the SOAR SDK configuration.
+  ai_short_description: >-
+    Retrieves a list of all users configured on a specified remote system using Windows
+    Management Instrumentation (WMI).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table named 'WMI Users' to the case containing the list of retrieved
-      users.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from a remote server via WMI (fetches_data=true). It
+      does not perform any state-changing operations on the external system (can_mutate_external_data=false).
+      It also does not update entities, create insights, modify alerts, or create
+      case comments within Google SecOps.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -240,43 +380,78 @@ ListUsers:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It relies entirely on the provided
+      action parameters (Server Address, Username, Password) to connect to a remote
+      system and fetch data.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries a remote system for a list of users. It does not enrich specific
+      IOCs or assets within the platform, nor does it mutate external state, manage
+      tickets, or execute arbitrary commands. Therefore, it does not match any of
+      the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Server Address | String | Yes | The IP address or hostname of the target server
+    to query. |
+
+    | Username | String | No | The username to authenticate with the target server.
+    |
+
+    | Password | Password | No | The password to authenticate with the target server.
+    |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility designed to verify the connectivity
-    and operational status of the WMI integration within Google SecOps. Its primary
-    purpose is to ensure that the integration is correctly configured and that the
-    SOAR environment can successfully execute actions associated with the WMI module.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | This action does not require any input parameters. | N/A | N/A |
-
-
-    ### Additional Notes
-
-    This specific implementation of the Ping action is a heartbeat check. It does
-    not perform active WMI queries against remote hosts or validate credentials against
-    a target server; it simply confirms the script execution path is functional. There
-    are no parameters or entity requirements for this action.
+    Tests connectivity for the WMI integration.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the SiemplifyAction module to interface
-    with the Google SecOps platform.
+    1. Initializes the Siemplify action.
 
-    2. **Status Assignment**: The script defines a static output message ('Connection
-    Established') and a result value ('true').
+    2. Sets a static success message indicating that the connection is established.
 
-    3. **Finalization**: The action concludes by returning these values to the platform,
-    signaling a successful connectivity test.
+    3. Ends the execution and returns the result.
+
+
+    ### Additional Notes
+
+    This action does not perform any actual external API calls or WMI queries; it
+    simply returns a static success message.
+  ai_short_description: >-
+    Tests connectivity for the WMI integration by returning a static success message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -287,10 +462,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action does not fetch data, mutate external or internal data, update entities,
+      create insights, modify alert data, or create case comments. It only returns
+      a static string.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -304,75 +516,127 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use any entity-specific
+      identifiers. It simply returns a static success message.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action simply returns a static success message and does not interact with
+      any external systems, alerts, or entities. Therefore, it does not match any
+      of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 RunQuery:
   ai_description: >-
     ### General Description
 
-    Runs an arbitrary WQL (Windows Management Instrumentation Query Language) query
-    against a target Windows server. This action is designed to retrieve specific
-    system information, such as running processes, service statuses, disk details,
-    or user account information, by executing custom queries directly on the remote
-    host.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Server Address | String | Yes | The IP address or hostname of the target Windows
-    machine to query. |
-
-    | Username | String | No | The username used for WMI authentication. |
-
-    | Password | Password | No | The password used for WMI authentication. |
-
-    | WQL Query | String | Yes | The specific WQL query string to execute (e.g., `SELECT
-    Caption, Description FROM Win32_LogicalDisk`). |
-
-
-    ### Additional Notes
-
-    - This action supports execution from both Windows and Linux-based Google SecOps
-    environments using appropriate WMI client libraries.
-
-    - Results are returned as a JSON object and also formatted as a CSV data table
-    for visibility in the case wall.
+    Executes an arbitrary Windows Management Instrumentation Query Language (WQL)
+    query on a specified remote system. This action allows analysts to retrieve specific
+    system information, configurations, or statuses directly from a remote Windows
+    machine using WMI.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action establishes a connection to the remote server
-    using the provided `Server Address`, `Username`, and `Password`.
+    1. Extracts the target server address, credentials, and the WQL query from the
+    action parameters.
 
-    2. **Execution**: The specified `WQL Query` is executed against the remote WMI
-    interface.
+    2. Establishes a WMI connection to the target server using the provided credentials
+    via the `WMIManager`.
 
-    3. **Data Processing**: The raw WMI objects returned are parsed into a list of
-    dictionaries.
+    3. Executes the WQL query on the remote system.
 
-    4. **Output Generation**: The action generates a JSON result of the items and
-    constructs a CSV representation of the data.
+    4. Formats the query results into a JSON object and constructs a CSV data table.
 
-    5. **Internal Mutation**: A data table named 'WMI Query Results' is added to the
-    case wall containing the CSV output.
+    5. Returns the results to the Google SecOps platform, attaching the JSON and data
+    table to the action results.
+
+
+    ### Additional Notes
+
+    The action supports execution from both Windows and Linux SOAR environments, utilizing
+    the appropriate underlying WMI client wrapper depending on the OS.
+  ai_short_description: >-
+    Executes an arbitrary WQL query on a specified remote system and returns the results
+    as JSON and a data table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table containing the query results to the case wall using the add_data_table
-      method.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by executing a WQL query on a remote server. It does
+      not mutate external data (WQL queries are read-only in this context), nor does
+      it mutate internal data, update entities, create insights, modify alerts, or
+      create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -386,3 +650,55 @@ RunQuery:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates solely based on the provided action parameters (Server
+      Address, WQL Query). Therefore, all entity type and filter flags are set to
+      false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action connects to a remote host and executes a WQL query, returning the
+      system data output. This aligns with the 'Execute Command on the Host' category,
+      as it runs a system query on a remote endpoint and returns the output. It does
+      not enrich specific IOCs or assets within the SOAR entity model, nor does it
+      mutate external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Server Address | String | Yes | Server Address |
+
+    | Username | String | No | Username |
+
+    | Password | Password | No | Password |
+
+    | WQL Query | String | Yes | Query content(e.g: SELECT Caption, Description FROM
+    Win32_LogicalDisk WHERE DriveType <> 3). |

@@ -19,7 +19,7 @@ from typing import Any
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.ToolsCommon import ExecutionScope
+from ..core.ToolsCommon import ExecutionScope, get_case_alerts
 
 SCRIPT_NAME: str = "FindFirstAlert"
 
@@ -34,7 +34,7 @@ def main():
     )
     
     if execution_scope.value == ExecutionScope.Case.value:
-        alerts = list(getattr(siemplify.case, "open_alerts", None) or siemplify.case.alerts)
+        alerts = get_case_alerts(siemplify)
     else:
         alerts = list(siemplify.case.alerts)
 

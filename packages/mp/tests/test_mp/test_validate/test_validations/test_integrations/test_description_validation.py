@@ -152,9 +152,7 @@ class TestIntegrationDescriptionValidation:
 
     def test_non_dict_project_section_fails(self, temp_integration: Path) -> None:
         """Test that non-dict project section fails validation."""
-        content = {
-            "project": "not a dict"
-        }
+        content = {"project": "not a dict"}
         _write_pyproject(temp_integration, content)
         with pytest.raises(
             NonFatalValidationError, match=r"Integration is missing the 'project' section in pyproject\.toml\."
