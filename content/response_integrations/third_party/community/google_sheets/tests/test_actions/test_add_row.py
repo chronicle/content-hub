@@ -20,21 +20,36 @@ DEFAULT_PARAMETERS: dict[str, str] = {
 
 
 class FakeWorksheet:
-    def __init__(self, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        rows: list[list[str]] | None = None,
+        error: Exception | None = None,
+    ) -> None:
         self.error = error
+        self.rows = [row.copy() for row in rows or []]
+        self.appended_rows: list[list[str]] = []
         self.inserted_rows: list[tuple[list[str], int | None]] = []
-        self.row_count = 1
+        self.row_count = len(self.rows)
+
+    def append_row(self, values: list[str]) -> None:
+        if self.error:
+            raise self.error
+        self.appended_rows.append(values)
+        self.rows.append(values)
+        self.row_count = len(self.rows)
 
     def insert_row(self, values: list[str], index: int | None = None) -> None:
         if self.error:
             raise self.error
         self.inserted_rows.append((values, index))
+        self.rows.insert((index or 1) - 1, values)
+        self.row_count = len(self.rows)
 
 
 class FakeSpreadsheet:
-    def __init__(self, worksheet: FakeWorksheet) -> None:
-        self.sheet1 = worksheet
-        self._worksheets = {"myworksheet": worksheet}
+    def __init__(self, worksheets: dict[str, FakeWorksheet]) -> None:
+        self._worksheets = worksheets
+        self.sheet1 = next(iter(worksheets.values()))
 
     def worksheet(self, name: str) -> FakeWorksheet:
         return self._worksheets[name]
@@ -44,13 +59,48 @@ class FakeSpreadsheet:
 def test_add_row_returns_success_result_when_row_is_added(
     action_output: MockActionOutput,
 ) -> None:
-    worksheet = FakeWorksheet()
-    fake_sheet = FakeSpreadsheet(worksheet)
+    worksheet = FakeWorksheet(rows=[["existing row"]])
+    fake_sheet = FakeSpreadsheet({"myworksheet": worksheet})
 
     with unittest.mock.patch(CREATE_SPREADSHEET_PATH, return_value=fake_sheet):
         AddRow.main()
 
     assert worksheet.inserted_rows == [(["val1", "val2"], 2)]
+    assert worksheet.rows == [["existing row"], ["val1", "val2"]]
+    assert action_output.results.output_message == "Row added to the sheet successfully"
+    assert action_output.results.result_value is True
+    assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
+
+
+@set_metadata(
+    integration_config_file_path=CONFIG_PATH,
+    parameters={**DEFAULT_PARAMETERS, "Row Index": ""},
+)
+def test_add_row_appends_to_non_default_worksheet_when_row_index_is_empty(
+    action_output: MockActionOutput,
+) -> None:
+    worksheet = FakeWorksheet(rows=[["Name", "Status"], ["Existing", "Active"]])
+    other_worksheet = FakeWorksheet(rows=[["Other sheet value"]])
+    fake_sheet = FakeSpreadsheet(
+        {
+            "otherworksheet": other_worksheet,
+            "myworksheet": worksheet,
+        },
+    )
+
+    assert fake_sheet.sheet1 is other_worksheet
+
+    with unittest.mock.patch(CREATE_SPREADSHEET_PATH, return_value=fake_sheet):
+        AddRow.main()
+
+    assert worksheet.rows == [
+        ["Name", "Status"],
+        ["Existing", "Active"],
+        ["val1", "val2"],
+    ]
+    assert other_worksheet.rows == [["Other sheet value"]]
+    assert worksheet.appended_rows == [["val1", "val2"]]
+    assert worksheet.inserted_rows == []
     assert action_output.results.output_message == "Row added to the sheet successfully"
     assert action_output.results.result_value is True
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
@@ -61,7 +111,7 @@ def test_add_row_returns_failure_details_when_insert_fails(
     action_output: MockActionOutput,
 ) -> None:
     worksheet = FakeWorksheet(error=RuntimeError("worksheet unavailable"))
-    fake_sheet = FakeSpreadsheet(worksheet)
+    fake_sheet = FakeSpreadsheet({"myworksheet": worksheet})
 
     with unittest.mock.patch(CREATE_SPREADSHEET_PATH, return_value=fake_sheet):
         AddRow.main()
@@ -83,7 +133,7 @@ def test_add_row_returns_failure_details_when_insert_fails(
 def test_add_row_returns_clear_failure_for_invalid_row_index(
     action_output: MockActionOutput,
 ) -> None:
-    fake_sheet = FakeSpreadsheet(FakeWorksheet())
+    fake_sheet = FakeSpreadsheet({"myworksheet": FakeWorksheet()})
 
     with unittest.mock.patch(
         CREATE_SPREADSHEET_PATH,
