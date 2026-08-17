@@ -53,7 +53,7 @@ class FieldAgent:
         return str(last_error)
 
     async def _validate(
-        self, prompt_text: str, drafted_content: str, gemini: Gemini, max_api_retries: int = 3
+        self, prompt_text: str, drafted_content: str, max_api_retries: int = 3
     ) -> ValidationResult:
         prompt = f"""
     You are an extremely strict technical reviewer. You are evaluating drafted {self.config.field_name}.
@@ -69,12 +69,14 @@ class FieldAgent:
     
     If ANY of these fail, mark `is_valid` as False and provide explicit feedback.
     """
+        val_config = GeminiConfig(model_name=self.config.model_name, temperature=0.0)
         last_error = None
         for attempt in range(max_api_retries):
             try:
-                return await gemini.send_message(
-                    prompt, raise_error_if_empty_response=True, response_json_schema=ValidationResult
-                )
+                async with Gemini(config=val_config) as val_gemini:
+                    return await val_gemini.send_message(
+                        prompt, raise_error_if_empty_response=True, response_json_schema=ValidationResult
+                    )
             except Exception as e:
                 last_error = e
                 logger.warning(
@@ -109,7 +111,7 @@ class FieldAgent:
                 logger.info(
                     f"Agent [{self.config.field_name}]: Validating draft (Attempt {attempt + 1}/{self.config.max_retries})..."
                 )
-                validation: ValidationResult = await self._validate(prompt_text, str(draft_content), gemini)
+                validation: ValidationResult = await self._validate(prompt_text, str(draft_content))
 
                 if validation.is_valid:
                     logger.info(
