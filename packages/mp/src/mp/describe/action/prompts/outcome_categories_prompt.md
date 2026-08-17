@@ -12,21 +12,21 @@ Classify the provided Google SecOps SOAR action into the official **Outcome Cate
 
 ### Official Outcome Categories Taxonomy (27 Categories)
 
-An action belongs to a category ONLY IF it demonstrably executes the expected outcome through physical Python API calls. If an action's operations do not strictly match any of the canonical 27 categories (such as updating alerts in 3rd-party external platforms, performing technical DNS resolutions, administrative operations, or utility checks), all 27 boolean category flags must remain `false` (only the `reasoning` field is populated).
+An action belongs to a category ONLY IF it demonstrably executes the expected outcome through physical Python API calls. If an action's operations do not strictly match any of the canonical 27 categories (such as performing technical DNS resolutions, administrative workspace room operations, or utility checks), all 27 boolean category flags must remain `false` (only the `reasoning` field is populated).
 
 #### Group 1: Enrichment, Search & Context (Read-Only Operations)
-- **`enrich_ioc`**: Queries external threat intelligence to retrieve reputation, threat scores, malware family, or context for external indicators (IP, domain, URL, hash, CVE). *(Technical DNS/IP lookups without reputation scoring are not enrichments and must leave all 27 category flags set to false).*
+- **`enrich_ioc`**: Queries external threat intelligence sources, threat relationship graphs, or malware analysis databases to retrieve reputation, threat scores, malware family, attribution, or related threat infrastructure (e.g., associated malicious IPs, domains, hashes, campaigns, threat actors) for indicators (hash, filename, IP, domain, URL, CVE, Threat Actor, Campaign). *(Technical DNS/IP/Whois lookups without reputation scoring or threat intelligence context are not enrichments and must leave all 27 category flags set to false).*
 - **`enrich_asset`**: Queries internal inventory, CMDB, directory services, user profile stores, or vulnerability databases to return contextual metadata, configuration, or profile insights for specific internal entities (hosts, users, internal IPs, devices).
 - **`search_asset`**: Queries directory services, CMDBs, device search engines, or workspace user stores to find users, hosts, devices, or group members matching search criteria or group filters.
 - **`search_events`**: Queries SIEM logs, data lakes, firewall traffic/threat logs, network flow repositories, or endpoint telemetry repositories to return a collection of historical logs or events.
-- **`search_email`**: Searches mailbox servers or email archives across mailboxes based on sender, recipient, subject, or attachment criteria.
-- **`get_alert_information`**: Fetches alert details, detections, or lists/queues of open incidents/alerts from external security platforms (e.g., EDR, SIEM, SOC alert feeds) (read-only).
+- **`search_email`**: Searches or polls mailbox servers or email archives across mailboxes based on sender, recipient, subject, or message ID criteria.
+- **`get_alert_information`**: Fetches alert details, detections, or lists/queues of open incidents/alerts from security platforms (e.g., EDR, SIEM, SOC alert feeds) (read-only).
 
 #### Group 2: Remediation & State Mutating Operations (External Write/State Mutation)
 - **`create_ticket`**: Generates a new issue/incident/record in an external ITSM ticketing platform or task management system (e.g., Jira, ServiceNow, Freshservice).
 - **`update_ticket`**: Updates status, priority, comments, notes, fields, or uploads file attachments of an existing ticket/record in an external ITSM ticketing platform.
-- **`add_ioc_to_blocklist`**: Adds an indicator (IP, domain, URL, hash) to security control blocklists/policies (firewall, proxy, DNS filter, EDR blocklist).
-- **`remove_ioc_from_blocklist`**: Removes an indicator from security control blocklists to restore connectivity or execution rights.
+- **`add_ioc_to_blocklist`**: Adds an indicator (IP, domain, URL, hash, sender address) to security control blocklists/policies (firewall, proxy, DNS filter, EDR blocklist, or mailbox blocked senders list).
+- **`remove_ioc_from_blocklist`**: Removes an indicator (IP, domain, URL, hash, sender address) from security control blocklists, firewall policies, or mailbox blocked senders lists to restore connectivity or allow communication.
 - **`add_ioc_to_allowlist`**: Adds an indicator to security control allowlists / trusted lists to prevent alerts or grant access.
 - **`remove_ioc_from_allowlist`**: Removes an indicator from security control allowlists to re-enable monitoring/blocking.
 - **`disable_identity`**: Revokes active sessions and prevents a user or service account from authenticating.
@@ -38,11 +38,11 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
 - **`execute_command_on_the_host`**: Runs a script or system command on a remote endpoint/VM and returns output (STDOUT).
 - **`send_email`**: Dispatches an outbound email notification or response to specified recipients.
 - **`delete_email`**: Removes or purges specific emails or threads from user mailboxes.
-- **`update_email`**: Modifies email state (e.g., moving to quarantine, marking as read, applying labels).
+- **`update_email`**: Modifies email state (e.g., moving to quarantine, marking as read, applying labels, unmarking junk).
 - **`submit_file`**: Uploads a file or sample to an external sandbox or analysis engine for dynamic detonation/scanning.
 
 #### Group 3: Platform Operations & Communication
-- **`update_alert`**: Modifies the status, severity, or assignee of an alert/case strictly within the Google SecOps platform (e.g., using Siemplify internal alert/case manipulation methods). Actions updating alerts/issues/incidents in external 3rd-party security platforms (e.g., Azure Security Center, Defender, Sentinel, Orca, Wiz) do NOT match `update_alert` and must leave all 27 outcome category boolean flags set to `false`.
+- **`update_alert`**: Modifies the status, severity, assignee, SLA timers, score, or metadata of a security alert, detection, or incident (either within the internal SecOps platform or in external security detection/EDR/SIEM/SOC platforms). Actions modifying non-security ITSM tickets (e.g., Jira, ServiceNow) match `update_ticket`, not `update_alert`.
 - **`add_alert_comment`**: Appends analyst notes or comments to the alert activity timeline in SecOps or external security platform.
 - **`send_message`**: Dispatches a notification, card, message, or uploaded file attachment to a communication / chat platform or messaging channel (e.g., Slack, Teams, Google Chat, Discord, Telegram, Webex).
 - **`download_file`**: Retrieves any file, report artifact (PDF/XML/CSV), or sandbox dump from an external system and downloads/attaches it to the SOAR case via `siemplify.result.add_attachment` or file save.
@@ -53,7 +53,10 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
 
 1. **Physical API Call Traceability**: Set a boolean flag to `true` ONLY IF the Python code explicitly executes that capability via an executable API call. Never infer flags from action names, docstrings, or assumed playbook workflows.
 2. **Read vs. Write State Mutation Boundary**: If the script only performs read/query operations (HTTP GET, LDAP query), ALL mutating categories (`contain_host`, `add_ioc_to_blocklist`, `disable_identity`, `update_alert`, `create_ticket`, `update_ticket`, `reset_identity_password`, `update_identity`, `enable_identity`, `uncontain_host`, `delete_email`, `update_email`) MUST be strictly `false`.
-3. **Composite / Dual-Outcome Actions (Exhaustiveness)**: If an action executes multiple distinct capabilities (e.g., downloads a report artifact via `add_attachment` AND enriches host entities with scan telemetry / `siemplify.update_entities` / `is_enriched = True`), you MUST flag ALL executed categories as `true` (e.g., `download_file: true` AND `enrich_asset: true`).
+3. **Composite / Dual-Outcome Actions (Exhaustiveness)**: If an action executes multiple distinct capabilities, you MUST flag ALL executed categories as `true`:
+   * Downloads a report/attachment artifact via `add_attachment` AND enriches entities with scan telemetry: `download_file: true` AND `enrich_asset: true`.
+   * Asynchronously polls/searches a mailbox for replies AND downloads attachments into the case: `search_email: true` AND `download_file: true`.
+   * Unblocks a sender in a mailbox AND restores/moves emails out of junk: `remove_ioc_from_blocklist: true` AND `update_email: true`.
 4. **Ping & Connectivity Checks**: For health check, ping, or connection test actions, ALL 27 outcome categories boolean flags MUST be strictly `false`.
 5. **Mandatory 3-Step Reasoning Protocol with Literal Method Citations**:
    The `reasoning` field MUST strictly follow this exact 3-step format and quote literal Python method calls (`manager.<method_name>(<args>)` or `siemplify.<method_name>(<args>)`):
@@ -63,7 +66,7 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
 
 6. **Network Security Policies & Firewall Rule Modifications**:
    Modifying network security controls (Firewalls, Security Groups, Access Control Lists, Proxy policies) by adding or removing network indicators (IPs, CIDRs, domains) represents direct remediation on a security control policy.
-   * When an action adds IP ranges or indicators to a firewall rule or security policy, map it to `add_ioc_to_blocklist: true` (or composite `add_ioc_to_blocklist: true` and `add_ioc_to_allowlist: true` if the rule is user-configurable). Do NOT leave flags set to false.
+   * When an action adds IP ranges or indicators to a firewall rule or security policy, map it to `add_ioc_to_blocklist: true` (or composite `add_ioc_to_blocklist: true` and `add_ioc_to_allowlist: true` if the rule is user-configurable).
    * When an action removes IP ranges or indicators from a firewall rule or security policy, map it to `remove_ioc_from_blocklist: true` and `remove_ioc_from_allowlist: true`.
 
 7. **ITSM & Ticketing Platforms (Ticket Queries vs. Mutations & Attachments)**:
@@ -78,9 +81,9 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
    * **Messages, Notifications & File Uploads**: Sending text messages, interactive cards, replies, or uploading files/attachments to channels or users (e.g., `Send Message`, `Send Chat Message`, `Upload File`, `Ask Question`) represents dispatching communication content to recipients and MUST be mapped to `send_message: true`.
    * **Channel & Chat Container Administration**: Creating, deleting, renaming channels or managing channel membership (e.g., `Create Channel`, `Delete Channel`, `Add Users To Channel`, `Remove Users From Channel`, `List Channels`) modifies application-level collaboration rooms. It does NOT match `update_identity` (which is strictly for core IAM/directory services) and does NOT dispatch messages. All 27 category flags MUST remain `false` (`[]`).
 
-10. **Platform Scope Boundaries (Internal SecOps vs External Platforms)**:
-    * `update_alert`: Strictly reserved for modifying alert state within the Google SecOps platform itself. Actions updating alert statuses in external 3rd-party security platforms (e.g., CrowdStrike, Defender, Azure Security Center) do NOT match `update_alert` and MUST leave all 27 flags set to `false`.
-    * `enrich_ioc`: Strictly requires threat reputation, scores, or malware family attribution. Technical DNS/IP lookups without reputation scoring do NOT match `enrich_ioc` and MUST leave all 27 flags set to `false`.
+10. **Threat Intelligence vs. Technical Lookups**:
+    * `enrich_ioc`: Applies to threat intelligence reputation queries, threat scoring, attribution, threat campaigns, or queries retrieving related threat infrastructure indicators.
+    * Technical DNS/Whois/IP lookups without threat intelligence context or reputation scoring do NOT match `enrich_ioc` and MUST leave all 27 category flags set to `false`.
 
 ---
 
@@ -108,7 +111,7 @@ siemplify.update_entities([entity])
 }
 ```
 
-#### Example 2: External Security Alert Status Update vs. Internal SecOps Alert Update
+#### Example 2: Security Alert Status / SLA Update
 *Code Snippet:*
 ```python
 manager = SecurityAlertPlatformManager(client_id=client_id, secret=secret)
@@ -119,7 +122,8 @@ siemplify.result.add_result_json({"status": "success", "alert_id": alert_id})
 ```json
 {
   "outcome_categories": {
-    "reasoning": "Step 1 (State Boundary & Action Classification): The action executes an external state-mutating POST/PATCH operation to update the status of an alert in an external 3rd-party security platform (not internal Google SecOps). Step 2 (Physical Code Evidence): Calls `manager.update_alert_status(alert_id=alert_id, status=\"Resolved\", comment=\"Closed via SOAR\")` on the external platform API. Step 3 (Taxonomy Mapping & Disambiguation): Does not match 'Update Alert' because `update_alert` is strictly reserved for updating alerts within the Google SecOps platform itself. Does not match 'Update Ticket' (external system is a security platform, not an ITSM platform). All outcome categories are false."
+    "reasoning": "Step 1 (State Boundary & Action Classification): The action executes an external state-mutating POST/PATCH operation to update the status of an alert in a security platform, so evaluate Group 3 (Platform Operations & Communication). Step 2 (Physical Code Evidence): Calls `manager.update_alert_status(alert_id=alert_id, status=\"Resolved\", comment=\"Closed via SOAR\")` on the security platform API. Step 3 (Taxonomy Mapping & Disambiguation): Matches 'Update Alert' because it updates the status and metadata of a security alert/incident. Does not match 'Update Ticket' (targets a security alert platform, not an ITSM platform).",
+    "update_alert": true
   }
 }
 ```
@@ -141,19 +145,21 @@ siemplify.result.add_result_json(users)
 }
 ```
 
-#### Example 4: Historical Telemetry Log Query
+#### Example 4: Threat Intelligence Infrastructure & Campaign Relationships
 *Code Snippet:*
 ```python
-manager = NetworkTelemetryManager(host=host, api_key=api_key)
-events = manager.get_traffic_logs(query=filter_str, start_time=start_time, end_time=end_time)
-siemplify.result.add_result_json(events)
+manager = ThreatIntelManager(api_key=api_key)
+related_infra = manager.get_related_domains(indicator=entity.identifier)
+entity.additional_properties["related_domains"] = related_infra
+entity.is_enriched = True
+siemplify.update_entities([entity])
 ```
 *Expected Output:*
 ```json
 {
   "outcome_categories": {
-    "reasoning": "Step 1 (State Boundary & Action Classification): The action is read-only (retrieves historical network traffic telemetry logs without altering firewall policies), so evaluate Group 1 (Enrichment & Search). Step 2 (Physical Code Evidence): Calls `manager.get_traffic_logs(query=filter_str, start_time=start_time, end_time=end_time)` to query historical traffic flow events. Step 3 (Taxonomy Mapping & Disambiguation): Matches 'Search Events' because it queries a repository of raw historical telemetry logs. Does not match 'Add IOC To Blocklist' (no policy or rule mutation occurs) or 'Get Alert Information' (retrieves raw event streams, not alert records).",
-    "search_events": true
+    "reasoning": "Step 1 (State Boundary & Action Classification): The action is read-only, retrieving relationship threat intelligence and associated threat infrastructure for an indicator without mutating state, so evaluate Group 1 (Enrichment & Search). Step 2 (Physical Code Evidence): Calls `manager.get_related_domains(indicator=entity.identifier)`, sets `entity.additional_properties["related_domains"]`, and enriches the entity via `siemplify.update_entities([entity])`. Step 3 (Taxonomy Mapping & Disambiguation): Matches 'Enrich IOC' because it queries a threat intelligence platform to retrieve associated threat infrastructure and indicator relationships to enrich the IOC entity. All other categories are false.",
+    "enrich_ioc": true
   }
 }
 ```
