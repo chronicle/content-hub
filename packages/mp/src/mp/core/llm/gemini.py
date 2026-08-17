@@ -174,8 +174,8 @@ class Gemini(LlmSdk[GeminiConfig]):
             retry_if_not_exception_type((ClientError, KeyboardInterrupt, asyncio.CancelledError))
             | retry_if_exception(_should_retry_exception)
         ),
-        stop=stop_after_attempt(10),
-        wait=wait_exponential(max=60),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(max=10),
         after=after_log(logger, logging.WARNING),
         before_sleep=_log_retry_attempt,
     )
@@ -284,8 +284,8 @@ class Gemini(LlmSdk[GeminiConfig]):
             retry_if_not_exception_type((ClientError, KeyboardInterrupt, asyncio.CancelledError))
             | retry_if_exception(_should_retry_exception)
         ),
-        stop=stop_after_attempt(10),
-        wait=wait_exponential(max=60),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(max=10),
         after=after_log(logger, logging.WARNING),
         before_sleep=_log_retry_attempt,
     )
