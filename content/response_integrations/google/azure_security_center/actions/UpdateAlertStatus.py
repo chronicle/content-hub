@@ -26,6 +26,9 @@ from ..core.consts import (
     DEFAULT_ALERT_STATUS,
     MAPPED_ALERT_STATUS,
     PLURAL_ALERT_STATUS,
+    DEFAULT_LOGIN_API_ROOT,
+    DEFAULT_API_ROOT,
+    DEFAULT_GRAPH_API_ROOT,
 )
 from ..core.utils import get_mapped_value
 
@@ -86,6 +89,30 @@ def main():
         param_name="Refresh Token",
         is_mandatory=False,
     )
+    login_api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Login API Root",
+        default_value=DEFAULT_LOGIN_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
+    api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="API Root",
+        default_value=DEFAULT_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
+    graph_api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Graph API Root",
+        default_value=DEFAULT_GRAPH_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
     verify_ssl = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
@@ -135,6 +162,9 @@ def main():
             tenant_id=tenant_id,
             refresh_token=refresh_token,
             verify_ssl=verify_ssl,
+            login_api_root=login_api_root,
+            api_root=api_root,
+            graph_api_root=graph_api_root,
         )
         alert_status = get_mapped_value(MAPPED_ALERT_STATUS, alert_status)
         manager.update_alert_status(

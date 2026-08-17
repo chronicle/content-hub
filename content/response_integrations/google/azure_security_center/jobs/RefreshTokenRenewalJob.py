@@ -120,7 +120,10 @@ class RefreshTokenJob(RefreshTokenRenewalJob):
             subscription_id=instance_settings.get("Subscription ID"),
             tenant_id=instance_settings.get("Tenant ID"),
             refresh_token=instance_settings.get("Refresh Token"),
-            verify_ssl=instance_settings.get("Verify SSL").lower() == "true",
+            verify_ssl=instance_settings.get("Verify SSL").lower() == "true" if instance_settings.get("Verify SSL") else False,
+            login_api_root=instance_settings.get("Login API Root"),
+            api_root=instance_settings.get("API Root"),
+            graph_api_root=instance_settings.get("Graph API Root"),
         )
 
 
