@@ -61,6 +61,11 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
    * **Step 2 (Physical Code Evidence)**: Explicitly quote the literal Python method call(s) executed by the script (e.g., `manager.<method_name>(<args>)`), HTTP methods/endpoints, and data handlers.
    * **Step 3 (Taxonomy Mapping & Disambiguation)**: Map physical code evidence directly to the taxonomy definition for all `true` flags, and explicitly explain why adjacent/related categories are `false`.
 
+6. **Firewall & Security Policy Rule Modifications (IOC Blocklist / Allowlist Mapping)**:
+   Modifying network security controls (Firewalls, Security Groups, Access Control Lists, Proxy policies) by adding or removing network indicators (IPs, CIDRs, domains) represents direct remediation on a security control policy.
+   * When an action adds IP ranges or indicators to a firewall rule or security policy, map it to `add_ioc_to_blocklist: true` (or composite `add_ioc_to_blocklist: true` and `add_ioc_to_allowlist: true` if the rule is user-configurable). Do NOT leave flags set to false.
+   * When an action removes IP ranges or indicators from a firewall rule or security policy, map it to `remove_ioc_from_blocklist: true` and `remove_ioc_from_allowlist: true`.
+
 ---
 
 ### Generic Archetype Examples (Compact Format)
@@ -165,6 +170,24 @@ manager.test_connectivity()
 {
   "outcome_categories": {
     "reasoning": "Step 1 (State Boundary & Action Classification): The action is a connectivity test / health check that validates API credentials without fetching telemetry or mutating state. All outcome categories are false. Step 2 (Physical Code Evidence): Calls `manager.test_connectivity()` to validate authentication and connection status. Step 3 (Taxonomy Mapping & Disambiguation): Health checks and connectivity tests do not map to any functional security outcome category, so all 27 boolean flags are strictly false."
+  }
+}
+```
+
+#### Example 7: Firewall Rule IP Range Modification
+*Code Snippet:*
+```python
+manager = FirewallManager(credentials=credentials)
+rule = manager.get_firewall_rule(rule_name=rule_name)
+rule.extend_ip_ranges(ip_ranges=ip_ranges)
+manager.patch_firewall_rule(rule_name=rule_name, firewall=rule)
+```
+*Expected Output:*
+```json
+{
+  "outcome_categories": {
+    "reasoning": "Step 1 (State Boundary & Action Classification): The action performs an external state-mutating operation modifying network security control policies by adding IP ranges to a firewall rule, so evaluate Group 2 (Remediation & State Mutation). Step 2 (Physical Code Evidence): Calls `manager.get_firewall_rule(rule_name=rule_name)`, `rule.extend_ip_ranges(ip_ranges=ip_ranges)`, and `manager.patch_firewall_rule(rule_name=rule_name, firewall=rule)` to apply policy changes to the firewall. Step 3 (Taxonomy Mapping & Disambiguation): Matches 'Add IOC to Blocklist' because updating a firewall rule with IP ranges is the standard security control mechanism to block network traffic for IOCs. All other categories are false.",
+    "add_ioc_to_blocklist": true
   }
 }
 ```
