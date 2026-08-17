@@ -12,7 +12,7 @@ Classify the provided Google SecOps SOAR action into the official **Outcome Cate
 
 ### Official Outcome Categories Taxonomy (27 Categories)
 
-An action belongs to a category ONLY IF it demonstrably executes the expected outcome through physical Python API calls. If an action's operations do not strictly match any of the canonical 27 categories (such as performing technical DNS resolutions or workspace room management), all 27 boolean category flags must remain `false` (only the `reasoning` field is populated).
+An action belongs to a category ONLY IF it demonstrably executes the expected outcome through physical Python API calls. If an action's operations do not strictly match any of the canonical 27 categories (such as performing technical DNS resolutions, workspace room management, or updating metadata on existing items), all 27 boolean category flags must remain `false` (only the `reasoning` field is populated).
 
 #### Group 1: Enrichment, Search & Context (Read-Only Operations)
 - **`enrich_ioc`**: Returns reputation, prevalence, threat scores, malware family, attribution, or associated threat infrastructure (e.g., related malicious IPs, domains, hashes, campaigns, threat actors) for an indicator (hash, filename, IP, domain, URL, CVE, Threat Actor, Campaign). *(Technical DNS/IP/Whois lookups without reputation scoring or threat intelligence context are not enrichments and must leave all 27 category flags set to false).*
@@ -54,12 +54,13 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
 1. **Physical API Call Traceability**: Set a boolean flag to `true` ONLY IF the Python code explicitly executes that capability via an executable API call. Never infer flags from action names, docstrings, or assumed playbook workflows.
 2. **Read vs. Write State Mutation Boundary**: If the script only performs read/query operations (HTTP GET, LDAP query), ALL mutating categories (`contain_host`, `add_ioc_to_blocklist`, `disable_identity`, `update_alert`, `create_ticket`, `update_ticket`, `reset_identity_password`, `update_identity`, `enable_identity`, `uncontain_host`, `delete_email`, `update_email`) MUST be strictly `false`.
 3. **Alert Operations Disambiguation**:
-   * **`update_alert`**: Applies STRICTLY to operations modifying alerts/cases **within the Google SecOps platform** (`siemplify.<method>`). Mutating or closing alerts in external 3rd-party security platforms does not match `update_alert` and maps to `false` (`[]`).
+   * **`update_alert`**: Applies STRICTLY to operations modifying alerts/cases **within the Google SecOps platform** (`siemplify.<method>`). Mutating or closing alerts in external 3rd-party security platforms does not match `update_alert` and all category flags must remain `false`.
    * **`add_alert_comment`**: Applies to adding analyst notes, comments, or log entries to an alert's activity timeline in internal SecOps OR in external security detection platforms.
    * **`get_alert_information`**: Applies to read-only queries fetching alert details or open incident queues from 3rd-party security products.
-4. **IOC Management & Watchlists (Add vs. Delete vs. Allowlist)**:
+4. **IOC Management & Watchlists (Add vs. Delete vs. Metadata Updates)**:
    * Adding or uploading custom IOCs (IP, domain, hash, URL) to security controls or threat detection watchlists MUST be mapped strictly to `add_ioc_to_blocklist: true`.
-   * Deleting or removing custom IOCs from security controls or watchlists MUST be mapped strictly to `remove_ioc_from_blocklist: true`. Do NOT flag `remove_ioc_from_allowlist` unless the action or parameters explicitly target allowlist/whitelist policies.
+   * Deleting or removing custom IOCs from security controls or watchlists MUST be mapped strictly to `remove_ioc_from_blocklist: true`. Do NOT set `remove_ioc_from_allowlist: true` unless the action or parameters explicitly target allowlist/whitelist policies.
+   * Updating metadata, descriptions, comments, or expiration dates on an already existing IOC without creating a new blocklist entry or deleting an entry does NOT execute a blocklist/allowlist mutation. For such metadata update actions, `add_ioc_to_blocklist`, `remove_ioc_from_blocklist`, `add_ioc_to_allowlist`, and `remove_ioc_from_allowlist` MUST all remain `false`.
 5. **Asset Queries by IOC**:
    * Actions that query endpoint inventories to find hosts or devices associated with an IOC (e.g., `Get Hosts by IOC`, `Search Devices by IP`) search device inventory matching criteria and MUST be mapped strictly to `search_asset: true`.
 6. **Composite / Dual-Outcome Actions (Exhaustiveness)**: If an action executes multiple distinct capabilities, you MUST flag ALL executed categories as `true`:
@@ -79,7 +80,7 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
    * When an action removes IP ranges or indicators from a firewall rule or security policy, map it to `remove_ioc_from_blocklist: true` (and `remove_ioc_from_allowlist: true` if rule policy is bidirectional).
 
 10. **ITSM & Ticketing Platforms (Ticket Queries vs. Mutations & Attachments)**:
-   * **Read-Only Ticket Queries**: Actions that fetch or query tickets/incidents from external ITSM platforms (e.g., `Get Incident`, `Get Ticket`, `Get Record Details`) perform read operations on ticketing systems. They do NOT match `get_alert_information` (which is strictly reserved for security detection/alert feeds from 3rd party security products). All 27 category flags MUST remain `false` (`[]`).
+   * **Read-Only Ticket Queries**: Actions that fetch or query tickets/incidents from external ITSM platforms (e.g., `Get Incident`, `Get Ticket`, `Get Record Details`) perform read operations on ticketing systems. They do NOT match `get_alert_information` (which is strictly reserved for security detection/alert feeds from 3rd party security products). All 27 category flags MUST remain `false`.
    * **Ticket Mutations & File Attachments**: Actions that create tickets map to `create_ticket: true`. Actions that update ticket fields, add notes/comments, or upload file attachments to an existing ticket/record (e.g., `Add Attachment`, `Upload Attachment`) MUST be mapped to `update_ticket: true`. (Do NOT map to `submit_file`, which is strictly for sandbox detonation).
 
 11. **Asset & Identity Entities — Direct Lookup vs. Filter Search**:
@@ -88,7 +89,7 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
 
 12. **Communication & Collaboration Platforms (Messages vs. Container Administration)**:
     * **Messages, Notifications & File Uploads**: Sending text messages, interactive cards, replies, or uploading files/attachments to channels or users (e.g., `Send Message`, `Send Chat Message`, `Upload File`, `Ask Question`) represents dispatching communication content to recipients and MUST be mapped to `send_message: true`.
-    * **Channel & Chat Container Administration**: Creating, deleting, renaming channels or managing channel membership (e.g., `Create Channel`, `Delete Channel`, `Add Users To Channel`, `Remove Users From Channel`, `List Channels`) modifies application-level collaboration rooms. All 27 category flags MUST remain `false` (`[]`).
+    * **Channel & Chat Container Administration**: Creating, deleting, renaming channels or managing channel membership (e.g., `Create Channel`, `Delete Channel`, `Add Users To Channel`, `Remove Users From Channel`, `List Channels`) modifies application-level collaboration rooms. All 27 category flags MUST remain `false`.
 
 13. **Threat Intelligence vs. Technical Lookups**:
     * `enrich_ioc`: Applies to threat intelligence reputation queries, threat scoring, attribution, threat campaigns, or queries retrieving related threat infrastructure indicators.
