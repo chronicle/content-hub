@@ -48,7 +48,7 @@ def main():
         if row_index is not None:
             worksheet.insert_row(values, row_index)
         else:
-            worksheet.insert_row(values)
+            worksheet.append_row(values)
 
         print(worksheet.row_count)
     except Exception as err:
