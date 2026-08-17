@@ -3,16 +3,17 @@ from __future__ import annotations
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon import extract_action_param
+from TIPCommon.extraction import extract_action_param
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    REMOVE_SECURITY_POLICY_SCRIPT_NAME,
-    RESULT_VALUE_TRUE,
-    RESULT_VALUE_FALSE,
     COMMON_ACTION_ERROR_MESSAGE,
+    REMOVE_SECURITY_POLICY_SCRIPT_NAME,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
 )
-from ..core.utils import get_integration_params, validate_required_string, validate_integer_param
+from ..core.InfobloxExceptions import InfobloxException
+from ..core.utils import get_integration_params, validate_integer_param, validate_required_string
 
 
 @output_handler
@@ -49,9 +50,7 @@ def main():
         siemplify.LOGGER.exception(e)
     except Exception as e:
         status = EXECUTION_STATE_FAILED
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            REMOVE_SECURITY_POLICY_SCRIPT_NAME, str(e)
-        )
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(REMOVE_SECURITY_POLICY_SCRIPT_NAME, str(e))
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)

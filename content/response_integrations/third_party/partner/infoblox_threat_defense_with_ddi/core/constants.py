@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 INTEGRATION_NAME = "Infoblox Threat Defense with DDI"
 
 RESULT_VALUE_TRUE = True
@@ -30,65 +29,52 @@ ISO_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 # Allowed values for parameters
 ALLOWED_THREAT_LEVEL_VALUES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
-ALLOWED_STATUS_VALUES = ["Active", "Closed"]
-ALLOWED_PRIORITY_VALUES = ["LOW", "INFO", "MEDIUM", "HIGH", "CRITICAL"]
+ALLOWED_SEVERITY_VALUES = ["Critical", "High", "Medium", "Low"]
+ALLOWED_INSIGHT_STATUS_VALUES = [
+    "Accepted Risk",
+    "In Progress",
+    "False Positive",
+    "Needs Review",
+    "Reopened",
+    "Resolved",
+]
+VERIFIED_MAPPING = {"All": None, "Yes": "true", "No": "false"}
 
 # Scripts Name
 PING_SCRIPT_NAME = f"{INTEGRATION_NAME} - Ping"
 DNS_RECORD_LOOKUP_SCRIPT_NAME = f"{INTEGRATION_NAME} - DNS Record Lookup"
 CREATE_CUSTOM_LIST_SCRIPT_NAME = f"{INTEGRATION_NAME} - Create Custom List"
 GET_CUSTOM_LIST_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Custom List"
-UPDATE_CUSTOM_LIST_ITEMS_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Update Custom List Items"
-)
+UPDATE_CUSTOM_LIST_ITEMS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Update Custom List Items"
 REMOVE_NETWORK_LIST_SCRIPT_NAME = f"{INTEGRATION_NAME} - Remove Network List"
 REMOVE_CUSTOM_LIST_SCRIPT_NAME = f"{INTEGRATION_NAME} - Remove Custom List"
 UPDATE_CUSTOM_LIST_SCRIPT_NAME = f"{INTEGRATION_NAME} - Update Custom List"
 IP_LOOKUP_SCRIPT_NAME = f"{INTEGRATION_NAME} - IP Lookup"
 GET_NETWORK_LIST_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Network List"
-GET_SECURITY_POLICIES_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Get Security Policies"
-)
-CREATE_SECURITY_POLICY_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Create Security Policy"
-)
-UPDATE_SECURITY_POLICY_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Update Security Policy"
-)
-REMOVE_SECURITY_POLICY_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Remove Security Policy"
-)
+GET_SECURITY_POLICIES_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Security Policies"
+CREATE_SECURITY_POLICY_SCRIPT_NAME = f"{INTEGRATION_NAME} - Create Security Policy"
+UPDATE_SECURITY_POLICY_SCRIPT_NAME = f"{INTEGRATION_NAME} - Update Security Policy"
+REMOVE_SECURITY_POLICY_SCRIPT_NAME = f"{INTEGRATION_NAME} - Remove Security Policy"
 CREATE_NETWORK_LIST_SCRIPT_NAME = f"{INTEGRATION_NAME} - Create Network List"
 UPDATE_NETWORK_LIST_SCRIPT_NAME = f"{INTEGRATION_NAME} - Update Network List"
-GET_SOC_INSIGHTS_COMMENTS_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Get SOC Insights Comments"
-)
-GET_SOC_INSIGHTS_INDICATORS_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Get SOC Insights Indicators"
-)
-GET_SOC_INSIGHTS_EVENTS_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Get SOC Insights Events"
-)
+GET_SOC_INSIGHTS_INDICATORS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Infoblox IQ for Threat Defense Indicators"
+GET_SOC_INSIGHTS_EVENTS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Infoblox IQ for Threat Defense Events"
 IP_ASSET_DATA_LOOKUP_SCRIPT_NAME = f"{INTEGRATION_NAME} - IP Asset Data Lookup"
 INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_SCRIPT_NAME = (
     f"{INTEGRATION_NAME} - Initiate Indicator Intel Lookup With Dossier"
 )
-GET_INDICATOR_INTEL_LOOKUP_RESULT_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Get Indicator Intel Lookup Result"
-)
-INDICATOR_THREAT_LOOKUP_WITH_TIDE_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Indicator Threat Lookup With TIDE"
-)
+GET_INDICATOR_INTEL_LOOKUP_RESULT_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Indicator Intel Lookup Result"
+INDICATOR_THREAT_LOOKUP_WITH_TIDE_SCRIPT_NAME = f"{INTEGRATION_NAME} - Indicator Threat Lookup With TIDE"
 DHCP_LEASE_LOOKUP_SCRIPT_NAME = f"{INTEGRATION_NAME} - DHCP Lease Lookup"
-GET_SOC_INSIGHTS_ASSETS_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Get SOC Insights Assets"
-)
+GET_SOC_INSIGHTS_ASSETS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Infoblox IQ for Threat Defense Assets"
 HOST_LOOKUP_SCRIPT_NAME = f"{INTEGRATION_NAME} - Host Lookup"
+UPDATE_STATUS_OF_INSIGHT_SCRIPT_NAME = f"{INTEGRATION_NAME} - Update Status of Infoblox IQ for Threat Defense"
+GET_INSIGHT_DETAILS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Infoblox IQ for Threat Defense Details"
+EXECUTE_RECOMMENDATION_ACTIONS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Execute Recommendation Actions"
+UNDO_RECOMMENDATION_ACTION_SCRIPT_NAME = f"{INTEGRATION_NAME} - Undo a Recommendation Action"
 
-SOC_INSIGHTS_CONNECTOR_NAME = f"{INTEGRATION_NAME} - SOC Insights Connector"
-DNS_SECURITY_EVENTS_CONNECTOR_NAME = (
-    f"{INTEGRATION_NAME} - DNS Security Events Connector"
-)
+SOC_INSIGHTS_CONNECTOR_NAME = f"{INTEGRATION_NAME} - Infoblox - IQ for Threat Defense Connector"
+DNS_SECURITY_EVENTS_CONNECTOR_NAME = f"{INTEGRATION_NAME} - DNS Security Events Connector"
 
 # Action Identifiers
 GET_CUSTOM_LIST_ACTION_IDENTIFIER = "get_custom_list"
@@ -103,18 +89,11 @@ IP_LOOKUP_ACTION_IDENTIFIER = "ip_lookup"
 PING_ACTION_IDENTIFIER = "ping"
 CREATE_NETWORK_LIST_ACTION_IDENTIFIER = "create_network_list"
 UPDATE_NETWORK_LIST_ACTION_IDENTIFIER = "update_network_list"
-GET_SOC_INSIGHTS_COMMENTS_ACTION_IDENTIFIER = "get_soc_insights_comments"
 GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER = "get_soc_insights_indicators"
 GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER = "get_soc_insights_events"
-INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_ACTION_IDENTIFIER = (
-    "initiate_indicator_intel_lookup_with_dossier"
-)
-GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER = (
-    "get_indicator_intel_lookup_result"
-)
-INDICATOR_THREAT_LOOKUP_WITH_TIDE_ACTION_IDENTIFIER = (
-    "indicator_threat_lookup_with_tide"
-)
+INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_ACTION_IDENTIFIER = "initiate_indicator_intel_lookup_with_dossier"
+GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER = "get_indicator_intel_lookup_result"
+INDICATOR_THREAT_LOOKUP_WITH_TIDE_ACTION_IDENTIFIER = "indicator_threat_lookup_with_tide"
 GET_SECURITY_POLICIES_ACTION_IDENTIFIER = "get_security_policies"
 CREATE_SECURITY_POLICY_ACTION_IDENTIFIER = "create_security_policy"
 UPDATE_SECURITY_POLICY_ACTION_IDENTIFIER = "update_security_policy"
@@ -124,9 +103,19 @@ GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER = "get_soc_insights_assets"
 HOST_LOOKUP_ACTION_IDENTIFIER = "host_lookup"
 GET_SOC_INSIGHTS_ACTION_IDENTIFIER = "get_soc_insights"
 GET_DNS_SECURITY_EVENTS_ACTION_IDENTIFIER = "get_dns_security_events"
+GET_ACCOUNT_ACTION_IDENTIFIER = "get_account"
+UPDATE_STATUS_OF_INSIGHT_ACTION_IDENTIFIER = "update_status_of_insight"
+GET_INSIGHT_DETAILS_ACTION_IDENTIFIER = "get_insight_details"
+EXECUTE_RECOMMENDATION_ACTIONS_ACTION_IDENTIFIER = "execute_recommendation_action"
+UNDO_RECOMMENDATION_ACTION_ACTION_IDENTIFIER = "undo_recommendation_action"
 
 # API Services and Versions
 API_AUTHN_VERSION_V1 = "/api/authn/v1"
+
+# Infoblox client/customer tracking headers
+X_INFOBLOX_CLIENT_HEADER = "x-Infoblox-client"
+X_INFOBLOX_CUSTOMER_HEADER = "x-Infoblox-customer"
+X_INFOBLOX_CLIENT_VALUE = "GoogleSecPps_infobloxThreatDefenseWithDDI"
 
 # API Endpoints
 ENDPOINTS = {
@@ -142,23 +131,23 @@ ENDPOINTS = {
     REMOVE_NETWORK_LIST_ACTION_IDENTIFIER: "/api/atcfw/v1/network_lists/{network_list_id}",
     CREATE_NETWORK_LIST_ACTION_IDENTIFIER: "/api/atcfw/v1/network_lists",
     UPDATE_NETWORK_LIST_ACTION_IDENTIFIER: "/api/atcfw/v1/network_lists/{network_list_id}",
-    GET_SOC_INSIGHTS_COMMENTS_ACTION_IDENTIFIER: "/api/v1/insights/{insight_id}/comments",
-    GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER: "/api/v1/insights/{insight_id}/indicators",
-    GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER: "/api/v1/insights/{insight_id}/events",
-    INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_ACTION_IDENTIFIER:
-        "/tide/api/services/intel/lookup/indicator/{type}",
-    GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER:
-        "/tide/api/services/intel/lookup/jobs/{job_id}/results",
+    GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER: "/api/v2/insights/{insight_id}/indicators",
+    GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER: "/api/v2/insights/{insight_id}/events",
+    INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_ACTION_IDENTIFIER: "/tide/api/services/intel/lookup/indicator/{type}",
+    GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER: "/tide/api/services/intel/lookup/jobs/{job_id}/results",
     INDICATOR_THREAT_LOOKUP_WITH_TIDE_ACTION_IDENTIFIER: "/tide/api/data/threats",
     GET_SECURITY_POLICIES_ACTION_IDENTIFIER: "/api/atcfw/v1/security_policies",
     CREATE_SECURITY_POLICY_ACTION_IDENTIFIER: "/api/atcfw/v1/security_policies",
-    UPDATE_SECURITY_POLICY_ACTION_IDENTIFIER:
-        "/api/atcfw/v1/security_policies/{security_policy_id}",
-    REMOVE_SECURITY_POLICY_ACTION_IDENTIFIER:
-        "/api/atcfw/v1/security_policies/{security_policy_id}",
+    UPDATE_SECURITY_POLICY_ACTION_IDENTIFIER: "/api/atcfw/v1/security_policies/{security_policy_id}",
+    REMOVE_SECURITY_POLICY_ACTION_IDENTIFIER: "/api/atcfw/v1/security_policies/{security_policy_id}",
     DHCP_LEASE_LOOKUP_ACTION_IDENTIFIER: "/api/ddi/v1/dhcp/lease",
-    GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER: "/api/v1/insights/{insight_id}/assets",
+    GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER: "/api/v2/insights/{insight_id}/assets",
     HOST_LOOKUP_ACTION_IDENTIFIER: "/api/ddi/v1/ipam/host",
-    GET_SOC_INSIGHTS_ACTION_IDENTIFIER: "/api/v1/insights",
+    GET_SOC_INSIGHTS_ACTION_IDENTIFIER: "/api/v2/insights",
     GET_DNS_SECURITY_EVENTS_ACTION_IDENTIFIER: "/api/dnsdata/v2/dns_event",
+    GET_ACCOUNT_ACTION_IDENTIFIER: "/api/atcfw/v1/account",
+    UPDATE_STATUS_OF_INSIGHT_ACTION_IDENTIFIER: "/api/v2/insights/status",
+    GET_INSIGHT_DETAILS_ACTION_IDENTIFIER: "/api/v2/insights/{insight_id}",
+    EXECUTE_RECOMMENDATION_ACTIONS_ACTION_IDENTIFIER: "/api/v2/insights/{insight_id}/actions",
+    UNDO_RECOMMENDATION_ACTION_ACTION_IDENTIFIER: "/api/v2/insights/global-activity/{audit_entry_id}/undo",
 }

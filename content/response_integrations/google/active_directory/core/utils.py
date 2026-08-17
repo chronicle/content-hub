@@ -15,6 +15,8 @@
 from __future__ import annotations
 import copy
 
+from typing import Any
+
 from .ActiveDirectoryManager import ActiveDirectoryManagerError
 from soar_sdk.SiemplifyUtils import unix_now
 
@@ -117,3 +119,53 @@ def is_action_approaching_iteration_run_timeout(action_start_time):
         + ASYNC_ACTION_ITERATION_TIMEOUT_MS
         - ASYNC_ACTION_ITERATION_TIMEOUT_THRESHOLD_MS
     )
+
+
+def prevent_reverting_properties(entity: Any) -> None:
+    """Monkeypatches the `to_dict` method on the given entity object to prevent
+    reverting read-only properties (IsPivot) to False/False string.
+
+    This is necessary because the SecOps SOAR platform does not allow changing these
+    properties from True to False, resulting in a 400 Bad Request error.
+
+    Args:
+        entity: The DomainEntityInfo (or similar) entity object.
+    """
+    if not hasattr(entity, "to_dict"):
+        return
+
+    add_props = getattr(entity, "additional_properties", {}) or {}
+
+    is_pivot = (
+        getattr(entity, "is_pivot", False)
+        or str(add_props.get("IsPivot", "")).lower() == "true"
+    )
+
+    if not is_pivot:
+        return
+
+    orig_to_dict = entity.to_dict
+
+    def new_to_dict():
+        d = orig_to_dict().copy()
+        d.pop("to_dict", None)
+
+        def clean_key(target_dict, key):
+            target_dict.pop(key, None)
+
+        clean_key(d, "is_pivot")
+        clean_key(d, "IsPivot")
+
+        add_props_dict = d.get("additional_properties") or d.get("additionalProperties")
+        if isinstance(add_props_dict, dict):
+            add_props_dict = add_props_dict.copy()
+            clean_key(add_props_dict, "IsPivot")
+
+            if "additional_properties" in d:
+                d["additional_properties"] = add_props_dict
+            if "additionalProperties" in d:
+                d["additionalProperties"] = add_props_dict
+
+        return d
+
+    entity.to_dict = new_to_dict

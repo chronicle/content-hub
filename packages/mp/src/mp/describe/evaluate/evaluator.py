@@ -15,6 +15,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import functools
 import json
 import logging
 import uuid
@@ -84,9 +86,7 @@ def _load_yaml_file_data(
             params_desc = str(action_data.get("parameters_description") or "")
             capabilities_str = json.dumps(action_data.get("capabilities") or {})
             entity_usage_str = json.dumps(action_data.get("entity_usage") or {})
-            outcome_str = json.dumps(
-                action_data.get("outcome_categories") or action_data.get("categories") or {}
-            )
+            outcome_str = json.dumps(action_data.get("outcome_categories") or action_data.get("categories") or {})
 
             actions_dict[action_name] = {
                 "ai_description": ai_desc,
@@ -154,8 +154,7 @@ def load_integration_artifacts(
             continue
         suffix = file_path.suffix.lower()
         if suffix in {".yaml", ".json", ".actiondef", ".action_def"} and not any(
-            p.lower() in {"actions", "actionsdefinitions", "actions_definitions"}
-            for p in parts
+            p.lower() in {"actions", "actionsdefinitions", "actions_definitions"} for p in parts
         ):
             continue
         logger.info("  📄 Loaded source/actiondef file: %s", rel_path)
@@ -208,14 +207,65 @@ def normalize_action_name(raw_name: str) -> str:
     for ext in (".py", ".yaml", ".yml", ".json", ".actiondef", ".action_def"):
         if name.lower().endswith(ext):
             name = name[: -len(ext)]
-    return (
-        name.lower()
-        .replace(" ", "")
-        .replace("_", "")
-        .replace(":", "")
-        .replace("-", "")
-        .rstrip("s")
-    )
+    return name.lower().replace(" ", "").replace("_", "").replace(":", "").replace("-", "").rstrip("s")
+
+
+def _match_action_files_by_yaml_name(
+    action_name: str, python_files: dict[str, str], shared_dirs: set[str]
+) -> list[str]:
+    """Find action-specific files by inspecting 'name:' field in action definition YAMLs.
+
+    Args:
+        action_name: Name of the action.
+        python_files: Mapping of relative filepath to code string.
+        shared_dirs: Set of directory names containing shared code.
+
+    Returns:
+        List of matching action file paths.
+
+    """
+    for filename, content in python_files.items():
+        if filename.endswith((".yaml", ".yml")) and action_name in content:
+            with contextlib.suppress(Exception):
+                parsed = yaml.safe_load(content)
+                if isinstance(parsed, dict) and parsed.get("name") == action_name:
+                    stem = Path(filename).stem
+                    return [
+                        f
+                        for f in python_files
+                        if Path(f).stem == stem
+                        and not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)
+                    ]
+    return []
+
+
+def _match_action_files_by_normalization(
+    action_name: str, python_files: dict[str, str], shared_dirs: set[str]
+) -> list[str]:
+    """Fallback: find action-specific files by normalized name matching.
+
+    Args:
+        action_name: Name of the action.
+        python_files: Mapping of relative filepath to code string.
+        shared_dirs: Set of directory names containing shared code.
+
+    Returns:
+        List of matching action file paths.
+
+    """
+    norm_target = normalize_action_name(action_name)
+    if not norm_target:
+        return []
+    non_shared = [
+        f for f in python_files if not ({p.lower() for p in f.split("/")[:-1]} & shared_dirs)
+    ]
+    exact = [f for f in non_shared if norm_target == normalize_action_name(f)]
+    fuzzy = [
+        f
+        for f in non_shared
+        if norm_target in normalize_action_name(f) or normalize_action_name(f) in norm_target
+    ]
+    return exact or fuzzy
 
 
 def get_code_for_action(
@@ -231,10 +281,6 @@ def get_code_for_action(
         Tuple of (combined_code_string, action_specific_files, shared_common_files).
 
     """
-    norm_target = normalize_action_name(action_name)
-    exact_action_files: list[str] = []
-    fuzzy_action_files: list[str] = []
-    shared_files: list[str] = []
     shared_dirs = {
         "core",
         "common",
@@ -247,26 +293,25 @@ def get_code_for_action(
         "clients",
     }
 
-    for filename in python_files:
-        norm_file = normalize_action_name(filename)
-        parts = {p.lower() for p in filename.split("/")[:-1]}
+    shared_files = [
+        f for f in python_files if {p.lower() for p in f.split("/")[:-1]} & shared_dirs
+    ]
 
-        if norm_target and norm_target == norm_file:
-            exact_action_files.append(filename)
-        elif norm_target and (norm_target in norm_file or norm_file in norm_target):
-            fuzzy_action_files.append(filename)
-        elif parts & shared_dirs:
-            shared_files.append(filename)
+    action_files = _match_action_files_by_yaml_name(action_name, python_files, shared_dirs)
+    if not action_files:
+        action_files = _match_action_files_by_normalization(action_name, python_files, shared_dirs)
 
-    action_files = exact_action_files or fuzzy_action_files
     if action_files:
         action_files.sort()
         shared_files.sort()
         used_files = action_files + shared_files
-        combined_code = "\n\n".join(
-            f"# File: {f}\n{python_files[f]}" for f in used_files
-        )
+        combined_code = "\n\n".join(f"# File: {f}\n{python_files[f]}" for f in used_files)
         return combined_code, action_files, shared_files
+
+    if shared_files:
+        shared_files.sort()
+        combined_code = "\n\n".join(f"# File: {f}\n{python_files[f]}" for f in shared_files)
+        return combined_code, [], shared_files
 
     all_files = sorted(python_files.keys())
     combined_code = (
@@ -280,19 +325,24 @@ def get_code_for_action(
 _get_code_for_action = get_code_for_action
 
 
-async def _direct_evaluate_prompts(prompts: list[str]) -> list[RuleVerdict | str]:
-    """Execute evaluation prompts directly via streaming Gemini LLM session.
+async def _direct_evaluate_prompts(
+    prompts: list[str], *, use_batch: bool = False
+) -> list[RuleVerdict | str]:
+    """Execute evaluation prompts via Gemini LLM session (streaming or Batch API).
 
     Args:
         prompts: List of prompt strings.
+        use_batch: Whether to use Google GenAI Batch API.
 
     Returns:
         List of RuleVerdict or error strings.
 
     """
     async with create_llm_session() as gemini:
-        gemini.__dict__["bulk_threshold"] = 500
-        return await gemini.send_bulk_messages(prompts, response_json_schema=RuleVerdict)
+        gemini.bulk_threshold = 0 if use_batch else 5000
+        return await gemini.send_bulk_messages(
+            prompts, response_json_schema=RuleVerdict, use_batch=use_batch
+        )
 
 
 class EvaluationEngine:
@@ -375,9 +425,7 @@ class EvaluationEngine:
         return True, ""
 
     @staticmethod
-    def _validate_field_for_rule(
-        target_field: str, fields: dict[str, str]
-    ) -> tuple[bool, str]:
+    def _validate_field_for_rule(target_field: str, fields: dict[str, str]) -> tuple[bool, str]:
         """Validate that a target YAML field is present and structurally valid before running its rule evaluation.
 
         Args:
@@ -443,9 +491,7 @@ class EvaluationEngine:
                 "ai_short_description key is missing or empty in YAML.",
                 "Define ai_short_description as a direct single-paragraph summary without bulleted lists or tables.",
             )
-        has_lists = any(
-            line.strip().startswith(("-", "*", "1.")) for line in target_val.splitlines()
-        )
+        has_lists = any(line.strip().startswith(("-", "*", "1.")) for line in target_val.splitlines())
         if has_lists or "|" in target_val or "\n\n" in target_val:
             return (
                 VerdictEnum.FAIL,
@@ -462,9 +508,7 @@ class EvaluationEngine:
         )
 
     @staticmethod
-    def _heuristic_eval_params_desc(
-        title_lower: str, val_lower: str
-    ) -> tuple[VerdictEnum, str, str | None]:
+    def _heuristic_eval_params_desc(title_lower: str, val_lower: str) -> tuple[VerdictEnum, str, str | None]:
         """Heuristically evaluate parameters_description field structure.
 
         Args:
@@ -485,10 +529,7 @@ class EvaluationEngine:
                         "table or fallback text."
                     ),
                 )
-            if (
-                "| parameter | type | mandatory | description |" in val_lower
-                or "there are no parameters" in val_lower
-            ):
+            if "| parameter | type | mandatory | description |" in val_lower or "there are no parameters" in val_lower:
                 return (
                     VerdictEnum.PASS,
                     (
@@ -596,11 +637,14 @@ class EvaluationEngine:
             )
 
     @staticmethod
-    def _dispatch_prompts(prompts: list[str]) -> list[RuleVerdict | str]:
+    def _dispatch_prompts(
+        prompts: list[str], *, use_batch: bool = False
+    ) -> list[RuleVerdict | str]:
         """Dispatch prompts to Gemini API with event loop handling.
 
         Args:
             prompts: List of prompt strings.
+            use_batch: Whether to use Google GenAI Batch API.
 
         Returns:
             List of responses from Gemini API.
@@ -611,8 +655,10 @@ class EvaluationEngine:
         except RuntimeError:
             loop = None
         if loop and loop.is_running():
-            return anyio.from_thread.run(_direct_evaluate_prompts, prompts)
-        return asyncio.run(_direct_evaluate_prompts(prompts))
+            return anyio.from_thread.run(
+                functools.partial(_direct_evaluate_prompts, prompts, use_batch=use_batch)
+            )
+        return asyncio.run(_direct_evaluate_prompts(prompts, use_batch=use_batch))
 
     def evaluate_integration(  # ruff: ignore[complex-structure, too-many-branches, too-many-arguments, too-many-locals, too-many-statements, too-many-positional-arguments]
         self,
@@ -629,6 +675,7 @@ class EvaluationEngine:
         *,
         use_llm: bool = True,
         add_prompt: bool = False,
+        use_batch: bool = False,
     ) -> EvaluationReport:
         """Execute all evaluation rules per action for an integration.
 
@@ -645,6 +692,7 @@ class EvaluationEngine:
             action: Optional action name filter.
             use_llm: Whether to attempt Gemini API call.
             add_prompt: Whether to attach evaluation prompts in results.
+            use_batch: Whether to use Google GenAI Batch API.
 
         Returns:
             EvaluationReport containing overall evaluation results.
@@ -660,9 +708,7 @@ class EvaluationEngine:
             disk_code_map, disk_actions, loaded_paths = load_integration_artifacts(
                 integration_id, src=src, config_yaml=config_yaml
             )
-            python_files = (
-                {"all_files.py": python_code} if python_code else disk_code_map
-            )
+            python_files = {"all_files.py": python_code} if python_code else disk_code_map
             if extracted_fields:
                 actions_dict: dict[str, dict[str, str]] = {"all_actions": extracted_fields}
             elif disk_actions:
@@ -678,12 +724,7 @@ class EvaluationEngine:
         if action:
             norm_target = normalize_action_name(action)
             matched_key = next(
-                (
-                    k
-                    for k in actions_dict
-                    if normalize_action_name(k) == norm_target
-                    or k.lower() == action.lower()
-                ),
+                (k for k in actions_dict if normalize_action_name(k) == norm_target or k.lower() == action.lower()),
                 None,
             )
             if matched_key:
@@ -729,9 +770,7 @@ class EvaluationEngine:
                 "integration_categories",
             }:
                 continue
-            action_code, action_files, shared_files = get_code_for_action(
-                action_name, python_files
-            )
+            action_code, action_files, shared_files = get_code_for_action(action_name, python_files)
             logger.info(
                 "  📄 (%s) Using %d files for evaluation prompt:\n"
                 "    - Action-Specific (%d):\n        * %s\n"
@@ -744,9 +783,7 @@ class EvaluationEngine:
                 "\n        * ".join(shared_files) if shared_files else "None",
             )
             for rule in active_rules:
-                is_valid, err_reason = self._validate_field_for_rule(
-                    rule.target_field, fields
-                )
+                is_valid, err_reason = self._validate_field_for_rule(rule.target_field, fields)
                 if not is_valid:
                     eval_id = f"eval_{uuid.uuid4().hex[:8]}"
                     res_fail = RuleEvaluationResult(
@@ -759,8 +796,7 @@ class EvaluationEngine:
                         actual_value=fields.get(rule.target_field, "-"),
                         verdict=VerdictEnum.FAIL,
                         reasoning=(
-                            f"target field '{rule.target_field}' is missing, "
-                            f"empty, or malformed in YAML: {err_reason}."
+                            f"target field '{rule.target_field}' is missing, empty, or malformed in YAML: {err_reason}."
                         ),
                         suggested_fix=f"Define a valid '{rule.target_field}' in the action YAML.",
                         prompt=None,
@@ -788,11 +824,13 @@ class EvaluationEngine:
 
         if use_llm and prompts:
             try:
+                mode_str = "Batch API" if use_batch else "Direct Streaming"
                 logger.info(
-                    "⚡ [3/4] Dispatching %d rule evaluation prompts to Gemini API (Direct Streaming)...",
+                    "⚡ [3/4] Dispatching %d rule evaluation prompts to Gemini API (%s)...",
                     len(prompts),
+                    mode_str,
                 )
-                llm_responses = EvaluationEngine._dispatch_prompts(prompts)
+                llm_responses = EvaluationEngine._dispatch_prompts(prompts, use_batch=use_batch)
             except Exception as err:  # ruff: ignore[blind-except]
                 logger.warning(
                     "Gemini API evaluation offline or unavailable: %s. Using heuristic evaluation.",
@@ -825,9 +863,7 @@ class EvaluationEngine:
                     )
             else:
                 heuristic_fallbacks.append((action_name, rule.title))
-                verdict_val, reasoning, fix = self._heuristic_evaluate_rule(
-                    rule.title, rule.target_field, str(target_val)
-                )
+                verdict_val, reasoning, fix = self._heuristic_evaluate_rule(rule.title, rule.target_field, target_val)
                 logger.info(
                     "  [%s] %s: %s (Heuristic)",
                     action_name,
@@ -842,7 +878,7 @@ class EvaluationEngine:
                 run_id=run_id,
                 evaluated_at=evaluated_at,
                 rule_title=rule.title,
-                actual_value=str(target_val),
+                actual_value=target_val,
                 verdict=verdict_val,
                 reasoning=reasoning,
                 suggested_fix=fix,
