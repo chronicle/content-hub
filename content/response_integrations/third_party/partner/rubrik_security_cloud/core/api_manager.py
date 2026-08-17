@@ -2,18 +2,27 @@ from __future__ import annotations
 
 import json
 import time
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import requests
 from TIPCommon.oauth import CredStorage
 
 from .constants import (
+    ACCESS_TYPE_UNSPECIFIED,
     ADVANCE_IOC_SCAN_ACTION_IDENTIFIER,
     DEFAULT_REQUEST_TIMEOUT,
     DEFAULT_SONAR_FILE_SORT_ORDER,
     DEFAULT_TIMEZONE,
+    ERROR_NO_VIOLATION_FOUND,
+    FILE_DOWNLOAD_ENDPOINT,
+    FILE_STATE_FAILED,
+    FILE_STATE_READY,
+    FILE_TYPE_HITS,
     GET_CDM_CLUSTER_CONNECTION_STATE_ACTION_IDENTIFIER,
     GET_CDM_CLUSTER_LOCATION_ACTION_IDENTIFIER,
+    GET_CLASSIFICATION_OBJECT_DETAIL_ACTION_IDENTIFIER,
+    GET_CLOSEST_SNAPSHOT_ACTION_IDENTIFIER,
     GET_SONAR_SENSITIVE_HITS_ACTION_IDENTIFIER,
     GRAPHQL_URL,
     INTERNAL_SERVER_ERROR_STATUS_CODES,
@@ -24,6 +33,8 @@ from .constants import (
     LIST_SONAR_FILE_CONTEXTS_ACTION_IDENTIFIER,
     PING_ACTION_IDENTIFIER,
     RATE_LIMIT_EXCEEDED_STATUS_CODE,
+    REMEDIATION_TARGET_TYPE_VIOLATION,
+    REMEDIATION_TYPE_EXPORT_LOG,
     RETRY_COUNT,
     SORT_ORDER_ENUM,
     TURBO_IOC_SCAN_ACTION_IDENTIFIER,
@@ -33,6 +44,8 @@ from .constants import (
 from .graphql_queries import (
     CDM_CLUSTER_CONNECTION_STATE_QUERY,
     CDM_CLUSTER_LOCATION_QUERY,
+    CLASSIFICATION_OBJECT_DETAIL_QUERY,
+    CLOSEST_SNAPSHOT_QUERY,
     LIST_EVENTS_QUERY,
     OBJECT_SNAPSHOTS_QUERY,
     SONAR_FILE_CONTEXTS_QUERY,
@@ -44,6 +57,8 @@ from .graphql_queries import (
     THREAT_HUNT_DETAILS_V2_QUERY,
 )
 from .rubrik_exceptions import (
+    AmbiguousFileMatchException,
+    ConnectionTimeoutException,
     GraphQLQueryException,
     InternalSeverError,
     ItemNotFoundException,
@@ -59,6 +74,385 @@ from .utils import (
     validate_json,
 )
 
+# ---------------------------------------------------------------------------
+# GraphQL query strings
+# ---------------------------------------------------------------------------
+
+_DSPM_LIST_QUERY = """
+query DataSecurityViolationsListQuery(
+  $statuses: [PolicyViolationStatus!],
+  $severities: [Severity!],
+  $categories: [Category!],
+  $sensitivityLevels: [SensitivityLevel!],
+  $detectionDate: TimeRangeInput,
+  $updateDate: TimeRangeInput,
+  $first: Int,
+  $after: String,
+  $sortBy: PolicyViolationSortField,
+  $sortOrder: SortOrder,
+  $resourceMetadataFilter: ResourceMetadataFiltersInput
+) {
+  policyViolations(
+    statuses: $statuses,
+    policySeverities: $severities,
+    policyCategories: $categories,
+    sensitivityLevels: $sensitivityLevels,
+    detectionDate: $detectionDate,
+    updateDate: $updateDate,
+    policyTypes: [POLICY_TYPE_DATAGOV],
+    first: $first,
+    after: $after,
+    sortBy: $sortBy,
+    sortOrder: $sortOrder,
+    resourceMetadataFilter: $resourceMetadataFilter
+  ) {
+    count
+    edges {
+      node {
+        policyViolationId
+        status
+        createdAt
+        lastUpdatedAt
+        violationSeverity
+        policy { name policyCategory policySeverity }
+        resourceId
+        resourceMetadata {
+          metadata {
+            ... on CommonAssetMetadata { name objectType platform }
+          }
+        }
+        details {
+          ... on DataGovViolationDetails {
+            snapshotId
+            violatedHighRiskSensitiveHits
+            violatedMediumRiskSensitiveHits
+          }
+        }
+      }
+    }
+    pageInfo { endCursor hasNextPage }
+  }
+}
+"""
+
+_DSPM_GET_QUERY = """
+query DataSecurityViolationGetQuery($violationId: String!) {
+  policyViolation(
+    violationId: $violationId
+    policyTypes: [POLICY_TYPE_DATAGOV]
+  ) {
+    policyViolationId
+    status
+    violationSeverity
+    createdAt
+    lastUpdatedAt
+    resourceId
+    policy {
+      policyId
+      name
+      policyCategory
+      policySeverity
+      description
+      containsAccessFilters
+    }
+    remediations {
+      remediationId
+      state
+      remediationDetails {
+        details {
+          ticketNumber
+          ticketUrl
+        }
+      }
+    }
+    details {
+      ... on DataGovViolationDetails {
+        snapshotId
+        violatedSensitiveHits
+        violatedHighRiskSensitiveHits
+        violatedMediumRiskSensitiveHits
+        violatedLowRiskSensitiveHits
+        violatedNoRiskSensitiveHits
+        dataCategories { id name totalViolatedHits }
+        dataTypes { id name totalViolatedHits }
+        mipLabels { id name totalViolatedHits }
+        documentTypes { id name totalViolatedHits }
+      }
+    }
+    resourceMetadata {
+      metadata {
+        ... on CommonAssetMetadata {
+          name
+          objectType
+          platform
+          physicalHost
+          region
+          isDeleted
+          creationTime
+          lastAccessTime
+          snapshotTimestamp
+          clusterInfo { clusterName clusterUuid }
+          cloudAccountInfo { accountName }
+        }
+      }
+    }
+  }
+}
+"""
+
+_IR_GET_QUERY = """
+query DataSecurityViolationGetQuery(
+  $violationId: String!,
+  $policyTypes: [PolicyType!]!
+) {
+  policyViolation(violationId: $violationId, policyTypes: $policyTypes) {
+    policyViolationId
+    status
+    violationSeverity
+    createdAt
+    lastUpdatedAt
+    resourceId
+    resourceType
+    policy {
+      policyId
+      name
+      description
+      policyCategory
+      policySeverity
+      policyType
+      frameworks
+      manualRemediationProcess
+    }
+    details {
+      ... on IdentityViolationDetails { domainUniqueId principalUniqueId }
+      ... on IdpViolationDetails { domainUniqueId }
+    }
+    resourceMetadata {
+      metadata {
+        ... on IdentityMetadata {
+          displayName
+          domainName
+          idpType
+          principalType
+          privilegeType
+          userPrincipalName
+          status
+          title
+          source
+          identityTags
+          uniqueId
+          nativeType
+        }
+        ... on IdpMetadata {
+          domainName
+          domainUniqueId
+          idpType
+          rootDomainName
+          rootDomainId
+        }
+      }
+    }
+  }
+}
+"""
+
+_UPDATE_VIOLATIONS_MUTATION = """
+mutation UpdatePolicyViolationsMutation($input: BulkUpdatePolicyViolationsInput!) {
+  bulkUpdatePolicyViolations(input: $input)
+}
+"""
+
+_DOWNLOAD_CSV_MUTATION = """
+mutation DownloadFullSnapshotResultsCsvMutation(
+  $snappableFid: String!,
+  $snapshotFid: String!,
+  $filters: DownloadResultsCsvFiltersInput
+) {
+  downloadSnapshotResultsCsv(
+    snappableFid: $snappableFid,
+    snapshotFid: $snapshotFid,
+    downloadFilter: $filters
+  ) {
+    isSuccessful
+  }
+}
+"""
+
+_DOWNLOAD_BAR_QUERY = """
+query DownloadBarQuery {
+  allUserFiles {
+    downloads {
+      externalId
+      filename
+      type
+      state
+      createdAt
+    }
+  }
+}
+"""
+
+_CREATE_REMEDIATION_MUTATION = """
+mutation CreateViolationRemediationMutation($input: CreateViolationRemediationInput!) {
+  createViolationRemediation(input: $input) {
+    remediationId
+  }
+}
+"""
+
+_FILE_LIST_QUERY = """
+query DSPMViolationFileListQuery(
+  $snappableFid: String!,
+  $snapshotFid: String!,
+  $first: Int!,
+  $after: String,
+  $sort: FileResultSortInput,
+  $filters: ListFileResultFiltersInput,
+  $timezone: String!
+) {
+  policyObj(snappableFid: $snappableFid, snapshotFid: $snapshotFid) {
+    id: snapshotFid
+    fileResultConnection(
+      first: $first,
+      after: $after,
+      sort: $sort,
+      filter: $filters,
+      timezone: $timezone
+    ) {
+      edges {
+        cursor
+        node {
+          nativePath
+          stdPath
+          filename
+          mode
+          size
+          lastAccessTime
+          lastModifiedTime
+          creationTime
+          lastScanTime
+          directory
+          createdBy
+          modifiedBy
+          numDescendantFiles
+          numDescendantErrorFiles
+          numDescendantSkippedExtFiles
+          numDescendantSkippedSizeFiles
+          errorCode
+          hits { totalHits violations violationsDelta totalHitsDelta }
+          filesWithHits { totalHits violations }
+          openAccessFilesWithHits { totalHits violations }
+          staleFilesWithHits { totalHits violations }
+          sensitiveHits {
+            highRiskHits { totalHits violatedHits }
+            mediumRiskHits { totalHits violatedHits }
+            lowRiskHits { totalHits violatedHits }
+            noRiskHits { totalHits violatedHits }
+          }
+          analyzerResults {
+            hits { totalHits violations }
+            analyzer { id name analyzerType }
+          }
+          openAccessType
+          stalenessType
+          numActivities
+          numActivitiesDelta
+          exposureSummary {
+            exposureType
+            fileCount { totalCount violatedCount }
+          }
+          dbEntityType
+        }
+      }
+      pageInfo { startCursor endCursor hasNextPage hasPreviousPage }
+      hasLatestData
+    }
+  }
+}
+"""
+
+_IR_LIST_QUERY = """
+query IRViolationsListQuery(
+  $policyTypes: [PolicyType!]!,
+  $statuses: [PolicyViolationStatus!],
+  $severities: [Severity!],
+  $categories: [Category!],
+  $detectionDate: TimeRangeInput,
+  $updateDate: TimeRangeInput,
+  $first: Int,
+  $after: String,
+  $sortBy: PolicyViolationSortField,
+  $sortOrder: SortOrder,
+  $resourceMetadataFilter: ResourceMetadataFiltersInput
+) {
+  policyViolations(
+    policyTypes: $policyTypes,
+    statuses: $statuses,
+    policySeverities: $severities,
+    policyCategories: $categories,
+    detectionDate: $detectionDate,
+    updateDate: $updateDate,
+    first: $first,
+    after: $after,
+    sortBy: $sortBy,
+    sortOrder: $sortOrder,
+    resourceMetadataFilter: $resourceMetadataFilter
+  ) {
+    count
+    edges {
+      node {
+        policyViolationId
+        violationSeverity
+        status
+        createdAt
+        lastUpdatedAt
+        resourceId
+        resourceType
+        policy {
+          policyId
+          name
+          description
+          policyCategory
+          policySeverity
+          policyType
+          frameworks
+          manualRemediationProcess
+        }
+        details {
+          ... on IdentityViolationDetails { domainUniqueId }
+          ... on IdpViolationDetails { domainUniqueId }
+        }
+        resourceMetadata {
+          metadata {
+            ... on IdentityMetadata {
+              displayName
+              domainName
+              idpType
+              principalType
+              privilegeType
+              userPrincipalName
+              status
+              title
+              source
+              identityTags
+              uniqueId
+              nativeType
+            }
+            ... on IdpMetadata {
+              domainName
+              domainUniqueId
+              idpType
+              rootDomainName
+              rootDomainId
+            }
+          }
+        }
+      }
+    }
+    pageInfo { startCursor endCursor hasNextPage hasPreviousPage }
+  }
+}
+"""
 
 class APIManager:
     def __init__(
@@ -129,6 +523,30 @@ class APIManager:
 
         self.session.headers.update({"Authorization": f"Bearer {self.token}"})
 
+    def _log(self, message: str) -> None:
+        """Log an informational message via the Chronicle SOAR logger."""
+        self.siemplify.LOGGER.info(message)
+
+    def _execute_graphql(
+        self,
+        query: str,
+        variables: Dict[str, Any],
+        api_identifier: str = "GraphQL Query",
+    ) -> Dict[str, Any]:
+        """Execute a GraphQL query/mutation and return the unwrapped 'data' payload.
+
+        Args:
+            query: The GraphQL query or mutation string.
+            variables: GraphQL variables for the query.
+            api_identifier: API action identifier for logging/error handling.
+
+        Returns:
+            The 'data' field of the GraphQL response.
+        """
+        payload = json.dumps({"query": query, "variables": variables})
+        response = self._make_rest_call(api_identifier, "POST", self.graphql_url, data=payload)
+        return (response or {}).get("data") or {}
+
     def generate_token(self) -> str:
         """Generate and save a new access token.
 
@@ -181,7 +599,13 @@ class APIManager:
         elif body:
             request_kwargs["json"] = body
 
-        response = self.session.request(method, url, **request_kwargs)
+        try:
+            response = self.session.request(method, url, **request_kwargs)
+        except requests.exceptions.RequestException as e:
+            raise ConnectionTimeoutException(
+                f"Unable to connect to Rubrik at {url}. Please verify the endpoint is "
+                f"reachable and the Service Account JSON is valid. Details: {e}"
+            )
 
         try:
             self.validate_response(api_identifier, response)
@@ -1100,6 +1524,552 @@ class APIManager:
 
         return self._make_rest_call(
             GET_SONAR_SENSITIVE_HITS_ACTION_IDENTIFIER,
+            "POST",
+            self.graphql_url,
+            data=payload,
+        )
+
+    def search_dspm_violations(
+        self,
+        statuses: Optional[List[str]] = None,
+        severities: Optional[List[str]] = None,
+        categories: Optional[List[str]] = None,
+        sensitivity_levels: Optional[List[str]] = None,
+        object_types: Optional[List[str]] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        update_start_date: Optional[str] = None,
+        update_end_date: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        first: int = 50,
+        after_cursor: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Paginated search for DSPM policy violations."""
+        variables: Dict[str, Any] = {
+            "first": first,
+        }
+        if statuses:
+            variables["statuses"] = statuses
+        if severities:
+            variables["severities"] = severities
+        if categories:
+            variables["categories"] = categories
+        if sensitivity_levels:
+            variables["sensitivityLevels"] = sensitivity_levels
+        if start_date and end_date:
+            variables["detectionDate"] = {"start": start_date, "end": end_date}
+        if update_start_date and update_end_date:
+            variables["updateDate"] = {"start": update_start_date, "end": update_end_date}
+        if object_types:
+            variables["resourceMetadataFilter"] = {"managedObjectTypes": object_types}
+        if sort_by:
+            variables["sortBy"] = sort_by
+        if sort_order:
+            variables["sortOrder"] = sort_order
+        if after_cursor:
+            variables["after"] = after_cursor
+
+        self._log(f"Searching DSPM violations with variables: {variables}")
+        return self._execute_graphql(_DSPM_LIST_QUERY, variables)
+
+    def get_dspm_violation_details(self, violation_id: str) -> Dict[str, Any]:
+        """Retrieve full details for a single DSPM violation."""
+        variables = {
+            "violationId": violation_id,
+        }
+        self._log(f"Getting DSPM violation details: {violation_id}")
+        data = self._execute_graphql(_DSPM_GET_QUERY, variables)
+        if not data.get("policyViolation"):
+            raise ItemNotFoundException(ERROR_NO_VIOLATION_FOUND.format(violation_id))
+        return data
+
+    def update_violation_status(
+        self,
+        violation_ids: List[str],
+        new_status: str,
+    ) -> None:
+        """
+        Update the status of one or more DSPM or IR violations.
+
+        The bulkUpdatePolicyViolations mutation returns null on success.
+        Raises GraphQLQueryException if the response contains errors.
+        """
+        variables = {
+            "input": {
+                "newPolicyViolationStatus": new_status,
+                "policyViolationIds": violation_ids,
+            }
+        }
+        self._log(f"Updating violation(s) {violation_ids} to status: {new_status}")
+        self._execute_graphql(_UPDATE_VIOLATIONS_MUTATION, variables)
+
+    def trigger_snapshot_csv(
+        self,
+        snappable_fid: str,
+        snapshot_fid: str,
+        violation_id: str,
+    ) -> bool:
+        """
+        Trigger async CSV generation for files at risk in a snapshot.
+
+        Returns:
+            True if isSuccessful was returned as true.
+
+        Raises:
+            RubrikException: If isSuccessful is false.
+        """
+        variables = {
+            "snappableFid": snappable_fid,
+            "snapshotFid": snapshot_fid,
+            "filters": {
+                "policyViolationId": violation_id,
+                "fileType": FILE_TYPE_HITS,
+            },
+        }
+        self._log(
+            f"Triggering snapshot CSV: snappableFid={snappable_fid} "
+            f"snapshotFid={snapshot_fid} violationId={violation_id}"
+        )
+        data = self._execute_graphql(_DOWNLOAD_CSV_MUTATION, variables)
+        is_successful = (data.get("downloadSnapshotResultsCsv") or {}).get("isSuccessful", False)
+        if not is_successful:
+            raise RubrikException(
+                "CSV generation trigger returned isSuccessful=false. "
+                "Check RSC permissions and input IDs."
+            )
+        return True
+
+    def get_ready_user_file(
+        self, file_type: str, filename_contains: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Check once whether a matching user file has reached READY or FAILED state.
+
+        This is a single, non-blocking check intended to be called on each
+        invocation of a native async action — the Chronicle SOAR platform is
+        responsible for re-invoking the action until this returns a result.
+
+        `allUserFiles` returns every user's in-flight/recent downloads across
+        the whole RSC account, not just the ones triggered by this action run —
+        `downloads` groups are flattened across all groups before filtering.
+
+        Args:
+            file_type: One of USER_FILE_TYPE_CSV or USER_FILE_TYPE_LOG.
+            filename_contains: When provided, this is a HARD filter — only
+                entries whose filename contains this value (case-insensitive)
+                are considered at all. There is no fallback to an unrelated
+                file: if nothing matches, this returns None (treated as "not
+                ready yet") even if other files of the same file_type are
+                READY/FAILED, since those belong to concurrent downloads for
+                other objects and must never be picked up by mistake.
+
+        Returns:
+            Dict with externalId, filename, type, state, createdAt if a matching
+            file has reached READY or FAILED state, otherwise None.
+        """
+        data = self._execute_graphql(_DOWNLOAD_BAR_QUERY, {})
+        all_files: List[Dict[str, Any]] = []
+        for group in data.get("allUserFiles") or []:
+            all_files.extend(group.get("downloads") or [])
+
+        candidates = [f for f in all_files if f.get("type") == file_type]
+
+        if filename_contains:
+            candidates = [
+                f
+                for f in candidates
+                if filename_contains.lower() in (f.get("filename") or "").lower()
+            ]
+
+        matching = [
+            f for f in candidates if f.get("state") in (FILE_STATE_READY, FILE_STATE_FAILED)
+        ]
+
+        if not matching:
+            self._log(
+                f"File not ready yet (file_type={file_type}, "
+                f"filename_contains={filename_contains!r})."
+            )
+            return None
+
+        matching.sort(key=lambda f: f.get("createdAt", ""), reverse=True)
+        entry = matching[0]
+        self._log(
+            f"File check complete: state={entry.get('state')} "
+            f"externalId={entry.get('externalId')} filename={entry.get('filename')}"
+        )
+        return entry
+
+    @staticmethod
+    def _parse_user_file_created_at(created_at: Optional[str]) -> Optional[datetime]:
+        """Parse an allUserFiles createdAt timestamp into a timezone-aware datetime.
+
+        RSC returns ISO-8601 UTC timestamps such as "2026-07-21T18:07:11.000Z".
+        Returns None if the value is missing or cannot be parsed.
+        """
+        if not created_at:
+            return None
+        try:
+            normalized = created_at.strip().replace("Z", "+00:00")
+            parsed = datetime.fromisoformat(normalized)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed
+        except (ValueError, AttributeError):
+            return None
+
+    def find_user_file_by_filename(
+        self,
+        file_type: str,
+        filename_contains: str,
+        created_after: Optional[datetime] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Locate a user file entry by type + filename pattern, in whatever state
+        it currently happens to be (READY, FAILED, or still generating).
+
+        Intended to be called only until a matching entry is found at all —
+        once found, callers should persist its externalId and switch to
+        get_user_file_by_external_id() for all subsequent status checks
+        instead of re-matching by filename on every poll. This avoids
+        repeatedly re-scanning every user's downloads and pins the poll to
+        one concrete file as soon as its identity is known.
+
+        Args:
+            file_type: One of USER_FILE_TYPE_CSV or USER_FILE_TYPE_LOG.
+            filename_contains: Hard filter — only entries whose filename
+                contains this value (case-insensitive) are considered.
+            created_after: When provided, only entries created strictly after
+                this time are considered. This isolates the file generated by
+                the current action run from files with the same name format
+                that were triggered earlier for the same object but a different
+                violation/snapshot. If more than one entry matches the name and
+                was created after this time, the correct file cannot be
+                determined and AmbiguousFileMatchException is raised.
+
+        Returns:
+            The most-recently-created matching entry, or None if no matching
+            entry exists yet (the triggered file hasn't appeared in the
+            download bar at all so far).
+
+        Raises:
+            AmbiguousFileMatchException: If created_after is provided and more
+                than one matching entry was created after it.
+        """
+        data = self._execute_graphql(_DOWNLOAD_BAR_QUERY, {})
+        all_files: List[Dict[str, Any]] = []
+        for group in data.get("allUserFiles") or []:
+            all_files.extend(group.get("downloads") or [])
+
+        candidates = [
+            f
+            for f in all_files
+            if f.get("type") == file_type
+            and filename_contains.lower() in (f.get("filename") or "").lower()
+        ]
+
+        if created_after is not None:
+            candidates = [
+                f
+                for f in candidates
+                if (self._parse_user_file_created_at(f.get("createdAt")) or datetime.min.replace(tzinfo=timezone.utc))
+                > created_after
+            ]
+
+        if not candidates:
+            self._log(
+                f"No file located yet (file_type={file_type}, "
+                f"filename_contains={filename_contains!r})."
+            )
+            return None
+
+        if created_after is not None and len(candidates) > 1:
+            filenames = ", ".join(
+                f"{f.get('filename')!r} (createdAt={f.get('createdAt')})" for f in candidates
+            )
+            raise AmbiguousFileMatchException(
+                f"Found {len(candidates)} files matching '{filename_contains}' created after "
+                f"the action started; cannot determine which one belongs to this request. "
+                f"Matches: {filenames}."
+            )
+
+        candidates.sort(key=lambda f: f.get("createdAt", ""), reverse=True)
+        entry = candidates[0]
+        self._log(
+            f"File located: state={entry.get('state')} "
+            f"externalId={entry.get('externalId')} filename={entry.get('filename')}"
+        )
+        return entry
+
+    def get_user_file_by_external_id(self, external_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Look up a specific, already-identified user file entry by its externalId.
+
+        Args:
+            external_id: The externalId captured from a prior
+                find_user_file_by_filename() call.
+
+        Returns:
+            The matching entry (in whatever state it currently has), or None
+            if it's not present in allUserFiles (not yet visible, or expired).
+        """
+        data = self._execute_graphql(_DOWNLOAD_BAR_QUERY, {})
+        for group in data.get("allUserFiles") or []:
+            for entry in group.get("downloads") or []:
+                if entry.get("externalId") == external_id:
+                    self._log(f"File status: state={entry.get('state')} externalId={external_id}")
+                    return entry
+        self._log(f"File not visible yet for externalId={external_id}.")
+        return None
+
+    def download_file(self, external_id: str) -> bytes:
+        """
+        Download a generated file from /file-downloads/{external_id}.
+
+        Returns:
+            Binary content of the file.
+
+        Raises:
+            RubrikException: If the HTTP download request fails (e.g. missing
+                ViewReport permission, expired file). Message is intentionally
+                unprefixed so each calling action can prepend its own wording.
+        """
+        endpoint = FILE_DOWNLOAD_ENDPOINT.format(external_id=external_id)
+        url = f"https://{self.domain}{endpoint}"
+        self._log(f"Downloading file externalId={external_id}")
+        try:
+            response = self.session.get(url, timeout=DEFAULT_REQUEST_TIMEOUT)
+        except requests.exceptions.RequestException as e:
+            raise ConnectionTimeoutException(
+                f"Unable to connect to Rubrik at {url}. Please verify the endpoint is "
+                f"reachable and the Service Account JSON is valid. Details: {e}"
+            )
+        if not response.ok:
+            raise RubrikException(
+                f"File download failed. Status: {response.status_code}. Body: {response.text}"
+            )
+        return response.content
+
+    def trigger_remediation_log(
+        self,
+        violation_id: str,
+        resource_id: str,
+    ) -> str:
+        """
+        Trigger async remediation log CSV generation.
+
+        Returns:
+            The remediationId string.
+
+        Raises:
+            RubrikException: If remediationId is missing from the response.
+        """
+        variables = {
+            "input": {
+                "targets": {
+                    "targetIds": [violation_id],
+                    "targetType": REMEDIATION_TARGET_TYPE_VIOLATION,
+                },
+                "remediationType": REMEDIATION_TYPE_EXPORT_LOG,
+                "resourceId": resource_id,
+            }
+        }
+        self._log(
+            f"Triggering remediation log: violationId={violation_id} resourceId={resource_id}"
+        )
+        data = self._execute_graphql(_CREATE_REMEDIATION_MUTATION, variables)
+        remediation_id = (data.get("createViolationRemediation") or {}).get("remediationId")
+        if not remediation_id:
+            raise RubrikException(
+                "Remediation log creation did not return a remediationId. "
+                "Check RSC permissions and input IDs."
+            )
+        return remediation_id
+
+    @staticmethod
+    def _build_time_range_filter(
+        start_time: Optional[str], end_time: Optional[str]
+    ) -> Optional[Dict[str, str]]:
+        """Build a {startTime, endTime, timezone} filter block, or None if either is absent."""
+        if not start_time or not end_time:
+            return None
+        return {"startTime": start_time, "endTime": end_time, "timezone": "UTC"}
+
+    def get_violation_file_list(
+        self,
+        snappable_fid: str,
+        snapshot_fid: str,
+        violation_id: Optional[str] = None,
+        filename_filter: Optional[str] = None,
+        risk_levels: Optional[List[str]] = None,
+        exposures: Optional[List[str]] = None,
+        access_via: Optional[str] = None,
+        last_access_start: Optional[str] = None,
+        last_access_end: Optional[str] = None,
+        last_updated_start: Optional[str] = None,
+        last_updated_end: Optional[str] = None,
+        creation_start: Optional[str] = None,
+        creation_end: Optional[str] = None,
+        last_scan_start: Optional[str] = None,
+        last_scan_end: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        first: int = 25,
+        after_cursor: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Paginated list of files at risk for a DSPM violation."""
+        sort_input: Optional[Dict[str, str]] = None
+        if sort_by or sort_order:
+            sort_input = {
+                "sortBy": sort_by or "HITS",
+                "sortOrder": sort_order or "DESC",
+            }
+
+        filters: Dict[str, Any] = {
+            "fileType": FILE_TYPE_HITS,
+            "whitelistEnabled": True,
+            "snappablePaths": [{"snappableFid": snappable_fid}],
+            "riskLevelTypesFilter": risk_levels or [],
+            "exposureFilter": exposures or [],
+            "accessVia": access_via or ACCESS_TYPE_UNSPECIFIED,
+        }
+        if violation_id:
+            filters["violationId"] = violation_id
+        if filename_filter:
+            filters["searchText"] = filename_filter
+
+        last_access_filter = self._build_time_range_filter(last_access_start, last_access_end)
+        if last_access_filter:
+            filters["lastAccessFilter"] = last_access_filter
+
+        last_modified_filter = self._build_time_range_filter(last_updated_start, last_updated_end)
+        if last_modified_filter:
+            filters["lastModifiedFilter"] = last_modified_filter
+
+        creation_time_filter = self._build_time_range_filter(creation_start, creation_end)
+        if creation_time_filter:
+            filters["creationTimeFilter"] = creation_time_filter
+
+        last_scan_filter = self._build_time_range_filter(last_scan_start, last_scan_end)
+        if last_scan_filter:
+            filters["lastScanFilter"] = last_scan_filter
+
+        variables: Dict[str, Any] = {
+            "snappableFid": snappable_fid,
+            "snapshotFid": snapshot_fid,
+            "first": first,
+            "filters": filters,
+            "timezone": "UTC",
+        }
+        if sort_input:
+            variables["sort"] = sort_input
+        if after_cursor:
+            variables["after"] = after_cursor
+
+        self._log(
+            f"Getting violation file list: snappableFid={snappable_fid} "
+            f"snapshotFid={snapshot_fid} violationId={violation_id}"
+        )
+        return self._execute_graphql(_FILE_LIST_QUERY, variables)
+
+    def search_ir_violations(
+        self,
+        policy_types: List[str],
+        statuses: Optional[List[str]] = None,
+        severities: Optional[List[str]] = None,
+        categories: Optional[List[str]] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        update_start_date: Optional[str] = None,
+        update_end_date: Optional[str] = None,
+        idp_types: Optional[List[str]] = None,
+        identity_tags: Optional[List[str]] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        first: int = 50,
+        after_cursor: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Paginated search for Identity Resilience (IR) policy violations."""
+        variables: Dict[str, Any] = {
+            "policyTypes": policy_types,
+            "first": first,
+        }
+        if statuses:
+            variables["statuses"] = statuses
+        if severities:
+            variables["severities"] = severities
+        if categories:
+            variables["categories"] = categories
+        if start_date and end_date:
+            variables["detectionDate"] = {"start": start_date, "end": end_date}
+        if update_start_date and update_end_date:
+            variables["updateDate"] = {"start": update_start_date, "end": update_end_date}
+        resource_metadata_filter: Dict[str, Any] = {}
+        if idp_types:
+            resource_metadata_filter["idpTypes"] = idp_types
+        if identity_tags:
+            resource_metadata_filter["identityTags"] = identity_tags
+        if resource_metadata_filter:
+            variables["resourceMetadataFilter"] = resource_metadata_filter
+        if sort_by:
+            variables["sortBy"] = sort_by
+        if sort_order:
+            variables["sortOrder"] = sort_order
+        if after_cursor:
+            variables["after"] = after_cursor
+
+        self._log(f"Searching IR violations: policyTypes={policy_types}")
+        return self._execute_graphql(_IR_LIST_QUERY, variables)
+
+    def get_ir_violation_details(
+        self,
+        violation_id: str,
+        policy_types: List[str],
+    ) -> Dict[str, Any]:
+        """
+        Retrieve full details for a single IR violation.
+
+        Uses the same DataSecurityViolationGetQuery operation as DSPM details,
+        but with IR policy types which drives the IR-specific response schema.
+        """
+        variables = {
+            "violationId": violation_id,
+            "policyTypes": policy_types,
+        }
+        self._log(f"Getting IR violation details: {violation_id} policyTypes={policy_types}")
+        data = self._execute_graphql(_IR_GET_QUERY, variables)
+        if not data.get("policyViolation"):
+            raise ItemNotFoundException(ERROR_NO_VIOLATION_FOUND.format(violation_id))
+        return data
+
+    def get_closest_snapshot(self, snappable_id: str, before_time: str) -> Dict[str, Any]:
+        variables = {
+            "snappableId": snappable_id,
+            "beforeTime": before_time,
+        }
+        payload = json.dumps({"query": CLOSEST_SNAPSHOT_QUERY, "variables": variables})
+        return self._make_rest_call(
+            GET_CLOSEST_SNAPSHOT_ACTION_IDENTIFIER,
+            "POST",
+            self.graphql_url,
+            data=payload,
+        )
+
+    def get_classification_object_detail(
+        self,
+        snappable_fid: str,
+        snapshot_fid: str,
+        include_whitelisted: bool = False,
+    ) -> Dict[str, Any]:
+        variables = {
+            "snappableFid": snappable_fid,
+            "snapshotFid": snapshot_fid,
+            "includeWhitelistedResults": include_whitelisted,
+        }
+        payload = json.dumps({"query": CLASSIFICATION_OBJECT_DETAIL_QUERY, "variables": variables})
+        return self._make_rest_call(
+            GET_CLASSIFICATION_OBJECT_DETAIL_ACTION_IDENTIFIER,
             "POST",
             self.graphql_url,
             data=payload,

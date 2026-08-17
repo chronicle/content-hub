@@ -1,0 +1,63 @@
+"Rubrik Security Cloud - Close Duplicate Violation Alerts Job":
+  ai_description: >-
+    ### General Description
+
+    This job acts as a maintenance and deduplication utility for Google SecOps cases
+    originating from Rubrik Security Cloud (RSC). It addresses the issue where RSC
+    webhooks echo status-change events as new duplicate alerts. The job groups open
+    cases' Rubrik alerts by their violation `series_id`. If the latest status for
+    a given `series_id` is terminal (e.g., Remediated, Closed, Dismissed), the job
+    automatically closes every case associated with that `series_id`, provided the
+    case does not also contain other still-open violations. This is an internal mutation
+    job that updates case states and adds comments within SOAR without making external
+    API calls to Rubrik.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Close Reason | String | Yes | Reason applied when auto-closing a case whose
+    violation(s) reached a terminal status in RSC. |
+
+    | Comment Prefix | String | No | Prefix used on the case comment and close comment
+    this job adds, for traceability in the case activity feed. |
+
+    | Rule Generator | String | No | Optional comma-separated list of rule_generator
+    values to scope this job to Rubrik-originated cases only. |
+
+    | Max Cases To Process | Integer | Yes | Max open cases to fetch and inspect per
+    run. |
+
+    | Lookback Days | Integer | Yes | Number of days to look back when fetching open
+    cases. |
+
+    | Dry Run | Boolean | No | Set true for test run purposes only -- logs intended
+    comments/closures without calling add_comment or close_case. Otherwise false.
+    |
+
+    | Close Root Cause | String | Yes | Root cause applied when auto-closing a case
+    whose violation(s) reached a terminal status in RSC. |
+
+
+    ### Flow Description
+
+    1. Queries SOAR for candidate open case IDs that were created or updated within
+    the configured `Lookback Days`, capped by `Max Cases To Process`.
+
+    2. Retrieves full case details and extracts Rubrik alerts, optionally filtering
+    by the `Rule Generator` parameter.
+
+    3. Groups the extracted alerts by their violation `series_id` and determines the
+    latest status for each group, ignoring audit or rule-creation events.
+
+    4. Evaluates the statuses to identify terminal states (Remediated, Closed, Dismissed).
+
+    5. Closes cases that only contain terminal violations, applying the configured
+    `Close Reason` and `Close Root Cause`, and adding a trace comment. Skips cases
+    that contain a mix of open and terminal violations.
+
+    6. If `Dry Run` is enabled, logs the intended closures and comments without actually
+    modifying the cases in SOAR.

@@ -3,7 +3,6 @@
 This module implements TIPCommon OAuth components for secure token management
 with automatic refresh and encrypted storage.
 """
-
 from __future__ import annotations
 
 from typing import Any
@@ -18,7 +17,7 @@ from TIPCommon.oauth import (
 from TIPCommon.smp_time import unix_now
 
 from .constants import DEFAULT_REQUEST_TIMEOUT
-from .rubrik_exceptions import RubrikException
+from .rubrik_exceptions import ConnectionTimeoutException, RubrikException
 from .utils import compute_expiry
 
 
@@ -107,12 +106,18 @@ class RubrikOAuthAdapter(OAuthAdapter):
         url = self.service_account_json.get("access_token_uri")
 
         # Request new token from Rubrik
-        response = requests.post(
-            url,
-            json=payload,
-            verify=self.verify_ssl,
-            timeout=DEFAULT_REQUEST_TIMEOUT,
-        )
+        try:
+            response = requests.post(
+                url,
+                json=payload,
+                verify=self.verify_ssl,
+                timeout=DEFAULT_REQUEST_TIMEOUT,
+            )
+        except requests.exceptions.RequestException as e:
+            raise ConnectionTimeoutException(
+                f"Unable to connect to Rubrik at {url}. Please verify the endpoint is "
+                f"reachable and the Service Account JSON is valid. Details: {e}"
+            )
         response.raise_for_status()
 
         # Extract access token

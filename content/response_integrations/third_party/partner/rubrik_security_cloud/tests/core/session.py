@@ -42,6 +42,37 @@ class RubrikSession(MockSession[MockRequest, MockResponse, RubrikSecurityCloud])
 
             if "deploymentVersion" in query:
                 return MockResponse(content=self._product.get_deployment_version(), status_code=200)
+            # --- Violation management (DSPM / IR), file list, downloads ---
+            elif "allUserFiles" in query:
+                return MockResponse(content=self._product.get_all_user_files(), status_code=200)
+            elif "downloadSnapshotResultsCsv" in query:
+                return MockResponse(content=self._product.get_download_csv(), status_code=200)
+            elif "createViolationRemediation" in query:
+                return MockResponse(content=self._product.get_create_remediation(), status_code=200)
+            elif "bulkUpdatePolicyViolations" in query:
+                return MockResponse(
+                    content=self._product.get_update_violation_status(), status_code=200
+                )
+            elif "fileResultConnection" in query:
+                return MockResponse(
+                    content=self._product.get_violation_file_list(), status_code=200
+                )
+            elif "DataSecurityViolationsListQuery" in query:
+                return MockResponse(
+                    content=self._product.get_search_dspm_violations(), status_code=200
+                )
+            elif "IRViolationsListQuery" in query:
+                return MockResponse(
+                    content=self._product.get_search_ir_violations(), status_code=200
+                )
+            elif "IdentityMetadata" in query:
+                return MockResponse(
+                    content=self._product.get_ir_violation_details(), status_code=200
+                )
+            elif "POLICY_TYPE_DATAGOV" in query and "policyViolation(" in query:
+                return MockResponse(
+                    content=self._product.get_dspm_violation_details(), status_code=200
+                )
             elif "clusterConnection" in query and "geoLocation" in query:
                 return MockResponse(
                     content=self._product.get_cdm_cluster_location(), status_code=200
