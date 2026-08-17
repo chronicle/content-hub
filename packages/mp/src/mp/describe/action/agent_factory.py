@@ -209,5 +209,11 @@ class FieldAgent:
     ) -> list[T_Schema | str]:
         if contexts is None:
             contexts = [{} for _ in prompts]
-        tasks = [self.generate(p, target_model, ctx) for p, ctx in zip(prompts, contexts)]
+        semaphore = asyncio.Semaphore(3)
+
+        async def _bounded_generate(p: str, ctx: dict):
+            async with semaphore:
+                return await self.generate(p, target_model, ctx)
+
+        tasks = [_bounded_generate(p, ctx) for p, ctx in zip(prompts, contexts)]
         return await asyncio.gather(*tasks)

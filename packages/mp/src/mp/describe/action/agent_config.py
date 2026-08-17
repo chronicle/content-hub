@@ -1,4 +1,19 @@
-from mp.describe.action.agent_factory import AgentConfig
+from dataclasses import dataclass
+from pydantic import BaseModel
+
+class ValidationResult(BaseModel):
+    is_valid: bool
+    feedback: str = ""
+
+@dataclass
+class AgentConfig:
+    field_name: str
+    validation_questions: str
+    model_name: str = "gemini-3.1-pro-preview"
+    temperature: float = 0.1
+    max_retries: int = 3
+    draft_log_msg: str = "Generating initial draft..."
+    refine_log_msg: str = "Refining draft based on feedback..."
 
 PARAMETERS_VALIDATION = """
 1. Does the parameters table exclusively list the action-specific parameters defined in the JSON file?
