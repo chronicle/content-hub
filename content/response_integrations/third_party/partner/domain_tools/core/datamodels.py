@@ -127,7 +127,10 @@ class IrisInvestigateModel(DTBaseModel):
                 "ga", self.analytics.google_analytics
             ),
             "Website Response Code": self.analytics.website_response_code,
-            "Tags": ", ".join(self.analytics.tags) if self.analytics.tags else "N/A",
+            "Tags": ", ".join(
+                t if isinstance(t, str) else t.get("value", str(t))
+                for t in self.analytics.tags
+            ) if self.analytics.tags else "N/A",
             # Identity
             "Registrant Name": self.identity.registrant_name,
             "Registrant Org": self.identity.registrant_org,
@@ -308,6 +311,45 @@ class WhoisHistoryEntry:
     date: str = ""
     is_private: int = 0
     whois: WhoisDetails = field(default_factory=WhoisDetails)
+
+
+@dataclass
+class EnrichedDomainSummary(DTBaseModel):
+    """Lightweight enrichment result from iris_enrich, used for bulk risk scoring."""
+
+    domain: str = ""
+    risk_category: str = ""
+    overall_risk_score: int = 0
+    proximity_risk_score: int = 0
+    threat_profile_risk_score: int = 0
+    malware_risk_score: int = 0
+    phishing_risk_score: int = 0
+    spam_risk_score: int = 0
+    threat_profile_threats: list[str] = field(default_factory=list)
+    threat_profile_evidence: list[str] = field(default_factory=list)
+    create_date: str | None = None
+    domain_age_days: int | None = None
+    is_young_domain: bool = False
+    registrant_org: str | None = None
+    ip_country_code: str = ""
+    iris_investigate_link: str = ""
+
+    def to_table_data(self) -> dict[str, Any]:
+        return {
+            "Domain": self.domain,
+            "Risk Category": self.risk_category,
+            "Overall Risk Score": self.overall_risk_score,
+            "Proximity Risk Score": self.proximity_risk_score,
+            "Threat Profile Score": self.threat_profile_risk_score,
+            "Threats": ", ".join(self.threat_profile_threats) if self.threat_profile_threats else "N/A",
+            "Evidence": ", ".join(self.threat_profile_evidence) if self.threat_profile_evidence else "N/A",
+            "Create Date": self.create_date or "N/A",
+            "Domain Age (days)": self.domain_age_days if self.domain_age_days is not None else "N/A",
+            "Young Domain": self.is_young_domain,
+            "Registrant Org": self.registrant_org or "N/A",
+            "IP Country": self.ip_country_code or "N/A",
+            "Iris Link": self.iris_investigate_link,
+        }
 
 
 @dataclass(frozen=True, slots=True)

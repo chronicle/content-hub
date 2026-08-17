@@ -7,6 +7,7 @@ from .datamodels import (
     RDAPDNSSEC,
     Analytics,
     Contact,
+    EnrichedDomainSummary,
     Hosting,
     Identity,
     IrisInvestigateModel,
@@ -20,7 +21,7 @@ from .datamodels import (
     WhoisHistoryModel,
     WhoisRegistration,
 )
-from .UtilsManager import get_domain_risk_score_details
+from .UtilsManager import classify_domain_risk, get_domain_risk_score_details
 
 
 class DomainToolsParser:
@@ -127,6 +128,67 @@ class DomainToolsParser:
                 redirects_to=raw_data.get("redirect") or [],
                 redirect_domain=raw_data.get("redirect_domain") or [],
             ),
+        )
+
+    def parse_iris_enrich_data(self, domain: str, raw_data: dict[str, Any]) -> EnrichedDomainSummary:
+        """Parse a single iris_enrich result into an EnrichedDomainSummary."""
+        risk_raw = raw_data.get("domain_risk") or {}
+        risk_details = get_domain_risk_score_details(risk_raw)
+
+        overall_score = risk_details.get("overall_risk_score") or 0
+        create_date_raw = raw_data.get("create_date") or {}
+        create_date = create_date_raw.get("value") if isinstance(create_date_raw, dict) else create_date_raw or None
+
+        domain_age_days: int | None = None
+        if create_date:
+            try:
+                created = datetime.strptime(create_date[:10], "%Y-%m-%d")
+                domain_age_days = (datetime.now() - created).days
+            except ValueError:
+                pass
+
+        risk_category = classify_domain_risk(overall_score, domain_age_days)
+
+        ips = raw_data.get("ip") or []
+        ip_cc = ips[0].get("country_code", {}).get("value", "") if ips else ""
+
+        registrant_org_raw = raw_data.get("registrant_org") or {}
+        registrant_org = (
+            registrant_org_raw.get("value") if isinstance(registrant_org_raw, dict) else registrant_org_raw or None
+        )
+
+        iris_link = f'https://iris.domaintools.com/investigate/search/?q=domain:"{domain}"'
+
+        threats_raw = risk_details.get("threat_profile_threats", "")
+        evidence_raw = risk_details.get("threat_profile_evidence", "")
+        threats = (
+            [t.strip() for t in threats_raw.split(",") if t.strip()]
+            if isinstance(threats_raw, str)
+            else (threats_raw or [])
+        )
+        evidence = (
+            [e.strip() for e in evidence_raw.split(",") if e.strip()]
+            if isinstance(evidence_raw, str)
+            else (evidence_raw or [])
+        )
+
+        return EnrichedDomainSummary(
+            domain=domain,
+            risk_category=risk_category,
+            overall_risk_score=overall_score,
+            proximity_risk_score=risk_details.get("proximity_risk_score") or 0,
+            threat_profile_risk_score=risk_details.get("threat_profile_risk_score") or 0,
+            malware_risk_score=risk_details.get("threat_profile_malware_risk_score") or 0,
+            phishing_risk_score=risk_details.get("threat_profile_phishing_risk_score") or 0,
+            spam_risk_score=risk_details.get("threat_profile_spam_risk_score") or 0,
+            threat_profile_threats=threats,
+            threat_profile_evidence=evidence,
+            create_date=create_date,
+            domain_age_days=domain_age_days,
+            is_young_domain=(risk_category == "young_domain"),
+            registrant_org=registrant_org,
+            ip_country_code=ip_cc,
+            iris_investigate_link=iris_link,
         )
 
     def parse_domain_rdap_data(self, raw_data: dict[str, Any]) -> ParsedDomainRDAPModel:
