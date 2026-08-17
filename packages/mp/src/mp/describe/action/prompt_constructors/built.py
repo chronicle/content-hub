@@ -68,22 +68,13 @@ class BuiltPromptConstructor(PromptConstructor):
     async def _get_managers_names_and_content(self) -> tuple[str, str]:
         names: list[str] = []
         content: io.StringIO = io.StringIO()
-        total_len = 0
-        MAX_MGR_CHARS = 300_000
         managers_dir: anyio.Path = self.out_path / constants.OUT_MANAGERS_SCRIPTS_DIR
         if await managers_dir.exists():
             async for core_file in managers_dir.glob("*.py"):
                 names.append(core_file.name)
-                file_text = await core_file.read_text(encoding="utf-8")
-                if total_len < MAX_MGR_CHARS:
-                    remaining = MAX_MGR_CHARS - total_len
-                    chunk = file_text[:remaining]
-                    content.write("```python\n")
-                    content.write(chunk)
-                    if len(chunk) < len(file_text):
-                        content.write("\n# ... (truncated for length)\n")
-                    content.write("\n```\n\n")
-                    total_len += len(chunk)
+                content.write("```python\n")
+                content.write(await core_file.read_text(encoding="utf-8"))
+                content.write("\n```\n\n")
 
         return ", ".join(names), content.getvalue()
 
