@@ -48,12 +48,14 @@ def main():
     print(row_numbers_to_return)
 
     output_msg = "."
-    output_msg = f"Found {len(values_list)} rows: {row_numbers_to_return}, with value {search_value} in column {column_number_int}."
+    output_msg = (
+        f"Found {len(values_list)} rows: {row_numbers_to_return}, "
+        f"with value {search_value} in column {column_number_int}."
+    )
     try:
         cell = worksheet.find(search_value)
         row_values = worksheet.row_values(cell.row)
         siemplify.result.add_result_json(row_values)
-        ret_val = cell.row
     except gspread.exceptions.CellNotFound:
         output_msg = f"Couldn't find row with value {search_value} in column {column_number_int}."
         status = EXECUTION_STATE_FAILED

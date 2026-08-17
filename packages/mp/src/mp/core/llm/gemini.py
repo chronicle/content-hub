@@ -55,7 +55,7 @@ from tenacity import (
 
 import mp.core.config
 
-from .sdk import LlmConfig, LlmSdk, T_Schema
+from .sdk import DEFAULT_BULK_THRESHOLD, LlmConfig, LlmSdk, T_Schema
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -66,6 +66,7 @@ if TYPE_CHECKING:
 POLL_BATCH_SLEEP_SEC: int = 10
 SERVER_ERROR_STATUS_CODE: int = 500
 RATE_LIMIT_STATUS_CODE: int = 429
+MAX_CONCURRENT_REQUESTS: int = 4
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -129,15 +130,21 @@ def _log_retry_attempt(retry_state: RetryCallState) -> None:
 
 
 def _should_retry_exception(e: BaseException) -> bool:
+    if isinstance(e, (TimeoutError, asyncio.TimeoutError)):
+        return True
     return isinstance(e, ClientError) and (e.code == RATE_LIMIT_STATUS_CODE or e.code >= SERVER_ERROR_STATUS_CODE)
 
 
 class Gemini(LlmSdk[GeminiConfig]):
-    def __init__(self, config: GeminiConfig) -> None:
-        super().__init__(config)
+    def __init__(
+        self,
+        config: GeminiConfig,
+        *,
+        bulk_threshold: int = DEFAULT_BULK_THRESHOLD,
+    ) -> None:
+        super().__init__(config, bulk_threshold=bulk_threshold)
         self.client: AsyncClient = genai.client.Client(api_key=self.config.api_key).aio
         self.content: Content = Content(role="user", parts=[])
-        self.bulk_threshold: int = 4
 
     async def __aenter__(self) -> Self:
         return self
@@ -163,7 +170,10 @@ class Gemini(LlmSdk[GeminiConfig]):
     ) -> str: ...
 
     @retry(
-        retry=(retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)),
+        retry=(
+            retry_if_not_exception_type((ClientError, KeyboardInterrupt, asyncio.CancelledError))
+            | retry_if_exception(_should_retry_exception)
+        ),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),
@@ -253,9 +263,13 @@ class Gemini(LlmSdk[GeminiConfig]):
             return []
 
         if not use_batch or len(prompts) <= self.bulk_threshold:
-            return await asyncio.gather(*[
-                self._send_single_message_independent(prompt, response_json_schema) for prompt in prompts
-            ])
+            semaphore: asyncio.Semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+
+            async def _bounded_send(p: str) -> T_Schema | str:
+                async with semaphore:
+                    return await self._send_single_message_independent(p, response_json_schema)
+
+            return await asyncio.gather(*[_bounded_send(prompt) for prompt in prompts])
 
         requests: list[InlinedRequest] = self._prepare_batch_requests(prompts, response_json_schema)
         batch_job: BatchJob = await self._create_batch_job(requests)
@@ -263,7 +277,10 @@ class Gemini(LlmSdk[GeminiConfig]):
         return await self._get_batch_results(batch_job, response_json_schema)
 
     @retry(
-        retry=(retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)),
+        retry=(
+            retry_if_not_exception_type((ClientError, KeyboardInterrupt, asyncio.CancelledError))
+            | retry_if_exception(_should_retry_exception)
+        ),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),
