@@ -12,12 +12,12 @@ Classify the provided Google SecOps SOAR action into the official **Outcome Cate
 
 ### Official Outcome Categories Taxonomy (27 Categories)
 
-An action belongs to a category ONLY IF it demonstrably executes the expected outcome through physical Python API calls. If an action's operations do not strictly match any of the canonical 27 categories (such as performing technical DNS resolutions, workspace room management, or mutating alerts in external 3rd-party products), all 27 boolean category flags must remain `false` (only the `reasoning` field is populated).
+An action belongs to a category ONLY IF it demonstrably executes the expected outcome through physical Python API calls. If an action's operations do not strictly match any of the canonical 27 categories (such as performing technical DNS resolutions or workspace room management), all 27 boolean category flags must remain `false` (only the `reasoning` field is populated).
 
 #### Group 1: Enrichment, Search & Context (Read-Only Operations)
 - **`enrich_ioc`**: Returns reputation, prevalence, threat scores, malware family, attribution, or associated threat infrastructure (e.g., related malicious IPs, domains, hashes, campaigns, threat actors) for an indicator (hash, filename, IP, domain, URL, CVE, Threat Actor, Campaign). *(Technical DNS/IP/Whois lookups without reputation scoring or threat intelligence context are not enrichments and must leave all 27 category flags set to false).*
 - **`enrich_asset`**: Returns contextual metadata (e.g., OS version, owner, department, MAC address, user profile details) for a specific user, hostname, device, or internal resource.
-- **`search_asset`**: Queries directory services, CMDBs, device inventories, or workspace user stores to find users, hosts, devices, or group members matching search criteria or list filters.
+- **`search_asset`**: Queries directory services, CMDBs, device inventories, or workspace user stores to find users, hosts, devices, or group members matching search criteria or list filters (including querying hosts/devices associated with an IOC).
 - **`search_events`**: Returns a collection of historical logs or telemetry data matching specific search parameters from SIEM, data lakes, firewall traffic logs, or endpoint telemetry repositories.
 - **`search_email`**: Identifies and lists emails across the mail server based on criteria like sender, subject, date, or message ID (including polling mailboxes for user replies).
 - **`get_alert_information`**: Fetches information about alerts, detections, or lists of open security incidents from a 3rd party product (read-only).
@@ -25,10 +25,10 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
 #### Group 2: Remediation & State Mutating Operations (External Write/State Mutation)
 - **`create_ticket`**: Generates a new record in an external ITSM ticketing platform and returns the Ticket ID.
 - **`update_ticket`**: Synchronizes status, priority, comments, notes, or field changes from SecOps to an external ITSM ticketing system, or uploads file attachments to an existing ticket.
-- **`add_ioc_to_blocklist`**: Updates security controls (Firewall, EDR, Proxy, DNS filter, or mailbox blocked senders list) to prevent future interaction with the IOC.
-- **`remove_ioc_from_blocklist`**: Restores connectivity or execution rights for an indicator by removing it from restricted lists, firewall rules, or mailbox blocked senders lists.
-- **`add_ioc_to_allowlist`**: Marks an indicator as "known good" in security controls to prevent future security alerts or false positives.
-- **`remove_ioc_from_allowlist`**: Re-enables standard security monitoring and blocking for a previously trusted indicator.
+- **`add_ioc_to_blocklist`**: Updates security controls (Firewall, EDR, Proxy, DNS filter, custom IOC watchlists, or mailbox blocked senders list) to prevent future interaction with the IOC.
+- **`remove_ioc_from_blocklist`**: Restores connectivity or execution rights for an indicator by removing it from restricted lists, custom IOC watchlists, firewall rules, or mailbox blocked senders lists.
+- **`add_ioc_to_allowlist`**: Marks an indicator as "known good" in security controls to prevent future security alerts or false positives (strictly when the action or policy explicitly designates allowlisting/whitelisting).
+- **`remove_ioc_from_allowlist`**: Re-enables standard security monitoring and blocking for a previously trusted indicator (strictly when explicitly removing from an allowlist).
 - **`disable_identity`**: Revokes active sessions and prevents a user or service account from authenticating to the network.
 - **`enable_identity`**: Restores authentication capabilities and system access for a previously disabled account.
 - **`reset_identity_password`**: Invalidates current credentials and triggers a password change or temporary password generation.
@@ -43,7 +43,7 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
 
 #### Group 3: Platform Operations & Communication
 - **`update_alert`**: Changes the status, severity, SLA, score, stage, custom fields, or assignee of an alert/case strictly **within the SecOps platform** (internal SOAR SDK calls: `siemplify.<method>`). Modifying, closing, or updating alerts/detections in external 3rd-party systems via manager API calls does NOT match `update_alert` and MUST leave all 27 category flags set to `false`.
-- **`add_alert_comment`**: Appends analyst notes or automated log entries to the alert's activity timeline within the SecOps platform (`siemplify.add_comment` or case wall entries).
+- **`add_alert_comment`**: Appends analyst notes, comments, or automated log entries to the alert's activity timeline (applies to alert/detection comments in both internal SecOps and external security detection platforms).
 - **`send_message`**: Sends a message, card, interactive question, or uploaded file to a communication app channel or user.
 - **`download_file`**: Retrieves a specific file, report artifact (PDF/XML/CSV), or sandbox dump from a remote system for local forensic analysis or attaches it to the SOAR case via `siemplify.result.add_attachment`.
 
@@ -53,40 +53,44 @@ An action belongs to a category ONLY IF it demonstrably executes the expected ou
 
 1. **Physical API Call Traceability**: Set a boolean flag to `true` ONLY IF the Python code explicitly executes that capability via an executable API call. Never infer flags from action names, docstrings, or assumed playbook workflows.
 2. **Read vs. Write State Mutation Boundary**: If the script only performs read/query operations (HTTP GET, LDAP query), ALL mutating categories (`contain_host`, `add_ioc_to_blocklist`, `disable_identity`, `update_alert`, `create_ticket`, `update_ticket`, `reset_identity_password`, `update_identity`, `enable_identity`, `uncontain_host`, `delete_email`, `update_email`) MUST be strictly `false`.
-3. **Internal Platform SDK (`siemplify.<method>`) vs. External 3rd-Party APIs (`manager.<method>`)**:
-   * **Internal SecOps Alert Operations**: `update_alert` and `add_alert_comment` apply STRICTLY to actions executing internal SOAR SDK methods (e.g., `siemplify.set_case_stage`, `siemplify.pause_alert_sla`, `siemplify.change_alert_severity`, `siemplify.add_comment`) to modify cases/alerts inside the SecOps platform itself.
-   * **External 3rd-Party Service APIs**: When a script calls an external product API via `manager.<method>()`:
-     - Reading external alerts/detections $ightarrow$ `get_alert_information: true`.
-     - Modifying, resolving, or closing alerts/incidents in an external 3rd-party product API does NOT match `update_alert` (which is strictly internal). Because the taxonomy does not define a category for mutating 3rd-party alerts, all 27 category flags MUST remain `false` (`[]`).
-4. **Composite / Dual-Outcome Actions (Exhaustiveness)**: If an action executes multiple distinct capabilities, you MUST flag ALL executed categories as `true`:
+3. **Alert Operations Disambiguation**:
+   * **`update_alert`**: Applies STRICTLY to operations modifying alerts/cases **within the Google SecOps platform** (`siemplify.<method>`). Mutating or closing alerts in external 3rd-party security platforms does not match `update_alert` and maps to `false` (`[]`).
+   * **`add_alert_comment`**: Applies to adding analyst notes, comments, or log entries to an alert's activity timeline in internal SecOps OR in external security detection platforms.
+   * **`get_alert_information`**: Applies to read-only queries fetching alert details or open incident queues from 3rd-party security products.
+4. **IOC Management & Watchlists (Add vs. Delete vs. Allowlist)**:
+   * Adding or uploading custom IOCs (IP, domain, hash, URL) to security controls or threat detection watchlists MUST be mapped strictly to `add_ioc_to_blocklist: true`.
+   * Deleting or removing custom IOCs from security controls or watchlists MUST be mapped strictly to `remove_ioc_from_blocklist: true`. Do NOT flag `remove_ioc_from_allowlist` unless the action or parameters explicitly target allowlist/whitelist policies.
+5. **Asset Queries by IOC**:
+   * Actions that query endpoint inventories to find hosts or devices associated with an IOC (e.g., `Get Hosts by IOC`, `Search Devices by IP`) search device inventory matching criteria and MUST be mapped strictly to `search_asset: true`.
+6. **Composite / Dual-Outcome Actions (Exhaustiveness)**: If an action executes multiple distinct capabilities, you MUST flag ALL executed categories as `true`:
    * Downloads a report/attachment artifact via `add_attachment` AND enriches entities with scan telemetry: `download_file: true` AND `enrich_asset: true`.
    * Asynchronously polls/searches a mailbox for replies AND downloads attachments into the case: `search_email: true` AND `download_file: true`.
    * Unblocks a sender in a mailbox AND restores/moves emails out of junk: `remove_ioc_from_blocklist: true` AND `update_email: true`.
-5. **Ping & Connectivity Checks**: For health check, ping, or connection test actions, ALL 27 outcome categories boolean flags MUST be strictly `false`.
-6. **Mandatory 3-Step Reasoning Protocol with Literal Method Citations**:
+7. **Ping & Connectivity Checks**: For health check, ping, or connection test actions, ALL 27 outcome categories boolean flags MUST be strictly `false`.
+8. **Mandatory 3-Step Reasoning Protocol with Literal Method Citations**:
    The `reasoning` field MUST strictly follow this exact 3-step format and quote literal Python method calls (`manager.<method_name>(<args>)` or `siemplify.<method_name>(<args>)`):
-   * **Step 1 (State Boundary & Action Classification)**: Explicitly state whether the action is read-only or state-mutating, whether it operates on internal platform context (`siemplify.<method>`) or external service API (`manager.<method>`), and identify candidate category groups. If it is a ping/health check, state that all categories are false.
+   * **Step 1 (State Boundary & Action Classification)**: Explicitly state whether the action is read-only or state-mutating, identify the target object and API scope, and identify candidate category groups. If it is a ping/health check, state that all categories are false.
    * **Step 2 (Physical Code Evidence)**: Explicitly quote the literal Python method call(s) executed by the script (e.g., `manager.<method_name>(<args>)` or `siemplify.<method_name>(<args>)`), HTTP methods/endpoints, and data handlers.
    * **Step 3 (Taxonomy Mapping & Disambiguation)**: Map physical code evidence directly to the taxonomy definition for all `true` flags, and explicitly explain why adjacent/related categories are `false`.
 
-7. **Network Security Policies & Firewall Rule Modifications**:
+9. **Network Security Policies & Firewall Rule Modifications**:
    Modifying network security controls (Firewalls, Security Groups, Access Control Lists, Proxy policies) by adding or removing network indicators (IPs, CIDRs, domains) represents direct remediation on a security control policy.
    * When an action adds IP ranges or indicators to a firewall rule or security policy, map it to `add_ioc_to_blocklist: true`.
    * When an action removes IP ranges or indicators from a firewall rule or security policy, map it to `remove_ioc_from_blocklist: true` (and `remove_ioc_from_allowlist: true` if rule policy is bidirectional).
 
-8. **ITSM & Ticketing Platforms (Ticket Queries vs. Mutations & Attachments)**:
+10. **ITSM & Ticketing Platforms (Ticket Queries vs. Mutations & Attachments)**:
    * **Read-Only Ticket Queries**: Actions that fetch or query tickets/incidents from external ITSM platforms (e.g., `Get Incident`, `Get Ticket`, `Get Record Details`) perform read operations on ticketing systems. They do NOT match `get_alert_information` (which is strictly reserved for security detection/alert feeds from 3rd party security products). All 27 category flags MUST remain `false` (`[]`).
    * **Ticket Mutations & File Attachments**: Actions that create tickets map to `create_ticket: true`. Actions that update ticket fields, add notes/comments, or upload file attachments to an existing ticket/record (e.g., `Add Attachment`, `Upload Attachment`) MUST be mapped to `update_ticket: true`. (Do NOT map to `submit_file`, which is strictly for sandbox detonation).
 
-9. **Asset & Identity Entities — Direct Lookup vs. Filter Search**:
+11. **Asset & Identity Entities — Direct Lookup vs. Filter Search**:
    * **Direct Entity Profile / CI Lookup by ID**: Actions that query a repository (directory, CMDB, user profile store, or workspace) for a specific user, host, or device by a unique identifier (e.g., Email, Username, User ID, Sys ID, Device ID) to retrieve contextual metadata, attributes, or profile information MUST be mapped to `enrich_asset: true`.
    * **Filter Search / Listing**: Actions that search a repository, directory, CMDB, or workspace using search criteria, queries, or list multiple records matching parameters (e.g., `List Users`, `List CMDB Records`, `Search Assets`) MUST be mapped to `search_asset: true`.
 
-10. **Communication & Collaboration Platforms (Messages vs. Container Administration)**:
+12. **Communication & Collaboration Platforms (Messages vs. Container Administration)**:
     * **Messages, Notifications & File Uploads**: Sending text messages, interactive cards, replies, or uploading files/attachments to channels or users (e.g., `Send Message`, `Send Chat Message`, `Upload File`, `Ask Question`) represents dispatching communication content to recipients and MUST be mapped to `send_message: true`.
     * **Channel & Chat Container Administration**: Creating, deleting, renaming channels or managing channel membership (e.g., `Create Channel`, `Delete Channel`, `Add Users To Channel`, `Remove Users From Channel`, `List Channels`) modifies application-level collaboration rooms. All 27 category flags MUST remain `false` (`[]`).
 
-11. **Threat Intelligence vs. Technical Lookups**:
+13. **Threat Intelligence vs. Technical Lookups**:
     * `enrich_ioc`: Applies to threat intelligence reputation queries, threat scoring, attribution, threat campaigns, or queries retrieving related threat infrastructure indicators.
     * Technical DNS/Whois/IP lookups without threat intelligence context or reputation scoring do NOT match `enrich_ioc` and MUST leave all 27 category flags set to `false`.
 
@@ -134,7 +138,24 @@ siemplify.end("Successfully updated alert status and SLA", True)
 }
 ```
 
-#### Example 3: User Profile & Asset Search Query
+#### Example 3: External Security Platform Alert Comment
+*Code Snippet:*
+```python
+manager = SecurityAlertPlatformManager(credentials=credentials)
+manager.add_comment_to_alert(alert_id=alert_id, comment=comment_text)
+siemplify.result.add_result_json({"status": "success"})
+```
+*Expected Output:*
+```json
+{
+  "outcome_categories": {
+    "reasoning": "Step 1 (State Boundary & Action Classification): The action performs a state-mutating POST operation adding a comment to an alert in a security platform, so evaluate Group 3 (Platform Operations & Communication). Step 2 (Physical Code Evidence): Calls `manager.add_comment_to_alert(alert_id=alert_id, comment=comment_text)`. Step 3 (Taxonomy Mapping & Disambiguation): Matches 'Add Alert Comment' because it appends analyst notes or comments to an alert's activity timeline. Does not match 'Update Alert' (which is strictly for internal SecOps alert status/severity modifications) or 'Update Ticket' (targets security alerts, not ITSM tickets).",
+    "add_alert_comment": true
+  }
+}
+```
+
+#### Example 4: User Profile & Asset Search Query
 *Code Snippet:*
 ```python
 manager = WorkspaceManager(server=server, credentials=credentials)
@@ -151,7 +172,7 @@ siemplify.result.add_result_json(users)
 }
 ```
 
-#### Example 4: Threat Intelligence Infrastructure & Campaign Relationships
+#### Example 5: Threat Intelligence Infrastructure & Campaign Relationships
 *Code Snippet:*
 ```python
 manager = ThreatIntelManager(api_key=api_key)
@@ -170,7 +191,7 @@ siemplify.update_entities([entity])
 }
 ```
 
-#### Example 5: ITSM Ticket Creation
+#### Example 6: ITSM Ticket Creation
 *Code Snippet:*
 ```python
 manager = ITSMServiceManager(domain=domain, api_key=api_key)
@@ -187,7 +208,7 @@ siemplify.result.add_result_json(ticket)
 }
 ```
 
-#### Example 6: Ping / Health Check Action
+#### Example 7: Ping / Health Check Action
 *Code Snippet:*
 ```python
 manager = ApiClient(api_key=api_key)
@@ -202,7 +223,7 @@ manager.test_connectivity()
 }
 ```
 
-#### Example 7: Firewall Rule IP Range Modification
+#### Example 8: Firewall Rule IP Range Modification
 *Code Snippet:*
 ```python
 manager = FirewallManager(credentials=credentials)
@@ -220,7 +241,7 @@ manager.patch_firewall_rule(rule_name=rule_name, firewall=rule)
 }
 ```
 
-#### Example 8: ITSM Ticket Attachment
+#### Example 9: ITSM Ticket Attachment
 *Code Snippet:*
 ```python
 manager = ITSMServiceManager(domain=domain, api_key=api_key)
@@ -236,7 +257,7 @@ manager.upload_attachment(table_name="incident", record_sys_id=sys_id, file_path
 }
 ```
 
-#### Example 9: Communication File Upload & Dispatch
+#### Example 10: Communication File Upload & Dispatch
 *Code Snippet:*
 ```python
 manager = CommunicationManager(api_token=api_token)
@@ -252,7 +273,7 @@ manager.upload_file(channel_id=channel_id, file_path=file_path, comment="Inciden
 }
 ```
 
-#### Example 10: Specific User Profile Direct Lookup by ID
+#### Example 11: Specific User Profile Direct Lookup by ID
 *Code Snippet:*
 ```python
 manager = DirectoryClient(server=server, credentials=credentials)
