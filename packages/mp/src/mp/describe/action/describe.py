@@ -381,13 +381,9 @@ class MultiPromptDescribeAction(DescribeAction):
             for i, result in zip(valid_indices, llm_results, strict=True):
                 resource_name: str = resources[i]
                 if isinstance(result, str):
-                    logger.error(
-                        "Failed custom describe for action %s field %s: %s",
-                        resource_name,
-                        override.field_name,
-                        result,
-                    )
-                    continue
+                    error_msg = f"Failed custom describe for action \x27{resource_name}\x27 field \x27{override.field_name}\x27: {result}"
+                    logger.error(error_msg)
+                    raise RuntimeError(error_msg)
 
                 idx = name_to_idx.get(resource_name)
                 if idx is None:
