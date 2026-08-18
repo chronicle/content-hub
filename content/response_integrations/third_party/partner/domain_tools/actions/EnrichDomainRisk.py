@@ -63,7 +63,6 @@ def main() -> None:
     json_results: list[dict[str, Any]] = []
     success_entities: list = []
     failed_entities: list = []
-    csv_table_results: list[dict] = []
 
     target_entities = [
         entity
@@ -109,7 +108,6 @@ def main() -> None:
                 if enriched.overall_risk_score >= risk_threshold or enriched.is_young_domain:
                     entity.is_suspicious = True
 
-                csv_table_results.append(enriched.to_table_data())
                 success_entities.append(entity)
             except Exception as e:
                 failed_entities.append(entity)
@@ -121,6 +119,15 @@ def main() -> None:
         if success_entities:
             siemplify.update_entities(success_entities)
             siemplify.result.add_result_json(json_results)
+            csv_table_results = [
+                enriched.to_table_data()
+                for enriched in enriched_results
+                if extracted_domains.get(enriched.domain) in success_entities
+            ]
+            if csv_table_results:
+                siemplify.result.add_data_table(
+                    "Domain Risk Enrichment", construct_csv(csv_table_results)
+                )
 
             suspicious_count = sum(
                 1 for e in success_entities if e.is_suspicious
@@ -129,11 +136,6 @@ def main() -> None:
                 f"Successfully enriched {len(success_entities)} domain(s). "
                 f"{suspicious_count} marked as suspicious."
             )
-
-            if csv_table_results:
-                siemplify.result.add_data_table(
-                    "DomainTools Domain Risk Enrichment", construct_csv(csv_table_results)
-                )
 
             if failed_entities:
                 output_message += (

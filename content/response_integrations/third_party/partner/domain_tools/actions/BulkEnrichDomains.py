@@ -107,7 +107,6 @@ def main() -> None:
             "low_risk_count": 0,
         }
         domains_output: list[dict[str, Any]] = []
-        csv_rows: list[dict] = []
 
         for enriched in enriched_results:
             if enriched.risk_category == RISK_CATEGORY_HIGH:
@@ -125,15 +124,13 @@ def main() -> None:
                 continue
 
             domains_output.append(enriched.to_dict())
-            csv_rows.append(enriched.to_table_data())
 
         json_result = [{"Entity": "BulkEnrichment", "EntityResult": {"summary": summary, "domains": domains_output}}]
         siemplify.result.add_result_json(json_result)
 
+        csv_rows = [enriched.to_table_data() for enriched in enriched_results]
         if csv_rows:
-            siemplify.result.add_data_table(
-                "DomainTools Bulk Domain Enrichment", construct_csv(csv_rows)
-            )
+            siemplify.result.add_data_table("Bulk Domain Enrichment", construct_csv(csv_rows))
 
         output_message = (
             f"Enriched {summary['total_domains']} domain(s): "

@@ -1,8 +1,7 @@
 """
 Action script for DomainTools - Get Domain Profile.
 
-Builds a comprehensive dossier for each in-scope domain by combining
-Iris Investigate, RDAP, and WHOIS history data.
+Builds a comprehensive dossier for each in-scope domain using Iris Investigate.
 """
 
 from __future__ import annotations
@@ -53,9 +52,9 @@ def main() -> None:
     output_message: str = ""
     result_value: bool = True
     json_results: list[dict[str, Any]] = []
+    csv_rows: list[dict] = []
     success_entities: list = []
     failed_entities: list = []
-    csv_rows: list[dict] = []
 
     target_entities = [
         entity
@@ -78,9 +77,6 @@ def main() -> None:
             try:
                 iris_models = dt_manager.investigate_domains(domains=[domain])
                 iris_model = iris_models[0] if iris_models else None
-
-                rdap_model = dt_manager.get_parsed_domain_rdap(domain=domain)
-                whois_model = dt_manager.get_whois_history(domain=domain)
 
                 create_date = iris_model.registration.create_date if iris_model else None
                 domain_age_days: int | None = None
@@ -119,7 +115,6 @@ def main() -> None:
                         "expiration_date": iris_model.registration.expiration_date if iris_model else None,
                         "domain_status": iris_model.registration.domain_status if iris_model else False,
                         "registrar_status": iris_model.registration.registrar_status if iris_model else [],
-                        "rdap": rdap_model.to_dict() if rdap_model and rdap_model.has_found else {},
                     },
                     "hosting": {
                         "ip_addresses": iris_model.hosting.ip_addresses if iris_model else [],
@@ -128,7 +123,6 @@ def main() -> None:
                         "mx_servers": iris_model.hosting.mx_servers if iris_model else [],
                         "ssl_certificates": iris_model.hosting.ssl_certificates if iris_model else [],
                     },
-                    "history": whois_model.to_dict() if whois_model else {},
                     "metadata": {
                         "last_enriched": datetime.now().strftime("%Y-%m-%d"),
                         "domain_age_days": domain_age_days,
@@ -137,19 +131,10 @@ def main() -> None:
                 }
 
                 json_results.append({"Entity": entity.identifier, "EntityResult": profile})
+                if iris_model:
+                    csv_rows.append(iris_model.to_table_data())
                 entity.is_enriched = True
                 success_entities.append(entity)
-
-                csv_rows.append({
-                    "Domain": domain,
-                    "Risk Category": risk_category,
-                    "Overall Risk Score": overall_score,
-                    "Create Date": create_date or "N/A",
-                    "Domain Age (days)": domain_age_days if domain_age_days is not None else "N/A",
-                    "Registrant Org": iris_model.identity.registrant_org if iris_model else "N/A",
-                    "IP Country": iris_model.hosting.ip_country_code if iris_model else "N/A",
-                    "WHOIS Records": whois_model.record_count if whois_model else 0,
-                })
 
             except Exception as e:
                 failed_entities.append(entity)
@@ -159,13 +144,10 @@ def main() -> None:
         if success_entities:
             siemplify.update_entities(success_entities)
             siemplify.result.add_result_json(json_results)
+            if csv_rows:
+                siemplify.result.add_data_table("Domain Profile", construct_csv(csv_rows))
 
             output_message = f"Successfully built profiles for {len(success_entities)} domain(s)."
-
-            if csv_rows:
-                siemplify.result.add_data_table(
-                    "DomainTools Domain Profiles", construct_csv(csv_rows)
-                )
 
             if failed_entities:
                 output_message += (
