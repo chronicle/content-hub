@@ -201,7 +201,10 @@ def main(is_test_run):
             last_sync_cursor = max(saved_timestamp, unix_now() - lookback_ms)
         else:
             last_sync_cursor = unix_now() - hours_backwards * 60 * 60 * 1000
-        created_at_start = unix_now() - lookback_ms
+        # On the first run the cursor reaches further back than the lookback, so
+        # honor "Max Hours Backwards" instead of capping the backfill. On later
+        # runs the cursor is already clamped to the lookback, so this is a no-op.
+        created_at_start = min(unix_now() - lookback_ms, last_sync_cursor)
         siemplify.LOGGER.info(f"Fetching alerts from last_sync cursor {last_sync_cursor}")
 
         existing_ids_set = set(existing_ids)
@@ -283,7 +286,12 @@ def main(is_test_run):
                     siemplify.LOGGER.info(f"Alert {alert.alert_id} was created.")
 
                 except Exception as e:
-                    siemplify.LOGGER.error(f"Failed to process alert {alert.alert_id}")
+                    # The watermark may advance past this alert via later alerts in
+                    # the page, so it will not be fetched again - log it as dropped
+                    # rather than letting it disappear silently.
+                    siemplify.LOGGER.error(
+                        f"Failed to process alert {alert.alert_id}. It will be dropped and not retried."
+                    )
                     siemplify.LOGGER.exception(e)
 
                     if is_test_run:
@@ -291,8 +299,13 @@ def main(is_test_run):
 
                 siemplify.LOGGER.info(f"Finished processing alert {alert.alert_id}")
 
-            if stop_fetching or len(alerts) < fetch_limit:
-                # A short page means there are no more alerts in the window
+            if (
+                stop_fetching
+                or len(alerts) < fetch_limit
+                or len(processed_alerts) >= fetch_limit
+            ):
+                # A short page means there are no more alerts in the window, and a
+                # full per-cycle quota means the next page would be discarded anyway
                 break
 
             next_cursor = alerts[-1].last_sync_ms
@@ -303,7 +316,8 @@ def main(is_test_run):
                 # Tie ordering has no secondary sort key, so offsets are only
                 # meaningful within this run's back-to-back requests - do not carry
                 # the offset across runs. A row that shuffles out of view returns on
-                # its next last_sync rewrite; dedup absorbs the rest.
+                # its next last_sync rewrite, unless its CreatedAt has meanwhile aged
+                # out of the lookback window; dedup absorbs the rest.
                 offset += len(alerts)
             else:
                 last_sync_cursor = next_cursor
