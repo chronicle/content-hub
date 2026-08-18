@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from pathlib import Path  # noqa: TC003
+from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -75,7 +75,7 @@ class BuildParams:
 
 @app.command(name="integration", help="Build content-hub response integrations")
 @track_command
-def build_integration(  # noqa: PLR0913
+def build_integration(  # ruff:ignore[too-many-arguments]
     integrations: Annotated[
         list[str],
         typer.Argument(

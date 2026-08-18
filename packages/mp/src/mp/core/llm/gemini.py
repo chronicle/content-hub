@@ -19,6 +19,7 @@ import io
 import json
 import logging
 import os
+import time
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Self, overload
 
 from google import genai
@@ -54,7 +55,7 @@ from tenacity import (
 
 import mp.core.config
 
-from .sdk import LlmConfig, LlmSdk, T_Schema
+from .sdk import DEFAULT_BULK_THRESHOLD, LlmConfig, LlmSdk, T_Schema
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -65,6 +66,7 @@ if TYPE_CHECKING:
 POLL_BATCH_SLEEP_SEC: int = 10
 SERVER_ERROR_STATUS_CODE: int = 500
 RATE_LIMIT_STATUS_CODE: int = 429
+MAX_CONCURRENT_REQUESTS: int = 4
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -128,15 +130,21 @@ def _log_retry_attempt(retry_state: RetryCallState) -> None:
 
 
 def _should_retry_exception(e: BaseException) -> bool:
+    if isinstance(e, (TimeoutError, asyncio.TimeoutError)):
+        return True
     return isinstance(e, ClientError) and (e.code == RATE_LIMIT_STATUS_CODE or e.code >= SERVER_ERROR_STATUS_CODE)
 
 
 class Gemini(LlmSdk[GeminiConfig]):
-    def __init__(self, config: GeminiConfig) -> None:
-        super().__init__(config)
+    def __init__(
+        self,
+        config: GeminiConfig,
+        *,
+        bulk_threshold: int = DEFAULT_BULK_THRESHOLD,
+    ) -> None:
+        super().__init__(config, bulk_threshold=bulk_threshold)
         self.client: AsyncClient = genai.client.Client(api_key=self.config.api_key).aio
         self.content: Content = Content(role="user", parts=[])
-        self.bulk_threshold: int = 4
 
     async def __aenter__(self) -> Self:
         return self
@@ -162,7 +170,10 @@ class Gemini(LlmSdk[GeminiConfig]):
     ) -> str: ...
 
     @retry(
-        retry=(retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)),
+        retry=(
+            retry_if_not_exception_type((ClientError, KeyboardInterrupt, asyncio.CancelledError))
+            | retry_if_exception(_should_retry_exception)
+        ),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),
@@ -188,11 +199,9 @@ class Gemini(LlmSdk[GeminiConfig]):
             ValueError: If the JSON schema is invalid.
 
         """
-        schema: dict[str, Any] | None = None
-        if response_json_schema is not None:
-            schema = response_json_schema.model_json_schema()
-
-        config: GenerateContentConfig = self.create_generate_content_config(schema)
+        config: GenerateContentConfig = self.create_generate_content_config(
+            response_schema=response_json_schema
+        )
         logger.debug("Sending prompt: %s", prompt)
         if not self.content.parts:
             self.content.parts = []
@@ -232,13 +241,19 @@ class Gemini(LlmSdk[GeminiConfig]):
         self.content = Content(role="user", parts=[])
 
     async def send_bulk_messages(
-        self, prompts: list[str], /, *, response_json_schema: type[T_Schema] | None = None
+        self,
+        prompts: list[str],
+        /,
+        *,
+        response_json_schema: type[T_Schema] | None = None,
+        use_batch: bool = False,
     ) -> list[T_Schema | str]:
         """Send multiple messages to the LLM and get responses.
 
         Args:
             prompts: The prompts to send to the LLM.
             response_json_schema: The JSON schema to use for validation.
+            use_batch: Whether to use Google GenAI Batch API when prompt count exceeds bulk_threshold.
 
         Returns:
             The LLM responses as a list of strings or Pydantic models.
@@ -247,18 +262,25 @@ class Gemini(LlmSdk[GeminiConfig]):
         if not prompts:
             return []
 
-        if len(prompts) <= self.bulk_threshold:
-            return await asyncio.gather(*[
-                self._send_single_message_independent(prompt, response_json_schema) for prompt in prompts
-            ])
+        if not use_batch or len(prompts) <= self.bulk_threshold:
+            semaphore: asyncio.Semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+
+            async def _bounded_send(p: str) -> T_Schema | str:
+                async with semaphore:
+                    return await self._send_single_message_independent(p, response_json_schema)
+
+            return await asyncio.gather(*[_bounded_send(prompt) for prompt in prompts])
 
         requests: list[InlinedRequest] = self._prepare_batch_requests(prompts, response_json_schema)
         batch_job: BatchJob = await self._create_batch_job(requests)
-        await self._poll_batch_job(batch_job)
+        batch_job = await self._poll_batch_job(batch_job)
         return await self._get_batch_results(batch_job, response_json_schema)
 
     @retry(
-        retry=(retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)),
+        retry=(
+            retry_if_not_exception_type((ClientError, KeyboardInterrupt, asyncio.CancelledError))
+            | retry_if_exception(_should_retry_exception)
+        ),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),
@@ -277,11 +299,9 @@ class Gemini(LlmSdk[GeminiConfig]):
             The LLM response.
 
         """
-        schema: dict[str, Any] | None = None
-        if response_json_schema is not None:
-            schema = response_json_schema.model_json_schema()
-
-        config: GenerateContentConfig = self.create_generate_content_config(schema)
+        config: GenerateContentConfig = self.create_generate_content_config(
+            response_schema=response_json_schema
+        )
 
         parts: list[Part] = []
         if self.content.parts:
@@ -313,11 +333,9 @@ class Gemini(LlmSdk[GeminiConfig]):
             list[types.InlinedRequest]: The prepared requests.
 
         """
-        schema: dict[str, Any] | None = None
-        if response_json_schema is not None:
-            schema = response_json_schema.model_json_schema()
-
-        config: GenerateContentConfig = self.create_generate_content_config(schema)
+        config: GenerateContentConfig = self.create_generate_content_config(
+            response_schema=response_json_schema
+        )
 
         inlined_requests: list[InlinedRequest] = []
         for prompt in prompts:
@@ -361,23 +379,33 @@ class Gemini(LlmSdk[GeminiConfig]):
         logger.info("Created batch job: %s", batch_job.name)
         return batch_job
 
-    async def _poll_batch_job(self, batch_job: BatchJob) -> None:
+    async def _poll_batch_job(self, batch_job: BatchJob) -> BatchJob:
         """Poll the batch job until it completes or fails.
 
         Args:
             batch_job: The job to poll.
 
+        Returns:
+            BatchJob: The completed batch job.
+
         Raises:
             RuntimeError: If the job fails or loses its name.
 
         """
+        start_time: float = time.perf_counter()
+        first_poll: bool = True
         while batch_job.state in {
             "JOB_STATE_PENDING",
             "JOB_STATE_RUNNING",
             "JOB_STATE_QUEUED",
             "JOB_STATE_UNSPECIFIED",
         }:
-            logger.info("Batch job %s is in state %s, waiting...", batch_job.name, batch_job.state)
+            if first_poll:
+                logger.info("Batch job %s is in state %s, waiting...", batch_job.name, batch_job.state)
+                first_poll = False
+            else:
+                logger.debug("Batch job %s is in state %s, waiting...", batch_job.name, batch_job.state)
+
             if not batch_job.name:
                 msg: str = "Batch job lost name during polling"
                 raise RuntimeError(msg)
@@ -391,6 +419,10 @@ class Gemini(LlmSdk[GeminiConfig]):
                 msg += f": {batch_job.error}"
 
             raise RuntimeError(msg)
+
+        elapsed_seconds: float = time.perf_counter() - start_time
+        logger.info("Batch job %s completed in %.1fs", batch_job.name, elapsed_seconds)
+        return batch_job
 
     async def _get_batch_results(
         self, batch_job: BatchJob, response_json_schema: type[T_Schema] | None
@@ -445,11 +477,14 @@ class Gemini(LlmSdk[GeminiConfig]):
         return results
 
     def create_generate_content_config(
-        self, response_json_schema: dict[str, Any] | None = None
+        self,
+        response_schema: object | None = None,
+        response_json_schema: dict[str, object] | None = None,
     ) -> GenerateContentConfig:
         """Create a GenerateContentConfig object for the Gemini API.
 
         Args:
+            response_schema: Optional Pydantic model or schema class for strict structured output.
             response_json_schema: The JSON schema to validate the response against.
 
         Returns:
@@ -457,7 +492,7 @@ class Gemini(LlmSdk[GeminiConfig]):
 
         """
         response_mime_type: str = "plain/text"
-        if response_json_schema is not None:
+        if response_schema is not None or response_json_schema is not None:
             response_mime_type = "application/json"
 
         tools: ToolListUnion = self._get_tools()
@@ -476,6 +511,7 @@ class Gemini(LlmSdk[GeminiConfig]):
             temperature=self.config.temperature,
             response_mime_type=response_mime_type,
             thinking_config=thinking_config,
+            response_schema=response_schema,
             response_json_schema=response_json_schema,
             tools=tools,
             safety_settings=safety_settings,

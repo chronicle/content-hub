@@ -6,7 +6,7 @@ from TIPCommon.base.action import Action
 from TIPCommon.base.action.base_enrich_action import EnrichAction, EnrichActionError
 from TIPCommon.extraction import extract_configuration_param
 
-from .opencti_client.client import OpenCTIClient
+from ..core.opencti_client.client import OpenCTIClient
 
 if TYPE_CHECKING:
     from TIPCommon.types import Entity

@@ -18,7 +18,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from .entity_types import EntityType  # noqa: TC001
+from .entity_types import EntityTypesUsage  # ruff:ignore[typing-only-first-party-import]
 
 
 class EntityUsage(BaseModel):
@@ -34,12 +34,12 @@ class EntityUsage(BaseModel):
         ),
     ] = ""
     entity_types: Annotated[
-        list[EntityType],
+        EntityTypesUsage,
         Field(
             description=(
                 """### Entity Types Determination Logic
 
-**Field Definition:** `entity_types` (List of `EntityType`)
+**Field Definition:** `entity_types`
 
 This field identifies the specific categories of entities an action processes. It is critical to
 distinguish between actions that perform operations **on** SecOps entities versus actions that
@@ -50,30 +50,22 @@ simply process general data.
 * **Presence of Entities:** An action "runs on entities" if it iterates over the `target_entities`
   attribute or uses entity-specific identifiers to perform its task.
 * **Empty State:** If the action works on other data sources (e.g., fetching a static URL, checking
-  global system status) without referencing specific entities, this list **must be empty**.
+  global system status) without referencing specific entities, all flags **must be false**.
 * **Avoid String Matching:** Do not assume an action uses entities just because the variable name
   `entity` appears in the code. Verify that the logic actually interacts with the SecOps entity
   object model.
 
 #### **2. Filtering & Scope**
 
-* **Specific Types:** If the code filters entities by type (e.g., `if entity.type == "USER"`), list
-  only those specific types.
+* **Specific Types:** If the code filters entities by type (e.g., `if entity.type == "USER"`), set
+  only those specific flags to true.
 * **Unfiltered (Global) Scope:** If the action processes the `target_entities` list without any
   type-based filtering, it is considered to run on **all** supported entity types.
-  In this case, include every available `EntityType` from the metadata.
+  In this case, set every available flag to true.
 * **The `GenericEntity` Distinction:** `GenericEntity` is a specific, standalone entity type.
-  Do **not** use it as a placeholder for "all types." Only include it if the action explicitly
+  Do **not** use it as a placeholder for "all types." Only set it to true if the action explicitly
   supports the `GenericEntity` type or if no filters are applied (as part of the full list).
-
-#### **3. Logic Summary Table**
-
-| If the code... | Then `entity_types` should be... |
-| --- | --- |
-| Does not reference `target_entities` | `[]` (Empty List) |
-| Filters for specific types (IP, Host) | Only the specific types identified: `["IP", "HOSTNAME"]` |
-| Processes all entities without any filtering | **All** possible entity types from the metadata |
-| Explicitly checks for "Generic" type only | `["GenericEntity"]` |"""
+"""
             )
         ),
     ]

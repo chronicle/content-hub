@@ -78,7 +78,7 @@ class ValidateParams:
 
 
 @track_command
-def validate(  # noqa: PLR0913
+def validate(  # ruff:ignore[too-many-arguments]
     ctx: typer.Context,
     repository: Annotated[
         list[RepositoryType],

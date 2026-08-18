@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
-from mp.core.custom_types import RepositoryType  # noqa: TC001
+from mp.core.custom_types import RepositoryType  # ruff:ignore[typing-only-first-party-import]
 from mp.core.utils import ensure_valid_list
 from mp.core.utils.common import is_integration_repo, is_playbook_repo
 from mp.telemetry import track_command
