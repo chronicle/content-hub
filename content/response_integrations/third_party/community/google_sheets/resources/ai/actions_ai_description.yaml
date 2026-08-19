@@ -330,8 +330,8 @@ Add or Update Rows:
 
     4. Iterates through each row in the parsed JSON data.
 
-    5. For each row, makes an API call to search the specified worksheet for the value
-    corresponding to the given Field Name.
+    5. For each row, reads the value corresponding to the configured Field Name and
+    searches for that value only within the configured Column Number.
 
     6. If the value is found in the specified Column Number, it makes an API call
     to update the row within the range defined by Start Column and End Column.
@@ -345,8 +345,9 @@ Add or Update Rows:
     ### Additional Notes
 
     The JSON input should be an array of objects where each object represents a row
-    to be added or updated. Ensure that the values used for searching are unique to
-    prevent unintended overwrites.
+    to be added or updated and contains the configured Field Name. Column Number,
+    Start Column, and End Column are positive, one-based column numbers. Ensure that
+    the values used for searching are unique to prevent unintended overwrites.
   ai_short_description: >-
     Adds or updates rows in a Google Sheet based on a provided JSON array, searching
     by a specific column and appending new rows if the value is not found.
@@ -454,11 +455,11 @@ Add or Update Rows:
     update_identity: false
     update_ticket: false
   parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
-    \ --- | --- | --- |\n| Column Number | String | Yes | The column number by which\
-    \ we will look for the value of the given Field Name in the Json |\n| Start Column\
-    \ | String | Yes | From which column number we will update or add the values \u200B\
-    \u200Bto the given rows |\n| End Column | String | Yes | Untill which column number\
-    \ we will update or add the values \u200B\u200Bto the given rows |\n| Field Name\
+    \ --- | --- | --- |\n| Column Number | String | Yes | The positive, one-based\
+    \ column number in which to search for the configured Field Name value. |\n| Start\
+    \ Column | String | Yes | The positive, one-based column number where row updates\
+    \ start. |\n| End Column | String | Yes | The positive, one-based column number\
+    \ where row updates end. |\n| Field Name\
     \ | String | Yes | This is the field name in the given Json by which we will search\
     \ for its value in a row by its column number. |\n| Json | Code | Yes | The JSON\
     \ values to add or update for the chosen column number and field name. Each item\
@@ -903,15 +904,16 @@ Get All:
   ai_description: >-
     ### General Description
 
-    Retrieves all records from a specified Google Sheet and returns them as a JSON
-    object. This action is useful for pulling tabular data from a Google Workspace
-    environment into the SOAR platform for further processing.
+    Retrieves all records or raw row values from a specified Google Sheet and returns
+    them as a JSON result. Raw values allow worksheets with blank or duplicate headers
+    to be read without requiring a record-shaped header row.
 
 
     ### Flow Description
 
     1. Extracts the Google Sheets credentials from the integration configuration and
-    the target `Sheet Id` and `Worksheet Name` from the action parameters.
+    the target `Sheet Id`, `Worksheet Name`, and `Return Raw Values` option from the
+    action parameters.
 
     2. Authenticates with the Google Sheets API using the provided service account
     credentials.
@@ -920,9 +922,10 @@ Get All:
 
     4. Selects the target worksheet (defaults to the first sheet if no name is provided).
 
-    5. Fetches all records from the worksheet via the `get_all_records()` method.
+    5. Fetches header-keyed records via `get_all_records()`, or raw lists of cell
+    values via `get_all_values()` when Return Raw Values is enabled.
 
-    6. Appends the retrieved list of dictionaries to the action's JSON result.
+    6. Appends the retrieved records or raw rows to the action's JSON result.
 
 
     ### Additional Notes
@@ -931,9 +934,11 @@ Get All:
     using the first sheet (typically named "Sheet1").
 
     - The worksheet name is case-sensitive.
+
+    - Enable `Return Raw Values` for worksheets with blank or duplicate headers.
   ai_short_description: >-
-    Retrieves all records from a specified Google Sheet and returns the tabular data
-    as a JSON object.
+    Retrieves all records or raw row values from a specified Google Sheet and returns
+    the tabular data as a JSON result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -946,11 +951,11 @@ Get All:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action fetches data from an external source (Google Sheets API) using the
-      `get_all_records()` method, so `fetches_data` is true. It does not perform any
-      state-changing operations (POST/PUT/DELETE) on the Google Sheet, so `can_mutate_external_data`
-      is false. It does not update entities, create insights, modify alert data, or
-      create case comments within Google SecOps, so all internal mutation flags are
-      false.
+      `get_all_records()` or `get_all_values()` method, so `fetches_data` is true.
+      It does not perform any state-changing operations (POST/PUT/DELETE) on the Google
+      Sheet, so `can_mutate_external_data` is false. It does not update entities,
+      create insights, modify alert data, or create case comments within Google SecOps,
+      so all internal mutation flags are false.
   entity_usage:
     entity_types:
       address: false
@@ -1050,6 +1055,10 @@ Get All:
 
     | Worksheet Name | String | No | The worksheet name is the Sheet tab name. The
     default Sheet name is "Sheet1". Note: it is case sensitive. |
+
+    | Return Raw Values | Boolean | No | Return rows as lists of raw cell values instead
+    of records keyed by the header row. Enable this for worksheets with blank or duplicate
+    headers. |
 Get Range:
   ai_description: >-
     ### General Description
