@@ -377,6 +377,163 @@ class HostDatamodel(BaseModel):
         return max(scan_times) if scan_times else None
 
 
+class HostEnrichmentDatamodel(BaseModel):
+    """
+    Data model for the new Censys host enrichment endpoint.
+    Handles responses from GET /v3/global/asset/enrichment/host/{host_ip}.
+    """
+
+    def __init__(self, raw_data: Dict[str, Any]) -> None:
+        super().__init__(raw_data)
+        self.host_data = raw_data.get("result", {}).get("resource", {})
+
+    def is_found(self) -> bool:
+        return bool(self.host_data)
+
+    def get_enrichment_data(self) -> Dict[str, Any]:
+        if not self.is_found():
+            return {}
+
+        services = self.host_data.get("services", [])
+        dns_data = self.host_data.get("dns", {})
+        location = self.host_data.get("location", {})
+        asn = self.host_data.get("autonomous_system", {})
+        whois = self.host_data.get("whois", {})
+        reputation = self.host_data.get("reputation", {})
+        greynoise = self.host_data.get("greynoise", {})
+        privacy = self.host_data.get("privacy", [])
+        network = self.host_data.get("network", [])
+        third_party = self.host_data.get("third_party", {})
+        mallory = third_party.get("mallory", [])
+
+        first_privacy = privacy[0] if privacy else {}
+        first_network = network[0] if network else {}
+        first_mallory = mallory[0] if mallory else {}
+        first_observable = first_mallory.get("observable", {})
+        first_opinion = first_mallory.get("opinions", [{}])[0] if first_mallory.get("opinions") else {}
+
+        enrichment = {
+            f"{ENRICHMENT_PREFIX}service_count": self.host_data.get("service_count"),
+            f"{ENRICHMENT_PREFIX}ports": self._get_top_values(
+                [str(s.get("port")) for s in services if s.get("port")]
+            ),
+            f"{ENRICHMENT_PREFIX}protocols": self._get_top_values(
+                [s.get("protocol") for s in services if s.get("protocol")]
+            ),
+            f"{ENRICHMENT_PREFIX}host_labels": self._get_top_values(
+                [
+                    label.get("value")
+                    for label in self.host_data.get("labels", [])
+                    if label.get("value")
+                ]
+            ),
+            f"{ENRICHMENT_PREFIX}service_labels": self._get_top_values(
+                [
+                    label.get("value")
+                    for s in services
+                    for label in s.get("labels", [])
+                    if label.get("value")
+                ]
+            ),
+            f"{ENRICHMENT_PREFIX}threat_names": self._get_top_values(
+                [
+                    threat.get("name")
+                    for s in services
+                    for threat in s.get("threats", [])
+                    if threat.get("name")
+                ]
+            ),
+            f"{ENRICHMENT_PREFIX}dns_names": self._get_top_values(
+                dns_data.get("names", [])
+            ),
+            f"{ENRICHMENT_PREFIX}reverse_dns": self._get_top_values(
+                dns_data.get("reverse_dns", {}).get("names", [])
+            ),
+            f"{ENRICHMENT_PREFIX}network_name": whois.get("network", {}).get("name"),
+            f"{ENRICHMENT_PREFIX}network_cidrs": self._get_top_values(
+                whois.get("network", {}).get("cidrs", [])
+            ),
+            f"{ENRICHMENT_PREFIX}asn_name": asn.get("name"),
+            f"{ENRICHMENT_PREFIX}asn_id": asn.get("asn"),
+            f"{ENRICHMENT_PREFIX}location_city": location.get("city"),
+            f"{ENRICHMENT_PREFIX}location_province": location.get("province"),
+            f"{ENRICHMENT_PREFIX}location_postal": location.get("postal_code"),
+            f"{ENRICHMENT_PREFIX}location_country": location.get("country"),
+            f"{ENRICHMENT_PREFIX}country_code": location.get("country_code"),
+            f"{ENRICHMENT_PREFIX}continent": location.get("continent"),
+            f"{ENRICHMENT_PREFIX}geo_lat": location.get("coordinates", {}).get(
+                "latitude"
+            ),
+            f"{ENRICHMENT_PREFIX}geo_long": location.get("coordinates", {}).get(
+                "longitude"
+            ),
+            f"{ENRICHMENT_PREFIX}reputation_score": reputation.get("score"),
+            f"{ENRICHMENT_PREFIX}reputation_score_level": reputation.get(
+                "score_level"
+            ) or None,
+            # GreyNoise Fields
+            f"{ENRICHMENT_PREFIX}greynoise_actor": greynoise.get("actor") or None,
+            f"{ENRICHMENT_PREFIX}greynoise_classification": greynoise.get(
+                "classification"
+            ) or None,
+            f"{ENRICHMENT_PREFIX}greynoise_last_observed": greynoise.get(
+                "last_observed_time"
+            ),
+            # IPInfo Fields
+            f"{ENRICHMENT_PREFIX}privacy_tor": first_privacy.get("tor"),
+            f"{ENRICHMENT_PREFIX}privacy_vpn": first_privacy.get("vpn"),
+            f"{ENRICHMENT_PREFIX}privacy_proxy": first_privacy.get("proxy"),
+            f"{ENRICHMENT_PREFIX}privacy_anonymous": first_privacy.get("anonymous"),
+            f"{ENRICHMENT_PREFIX}privacy_relay": first_privacy.get("relay"),
+            f"{ENRICHMENT_PREFIX}network_hosting": first_network.get("hosting"),
+            f"{ENRICHMENT_PREFIX}network_mobile": first_network.get("mobile"),
+            f"{ENRICHMENT_PREFIX}network_satellite": first_network.get("satellite"),
+            # Mallory / third-party fields
+            f"{ENRICHMENT_PREFIX}mallory_name": first_observable.get("name"),
+            f"{ENRICHMENT_PREFIX}mallory_type": first_observable.get("type"),
+            f"{ENRICHMENT_PREFIX}mallory_last_updated_at": self._get_latest_value(
+                [
+                    first_mallory.get("last_seen_at"),
+                    first_mallory.get("updated_at"),
+                    first_observable.get("updated_at"),
+                    first_opinion.get("updated_at"),
+                ]
+            ),
+            f"{ENRICHMENT_PREFIX}mallory_description": first_observable.get(
+                "description"
+            )
+            or first_opinion.get("description"),
+            f"{ENRICHMENT_PREFIX}mallory_verdict": first_opinion.get("verdict"),
+            f"{ENRICHMENT_PREFIX}mallory_confidence": first_opinion.get("confidence"),
+            f"{ENRICHMENT_PREFIX}mallory_source": first_opinion.get("source")
+            or first_opinion.get("reference_source_slug"),
+        }
+
+        return {k: v for k, v in enrichment.items() if v is not None}
+
+    def _get_top_values(self, values: List[Any], max_count: int = 5) -> Optional[str]:
+        if not values:
+            return None
+
+        unique_values = []
+        seen = set()
+        for val in values:
+            if not val:
+                continue
+            val_str = val.get("id") or str(val) if isinstance(val, dict) else str(val)
+            if val_str not in seen:
+                unique_values.append(val_str)
+                seen.add(val_str)
+                if len(unique_values) >= max_count:
+                    break
+
+        return ", ".join(unique_values) if unique_values else None
+
+    def _get_latest_value(self, values: List[Any]) -> Optional[str]:
+        values = [value for value in values if value]
+        return max(values) if values else None
+
+
 class WebPropertyDatamodel(BaseModel):
     """
     Data model for Censys Web Property enrichment data.
