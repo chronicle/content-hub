@@ -205,7 +205,10 @@ def main(is_test_run):
         # honor "Max Hours Backwards" instead of capping the backfill. On later
         # runs the cursor is already clamped to the lookback, so this is a no-op.
         created_at_start = min(unix_now() - lookback_ms, last_sync_cursor)
-        siemplify.LOGGER.info(f"Fetching alerts from last_sync cursor {last_sync_cursor}")
+        siemplify.LOGGER.info(
+            f"Fetching alerts from last_sync cursor {last_sync_cursor}, "
+            f"created at or after {created_at_start}"
+        )
 
         existing_ids_set = set(existing_ids)
         fetched_alerts = []
