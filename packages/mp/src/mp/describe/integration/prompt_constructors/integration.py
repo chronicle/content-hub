@@ -25,10 +25,15 @@ import anyio
 import yaml
 
 from mp.core import constants
+from mp.describe.common.metadata import (
+    IntegrationOverridePromptParams,
+    build_integration_override_prompt,
+)
 from mp.describe.common.prompt_constructors.prompt_constructor import PromptConstructor
 
 if TYPE_CHECKING:
     from mp.core.data_models.integrations.integration_meta.metadata import NonBuiltIntegrationMetadata
+    from mp.describe.common.metadata import PromptOverrideConfig
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -45,21 +50,65 @@ class IntegrationPromptConstructor(PromptConstructor):
         prompt_file: anyio.Path = anyio.Path(__file__).parent.parent / "prompts" / "task.md"
         return Template(await prompt_file.read_text(encoding="utf-8"))
 
-    async def construct(self) -> str:
+    async def construct(self, template: Template | None = None) -> str:
         """Construct the prompt for integrations.
+
+        Args:
+            template: Optional custom prompt template.
 
         Returns:
             str: The constructed prompt.
 
         """
-        template: Template = await self.get_task_prompt()
-        return template.safe_substitute({
+        if template is None:
+            template = await self.get_task_prompt()
+        integration_description = await self._get_integration_description()
+        actions_ai_descriptions = await self._get_actions_ai_descriptions()
+        connectors_ai_descriptions = await self._get_connectors_ai_descriptions()
+        jobs_ai_descriptions = await self._get_jobs_ai_descriptions()
+
+        result = template.safe_substitute({
             "integration_name": self.integration_name,
-            "integration_description": await self._get_integration_description(),
-            "actions_ai_descriptions": await self._get_actions_ai_descriptions(),
-            "connectors_ai_descriptions": await self._get_connectors_ai_descriptions(),
-            "jobs_ai_descriptions": await self._get_jobs_ai_descriptions(),
+            "integration_description": integration_description,
+            "actions_ai_descriptions": actions_ai_descriptions,
+            "connectors_ai_descriptions": connectors_ai_descriptions,
+            "jobs_ai_descriptions": jobs_ai_descriptions,
         })
+
+        if "<integration_description>" not in result:
+            context = (
+                f"\n\n### INTEGRATION CONTEXT\n\n"
+                f"<integration_name>\n{self.integration_name}\n</integration_name>\n\n"
+                f"<integration_description>\n{integration_description}\n</integration_description>\n\n"
+                f"<actions_ai_descriptions>\n{actions_ai_descriptions}\n</actions_ai_descriptions>\n\n"
+                f"<connectors_ai_descriptions>\n{connectors_ai_descriptions}\n</connectors_ai_descriptions>\n\n"
+                f"<jobs_ai_descriptions>\n{jobs_ai_descriptions}\n</jobs_ai_descriptions>\n"
+            )
+            result += context
+
+        return result
+
+    async def construct_override(self, override: PromptOverrideConfig) -> str:
+        """Construct the override prompt for integrations.
+
+        Args:
+            override: Prompt override configuration.
+
+        Returns:
+            str: The constructed override prompt.
+
+        """
+        return build_integration_override_prompt(
+            IntegrationOverridePromptParams(
+                target_field=override.target_field,
+                criteria=override.criteria,
+                integration_name=self.integration_name,
+                integration_description=await self._get_integration_description(),
+                actions_ai_descriptions=await self._get_actions_ai_descriptions(),
+                connectors_ai_descriptions=await self._get_connectors_ai_descriptions(),
+                jobs_ai_descriptions=await self._get_jobs_ai_descriptions(),
+            )
+        )
 
     async def _get_integration_description(self) -> str:
         # Try to find the description in various metadata files.

@@ -40,7 +40,14 @@ def test_get_integration_path_by_direct_path(mock_integration: pathlib.Path) -> 
     assert pathlib.Path(str(path)) == mock_integration
 
 
+def test_get_integration_path_with_direct_src_dir(mock_integration: pathlib.Path) -> None:
+    # Test that we can find an integration when src points directly to the integration directory
+    path = paths.get_integration_path("mock_integration", src=mock_integration)
+    assert pathlib.Path(str(path)).resolve() == mock_integration.resolve()
+
+
 def test_get_integration_path_by_relative_path(mock_integration: pathlib.Path, monkeypatch: MonkeyPatch) -> None:
+
     # Test that we can find an integration by its relative path from CWD
     monkeypatch.chdir(mock_integration.parent)
     path = paths.get_integration_path("mock_integration")

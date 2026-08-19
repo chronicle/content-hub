@@ -51,6 +51,14 @@ class DescriptionResult(NamedTuple):
     metadata: BaseModel | None
 
 
+class DescriptionParams(NamedTuple):
+    integration: anyio.Path
+    integration_name: str
+    action_name: str
+    action_file_name: str
+    status: IntegrationStatus
+
+
 class RichParams(NamedTuple):
     on_done: Callable[[], None] | None = None
     progress: Progress | None = None

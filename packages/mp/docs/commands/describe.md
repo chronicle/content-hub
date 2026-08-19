@@ -20,36 +20,34 @@ mp describe action [ACTIONS]... [OPTIONS]
 | `--all`              | `-a`      | Describe all integrations in the marketplace, or all actions if an integration is specified. | `bool` | `False` |
 | `--src`              |           | Customize source folder to describe from.                                                    | `path` | `None`  |
 | `--dst`              |           | Customize destination folder to save the AI descriptions.                                    | `path` | `None`  |
-| `--prompt-overrides` |           | Path to JSON prompt configuration file to override prompts for specific fields.              | `path` | `None`  |
+| `--prompt-overrides` |           | Path to YAML prompt configuration file to override prompts for specific fields.              | `path` | `None`  |
 | `--quiet`            | `-q`      | Log less on runtime.                                                                         | `bool` | `False` |
 | `--verbose`          | `-v`      | Log more on runtime.                                                                         | `bool` | `False` |
 | `--override`         | `-o`      | Rewrite actions that already have a description.                                             | `bool` | `False` |
 
 #### Prompt Overrides Configuration
 
-When `--prompt-overrides` is provided, custom prompt templates and field schema specifications can be defined for individual fields. Supplementary LLM calls are made using these custom prompts and schemas to override specific fields in the baseline description.
+When `--prompt-overrides` is provided, custom prompt templates and field schema specifications can be defined for individual fields using the same YAML format as evaluation rulesets. Supplementary LLM calls are made using these custom prompts and schemas to override specific fields in the baseline description.
 
-Expected JSON Configuration Schema:
+Expected YAML Configuration Schema:
 
-```json
-{
-  "prompt_config": [
-    {
-      "location": "/path/to/ai_description.md",
-      "field_name": "ai_description"
-    },
-    {
-      "location": "/path/to/prompt.md",
-      "field_name": "field_with_undefined_schema",
-      "schema": {
-        "model_name": "Model",
-        "type": "string",
-        "description": "Description of the field we do not have schema defined in code.",
-        "required": true
-      }
-    }
-  ]
-}
+```yaml
+- target_field: "ai_description"
+  criteria: >
+    Provide a comprehensive description of the action's behavior and intent based on its source code.
+
+- target_field: "parameters_description"
+  criteria: >
+    Document action parameters clearly in a table adhering to strict formatting guidelines.
+
+- target_field: "field_with_undefined_schema"
+  criteria: >
+    Custom criteria for undefined field...
+  schema:
+    model_name: "ModelName"
+    type: "string"
+    description: "Description of the field we do not have schema defined in code."
+    required: true
 ```
 
 If `--prompt-overrides` is omitted or empty, the original baseline result is returned without modifications.
@@ -111,14 +109,29 @@ mp describe integration [INTEGRATIONS]... [OPTIONS]
 
 ### Options
 
-| Option       | Shorthand | Description                                               | Type   | Default |
-|:-------------|:----------|:----------------------------------------------------------|:-------|:--------|
-| `--all`      | `-a`      | Describe all integrations in the marketplace.             | `bool` | `False` |
-| `--src`      |           | Customize source folder to describe from.                 | `path` | `None`  |
-| `--dst`      |           | Customize destination folder to save the AI descriptions. | `path` | `None`  |
-| `--quiet`    | `-q`      | Log less on runtime.                                      | `bool` | `False` |
-| `--verbose`  | `-v`      | Log more on runtime.                                      | `bool` | `False` |
-| `--override` | `-o`      | Rewrite integrations that already have a description.     | `bool` | `False` |
+| Option               | Shorthand | Description                                                                      | Type   | Default |
+|:---------------------|:----------|:---------------------------------------------------------------------------------|:-------|:--------|
+| `--all`              | `-a`      | Describe all integrations in the marketplace.                                     | `bool` | `False` |
+| `--src`              |           | Customize source folder to describe from.                                         | `path` | `None`  |
+| `--dst`              |           | Customize destination folder to save the AI descriptions.                         | `path` | `None`  |
+| `--prompt-overrides` |           | Path to YAML prompt configuration file to override prompts for specific fields.  | `path` | `None`  |
+| `--quiet`            | `-q`      | Log less on runtime.                                                             | `bool` | `False` |
+| `--verbose`          | `-v`      | Log more on runtime.                                                             | `bool` | `False` |
+| `--override`         | `-o`      | Rewrite integrations that already have a description.                             | `bool` | `False` |
+
+#### Prompt Overrides Configuration
+
+When `--prompt-overrides` is provided, custom prompt templates and field schema specifications can be defined for individual fields using the same YAML format as evaluation rulesets. Supplementary LLM calls are made using these custom prompts and schemas to override specific fields (such as `product_categories` or custom schema fields) in the baseline description.
+
+Expected YAML Configuration Schema:
+
+```yaml
+- target_field: "product_categories"
+  criteria: >
+    Categorize the integration accurately based on its actions, connectors, and overall security capabilities.
+```
+
+If `--prompt-overrides` is omitted or empty, the original baseline result is returned without modifications.
 
 ## `mp describe all-content`
 
@@ -145,4 +158,4 @@ mp describe all-content [INTEGRATIONS]... [OPTIONS]
 
 ## `mp describe-regression-test`
 
-For end-to-end regression testing of AI descriptions against baseline repository metadata, see [describe_regression_test.md](file:///usr/local/google/home/siedovolosyi/repos/content-hub/packages/mp/docs/commands/describe_regression_test.md).
+For end-to-end regression testing of AI descriptions against baseline repository metadata, see [describe_regression_test.md](./describe_regression_test.md).

@@ -22,7 +22,7 @@ import typer
 
 import mp.core.config
 from mp.core import constants
-from mp.core.file_utils import get_all_marketplace_integrations_paths
+from mp.describe.common.describe_all import get_all_integrations_paths
 from mp.describe.common.utils.paths import get_integration_path
 
 from .evaluator import EvaluationEngine
@@ -31,6 +31,44 @@ from .reporter import EvaluationReporter
 logger: logging.Logger = logging.getLogger(__name__)
 
 app: typer.Typer = typer.Typer(help="Commands for evaluating logical quality of AI descriptions.")
+
+
+def _resolve_target_integrations(
+    integration: str | None,
+    *,
+    all_marketplace: bool = False,
+    src: pathlib.Path | None = None,
+) -> list[str]:
+    """Resolve target integration names to evaluate.
+
+    Args:
+        integration: Integration name.
+        all_marketplace: Evaluate all marketplace integrations.
+        src: Custom source folder.
+
+    Returns:
+        List of integration names.
+
+    Raises:
+        typer.Exit: If integration is not specified and neither --all nor --src is provided, or no integrations found.
+
+    """
+    if not integration and not all_marketplace and not src:
+        logger.error("Please specify an integration name, --src, or use --all.")
+        raise typer.Exit(code=1)
+
+    if integration:
+        get_integration_path(integration, src=src)
+        return [integration]
+
+    if all_marketplace or src:
+        integration_paths = get_all_integrations_paths(src=src)
+        if src and not integration_paths:
+            logger.error("No integrations found in source '%s'", src)
+            raise typer.Exit(code=1)
+        return [p.name for p in integration_paths if p.is_dir()]
+
+    return []
 
 
 @app.command(
@@ -81,28 +119,11 @@ def evaluate(  # ruff: ignore[too-many-arguments]
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
 ) -> None:
-    """Evaluate quality of generated AI descriptions for an integration.
-
-    Raises:
-        typer.Exit: If integration is not specified and --all is False, or if integration path does not exist.
-
-    """
+    """Evaluate quality of generated AI descriptions for an integration."""
     run_params: mp.core.config.RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
-    if not integration and not all_marketplace:
-        logger.error("Please specify an integration name or use --all.")
-        raise typer.Exit(code=1)
-
-    if all_marketplace:
-        integration_paths = get_all_marketplace_integrations_paths()
-        integrations_to_eval = [p.name for p in integration_paths if p.is_dir()]
-    elif integration:
-        get_integration_path(integration, src=src)
-        integrations_to_eval = [integration]
-    else:
-        integrations_to_eval = []
-
+    integrations_to_eval = _resolve_target_integrations(integration, all_marketplace=all_marketplace, src=src)
     db_target = db_path or pathlib.Path("rule_evaluations.db")
 
     if config_yaml and config_yaml.exists():

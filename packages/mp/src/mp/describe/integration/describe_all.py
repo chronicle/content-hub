@@ -19,7 +19,7 @@ from pathlib import Path
 from mp.describe.common.describe_all import MarketplaceOrchestratorBase, get_all_integrations_paths
 from mp.describe.common.utils.paths import get_integration_path
 
-from .describe import DescribeIntegration
+from .describe import MultiPromptDescribeIntegration
 
 
 async def describe_all_integrations(
@@ -27,6 +27,7 @@ async def describe_all_integrations(
     dst: Path | None = None,
     *,
     override: bool = False,
+    prompt_overrides: Path | None = None,
     integrations: list[str] | None = None,
 ) -> None:
     """Describe all integrations in the marketplace or specific ones.
@@ -35,6 +36,7 @@ async def describe_all_integrations(
         src: Optional custom source path.
         dst: Optional custom destination path.
         override: Whether to rewrite existing descriptions.
+        prompt_overrides: Path to prompt overrides configuration YAML/JSON file.
         integrations: Optional list of integration names to describe.
 
     """
@@ -44,15 +46,34 @@ async def describe_all_integrations(
     else:
         integrations_paths = get_all_integrations_paths(src=src)
 
-    orchestrator = _MarketplaceOrchestrator(src, integrations_paths, dst=dst, override=override)
+    orchestrator = _MarketplaceOrchestrator(
+        src,
+        integrations_paths,
+        dst=dst,
+        override=override,
+        prompt_overrides=prompt_overrides,
+    )
     await orchestrator.run()
 
 
 class _MarketplaceOrchestrator(MarketplaceOrchestratorBase):
-    def _create_describer(self, integration_name: str) -> DescribeIntegration:
-        return DescribeIntegration(
+    def __init__(
+        self,
+        src: Path | None,
+        integrations_paths: list[Path],
+        *,
+        dst: Path | None = None,
+        override: bool = False,
+        prompt_overrides: Path | None = None,
+    ) -> None:
+        super().__init__(src, integrations_paths, dst=dst, override=override)
+        self.prompt_overrides: Path | None = prompt_overrides
+
+    def _create_describer(self, integration_name: str) -> MultiPromptDescribeIntegration:
+        return MultiPromptDescribeIntegration(
             integration=integration_name,
             src=self.src,
             dst=self.dst,
             override=self.override,
+            prompt_overrides=self.prompt_overrides,
         )
