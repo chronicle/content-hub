@@ -23,6 +23,116 @@ from .entity_usage import EntityUsage  # ruff:ignore[typing-only-first-party-imp
 from .outcome_categories import OutcomeCategories  # ruff:ignore[typing-only-first-party-import]
 
 
+class ImpactAnalysisActionsMetadata(BaseModel):
+    volume_risk_reasoning: Annotated[
+        str,
+        Field(
+            description=(
+                "Step-by-step reasoning evaluating the scale of deployment (localized to a single target, small subset, or broad-scale across an entire fleet)."
+            ),
+        ),
+    ] = ""
+    scope_risk_reasoning: Annotated[
+        str,
+        Field(
+            description=(
+                "Step-by-step reasoning measuring the breadth of impact on the spectrum from an isolated user account/workstation "
+                "up to foundational corporate infrastructure."
+            ),
+        ),
+    ] = ""
+    friction_risk_reasoning: Annotated[
+        str,
+        Field(
+            description=(
+                "Step-by-step reasoning evaluating the extent to which mistaken execution halts standard employee productivity if it occurs as a false positive."
+            ),
+        ),
+    ] = ""
+    reversibility_risk_reasoning: Annotated[
+        str,
+        Field(
+            description=(
+                "Step-by-step reasoning evaluating the ease with which a human operator can undo an action if the agent errs. "
+                "State whether the action is fully reversible, partially reversible with manual intervention, or completely irreversible."
+            ),
+        ),
+    ] = ""
+    asset_criticality_relevance: Annotated[
+        bool,
+        Field(
+            description=(
+                "A Boolean indicator (true or false) indicating whether the action's primary purpose is read-only data enrichment/retrieval "
+                "AND its response data helps calculate the asset criticality level for assets or entities."
+            ),
+        ),
+    ] = False
+    asset_criticality_relevance_reasoning: Annotated[
+        str,
+        Field(
+            description=(
+                "Step-by-step rationale evaluating whether the action's primary purpose is data enrichment/retrieval and whether its response payload "
+                "can help calculate asset criticality. Evaluates: 1. Operation Type Check, 2. Asset or Group Identifier Presence, "
+                "3. Discovery of Pre-existing Metadata/Scope Signals, 4. Downstream Utility."
+            ),
+        ),
+    ] = ""
+    volume_risk_score: Annotated[
+        str,
+        Field(
+            description=(
+                "Score evaluating the scale of deployment (Low, Medium, or High)."
+            ),
+        ),
+    ] = ""
+    scope_risk_score: Annotated[
+        str,
+        Field(
+            description=(
+                "Score measuring the breadth of impact from isolated target up to foundational corporate infrastructure (Low, Medium, or High)."
+            ),
+        ),
+    ] = ""
+    friction_risk_score: Annotated[
+        str,
+        Field(
+            description=(
+                "Score evaluating the extent to which mistaken execution halts standard employee productivity (Low, Medium, or High)."
+            ),
+        ),
+    ] = ""
+    reversibility_risk_score: Annotated[
+        str,
+        Field(
+            description=(
+                "Score evaluating the ease with which a human operator can undo an action if the agent errs (Low, Medium, or High)."
+            ),
+        ),
+    ] = ""
+    asset_criticality_categories: Annotated[
+        list[str],
+        Field(
+            default_factory=list,
+            description=(
+                "When asset_criticality_relevance is enabled, map the operation to any of the following five classification buckets "
+                "based on the returned metadata and environmental context: 'Enrichment: Asset Risk & Reputation', "
+                "'Enrichment: Identity & Organizational Context', 'Enrichment: Organizational Network Context', "
+                "'Enrichment: Endpoint Telemetry & Vulnerability', 'Enrichment: External Network Routing'. "
+                "Multiple categories may be assigned for multi-faceted payloads. If relevance is false, return an empty array `[]`."
+            ),
+        ),
+    ]
+    asset_criticality_categories_reasoning: Annotated[
+        str,
+        Field(
+            description=(
+                "Provide a concise, single-sentence rationale justifying the selected categories based on the function logic and expected response data. "
+                "State 'Not applicable as relevance is false' if relevance is disabled."
+            ),
+        ),
+    ] = ""
+
+
 class ActionAiMetadata(BaseModel):
     ai_description: Annotated[
         str,
@@ -99,6 +209,14 @@ class ActionAiMetadata(BaseModel):
             description=(
                 "Fields that describe how the action operates. Determine these fields based on the"
                 "metadata json and the code itself."
+            ),
+        ),
+    ]
+    impact_analysis_actions_metadata: Annotated[
+        ImpactAnalysisActionsMetadata,
+        Field(
+            description=(
+                "Metadata related to impact analysis, including risk scores, reasonings, and asset criticality."
             ),
         ),
     ]
