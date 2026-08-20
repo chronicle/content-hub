@@ -308,15 +308,27 @@ def process_user_authenticated_header(headers: dict) -> dict:
 def get_authentication_results(
     headers: dict,
     siemplify: SiemplifyAction,
+    use_authentication_results_original: bool = False,
 ) -> list[dict] | None:
     """Parse the Authentication-Results header(s) into the per-message SPF,
     DKIM, DMARC, and ARC verdicts recorded by the receiving mail servers.
 
     Unlike a DNS lookup of the sender's published policy, this reflects whether
-    *this* message actually passed authentication. Returns a list of parsed
-    results (one per Authentication-Results header) or None if none are present.
+    *this* message actually passed authentication. When
+    ``use_authentication_results_original`` is set, the
+    Authentication-Results-Original header preserved by a Secure Email Gateway
+    is parsed instead, falling back to Authentication-Results when absent.
+    Returns a list of parsed results (one per header) or None if none are
+    present.
     """
-    ar_values = AuthenticationResults.collect_authentication_results(headers)
+    ar_values = []
+    if use_authentication_results_original:
+        ar_values = AuthenticationResults.collect_authentication_results(
+            headers,
+            header_name="authentication-results-original",
+        )
+    if not ar_values:
+        ar_values = AuthenticationResults.collect_authentication_results(headers)
     if not ar_values:
         return None
 
@@ -340,10 +352,12 @@ def get_authentication_results(
 
 def get_authentication_recommendations(
     authentication_results: list[dict] | None,
+    allow_multiple_authentication_results: bool = False,
 ) -> list[dict]:
     """Turn parsed Authentication-Results into pass/fail recommendation rows."""
     summary = AuthenticationResults.summarize_authentication_results(
         authentication_results,
+        allow_multiple=allow_multiple_authentication_results,
     )
 
     recommendations = []
@@ -368,6 +382,17 @@ def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
     siemplify.LOGGER.info("================= Main - Param Init =================")
+
+    use_authentication_results_original = siemplify.extract_action_param(
+        "Use Authentication-Results-Original Header",
+        input_type=bool,
+        default_value=False,
+    )
+    allow_multiple_authentication_results = siemplify.extract_action_param(
+        "Allow Multiple Authentication-Results Headers",
+        input_type=bool,
+        default_value=False,
+    )
 
     result_json = {}
     output_message = ""
@@ -433,12 +458,17 @@ def main() -> None:
             user_authenticated_header["siemplify_recommendations"],
         )
 
-        authentication_results = get_authentication_results(real_headers, siemplify)
+        authentication_results = get_authentication_results(
+            real_headers,
+            siemplify,
+            use_authentication_results_original=use_authentication_results_original,
+        )
         if authentication_results:
             result_json["authentication_results"] = authentication_results
             result_json["authentication_summary"] = (
                 AuthenticationResults.summarize_authentication_results(
                     authentication_results,
+                    allow_multiple=allow_multiple_authentication_results,
                 )
             )
             result_json["authentication_by_server"] = (
@@ -447,7 +477,12 @@ def main() -> None:
                 )
             )
             siemplify_recommendations.extend(
-                get_authentication_recommendations(authentication_results),
+                get_authentication_recommendations(
+                    authentication_results,
+                    allow_multiple_authentication_results=(
+                        allow_multiple_authentication_results
+                    ),
+                ),
             )
 
         result_json["header_analysis_result"] = siemplify_recommendations

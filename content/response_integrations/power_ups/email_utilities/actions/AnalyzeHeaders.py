@@ -23,18 +23,15 @@ denylist checks), and source-server details.
 
 from __future__ import annotations
 
-import binascii
 import datetime
 import ipaddress
 import json
 import re
-import socket
 from typing import Any
 
 import dns.resolver
 import pydnsbl
 import tldextract
-from dateutil.parser import parse
 from ipwhois import IPWhois
 from mailsuite.utils import parse_authentication_results
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
@@ -43,145 +40,6 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 from ..core import AuthenticationResults, EmailParserRouting, EmailUtilitiesManager
 from ..core.IpLocation import DbIpCity
-
-
-def ip_in_subnetwork(ip_address: str, subnetwork: str) -> bool:
-    """Returns True if the given IP address belongs to the
-    subnetwork expressed in CIDR notation, otherwise False.
-    Both parameters are strings.
-
-    Both IPv4 addresses/subnetworks (e.g. "1.1.1.1"
-    and "1.1.1.1/24") and IPv6 addresses/subnetworks (e.g.
-    "2a02:a448:ddb0::" and "2a02:a448:ddb0::/44") are accepted.
-
-    Raises:
-        ValueError: If the address and subnetwork are different IP versions.
-    """
-    (ip_integer, version1) = ip_to_integer(ip_address)
-    (ip_lower, ip_upper, version2) = subnetwork_to_ip_range(subnetwork)
-
-    if version1 != version2:
-        raise ValueError("incompatible IP versions")
-
-    return ip_lower <= ip_integer <= ip_upper
-
-
-def ip_to_integer(ip_address: str) -> tuple[int, int]:
-    """Converts an IP address expressed as a string to its
-    representation as an integer value and returns a tuple
-    (ip_integer, version), with version being the IP version
-    (either 4 or 6).
-
-    Both IPv4 addresses (e.g. "1.1.1.1") and IPv6 addresses
-    (e.g. "2a02:a448:ddb0::") are accepted.
-
-    Raises:
-        ValueError: If the string is not a valid IPv4 or IPv6 address.
-    """
-    # try parsing the IP address first as IPv4, then as IPv6
-    for version in (socket.AF_INET, socket.AF_INET6):
-        try:
-            ip_hex = socket.inet_pton(version, ip_address)
-            ip_integer = int(binascii.hexlify(ip_hex), 16)
-
-            return (ip_integer, 4 if version == socket.AF_INET else 6)
-        except OSError:
-            # not a valid address for this family; try the next one
-            pass
-
-    raise ValueError("invalid IP address")
-
-
-def subnetwork_to_ip_range(subnetwork: str) -> tuple[int, int, int]:
-    """Returns a tuple (ip_lower, ip_upper, version) containing the
-    integer values of the lower and upper IP addresses respectively
-    in a subnetwork expressed in CIDR notation (as a string), with
-    version being the subnetwork IP version (either 4 or 6).
-
-    Both IPv4 subnetworks (e.g. "1.1.1.1/24") and IPv6
-    subnetworks (e.g. "2a02:a448:ddb0::/44") are accepted.
-
-    Raises:
-        ValueError: If the string is not a valid CIDR subnetwork.
-    """
-    try:
-        fragments = subnetwork.split("/")
-        network_prefix = fragments[0]
-        netmask_len = int(fragments[1])
-
-        # try parsing the subnetwork first as IPv4, then as IPv6
-        for version in (socket.AF_INET, socket.AF_INET6):
-            ip_len = 32 if version == socket.AF_INET else 128
-
-            try:
-                suffix_mask = (1 << (ip_len - netmask_len)) - 1
-                netmask = ((1 << ip_len) - 1) - suffix_mask
-                ip_hex = socket.inet_pton(version, network_prefix)
-                ip_lower = int(binascii.hexlify(ip_hex), 16) & netmask
-                ip_upper = ip_lower + suffix_mask
-
-                return (ip_lower, ip_upper, 4 if version == socket.AF_INET else 6)
-            except (OSError, ValueError):
-                # not a valid network for this family; try the next one
-                pass
-    except (ValueError, IndexError):
-        pass
-
-    raise ValueError("invalid subnetwork")
-
-
-def date_parser(line: str) -> datetime.datetime:
-    """Parse a date out of a header line, tolerating fuzzy formats.
-
-    Args:
-        line: The header line to extract a date from.
-
-    Returns:
-        The parsed datetime.
-    """
-    try:
-        r = parse(line, fuzzy=True)
-    # if the fuzzy parser failed to parse the line due to
-    # incorrect timezone information issue #5 GitHub
-    except ValueError:
-        r = re.findall(r"^(.*?)\s*(?:\(|utc)", line, re.IGNORECASE)
-        if r:
-            r = parse(r[0])
-    return r
-
-
-def get_header_val(h: str, data: str, rex: str = "\\s*(.*?)\n\\S+:\\s") -> str | None:
-    """Extract the value of a single header from raw header text.
-
-    Args:
-        h: The header name to search for.
-        data: The raw header text to search within.
-        rex: The regex fragment matching the header's value.
-
-    Returns:
-        The matched header value, or None if not found.
-    """
-    r = re.findall(f"{h}:{rex}", data, re.VERBOSE | re.DOTALL | re.IGNORECASE)
-    if r:
-        return r[0].strip()
-    return None
-
-
-def get_auth_val(a: str, data: str, rex: str = r"(\w+)\b") -> str | None:
-    """Parse a value out of the Authentication-Results header (legacy helper).
-
-    Args:
-        a: The authentication mechanism name to search for.
-        data: The header text to search within.
-        rex: The regex fragment matching the value.
-
-    Returns:
-        The matched value, or None if not found.
-    """
-    r = re.findall(rf"{a}={rex}", data, re.VERBOSE | re.DOTALL | re.IGNORECASE)
-    if r:
-        return r[0].strip()
-    return None
 
 
 def return_domain(email: str) -> str | None:
@@ -241,42 +99,50 @@ def parse_hops(received: list[str], siemplify: SiemplifyAction) -> list[dict]:
                 denylist = {}
                 hop_info["from"] = f
                 try:
-                    ipaddress.ip_address(f)
-                    ip_check = ip_checker.check(f)
-                    # hop_info['from'] = f
-                    try:
-                        obj = IPWhois(f)
-                        hop_info["from_ip_whois"] = obj.lookup_rdap(depth=1)
-                        response = DbIpCity.get(f, api_key="free")
-                        hop_info["from_geo"] = json.loads(response.to_json())
-                    except Exception as e:
+                    # Private/reserved relay addresses can't appear on public
+                    # denylists, and querying RBL, WHOIS, and geo-IP services
+                    # about them would leak internal topology to third parties.
+                    if not ipaddress.ip_address(f).is_global:
                         siemplify.LOGGER.debug(
-                            f"WHOIS/geo enrichment failed for a from-hop IP: {e}",
+                            "Skipping RBL/WHOIS/geo enrichment for a "
+                            "non-global from-hop IP",
                         )
+                    else:
+                        ip_check = ip_checker.check(f)
+                        try:
+                            obj = IPWhois(f)
+                            hop_info["from_ip_whois"] = obj.lookup_rdap(depth=1)
+                            response = DbIpCity.get(f, api_key="free")
+                            hop_info["from_geo"] = json.loads(response.to_json())
+                        except Exception as e:
+                            siemplify.LOGGER.debug(
+                                f"WHOIS/geo enrichment failed for a from-hop IP: {e}",
+                            )
 
-                    denylist["blacklisted"] = ip_check.blacklisted
-                    denylist["detected_by"] = ip_check.detected_by.copy()
-                    denylist["categories"] = ip_check.categories.copy()
-                    hop_info["blacklist_info"].append(denylist)
+                        denylist["blacklisted"] = ip_check.blacklisted
+                        denylist["detected_by"] = ip_check.detected_by.copy()
+                        denylist["categories"] = ip_check.categories.copy()
+                        hop_info["blacklist_info"].append(denylist)
                 except ValueError:
                     try:
                         domain_check = domain_checker.check(f)
-                        resolved_ip_answer = dns.resolver.resolve(f)
-                        # for r in resolved_ip_answer:
-                        #    resolved_ip = r
-                        try:
-                            obj = IPWhois(resolved_ip_answer[0])
-                            ip_whois = obj.lookup_rdap(depth=1)
-                            response = DbIpCity.get(
-                                resolved_ip_answer[0],
-                                api_key="free",
-                            )
-                            hop_info["from_geo"] = json.loads(response.to_json())
-                            hop_info["from_ip_whois"] = ip_whois
-                        except Exception as e:
+                        resolved_ip = str(dns.resolver.resolve(f)[0])
+                        if ipaddress.ip_address(resolved_ip).is_global:
+                            try:
+                                obj = IPWhois(resolved_ip)
+                                ip_whois = obj.lookup_rdap(depth=1)
+                                response = DbIpCity.get(resolved_ip, api_key="free")
+                                hop_info["from_geo"] = json.loads(response.to_json())
+                                hop_info["from_ip_whois"] = ip_whois
+                            except Exception as e:
+                                siemplify.LOGGER.debug(
+                                    "WHOIS/geo enrichment failed for a resolved "
+                                    f"from-hop host: {e}",
+                                )
+                        else:
                             siemplify.LOGGER.debug(
-                                "WHOIS/geo enrichment failed for a resolved "
-                                f"from-hop host: {e}",
+                                "Skipping WHOIS/geo enrichment for a from-hop "
+                                "host that resolves to a non-global IP",
                             )
 
                         denylist["blacklisted"] = domain_check.blacklisted
@@ -298,30 +164,42 @@ def parse_hops(received: list[str], siemplify: SiemplifyAction) -> list[dict]:
         if "by" in parsed_route:
             hop_info["by"] = parsed_route["by"][0]
             try:
-                ipaddress.ip_address(hop_info["by"])
-
-                obj = IPWhois(hop_info["by"])
-
-                response = DbIpCity.get(hop_info["by"], api_key="free")
-                hop_info["by_geo"] = json.loads(response.to_json())
-                hop_info["by_ip_whois"] = obj.lookup_rdap(depth=1)
-
-            except Exception as e:
-                siemplify.LOGGER.debug(
-                    f"by-hop is not a direct IP or enrichment failed, trying DNS: {e}",
-                )
-                try:
-                    resolved_ip_answer = dns.resolver.resolve(hop_info["by"])
-                    resolved_ip = resolved_ip_answer[0]
+                by_ip = ipaddress.ip_address(hop_info["by"])
+            except ValueError:
+                by_ip = None
+            if by_ip is not None:
+                if by_ip.is_global:
                     try:
-                        obj = IPWhois(resolved_ip)
-                        hop_info["by_ip_whois"] = obj.lookup_rdap(depth=1)
-                        response = DbIpCity.get(resolved_ip, api_key="free")
+                        obj = IPWhois(hop_info["by"])
+                        response = DbIpCity.get(hop_info["by"], api_key="free")
                         hop_info["by_geo"] = json.loads(response.to_json())
+                        hop_info["by_ip_whois"] = obj.lookup_rdap(depth=1)
                     except Exception as e:
                         siemplify.LOGGER.debug(
-                            "WHOIS/geo enrichment failed for a resolved "
-                            f"by-hop host: {e}",
+                            f"WHOIS/geo enrichment failed for a by-hop IP: {e}",
+                        )
+                else:
+                    siemplify.LOGGER.debug(
+                        "Skipping WHOIS/geo enrichment for a non-global by-hop IP",
+                    )
+            else:
+                try:
+                    resolved_ip = str(dns.resolver.resolve(hop_info["by"])[0])
+                    if ipaddress.ip_address(resolved_ip).is_global:
+                        try:
+                            obj = IPWhois(resolved_ip)
+                            hop_info["by_ip_whois"] = obj.lookup_rdap(depth=1)
+                            response = DbIpCity.get(resolved_ip, api_key="free")
+                            hop_info["by_geo"] = json.loads(response.to_json())
+                        except Exception as e:
+                            siemplify.LOGGER.debug(
+                                "WHOIS/geo enrichment failed for a resolved "
+                                f"by-hop host: {e}",
+                            )
+                    else:
+                        siemplify.LOGGER.debug(
+                            "Skipping WHOIS/geo enrichment for a by-hop host "
+                            "that resolves to a non-global IP",
                         )
                 except Exception as e:
                     siemplify.LOGGER.debug(
@@ -363,7 +241,12 @@ def coalesce(input_dict: dict, *arg: str) -> Any:
     return None
 
 
-def build_result(header: dict, siemplify: SiemplifyAction) -> dict:
+def build_result(
+    header: dict,
+    siemplify: SiemplifyAction,
+    use_authentication_results_original: bool = False,
+    allow_multiple_authentication_results: bool = False,
+) -> dict:
     """Assemble the full analysis result for a set of email headers.
 
     Args:
@@ -386,14 +269,10 @@ def build_result(header: dict, siemplify: SiemplifyAction) -> dict:
     ext = tldextract.extract(result["FromDomain"])
 
     result["FromParentDomain"] = f"{ext.domain}.{ext.suffix}"
+    # MFromDomain is the RFC 5321 MAIL FROM (envelope) domain, taken from the
+    # Return-Path header the final receiver writes from the envelope; when that
+    # header is absent it falls back to the RFC 5322 From domain.
     result["MFromDomain"] = return_domain(coalesce(header, "return-path", "from"))
-    try:
-        dmarc_sig = coalesce(header, "authentication-results")
-        res = re.search(r"header.i=@(.*?)\s", dmarc_sig)
-        if res:
-            result["DmarcDomain"] = res.group(1)
-    except Exception as e:
-        siemplify.LOGGER.debug(f"Could not derive DmarcDomain from headers: {e}")
 
     try:
         received_spf = header.get("received-spf")[0]
@@ -407,7 +286,18 @@ def build_result(header: dict, siemplify: SiemplifyAction) -> dict:
     # whether the email passed authentication, rather than looking up the From
     # domain's published policy (which only describes what the domain enforces,
     # not whether this particular message passed it).
-    auth_results = AuthenticationResults.collect_authentication_results(header)
+    # A Secure Email Gateway may preserve the internet-boundary results in an
+    # Authentication-Results-Original header before stamping its own; prefer it
+    # when the user opted in, falling back to Authentication-Results when the
+    # message doesn't carry one.
+    auth_results = []
+    if use_authentication_results_original:
+        auth_results = AuthenticationResults.collect_authentication_results(
+            header,
+            header_name="authentication-results-original",
+        )
+    if not auth_results:
+        auth_results = AuthenticationResults.collect_authentication_results(header)
     if auth_results:
         try:
             result["AuthenticationResults"] = parse_authentication_results(
@@ -426,6 +316,7 @@ def build_result(header: dict, siemplify: SiemplifyAction) -> dict:
     result["AuthenticationSummary"] = (
         AuthenticationResults.summarize_authentication_results(
             result["AuthenticationResults"],
+            allow_multiple=allow_multiple_authentication_results,
         )
     )
     result["AuthenticationByServer"] = (
@@ -434,14 +325,57 @@ def build_result(header: dict, siemplify: SiemplifyAction) -> dict:
         )
     )
 
+    # DMARC evaluates the RFC 5322 From domain, which the receiver records as
+    # the dmarc method's header.from property (RFC 8601). The dkim method's
+    # header.i property is a different identity (the AUID) and only matches the
+    # DMARC domain when DKIM happens to be aligned, so it must not be used here.
+    dmarc_domain = AuthenticationResults.get_dmarc_from_domain(
+        result["AuthenticationResults"],
+    )
+    if dmarc_domain is None:
+        try:
+            res = re.search(
+                r"header\.from=([^\s;]+)",
+                " ".join(str(value) for value in auth_results),
+            )
+            if res:
+                dmarc_domain = res.group(1)
+        except Exception as e:
+            siemplify.LOGGER.debug(f"Could not derive DmarcDomain from headers: {e}")
+    if dmarc_domain:
+        result["DmarcDomain"] = dmarc_domain
+
+    # The spf method's smtp.mailfrom property is authoritative for the domain
+    # SPF evaluated; the Received-SPF comment scraped above is free-form,
+    # provider-specific text kept only as a fallback.
+    spf_domain = AuthenticationResults.get_spf_mail_from_domain(
+        result["AuthenticationResults"],
+    )
+    if spf_domain:
+        result["SPFDomain"] = spf_domain
+
     dkim = EmailUtilitiesManager.DKIM(logger=siemplify.LOGGER, headers=header)
     arc = EmailUtilitiesManager.ARC(logger=siemplify.LOGGER, headers=header)
 
-    try:
-        result["DKIMVerify"] = dkim.verify()
-    except Exception as e:
+    # A message may carry several DKIM signatures (an ESP's and the brand's,
+    # for example), so every signature is tried: DKIMVerify is True when any
+    # of them verifies, and "error" only when every attempt raised.
+    dkim_signatures = AuthenticationResults.collect_authentication_results(
+        header,
+        header_name="dkim-signature",
+    )
+    dkim_results = []
+    dkim_errors = []
+    for idx in range(max(1, len(dkim_signatures))):
+        try:
+            dkim_results.append(dkim.verify(idx=idx))
+        except Exception as e:
+            dkim_errors.append(str(e))
+    if dkim_results:
+        result["DKIMVerify"] = any(dkim_results)
+    else:
         result["DKIMVerify"] = "error"
-        result["DKIMVerificationError"] = str(e)
+        result["DKIMVerificationError"] = "; ".join(dkim_errors)
 
     arc_res = {}
     try:
@@ -456,41 +390,34 @@ def build_result(header: dict, siemplify: SiemplifyAction) -> dict:
 
     try:
         result["RelayInfo"] = parse_hops(header["received"], siemplify)
+        # Received headers are prepended by each hop, so walking the reversed
+        # list visits the path oldest-first; the first hop with a "by" host is
+        # the origin-side server that first received the message, which is what
+        # SourceServer reports.
         for fromserver_str in reversed(header["received"]):
-            if "by" in fromserver_str:
-                fromserver = EmailParserRouting.parserouting(fromserver_str)
+            if "by" not in fromserver_str:
+                continue
+            fromserver = EmailParserRouting.parserouting(fromserver_str)
+            if "by" not in fromserver:
+                continue
+            by_host = fromserver["by"][0]
+            result["SourceServer"] = by_host
+            try:
+                ipaddress.ip_address(by_host)
+                result["SourceServerIP"] = by_host
+            except ValueError:
                 try:
-                    if "by" in fromserver:
-                        ipaddress.ip_address(fromserver["by"][0])
-                        result["SourceServerIP"] = fromserver["by"][0]
-                        result["SourceServer"] = fromserver["by"][0]
+                    result["SourceServerIP"] = EmailUtilitiesManager.Resolver().query(
+                        by_host,
+                        query_type="A",
+                    )[0][2]
                 except Exception as e:
                     siemplify.LOGGER.debug(
-                        f"Source server is not a direct IP, resolving by name: {e}",
+                        f"Could not resolve source server IP: {e}",
                     )
-                    if "by" in fromserver:
-                        result["SourceServer"] = fromserver["by"][0]
-                        try:
-                            result["SourceServerIP"] = (
-                                EmailUtilitiesManager.Resolver().query(
-                                    result["SourceServer"],
-                                )[0][2]
-                            )
-                        except Exception as e:
-                            siemplify.LOGGER.debug(
-                                f"Could not resolve source server IP: {e}",
-                            )
-                continue
+            break
     except Exception as e:
         siemplify.LOGGER.warn(f"Failed to build relay/source-server info: {e}")
-
-    try:
-        result["StrongSPF"] = EmailUtilitiesManager.SpfRecord.from_domain(
-            result["FromDomain"],
-        ).is_record_strong()
-    except Exception as e:
-        result["StrongSPF"] = False
-        siemplify.LOGGER.debug(f"Could not evaluate StrongSPF: {e}")
 
     return result
 
@@ -503,6 +430,16 @@ def main(siemplify: SiemplifyAction) -> None:
         default_value="{}",
         print_value=False,
     )
+    use_authentication_results_original = siemplify.extract_action_param(
+        "Use Authentication-Results-Original Header",
+        input_type=bool,
+        default_value=False,
+    )
+    allow_multiple_authentication_results = siemplify.extract_action_param(
+        "Allow Multiple Authentication-Results Headers",
+        input_type=bool,
+        default_value=False,
+    )
 
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
     output_message = (
@@ -513,7 +450,12 @@ def main(siemplify: SiemplifyAction) -> None:
     )
     h = json.loads(headers_json)
 
-    headers_res = build_result(h, siemplify)
+    headers_res = build_result(
+        h,
+        siemplify,
+        use_authentication_results_original=use_authentication_results_original,
+        allow_multiple_authentication_results=allow_multiple_authentication_results,
+    )
     # print(json.dumps(headers_res, indent=4, sort_keys=True, default=str))
     siemplify.result.add_result_json(headers_res)
     siemplify.result.add_json("Headers", headers_res)
