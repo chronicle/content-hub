@@ -118,4 +118,3 @@ def get_integration_parameters(chronicle_soar: ChronicleSOAR) -> IntegrationPara
     )
 
     return integration_params
-
