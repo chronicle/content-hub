@@ -16,15 +16,18 @@ from __future__ import annotations
 
 import copy
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 import pytest
 
 from wiz.core import constants
+from wiz.core.auth_manager import SessionAuthenticationParameters, _generate_token, get_auth_url
 from wiz.core.exceptions import InvalidCredsError, IssueNotFoundError
 
 from . import common
 
 if TYPE_CHECKING:
+
     from tests.core.product import Wiz
     from tests.core.session import WizSession
 
@@ -275,3 +278,82 @@ class TestApiManager:
         assert len(script_session.request_history) == 1
         assert script_session.request_history[0].response.status_code == 200
         assert script_session.request_history[0].response.json() == common.RESOLVE_ISSUE
+
+
+class TestAuthManager:
+    """Unit tests for AuthManager functions."""
+
+    @pytest.mark.parametrize(
+        ("auth_url_input", "expected_auth_url"),
+        [
+            ("https://auth.app.wiz.io", "https://auth.app.wiz.io/oauth/token"),
+            ("https://auth.app.wiz.io/", "https://auth.app.wiz.io/oauth/token"),
+            ("https://auth.app.wiz.us", "https://auth.app.wiz.us/oauth/token"),
+            ("https://auth.app.wiz.us/oauth/token", "https://auth.app.wiz.us/oauth/token"),
+            ("https://auth.gov.wiz.io", "https://auth.gov.wiz.io/oauth/token"),
+            ("https://auth.eu1.app.wiz.io", "https://auth.eu1.app.wiz.io/oauth/token"),
+            ("", "https://auth.app.wiz.io/oauth/token"),
+            (None, "https://auth.app.wiz.io/oauth/token"),
+        ],
+    )
+    def test_get_auth_url(self, auth_url_input: str | None, expected_auth_url: str) -> None:
+        """Test get_auth_url resolves the correct token URL based on the input."""
+        assert get_auth_url(auth_url_input) == expected_auth_url
+
+    def test_generate_token_gov(self) -> None:
+        """Test _generate_token calls the Gov auth URL when a Gov Auth URL is configured."""
+        mock_session = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"access_token": "gov_test_token"}
+        mock_session.post.return_value = mock_response
+
+        params = SessionAuthenticationParameters(
+            api_root="https://api.us1.app.wiz.us",
+            client_id="test_client_id",
+            client_secret="test_client_secret",  # noqa: S106
+            verify_ssl=True,
+            auth_url="https://auth.app.wiz.us",
+        )
+
+        token = _generate_token(session=mock_session, session_parameters=params)
+
+        assert token == "gov_test_token"  # noqa: S105
+        mock_session.post.assert_called_once_with(
+            "https://auth.app.wiz.us/oauth/token",
+            data={
+                "client_id": "test_client_id",
+                "client_secret": "test_client_secret",
+                "audience": "wiz-api",
+                "grant_type": "client_credentials",
+            },
+        )
+
+    def test_generate_token_commercial(self) -> None:
+        """Test _generate_token calls the Commercial auth URL by default."""
+        mock_session = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"access_token": "comm_test_token"}
+        mock_session.post.return_value = mock_response
+
+        params = SessionAuthenticationParameters(
+            api_root="https://api.us100.app.wiz.io",
+            client_id="test_client_id",
+            client_secret="test_client_secret",  # noqa: S106
+            verify_ssl=True,
+            auth_url="https://auth.app.wiz.io",
+        )
+
+        token = _generate_token(session=mock_session, session_parameters=params)
+
+        assert token == "comm_test_token"  # noqa: S105
+        mock_session.post.assert_called_once_with(
+            "https://auth.app.wiz.io/oauth/token",
+            data={
+                "client_id": "test_client_id",
+                "client_secret": "test_client_secret",
+                "audience": "wiz-api",
+                "grant_type": "client_credentials",
+            },
+        )

@@ -42,9 +42,12 @@ ENDPOINTS: Mapping[str, str] = {
     "graphql": "/graphql",
 }
 
-AUTH_URL: str = "https://auth.app.wiz.io/oauth/token"
+DEFAULT_AUTH_URL: str = "https://auth.app.wiz.io"
+AUTH_TOKEN_ENDPOINT: str = "/oauth/token"  # noqa: S105
+AUTH_URL: str = f"{DEFAULT_AUTH_URL}{AUTH_TOKEN_ENDPOINT}"
 
 STATUS_REJECTED: str = "REJECTED"
+
 STATUS_REOPEN: str = "OPEN"
 STATUS_RESOLVED: str = "RESOLVED"
 DEFAULT_IGNORE_ISSUE_RESOLUTION_REASON: str = "False Positive"
