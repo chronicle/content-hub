@@ -39,7 +39,7 @@ class MockParams:
         self.credential_mapping = "{}"
         self.api_root = "https://mock-pam"
         self.username = "user"
-        self.password = "pass"  # ruff:ignore[hardcoded-password-string]
+        self.password = "pass"  # noqa: S105
         self.verify_ssl = False
         self.ca_certificate = None
         self.client_certificate = None
@@ -630,11 +630,11 @@ class TestInitCyberArkPamClient:
         job = _make_job()
         job.params.api_root = "https://job-pam-url"
         job.params.username = "job_user"
-        job.params.password = "job_pass"  # ruff:ignore[hardcoded-password-string]
+        job.params.password = "job_pass"  # noqa: S105
         job.params.verify_ssl = True
         job.params.ca_certificate = "job_ca"
         job.params.client_certificate = "job_cert"
-        job.params.client_certificate_passphrase = "job_cert_pass"  # ruff:ignore[hardcoded-password-string]
+        job.params.client_certificate_passphrase = "job_cert_pass"  # noqa: S105
 
         with (
             patch("cyber_ark_pam.jobs.sync_integration_credential_job.CyberArkPamManager") as mock_manager_cls,
@@ -648,12 +648,12 @@ class TestInitCyberArkPamClient:
             mock_manager_cls.assert_called_once_with(
                 api_root="https://job-pam-url",
                 username="job_user",
-                password="job_pass",  # ruff:ignore[hardcoded-password-func-arg]
+                password="job_pass",  # noqa: S106
                 logger=ANY,
                 verify_ssl=True,
                 ca_certificate="job_ca",
                 client_certificate="job_cert",
-                client_certificate_passphrase="job_cert_pass",  # ruff:ignore[hardcoded-password-func-arg]
+                client_certificate_passphrase="job_cert_pass",  # noqa: S106
             )
 
     @pytest.mark.anyio
@@ -672,11 +672,11 @@ class TestInitCyberArkPamClient:
         fallback_params = IntegrationParameters(
             api_root="https://integration-pam-url",
             username="integration_user",
-            password="integration_pass",  # ruff:ignore[hardcoded-password-func-arg]
+            password="integration_pass",  # noqa: S106
             verify_ssl=False,
             ca_certificate="integration_ca",
             client_certificate="integration_cert",
-            client_certificate_passphrase="integration_cert_pass",  # ruff:ignore[hardcoded-password-func-arg]
+            client_certificate_passphrase="integration_cert_pass",  # noqa: S106
         )
 
         with (
@@ -692,10 +692,10 @@ class TestInitCyberArkPamClient:
             mock_manager_cls.assert_called_once_with(
                 api_root="https://integration-pam-url",
                 username="integration_user",
-                password="integration_pass",  # ruff:ignore[hardcoded-password-func-arg]
+                password="integration_pass",  # noqa: S106
                 logger=ANY,
                 verify_ssl=False,
                 ca_certificate="integration_ca",
                 client_certificate="integration_cert",
-                client_certificate_passphrase="integration_cert_pass",  # ruff:ignore[hardcoded-password-func-arg]
+                client_certificate_passphrase="integration_cert_pass",  # noqa: S106
             )

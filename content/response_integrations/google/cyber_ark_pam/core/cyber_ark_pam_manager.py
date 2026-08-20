@@ -15,7 +15,7 @@
 # ============================= IMPORTS ===================================== #
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import requests
 
@@ -33,13 +33,13 @@ if TYPE_CHECKING:
 class CyberArkPamManager:
     """CyberArk PAM Manager."""
 
-    def __init__(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         api_root: str,
         username: str,
         password: str,
         logger: ScriptLogger | None = None,
-        verify_ssl: bool = False,  # ruff:ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument]
+        verify_ssl: bool = False,  # noqa: FBT001, FBT002
         ca_certificate: str | None = None,
         client_certificate: str | None = None,
         client_certificate_passphrase: str | None = None,
@@ -87,7 +87,7 @@ class CyberArkPamManager:
         if "Authorization" not in self.session.headers:
             self.test_connectivity()
 
-    def list_accounts(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
+    def list_accounts(  # noqa: PLR0913, PLR0917
         self,
         search_query: str | None,
         search_operator: str | None,
