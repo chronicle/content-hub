@@ -50,7 +50,6 @@ OUTCOME_CATEGORIES_VALIDATION = """
 ENTITY_USAGE_VALIDATION = """
 1. Did the AI correctly identify whether the action processes platform target entities (via siemplify.target_entities, input parameters representing entities, SOAR SDK helper methods, or dynamic case alert entity collections such as siemplify.case.alerts / alert.entities)?
    (Note: Accessing alert.entities[0] solely to retrieve alert-level data like SourceFileContent—without any other entity filtering, enrichment, or iteration—does NOT count as entity processing and all entity types must be False.)
-   (Note: Standalone utility or connection parameters, such as a URL in SSL certificate check actions or a hostname in ping actions, do NOT count as entity processing unless the action actually interacts with, updates, or enriches SOAR platform entities.)
 2. If the Python script does not process entities from the platform, are ALL entity type flags correctly set to False?
 3. For every specific entity type flagged as True (e.g., address), is that entity type validly targeted through at least one of the following mechanisms?
     - Explicit Code Filter: The Python code explicitly contains a programmatic conditional check or filter targeting that specific type (e.g., entity.entity_type == EntityTypes.<ENTITY_TYPE_NAME> or checking against a set/list of supported types).

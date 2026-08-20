@@ -1,336 +1,117 @@
 **Input Data:**
-I have provided the following files for a Google SecOps action:
+I have provided the following files for a Google SecOps SOAR action:
 
 1. `Script Code`: The Python logic.
 2. `Script Settings`: The JSON metadata containing parameters and simulation data. Important: Integration-level parameters are provided within this JSON solely for background context.
+3. `Manager Code`: The core Python manager class or API client files wrapping external service interactions.
 
-**Reference Documentation:**
+**Objective:**
+Classify the provided Google SecOps SOAR action into the **Entity Usage** (`entity_usage`) model by determining targeted entity types (35 types), identifying entity filtering attributes (13 flags), and constructing a rigorous, step-by-step reasoning string grounded in physical code evidence.
 
-* **SOAR SDK:** https://github.com/chronicle/soar-sdk/tree/main/src/soar_sdk
-* **TIPCommon:** https://github.com/chronicle/content-hub/tree/main/packages/tipcommon/TIPCommon
-* **EnvironmentCommon**:
-  https://github.com/chronicle/content-hub/tree/main/packages/envcommon/EnvironmentCommon
-* **Case Manipulation**:
-  https://docs.cloud.google.com/chronicle/docs/soar/reference/case-manipulation
-* **TIPCommon**:
-  https://docs.cloud.google.com/chronicle/docs/soar/marketplace-integrations/tipcommon
-* **Integrations:** https://docs.cloud.google.com/chronicle/docs/soar/marketplace-integrations
-* **SOAR SDK Docs:**
-    * https://docs.cloud.google.com/chronicle/docs/soar/reference/custom-lists
-    * https://docs.cloud.google.com/chronicle/docs/soar/reference/integration-configuration-script-parameters
-    * https://docs.cloud.google.com/chronicle/docs/soar/reference/siemplify-action-module
-    * https://docs.cloud.google.com/chronicle/docs/soar/reference/siemplify-connectors-module
-    * https://docs.cloud.google.com/chronicle/docs/soar/reference/siemplify-data-model-module
-    * https://docs.cloud.google.com/chronicle/docs/soar/reference/siemplify-job-module
-    * https://docs.cloud.google.com/chronicle/docs/soar/reference/siemplify-module
-    * https://docs.cloud.google.com/chronicle/docs/soar/reference/script-result-module
+---
 
-**Instructions:**
+### Mandatory Evaluation Rules & Classification Taxonomy
 
-1. **Extract Entity Scopes:** Analyze how the action uses target entities. You MUST write out your step-by-step reasoning in the `reasoning` field of the `entity_usage` object before setting boolean flags:
-    * **Presence of Entities**: An action "runs on entities" if it satisfies at least one of the following criteria:
-        - It iterates over or references `target_entities` within the Python script.
-        - It accepts or processes entity identifiers via input parameters (e.g., $all_entity_param_examples).
-          CRITICAL: If an action accepts an input parameter representing an entity, set the corresponding entity type flag to `true`.
-        - It calls SOAR SDK helper methods that internally iterate over or mutate alert entities (e.g., `siemplify.add_alert_entities_to_custom_list()`, `siemplify.remove_alert_entities_from_custom_list()`, and `siemplify.any_alert_entities_in_custom_list()`).
-        - It dynamically resolves entities across case alerts by accessing alert collections (e.g., `siemplify.case.alerts`) and extracting entity attributes (`alert.entities`), either directly or through integration core helper functions.
-          CRITICAL: If `alert.entities[0]` (or `siemplify.current_alert.entities[0]`) is accessed solely as a platform storage vehicle to retrieve alert-level properties (e.g., `additional_properties["SourceFileContent"]`) without any subsequent entity filtering, enrichment, or iteration, do NOT classify the action as running on entities (set all entity type flags to `false`). However, if the action also iterates over, filters, or updates target entities, evaluate those entity operations independently.
-    * **Specific Types & Parameter Mapping**: If an action restricts execution to specific entity types, set boolean flags to `true` exclusively for the targeted types based on code filters (e.g., `if entity.entity_type == EntityTypes.<ENTITY_TYPE_NAME>`) or entity input parameters:
+1. **Entity Interaction & Presence Criteria**:
+   An action "runs on entities" if it satisfies at least one of the following criteria:
+   - **Platform Target Entities**: Iterates over or references `siemplify.target_entities` within the Python script.
+   - **Entity Input Parameters**: Accepts or processes entity identifiers via input parameters (e.g., `Address`, `Host Name`, `User`, `URL`, `File Hash`). Accepting an entity input parameter directly activates its corresponding entity type flag as `true` (see Rule 3).
+   - **SDK Helper Methods**: Calls SOAR SDK helper methods that internally iterate over or mutate alert entities (e.g., `siemplify.add_alert_entities_to_custom_list()`, `siemplify.remove_alert_entities_from_custom_list()`, and `siemplify.any_alert_entities_in_custom_list()`).
+   - **Dynamic Case/Alert Aggregation**: Dynamically resolves entities across case alerts by accessing alert collections (e.g., `siemplify.case.alerts`) and extracting entity attributes (`alert.entities`), either directly or through core helper functions.
+
+2. **Alert Storage Vehicle Negative Constraint**:
+   If `alert.entities[0]` (or `siemplify.current_alert.entities[0]`) is accessed solely as a platform storage vehicle to retrieve alert-level properties (e.g., `additional_properties["SourceFileContent"]`) without any subsequent entity filtering, enrichment, or iteration, do NOT classify the action as running on entities (set all 35 entity type flags and all 13 filter flags to `false`).
+   *Exception*: If the action also iterates over, filters, or updates target entities, evaluate those entity operations independently.
+
+3. **Entity Type Scope Determination & Parameter Mapping**:
+   - **Type-Filtered Scope**: If an action restricts execution to specific entity types (via code filters like `if entity.entity_type == EntityTypes.<NAME>` or entity input parameters), set boolean flags to `true` exclusively for the targeted types.
+   - **Unfiltered (Global) Scope**: If an action processes entities globally without type-based filtering - either by iterating over `target_entities` (directly or via SDK helper methods) or by dynamically aggregating entities across case alerts (`siemplify.case.alerts` / `alert.entities`) - it runs on all supported entity types; set all 35 `entity_types` flags to `true`.
+   - **Exclusion Logic vs. Type Filtering**: Negative conditional checks (e.g., `if entity.additional_properties.get("Type") != "<NAME>"`) are exclusion filters used to omit specific entities (`<entity>: false`). They do NOT restrict scope to specific types. If an action processes `target_entities` using an exclusion filter, ensure the excluded entity type flag is set to `false`.
+   - **Generic Entity (`generic`)**: `generic` (GenericEntity) is a standalone type. Do not use it as a fallback for "all types"; only set it to `true` if explicitly filtered for, or if all flags are `true` (global scope).
+   - **Parameter-to-Entity Mapping Rules**: When an action processes entities via input parameters, map parameter names to entity types according to:
 $entity_type_mapping_rules
-    * **Exclusion Logic vs. Type Filtering**: Negative conditional checks (e.g., `if entity.additional_properties.get("Type") != "<ENTITY_TYPE_NAME>"`) are exclusion filters used to omit specific entities (`<entity>: false`). They do NOT restrict scope to specific types. If an action processes `target_entities` using an exclusion filter, make sure the excluded entity type flag is set to `false`.
-    * **Unfiltered (Global) Scope**: If an action processes entities globally without type-based filtering—either by iterating over `target_entities` (directly or via SDK helper methods) or by dynamically aggregating entities across case alerts (`siemplify.case.alerts` / `alert.entities`) - it runs on all supported entity types; set all flags to `true`.
-    * **Generic Type**: `generic` (GenericEntity) is a standalone type. Do not use it as a fallback for "all types"; only set it to true if explicitly filtered for, or if all flags are true.
-    * **Filter Properties**: Populate boolean flags for how target entities are filtered:
-        * `filters_by_identifier`: Set to `true` ONLY if the code actively filters or matches platform `siemplify.target_entities` by identifier. Do NOT set to `true` if entity parameters are used solely for entity creation or case alert duplicate checks.
-        * `filters_by_creation_time` / `filters_by_modification_time`: filters by timestamp.
-        * `filters_by_additional_properties`: filters by entity's `additional_properties` dictionary.
-        * `filters_by_case_identifier` / `filters_by_alert_identifier`: filters by parent case/alert ID.
-        * `filters_by_entity_type` / `filters_by_is_internal` / `filters_by_is_suspicious` / `filters_by_is_artifact` / `filters_by_is_vulnerable` / `filters_by_is_enriched` / `filters_by_is_pivot`: filters by the corresponding attribute of the entity.
-2. **Strict Classification**:
-    * Only set boolean flags to `true` under `entity_usage` if supported by the script's actual execution model (either through explicit type filtering/mapping OR through unfiltered global/dynamic scope). Do not set flags to `true` based on potential capability, generic placeholder functions, or print logs.
 
-**Golden Dataset (Few-Shot Examples):**
+4. **Entity Filtering Attributes Classification (13 Flags)**:
+   Populate boolean flags for how target entities are filtered:
+   - `filters_by_identifier`: Set to `true` ONLY if the code actively filters or matches platform `siemplify.target_entities` by identifier. Do NOT set to `true` if entity parameters are used solely for entity creation or case alert duplicate checks.
+   - `filters_by_creation_time` / `filters_by_modification_time`: filters entities by timestamp.
+   - `filters_by_additional_properties`: filters entities by `additional_properties` dictionary keys/values.
+   - `filters_by_case_identifier` / `filters_by_alert_identifier`: filters entities by parent case/alert ID.
+   - `filters_by_entity_type`: filters entities by the `entity_type` attribute.
+   - `filters_by_is_internal`: filters entities by the `is_internal` attribute.
+   - `filters_by_is_suspicious`: filters entities by the `is_suspicious` attribute.
+   - `filters_by_is_artifact`: filters entities by the `is_artifact` attribute.
+   - `filters_by_is_vulnerable`: filters entities by the `is_vulnerable` attribute.
+   - `filters_by_is_enriched`: filters entities by the `is_enriched` attribute.
+   - `filters_by_is_pivot`: filters entities by the `is_pivot` attribute.
 
-***Example 1: Enrichment Action***
+5. **Physical Code Traceability & Strict Classification**:
+   Only set boolean flags to `true` under `entity_usage` if supported by the script's actual execution model (either through explicit type filtering/mapping OR through unfiltered global/dynamic scope). Do not set flags to `true` based on potential capability, generic placeholder functions, or print logs.
 
+6. **Reasoning Requirement with Literal Citations**:
+   You MUST provide step-by-step reasoning in the `reasoning` field quoting literal code constructs and parameter names. Explicitly state the entity interaction mechanism, the targeted entity types, and which filtering conditions are met or not met before setting the boolean flags.
+
+---
+
+### Generic Archetype Examples (Compact Format)
+
+#### Example 1: Code-Filtered Enrichment Action
 *Input Snippet (Python):*
-
 ```python
 suitable_entities = [
-    entity
-    for entity in siemplify.target_entities
+    entity for entity in siemplify.target_entities
     if entity.entity_type == EntityTypes.ADDRESS and entity.is_internal
 ]
 for entity in suitable_entities:
-    manager = VirusTotalManager(api_key=api_key)
-    ip_data = manager.get_ip_data(ip=entity.identifier)
-    if ip_data.threshold > 5:
-        entity.is_suspicious = True
-    siemplify.update_entities([entity])
-    siemplify.add_entity_insight(entity, ip_data.to_insight())
+    manager.enrich_ip(ip=entity.identifier)
 ```
-
-*Input Snippet (JSON):*
-
-```json
-{
-  "Description": "Enrich IP using VirusTotal.",
-  "SimulationDataJson": "{\"Entities\": [\"ADDRESS\"]}"
-}
-```
-
 *Expected Output:*
-
 ```json
 {
   "entity_usage": {
-    "reasoning": "The code iterates over `siemplify.target_entities` and filters using `entity.entity_type == EntityTypes.ADDRESS and entity.is_internal`. This means it targets ADDRESS entities, filtering by entity_type and is_internal.",
+    "reasoning": "The action iterates over `siemplify.target_entities`. Filters explicitly using `entity.entity_type == EntityTypes.ADDRESS`, targeting only ADDRESS entities. Evaluates `entity_type` and `is_internal`. All other filter flags are false.",
     "entity_types": {
-      "address": true,
-      "alert": false,
-      "application": false,
-      "child_hash": false,
-      "child_process": false,
-      "cluster": false,
-      "container": false,
-      "credit_card": false,
-      "cve": false,
-      "cve_id": false,
-      "database": false,
-      "deployment": false,
-      "destination_domain": false,
-      "domain": false,
-      "email_message": false,
-      "event": false,
-      "file_hash": false,
-      "file_name": false,
-      "generic": false,
-      "host_name": false,
-      "ip_set": false,
-      "mac_address": false,
-      "parent_hash": false,
-      "parent_process": false,
-      "phone_number": false,
-      "pod": false,
-      "process": false,
-      "service": false,
-      "source_domain": false,
-      "threat_actor": false,
-      "threat_campaign": false,
-      "threat_signature": false,
-      "url": false,
-      "usb": false,
-      "user": false
+      "address": true
     },
-    "filters_by_identifier": false,
-    "filters_by_creation_time": false,
-    "filters_by_modification_time": false,
-    "filters_by_additional_properties": false,
-    "filters_by_case_identifier": false,
-    "filters_by_alert_identifier": false,
     "filters_by_entity_type": true,
-    "filters_by_is_internal": true,
-    "filters_by_is_suspicious": false,
-    "filters_by_is_artifact": false,
-    "filters_by_is_vulnerable": false,
-    "filters_by_is_enriched": false,
-    "filters_by_is_pivot": false
+    "filters_by_is_internal": true
   }
 }
 ```
 
-***Example 2: Containment Action***
-
-*Input Snippet (Python):*
-
+#### Example 2: Parameter-Based Entity Action
+*Input Snippet (Python & Settings):*
 ```python
-entity = next((e for e in entities if e.entity_type == "ADDRESS"), None)
-if entity is None:
-    raise ValueError
-
-firewall = FirewallManager(api_key=api_key)
-# this performs a POST to the firewall to add the IP to a blocklist
-result = firewall.block_ip(ip=entity.identifier, reason="SOAR Automated Block")
-if result['success']:
-    siemplify.result.add_result_json(result)
+url_to_scan = siemplify.extract_action_param(param_name="URL", is_mandatory=True)
+manager.scan_url(url=url_to_scan)
 ```
-
-*Input Snippet (JSON):*
-
-```json
-{
-  "Description": "Blocks an IP address on the perimeter firewall.",
-  "SimulationDataJson": "{\"Entities\": [\"ADDRESS\"]}"
-}
-```
-
 *Expected Output:*
-
 ```json
 {
   "entity_usage": {
-    "reasoning": "The code processes `entities` looking for `e.entity_type == \"ADDRESS\"`, filtering strictly by entity_type.",
+    "reasoning": "The action receives an entity identifier via the 'URL' input parameter rather than iterating over platform target entities. The 'URL' parameter maps directly to the URL entity type (`DestinationURL`). No platform entity attributes or target entity collections are filtered.",
     "entity_types": {
-      "address": true,
-      "alert": false,
-      "application": false,
-      "child_hash": false,
-      "child_process": false,
-      "cluster": false,
-      "container": false,
-      "credit_card": false,
-      "cve": false,
-      "cve_id": false,
-      "database": false,
-      "deployment": false,
-      "destination_domain": false,
-      "domain": false,
-      "email_message": false,
-      "event": false,
-      "file_hash": false,
-      "file_name": false,
-      "generic": false,
-      "host_name": false,
-      "ip_set": false,
-      "mac_address": false,
-      "parent_hash": false,
-      "parent_process": false,
-      "phone_number": false,
-      "pod": false,
-      "process": false,
-      "service": false,
-      "source_domain": false,
-      "threat_actor": false,
-      "threat_campaign": false,
-      "threat_signature": false,
-      "url": false,
-      "usb": false,
-      "user": false
-    },
-    "filters_by_identifier": false,
-    "filters_by_creation_time": false,
-    "filters_by_modification_time": false,
-    "filters_by_additional_properties": false,
-    "filters_by_case_identifier": false,
-    "filters_by_alert_identifier": false,
-    "filters_by_entity_type": true,
-    "filters_by_is_internal": false,
-    "filters_by_is_suspicious": false,
-    "filters_by_is_artifact": false,
-    "filters_by_is_vulnerable": false,
-    "filters_by_is_enriched": false,
-    "filters_by_is_pivot": false
+      "url": true
+    }
   }
 }
 ```
 
-***Example 3: Action that uses no entities***
-
+#### Example 3: Unfiltered (Global) Scope Action
 *Input Snippet (Python):*
-
 ```python
-ticket_manager = TicketMAnager(api_key=api_key)
-# this performs a POST to the ticket service to open a new ticket
-results = ticket_manager.create_ticket(title, description)
-```
-
-*Input Snippet (JSON):*
-
-```json
-{
-  "Description": "Opens a new ticket in the ticket service.",
-  "SimulationDataJson": "{\"Entities\": []}"
-}
-```
-
-*Expected Output:*
-
-```json
-{
-  "entity_usage": {
-    "reasoning": "The action works on other data sources without referencing specific entities, so all flags must be false.",
-    "entity_types": {
-      "address": false,
-      "alert": false,
-      "application": false,
-      "child_hash": false,
-      "child_process": false,
-      "cluster": false,
-      "container": false,
-      "credit_card": false,
-      "cve": false,
-      "cve_id": false,
-      "database": false,
-      "deployment": false,
-      "destination_domain": false,
-      "domain": false,
-      "email_message": false,
-      "event": false,
-      "file_hash": false,
-      "file_name": false,
-      "generic": false,
-      "host_name": false,
-      "ip_set": false,
-      "mac_address": false,
-      "parent_hash": false,
-      "parent_process": false,
-      "phone_number": false,
-      "pod": false,
-      "process": false,
-      "service": false,
-      "source_domain": false,
-      "threat_actor": false,
-      "threat_campaign": false,
-      "threat_signature": false,
-      "url": false,
-      "usb": false,
-      "user": false
-    },
-    "filters_by_identifier": false,
-    "filters_by_creation_time": false,
-    "filters_by_modification_time": false,
-    "filters_by_additional_properties": false,
-    "filters_by_case_identifier": false,
-    "filters_by_alert_identifier": false,
-    "filters_by_entity_type": false,
-    "filters_by_is_internal": false,
-    "filters_by_is_suspicious": false,
-    "filters_by_is_artifact": false,
-    "filters_by_is_vulnerable": false,
-    "filters_by_is_enriched": false,
-    "filters_by_is_pivot": false
-  }
-}
-```
-
-***Example 4: Unfiltered (Global) Scope Action***
-
-*Input Snippet (Python):*
-
-```python
-category = siemplify.parameters["Category"]
+category = siemplify.extract_action_param(param_name="Category")
 for entity in siemplify.target_entities:
     custom_list_manager.add_to_custom_list(
         category=category, entity_identifier=entity.identifier
     )
 siemplify.end("Entities were added to custom list.", "true")
 ```
-
-*Input Snippet (JSON):*
-
-```json
-{
-  "Description": "Adds all target entities of the alert to a specified custom list category.",
-  "SimulationDataJson": "{\"Entities\": [\"ADDRESS\", \"USERUNIQNAME\", \"DOMAIN\"]}"
-}
-```
-
 *Expected Output:*
-
 ```json
 {
   "entity_usage": {
-    "reasoning": "The script iterates over `siemplify.target_entities` and adds each entity to the custom list category without filtering by entity type. Because it applies globally to all target entities attached to the alert, all supported entity type flags are set to true.",
+    "reasoning": "The script iterates over `siemplify.target_entities` without type filtering. Because no entity type filters are applied, the action applies globally to all supported entity types. No entity attribute filters are evaluated.",
     "entity_types": {
       "address": true,
       "alert": true,
@@ -367,50 +148,49 @@ siemplify.end("Entities were added to custom list.", "true")
       "url": true,
       "usb": true,
       "user": true
-    },
-    "filters_by_identifier": false,
-    "filters_by_creation_time": false,
-    "filters_by_modification_time": false,
-    "filters_by_additional_properties": false,
-    "filters_by_case_identifier": false,
-    "filters_by_alert_identifier": false,
-    "filters_by_entity_type": false,
-    "filters_by_is_internal": false,
-    "filters_by_is_suspicious": false,
-    "filters_by_is_artifact": false,
-    "filters_by_is_vulnerable": false,
-    "filters_by_is_enriched": false,
-    "filters_by_is_pivot": false
+    }
   }
 }
 ```
 
-***
+#### Example 4: Non-Entity Action & Alert Storage Vehicle Exception
+*Input Snippet (Python):*
+```python
+file_content = siemplify.current_alert.entities[0].additional_properties.get("SourceFileContent")
+manager.create_ticket(title="Security Alert", payload=file_content)
+```
+*Expected Output:*
+```json
+{
+  "entity_usage": {
+    "reasoning": "`siemplify.current_alert.entities[0]` is accessed strictly as a platform storage vehicle to read alert-level `SourceFileContent`, not for entity operations. No entities are processed or targeted. No entity filters are evaluated. All entity and filter flags are false.",
+    "entity_types": {}
+  }
+}
+```
+
+---
 
 **Current Task Input:**
 
-— START OF FILE ${json_file_name}—
-
+— START OF FILE ${json_file_name} —
 ```
 ${json_file_content}
 ```
+— END OF FILE ${json_file_name} —
 
-— END OF FILE ${json_file_name}—
-
-— START OF FILE ${python_file_name}—
-
+— START OF FILE ${python_file_name} —
 ```python
 ${python_file_content}
 ```
+— END OF FILE ${python_file_name} —
 
-— END OF FILE ${python_file_name}—
-
-— START OF FILE ${manager_file_names}—
-${manager_files_content} — END OF FILE ${manager_file_names}—
+— START OF FILE ${manager_file_names} —
+${manager_files_content}
+— END OF FILE ${manager_file_names} —
 
 **Final Instructions:**
-Based strictly on the provided "Current Task Input" and the guidelines defined in the System Prompt:
-
-1. Analyze the code flow and settings for entity usage.
-2. Construct the Entity Usage JSON (`entity_usage`).
-3. Ensure valid JSON syntax.
+Based strictly on the provided "Current Task Input" and guidelines:
+1. Analyze script code, settings, and manager methods to determine entity interactions.
+2. Formulate the step-by-step reasoning quoting exact code constructs and parameters.
+3. Populate `entity_usage` with accurate entity types and filter boolean flags.
