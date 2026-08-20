@@ -1,0 +1,503 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+import dataclasses
+from typing import TYPE_CHECKING
+
+from graphql_query import Argument, Field, Operation, Query, Variable
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+
+@dataclasses.dataclass(slots=True)
+class IssueQueryBuilder:
+    issue_id: str
+    variable_name: str = "id"
+    variable_type: str = "ID!"
+    operation_name: str = "GetIssue"
+    query_name: str = "issue"
+
+    @staticmethod
+    def build_fields() -> list[str]:
+        """Build the fields required in the issue query.
+
+        Returns:
+            The list of fields.
+
+        """
+        return [
+            "id",
+            "createdAt",
+            "updatedAt",
+            "status",
+            "severity",
+            "type",
+            "description",
+            "resolvedAt",
+            Field(
+                name="entitySnapshot",
+                fields=[
+                    "cloudPlatform",
+                    "id",
+                    "name",
+                    "region",
+                    "subscriptionName",
+                    "type",
+                ],
+            ),
+            Field(name="projects", fields=["id", "name"]),
+            Field(name="sourceRules", fields=["id", "name", "description"]),
+            Field(
+                name="serviceTickets",
+                fields=["id", "externalId", "name", "url"],
+            ),
+            Field(
+                name="notes",
+                fields=[
+                    "id",
+                    "text",
+                    "createdAt",
+                    Field(name="user", fields=["email", "name"]),
+                    Field(name="serviceAccount", fields=["email", "name"]),
+                ],
+            ),
+        ]
+
+    def build_query(self) -> SingleJson:
+        """Build the GraphQL query and variables payload.
+
+        Returns:
+            The query payload dict.
+
+        """
+        variable = Variable(name=self.variable_name, type=self.variable_type)
+
+        query = Query(
+            name=self.query_name,
+            arguments=[Argument(name=self.variable_name, value=variable)],
+            fields=self.build_fields(),
+        )
+
+        operation = Operation(
+            type="query",
+            name=self.operation_name,
+            variables=[variable],
+            queries=[query],
+        )
+
+        return {
+            "query": operation.render(),
+            "variables": {self.variable_name: self.issue_id},
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class AddCommentThreadMutationBuilder:
+    issue_id: str
+    comment: str
+    operation_name: str = "CreateIssueComment"
+    mutation_name: str = "createIssueNote"
+    input_variable_name: str = "input"
+    input_variable_type: str = "CreateIssueNoteInput!"
+
+    def build_mutation(self) -> SingleJson:
+        """Build the GraphQL mutation payload for adding a comment to an issue.
+
+        Returns:
+            The mutation payload dict.
+
+        """
+        variable = Variable(
+            name=self.input_variable_name,
+            type=self.input_variable_type,
+        )
+        issue_note_fields = ["createdAt", "id", "text"]
+        mutation = Query(
+            name=self.mutation_name,
+            arguments=[Argument(name=self.input_variable_name, value=variable)],
+            fields=[Field(name="issueNote", fields=issue_note_fields)],
+        )
+        operation = Operation(
+            type="mutation",
+            name=self.operation_name,
+            variables=[variable],
+            queries=[mutation],
+        )
+        input_value = {"issueId": self.issue_id, "text": self.comment}
+
+        return {
+            "query": operation.render(),
+            "variables": {self.input_variable_name: input_value},
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class AssociateServiceTicketMutationBuilder:
+    issue_id: str
+    ticket_id: str
+    ticket_url: str
+    input_variable_name: str = "input"
+    input_variable_type: str = "AssociateServiceTicketInput!"
+    operation_name: str = "AssociateServiceTicket"
+    mutation_name: str = "associateServiceTicket"
+
+    def build_mutation(self) -> SingleJson:
+        """Build the GraphQL mutation payload for associating a service ticket to an issue.
+
+        Returns:
+            SingleJson: The mutation payload dictionary.
+
+        """
+        variable = Variable(
+            name=self.input_variable_name,
+            type=self.input_variable_type,
+        )
+        service_ticket_fields = ["id", "externalId", "name", "url"]
+        mutation = Query(
+            name=self.mutation_name,
+            arguments=[Argument(name=self.input_variable_name, value=variable)],
+            fields=[Field(name="serviceTicket", fields=service_ticket_fields)],
+        )
+        operation = Operation(
+            type="mutation",
+            name=self.operation_name,
+            variables=[variable],
+            queries=[mutation],
+        )
+        input_value = {
+            "issueId": self.issue_id,
+            "ticketId": self.ticket_id,
+            "ticketUrl": self.ticket_url,
+        }
+
+        return {
+            "query": operation.render(),
+            "variables": {self.input_variable_name: input_value},
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class UpdateIssuePatch:
+    status: str | None = None
+    resolution_reason: str | None = None
+    resolution_note: str | None = None
+    note: str | None = None
+
+    def to_dict(self) -> SingleJson:
+        """Convert instance to dict, mapping specific fields and excluding None values.
+
+        Returns:
+            SingleJson: Dictionary with mapped keys and non-None values.
+
+        """
+        field_map = {
+            "resolution_reason": "resolutionReason",
+            "resolution_note": "resolutionNote",
+        }
+        return {
+            field_map.get(k, k): v for k, v in dataclasses.asdict(self).items() if v is not None
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class UpdateIssueMutationBuilder:
+    issue_id: str
+    patch: UpdateIssuePatch = dataclasses.field(default_factory=UpdateIssuePatch)
+    variable_name_issue_id: str = "issueId"
+    variable_name_patch: str = "patch"
+    variable_name_override: str = "override"
+    operation_name: str = "UpdateIssue"
+    mutation_name: str = "updateIssue"
+    return_note_field: str | None = None
+
+    def build_mutation(self) -> SingleJson:
+        """Build the GraphQL mutation payload for updating an issue.
+
+        Returns:
+            The mutation payload dict.
+
+        """
+        issue_id_var = Variable(name=self.variable_name_issue_id, type="ID!")
+        patch_var = Variable(name=self.variable_name_patch, type="UpdateIssuePatch")
+        variables = [issue_id_var, patch_var]
+
+        variable_data = {
+            self.variable_name_issue_id: self.issue_id,
+            self.variable_name_patch: self.patch.to_dict(),
+        }
+
+        input_value_fields = [
+            Argument(name="id", value=issue_id_var),
+            Argument(name="patch", value=patch_var),
+        ]
+        issue_fields = ["id", "status", "resolutionReason", "note", "dueAt"]
+
+        if self.return_note_field:
+            issue_fields.remove("note")
+            issue_fields.append("resolutionNote")
+
+        mutation = Query(
+            name=self.mutation_name,
+            arguments=[Argument(name="input", value=input_value_fields)],
+            fields=[
+                Field(
+                    name="issue",
+                    fields=issue_fields,
+                )
+            ],
+        )
+
+        return {
+            "query": Operation(
+                type="mutation",
+                name=self.operation_name,
+                variables=variables,
+                queries=[mutation],
+            ).render(),
+            "variables": variable_data,
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class VulnerabilityFindingsQueryBuilder:
+    resource_name: str
+    severity: list[str] | None = None
+    has_fix: bool | None = None
+    has_exploit: bool | None = None
+    cve_ids: list[str] | None = None
+
+    first: int = 100
+
+    @staticmethod
+    def build_fields() -> list[Field]:
+        """Build the fields required in the vulnerability findings query.
+
+        Returns:
+            The list of fields.
+
+        """
+        return [
+            Field(
+                name="nodes",
+                fields=[
+                    "id",
+                    "portalUrl",
+                    "name",
+                    "CVEDescription",
+                    "CVSSSeverity",
+                    "score",
+                    "severity",
+                    "status",
+                    "hasExploit",
+                    "remediation",
+                    Field(
+                        name="vulnerableAsset",
+                        fields=["... on VulnerableAssetBase { id type name }"],
+                    ),
+                ],
+            )
+        ]
+
+    def build_query(self) -> SingleJson:
+        """Build the GraphQL query payload for listing vulnerability findings.
+
+        Returns:
+            The query payload dict.
+
+        """
+        filter_var = Variable(name="filterBy", type="VulnerabilityFindingFilters")
+        first_var = Variable(name="first", type="Int")
+
+        query = Query(
+            name="vulnerabilityFindings",
+            arguments=[
+                Argument(name="filterBy", value=filter_var),
+                Argument(name="first", value=first_var),
+            ],
+            fields=self.build_fields(),
+        )
+
+        operation = Operation(
+            type="query",
+            name="VulnerabilityFindingsPage",
+            variables=[filter_var, first_var],
+            queries=[query],
+        )
+
+        filter_by = {
+            "assetName": {"equals": self.resource_name}
+        }
+        if self.severity:
+            filter_by["severity"] = self.severity
+        if self.has_fix is not None:
+            filter_by["hasFix"] = self.has_fix
+        if self.has_exploit is not None:
+            filter_by["hasExploit"] = self.has_exploit
+        if self.cve_ids and len(self.cve_ids) == 1:
+            filter_by["vulnerabilityExternalIdV2"] = {"equals": self.cve_ids[0]}
+
+        return {
+            "query": operation.render(),
+            "variables": {
+                "first": self.first,
+                "filterBy": filter_by,
+            },
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class ThreatAIAnalysisQueryBuilder:
+    issue_id: str
+    variable_name: str = "issueId"
+    variable_type: str = "ID!"
+    operation_name: str = "threatAIAnalysis"
+    query_name: str = "issue"
+
+    @staticmethod
+    def build_fields() -> list[Field]:
+        """Build the fields required in the threat AI analysis query.
+
+        Returns:
+            The list of fields.
+
+        """
+        return [
+            Field(
+                name="threatDetectionDetails",
+                fields=[
+                    Field(
+                        name="aiAnalysis",
+                        fields=[
+                            "id",
+                            "status",
+                            "verdict",
+                            "analyzedAt",
+                            "severity",
+                            "confidenceLevel",
+                            "conclusion",
+                        ],
+                    ),
+                ],
+            ),
+        ]
+
+    def build_query(self) -> SingleJson:
+        """Build the GraphQL query and variables payload.
+
+        Returns:
+            The query payload dict.
+
+        """
+        variable = Variable(name=self.variable_name, type=self.variable_type)
+
+        query = Query(
+            name=self.query_name,
+            arguments=[Argument(name="id", value=variable)],
+            fields=self.build_fields(),
+        )
+
+        operation = Operation(
+            type="query",
+            name=self.operation_name,
+            variables=[variable],
+            queries=[query],
+        )
+
+        return {
+            "query": operation.render(),
+            "variables": {self.variable_name: self.issue_id},
+        }
+
+
+@dataclasses.dataclass(slots=True)
+class IssuesQueryBuilder:
+    variable_name: str = "filterBy"
+    variable_type: str = "IssueFilters"
+    operation_name: str = "GetLatestUpdatedThreats"
+    query_name: str = "issuesV2"
+
+    def build_query(
+        self,
+        statuses: list[str],
+        status_changed_after: str | None = None,
+        first: int = 250,
+    ) -> SingleJson:
+        """Build the GraphQL query and variables payload for multiple issues.
+
+        Args:
+            statuses (list[str]): The list of issue statuses to filter.
+            status_changed_after (str | None): Optional date to filter by statusChangedAt.
+            first (int): The number of items to return.
+
+        Returns:
+            SingleJson: The query payload dict.
+
+        """
+        filter_var = Variable(name=self.variable_name, type=self.variable_type)
+        first_var = Variable(name="first", type="Int")
+
+        query = Query(
+            name=self.query_name,
+            arguments=[
+                Argument(name=self.variable_name, value=filter_var),
+                Argument(name="first", value=first_var),
+            ],
+            fields=[
+                Field(
+                    name="nodes",
+                    fields=[
+                        "id",
+                        "status",
+                        "updatedAt",
+                        "severity",
+                        Field(
+                            name="notes",
+                            fields=[
+                                "id",
+                                "text",
+                                "createdAt",
+                                Field(name="user", fields=["email", "name"]),
+                                Field(name="serviceAccount", fields=["email", "name"]),
+                            ],
+                        ),
+                    ],
+                )
+            ],
+        )
+
+        operation = Operation(
+            type="query",
+            name=self.operation_name,
+            variables=[filter_var, first_var],
+            queries=[query],
+        )
+
+        filter_payload: dict[str, any] = {
+            "type": ["THREAT_DETECTION"],
+            "status": statuses,
+        }
+
+        if status_changed_after:
+            filter_payload["statusChangedAt"] = {"after": status_changed_after}
+
+        return {
+            "query": operation.render(),
+            "variables": {
+                self.variable_name: filter_payload,
+                "first": first,
+            },
+        }

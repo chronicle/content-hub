@@ -1,0 +1,394 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, NamedTuple
+
+from TIPCommon.base.interfaces import Apiable
+
+from . import api_utils, auth_manager, constants, data_parser, datamodels, exceptions, query_builder
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    import requests
+    from TIPCommon.base.interfaces.logger import ScriptLogger
+
+
+class ApiParameters(NamedTuple):
+    api_root: str
+
+
+class WizApiClient(Apiable):
+    def __init__(
+        self,
+        authenticated_session: auth_manager.AuthenticateSession,
+        configuration: ApiParameters,
+        logger: ScriptLogger,
+    ) -> None:
+        super().__init__(
+            authenticated_session=authenticated_session,
+            configuration=configuration,
+        )
+        self.logger: ScriptLogger = logger
+        self.api_root: str = self.configuration.api_root
+
+    def test_connectivity(self) -> None:
+        """Test the connectivity to the Wiz API."""
+        graphql_query: Mapping[str, str] = {
+            "query": """
+        query {
+            issues(first: 1) {
+                nodes { id }
+            }
+        }
+        """
+        }
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(url=url, json=graphql_query)
+        api_utils.validate_response(response=response)
+
+    def get_issue_details(self, issue_id: str) -> datamodels.Issue:
+        """Get details of a specific issue by its ID using graphql_query lib.
+
+        Args:
+            issue_id (str): The ID of the issue to retrieve details for.
+
+        Returns:
+            datamodels.Issue: An Issue object containing the details of the issue.
+
+        """
+        issue_query_builder: query_builder.IssueQueryBuilder = query_builder.IssueQueryBuilder(issue_id=issue_id)
+
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=issue_query_builder.build_query(),
+        )
+        api_utils.validate_response(response=response)
+
+        return data_parser.build_issue_object(response.json())
+
+    def add_comment_to_issue(
+        self,
+        issue_id: str,
+        comment: str,
+    ) -> datamodels.IssueComment:
+        """Add a comment to an issue.
+
+        Args:
+            issue_id (str): The ID of the issue to add a comment to.
+            comment (str): The comment to add to the issue.
+
+        Returns:
+            datamodels.IssueComment: An issue object containing details of the commented
+            issue.
+
+        """
+        mutation_query: query_builder.AddCommentThreadMutationBuilder = query_builder.AddCommentThreadMutationBuilder(
+            issue_id=issue_id,
+            comment=comment,
+        )
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=mutation_query.build_mutation(),
+        )
+        api_utils.validate_response(response=response)
+
+        return data_parser.build_issue_comment_object(response.json())
+
+    def associate_service_ticket(
+        self,
+        issue_id: str,
+        ticket_id: str,
+        ticket_url: str,
+    ) -> requests.Response:
+        """Associate a service ticket with an issue.
+
+        Args:
+            issue_id (str): The ID of the issue/threat in Wiz.
+            ticket_id (str): The Case ID in Google SecOps.
+            ticket_url (str): The full URL of the SecOps case.
+
+        Returns:
+            requests.Response: Response object.
+
+        """
+        mutation_query = query_builder.AssociateServiceTicketMutationBuilder(
+            issue_id=issue_id,
+            ticket_id=ticket_id,
+            ticket_url=ticket_url,
+        )
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=mutation_query.build_mutation(),
+        )
+        api_utils.validate_response(response=response)
+
+        return response
+
+    def reopen_issue(self, issue_id: str) -> datamodels.Issue:
+        """Reopen an issue.
+
+        Args:
+            issue_id (str): The ID of the issue to reopen.
+
+        Returns:
+            datamodels.Issue: An Issue object containing the details of the reopened
+            issue.
+
+        """
+        mutation_query: query_builder.UpdateIssueMutationBuilder = query_builder.UpdateIssueMutationBuilder(
+            issue_id=issue_id,
+            patch=query_builder.UpdateIssuePatch(
+                status=constants.STATUS_REOPEN,
+            ),
+        )
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=mutation_query.build_mutation(),
+        )
+        api_utils.validate_response(response=response)
+
+        return data_parser.build_update_issue_object(response.json())
+
+    def ignore_issue(
+        self,
+        issue_id: str,
+        resolution_reason: str,
+        note: str | None = None,
+    ) -> datamodels.Issue:
+        """Reject an issue.
+
+        Args:
+            issue_id (str): The ID of the issue to reject.
+            resolution_reason (str): The reason for rejecting the issue.
+            note (str | None): An optional note to add to the rejection.
+
+        Returns:
+            datamodels.Issue: An Issue object containing the details of the rejected
+            issue.
+
+        """
+        mutation_query: query_builder.UpdateIssueMutationBuilder = query_builder.UpdateIssueMutationBuilder(
+            issue_id=issue_id,
+            patch=query_builder.UpdateIssuePatch(
+                status=constants.STATUS_REJECTED,
+                resolution_reason=constants.IGNORE_ISSUE_RESOLUTION_REASONS[resolution_reason],
+                note=note,
+            ),
+        )
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=mutation_query.build_mutation(),
+        )
+        api_utils.validate_response(response=response)
+
+        return data_parser.build_update_issue_object(response.json())
+
+    def resolve_issue(
+        self,
+        issue_id: str,
+        resolution_reason: str,
+        resolution_note: str | None = None,
+    ) -> datamodels.Issue:
+        """Resolve an issue.
+
+        Args:
+            issue_id (str): The ID of the issue to resolve.
+            resolution_reason (str): The reason for resolving the issue.
+            resolution_note (str | None): An optional note to add to the resolution.
+
+        Returns:
+            datamodels.Issue: An Issue object containing the details of the resolved
+            issue.
+
+        """
+        mutation_query: query_builder.UpdateIssueMutationBuilder = query_builder.UpdateIssueMutationBuilder(
+            issue_id=issue_id,
+            patch=query_builder.UpdateIssuePatch(
+                status=constants.STATUS_RESOLVED,
+                resolution_reason=constants.RESOLVE_ISSUE_RESOLUTION_REASONS[resolution_reason],
+                resolution_note=resolution_note,
+            ),
+            return_note_field=True,
+        )
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=mutation_query.build_mutation(),
+        )
+        api_utils.validate_response(response=response)
+
+        return data_parser.build_update_issue_object(response.json())
+
+    def get_resource_vulnerability_findings(  # ruff:ignore[too-many-arguments]
+        self,
+        resource_name: str,
+        *,
+        severity: list[str] | None = None,
+        has_fix: bool | None = None,
+        has_exploit: bool | None = None,
+        cve_ids: list[str] | None = None,
+        first: int = 100,
+    ) -> list[datamodels.VulnerabilityFinding]:
+        """Get vulnerability findings for a specific resource.
+
+        Args:
+            resource_name: The name of the resource.
+            severity: Filter by severity levels.
+            has_fix: Filter by fix availability.
+            has_exploit: Filter by exploit availability.
+            cve_ids: Filter by CVE IDs.
+            first: Max findings to return.
+
+        Returns:
+            A list of VulnerabilityFinding objects.
+
+        """
+        api_first = first
+        if cve_ids and len(cve_ids) > 1:
+            api_first = constants.MAX_FINDINGS_LIMIT
+
+        query_builder_instance = query_builder.VulnerabilityFindingsQueryBuilder(
+            resource_name=resource_name,
+            severity=severity,
+            has_fix=has_fix,
+            has_exploit=has_exploit,
+            cve_ids=cve_ids,
+            first=api_first,
+        )
+
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=query_builder_instance.build_query(),
+        )
+        api_utils.validate_response(response=response)
+
+        nodes = response.json().get("data", {}).get("vulnerabilityFindings", {}).get("nodes", [])
+        findings = [data_parser.build_vulnerability_finding_object(node) for node in nodes]
+        if cve_ids:
+            findings = [f for f in findings if f.name in cve_ids]
+        return findings[:first]
+
+    def get_threat_ai_analysis(
+        self,
+        issue_id: str
+    ) -> datamodels.ThreatAIAnalysis | None:
+        """Get threat AI analysis for a specific threat by its issue ID.
+
+        Args:
+            issue_id: The ID of the issue/threat to retrieve details for.
+
+        Returns:
+            A ThreatAIAnalysis object containing details, or None if analysis is not found.
+
+        Raises:
+            IssueNotFoundError: If the threat with specified ID is not found.
+
+        """
+        threat_analysis_query_builder: query_builder.ThreatAIAnalysisQueryBuilder = (
+            query_builder.ThreatAIAnalysisQueryBuilder(issue_id=issue_id)
+        )
+
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=threat_analysis_query_builder.build_query(),
+        )
+        api_utils.validate_response(response=response)
+
+        response_json = response.json()
+        if (response_json.get("data") or {}).get("issue") is None:
+            msg = (
+                f"Threat with ID {issue_id} wasn't found"
+                f" in {constants.INTEGRATION_NAME}."
+            )
+            raise exceptions.IssueNotFoundError(
+                msg
+            )
+
+        return data_parser.build_threat_ai_analysis_object(response_json)
+
+    def get_updated_threats(self, updated_after: str) -> list[datamodels.Issue]:
+        """Get threats updated after a specific timestamp.
+
+        Args:
+            updated_after (str): The ISO 8601 timestamp to filter by.
+
+        Returns:
+            list[datamodels.Issue]: A list of Issue objects.
+
+        """
+        issues_query_builder = query_builder.IssuesQueryBuilder()
+
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        payload1 = issues_query_builder.build_query(
+            statuses=["OPEN", "IN_PROGRESS"]
+        )
+        response1 = self.session.post(url=url, json=payload1)
+        api_utils.validate_response(response=response1)
+        active_threats = data_parser.build_issues_list(response1.json())
+
+        payload2 = issues_query_builder.build_query(
+            statuses=["RESOLVED", "REJECTED"],
+            status_changed_after=updated_after,
+        )
+        response2 = self.session.post(url=url, json=payload2)
+        api_utils.validate_response(response=response2)
+        resolved_threats = data_parser.build_issues_list(response2.json())
+
+        combined: dict[str, datamodels.Issue] = {}
+        for t in active_threats:
+            combined[t.issue_id] = t
+        for t in resolved_threats:
+            combined[t.issue_id] = t
+
+        return list(combined.values())

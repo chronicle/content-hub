@@ -54,11 +54,11 @@ class TestConditionDataModel:
         assert CONDITION.to_non_built() == NON_BUILT_CONDITION
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             Condition.from_built(cast("BuiltCondition", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             Condition.from_non_built(cast("NonBuiltCondition", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
@@ -82,11 +82,11 @@ class TestConditionGroupDataModel:
         assert CONDITION_GROUP.to_non_built() == NON_BUILT_CONDITION_GROUP
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             ConditionGroup.from_built(cast("BuiltConditionGroup", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             ConditionGroup.from_non_built(cast("NonBuiltConditionGroup", cast("object", {})))
 
     def test_from_built_with_none_values(self) -> None:

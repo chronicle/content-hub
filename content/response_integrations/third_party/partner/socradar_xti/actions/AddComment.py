@@ -21,10 +21,15 @@ def main() -> None:
     )
     alarm_id = siemplify.extract_action_param("Alarm ID", is_mandatory=True)
     comment = siemplify.extract_action_param("Comment", is_mandatory=True)
-    user_email = siemplify.extract_action_param("User Email", default_value="")
+    user_email = siemplify.extract_action_param("User Email", is_mandatory=True)
     try:
+        if not user_email or not user_email.strip():
+            raise ValueError(
+                "'User Email' is required: the SOCRadar API rejects comments "
+                "without a company user email."
+            )
         manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-        result = manager.add_comment(alarm_id, comment, user_email)
+        result = manager.add_comment(alarm_id, comment, user_email.strip())
         siemplify.result.add_result_json(result)
         siemplify.end(f"Comment added to alarm {alarm_id}.", True)
     except Exception as e:

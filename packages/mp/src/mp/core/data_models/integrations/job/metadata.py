@@ -132,7 +132,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             file_name=file_name,
             creator=built["Creator"],
             description=built.get("Description") or "",
-            documentation_link=built.get("DocumentationLink"),  # ty:ignore[invalid-argument-type]
+            documentation_link=built.get("DocumentationLink"),
             integration=built["Integration"],
             is_custom=built.get("IsCustom", False),
             is_enabled=built.get("IsEnabled", True),
@@ -148,7 +148,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             file_name=file_name,
             creator=non_built["creator"],
             description=non_built.get("description") or "",
-            documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
+            documentation_link=non_built.get("documentation_link"),
             integration=non_built["integration"],
             is_custom=non_built.get("is_custom", False),
             is_enabled=non_built.get("is_enabled", True),
