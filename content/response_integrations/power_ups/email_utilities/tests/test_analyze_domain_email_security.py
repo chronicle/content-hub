@@ -40,30 +40,28 @@ def test_build_result_passes_checkdmarc_structures_through_verbatim() -> None:
     assert result["DNSSec"] is True
 
 
-def test_strong_spf_true_for_fail_and_softfail() -> None:
-    for all_value in ("fail", "softfail"):
+def test_strong_spf_true_only_for_hard_fail() -> None:
+    spf = {"record": "v=spf1 -all", "parsed": {"all": "fail"}}
+    assert build_result("x.example", _domain_check(spf))["StrongSPF"] is True
+    # A softfail policy is not strong: receivers commonly deliver softfailing
+    # mail, so counting "~all" (as the pre-53.0 field did) overstates it.
+    for all_value in ("softfail", "neutral"):
         spf = {"record": "v=spf1 ...", "parsed": {"all": all_value}}
-        assert build_result("x.example", _domain_check(spf))["StrongSPF"] is True
-
-
-def test_strong_spf_false_for_neutral_all() -> None:
-    spf = {"record": "v=spf1 ?all", "parsed": {"all": "neutral"}}
-    assert build_result("x.example", _domain_check(spf))["StrongSPF"] is False
+        assert build_result("x.example", _domain_check(spf))["StrongSPF"] is False
 
 
 def test_strong_spf_falls_back_to_record_suffix() -> None:
     assert (
-        build_result("x.example", _domain_check({"record": "v=spf1 a ~all"}))[
+        build_result("x.example", _domain_check({"record": "v=spf1 a -all"}))[
             "StrongSPF"
         ]
         is True
     )
-    assert (
-        build_result("x.example", _domain_check({"record": "v=spf1 a ?all"}))[
-            "StrongSPF"
-        ]
-        is False
-    )
+    for record in ("v=spf1 a ~all", "v=spf1 a ?all"):
+        assert (
+            build_result("x.example", _domain_check({"record": record}))["StrongSPF"]
+            is False
+        )
 
 
 def test_strong_spf_false_when_spf_missing() -> None:

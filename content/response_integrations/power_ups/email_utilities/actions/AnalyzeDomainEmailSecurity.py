@@ -40,9 +40,10 @@ def build_result(domain: str, domain_check: dict) -> dict:
 
     The SPF, DMARC, MX, and DNSSec structures are passed through verbatim as
     checkdmarc produced them (the same shapes Analyze Headers emitted before
-    integration version 53.0). StrongSPF keeps that action's old semantics:
-    True when the domain's SPF policy for non-matching senders is a hard or
-    soft fail ("-all" or "~all").
+    integration version 53.0). StrongSPF is True only when the domain's SPF
+    policy for non-matching senders is a hard fail ("-all"); the pre-53.0
+    Analyze Headers field also counted a softfail ("~all") as strong, which
+    overstated the policy — receivers commonly deliver softfailing mail.
 
     Args:
         domain: The domain that was checked.
@@ -61,10 +62,10 @@ def build_result(domain: str, domain_check: dict) -> dict:
         "StrongSPF": False,
     }
     try:
-        result["StrongSPF"] = spf["parsed"]["all"] in ("fail", "softfail")
+        result["StrongSPF"] = spf["parsed"]["all"] == "fail"
     except (KeyError, TypeError):
         try:
-            result["StrongSPF"] = spf["record"].strip().endswith(("-all", "~all"))
+            result["StrongSPF"] = spf["record"].strip().endswith("-all")
         except (AttributeError, KeyError, TypeError):
             pass
     return result
