@@ -128,7 +128,7 @@ class CyberArkPamAuthenticator:
         if self.logger:
             self.logger.info("Set Client's certificate for session")
 
-    def __set_verify(self, verify_ssl: bool, ca_certificate: str | None = None) -> None:  # noqa: FBT001
+    def __set_verify(self, verify_ssl: bool, ca_certificate: str | None = None) -> None:  # ruff: ignore[boolean-type-hint-positional-argument]
         """Set SSL verification for the session.
 
         Args:
