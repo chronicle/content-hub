@@ -322,9 +322,6 @@ class SyncIntegrationCredentialJob(Job):
             self.logger.info(f"Using cached payload for account '{mask_id(account_id)}' (version '{version_id}').")
             return self._secret_cache[cache_key]
 
-        ticket_id_raw = self.params.ticket_id
-        ticket_id = int(ticket_id_raw) if ticket_id_raw and str(ticket_id_raw).isdigit() else None
-
         if self.cyber_ark_manager is None:
             msg = "CyberArk PAM manager is not initialized."
             raise SecretAccessError(msg)
@@ -332,9 +329,6 @@ class SyncIntegrationCredentialJob(Job):
             password: str = await asyncio.to_thread(
                 self.cyber_ark_manager.get_password,
                 account=account_id,
-                reason=self.params.reason or "Credential Synchronization Job",
-                ticketing_system_name=self.params.ticketing_system_name,
-                ticket_id=ticket_id,
                 version=version_id,
             )
         except CyberArkPamNotFoundError as e:

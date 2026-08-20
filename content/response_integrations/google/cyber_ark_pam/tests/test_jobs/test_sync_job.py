@@ -44,9 +44,6 @@ class MockParams:
         self.ca_certificate = None
         self.client_certificate = None
         self.client_certificate_passphrase = None
-        self.reason = "Credential Synchronization Job"
-        self.ticketing_system_name = None
-        self.ticket_id = None
 
 
 def _make_job() -> SyncIntegrationCredentialJob:
@@ -212,9 +209,6 @@ class TestSyncFlow:
         # Should invoke get_password and set_configuration_property
         mock_manager.get_password.assert_called_once_with(
             account="123_45",
-            reason="Credential Synchronization Job",
-            ticketing_system_name=None,
-            ticket_id=None,
             version=None,
         )
         mock_api.set_configuration_property.assert_called_once_with(
@@ -243,9 +237,6 @@ class TestSyncFlow:
 
         mock_manager.get_password.assert_called_once_with(
             account="123_45",
-            reason="Credential Synchronization Job",
-            ticketing_system_name=None,
-            ticket_id=None,
             version=5,
         )
         mock_api.set_connector_parameter.assert_called_once_with(
@@ -280,9 +271,6 @@ class TestSyncFlow:
 
         mock_manager.get_password.assert_called_once_with(
             account="999_88",
-            reason="Credential Synchronization Job",
-            ticketing_system_name=None,
-            ticket_id=None,
             version=None,
         )
         mock_api.save_or_update_job.assert_called_once()
@@ -491,9 +479,6 @@ class TestSecretFetchCaching:
         # The manager's get_password should have been called exactly once
         mock_manager.get_password.assert_called_once_with(
             account="acc-1",
-            reason="Credential Synchronization Job",
-            ticketing_system_name=None,
-            ticket_id=None,
             version=None,
         )
         assert job._secret_cache["acc-1", None] == "cached_pwd"
