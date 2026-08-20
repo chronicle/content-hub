@@ -180,21 +180,3 @@ class CyberArkPamManager:
             json=payload,
         )
         validate_response(response)
-
-    def get_secret_versions(self, account: str) -> list[Any]:
-        """Get secret versions from CyberArk PAM for a specified account.
-
-        Args:
-            account: ID of the account.
-
-        Returns:
-            A list of secret versions.
-
-        """
-        self._ensure_authenticated()
-        response = self.session.get(
-            url=build_full_url(self.api_root, "get_secret_versions", account_id=account),
-        )
-        validate_response(response)
-
-        return self.parser.build_versions(response.json())

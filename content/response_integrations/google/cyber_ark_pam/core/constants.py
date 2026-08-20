@@ -26,7 +26,6 @@ URLS: dict[str, str] = {
     "list_accounts": "PasswordVault/API/Accounts",
     "get_password": "PasswordVault/API/Accounts/{account_id}/Password/Retrieve/",
     "change_password": "PasswordVault/API/Accounts/{account_id}/Change",
-    "get_secret_versions": "PasswordVault/API/Accounts/{account_id}/Secret/Versions",
 }
 MAX_RETRIES: int = 1
 AUTHENTICATION_TIMEOUT: int = 60
