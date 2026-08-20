@@ -84,6 +84,20 @@ def setup_whois_action_mocks(
         lambda: mock_siemplify,
     )
 
+    def mock_extract(url, *args, **kwargs):
+        mock_res = MagicMock()
+        if "univ-lyon1.fr" in url:
+            mock_res.registered_domain = "univ-lyon1.fr"
+        else:
+            mock_res.registered_domain = "google.com"
+        return mock_res
+
+    monkeypatch.setattr(
+        Whois,
+        "extract",
+        mock_extract,
+    )
+
 @pytest.mark.execution_scope("Alert")
 @set_metadata(
     parameters={"Create Entities": "true", "Domain Age Threshold": "0"},
