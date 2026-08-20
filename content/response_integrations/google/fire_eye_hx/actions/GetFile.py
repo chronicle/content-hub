@@ -184,6 +184,8 @@ def poll_file_acquisition(siemplify, hx_manager, acq_context):
         if zip_metadata:
             json_result.update(zip_metadata)
 
+        json_result["download_path"] = temp_filename
+
         siemplify.result.add_result_json(json_result)
         output_message = f"File '{file_name}' was successfully acquired from host {agent_id}."
         return output_message, "true", EXECUTION_STATE_COMPLETED

@@ -187,6 +187,8 @@ class TestGetFile(unittest.TestCase):
         json_res = mock_siemplify.result.add_result_json.call_args[0][0]
         assert json_res["state"] == "COMPLETE"
         assert json_res["md5"] == "abcd1234efgh"
+        assert "download_path" in json_res
+        assert json_res["download_path"].endswith(".zip")
         mock_siemplify.end.assert_called_once_with(
             "File 'notepad.exe' was successfully acquired from host agent-xyz-123.",
             "true",
