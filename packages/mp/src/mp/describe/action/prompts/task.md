@@ -69,7 +69,79 @@ Review these categories carefully. An action can belong to one or more categorie
         * `ai_short_description` (concise summary).
         *
         `parameters_description` (markdown table showing action-specific parameters. If the action has no parameters, set this field to exactly: "There are no parameters for this action". Do NOT document integration-level/configuration parameters here, including parameters retrieved via `siemplify.extract_configuration_param` in code or found under integration configurations).
-2. **Determine Capabilities:** Analyze the code and metadata to evaluate SOAR/system operations. You MUST provide step-by-step reasoning in the `reasoning` field of the
+2. **Evaluate Risk & Asset Criticality:** Analyze the action logic, execution mode, and its expected response payload against the following operational parameters to determine the fields under `impact_analysis_actions_metadata`:
+
+    * `reversibility_risk_score`: Assign a score of Low, Medium, or High assessing how easily a human operator can undo the action if the agent makes a mistake.
+    * `reversibility_risk_reasoning`: Provide step-by-step reasoning assessing how easily the **exact previous state** can be restored.
+        - **Low Risk (Symmetrically Reversible)**: Pure read-only operations, mutative actions that have a direct, single-step symmetrical inverse, OR creating empty entities/objects that can be simply deleted with no operational data loss. For **State Flags** (e.g., Force Password Reset, Unlock), focus on the immediate action to clear/reset the flag, ignoring downstream user actions. **Functional Equivalents** count (e.g., if there is no direct "Lock" command, Disabling is a valid functional equivalent for reversing an Unlock).
+          * *Examples*: Disabling a user account (can be re-enabled), adding a user to a group (can be removed), creating a ticket/issue (can be closed/deleted), forcing password reset (flag can be cleared), or adding an IP to a block list (can be unblocked).
+        - **Medium Risk (Manual/Asymmetric Effort)**: Actions that can be undone, but require non-trivial manual effort, administrative coordination, or restoring configurations from secondary backups. If reversing the action requires **referencing/knowing external state that was not recorded by the action itself** (e.g., knowing which OU a user belonged to before moving them), it is Medium.
+          * *Examples*: Executing a VM patch job, rolling back custom detection rule changes, modifying cloud instance network interfaces, or moving an entity to a new container without logging the previous one.
+
+        - **High Risk (Irreversible/Permanent Loss)**: Actions where the exact previous state is permanently destroyed or cannot be recalled.
+          * *Examples*: Hard-deleting cloud IAM roles or infrastructure, permanently purging emails/files bypassing trash/retention, overwriting passwords (where the original secure string is lost), or detonating sensitive files in public third-party sandboxes.
+
+
+    * `scope_risk_score`: Assign a score of Low, Medium, or High evaluating the breadth of the action's potential impact on the organization's infrastructure or information exposure.
+    * `scope_risk_reasoning`: Provide step-by-step reasoning evaluating the breadth of the action's potential impact.
+        - For **Mutative Actions**: Focus on the **Direct Footprint** (what the action itself modifies directly) rather than hypothetical downstream consequences (e.g., adding a user to a group is Low if it only modifies that one user's record, even if that group has broad permissions).
+        - For **Read-Only Actions**: Assess **Information Exposure**. Single-entity lookups (e.g., one user, one file) are Low. Multi-entity retrievals or Arbitrary Queries are **Medium ONLY if they expose sensitive Identity/Access Configurations (Topology)** (like group members, privilege trees, or ACL bindings). Enumerating basic **Entity Inventory** (e.g., listing all users, listing all groups simply as objects without their bindings/members) is Low as it exposes what exists, not how it is secured.
+        - **Low Risk (Single Entity / Read-Only Bounded / Target)**: Single-entity reads, reading non-sensitive telemetry/logs, basic inventory enumeration, OR actions that affect exactly ONE isolated user account, computer account, mailbox, case, or individual file. Also includes creating empty, unlinked containers or groups that do not inherently grant permissions or affect traffic.
+          * *Examples*: Searching for a specific user, downloading a single email attachment, resetting a user's session, getting host details, listing all available policies/groups, setting group membership for a single user, or disabling a single computer account.
+        - **Medium Risk (Whole Host Containment / Bounded Group / Multi-Entity Sensitive Read)**: Actions that perform **network containment/isolation or power state changes on a single host** (due to high operational impact), OR reading memberships of bounded groups/directories (exposing identities/ACL bindings), OR actions that impact **multiple** endpoints/computers simultaneously, OR modifying configurations of bounded department security groups/channels.
+          * *Examples*: Isolating/Containing an endpoint on the network, stopping a VM instance, fetching members of a group, hiding a host from EDR, or changing permissions on a shared drive.
+        - **High Risk (Control Plane / Global Posture)**: Modifies foundational control-plane configurations, organization-wide transport/mail routing rules, global identity boundaries, or fleet-wide sensor blocklists capable of widespread disruption. If an action can attach broad policies to broad roles/groups, it should be considered High.
+          * *Examples*: Modifying domain DNS, pushing global firewall rules across all fabrics, attaching organization-wide SCPs/IAM policies, or globally altering mail routing rules.
+
+    * `friction_risk_score`: Assign a score of Low, Medium, or High evaluating the extent to which an accidental execution stops people from doing their jobs or disrupts security operations.
+    * `friction_risk_reasoning`: Provide step-by-step reasoning evaluating disruption to standard employee productivity AND Security Operations Center (SOC) workflows.
+        - **Capability Principle**: For generic actions (e.g., "Update Attributes"), consider the **Capability** of the action to touch critical metadata. If the action can mutate arbitrary fields **that govern Authentication, Logon, or Network Access**, rate it assuming it can touch critical ones (Medium/High). If it only touches descriptive metadata (like comments), it is Low.
+        - **Low Risk (Zero/Silent Disruption)**: Read-only operations, background data enrichment, or non-intrusive metadata updates (on specific, non-critical fields). **Removing a block or detection (degrading posture)** is also Low Friction *if* it does not interrupt business workflows (it may leave a security gap, but work continues).
+          * *Examples*: Querying logs, adding an internal case comment, tagging an entity, or retrieving threat intel.
+
+
+        - **Medium Risk (Workflow Obstruction / SOC Disruption)**: Non-lockout disruption to user correspondence, OR disruption to SOC investigation queues.
+          * *Examples*: Moving an email to Junk/Trash, quarantining a file, or updating an incident/alert state (causing analysts to lose queue context).
+        - **High Risk (Hard Lockout / Business Freeze)**: Complete loss of employee productivity, account lockouts, or blocking business-critical communications.
+          * *Examples*: Disabling a user account completely, isolating an executive/critical host from the network, or blocking an active corporate domain.
+
+    * `volume_risk_score`: Assign a score of Low, Medium, or High evaluating the physical scale of the deployment or execution.
+    * `volume_risk_reasoning`: Provide step-by-step reasoning evaluating the scale of the deployment. Consider both **Input Cardinality** (how many targets are explicitly called) and **Output Cardinality** (how many records/entities are returned or processed in a batch).
+        - **Low Risk (Single Target / Individual Query / Bounded Set)**: Actions executed against exactly ONE explicit target per invocation (single IP, single user, single host, single URL), OR iterating over a **small, bounded set of artifacts** directly linked to the current event (typically a handful of IPs/users). **Simple enumeration of the Directory Inventory** (listing available objects up to a standard page limit) is also Low volume as it is a bounded read query with no change impact.
+          * *Examples*: Querying VirusTotal for a single IP/URL, disabling one user, listing available groups, or looping over the 3 external IPs found in the current alert. *(Crucial: Do NOT promote single-entity actions or inventory reads to Medium just because they query a cloud API).*
+        - **Medium Risk (Batch / Broad Iterators / Subnet Scans)**: Actions designed to iterate across **large collections** of entities, fetch batches/lists of 50+ records up to a limit (even if the input query is a single group/table name), or scan an internal subnet range.
+          * *Examples*: Fetching a batch of all directory users, retrieving members of a large group (batch return), scanning a /24 subnet, or listing events across an entire endpoint for the last 24 hours.
+        - **High Risk (Fleet-Wide / Global Broadcast / Fabric Commits)**: Orchestrated broadcast execution across the entire enterprise fleet, global configuration commits, or bulk operations across all mailboxes. This applies to **Broadcast Effects** (e.g., deploying a policy/rule that applies to all endpoints/mailboxes automatically). Standard central directory mutations (e.g., adding a user to a group) are NOT High Volume unless they explicitly trigger a fleet-wide push.
+          * *Examples*: Committing policy changes across an entire firewall fabric, uploading IOCs to a fleet-wide EDR blocklist, or applying a retention policy across all enterprise mailboxes.
+
+    * `asset_criticality_relevance`: A Boolean indicator (`true` or `false`) stating whether the action's response payload yields data, metadata, or threat intelligence that helps classify an entity's risk, privilege level, or environmental criticality.
+        - **Set to `true` ONLY if**: The action is a **strictly read-only / enrichment function** AND its response returns:
+          1. **Structural Privileges / Boundaries**: Directory roles, administrative group memberships, IAM policies, or container hierarchy (e.g., AD Group Members, AWS IAM Policies, Azure AD Roles).
+          2. **External Threat Intelligence / Reputation**: External risk scores, malware reports, threat actor links, or file hash analysis (e.g., VirusTotal scans, GTI IOC searches, Mandiant Threat Intel).
+          3. **Security Finding / Detection Details**: Native alert metadata, finding severity, or EDR incident reports (e.g., Security Command Center findings, Cortex XDR incident details, Defender alerts).
+          4. **Organizational Topology / Placement**: Directory paths, organizational units (OUs), or permission attachment counts that indicate where an asset sits in the hierarchy or how broadly a permission applies.
+          5. **Basic Identity / Asset Inventory**: Enumeration of users, hosts, or accounts in a directory. Knowing the existence, types, and age of assets is foundational to criticality.
+
+        - **Set to `false` if**:
+          1. **Mutative Actions**: Any action that creates, updates, deletes, or modifies state is AUTOMATICALLY `false` (even if it returns threat intel or ticket IDs).
+          2. **Generic Health / Simple Booleans**: Read-only actions that only return agent operational health, machine patch recommendations, ping status, or raw boolean checks of generic properties (e.g., "Is Online"). **Boolean checks of Group Membership in a directory** (e.g., "Is User in Group") are generally `false` UNLESS the action specifically and explicitly checks for a known high-privilege tier (e.g., "Is Domain Admin"), in which case it is `true`.
+
+
+
+    * `asset_criticality_relevance_reasoning`: Provide a step-by-step rationale evaluating whether the response payload provides useful asset criticality/severity signals following this checklist:
+        1. **Operation Type Check**: Is this a strictly read-only discovery/enrichment action? (If mutative -> immediately False).
+        2. **Classification Signals**: Does the payload return administrative privilege blocks, external threat intelligence reputation, or security incident/finding severity?
+        3. **Downstream Utility**: How does downstream logic utilize these specific signals to calculate the target's trust score, privilege tier, or environmental criticality?
+
+    * `asset_criticality_categories`: When asset_criticality_relevance is enabled, map the operation to any of the following five classification buckets based on the returned metadata and environmental context. Multiple categories may be assigned for multi-faceted payloads. If relevance is false, return an empty array `[]`.
+        - `"Enrichment: Asset Risk & Reputation"`: Retrieval of threat intelligence, historical reputation data, or risk scores for non-human indicators (e.g., File Hash, IP, Domain).
+        - `"Enrichment: Identity & Organizational Context"`: Discovery of administrative privileges, directory roles, or business hierarchy (e.g., Executive status, Domain Admin rights). Targets: USER, EMAILADDRESS.
+        - `"Enrichment: Organizational Network Context"`: Analysis of IAM policies, cloud-native permissions, and broad security configurations. Targets: USER, HOSTNAME.
+        - `"Enrichment: Endpoint Telemetry & Vulnerability"`: Querying internal host states, process logs, OS versions, and patch levels. Targets: HOSTNAME, MACADDRESS.
+        - `"Enrichment: External Network Routing"`: Collection of WHOIS records, DNS resolution, and global routing attributes. Targets: IP ADDRESS.
+
+    * `asset_criticality_categories_reasoning`: Provide a concise, single-sentence rationale justifying the selected categories based on the function logic and expected response data. State "Not applicable as relevance is false" if relevance is disabled.
+3. **Determine Capabilities:** Analyze the code and metadata to evaluate SOAR/system operations. You MUST provide step-by-step reasoning in the `reasoning` field of the
    `capabilities` object before setting boolean flags:
     * `fetches_data`: Set to true if the action requests/retrieves additional contextual data from an external tool or source (usually via HTTP GET).
     * `can_mutate_external_data`: Set to true if the action performs state-changing operations (POST/PUT/DELETE) on external systems (e.g., blocking an IP, disabling a user, creating a ticket).
@@ -80,7 +152,7 @@ Review these categories carefully. An action can belong to one or more categorie
     * `can_create_insight`: Set to true if the action generates/attaches insights (e.g., calling `siemplify.add_entity_insight` or `create_insight`).
     * `can_modify_alert_data`: Set to true if the action modifies the alert metadata/data inside the platform.
     * `can_create_case_comments`: Set to true if the action creates new analyst/case comments (e.g., calling `siemplify.add_case_comment`).
-3. **Extract Entity Scopes:** Analyze how the action uses target entities. You MUST write out your step-by-step reasoning in the `reasoning` field of the
+4. **Extract Entity Scopes:** Analyze how the action uses target entities. You MUST write out your step-by-step reasoning in the `reasoning` field of the
    `entity_usage` object before setting boolean flags:
     * **Presence of Entities**: An action "runs on entities" if it iterates over `target_entities` OR
       if it accepts/processes entity identifiers via input parameters (e.g. $all_entity_param_examples).
@@ -97,9 +169,9 @@ $entity_type_mapping_rules
         * `filters_by_case_identifier` / `filters_by_alert_identifier`: filters by parent case/alert ID.
         * `filters_by_entity_type` / `filters_by_is_internal` / `filters_by_is_suspicious` / `filters_by_is_artifact` / `filters_by_is_vulnerable` / `filters_by_is_enriched` /
           `filters_by_is_pivot`: filters by the corresponding attribute of the entity.
-4. **Outcome Categories & Reasoning:** You MUST write out your step-by-step reasoning in the `reasoning` field of the
+5. **Outcome Categories & Reasoning:** You MUST write out your step-by-step reasoning in the `reasoning` field of the
    `outcome_categories` object BEFORE populating the boolean flags. Discuss why the action matches or fails to match specific categories based on the expected outcomes defined above.
-5. **Strict Classification**: Only set a boolean flag to `true` under `capabilities` or
+6. **Strict Classification**: Only set a boolean flag to `true` under `capabilities` or
    `outcome_categories` if the script code explicitly and functionally implements that capability/action. Do not set flags to
    `true` based on potential capability, generic placeholder functions, or print logs.
 
@@ -140,6 +212,22 @@ for entity in suitable_entities:
   "ai_description": "Enriches IP Address entities using VirusTotal. This action retrieves threat intelligence including ASN, country, and reputation scores. It evaluates risk based on thresholds, updates the entity's suspicious status, and generates an insight with the analysis results.",
   "ai_short_description": "Enriches IP Address entities using VirusTotal.",
   "parameters_description": "| Parameter | Type | Mandatory | Description |\n| --- | --- | --- | --- |\n| api_key | String | Yes | VirusTotal API Key |",
+  "impact_analysis_actions_metadata": {
+    "volume_risk_reasoning": "Lookups are executed for localized IP entities within the alert.",
+    "scope_risk_reasoning": "The query is limited to fetching threat reputation data for individual IP addresses.",
+    "friction_risk_reasoning": "Background log analysis and reputation lookup create zero disruption to active employee workflows.",
+    "reversibility_risk_reasoning": "The action performs read-only threat intelligence queries to VirusTotal, making execution fully reversible.",
+    "asset_criticality_relevance": true,
+    "asset_criticality_relevance_reasoning": "1. Operation Type Check: Read-only enrichment lookup (VirusTotal scan). 2. Asset or Group Identifier Presence: Returns IP address reputation metadata. 3. Discovery of Pre-existing Metadata/Scope Signals: Contains ASN, country, and threat score signals. 4. Downstream Utility: Threat scores and reputation help classify whether the IP belongs to a critical asset.",
+    "volume_risk_score": "Low",
+    "scope_risk_score": "Low",
+    "friction_risk_score": "Low",
+    "reversibility_risk_score": "Low",
+    "asset_criticality_categories": [
+      "Enrichment: Asset Risk & Reputation"
+    ],
+    "asset_criticality_categories_reasoning": "VirusTotal IP enrichment retrieves threat intelligence, reputation data, and risk scores for non-human IP indicators."
+  },
   "capabilities": {
     "reasoning": "The action makes a GET request to VirusTotal API to fetch IP data. It does not mutate external data but updates internal entities and creates insights.",
     "fetches_data": true,
@@ -270,6 +358,20 @@ if result['success']:
   "ai_description": "Blocks a specific IP address on the target Firewall. This action initiates a state change on the external device to prevent network traffic to or from the specified entity.",
   "ai_short_description": "Blocks a specific IP address on the target Firewall.",
   "parameters_description": "| Parameter | Type | Mandatory | Description |\n| --- | --- | --- | --- |\n| api_key | String | Yes | API Key for Firewall |",
+  "impact_analysis_actions_metadata": {
+    "volume_risk_reasoning": "Executed for a single target IP address.",
+    "scope_risk_reasoning": "Modifies perimeter access control rules affecting corporate infrastructure.",
+    "friction_risk_reasoning": "Blocking network traffic halts active user/employee connectivity if triggered on a false positive.",
+    "reversibility_risk_reasoning": "Firewall block rules can be manually undone by removing the rule.",
+    "asset_criticality_relevance": false,
+    "asset_criticality_relevance_reasoning": "1. Operation Type Check: Mutative/operational action (POST to block IP on firewall). Fails rule: mutative actions do not qualify for asset criticality calculation. 2. Asset Identifier Presence: Operates on IP. 3. Discovery of Pre-existing Metadata/Scope Signals: Returns execution confirmation log. 4. Downstream Utility: Mutative action does not discover native pre-existing asset classification signals.",
+    "volume_risk_score": "Low",
+    "scope_risk_score": "High",
+    "friction_risk_score": "High",
+    "reversibility_risk_score": "Medium",
+    "asset_criticality_categories": [],
+    "asset_criticality_categories_reasoning": "Not applicable as relevance is false."
+  },
   "capabilities": {
     "reasoning": "The action performs a POST to a firewall to block an IP address. This directly aligns with the 'Block IP' expected outcome of isolating an endpoint.",
     "fetches_data": false,
@@ -394,6 +496,20 @@ results = ticket_manager.create_ticket(title, description)
   "ai_description": "Opens a new ticket in the ticket service by a post request.",
   "ai_short_description": "Opens a new ticket in the ticket service.",
   "parameters_description": "| Parameter | Type | Mandatory | Description |\n| --- | --- | --- | --- |\n| title | String | Yes | Ticket Title |\n| description | String | Yes | Ticket Description |",
+  "impact_analysis_actions_metadata": {
+    "volume_risk_reasoning": "Single ticket creation.",
+    "scope_risk_reasoning": "Operation affects only a single ticket.",
+    "friction_risk_reasoning": "Creating a ticket does not halt employee productivity.",
+    "reversibility_risk_reasoning": "Ticket created in external ITSM can be closed or cancelled.",
+    "asset_criticality_relevance": false,
+    "asset_criticality_relevance_reasoning": "1. Operation Type Check: Mutative action (creates ticket). Fails rule: mutative actions do not qualify for asset criticality calculation. 2. Asset Identifier Presence: Operates on title/description parameters. 3. Discovery of Pre-existing Metadata/Scope Signals: Returns ticket ID. 4. Downstream Utility: Does not return asset criticality classification metadata.",
+    "volume_risk_score": "Low",
+    "scope_risk_score": "Low",
+    "friction_risk_score": "Low",
+    "reversibility_risk_score": "Medium",
+    "asset_criticality_categories": [],
+    "asset_criticality_categories_reasoning": "Not applicable as relevance is false."
+  },
   "capabilities": {
     "reasoning": "The action makes a POST request to create a ticket (can_mutate_external_data=true). It does not fetch context data or update internal entities.",
     "fetches_data": false,
