@@ -183,3 +183,53 @@ class TestFileAcquisitionMethods:
                 f"{API_ROOT}/web/api/v2.1/download/1",
                 stream=True,
             )
+
+    def test_download_file_absolute_url(self, manager):
+        mock_resp = MagicMock(status_code=200)
+        with patch.object(manager.session, "get", return_value=mock_resp) as mock_get:
+            resp = manager.download_file("https://s3.amazonaws.com/sentinelone/pkg.zip")
+            assert resp == mock_resp
+            mock_get.assert_called_once_with(
+                "https://s3.amazonaws.com/sentinelone/pkg.zip",
+                stream=True,
+            )
+
+    def test_fetch_token_success(self):
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = {"token": "retrieved-token-456"}
+        with patch("requests.Session.post", return_value=mock_resp):
+            mgr = SentinelOneResponseManager(
+                API_ROOT, username="admin@corp.com", password="SecurePassword123"
+            )
+            assert mgr.session.headers["Authorization"] == "ApiToken retrieved-token-456"
+
+    def test_fetch_token_failure(self):
+        mock_resp = MagicMock(status_code=401, text="Unauthorized")
+        mock_resp.json.return_value = {"errors": [{"detail": "Invalid credentials"}]}
+        with patch("requests.Session.post", return_value=mock_resp):
+            with pytest.raises(SentinelOneConnectivityError):
+                SentinelOneResponseManager(
+                    API_ROOT, username="admin@corp.com", password="BadPassword"
+                )
+
+    def test_validate_response_error_formats(self, manager):
+        # Format 1: errors list with details
+        resp1 = MagicMock(status_code=500, text="Internal Error")
+        resp1.json.return_value = {"errors": [{"detail": "Custom server error"}]}
+        with pytest.raises(SentinelOneConnectivityError) as exc1:
+            manager.validate_response(resp1)
+        assert "Custom server error" in str(exc1.value)
+
+        # Format 2: message key
+        resp2 = MagicMock(status_code=400, text="Bad Request")
+        resp2.json.return_value = {"message": "Invalid query parameters"}
+        with pytest.raises(SentinelOneConnectivityError) as exc2:
+            manager.validate_response(resp2)
+        assert "Invalid query parameters" in str(exc2.value)
+
+        # Format 3: detail key
+        resp3 = MagicMock(status_code=403, text="Forbidden")
+        resp3.json.return_value = {"detail": "Insufficient permissions"}
+        with pytest.raises(SentinelOneConnectivityError) as exc3:
+            manager.validate_response(resp3)
+        assert "Insufficient permissions" in str(exc3.value)
