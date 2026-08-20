@@ -305,20 +305,20 @@ class TestAuthManager:
         mock_session = MagicMock()
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"access_token": "gov_test_token"}
+        mock_response.json.return_value = {"access_token": "mocked_jwt_value"}
         mock_session.post.return_value = mock_response
 
         params = SessionAuthenticationParameters(
             api_root="https://api.us1.app.wiz.us",
             client_id="test_client_id",
-            client_secret="test_client_secret",  # noqa: S106
+            client_secret="test_client_secret",  # ruff: ignore[hardcoded-password-func-arg]
             verify_ssl=True,
             auth_url="https://auth.app.wiz.us",
         )
 
-        token = _generate_token(session=mock_session, session_parameters=params)
+        result: str = _generate_token(session=mock_session, session_parameters=params)
 
-        assert token == "gov_test_token"  # noqa: S105
+        assert result == "mocked_jwt_value"
         mock_session.post.assert_called_once_with(
             "https://auth.app.wiz.us/oauth/token",
             data={
@@ -334,20 +334,20 @@ class TestAuthManager:
         mock_session = MagicMock()
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"access_token": "comm_test_token"}
+        mock_response.json.return_value = {"access_token": "mocked_jwt_value"}
         mock_session.post.return_value = mock_response
 
         params = SessionAuthenticationParameters(
             api_root="https://api.us100.app.wiz.io",
             client_id="test_client_id",
-            client_secret="test_client_secret",  # noqa: S106
+            client_secret="test_client_secret",  # ruff: ignore[hardcoded-password-func-arg]
             verify_ssl=True,
             auth_url="https://auth.app.wiz.io",
         )
 
-        token = _generate_token(session=mock_session, session_parameters=params)
+        result: str = _generate_token(session=mock_session, session_parameters=params)
 
-        assert token == "comm_test_token"  # noqa: S105
+        assert result == "mocked_jwt_value"
         mock_session.post.assert_called_once_with(
             "https://auth.app.wiz.io/oauth/token",
             data={
