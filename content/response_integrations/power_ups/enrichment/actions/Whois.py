@@ -19,6 +19,7 @@ import re
 from datetime import date, datetime
 
 import whois_alt
+import whois_alt.parse as parse
 from ipwhois import IPWhois
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -33,7 +34,81 @@ from TIPCommon.data_models import CreateEntity
 from TIPCommon.rest.soar_api import create_entity
 from tldextract import extract
 
+from ..core.data_model import get_domain_whois
 from ..core.IpLocation import DbIpCity
+
+# Monkeypatch whois_alt to prevent catastrophic backtracking on AFNIC (nic.fr) whois contacts
+# filter out problematic AFNIC regexes
+safe_regexes = []
+for r in parse.nic_contact_regexes:
+    pattern = r.pattern
+    if "type:\\s*(?P<type>.+)" in pattern and "contact:\\s*(?P<name>.+)" in pattern:
+        pass
+    else:
+        safe_regexes.append(r)
+parse.nic_contact_regexes = safe_regexes
+
+
+# add robust AFNIC parser fallback
+def parse_afnic_contact_blocks(data):
+    handle_contacts = []
+    for segment in data:
+        blocks = segment.split("\n\n")
+        for block in blocks:
+            if "nic-hdl:" not in block:
+                continue
+            contact = {}
+            address_lines = []
+            for line in block.splitlines():
+                line = line.strip()
+                if not line or ":" not in line:
+                    continue
+                key, val = line.split(":", 1)
+                key = key.strip().lower()
+                val = val.strip()
+                if key == "nic-hdl":
+                    contact["handle"] = val
+                elif key == "type":
+                    contact["type"] = val
+                elif key == "contact":
+                    contact["name"] = val
+                elif key == "address":
+                    address_lines.append(val)
+                elif key == "country":
+                    contact["country"] = val
+                elif key == "phone":
+                    contact["phone"] = val
+                elif key == "fax-no":
+                    contact["fax"] = val
+                elif key == "e-mail":
+                    contact["email"] = val
+                elif key == "changed":
+                    contact["changedate"] = val
+
+            for idx, addr in enumerate(address_lines[:4]):
+                contact[f"street{idx + 1}"] = addr
+
+            if "handle" in contact:
+                handle_contacts.append(contact)
+    return handle_contacts
+
+
+orig_parse_nic_contact = parse.parse_nic_contact
+
+
+def my_parse_nic_contact(data):
+    contacts = orig_parse_nic_contact(data)
+    afnic_contacts = parse_afnic_contact_blocks(data)
+    existing_handles = {c["handle"] for c in contacts if "handle" in c}
+    for ac in afnic_contacts:
+        if ac["handle"] not in existing_handles:
+            contacts.append(ac)
+            existing_handles.add(ac["handle"])
+    return contacts
+
+
+parse.parse_nic_contact = my_parse_nic_contact
+
 
 SUPPORTED_ENTITY_TYPES = [
     EntityTypes.ADDRESS,
@@ -46,13 +121,13 @@ SUPPORTED_ENTITY_TYPES = [
 
 def create_entity_with_relation(siemplify, new_entity, linked_entity):
     entity_to_create = CreateEntity(
-            case_id=siemplify.case_id,
-            alert_identifier=siemplify.alert_id,
-            entity_type="DOMAIN",
-            entity_identifier=new_entity.upper(),
-            entity_to_connect_regex=f"{re.escape(linked_entity.upper())}$",
-            types_to_connect=[],
-        )
+        case_id=siemplify.case_id,
+        alert_identifier=siemplify.alert_id,
+        entity_type="DOMAIN",
+        entity_identifier=new_entity.upper(),
+        entity_to_connect_regex=f"{re.escape(linked_entity.upper())}$",
+        types_to_connect=[],
+    )
     create_entity(siemplify, entity_to_create)
 
 
@@ -78,9 +153,7 @@ def main():
 
     status = EXECUTION_STATE_COMPLETED
     output_message = ""
-    result_value = (
-        None
-    )
+    result_value = None
     siemplify.script_name = "Whois"
     create_entities = (
         siemplify.extract_action_param("Create Entities", print_value=True).lower()
@@ -123,7 +196,7 @@ def main():
             try:
                 domain = get_domain_from_string(entity.identifier)
                 if domain:
-                    whois_data = whois_alt.get_whois(domain)
+                    whois_data = get_domain_whois(domain, logger=siemplify.LOGGER)
                     if "creation_date" in whois_data:
                         whois_data["age_in_days"] = int(
                             (
