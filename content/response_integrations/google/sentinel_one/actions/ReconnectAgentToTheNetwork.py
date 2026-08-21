@@ -39,6 +39,20 @@ def main():
         conf["Api Root"], conf["Username"], conf["Password"]
     )
 
+    agent_id = siemplify.parameters.get("Agent ID")
+    if agent_id:
+        agent_id = agent_id.strip()
+
+    if agent_id:
+        action_status = sentinel_one_manager.reconnect_agent_to_network(agent_id)
+        if action_status:
+            result_value = True
+            output_message = f"Agent {agent_id} was reconnected to the network."
+        else:
+            output_message = f"Failed to reconnect agent {agent_id} to the network."
+        siemplify.end(output_message, result_value)
+        return
+
     # Get scope entities.
     scope_entities = [
         entity
