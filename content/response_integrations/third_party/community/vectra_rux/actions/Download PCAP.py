@@ -6,7 +6,6 @@ import os
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon import extract_action_param, extract_configuration_param
 
 from ..core.constants import (
     COMMON_ACTION_ERROR_MESSAGE,
@@ -15,7 +14,7 @@ from ..core.constants import (
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
 )
-from ..core.UtilsManager import save_attachment, validate_integer
+from ..core.UtilsManager import validate_integer, get_integration_params
 from ..core.VectraRUXExceptions import (
     FileNotFoundException,
     InvalidIntegerException,
@@ -33,34 +32,13 @@ def main():
     siemplify.LOGGER.info("----------- Main - Param Init ---------")
 
     # Configuration Parameters
-    root_api = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Root",
-        input_type=str,
-    )
-    client_id = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client ID",
-        input_type=str,
-        remove_whitespaces=False,
-    )
-    client_secret = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client Secret",
-        input_type=str,
-        print_value=False,
-    )
+    api_root, client_id, client_secret = get_integration_params(siemplify)
 
     # Action Parameters
-    detection_id = extract_action_param(
-        siemplify,
+    detection_id = siemplify.extract_action_param(
         param_name="Detection ID",
         input_type=str,
         is_mandatory=True,
-        print_value=True,
     )
 
     siemplify.LOGGER.info("----------------- Main - Started ------------")
@@ -69,9 +47,8 @@ def main():
     result_value = RESULT_VALUE_TRUE
 
     try:
-        filepath = os.path.dirname(os.path.abspath(__file__))
         vectra_rux_manager = VectraRUXManager(
-            root_api,
+            api_root,
             client_id,
             client_secret,
             siemplify=siemplify,
@@ -80,9 +57,6 @@ def main():
         detection_id = validate_integer(detection_id, field_name="Detection ID")
 
         file_content, filename = vectra_rux_manager.download_pcap(detection_id)
-        # Save attachment to given path
-        local_path = save_attachment(path=filepath, name=filename, content=file_content)
-        siemplify.LOGGER.info(f"The Local path is: {local_path}")
 
         siemplify.result.add_attachment(
             "PCAP file",

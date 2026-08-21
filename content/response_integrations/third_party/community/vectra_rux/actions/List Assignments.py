@@ -5,16 +5,16 @@ import json
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+from TIPCommon.transformation import construct_csv
 
 from ..core.constants import (
     COMMON_ACTION_ERROR_MESSAGE,
-    INTEGRATION_NAME,
     LIST_ASSIGNMENTS_SCRIPT_NAME,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
 )
 from ..core.UtilsManager import (
+    get_integration_params,
     process_action_parameter_integer,
     validate_integer,
     validate_limit_param,
@@ -31,27 +31,7 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameters
-    api_root = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Root",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_id = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client ID",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_secret = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client Secret",
-        print_value=False,
-        is_mandatory=True,
-    )
+    api_root, client_id, client_secret = get_integration_params(siemplify)
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
@@ -62,36 +42,31 @@ def main():
         query_params_mapping = {}
 
         # Action Parameters
-        account_ids = extract_action_param(
-            siemplify,
+        account_ids = siemplify.extract_action_param(
             param_name="Accounts IDs",
             input_type=str,
             is_mandatory=False,
         )
 
-        host_ids = extract_action_param(
-            siemplify,
+        host_ids = siemplify.extract_action_param(
             param_name="Hosts IDs",
             input_type=str,
             is_mandatory=False,
         )
 
-        assignee_ids = extract_action_param(
-            siemplify,
+        assignee_ids = siemplify.extract_action_param(
             param_name="Assignees IDs",
             input_type=str,
             is_mandatory=False,
         )
 
-        resolution_ids = extract_action_param(
-            siemplify,
+        resolution_ids = siemplify.extract_action_param(
             param_name="Resolution IDs",
             input_type=str,
             is_mandatory=False,
         )
 
-        resolved_status = extract_action_param(
-            siemplify,
+        resolved_status = siemplify.extract_action_param(
             param_name="Resolved",
             input_type=str,
             is_mandatory=False,
@@ -99,8 +74,7 @@ def main():
         if resolved_status != "None":
             query_params_mapping["resolved"] = resolved_status
 
-        created_after = extract_action_param(
-            siemplify,
+        created_after = siemplify.extract_action_param(
             param_name="Created After",
             input_type=str,
             is_mandatory=False,
@@ -127,18 +101,18 @@ def main():
         if resolution_ids:
             query_params_mapping["resolution"] = ",".join(resolution_ids)
 
-        max_assignment_to_return = extract_action_param(
-            siemplify,
+        max_assignment_to_return = siemplify.extract_action_param(
             param_name="Limit",
             input_type=str,
             is_mandatory=False,
         )
-
+        
         max_assignment_to_return = validate_integer(
             validate_limit_param(max_assignment_to_return),
             zero_allowed=True,
             field_name="Limit",
         )
+            
         vectra_manager = VectraRUXManager(
             api_root,
             client_id,
@@ -166,6 +140,7 @@ def main():
             )
 
         siemplify.result.add_result_json(json.dumps(assignments, indent=4))
+
     except InvalidIntegerException as e:
         status = EXECUTION_STATE_FAILED
         result_value = RESULT_VALUE_FALSE
