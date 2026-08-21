@@ -37,7 +37,7 @@ class GetAccountPasswordValue(CyberArkPamAction):
         """Initialize the GetAccountPasswordValue action."""
         super().__init__(f"{INTEGRATION_NAME} - {SCRIPT_NAME}")
         self.account: str = ""
-        self.reason: str | None = None
+        self.reason: str = ""
         self.ticketing_system_name: str | None = None
         self.ticket_id: int | None = None
         self.version: int | None = None
@@ -53,8 +53,8 @@ class GetAccountPasswordValue(CyberArkPamAction):
         self.reason = extract_action_param(
             self.soar_action,
             param_name="Reason",
-            default_value="Retrieved automatically by Chronicle SOAR.",
             print_value=True,
+            is_mandatory=True,
         )
         self.ticketing_system_name = extract_action_param(
             self.soar_action,

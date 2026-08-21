@@ -131,7 +131,7 @@ class CyberArkPamManager:
     def get_password(
         self,
         account: str,
-        reason: str | None = None,
+        reason: str,
         ticketing_system_name: str | None = None,
         ticket_id: int | None = None,
         version: int | None = None,
