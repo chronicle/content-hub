@@ -47,14 +47,15 @@ if TYPE_CHECKING:
 
 
 PUSH_FAILURE_INDICATORS = (
-        "pre-receive hook declined",
-        "not allowed to push",
-        "push rejected",
-        "failed to push",
-        "error: failed to push",
-        "! [rejected]",
-        "! [remote rejected]",
-    )
+    "pre-receive hook declined",
+    "not allowed to push",
+    "push rejected",
+    "failed to push",
+    "error: failed to push",
+    "! [rejected]",
+    "! [remote rejected]",
+)
+
 
 class Git:
     """GitManager"""
