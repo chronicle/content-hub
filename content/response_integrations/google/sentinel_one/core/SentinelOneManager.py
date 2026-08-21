@@ -456,6 +456,30 @@ class SentinelOneManager:
         self.validate_response(response)
         return response.json()
 
+    def get_agent_network_status(self, agent_id: str) -> str:
+        """
+        Get network containment status for an endpoint agent.
+        :param agent_id: endpoint agent id {string}
+        :return: network status {string}
+        """
+        agent_data = self.get_endpoint_system_information(agent_id)
+        if isinstance(agent_data, dict):
+            data = agent_data.get("data", agent_data)
+            if isinstance(data, list) and data:
+                data = data[0]
+            if isinstance(data, dict):
+                if data.get("networkStatus"):
+                    return str(data["networkStatus"]).lower()
+                if data.get("network_status"):
+                    return str(data["network_status"]).lower()
+                net_info = data.get("network_information", {})
+                if isinstance(net_info, dict):
+                    if net_info.get("network_status"):
+                        return str(net_info["network_status"]).lower()
+                    if net_info.get("networkStatus"):
+                        return str(net_info["networkStatus"]).lower()
+        return "unknown"
+
     def get_server_settings(self):
         """
         Get system configuration server settings.
