@@ -26,6 +26,13 @@ from mp.core.data_models.common.condition.condition_group import (
     LogicalOperator,
     NonBuiltConditionGroup,
 )
+from mp.core.data_models.common.overview.metadata import (
+    BuiltOverview,
+    NonBuiltOverview,
+    Overview,
+    OverviewType,
+    OverviewWidgetDetails,
+)
 from mp.core.data_models.common.widget.data import (
     BuiltWidgetDataDefinition,
     HtmlWidgetDataDefinition,
@@ -51,13 +58,6 @@ from mp.core.data_models.playbooks.meta.metadata import (
     NonBuiltPlaybookMetadata,
     PlaybookCreationSource,
     PlaybookMetadata,
-)
-from mp.core.data_models.playbooks.overview.metadata import (
-    BuiltOverview,
-    NonBuiltOverview,
-    Overview,
-    OverviewType,
-    OverviewWidgetDetails,
 )
 from mp.core.data_models.playbooks.step.metadata import BuiltStep, NonBuiltStep, Step, StepType
 from mp.core.data_models.playbooks.step.step_debug_data import (
@@ -909,4 +909,42 @@ OVERVIEW_WITH_NONE = Overview(
     roles=[],
     role_names=[],
     widgets=[],
+)
+
+BUILT_OVERVIEW_CASE: BuiltOverview = {
+    "OverviewTemplate": {
+        "Identifier": "identifier",
+        "Name": "name",
+        "Creator": "creator",
+        "PlaybookDefinitionIdentifier": "playbook_id",
+        "Type": 3,
+        "AlertRuleType": "alert_rule_type",
+        "Widgets": [BUILT_PLAYBOOK_WIDGET_METADATA],
+        "Roles": [1, 2],
+    },
+    "Roles": ["role1", "role2"],
+}
+
+NON_BUILT_OVERVIEW_CASE: NonBuiltOverview = {
+    "identifier": "identifier",
+    "name": "name",
+    "creator": "creator",
+    "playbook_id": "playbook_id",
+    "widgets_details": [OVER_VIEW_WIDGET_DETAILS],
+    "type": "system_case",
+    "alert_rule_type": "alert_rule_type",
+    "roles": [1, 2],
+    "role_names": ["role1", "role2"],
+}
+
+OVERVIEW_CASE = Overview(
+    identifier="identifier",
+    name="name",
+    creator="creator",
+    playbook_id="playbook_id",
+    type_=OverviewType.SYSTEM_CASE,
+    alert_rule_type="alert_rule_type",
+    roles=[1, 2],
+    role_names=["role1", "role2"],
+    widgets=[PLAYBOOK_WIDGET_METADATA],
 )

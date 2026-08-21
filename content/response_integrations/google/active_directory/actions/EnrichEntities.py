@@ -18,7 +18,7 @@ import sys
 
 from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
 
-from ..core.ActiveDirectoryManager import (
+from core.ActiveDirectoryManager import (
     ActiveDirectoryManager,
     ActiveDirectoryNotExistPropertyError,
     ActiveDirectoryTimeoutError,
@@ -36,12 +36,13 @@ from soar_sdk.SiemplifyUtils import (
     convert_unixtime_to_datetime,
     convert_dict_to_json_result_dict,
 )
-from ..core.utils import (
+from core.utils import (
     load_csv_to_list,
     get_existing_fields_to_enrich,
     filter_nested_dictionary,
     is_action_approaching_timeout,
     is_action_approaching_iteration_run_timeout,
+    prevent_reverting_properties,
 )
 
 # =====================================
@@ -292,6 +293,7 @@ def main(is_first_run):
                         entity.additional_properties.update(enrichment_data)
                         entity.is_enriched = True
                         result_value["successful"].append(entity.identifier)
+                        prevent_reverting_properties(entity)
                         entities_to_update.append(entity)
                     else:
                         result_value["failed"].append(entity.identifier)

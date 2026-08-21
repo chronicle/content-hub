@@ -44,11 +44,11 @@ class TestTriggerDataModel:
         assert TRIGGER.to_non_built() == NON_BUILT_TRIGGER
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             Trigger.from_built(FILE_NAME, {})
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             Trigger.from_non_built(FILE_NAME, {})
 
     def test_from_built_with_none_values(self) -> None:

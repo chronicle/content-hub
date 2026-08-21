@@ -1,22 +1,23 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
-from TIPCommon import extract_action_param
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from TIPCommon.extraction import extract_action_param
 
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE,
     COMMON_ACTION_ERROR_MESSAGE,
     GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER,
     GET_INDICATOR_INTEL_LOOKUP_RESULT_SCRIPT_NAME,
     MAX_TABLE_RECORDS,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
 )
 from ..core.datamodels import IndicatorIntelLookupResult
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import get_integration_params, validate_required_string
 
 
@@ -64,9 +65,7 @@ def main():
 
         siemplify.result.add_result_json(json.dumps(response))
         if table_results:
-            siemplify.result.add_data_table(
-                title="Dossier Lookup Results", data_table=construct_csv(table_results)
-            )
+            siemplify.result.add_data_table(title="Dossier Lookup Results", data_table=construct_csv(table_results))
 
     except (InfobloxException, ValueError) as e:
         output_message = str(e)
@@ -75,9 +74,7 @@ def main():
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
     except Exception as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER, e
-        )
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER, e)
         result_value = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

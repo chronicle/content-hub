@@ -69,6 +69,8 @@ class SiemplifyApiClient:
         self._bearer_token = None
         if smp_username and smp_password:
             self._bearer_token = self.get_bearer_token(smp_password, smp_username)
+        self._integration_instance_names = {}
+        self._integration_instance_ids = {}
 
     def get_bearer_token(self, smp_password, smp_username):
         payload = {"password": smp_password, "username": smp_username}
@@ -543,6 +545,11 @@ class SiemplifyApiClient:
         Returns:
             str: Returns display name of the integration instance.
         """
+        env_key = tuple(sorted(environments)) if environments is not None else ()
+        cache_key = (integration_name, instance_id, env_key)
+        if cache_key in self._integration_instance_names:
+            return self._integration_instance_names[cache_key]
+
         res = get_integration_instance_details_by_id(
             chronicle_soar=chronicle_soar,
             integration_identifier=integration_name,
@@ -550,9 +557,12 @@ class SiemplifyApiClient:
             environments=environments,
         )
         if res is None:
+            self._integration_instance_names[cache_key] = None
             return None
 
-        return res.get("displayName") or res.get("instanceName")
+        name = res.get("displayName") or res.get("instanceName")
+        self._integration_instance_names[cache_key] = name
+        return name
 
     def get_integration_instance_id_by_name(
         self,
@@ -575,20 +585,29 @@ class SiemplifyApiClient:
         if display_name is None:
             return None
 
+        env_key = tuple(sorted(environments)) if environments is not None else ()
+        cache_key = (integration_name, display_name, env_key)
+        if cache_key in self._integration_instance_ids:
+            return self._integration_instance_ids[cache_key]
+
         try:
             res = get_integration_instance_details_by_name(
                 chronicle_soar=chronicle_soar,
                 integration_identifier=integration_name,
                 instance_display_name=display_name,
-                environments=environments
+                environments=environments,
             )
         except HTTPError as e:
             if e.response and e.response.status_code == 404 and consider_404_to_none:
+                self._integration_instance_ids[cache_key] = None
                 return None
 
             raise
 
         if res is None:
+            self._integration_instance_ids[cache_key] = None
             return None
 
-        return res.get("identifier")
+        identifier = res.get("identifier")
+        self._integration_instance_ids[cache_key] = identifier
+        return identifier

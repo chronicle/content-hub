@@ -5,6 +5,7 @@ INTEGRATION_DISPLAY_NAME = "SpyCloud Enterprise"
 
 # Actions
 PING_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Ping"
+GET_WATCHLIST_EXPOSURES_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Get Watchlist Exposures"
 
 ENDPOINT_PING = "/enterprise-v2/breach/catalog/1"
 ENDPOINT_BREACH_CATALOG = "/enterprise-v2/breach/catalog"

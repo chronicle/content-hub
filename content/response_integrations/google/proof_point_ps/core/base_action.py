@@ -25,7 +25,7 @@ from .api_client import ProofPointPSApiClient
 from .auth import AuthenticatedSession, SessionAuthenticationParameters
 import datetime
 from .constants import PROVIDER, TIME_FORMAT
-from .exceptions import ProofPointPSError
+from .exceptions import FolderNotFoundError, ProofPointPSError
 
 if TYPE_CHECKING:
     from .data_models import QuarantineRecord
@@ -118,9 +118,9 @@ class BaseProofPointPSAction(Action, ABC):
         folder_missing = []
 
         start_date = (
-            datetime.datetime.utcnow() - datetime.timedelta(days=30)
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=30)
         ).strftime(TIME_FORMAT)
-        end_date = datetime.datetime.utcnow().strftime(TIME_FORMAT)
+        end_date = datetime.datetime.now(datetime.timezone.utc).strftime(TIME_FORMAT)
 
         try:
             folder_records = self.api_client.search(
@@ -129,7 +129,7 @@ class BaseProofPointPSAction(Action, ABC):
                 start_date=start_date,
                 end_date=end_date,
             )
-        except ProofPointPSError:
+        except FolderNotFoundError:
             raise ProofPointPSError(f"Folder '{folder_name}' does not exist.")
 
         folder_records_map = {r.guid: r for r in folder_records if r.guid}

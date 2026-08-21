@@ -122,7 +122,7 @@ def restructure_script_imports(code_string: str) -> str:
 
 
 class FutureAnnotationsTransformer(cst.CSTTransformer):
-    def leave_Module(self, original_node: cst.Module, updated_node: cst.Module) -> cst.Module:  # noqa: N802, PLR6301
+    def leave_Module(self, original_node: cst.Module, updated_node: cst.Module) -> cst.Module:  # ruff:ignore[invalid-function-name, no-self-use]
         """Ensure `from __future__ import annotations` is present at the top of the module.
 
         Returns:
@@ -156,7 +156,7 @@ class FutureAnnotationsTransformer(cst.CSTTransformer):
 
 
 class SdkImportTransformer(cst.CSTTransformer):
-    def leave_ImportFrom(  # noqa: N802, PLR6301
+    def leave_ImportFrom(  # ruff:ignore[invalid-function-name, no-self-use]
         self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
     ) -> cst.ImportFrom:
         """Transform `from <module> import ...` statements for SDK modules.
@@ -178,7 +178,7 @@ class SdkImportTransformer(cst.CSTTransformer):
 
         return updated_node
 
-    def leave_Import(self, original_node: cst.Import, updated_node: cst.Import) -> cst.Import:  # noqa: ARG002, N802, PLR6301
+    def leave_Import(self, original_node: cst.Import, updated_node: cst.Import) -> cst.Import:  # ruff:ignore[unused-method-argument, invalid-function-name, no-self-use]
         """Transform `import <module>` statements for SDK modules.
 
         Returns:
@@ -219,9 +219,9 @@ class BaseCoreImportTransformer(cst.CSTTransformer, ABC):
     def _create_core_import_from(aliases: tuple[cst.ImportAlias, ...]) -> cst.ImportFrom:
         """Create the specific 'from ... import' node for core aliases."""
 
-    def leave_SimpleStatementLine(  # noqa: N802
+    def leave_SimpleStatementLine(  # ruff:ignore[invalid-function-name]
         self,
-        original_node: cst.SimpleStatementLine,  # noqa: ARG002
+        original_node: cst.SimpleStatementLine,  # ruff:ignore[unused-method-argument]
         updated_node: cst.SimpleStatementLine,
     ) -> FlattenSentinel[cst.SimpleStatementLine] | cst.SimpleStatementLine:
         """Handle `import <module>` statements.
@@ -291,7 +291,7 @@ class CorePackageImportTransformer(BaseCoreImportTransformer):
             relative=(cst.Dot(), cst.Dot()),
         )
 
-    def leave_ImportFrom(  # noqa: N802
+    def leave_ImportFrom(  # ruff:ignore[invalid-function-name]
         self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
     ) -> cst.ImportFrom:
         """Transform `from <module> import ...` statements for core package modules.
@@ -330,7 +330,7 @@ class CorePackageInternalImportTransformer(BaseCoreImportTransformer):
             relative=(cst.Dot(),),
         )
 
-    def leave_ImportFrom(  # noqa: N802
+    def leave_ImportFrom(  # ruff:ignore[invalid-function-name]
         self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
     ) -> cst.ImportFrom:
         """Transform `from <module> import ...` statements for internal core package modules.
@@ -378,9 +378,9 @@ def apply_transformers(content: str, transformers: list[cst.CSTTransformer]) -> 
 
 
 class ImportTransformer(cst.CSTTransformer):
-    def leave_Import(  # noqa: N802, PLR6301
+    def leave_Import(  # ruff:ignore[invalid-function-name, no-self-use]
         self,
-        original_node: cst.Import,  # noqa: ARG002
+        original_node: cst.Import,  # ruff:ignore[unused-method-argument]
         updated_node: cst.Import,
     ) -> cst.Import:
         """Handle `import <module>` statements for SDK modules.
@@ -409,7 +409,7 @@ class ImportTransformer(cst.CSTTransformer):
 
         return updated_node.with_changes(names=tuple(new_aliases)) if changed else updated_node
 
-    def leave_ImportFrom(  # noqa: N802, PLR6301, D102
+    def leave_ImportFrom(  # ruff:ignore[invalid-function-name, no-self-use, undocumented-public-method]
         self,
         original_node: cst.ImportFrom,
         updated_node: cst.ImportFrom,

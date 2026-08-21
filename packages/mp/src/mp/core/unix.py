@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import re
-import subprocess as sp  # noqa: S404
+import subprocess as sp  # ruff:ignore[suspicious-subprocess-import]
 import sys
 from typing import IO, TYPE_CHECKING
 
@@ -81,7 +81,7 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
     logger.debug("Running command: %s", command)
 
     try:
-        result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
+        result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # ruff:ignore[subprocess-without-shell-equals-true]
         _log_subprocess_result(result)
         _remove_safe_to_ignore_packages_from_requirements(requirements_path)
     except sp.CalledProcessError as e:
@@ -117,7 +117,7 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
     """
     logger.debug("Running pip command: %s in %s", command, cwd)
     try:
-        result = sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
+        result = sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # ruff:ignore[subprocess-without-shell-equals-true]
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
@@ -250,7 +250,7 @@ def _add_regular_dependencies_to_toml(deps_to_add: list[str], base_command: list
     deps_command: list[str] = base_command.copy()
     deps_command.extend(deps_to_add)
     try:
-        result = sp.run(deps_command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
+        result = sp.run(deps_command, cwd=project_path, check=True, text=True, capture_output=True)  # ruff:ignore[subprocess-without-shell-equals-true]
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
@@ -270,7 +270,7 @@ def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list
     dev_base_command.extend(_get_base_dev_dependencies())
     dev_base_command.extend(dev_deps_to_add)
     try:
-        result = sp.run(  # noqa: S603
+        result = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             dev_base_command, cwd=project_path, check=True, text=True, capture_output=True
         )
         _log_subprocess_result(result)
@@ -341,7 +341,7 @@ def init_python_project(project_path: Path) -> None:
     logger.debug("Running command: %s", command)
 
     try:
-        result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
+        result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # ruff:ignore[subprocess-without-shell-equals-true]
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
@@ -392,12 +392,12 @@ def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
 
     if not sys.platform.startswith("win"):
         chmod_command: list[str] = ["chmod", "+x", script_full_path]
-        sp.run(chmod_command, check=True)  # noqa: S603
+        sp.run(chmod_command, check=True)  # ruff:ignore[subprocess-without-shell-equals-true]
 
     command: list[str] = [script_full_path] + [str(p) for p in test_paths]
     logger.debug("Running script on paths: %s", command)
 
-    result = sp.run(  # noqa: S603
+    result = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
         command,
         capture_output=True,
         text=True,
@@ -434,7 +434,7 @@ def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **
     logger.debug("Executing command and capturing output: %s", c)
 
     try:
-        with sp.Popen(c, stdout=sp.PIPE, stderr=sp.STDOUT) as process:  # noqa: S603
+        with sp.Popen(c, stdout=sp.PIPE, stderr=sp.STDOUT) as process:  # ruff:ignore[subprocess-without-shell-equals-true]
             for line in _stream_process_output(process):
                 logger.info("%s", line.decode(errors="replace").rstrip())
 
@@ -477,7 +477,7 @@ def get_changed_files() -> list[str]:
         "--diff-filter=ACMRTUXB",
     ]
     try:
-        result: sp.CompletedProcess[str] = sp.run(  # noqa: S603
+        result: sp.CompletedProcess[str] = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             command,
             check=True,
             text=True,
@@ -569,7 +569,7 @@ def check_lock_file(project_path: Path) -> None:
     logger.debug("Checking lock file consistency: %s", command)
 
     try:
-        result = sp.run(  # noqa: S603
+        result = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             command, cwd=project_path, check=True, text=True, capture_output=True
         )
         _log_subprocess_result(result)
@@ -609,7 +609,7 @@ def get_files_unmerged_to_main_branch(
         str(integration_path),
     ]
     try:
-        results: sp.CompletedProcess[str] = sp.run(  # noqa: S603
+        results: sp.CompletedProcess[str] = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             command, check=True, text=True, capture_output=True
         )
         return [p for path in results.stdout.strip().splitlines() if path and (p := pathlib.Path(path)).exists()]
@@ -635,7 +635,7 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
     # git show requires a repo-root-relative path; convert absolute paths.
     try:
         rev_parse_command: list[str] = ["git", "rev-parse", "--show-toplevel"]
-        repo_root_result = sp.run(  # noqa: S603
+        repo_root_result = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             rev_parse_command,
             check=True,
             text=True,
@@ -649,7 +649,7 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
     command: list[str] = ["git", "show", git_path_arg]
 
     try:
-        results: sp.CompletedProcess[str] = sp.run(  # noqa: S603
+        results: sp.CompletedProcess[str] = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             command, check=True, text=True, capture_output=True
         )
 
