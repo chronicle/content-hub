@@ -23,7 +23,7 @@ def main():
 
     try:
         siemplify.LOGGER.info("Starting to get the user information")
-        user = pager_duty.get_user_by_ID(userID)
+        user = pager_duty.get_user_by_id(userID)
         result_value = True
         output_message = f"Successfully retrieved user {user['email']}"
 

@@ -47,32 +47,32 @@ class PagerDutyManager:
         )
         response.raise_for_status()
 
-    def acknowledge_incident(self, incident_id: str) -> requests.Response:
+    def acknowledge_incident(self, incident_id: str) -> SingleJson:
         """Acknowledges an incident in PagerDuty.
-
-        API Reference: https://developer.pagerduty.com/api-reference/8a0e1aa2ec666-update-an-incident
 
         Args:
             incident_id: The ID of the incident to acknowledge.
 
         Returns:
-            requests.Response: The API response.
+            SingleJson: The API response.
         """
-        url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}"
-        data: dict[str, str] = {"statuses[]": "acknowledged"}
-        headers: dict[str, str] = {
-            "Content-Type": "application/json",
-            "Accept": "application/vnd.pagerduty+json;version=2",
-            "Authorization": f"Token token={self.api_key}",
+        url: str = f"{self.BASE_URL}{self.INCIDENTS_URI}/{incident_id}"
+        payload: SingleJson = {
+            "incident": {
+                "type": "incident",
+                "status": "acknowledged",
+            }
         }
-        response: requests.Response = requests.request(
-            "GET",
+        headers: dict[str, str] = self._get_auth_headers()
+        headers["Content-Type"] = "application/json"
+        response = self.requests_session.put(
             url,
+            json=payload,
             headers=headers,
-            params=data,
             timeout=10,
         )
-        return response
+        response.raise_for_status()
+        return response.json()
 
     def resolve_incident(self, incident_id: str) -> SingleJson:
         """Resolves an incident in PagerDuty.
@@ -84,12 +84,7 @@ class PagerDutyManager:
             SingleJson: The API response.
         """
         url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}"
-        payload: SingleJson = {
-            "incident": {
-                "type": "incident",
-                "status": "resolved"
-            }
-        }
+        payload: SingleJson = {"incident": {"type": "incident", "status": "resolved"}}
         headers: dict[str, str] = self._get_auth_headers()
         headers["Content-Type"] = "application/json"
         response = self.requests_session.put(
@@ -112,11 +107,7 @@ class PagerDutyManager:
             SingleJson: The API response.
         """
         url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}/notes"
-        payload: SingleJson = {
-            "note": {
-                "content": content
-            }
-        }
+        payload: SingleJson = {"note": {"content": content}}
         headers: dict[str, str] = self._get_auth_headers()
         headers["Content-Type"] = "application/json"
         response = self.requests_session.post(
@@ -263,11 +254,11 @@ class PagerDutyManager:
             return response.json()
         return {"message": "No Incident Found"}
 
-    def get_incident_ID(self, incidentID: str, email_from: str) -> SingleJson:
+    def get_incident_id(self, incident_id: str, email_from: str) -> SingleJson:
         """Gets incident by ID.
 
         Args:
-            incidentID (str): Incident ID or key.
+            incident_id (str): Incident ID or key.
             email_from (str): Email address.
 
         Returns:
@@ -276,17 +267,17 @@ class PagerDutyManager:
         self.requests_session.headers.update(
             {"Authorization": f"Token token={self.api_key}", "From": f"{email_from}"},
         )
-        parameters: dict[str, str] = {"user_ids[]": incidentID}
+        payload: dict[str, str] = {"user_ids[]": incident_id}
         url: str = self.BASE_URL + self.INCIDENTS_URI
         response: requests.Response = self.requests_session.get(
-            url=url, json=parameters, timeout=10
+            url=url, json=payload, timeout=10
         )
         response.raise_for_status()
         incident_data: SingleJson = {}
         info_got: list[SingleJson] = response.json().get("incidents")
 
         for incident in info_got:
-            if incident.get("incident_key") == incidentID:
+            if incident.get("incident_key") == incident_id:
                 incident_data = incident
 
         return incident_data
@@ -316,11 +307,11 @@ class PagerDutyManager:
                 return user
         raise PagerDutyNotFoundError(f"User with email '{email}' was not found.")
 
-    def get_user_by_ID(self, userID: str) -> SingleJson:
+    def get_user_by_id(self, user_id: str) -> SingleJson:
         """Gets user by ID.
 
         Args:
-            userID: User ID.
+            user_id: User ID.
 
         Returns:
             SingleJson: User dict.
@@ -333,14 +324,14 @@ class PagerDutyManager:
             "Accept": "application/vnd.pagerduty+json;version=2",
             "Authorization": f"Token token={self.api_key}",
         }
-        url: str = self.BASE_URL + "/users/" + userID
+        url: str = self.BASE_URL + "/users/" + user_id
         response = self.requests_session.request(
             "GET", url, headers=headers, timeout=10
         )
         response.raise_for_status()
         if response.json().get("user"):
             return response.json()["user"]
-        raise PagerDutyNotFoundError(f"User with ID '{userID}' was not found.")
+        raise PagerDutyNotFoundError(f"User with ID '{user_id}' was not found.")
 
     def list_filtered_incidents(self, params: dict[str, Any]) -> list[SingleJson]:
         """Lists filtered incidents.
@@ -403,10 +394,7 @@ class PagerDutyManager:
         return response.json()
 
     def run_response_play(
-        self,
-        email: str,
-        response_plays_id: str,
-        user_id: str
+        self, email: str, response_plays_id: str, user_id: str
     ) -> SingleJson:
         """Runs a response play.
 
@@ -435,7 +423,7 @@ class PagerDutyManager:
             timeout=10,
         )
         response.raise_for_status()
-        return {"message": response}
+        return response.json() if response.content else {"status": "ok"}
 
     def _get_auth_headers(self) -> dict[str, str]:
         """Returns a dictionary with standard authentication headers.

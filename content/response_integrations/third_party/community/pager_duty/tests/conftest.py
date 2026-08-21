@@ -70,6 +70,7 @@ def job(mock_job_env):
 
     SyncIncidents.logger = property(lambda self: mock_logger)
     mock_soar_job = MagicMock()
+    mock_soar_job.get_context_property.return_value = "P99999"
 
     SyncIncidents.soar_job = property(lambda self: mock_soar_job)
     job_instance = SyncIncidents()
@@ -109,6 +110,7 @@ def job_failing_api(mock_job_env):
     job_instance = SyncIncidents()
     client = job_instance._init_api_clients()
     client.resolve_incident = MagicMock(side_effect=Exception("API Failure"))
+    client.add_incident_note = MagicMock(side_effect=Exception("API Failure"))
     SyncIncidents.api_client = property(lambda self: client)
     job_instance._remove_synced_entries = MagicMock()
 
@@ -118,6 +120,14 @@ def job_failing_api(mock_job_env):
     SyncIncidents.api_client = original_api_client
     SyncIncidents.logger = original_logger
     SyncIncidents.soar_job = original_soar_job
+
+
+@pytest.fixture
+def job_failing_soar_close_alert(job):
+    """Fixture providing a job instance where soar_job.close_alert fails."""
+    job.soar_job.close_alert.side_effect = Exception("SecOps API Error")
+    job._remove_synced_entries.reset_mock()
+    return job
 
 
 @pytest.fixture
@@ -146,19 +156,34 @@ def job_case_sync():
     meta = SyncMetadata(status="triggered", incident_number="P123", closure_reason=None)
 
     res.incidents_to_close_in_product = [
-        {"meta": meta, "alert": alert, "is_case_closed": False, "comment": "SecOps closed"}
+        {
+            "meta": meta,
+            "alert": alert,
+            "is_case_closed": False,
+            "comment": "SecOps closed",
+        }
     ]
     res.alerts_to_close_in_soar = []
 
     job_case.get_status_to_sync.return_value = res
     job_case.case_detail.id_ = 1
+    job_case.case_detail.is_closed = False
 
     return job_case
 
 
 @pytest.fixture
+def job_case_closed():
+    """Fixture providing a closed JobCase mock."""
+    job_case = MagicMock(spec=JobCase)
+    job_case.case_detail.id_ = 1
+    job_case.case_detail.is_closed = True
+    return job_case
+
+
+@pytest.fixture
 def job_case_sync_close_case():
-    """Fixture providing a JobCase mock for syncing status (PagerDuty to SOAR, close case)."""
+    """Fixture providing a JobCase mock for syncing status (close case)."""
     job_case = MagicMock(spec=JobCase)
     res = MagicMock()
 
@@ -180,7 +205,7 @@ def job_case_sync_close_case():
 
 @pytest.fixture
 def job_case_sync_close_alert():
-    """Fixture providing a JobCase mock for syncing status (PagerDuty to SOAR, close alert only)."""
+    """Fixture providing a JobCase mock for syncing status (close alert only)."""
     job_case = MagicMock(spec=JobCase)
     res = MagicMock()
 
@@ -202,3 +227,20 @@ def job_case_sync_close_alert():
     job_case.case_detail.alerts = [alert1, alert2]
 
     return job_case
+
+
+@pytest.fixture
+def ticket_with_id():
+    """Fixture providing an AlertCard mock with standard PagerDuty ticket_id."""
+    ticket = MagicMock()
+    ticket.ticket_id = "P12345"
+    return ticket
+
+
+@pytest.fixture
+def ticket_with_context():
+    """Fixture providing an AlertCard mock with UUID ticket_id and context group."""
+    ticket = MagicMock()
+    ticket.ticket_id = "550e8400-e29b-41d4-a716-446655440000"
+    ticket.alert_group_identifier = "group_1"
+    return ticket

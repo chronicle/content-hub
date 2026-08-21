@@ -24,7 +24,7 @@ class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
             self.list_users,
             self.snooze_incident,
             self.get_incident_by_id,
-            self.resolve_incident_by_id,
+            self.update_incident_by_id,
             self.add_incident_note,
             self.create_incident,
             self.get_user_by_id_endpoint,
@@ -98,13 +98,13 @@ class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
             )
 
         incident_exists = any(
-            inc.get("id") == incident_id 
+            inc.get("id") == incident_id
             for inc in self._product.incidents.get("incidents", [])
-            )
+        )
         if not incident_exists:
             return MockResponse(
                 status_code=404, content={"error": {"message": "Incident not found"}}
-                )
+            )
 
         return MockResponse(content=self._product.snooze_incident(incident_id))
 
@@ -115,16 +115,22 @@ class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
         incident = self._product.get_incident(incident_id)
         if incident:
             return MockResponse(content={"incident": incident})
-        return MockResponse(status_code=404, content={"error": {"message": "Incident not found"}})
+        return MockResponse(
+            status_code=404, content={"error": {"message": "Incident not found"}}
+        )
 
     @router.put(r"/incidents/(?P<incident_id>[^/]+)")
-    def resolve_incident_by_id(self, request: MockRequest) -> MockResponse:
-        """Mock for resolving an incident."""
+    def update_incident_by_id(self, request: MockRequest) -> MockResponse:
+        """Mock for updating an incident (resolve or acknowledge)."""
         incident_id = request.url.path.split("/")[-1]
-        res = self._product.resolve_incident(incident_id)
+        payload = get_request_payload(request)
+        status = payload.get("incident", {}).get("status", "resolved")
+        res = self._product.update_incident(incident_id, status=status)
         if res:
             return MockResponse(content=res)
-        return MockResponse(status_code=404, content={"error": {"message": "Incident not found"}})
+        return MockResponse(
+            status_code=404, content={"error": {"message": "Incident not found"}}
+        )
 
     @router.post(r"/incidents/(?P<incident_id>[^/]+)/notes")
     def add_incident_note(self, request: MockRequest) -> MockResponse:
@@ -140,16 +146,30 @@ class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
         """Mock for creating an incident."""
         from_header = request.headers.get("From", "")
         if not from_header or from_header == "":
-            return MockResponse(status_code=400, content={"error": {"message": "Missing email"}})
-        return MockResponse(content={"incident": {"id": "INC123", "status": "triggered"}})
+            return MockResponse(
+                status_code=400, content={"error": {"message": "Missing email"}}
+            )
+        return MockResponse(
+            content={"incident": {"id": "INC123", "status": "triggered"}}
+        )
 
     @router.get(r"/users/(?P<user_id>[^/]+)")
     def get_user_by_id_endpoint(self, request: MockRequest) -> MockResponse:
         """Mock for getting a user by ID."""
         user_id = request.url.path.split("/")[-1]
         if user_id == "NONEXISTENT_USER":
-            return MockResponse(status_code=404, content={"error": {"message": "User not found"}})
-        return MockResponse(content={"user": {"id": user_id, "name": "John Doe", "email": "john.doe@example.com"}})
+            return MockResponse(
+                status_code=404, content={"error": {"message": "User not found"}}
+            )
+        return MockResponse(
+            content={
+                "user": {
+                    "id": user_id,
+                    "name": "John Doe",
+                    "email": "john.doe@example.com",
+                }
+            }
+        )
 
     @router.get(r"/oncalls")
     def list_oncalls(self, request: MockRequest) -> MockResponse:
@@ -166,6 +186,8 @@ class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
         """Mock for running a response play."""
         play_id = request.url.path.split("/")[-2]
         if play_id == "INVALID_PLAY_ID":
-            return MockResponse(status_code=404, content={"error": {"message": "Response play not found"}})
+            return MockResponse(
+                status_code=404,
+                content={"error": {"message": "Response play not found"}},
+            )
         return MockResponse(content={"status": "ok"})
-
