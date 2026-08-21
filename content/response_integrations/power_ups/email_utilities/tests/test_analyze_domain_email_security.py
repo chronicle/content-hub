@@ -26,6 +26,9 @@ def _domain_check(spf: dict | None) -> dict:
         "mx": {"hosts": [], "warnings": []},
         "spf": spf,
         "dmarc": {"record": "v=DMARC1; p=reject", "valid": True},
+        "mta_sts": {"valid": True, "id": "20240101", "policy": {"mode": "enforce"}},
+        "smtp_tls_reporting": {"valid": True, "rua": ["mailto:tls@x.example"]},
+        "bimi": {"valid": True, "selector": "default", "record": "v=BIMI1;"},
     }
 
 
@@ -38,6 +41,9 @@ def test_build_result_passes_checkdmarc_structures_through_verbatim() -> None:
     assert result["DMARC"] is check["dmarc"]
     assert result["MX"] is check["mx"]
     assert result["DNSSec"] is True
+    assert result["MTASTS"] is check["mta_sts"]
+    assert result["SMTPTLSReporting"] is check["smtp_tls_reporting"]
+    assert result["BIMI"] is check["bimi"]
 
 
 def test_build_result_does_not_reproduce_strong_spf() -> None:

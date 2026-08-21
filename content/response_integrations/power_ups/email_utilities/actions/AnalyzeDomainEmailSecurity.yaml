@@ -1,18 +1,23 @@
 creator: Sean Whalen
 default_result_value: ''
-description: Analyzes the email-security posture of a domain's published DNS records
+description: Analyzes the email-security posture of a domain's published records
     using checkdmarc, reporting the presence and validity of its SPF and DMARC records
-    (with warnings), its MX hosts, and whether its DNS is DNSSEC-signed. These fields
-    describe what the domain publishes and enforces - they say nothing about whether
-    any individual email passed authentication; use Analyze Headers or Analyze EML
-    Headers for per-message verdicts. Returns the same SPF, DMARC, MX, and DNSSec
-    structures that Analyze Headers provided before integration version 53.0, so
-    playbooks that referenced those fields can migrate to this action. The pre-53.0
-    StrongSPF boolean is deliberately not reproduced - it is not a standard concept
-    and gave a false sense of security (it counted a softfail "~all" policy as strong,
-    although receivers commonly deliver softfailing mail); the policy it summarized
-    is available verbatim in the SPF "parsed" object's "all" value, e.g. "fail" for
-    "-all" and "softfail" for "~all".
+    (with warnings), its MX hosts, whether its DNS is DNSSEC-signed, and its MTA-STS,
+    SMTP TLS reporting (TLS-RPT), and BIMI deployment. These fields describe what
+    the domain publishes and enforces - they say nothing about whether any individual
+    email passed authentication; use Analyze Headers or Analyze EML Headers for per-message
+    verdicts. The SPF, DMARC, MX, and DNSSec structures match what Analyze Headers
+    provided before integration version 53.0, so playbooks that referenced those
+    fields can migrate to this action. The action only reads published state (DNS
+    lookups, plus the HTTPS fetches checkdmarc uses for MTA-STS policies and BIMI
+    assets) and never connects to the domain's MX hosts over SMTP - STARTTLS/TLS
+    probing is blocked in many runtimes (Google Cloud blocks destination TCP port
+    25), where each probe would time out and record a misleading "STARTTLS is not
+    supported" warning. The pre-53.0 StrongSPF boolean is deliberately not reproduced
+    - it is not a standard concept and gave a false sense of security (it counted
+    a softfail "~all" policy as strong, although receivers commonly deliver softfailing
+    mail); the policy it summarized is available verbatim in the SPF "parsed" object's
+    "all" value, e.g. "fail" for "-all" and "softfail" for "~all".
 dynamic_results_metadata:
 -   result_example_path: resources/AnalyzeDomainEmailSecurity_JsonResult_example.json
     result_name: JsonResult
@@ -26,19 +31,17 @@ parameters:
     is_mandatory: true
     name: Domain
     type: string
--   default_value: 'false'
-    description: Connect to each of the domain's resolved MX hosts over SMTP to test
-        STARTTLS/TLS support. Disabled by default because environments that block
-        outbound SMTP (for example, Google Cloud blocks destination TCP port 25)
-        make each probe time out and then report a misleading "STARTTLS is not supported"
-        warning for every MX host.
-    is_mandatory: false
-    name: Test MX Hosts For STARTTLS/TLS
-    type: boolean
 -   default_value: 'true'
     description: Include a human-readable name and description for each parsed DMARC
         tag in the results, as Analyze Headers did before integration version 53.0.
     is_mandatory: false
     name: Include Tag Descriptions
     type: boolean
+-   default_value: default
+    description: The DNS selector to use when looking up the domain's BIMI record.
+        Most domains publish their BIMI record at the "default" selector; only change
+        this if the sender is known to use a different one.
+    is_mandatory: false
+    name: BIMI Selector
+    type: string
 script_result_name: ScriptResult
