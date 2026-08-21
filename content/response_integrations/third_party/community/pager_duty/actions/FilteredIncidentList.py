@@ -84,7 +84,8 @@ def main():
     sort_by = siemplify.extract_action_param("Sort_By")
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
-    pager_duty = PagerDutyManager(api_token)
+    verify_ssl = str(configurations.get("Verify SSL", "true")).lower() == "true"
+    pager_duty = PagerDutyManager(api_token, verify_ssl=verify_ssl)
 
     try:
         siemplify.LOGGER.info("Started processing the parameters")

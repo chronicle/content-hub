@@ -11,3 +11,21 @@ SCRIPT_NAME_LISTINCIDENTS = "_ListIncidents"
 SCRIPT_NAME_RUN_RESPONSE = "_Run_Response_Play"
 SCRIPT_NAME_PING = "_Ping"
 SCRIPT_NAME_SNOOZE = "_SnoozeIncident"
+
+REASON_MALICIOUS: str = "Malicious"
+REASON_NOT_MALICIOUS: str = "Not Malicious"
+REASON_MAINTENANCE: str = "Maintenance"
+CLASSIFICATION_TRUE_POSITIVE: str = "True Positive"
+CLASSIFICATION_FALSE_POSITIVE: str = "False Positive"
+CLASSIFICATION_OTHER: str = "Other"
+ROOT_CAUSE_OTHER: str = "Other"
+REASON_RESOLVED_IN_PAGERDUTY: str = "Resolved in PagerDuty"
+SEVERITY_HIGH: str = "80"
+SEVERITY_LOW: str = "40"
+
+PAGERDUTY_COMMENT_PREFIX: str = "PagerDuty:"
+SIEM_COMMENT_PREFIX: str = "Google SecOps "
+CONTEXT_KEY: str = "TICKET_ID"
+ENTITY_TYPE_TICKET: int = 1
+ENTITY_TYPE_ALERT: int = 2
+MS_IN_SECOND: int = 1000
