@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import uuid
 from datetime import datetime
 from email.utils import parseaddr
 from types import SimpleNamespace
+import uuid
 
 from TIPCommon.base.job.base_sync_job import BaseSyncJob
 from TIPCommon.base.job.job_case import (
@@ -17,14 +17,13 @@ from TIPCommon.types import SingleJson
 from ..core.constants import (
     CONTEXT_KEY,
     ENTITY_TYPE_ALERT,
+    MS_IN_SECOND,
     PAGERDUTY_COMMENT_PREFIX,
     REASON_MAINTENANCE,
     ROOT_CAUSE_OTHER,
     SIEM_COMMENT_PREFIX,
 )
 from ..core.PagerDutyManager import PagerDutyManager
-
-MS_IN_SECOND: int = 1000
 
 
 class SyncIncidents(BaseSyncJob[PagerDutyManager]):
@@ -113,12 +112,17 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         """
         try:
             incident = self.api_client.get_incident(incident_id)
-            updated_at_str = incident.get("updated_at")
-            if updated_at_str:
-                dt = datetime.fromisoformat(updated_at_str.replace("Z", "+00:00"))
-                return int(dt.timestamp() * MS_IN_SECOND)
+            if incident:
+                timestamp_str = (
+                    incident.get("updated_at") or incident.get("created_at")
+                )
+                if timestamp_str:
+                    dt = datetime.fromisoformat(
+                        timestamp_str.replace("Z", "+00:00")
+                    )
+                    return int(dt.timestamp() * MS_IN_SECOND)
         except Exception as e:
-            self.logger.debug(
+            self.logger.error(
                 f"Failed to get incident timestamp for {incident_id}: {e}"
             )
         return 0
@@ -132,7 +136,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         latest_timestamp = 0
         try:
             notes = self.api_client.get_incident_notes(incident_id)
-            for note in notes:
+            for note in (notes or []):
                 created_at_str = note.get("created_at")
                 if created_at_str:
                     try:
@@ -142,13 +146,13 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         created_at_ms = int(dt.timestamp() * MS_IN_SECOND)
                         latest_timestamp = max(latest_timestamp, created_at_ms)
                     except Exception as e:
-                        self.logger.debug(
+                        self.logger.error(
                             f"Failed to parse created_at for note in incident "
                             f"{incident_id}: {e}"
                         )
                         continue
         except Exception as e:
-            self.logger.debug(f"Failed to get notes timestamp for {incident_id}: {e}")
+            self.logger.error(f"Failed to get notes timestamp for {incident_id}: {e}")
         return latest_timestamp
 
     def _is_incident_modified(
@@ -254,7 +258,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             try:
                 notes = self.api_client.get_incident_notes(incident_id)
                 detail["comments"] = [
-                    SimpleNamespace(message=note.get("content", "")) for note in notes
+                    SimpleNamespace(message=note.get("content", ""))
+                    for note in (notes or [])
                 ]
             except Exception as e:
                 self.logger.error(
