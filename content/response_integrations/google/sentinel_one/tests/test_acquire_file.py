@@ -26,6 +26,7 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_FAILED,
     EXECUTION_STATE_INPROGRESS,
 )
+from soar_sdk.SiemplifyDataModel import EntityTypes
 
 from ..actions import AcquireFile
 from ..actions.AcquireFile import (
@@ -34,8 +35,12 @@ from ..actions.AcquireFile import (
     get_acquired_file_info,
     main,
     process_acquired_file_bytes,
+    resolve_agent_id,
 )
-from ..core.SentinelOneManager import SentinelOneManager
+from ..core.SentinelOneManager import (
+    SentinelOneAgentNotFoundError,
+    SentinelOneManager,
+)
 
 
 def create_test_zip_package(
@@ -69,6 +74,12 @@ def create_test_zip_package(
     return buf.getvalue()
 
 
+class MockEntity:
+    def __init__(self, identifier: str, entity_type: str):
+        self.identifier = identifier
+        self.entity_type = entity_type
+
+
 class TestAcquireFileHelpers:
     def test_generate_password_complexity(self):
         pwd = generate_password()
@@ -77,6 +88,53 @@ class TestAcquireFileHelpers:
         assert any(c.isupper() for c in pwd)
         assert any(c.isdigit() for c in pwd)
         assert any(not c.isalnum() for c in pwd)
+
+    def test_resolve_agent_id_from_param(self):
+        mock_siemplify = mock.MagicMock()
+        mock_manager = mock.MagicMock()
+        res = resolve_agent_id(mock_siemplify, mock_manager, "agent-123")
+        assert res == "agent-123"
+
+    def test_resolve_agent_id_from_entity(self):
+        mock_siemplify = mock.MagicMock()
+        mock_siemplify.target_entities = [
+            MockEntity("host-1", EntityTypes.HOSTNAME)
+        ]
+        mock_manager = mock.MagicMock()
+        mock_manager.find_endpoint_agent_id.return_value = 998877
+
+        res = resolve_agent_id(mock_siemplify, mock_manager, None)
+        assert res == "998877"
+        mock_manager.find_endpoint_agent_id.assert_called_once_with(
+            "host-1", by_ip_address=False
+        )
+
+    def test_resolve_agent_id_from_ip_entity(self):
+        mock_siemplify = mock.MagicMock()
+        mock_siemplify.target_entities = [
+            MockEntity("10.0.0.1", EntityTypes.ADDRESS)
+        ]
+        mock_manager = mock.MagicMock()
+        mock_manager.find_endpoint_agent_id.return_value = 112233
+
+        res = resolve_agent_id(mock_siemplify, mock_manager, "")
+        assert res == "112233"
+        mock_manager.find_endpoint_agent_id.assert_called_once_with(
+            "10.0.0.1", by_ip_address=True
+        )
+
+    def test_resolve_agent_id_not_found(self):
+        mock_siemplify = mock.MagicMock()
+        mock_siemplify.target_entities = [
+            MockEntity("unknown-host", EntityTypes.HOSTNAME)
+        ]
+        mock_manager = mock.MagicMock()
+        mock_manager.find_endpoint_agent_id.side_effect = (
+            SentinelOneAgentNotFoundError("Not found")
+        )
+
+        res = resolve_agent_id(mock_siemplify, mock_manager, None)
+        assert res is None
 
     def test_get_acquired_file_info_success(self):
         zip_bytes = create_test_zip_package(
@@ -101,7 +159,11 @@ class TestAcquireFileHelpers:
         )
         with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zipf:
             with mock.patch.object(
-                zipf, "read", side_effect=RuntimeError("Bad password for file: manifest.json")
+                zipf,
+                "read",
+                side_effect=RuntimeError(
+                    "Bad password for file: manifest.json"
+                ),
             ):
                 with pytest.raises(BadZipPasswordError):
                     get_acquired_file_info(zipf, "/tmp/test.exe")
@@ -192,7 +254,9 @@ class TestAcquireFileAction:
 
     @mock.patch.object(AcquireFile, "SiemplifyAction")
     @mock.patch.object(SentinelOneManager, "get_token", return_value="dummy_token")
-    def test_first_run_invalid_relative_path(self, mock_token, mock_siemplify_cls):
+    def test_first_run_invalid_relative_path(
+        self, mock_token, mock_siemplify_cls
+    ):
         mock_siemplify = mock_siemplify_cls.return_value
         mock_siemplify.get_configuration.return_value = {
             "Api Root": "https://test.sentinelone.net",
@@ -202,6 +266,28 @@ class TestAcquireFileAction:
         mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
             "Agent ID": "123456",
             "File Path": "relative_file.txt",
+            "Password": None,
+        }.get(param_name)
+
+        main(is_first_run=True)
+
+        mock_siemplify.end.assert_called_once()
+        _, _, status = mock_siemplify.end.call_args[0]
+        assert status == EXECUTION_STATE_FAILED
+
+    @mock.patch.object(AcquireFile, "SiemplifyAction")
+    @mock.patch.object(SentinelOneManager, "get_token", return_value="dummy_token")
+    def test_first_run_no_agent_id(self, mock_token, mock_siemplify_cls):
+        mock_siemplify = mock_siemplify_cls.return_value
+        mock_siemplify.target_entities = []
+        mock_siemplify.get_configuration.return_value = {
+            "Api Root": "https://test.sentinelone.net",
+            "Username": "testuser",
+            "Password": "testpass",
+        }
+        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
+            "Agent ID": None,
+            "File Path": "/tmp/test.exe",
             "Password": None,
         }.get(param_name)
 
@@ -223,7 +309,7 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.parameters = {
+        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
             "additional_data": json.dumps(
                 {
                     "agent_id": "123456",
@@ -233,8 +319,8 @@ class TestAcquireFileAction:
                     "activities_seen": [],
                 }
             )
-        }
-        mock_siemplify.extract_action_param.return_value = None
+        }.get(param_name)
+
         mock_activities.return_value = []
 
         main(is_first_run=False)
@@ -248,15 +334,16 @@ class TestAcquireFileAction:
 
     @mock.patch.object(AcquireFile, "SiemplifyAction")
     @mock.patch.object(SentinelOneManager, "get_token", return_value="dummy_token")
-    def test_polling_missing_additional_data(self, mock_token, mock_siemplify_cls):
+    def test_polling_missing_additional_data(
+        self, mock_token, mock_siemplify_cls
+    ):
         mock_siemplify = mock_siemplify_cls.return_value
         mock_siemplify.get_configuration.return_value = {
             "Api Root": "https://test.sentinelone.net",
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.parameters = {}
-        mock_siemplify.extract_action_param.return_value = None
+        mock_siemplify.extract_action_param.return_value = "{}"
 
         main(is_first_run=False)
 
@@ -269,7 +356,11 @@ class TestAcquireFileAction:
     @mock.patch.object(SentinelOneManager, "get_file_upload_activities")
     @mock.patch.object(SentinelOneManager, "download_file_by_url")
     def test_polling_completed_success(
-        self, mock_download, mock_activities, mock_token, mock_siemplify_cls
+        self,
+        mock_download,
+        mock_activities,
+        mock_token,
+        mock_siemplify_cls,
     ):
         password = "SecretPass123!"
         content = b"executable payload binary"
@@ -283,7 +374,7 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.parameters = {
+        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
             "additional_data": json.dumps(
                 {
                     "agent_id": "123456",
@@ -293,8 +384,7 @@ class TestAcquireFileAction:
                     "activities_seen": [],
                 }
             )
-        }
-        mock_siemplify.extract_action_param.return_value = None
+        }.get(param_name)
 
         mock_activities.return_value = [
             {
@@ -314,18 +404,25 @@ class TestAcquireFileAction:
         assert result_json["file_path"] == "/tmp/test.exe"
         assert result_json["md5"] == hashlib.md5(content).hexdigest()
         assert result_json["sha256"] == hashlib.sha256(content).hexdigest()
+        assert "download_path" in result_json
+        assert result_json["download_path"].endswith(".zip")
+        assert result_json["local_package_file"].endswith(".zip")
 
         mock_siemplify.end.assert_called_once()
         msg, is_success, status = mock_siemplify.end.call_args[0]
         assert status == EXECUTION_STATE_COMPLETED
-        assert is_success is True
+        assert is_success == "true"
 
     @mock.patch.object(AcquireFile, "SiemplifyAction")
     @mock.patch.object(SentinelOneManager, "get_token", return_value="dummy_token")
     @mock.patch.object(SentinelOneManager, "get_file_upload_activities")
     @mock.patch.object(SentinelOneManager, "download_file_by_url")
     def test_polling_file_not_included(
-        self, mock_download, mock_activities, mock_token, mock_siemplify_cls
+        self,
+        mock_download,
+        mock_activities,
+        mock_token,
+        mock_siemplify_cls,
     ):
         password = "SecretPass123!"
         zip_bytes = create_test_zip_package(
@@ -343,7 +440,7 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.parameters = {
+        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
             "additional_data": json.dumps(
                 {
                     "agent_id": "123456",
@@ -353,8 +450,7 @@ class TestAcquireFileAction:
                     "activities_seen": [],
                 }
             )
-        }
-        mock_siemplify.extract_action_param.return_value = None
+        }.get(param_name)
 
         mock_activities.return_value = [
             {"id": "act-102", "data": {"downloadUrl": "/download/102"}}
@@ -371,14 +467,18 @@ class TestAcquireFileAction:
         mock_siemplify.end.assert_called_once()
         msg, is_success, status = mock_siemplify.end.call_args[0]
         assert status == EXECUTION_STATE_FAILED
-        assert is_success is False
+        assert is_success == "false"
 
     @mock.patch.object(AcquireFile, "SiemplifyAction")
     @mock.patch.object(SentinelOneManager, "get_token", return_value="dummy_token")
     @mock.patch.object(SentinelOneManager, "get_file_upload_activities")
     @mock.patch.object(SentinelOneManager, "download_file_by_url")
     def test_polling_skip_bad_password_and_corrupt_zip(
-        self, mock_download, mock_activities, mock_token, mock_siemplify_cls
+        self,
+        mock_download,
+        mock_activities,
+        mock_token,
+        mock_siemplify_cls,
     ):
         password = "TargetPassword123!"
         good_content = b"valid file"
@@ -392,7 +492,7 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.parameters = {
+        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
             "additional_data": json.dumps(
                 {
                     "agent_id": "123456",
@@ -402,8 +502,7 @@ class TestAcquireFileAction:
                     "activities_seen": ["act-seen"],
                 }
             )
-        }
-        mock_siemplify.extract_action_param.return_value = None
+        }.get(param_name)
 
         mock_activities.return_value = [
             {"id": "act-seen", "data": {"downloadUrl": "/download/seen"}},
@@ -411,7 +510,7 @@ class TestAcquireFileAction:
             {"id": "act-good", "data": {"downloadUrl": "/download/good"}},
         ]
 
-        def download_side_effect(url):
+        def download_side_effect(url: str) -> bytes:
             if "corrupt" in url:
                 return b"corrupted not a zip"
             return good_zip
@@ -423,7 +522,7 @@ class TestAcquireFileAction:
         mock_siemplify.end.assert_called_once()
         msg, is_success, status = mock_siemplify.end.call_args[0]
         assert status == EXECUTION_STATE_COMPLETED
-        assert is_success is True
+        assert is_success == "true"
 
 
 class TestSentinelOneManagerAcquisitionMethods:
@@ -438,9 +537,7 @@ class TestSentinelOneManagerAcquisitionMethods:
             }
             mock_post.return_value.status_code = 200
 
-            res = manager.fetch_files(
-                "agent_1", "/tmp/file.txt", "Pass123!"
-            )
+            res = manager.fetch_files("agent_1", "/tmp/file.txt", "Pass123!")
             assert res == {"success": True}
             mock_post.assert_called_once()
             assert (
