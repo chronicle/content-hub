@@ -36,6 +36,7 @@ from ..core.constants import (
     CONNECTORS_KEY,
     INTEGRATION_INSTANCES_KEY,
     JOBS_KEY,
+    SYNC_CREDENTIAL_JOB_REASON,
     SYNC_CREDENTIAL_JOB_SCRIPT_NAME,
     TIMEOUT_THRESHOLD_MS,
 )
@@ -329,6 +330,7 @@ class SyncIntegrationCredentialJob(Job):
             password: str = await asyncio.to_thread(
                 self.cyber_ark_manager.get_password,
                 account=account_id,
+                reason=SYNC_CREDENTIAL_JOB_REASON,
                 version=version_id,
             )
         except CyberArkPamNotFoundError as e:

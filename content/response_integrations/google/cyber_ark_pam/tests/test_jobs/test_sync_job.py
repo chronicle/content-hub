@@ -22,6 +22,7 @@ from unittest.mock import ANY, AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
+from cyber_ark_pam.core.constants import SYNC_CREDENTIAL_JOB_REASON
 from cyber_ark_pam.core.datamodels import IntegrationParameters
 from cyber_ark_pam.core.exceptions import (
     IntegrationCredentialSyncError,
@@ -209,6 +210,7 @@ class TestSyncFlow:
         # Should invoke get_password and set_configuration_property
         mock_manager.get_password.assert_called_once_with(
             account="123_45",
+            reason=SYNC_CREDENTIAL_JOB_REASON,
             version=None,
         )
         mock_api.set_configuration_property.assert_called_once_with(
@@ -237,6 +239,7 @@ class TestSyncFlow:
 
         mock_manager.get_password.assert_called_once_with(
             account="123_45",
+            reason=SYNC_CREDENTIAL_JOB_REASON,
             version=5,
         )
         mock_api.set_connector_parameter.assert_called_once_with(
@@ -271,6 +274,7 @@ class TestSyncFlow:
 
         mock_manager.get_password.assert_called_once_with(
             account="999_88",
+            reason=SYNC_CREDENTIAL_JOB_REASON,
             version=None,
         )
         mock_api.save_or_update_job.assert_called_once()
@@ -479,6 +483,7 @@ class TestSecretFetchCaching:
         # The manager's get_password should have been called exactly once
         mock_manager.get_password.assert_called_once_with(
             account="acc-1",
+            reason=SYNC_CREDENTIAL_JOB_REASON,
             version=None,
         )
         assert job._secret_cache["acc-1", None] == "cached_pwd"

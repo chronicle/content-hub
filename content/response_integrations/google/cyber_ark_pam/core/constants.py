@@ -38,6 +38,7 @@ MIN_MASK_LENGTH: int = 6
 # Sync Credential Job constants
 ACCOUNTS_PATTERN: re.Pattern = re.compile(r"^accounts/(?P<account>[^/]+)(?:/versions/(?P<version>\d+))?$")
 SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = "Sync Integration Credential Job"
+SYNC_CREDENTIAL_JOB_REASON: str = f"Requested by {SYNC_CREDENTIAL_JOB_SCRIPT_NAME} of Google SecOps."
 
 # Credential mapping JSON keys
 INTEGRATION_INSTANCES_KEY: str = "integration_instances"
