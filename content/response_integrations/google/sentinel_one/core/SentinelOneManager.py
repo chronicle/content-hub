@@ -34,9 +34,11 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import requests
-import urllib.parse
+
 import copy
+import urllib.parse
+
+import requests
 
 # =====================================
 #               CONSTS                #
@@ -69,6 +71,9 @@ DISCONNECT_AGENT_FROM_NETWORK_URL = (
     "web/api/v1.6/agents/{0}/disconnect"  # {0} - Agent ID.
 )
 FETCH_FILES_URL = "web/api/v1.6/agents/{0}/fetch-files"  # {0} - Agent ID.
+FETCH_FILES_V2_URL = "web/api/v2.1/agents/{0}/actions/fetch-files"  # {0} - Agent ID.
+GET_ACTIVITIES_V2_URL = "web/api/v2.1/activities"
+AGENT_FILE_UPLOAD_ACTIVITY_ID = "80"
 GET_AGENT_INFORMATION_URL = "web/api/v1.6/agents/{0}"  # {0} - Agent ID.
 
 # Parameters.
@@ -219,7 +224,8 @@ class SentinelOneManager:
             # Get agent id by host name.
             if not by_ip_address:
                 if agent["network_information"]["computer_name"] == identifier:
-                    # There are two types of requests when one takes uuid of the agent as an argument and the second Takes the id
+                    # There are two types of requests: one takes agent uuid
+                    # as argument, and the other takes agent id
                     if not get_uuid:
                         return agent["id"]
                     else:
@@ -566,7 +572,7 @@ class SentinelOneManager:
         self.validate_response(response)
         return True
 
-    # Still not complete for API problem reasons.
+    # Still not complete for API problem reasons (v1.6).
     def fetch_files_for_agent(self, agent_id, zip_password, files=[]):
         """
         Fetch files from endpoint machines and allows to download the files through the Siemplify client.
@@ -586,6 +592,60 @@ class SentinelOneManager:
 
         response = self.session.post(request_url, json=payload)
         self.validate_response(response)
+
+    def fetch_files(self, agent_id, file_path, password):
+        """
+        Initiate file fetch on an endpoint agent via SentinelOne API v2.1.
+        :param agent_id: endpoint agent id or uuid {string}
+        :param file_path: absolute file path to acquire {string}
+        :param password: password for the zip archive {string}
+        :return: response JSON data {dict}
+        """
+        request_url = urllib.parse.urljoin(
+            self.api_root, FETCH_FILES_V2_URL.format(agent_id)
+        )
+        payload = {"data": {"files": [file_path], "password": password}}
+        response = self.session.post(request_url, json=payload)
+        self.validate_response(response)
+        return response.json().get("data", {})
+
+    def get_file_upload_activities(self, agent_id, created_at_gte=None):
+        """
+        Get file upload activities (type 80) for an agent via SentinelOne API v2.1.
+        :param agent_id: endpoint agent id {string}
+        :param created_at_gte: ISO timestamp string for activity filter {string}
+        :return: list of activity dicts {list}
+        """
+        request_url = urllib.parse.urljoin(self.api_root, GET_ACTIVITIES_V2_URL)
+        params = {
+            "activity_types": AGENT_FILE_UPLOAD_ACTIVITY_ID,
+            "agent_ids": agent_id,
+            "sortBy": "createdAt",
+            "sortOrder": "desc",
+        }
+        if created_at_gte:
+            params["createdAt__gte"] = created_at_gte
+        response = self.session.get(request_url, params=params)
+        self.validate_response(response)
+        return response.json().get("data", [])
+
+    def download_file_by_url(self, download_url):
+        """
+        Download file content from download URL.
+        :param download_url: relative or absolute download URL {string}
+        :return: raw response content bytes {bytes}
+        """
+        if not download_url.startswith("http"):
+            if not download_url.startswith("/"):
+                download_url = f"/{download_url}"
+            if not download_url.startswith("/web/api/v2.1"):
+                download_url = f"/web/api/v2.1{download_url}"
+            request_url = urllib.parse.urljoin(self.api_root, download_url.lstrip("/"))
+        else:
+            request_url = download_url
+        response = self.session.get(request_url, stream=True)
+        self.validate_response(response)
+        return response.content
 
 
 #
