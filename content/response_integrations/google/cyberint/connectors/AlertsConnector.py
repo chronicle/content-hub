@@ -105,6 +105,14 @@ def main(is_test_run):
     device_product_field = extract_connector_param(
         siemplify, "DeviceProductField", is_mandatory=True
     )
+    disable_overflow = extract_connector_param(
+        siemplify,
+        param_name="Disable Overflow",
+        default_value=False,
+        input_type=bool,
+        print_value=True,
+    )
+
 
     try:
         siemplify.LOGGER.info("------------------- Main - Started -------------------")
@@ -205,12 +213,19 @@ def main(is_test_run):
                 )
 
                 if is_overflowed(siemplify, alert_info, is_test_run):
-                    siemplify.LOGGER.info(
-                        f"{alert_info.rule_generator}-{alert_info.ticket_id}-{alert_info.environment}"
-                        f"-{alert_info.device_product} found as overflow alert. Skipping..."
-                    )
-                    # If is overflowed we should skip
-                    continue
+                    if disable_overflow:
+                        siemplify.LOGGER.info(
+                            f"{alert_info.rule_generator}-{alert_info.ticket_id}-{alert_info.environment}"
+                            f"-{alert_info.device_product} found as overflow alert, but overflow is disabled. Processing..."
+                        )
+                    else:
+                        siemplify.LOGGER.info(
+                            f"{alert_info.rule_generator}-{alert_info.ticket_id}-{alert_info.environment}"
+                            f"-{alert_info.device_product} found as overflow alert. Skipping..."
+                        )
+                        # If is overflowed we should skip
+                        continue
+
 
                 processed_alerts.append(alert_info)
                 siemplify.LOGGER.info(f"Alert {alert.id} was created.")
