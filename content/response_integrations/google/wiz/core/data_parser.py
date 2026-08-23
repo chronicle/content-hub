@@ -100,3 +100,17 @@ def build_threat_ai_analysis_object(
 
     ai_analysis = threat_details.get("aiAnalysis")
     return datamodels.ThreatAIAnalysis.from_json(response_json, ai_analysis)
+
+
+def build_issues_list(response_json: SingleJson) -> list[datamodels.Issue]:
+    """Build a list of Issue objects from the query response.
+
+    Args:
+        response_json: The JSON response data containing issues.
+
+    Returns:
+        A list of Issue objects.
+
+    """
+    nodes = response_json.get("data", {}).get("issuesV2", {}).get("nodes") or []
+    return [datamodels.Issue.from_json(node) for node in nodes]

@@ -17,8 +17,10 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING
 
+from requests.adapters import HTTPAdapter
 from TIPCommon.base.interfaces import Authable
 from TIPCommon.base.utils import CreateSession
+from urllib3.util import Retry
 
 from . import api_utils, constants
 
@@ -60,6 +62,17 @@ def get_authenticated_session(
 
     """
     session: requests.Session = CreateSession.create_session()
+    retry_strategy = Retry(
+        total=constants.RETRY_TOTAL_ATTEMPTS,
+        backoff_factor=constants.RETRY_BACKOFF_FACTOR,
+        status_forcelist=constants.RETRY_STATUS_CODES,
+        allowed_methods=frozenset(constants.RETRY_ALLOWED_METHODS),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
     _authenticate_session(session, session_parameters=session_parameters)
 
     return session
