@@ -1,22 +1,24 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
-from TIPCommon import extract_action_param
-from ..core.datamodels import IPLookup
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from TIPCommon.extraction import extract_action_param
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE,
     COMMON_ACTION_ERROR_MESSAGE,
+    DEFAULT_LIMIT,
+    DEFAULT_OFFSET,
     IP_LOOKUP_SCRIPT_NAME,
     MAX_TABLE_RECORDS,
-    DEFAULT_OFFSET,
-    DEFAULT_LIMIT,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
 )
+from ..core.datamodels import IPLookup
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import get_integration_params, validate_integer_param
 
 
@@ -110,14 +112,11 @@ def main():
             table_results.append(model.to_csv())
 
         output_message = (
-            f"Successfully retrieved {len(results)} IP records. "
-            f"Showing up to {MAX_TABLE_RECORDS} in table."
+            f"Successfully retrieved {len(results)} IP records. Showing up to {MAX_TABLE_RECORDS} in table."
         )
         siemplify.result.add_result_json(json.dumps(response))
         if table_results:
-            siemplify.result.add_data_table(
-                title="IP Lookup Data", data_table=construct_csv(table_results)
-            )
+            siemplify.result.add_data_table(title="IP Lookup Data", data_table=construct_csv(table_results))
         else:
             output_message = "No IP data found."
 
