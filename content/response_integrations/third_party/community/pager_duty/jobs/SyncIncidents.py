@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from email.utils import parseaddr
 from types import SimpleNamespace
-import uuid
 
 from TIPCommon.base.job.base_sync_job import BaseSyncJob
 from TIPCommon.base.job.job_case import (
@@ -33,6 +33,48 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             context_identifier="Pagerduty Ticket",
             tags_identifiers=["Pagerduty Ticket"],
         )
+        self._incident_cache: dict[str, SingleJson | None] = {}
+        self._notes_cache: dict[str, list[SingleJson]] = {}
+
+    def _get_cached_incident(self, incident_id: str) -> SingleJson | None:
+        """Fetches a PagerDuty incident by ID with in-memory caching.
+
+        Args:
+            incident_id: The ID of the incident to fetch.
+
+        Returns:
+            The incident dictionary or None if not found/error.
+        """
+        if incident_id not in self._incident_cache:
+            try:
+                self._incident_cache[incident_id] = self.api_client.get_incident(
+                    incident_id
+                )
+            except Exception as e:
+                self.logger.error(f"Failed to fetch incident {incident_id}: {e}")
+                self._incident_cache[incident_id] = None
+        return self._incident_cache[incident_id]
+
+    def _get_cached_incident_notes(self, incident_id: str) -> list[SingleJson]:
+        """Fetches PagerDuty incident notes by incident ID with in-memory caching.
+
+        Args:
+            incident_id: The ID of the incident whose notes to fetch.
+
+        Returns:
+            A list of note dictionaries.
+        """
+        if incident_id not in self._notes_cache:
+            try:
+                self._notes_cache[incident_id] = (
+                    self.api_client.get_incident_notes(incident_id) or []
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to fetch notes for incident {incident_id}: {e}"
+                )
+                self._notes_cache[incident_id] = []
+        return self._notes_cache[incident_id]
 
     def _init_api_clients(self) -> PagerDutyManager:
         """Initializes the API client.
@@ -58,10 +100,6 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             verify_ssl=verify_ssl,
             from_email=from_email,
         )
-
-    def _get_cases_to_sync(self) -> list[JobCase]:
-        """Fetches cases to sync from SecOps and modified PagerDuty incidents."""
-        return super()._get_cases_to_sync()
 
     def modified_synced_case_ids_by_product(
         self,
@@ -111,7 +149,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             The timestamp in milliseconds, or 0 if failed/not found.
         """
         try:
-            incident = self.api_client.get_incident(incident_id)
+            incident = self._get_cached_incident(incident_id)
             if incident:
                 timestamp_str = (
                     incident.get("updated_at") or incident.get("created_at")
@@ -135,8 +173,10 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         """
         latest_timestamp = 0
         try:
-            notes = self.api_client.get_incident_notes(incident_id)
-            for note in (notes or []):
+            notes = self._get_cached_incident_notes(incident_id)
+            for note in notes:
+                if not isinstance(note, dict):
+                    continue
                 created_at_str = note.get("created_at")
                 if created_at_str:
                     try:
@@ -241,12 +281,9 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         """Fetches PagerDuty incident details for given IDs."""
         results = []
         for product_id in product_ids:
-            try:
-                incident = self.api_client.get_incident(product_id)
-                if incident:
-                    results.append(incident)
-            except Exception as e:
-                self.logger.error(f"Failed to fetch incident {product_id}: {e}")
+            incident = self._get_cached_incident(product_id)
+            if incident:
+                results.append(incident)
         return results
 
     def _attach_comments_to_product_details(
@@ -255,16 +292,14 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         """Attaches PagerDuty notes as comments to product details."""
         for detail in product_details:
             incident_id = detail.get("id")
-            try:
-                notes = self.api_client.get_incident_notes(incident_id)
-                detail["comments"] = [
-                    SimpleNamespace(message=note.get("content", ""))
-                    for note in (notes or [])
-                ]
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to fetch notes for incident {incident_id}: {e}"
-                )
+            if not incident_id:
+                continue
+            notes = self._get_cached_incident_notes(incident_id)
+            detail["comments"] = [
+                SimpleNamespace(message=note.get("content", ""))
+                for note in notes
+                if isinstance(note, dict)
+            ]
 
     def _attach_product_details_to_case(
         self, job_case: JobCase, product_details: list[SingleJson]
@@ -310,16 +345,18 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
     def sync_status(self, job_case: JobCase) -> None:
         """Syncs closure status between SecOps case alerts and PagerDuty incidents."""
         res = job_case.get_status_to_sync(product_closed_status="resolved")
-        self.sync_product_status_to_case(res, job_case)
+        self._sync_product_status_to_case(res, job_case)
         self._sync_case_status_to_product(res, job_case)
 
-    def sync_product_status_to_case(
+    def _sync_product_status_to_case(
         self, res: JobStatusResult, job_case: JobCase
     ) -> None:
         """Syncs closures from PagerDuty to SecOps case alerts."""
         case_id = str(job_case.case_detail.id_)
         for alert, meta in res.alerts_to_close_in_soar:
-            comment = meta.closure_reason or "Ticket was closed"
+            comment = (
+                f"{PAGERDUTY_COMMENT_PREFIX}{meta.incident_number}: Ticket was closed"
+            )
             try:
                 self.soar_job.close_alert(
                     root_cause=ROOT_CAUSE_OTHER,
@@ -330,9 +367,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 )
                 alert.status = "close"
                 self.logger.info(
-                    f"Successfully closed alert {alert.identifier} in case "
-                    f"{case_id} because PagerDuty incident "
-                    f"{meta.incident_number} was resolved."
+                    f"Successfully closed alert {alert.identifier} in case {case_id}."
                 )
                 self._remove_synced_entries(
                     synced_list=[(job_case.case_detail.id_, f"{meta.incident_number}")],
@@ -359,7 +394,9 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                     self.api_client.add_incident_note(
                         meta.incident_number, closing_comment
                     )
+                    self._notes_cache.pop(meta.incident_number, None)
                 self.api_client.resolve_incident(meta.incident_number)
+                self._incident_cache.pop(meta.incident_number, None)
                 self.logger.info(
                     f"Successfully resolved PagerDuty incident {meta.incident_number}."
                 )
@@ -405,6 +442,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             for comment in comments:
                 try:
                     self.api_client.add_incident_note(incident_id, comment)
+                    self._notes_cache.pop(incident_id, None)
                     self.logger.info(
                         f"Successfully synced comments from SecOps to PagerDuty "
                         f"incident {incident_id}."

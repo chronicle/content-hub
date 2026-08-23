@@ -70,7 +70,12 @@ def main(is_test_run: bool) -> None:
         hostname: str | None = server_url.hostname
         port: int | None = server_url.port
         credentials: str = ""
-        if proxy_username and proxy_password:
+        if (
+            proxy_username
+            and proxy_password
+            and str(proxy_username).lower() != "null"
+            and str(proxy_password).lower() != "null"
+        ):
             credentials = f"{proxy_username}:{proxy_password}@"
         proxy_str: str = f"{scheme}://{credentials}{hostname}"
         if port:

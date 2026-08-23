@@ -274,7 +274,7 @@ class PagerDutyManager:
         )
         response.raise_for_status()
         incident_data: SingleJson = {}
-        info_got: list[SingleJson] = response.json().get("incidents")
+        info_got: list[SingleJson] = response.json().get("incidents") or []
 
         for incident in info_got:
             if incident.get("incident_key") == incident_id:
@@ -370,7 +370,7 @@ class PagerDutyManager:
         )
 
         response.raise_for_status()
-        return response.json().get("incidents")
+        return response.json().get("incidents") or []
 
     def snooze_incident(self, email_from: str, incident_id: str) -> SingleJson:
         """Snoozes an incident.
