@@ -21,6 +21,7 @@ import pytest  # ruff:ignore[typing-only-third-party-import]
 import yaml
 from typer.testing import CliRunner
 
+from mp.dev_env.api import BackendAPI
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.sub_commands.push import push_app
 
@@ -869,3 +870,35 @@ def test_pull_all_custom_fields_shared_scope(
     assert (tmp_path / "shared" / "Field_3_alert_case.yaml").exists()
     assert not (tmp_path / "alert" / "Field_1_alert.yaml").exists()
     assert not (tmp_path / "case" / "Field_2_case.yaml").exists()
+
+
+def test_backend_api_list_custom_fields_pagination() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp_page_1 = mock.MagicMock()
+    resp_page_1.ok = True
+    resp_page_1.status_code = 200
+    resp_page_1.json.return_value = {
+        "items": [{"id": i, "displayName": f"Field {i}"} for i in range(1, 51)],
+        "nextPageToken": "token_page_2",
+    }
+
+    resp_page_2 = mock.MagicMock()
+    resp_page_2.ok = True
+    resp_page_2.status_code = 200
+    resp_page_2.json.return_value = {
+        "items": [{"id": i, "displayName": f"Field {i}"} for i in range(51, 81)],
+        "nextPageToken": None,
+    }
+
+    api.session.get.side_effect = [resp_page_1, resp_page_2]
+
+    fields = api.list_custom_fields()
+    assert len(fields) == 80
+    assert api.session.get.call_count == 2
+    api.session.get.assert_any_call("https://soar.test/api/1p/external/v1/customFields", params=None)
+    api.session.get.assert_any_call(
+        "https://soar.test/api/1p/external/v1/customFields", params={"pageToken": "token_page_2"}
+    )
+
