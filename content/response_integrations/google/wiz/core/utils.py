@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from TIPCommon.extraction import extract_configuration_param
+from TIPCommon.extraction import extract_configuration_param, extract_job_param
 
 from . import constants
 from .datamodels import IntegrationParameters
@@ -35,35 +35,64 @@ def get_integration_parameters(chronicle_soar: ChronicleSOAR) -> IntegrationPara
         IntegrationParameters: IntegrationParameters object.
 
     """
-    api_root = extract_configuration_param(
-        chronicle_soar,
-        provider_name=constants.INTEGRATION_NAME,
-        param_name="API Root",
-        is_mandatory=True,
-        print_value=True,
-    )
-    client_id = extract_configuration_param(
-        chronicle_soar,
-        provider_name=constants.INTEGRATION_NAME,
-        param_name="Client ID",
-        is_mandatory=True,
-        print_value=True,
-    )
-    client_secret = extract_configuration_param(
-        chronicle_soar,
-        provider_name=constants.INTEGRATION_NAME,
-        param_name="Client Secret",
-        is_mandatory=True,
-        remove_whitespaces=False,
-    )
-    verify_ssl: bool = extract_configuration_param(
-        chronicle_soar,
-        provider_name=constants.INTEGRATION_NAME,
-        param_name="Verify SSL",
-        is_mandatory=False,
-        input_type=bool,
-        print_value=True,
-    )
+    is_job = type(chronicle_soar).__name__ == "SiemplifyJob"
+
+    if is_job:
+        api_root = extract_job_param(
+            chronicle_soar,
+            param_name="Wiz API Root",
+            is_mandatory=True,
+            print_value=True,
+        )
+        client_id = extract_job_param(
+            chronicle_soar,
+            param_name="Wiz Client ID",
+            is_mandatory=True,
+            print_value=True,
+        )
+        client_secret = extract_job_param(
+            chronicle_soar,
+            param_name="Wiz Client Secret",
+            is_mandatory=True,
+            remove_whitespaces=False,
+        )
+        verify_ssl: bool = extract_job_param(
+            chronicle_soar,
+            param_name="Verify SSL",
+            input_type=bool,
+            is_mandatory=True,
+            print_value=True,
+        )
+    else:
+        api_root = extract_configuration_param(
+            chronicle_soar,
+            provider_name=constants.INTEGRATION_NAME,
+            param_name="API Root",
+            is_mandatory=True,
+            print_value=True,
+        )
+        client_id = extract_configuration_param(
+            chronicle_soar,
+            provider_name=constants.INTEGRATION_NAME,
+            param_name="Client ID",
+            is_mandatory=True,
+            print_value=True,
+        )
+        client_secret = extract_configuration_param(
+            chronicle_soar,
+            provider_name=constants.INTEGRATION_NAME,
+            param_name="Client Secret",
+            is_mandatory=True,
+            remove_whitespaces=False,
+        )
+        verify_ssl: bool = extract_configuration_param(
+            chronicle_soar,
+            provider_name=constants.INTEGRATION_NAME,
+            param_name="Verify SSL",
+            is_mandatory=False,
+            input_type=bool,
+            print_value=True,
+        )
     integration_params: IntegrationParameters = IntegrationParameters(
         api_root=api_root,
         client_id=client_id,
