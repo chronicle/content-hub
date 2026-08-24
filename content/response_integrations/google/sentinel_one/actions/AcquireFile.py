@@ -22,6 +22,7 @@ import os
 import secrets
 import string
 import sys
+import tempfile
 import uuid
 import zipfile
 
@@ -248,7 +249,7 @@ def poll_file_acquisition(
                     if not isinstance(execution_folder, str) or not os.path.isdir(execution_folder):
                         execution_folder = getattr(siemplify, "execution_folder", None)
                     if not isinstance(execution_folder, str) or not os.path.isdir(execution_folder):
-                        execution_folder = "/tmp"
+                        execution_folder = tempfile.gettempdir()
                     temp_filename = os.path.join(
                         execution_folder, f"{uuid.uuid4()}.zip"
                     )
