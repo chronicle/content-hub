@@ -33,6 +33,7 @@ from soar_sdk.ScriptResult import (
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.SentinelOneManager import (
     SentinelOneAgentNotFoundError,
@@ -40,8 +41,8 @@ from ..core.SentinelOneManager import (
     SentinelOneManagerError,
 )
 
-SENTINEL_ONE_PROVIDER = "SentinelOne"
-SCRIPT_NAME = "SentinelOne - Acquire File"
+INTEGRATION_NAME = "SentinelOne"
+SCRIPT_NAME = "Acquire File"
 SUPPORTED_ENTITIES = [EntityTypes.HOSTNAME, EntityTypes.ADDRESS]
 
 
@@ -309,29 +310,51 @@ def poll_file_acquisition(
 @output_handler
 def main(is_first_run: bool = True) -> None:
     siemplify = SiemplifyAction()
-    siemplify.script_name = SCRIPT_NAME
+    siemplify.script_name = f"{INTEGRATION_NAME} - {SCRIPT_NAME}"
+    siemplify.LOGGER.info("================= Main - Param Init =================")
 
-    mode = "Main" if is_first_run else "QueryState"
-    siemplify.LOGGER.info(f"----------------- {mode} - Param Init -----------------")
+    # INIT INTEGRATION CONFIGURATION:
+    api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Api Root",
+        is_mandatory=True,
+        input_type=str,
+    )
+    username = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Username",
+        is_mandatory=True,
+        input_type=str,
+    )
+    password = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Password",
+        is_mandatory=True,
+        input_type=str,
+    )
 
-    conf = siemplify.get_configuration(SENTINEL_ONE_PROVIDER)
-    api_root = conf["Api Root"]
-    username = conf["Username"]
-    password = conf["Password"]
-
-    agent_id_param = siemplify.extract_action_param(
+    agent_id_param = extract_action_param(
+        siemplify,
         param_name="Agent ID",
         is_mandatory=False,
+        input_type=str,
         print_value=True,
     )
-    file_path_param = siemplify.extract_action_param(
+    file_path_param = extract_action_param(
+        siemplify,
         param_name="File Path",
         is_mandatory=bool(is_first_run),
+        input_type=str,
         print_value=True,
     )
-    password_param = siemplify.extract_action_param(
+    password_param = extract_action_param(
+        siemplify,
         param_name="Password",
         is_mandatory=False,
+        input_type=str,
         print_value=False,
     )
 
@@ -339,7 +362,7 @@ def main(is_first_run: bool = True) -> None:
     output_message = ""
     result_value = "false"
 
-    siemplify.LOGGER.info(f"----------------- {mode} - Started -----------------")
+    siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     try:
         manager = SentinelOneManager(api_root, username, password)
@@ -353,10 +376,12 @@ def main(is_first_run: bool = True) -> None:
                 password=password_param,
             )
         else:
-            state_raw = siemplify.extract_action_param(
+            state_raw = extract_action_param(
+                siemplify,
                 param_name="additional_data",
                 default_value="{}",
                 is_mandatory=False,
+                input_type=str,
             )
             state = json.loads(state_raw or "{}")
             if not state or not state.get("agent_id"):

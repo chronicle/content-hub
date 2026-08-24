@@ -204,11 +204,11 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
+        mock_siemplify.parameters = {
             "Agent ID": "123456",
             "File Path": "/tmp/malware.exe",
             "Password": None,
-        }.get(param_name)
+        }
 
         main(is_first_run=True)
 
@@ -237,11 +237,11 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
+        mock_siemplify.parameters = {
             "Agent ID": "agent_uuid_123",
             "File Path": "C:\\Windows\\System32\\calc.exe",
             "Password": "CustomSecret123!",
-        }.get(param_name)
+        }
 
         main(is_first_run=True)
 
@@ -263,11 +263,11 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
+        mock_siemplify.parameters = {
             "Agent ID": "123456",
             "File Path": "relative_file.txt",
             "Password": None,
-        }.get(param_name)
+        }
 
         main(is_first_run=True)
 
@@ -285,11 +285,11 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
+        mock_siemplify.parameters = {
             "Agent ID": None,
             "File Path": "/tmp/test.exe",
             "Password": None,
-        }.get(param_name)
+        }
 
         main(is_first_run=True)
 
@@ -309,7 +309,7 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
+        mock_siemplify.parameters = {
             "additional_data": json.dumps(
                 {
                     "agent_id": "123456",
@@ -319,7 +319,7 @@ class TestAcquireFileAction:
                     "activities_seen": [],
                 }
             )
-        }.get(param_name)
+        }
 
         mock_activities.return_value = []
 
@@ -343,7 +343,9 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.extract_action_param.return_value = "{}"
+        mock_siemplify.parameters = {
+            "additional_data": "{}"
+        }
 
         main(is_first_run=False)
 
@@ -374,7 +376,7 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
+        mock_siemplify.parameters = {
             "additional_data": json.dumps(
                 {
                     "agent_id": "123456",
@@ -384,7 +386,7 @@ class TestAcquireFileAction:
                     "activities_seen": [],
                 }
             )
-        }.get(param_name)
+        }
 
         mock_activities.return_value = [
             {
@@ -440,7 +442,7 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
+        mock_siemplify.parameters = {
             "additional_data": json.dumps(
                 {
                     "agent_id": "123456",
@@ -450,7 +452,7 @@ class TestAcquireFileAction:
                     "activities_seen": [],
                 }
             )
-        }.get(param_name)
+        }
 
         mock_activities.return_value = [
             {"id": "act-102", "data": {"downloadUrl": "/download/102"}}
@@ -492,7 +494,7 @@ class TestAcquireFileAction:
             "Username": "testuser",
             "Password": "testpass",
         }
-        mock_siemplify.extract_action_param.side_effect = lambda param_name, **kwargs: {
+        mock_siemplify.parameters = {
             "additional_data": json.dumps(
                 {
                     "agent_id": "123456",
@@ -502,7 +504,7 @@ class TestAcquireFileAction:
                     "activities_seen": ["act-seen"],
                 }
             )
-        }.get(param_name)
+        }
 
         mock_activities.return_value = [
             {"id": "act-seen", "data": {"downloadUrl": "/download/seen"}},
