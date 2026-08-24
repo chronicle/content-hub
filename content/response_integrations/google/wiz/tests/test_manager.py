@@ -16,13 +16,14 @@ from __future__ import annotations
 
 import copy
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from wiz.core import constants
 from wiz.core.auth_manager import SessionAuthenticationParameters, _generate_token, get_auth_url
 from wiz.core.exceptions import InvalidCredsError, IssueNotFoundError
+from wiz.core.utils import get_integration_parameters
 
 from . import common
 
@@ -289,10 +290,15 @@ class TestAuthManager:
             ("https://auth.app.wiz.io", "https://auth.app.wiz.io/oauth/token"),
             ("https://auth.app.wiz.io/", "https://auth.app.wiz.io/oauth/token"),
             ("https://auth.app.wiz.us", "https://auth.app.wiz.us/oauth/token"),
+            ("https://auth.app.wiz.us/", "https://auth.app.wiz.us/oauth/token"),
+            (" https://auth.app.wiz.us  ", "https://auth.app.wiz.us/oauth/token"),
             ("https://auth.app.wiz.us/oauth/token", "https://auth.app.wiz.us/oauth/token"),
+            ("https://auth.app.wiz.us/oauth/token/", "https://auth.app.wiz.us/oauth/token"),
+            (" https://auth.app.wiz.us/oauth/token/  ", "https://auth.app.wiz.us/oauth/token"),
             ("https://auth.gov.wiz.io", "https://auth.gov.wiz.io/oauth/token"),
             ("https://auth.eu1.app.wiz.io", "https://auth.eu1.app.wiz.io/oauth/token"),
             ("", "https://auth.app.wiz.io/oauth/token"),
+            ("   ", "https://auth.app.wiz.io/oauth/token"),
             (None, "https://auth.app.wiz.io/oauth/token"),
         ],
     )
@@ -357,3 +363,57 @@ class TestAuthManager:
                 "grant_type": "client_credentials",
             },
         )
+
+
+class TestUtils:
+    """Unit tests for utility functions."""
+
+    @patch("wiz.core.utils.extract_configuration_param")
+    def test_get_integration_parameters_action_context(
+        self,
+        mock_extract_config: MagicMock,
+    ) -> None:
+        """Test get_integration_parameters extracts auth_url in action context."""
+        mock_soar = MagicMock()
+        type(mock_soar).__name__ = "SiemplifyAction"
+
+        mock_extract_config.side_effect = [
+            "https://api.us100.app.wiz.io",
+            "test_client_id",
+            "mocked_secret_val",
+            True,
+            "https://auth.app.wiz.us",
+        ]
+
+        params = get_integration_parameters(mock_soar)
+
+        assert params.api_root == "https://api.us100.app.wiz.io"
+        assert params.client_id == "test_client_id"
+        assert params.client_secret == "mocked_secret_val"  # ruff: ignore[hardcoded-password-string]
+        assert params.verify_ssl is True
+        assert params.auth_url == "https://auth.app.wiz.us"
+
+    @patch("wiz.core.utils.extract_job_param")
+    def test_get_integration_parameters_job_context(
+        self,
+        mock_extract_job: MagicMock,
+    ) -> None:
+        """Test get_integration_parameters extracts auth_url in job context."""
+        mock_soar = MagicMock()
+        type(mock_soar).__name__ = "SiemplifyJob"
+
+        mock_extract_job.side_effect = [
+            "https://api.us1.app.wiz.us",
+            "test_client_id",
+            "mocked_secret_val",
+            True,
+            "https://auth.app.wiz.us",
+        ]
+
+        params = get_integration_parameters(mock_soar)
+
+        assert params.api_root == "https://api.us1.app.wiz.us"
+        assert params.client_id == "test_client_id"
+        assert params.client_secret == "mocked_secret_val"  # ruff: ignore[hardcoded-password-string]
+        assert params.verify_ssl is True
+        assert params.auth_url == "https://auth.app.wiz.us"

@@ -101,10 +101,11 @@ def get_auth_url(auth_url: str | None = None) -> str:
         str: The full token URL ending with /oauth/token.
 
     """
-    base_url: str = (auth_url or constants.DEFAULT_AUTH_URL).strip().rstrip("/")
-    if base_url.endswith("/oauth/token"):
+    clean_url: str = (auth_url or "").strip().rstrip("/")
+    base_url: str = clean_url or constants.DEFAULT_AUTH_URL
+    if base_url.endswith(constants.AUTH_ENDPOINT):
         return base_url
-    return f"{base_url}/oauth/token"
+    return f"{base_url}{constants.AUTH_ENDPOINT}"
 
 
 def _generate_token(
