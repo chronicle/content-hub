@@ -99,7 +99,7 @@ def main() -> None:
             return
 
         if len(domains) > BULK_ENRICH_MAX_DOMAINS:
-            siemplify.LOGGER.warning(
+            siemplify.LOGGER.warn(
                 f"Domain count {len(domains)} exceeds max {BULK_ENRICH_MAX_DOMAINS}. Truncating."
             )
             domains = domains[:BULK_ENRICH_MAX_DOMAINS]
