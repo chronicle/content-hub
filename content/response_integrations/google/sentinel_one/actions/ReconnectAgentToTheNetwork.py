@@ -35,9 +35,21 @@ def main():
     # Configuration.
     siemplify = SiemplifyAction()
     conf = siemplify.get_configuration(SENTINEL_ONE_PROVIDER)
-    sentinel_one_manager = SentinelOneManager(
-        conf["Api Root"], conf["Username"], conf["Password"]
-    )
+    sentinel_one_manager = SentinelOneManager(conf["Api Root"], conf["Username"], conf["Password"])
+
+    agent_id = siemplify.parameters.get("Agent ID")
+    if agent_id:
+        agent_id = agent_id.strip()
+
+    if agent_id:
+        action_status = sentinel_one_manager.reconnect_agent_to_network(agent_id)
+        if action_status:
+            result_value = True
+            output_message = f"Agent {agent_id} was reconnected to the network."
+        else:
+            output_message = f"Failed to reconnect agent {agent_id} to the network."
+        siemplify.end(output_message, result_value)
+        return
 
     # Get scope entities.
     scope_entities = [
@@ -51,13 +63,9 @@ def main():
         try:
             # Get endpoint agent id.
             if entity.entity_type == ADDRESS:
-                agent_id = sentinel_one_manager.find_endpoint_agent_id(
-                    entity.identifier, by_ip_address=True
-                )
+                agent_id = sentinel_one_manager.find_endpoint_agent_id(entity.identifier, by_ip_address=True)
             else:
-                agent_id = sentinel_one_manager.find_endpoint_agent_id(
-                    entity.identifier
-                )
+                agent_id = sentinel_one_manager.find_endpoint_agent_id(entity.identifier)
 
             action_status = sentinel_one_manager.reconnect_agent_to_network(agent_id)
 
@@ -69,7 +77,7 @@ def main():
 
     # Form output message.
     if entities_successed:
-        output_message = f'The following entities were reconnected from the network: {",".join([entity.identifier for entity in entities_successed])}'
+        output_message = f"The following entities were reconnected from the network: {','.join([entity.identifier for entity in entities_successed])}"
     else:
         output_message = "No target entities were reconnected from the network."
 

@@ -34,9 +34,11 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import requests
-import urllib.parse
+
 import copy
+import urllib.parse
+
+import requests
 
 # =====================================
 #               CONSTS                #
@@ -61,14 +63,13 @@ GET_THREATS_BY_ENDPOINT_URL = "web/api/v1.6/threats"
 GET_REPORTS_URL = "web/api/v1.6/reports"
 GET_APPLICATIONS_URL = "web/api/v1.6/agents/{0}/applications"  # {0} - Agent ID.
 GET_EXCLUSION_LISTS_URLS = "web/api/v1.6/exclusion-lists"
-CREATE_PATH_IN_LIST_URL = (
-    "web/api/v1.6/exclusion-lists/{0}/folders"  # {0} - Exclusion List ID.
-)
+CREATE_PATH_IN_LIST_URL = "web/api/v1.6/exclusion-lists/{0}/folders"  # {0} - Exclusion List ID.
 RECONNECT_AGENT_NETWORK_URL = "web/api/v1.6/agents/{0}/connect"  # {0} - Agent ID.
-DISCONNECT_AGENT_FROM_NETWORK_URL = (
-    "web/api/v1.6/agents/{0}/disconnect"  # {0} - Agent ID.
-)
+DISCONNECT_AGENT_FROM_NETWORK_URL = "web/api/v1.6/agents/{0}/disconnect"  # {0} - Agent ID.
 FETCH_FILES_URL = "web/api/v1.6/agents/{0}/fetch-files"  # {0} - Agent ID.
+FETCH_FILES_V2_URL = "web/api/v2.1/agents/{0}/actions/fetch-files"  # {0} - Agent ID.
+GET_ACTIVITIES_V2_URL = "web/api/v2.1/activities"
+AGENT_FILE_UPLOAD_ACTIVITY_ID = "80"
 GET_AGENT_INFORMATION_URL = "web/api/v1.6/agents/{0}"  # {0} - Agent ID.
 
 # Parameters.
@@ -139,9 +140,7 @@ class SentinelOneManager:
         self.session = requests.session()
         self.token = self.get_token(username, password)
         self.session.headers = copy.deepcopy(HEADERS)
-        self.session.headers["Authorization"] = self.session.headers[
-            "Authorization"
-        ].format(self.token)
+        self.session.headers["Authorization"] = self.session.headers["Authorization"].format(self.token)
 
     def get_token(self, username, password):
         """
@@ -219,7 +218,8 @@ class SentinelOneManager:
             # Get agent id by host name.
             if not by_ip_address:
                 if agent["network_information"]["computer_name"] == identifier:
-                    # There are two types of requests when one takes uuid of the agent as an argument and the second Takes the id
+                    # There are two types of requests: one takes agent uuid
+                    # as argument, and the other takes agent id
                     if not get_uuid:
                         return agent["id"]
                     else:
@@ -234,9 +234,7 @@ class SentinelOneManager:
                             return agent["uuid"]
 
         # raise exception if agent not found.
-        raise SentinelOneAgentNotFoundError(
-            f"Not found agent id for endpoint: {identifier}"
-        )
+        raise SentinelOneAgentNotFoundError(f"Not found agent id for endpoint: {identifier}")
 
     def get_agent_operation_system(self, agent_id):
         """
@@ -245,9 +243,7 @@ class SentinelOneManager:
         :return: operation system name {string}
         """
 
-        request_url = urllib.parse.urljoin(
-            self.api_root, GET_AGENT_INFORMATION_URL.format(agent_id)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, GET_AGENT_INFORMATION_URL.format(agent_id))
         response = self.session.get(request_url)
         self.validate_response(response)
         agent_data = response.json()
@@ -293,9 +289,7 @@ class SentinelOneManager:
         :param agent_id: endpoint agent id {string}
         :return: {boolean} weather agent is alive or not
         """
-        request_url = urllib.parse.urljoin(
-            self.api_root, GET_AGENT_INFORMATION_URL.format(agent_id)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, GET_AGENT_INFORMATION_URL.format(agent_id))
         response = self.session.get(request_url)
         self.validate_response(response)
         # Return agent status.
@@ -373,9 +367,7 @@ class SentinelOneManager:
         :param csv_output: output returned as csv {bool}
         :return: list of dicts when each dict is a data about a process on the endpoint {dict}
         """
-        request_url = urllib.parse.urljoin(
-            self.api_root, GET_AGENT_PROCESSES_LIST_URL.format(agent_id)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, GET_AGENT_PROCESSES_LIST_URL.format(agent_id))
         response = self.session.get(request_url)
         self.validate_response(response)
 
@@ -383,9 +375,7 @@ class SentinelOneManager:
             return self.list_of_dicts_to_csv(response.json())
         return response.json()
 
-    def get_events_for_endpoint_by_date(
-        self, agent_uuid, from_date, to_date, limit=100, csv_output=False
-    ):
+    def get_events_for_endpoint_by_date(self, agent_uuid, from_date, to_date, limit=100, csv_output=False):
         """
         get events for endpoint by date.
         :param agent_uuid: endpoint agent uuid {string}
@@ -406,9 +396,7 @@ class SentinelOneManager:
         params["token"] = self.token
         params["limit"] = limit
 
-        request_url = urllib.parse.urljoin(
-            self.api_root, GET_EVENTS_FOR_ENDPOINT_URL.format(agent_uuid)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, GET_EVENTS_FOR_ENDPOINT_URL.format(agent_uuid))
         response = self.session.post(request_url, params=params)
         self.validate_response(response)
 
@@ -422,9 +410,7 @@ class SentinelOneManager:
         :param file_hash: file hash {string}
         :return: file hash reputation data {dict}
         """
-        request_url = urllib.parse.urljoin(
-            self.api_root, GET_HASH_REPUTATION_URL.format(file_hash)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, GET_HASH_REPUTATION_URL.format(file_hash))
         response = self.session.get(request_url)
         self.validate_response(response)
         return response.json()
@@ -435,9 +421,7 @@ class SentinelOneManager:
         :param file_hash: file hash {string}
         :return: file hash data {dict}
         """
-        request_url = urllib.parse.urljoin(
-            self.api_root, GET_HASH_DATA_URL.format(file_hash)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, GET_HASH_DATA_URL.format(file_hash))
         response = self.session.get(request_url)
         self.validate_response(response)
         return response.json()
@@ -449,12 +433,34 @@ class SentinelOneManager:
         :return: endpoint system information {dict}
         """
 
-        request_url = urllib.parse.urljoin(
-            self.api_root, GET_ENDPOINT_SYSTEM_INFO_URL.format(agent_id)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, GET_ENDPOINT_SYSTEM_INFO_URL.format(agent_id))
         response = self.session.get(request_url)
         self.validate_response(response)
         return response.json()
+
+    def get_agent_network_status(self, agent_id: str) -> str:
+        """
+        Get network containment status for an endpoint agent.
+        :param agent_id: endpoint agent id {string}
+        :return: network status {string}
+        """
+        agent_data = self.get_endpoint_system_information(agent_id)
+        if isinstance(agent_data, dict):
+            data = agent_data.get("data", agent_data)
+            if isinstance(data, list) and data:
+                data = data[0]
+            if isinstance(data, dict):
+                if data.get("networkStatus"):
+                    return str(data["networkStatus"]).lower()
+                if data.get("network_status"):
+                    return str(data["network_status"]).lower()
+                net_info = data.get("network_information", {})
+                if isinstance(net_info, dict):
+                    if net_info.get("network_status"):
+                        return str(net_info["network_status"]).lower()
+                    if net_info.get("networkStatus"):
+                        return str(net_info["networkStatus"]).lower()
+        return "unknown"
 
     def get_server_settings(self):
         """
@@ -503,9 +509,7 @@ class SentinelOneManager:
         :param csv_output: output returned as csv {bool}
         :return: endpoint system information {dict}
         """
-        request_url = urllib.parse.urljoin(
-            self.api_root, GET_APPLICATIONS_URL.format(agent_id)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, GET_APPLICATIONS_URL.format(agent_id))
         response = self.session.get(request_url)
         self.validate_response(response)
 
@@ -525,9 +529,7 @@ class SentinelOneManager:
         list_id = self.get_exclusion_list_id_by_name(list_name)
 
         if list_id:
-            request_url = urllib.parse.urljoin(
-                self.api_root, CREATE_PATH_IN_LIST_URL.format(list_id)
-            )
+            request_url = urllib.parse.urljoin(self.api_root, CREATE_PATH_IN_LIST_URL.format(list_id))
 
             # Organize payload.
             payload = copy.deepcopy(CREATE_PATH_IN_LIST_PAYLOAD)
@@ -546,9 +548,7 @@ class SentinelOneManager:
         :param agent_id: endpoint agent id {string}
         :return: is success {bool}
         """
-        request_url = urllib.parse.urljoin(
-            self.api_root, RECONNECT_AGENT_NETWORK_URL.format(agent_id)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, RECONNECT_AGENT_NETWORK_URL.format(agent_id))
         response = self.session.post(request_url)
         self.validate_response(response)
         return True
@@ -559,14 +559,12 @@ class SentinelOneManager:
         :param agent_id: endpoint agent id {string}
         :return: is success {bool}
         """
-        request_url = urllib.parse.urljoin(
-            self.api_root, DISCONNECT_AGENT_FROM_NETWORK_URL.format(agent_id)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, DISCONNECT_AGENT_FROM_NETWORK_URL.format(agent_id))
         response = self.session.post(request_url)
         self.validate_response(response)
         return True
 
-    # Still not complete for API problem reasons.
+    # Still not complete for API problem reasons (v1.6).
     def fetch_files_for_agent(self, agent_id, zip_password, files=[]):
         """
         Fetch files from endpoint machines and allows to download the files through the Siemplify client.
@@ -575,9 +573,7 @@ class SentinelOneManager:
         :param files: list of strings which are the file names to fetch {list}
         :return:
         """
-        request_url = urllib.parse.urljoin(
-            self.api_root, FETCH_FILES_URL.format(agent_id)
-        )
+        request_url = urllib.parse.urljoin(self.api_root, FETCH_FILES_URL.format(agent_id))
 
         # Organize payload.
         payload = copy.deepcopy(FETCH_FILES_PAYLOAD)
@@ -586,6 +582,58 @@ class SentinelOneManager:
 
         response = self.session.post(request_url, json=payload)
         self.validate_response(response)
+
+    def fetch_files(self, agent_id, file_path, password):
+        """
+        Initiate file fetch on an endpoint agent via SentinelOne API v2.1.
+        :param agent_id: endpoint agent id or uuid {string}
+        :param file_path: absolute file path to acquire {string}
+        :param password: password for the zip archive {string}
+        :return: response JSON data {dict}
+        """
+        request_url = urllib.parse.urljoin(self.api_root, FETCH_FILES_V2_URL.format(agent_id))
+        payload = {"data": {"files": [file_path], "password": password}}
+        response = self.session.post(request_url, json=payload)
+        self.validate_response(response)
+        return response.json().get("data", {})
+
+    def get_file_upload_activities(self, agent_id, created_at_gte=None):
+        """
+        Get file upload activities (type 80) for an agent via SentinelOne API v2.1.
+        :param agent_id: endpoint agent id {string}
+        :param created_at_gte: ISO timestamp string for activity filter {string}
+        :return: list of activity dicts {list}
+        """
+        request_url = urllib.parse.urljoin(self.api_root, GET_ACTIVITIES_V2_URL)
+        params = {
+            "activity_types": AGENT_FILE_UPLOAD_ACTIVITY_ID,
+            "agent_ids": agent_id,
+            "sortBy": "createdAt",
+            "sortOrder": "desc",
+        }
+        if created_at_gte:
+            params["createdAt__gte"] = created_at_gte
+        response = self.session.get(request_url, params=params)
+        self.validate_response(response)
+        return response.json().get("data", [])
+
+    def download_file_by_url(self, download_url):
+        """
+        Download file content from download URL.
+        :param download_url: relative or absolute download URL {string}
+        :return: raw response content bytes {bytes}
+        """
+        if not download_url.startswith("http"):
+            if not download_url.startswith("/"):
+                download_url = f"/{download_url}"
+            if not download_url.startswith("/web/api/v2.1"):
+                download_url = f"/web/api/v2.1{download_url}"
+            request_url = urllib.parse.urljoin(self.api_root, download_url.lstrip("/"))
+        else:
+            request_url = download_url
+        response = self.session.get(request_url, stream=True)
+        self.validate_response(response)
+        return response.content
 
 
 #
