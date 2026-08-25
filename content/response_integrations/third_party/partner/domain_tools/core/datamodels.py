@@ -110,6 +110,10 @@ class IrisInvestigateModel(DTBaseModel):
     first_seen: dict | None = None
     server_type: dict | None = None
 
+    @staticmethod
+    def _v(d: dict | None) -> str | None:
+        return d.get("value") if isinstance(d, dict) else d
+
     def to_table_data(self) -> dict[str, Any]:
         """Returns a simplified summary dict for UI tables (csv)."""
         return {
@@ -133,9 +137,9 @@ class IrisInvestigateModel(DTBaseModel):
                 for t in self.analytics.tags
             ) if self.analytics.tags else "N/A",
             # Identity
-            "Registrant Name": self.identity.registrant_name.get("value") if isinstance(self.identity.registrant_name, dict) else self.identity.registrant_name,
-            "Registrant Org": self.identity.registrant_org.get("value") if isinstance(self.identity.registrant_org, dict) else self.identity.registrant_org,
-            "Registrar": self.identity.registrar.get("value") if isinstance(self.identity.registrar, dict) else self.identity.registrar,
+            "Registrant Name": self._v(self.identity.registrant_name),
+            "Registrant Org": self._v(self.identity.registrant_org),
+            "Registrar": self._v(self.identity.registrar),
             "SOA Email": self._format_list_value(
                 "ema", [{"value": e} for e in self.identity.soa_email]
             ),
@@ -143,14 +147,14 @@ class IrisInvestigateModel(DTBaseModel):
                 "ssl.em", [{"value": e} for e in self.identity.ssl_email]
             ),
             # Registration
-            "Create Date": self.registration.create_date.get("value") if isinstance(self.registration.create_date, dict) else self.registration.create_date,
-            "Expiration Date": self.registration.expiration_date.get("value") if isinstance(self.registration.expiration_date, dict) else self.registration.expiration_date,
+            "Create Date": self._v(self.registration.create_date),
+            "Expiration Date": self._v(self.registration.expiration_date),
             "Domain Status": self.registration.domain_status,
             # hosting
             "IP Addresses": self._format_ips(self.hosting.ip_addresses),
-            "IP Country Code": self.hosting.ip_country_code.get("value") if isinstance(self.hosting.ip_country_code, dict) else self.hosting.ip_country_code,
-            "Website Title": self.website_title.get("value") if isinstance(self.website_title, dict) else self.website_title,
-            "Server Type": self.server_type.get("value") if isinstance(self.server_type, dict) else self.server_type,
+            "IP Country Code": self._v(self.hosting.ip_country_code),
+            "Website Title": self._v(self.website_title),
+            "Server Type": self._v(self.server_type),
             "Popularity": self.analytics.popularity_rank,
         }
 

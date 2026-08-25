@@ -144,6 +144,7 @@ class DomainToolsParser:
         """Parse an iris_enrich contact where each field is wrapped in {value: ...}."""
         if not contact_data:
             return None
+
         def _v(key: str) -> str | None:
             raw = contact_data.get(key, {})
             v = raw.get("value", "") if isinstance(raw, dict) else (raw or "")
