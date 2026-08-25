@@ -33,3 +33,4 @@ BULK_ENRICH_MAX_DOMAINS = 100
 LICENSE_IRIS_ENRICH = "iris-enrich"
 LICENSE_IRIS_INVESTIGATE = "iris-investigate"
 LICENSE_PARSED_DOMAIN_RDAP = "parsed-domain-rdap"
+LICENSE_WHOIS_HISTORY = "whois-history"

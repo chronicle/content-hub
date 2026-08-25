@@ -159,7 +159,7 @@ class DomainToolsManager:
 
     def get_whois_history(self, domain: str):
         try:
-            self._check_license("parsed-domain-rdap")
+            self._check_license("whois-history")
             response = self._api.whois_history(query=domain).response()
             return self.parser.parse_whois_history(raw_data=response)
         except NotFoundException:
