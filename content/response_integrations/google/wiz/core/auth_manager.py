@@ -36,6 +36,7 @@ class SessionAuthenticationParameters:
     client_id: str
     client_secret: str
     verify_ssl: bool
+    auth_url: str | None = None
 
 
 class AuthenticateSession(Authable):
@@ -90,6 +91,23 @@ def _authenticate_session(
     session.headers.update({"Authorization": f"Bearer {bearer_token}"})
 
 
+def get_auth_url(auth_url: str | None = None) -> str:
+    """Get the full OAuth token URL from the configured Authentication URL.
+
+    Args:
+        auth_url (str | None): The Authentication URL configured in the integration.
+
+    Returns:
+        str: The full token URL ending with /oauth/token.
+
+    """
+    clean_url: str = (auth_url or "").strip().rstrip("/")
+    base_url: str = clean_url or constants.DEFAULT_AUTH_URL
+    if base_url.endswith(constants.AUTH_ENDPOINT):
+        return base_url
+    return f"{base_url}{constants.AUTH_ENDPOINT}"
+
+
 def _generate_token(
     session: requests.Session,
     session_parameters: SessionAuthenticationParameters,
@@ -111,7 +129,8 @@ def _generate_token(
         "audience": "wiz-api",
         "grant_type": "client_credentials",
     }
-    response: requests.Response = session.post(constants.AUTH_URL, data=auth_payload)
+    auth_url: str = get_auth_url(session_parameters.auth_url)
+    response: requests.Response = session.post(auth_url, data=auth_payload)
     api_utils.validate_response(response)
 
     return response.json()["access_token"]
