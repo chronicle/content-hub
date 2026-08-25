@@ -1,7 +1,7 @@
 """
 Action script for DomainTools - Bulk Enrich Domains.
 
-Batch-enriches up to 500 domains and returns aggregate statistics
+Batch-enriches up to 100 domains and returns aggregate statistics
 by risk category, plus per-domain enrichment details.
 """
 
