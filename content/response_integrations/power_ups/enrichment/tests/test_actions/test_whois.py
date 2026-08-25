@@ -13,10 +13,9 @@
 # limitations under the License.
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
+
 import pytest
-import requests
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
@@ -53,7 +52,19 @@ MOCK_AFNIC_RDAP = {
         {
             "handle": "ULUC6-FRNIC",
             "roles": ["registrant"],
-            "vcardArray": ["vcard", [["version", {}, "text", "4.0"], ["fn", {}, "text", "UNIVERSITE LYON 1 CLAUDE BERNARD"], ["adr", {"cc": "FR"}, "text", ["", "", "43, boulevard du 11 Novembre 1918", "Villeurbanne", "", "69622"]]]]
+            "vcardArray": [
+                "vcard",
+                [
+                    ["version", {}, "text", "4.0"],
+                    ["fn", {}, "text", "UNIVERSITE LYON 1 CLAUDE BERNARD"],
+                    [
+                        "adr",
+                        {"cc": "FR"},
+                        "text",
+                        ["", "", "43, boulevard du 11 Novembre 1918", "Villeurbanne", "", "69622"],
+                    ],
+                ],
+            ]
         },
         {
             "handle": "FF16254-FRNIC",
@@ -72,6 +83,7 @@ MOCK_GOOGLE_WHOIS = """Domain Name: GOOGLE.COM
 Registrar: MarkMonitor Inc.
 Creation Date: 1997-09-15T04:00:00Z
 """
+
 
 @pytest.fixture(autouse=True)
 def setup_whois_action_mocks(
@@ -97,6 +109,7 @@ def setup_whois_action_mocks(
         "extract",
         mock_extract,
     )
+
 
 @pytest.mark.execution_scope("Alert")
 @set_metadata(
