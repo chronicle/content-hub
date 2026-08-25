@@ -111,7 +111,7 @@ class IrisInvestigateModel(DTBaseModel):
     server_type: dict | None = None
 
     @staticmethod
-    def _v(d: dict | None) -> str | None:
+    def _extract_value(d: dict | None) -> str | None:
         return d.get("value") if isinstance(d, dict) else d
 
     def to_table_data(self) -> dict[str, Any]:
@@ -137,9 +137,9 @@ class IrisInvestigateModel(DTBaseModel):
                 for t in self.analytics.tags
             ) if self.analytics.tags else "N/A",
             # Identity
-            "Registrant Name": self._v(self.identity.registrant_name),
-            "Registrant Org": self._v(self.identity.registrant_org),
-            "Registrar": self._v(self.identity.registrar),
+            "Registrant Name": self._extract_value(self.identity.registrant_name),
+            "Registrant Org": self._extract_value(self.identity.registrant_org),
+            "Registrar": self._extract_value(self.identity.registrar),
             "SOA Email": self._format_list_value(
                 "ema", [{"value": e} for e in self.identity.soa_email]
             ),
@@ -147,14 +147,14 @@ class IrisInvestigateModel(DTBaseModel):
                 "ssl.em", [{"value": e} for e in self.identity.ssl_email]
             ),
             # Registration
-            "Create Date": self._v(self.registration.create_date),
-            "Expiration Date": self._v(self.registration.expiration_date),
+            "Create Date": self._extract_value(self.registration.create_date),
+            "Expiration Date": self._extract_value(self.registration.expiration_date),
             "Domain Status": self.registration.domain_status,
             # hosting
             "IP Addresses": self._format_ips(self.hosting.ip_addresses),
-            "IP Country Code": self._v(self.hosting.ip_country_code),
-            "Website Title": self._v(self.website_title),
-            "Server Type": self._v(self.server_type),
+            "IP Country Code": self._extract_value(self.hosting.ip_country_code),
+            "Website Title": self._extract_value(self.website_title),
+            "Server Type": self._extract_value(self.server_type),
             "Popularity": self.analytics.popularity_rank,
         }
 
