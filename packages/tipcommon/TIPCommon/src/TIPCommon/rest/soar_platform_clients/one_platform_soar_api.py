@@ -870,3 +870,40 @@ class OnePlatformSoarApi(BaseSoarApi):
             "$pageSize": 1,
         }
         return self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)
+
+    def attach_case_playbook_to_case(self) -> requests.Response:
+        """Attach case playbook to the case."""
+        endpoint: str = "/legacyPlaybooks:legacyAttachWorkflowToCase"
+        payload = {
+            "cyberCaseId": self.params.case_id,
+            "shouldRunAutomatic": self.params.should_run_automatic,
+            "wfName": self.params.playbook_name,
+        }
+        if (
+            getattr(self.params, "original_workflow_definition_identifier", None)
+            is not None
+        ):
+            payload["originalWorkflowDefinitionIdentifier"] = (
+                self.params.original_workflow_definition_identifier
+            )
+
+        return self._make_request(
+            HttpMethod.POST,
+            endpoint,
+            json_payload=payload,
+            params={"format": "camel"},
+        )
+
+    def get_enabled_workflow_cards(self) -> requests.Response:
+        """Get enabled workflow cards."""
+        endpoint: str = "/legacyPlaybooks:legacyGetEnabledWFCards"
+        payload = {
+            "caseEnvironment": self.params.environment,
+            "executionScope": "CASE"
+        }
+        return self._make_request(
+            HttpMethod.POST,
+            endpoint,
+            json_payload=payload,
+            params={"format": "camel"},
+        )

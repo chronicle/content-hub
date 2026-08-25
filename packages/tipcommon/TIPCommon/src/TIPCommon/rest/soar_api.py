@@ -1990,3 +1990,39 @@ def get_case_close_comment(
     response = api_client.get_case_close_comment(case_id)
     validate_response(response, validate_json=True)
     return CaseCloseComment.from_json(response.json()).comment
+
+
+def attach_case_playbook_to_case(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    playbook_name: str,
+    should_run_automatic: bool,
+    original_workflow_definition_identifier: str | None = None,
+) -> None:
+    """Attach case playbook to the case."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.case_id = case_id
+    api_client.params.playbook_name = playbook_name
+    api_client.params.should_run_automatic = should_run_automatic
+    api_client.params.original_workflow_definition_identifier = (
+        original_workflow_definition_identifier
+    )
+
+    response = api_client.attach_case_playbook_to_case()
+    validate_response(response, validate_json=False)
+
+
+def get_enabled_workflow_cards(
+    chronicle_soar: ChronicleSOAR,
+    environment: str,
+) -> list[SingleJson]:
+    """Get enabled workflow cards."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.environment = environment
+
+    response = api_client.get_enabled_workflow_cards()
+    validate_response(response, validate_json=True)
+    res_json = response.json()
+    if isinstance(res_json, dict):
+        return res_json.get("payload", [])
+    return res_json
