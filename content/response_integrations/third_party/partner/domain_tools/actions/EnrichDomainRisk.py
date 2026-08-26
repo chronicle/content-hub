@@ -105,8 +105,8 @@ def main() -> None:
                 entity.additional_properties.update(prefixed)
 
                 entity.is_enriched = True
-                if enriched.overall_risk_score >= risk_threshold or enriched.is_young_domain:
-                    entity.is_suspicious = True
+                entity.is_suspicious = enriched.overall_risk_score >= risk_threshold
+                enriched.is_suspicious = entity.is_suspicious
 
                 success_entities.append(entity)
             except Exception as e:
@@ -116,9 +116,16 @@ def main() -> None:
                 )
                 siemplify.LOGGER.exception(e)
 
+        enriched_domains = {e.domain for e in enriched_results}
+        missing_domains = [d for d in extracted_domains if d not in enriched_domains]
+
         if success_entities:
             siemplify.update_entities(success_entities)
+
+            if missing_domains:
+                json_results.append({"Entity": "MissingDomains", "EntityResult": {"missing_domains": missing_domains}})
             siemplify.result.add_result_json(json_results)
+
             csv_table_results = [
                 enriched.to_table_data()
                 for enriched in enriched_results
@@ -129,17 +136,19 @@ def main() -> None:
                     "Domain Risk Enrichment", construct_csv(csv_table_results)
                 )
 
-            suspicious_count = sum(
-                1 for e in success_entities if e.is_suspicious
-            )
+            suspicious_count = sum(1 for e in success_entities if e.is_suspicious)
             output_message = (
                 f"Successfully enriched {len(success_entities)} domain(s). "
-                f"{suspicious_count} marked as suspicious."
+                f"{suspicious_count} marked as suspicious based on the given threshold of {risk_threshold}. \n"
             )
 
             if failed_entities:
                 output_message += (
                     f"\nFailed to enrich: {', '.join(str(e.identifier) for e in failed_entities)}"
+                )
+            if missing_domains:
+                output_message += (
+                    f"\nNot returned by API: {', '.join(missing_domains)}"
                 )
         else:
             output_message = "No entities were enriched."

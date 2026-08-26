@@ -64,12 +64,12 @@ class Contact:
 
 @dataclass(slots=True)
 class Identity:
-    registrant_name: str | None = None
-    registrant_org: str | None = None
-    registrar: str | None = None
+    registrant_name: dict | None = None
+    registrant_org: dict | None = None
+    registrar: dict | None = None
     soa_email: list[str] = field(default_factory=list)
     ssl_email: list[str] = field(default_factory=list)
-    email_domains: list[str] = field(default_factory=list)
+    email_domains: list[dict] = field(default_factory=list)
     additional_whois_emails: list[str] = field(default_factory=list)
     registrant_contact: Contact | None = None
     admin_contact: Contact | None = None
@@ -81,20 +81,21 @@ class Identity:
 class Registration:
     registrar_status: list[str] = field(default_factory=list)
     domain_status: bool = False
-    create_date: str | None = None
-    expiration_date: str | None = None
+    create_date: dict | None = None
+    expiration_date: dict | None = None
 
 
 @dataclass(slots=True)
 class Hosting:
     ip_addresses: list[dict] = field(default_factory=list)
-    ip_country_code: str = ""
+    ip_country_code: dict | None = None
+    isp: dict | None = None
     mx_servers: list[dict] = field(default_factory=list)
     spf_info: list[str] = field(default_factory=list)
     name_servers: list[dict] = field(default_factory=list)
     ssl_certificates: list[dict] = field(default_factory=list)
-    redirects_to: list[str] = field(default_factory=list)
-    redirect_domain: list[str] = field(default_factory=list)
+    redirects_to: dict | None = None
+    redirect_domain: dict | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,9 +106,13 @@ class IrisInvestigateModel(DTBaseModel):
     identity: Identity
     registration: Registration
     hosting: Hosting
-    website_title: str = ""
-    first_seen: str = ""
-    server_type: str = ""
+    website_title: dict | None = None
+    first_seen: dict | None = None
+    server_type: dict | None = None
+
+    @staticmethod
+    def _extract_value(d: dict | None) -> str | None:
+        return d.get("value") if isinstance(d, dict) else d
 
     def to_table_data(self) -> dict[str, Any]:
         """Returns a simplified summary dict for UI tables (csv)."""
@@ -132,9 +137,9 @@ class IrisInvestigateModel(DTBaseModel):
                 for t in self.analytics.tags
             ) if self.analytics.tags else "N/A",
             # Identity
-            "Registrant Name": self.identity.registrant_name,
-            "Registrant Org": self.identity.registrant_org,
-            "Registrar": self.identity.registrar,
+            "Registrant Name": self._extract_value(self.identity.registrant_name),
+            "Registrant Org": self._extract_value(self.identity.registrant_org),
+            "Registrar": self._extract_value(self.identity.registrar),
             "SOA Email": self._format_list_value(
                 "ema", [{"value": e} for e in self.identity.soa_email]
             ),
@@ -142,14 +147,14 @@ class IrisInvestigateModel(DTBaseModel):
                 "ssl.em", [{"value": e} for e in self.identity.ssl_email]
             ),
             # Registration
-            "Create Date": self.registration.create_date,
-            "Expiration Date": self.registration.expiration_date,
+            "Create Date": self._extract_value(self.registration.create_date),
+            "Expiration Date": self._extract_value(self.registration.expiration_date),
             "Domain Status": self.registration.domain_status,
             # hosting
             "IP Addresses": self._format_ips(self.hosting.ip_addresses),
-            "IP Country Code": self.hosting.ip_country_code,
-            "Website Title": self.website_title,
-            "Server Type": self.server_type,
+            "IP Country Code": self._extract_value(self.hosting.ip_country_code),
+            "Website Title": self._extract_value(self.website_title),
+            "Server Type": self._extract_value(self.server_type),
             "Popularity": self.analytics.popularity_rank,
         }
 
@@ -330,24 +335,73 @@ class EnrichedDomainSummary(DTBaseModel):
     create_date: str | None = None
     domain_age_days: int | None = None
     is_young_domain: bool = False
+    is_suspicious: bool = False
     registrant_org: str | None = None
+    registrant_name: str | None = None
+    registrar: str | None = None
+    registrar_status: list[str] = field(default_factory=list)
     ip_country_code: str = ""
     iris_investigate_link: str = ""
+    website_title: str | None = None
+    server_type: str | None = None
+    first_seen: str | None = None
+    expiration_date: str | None = None
+    active: bool = False
+    whois_url: str | None = None
+    popularity_rank: int | None = None
+    alexa: str | None = None
+    redirect: str | None = None
+    redirect_domain: str | None = None
+    spf_info: str | None = None
+    ssl_info: list[dict] = field(default_factory=list)
+    tld: str | None = None
+    adsense: str | None = None
+    google_analytics: str | None = None
+    ga4: list[dict] = field(default_factory=list)
+    gtm_codes: list[dict] = field(default_factory=list)
+    fb_codes: list[dict] = field(default_factory=list)
+    hotjar_codes: list[dict] = field(default_factory=list)
+    baidu_codes: list[dict] = field(default_factory=list)
+    yandex_codes: list[dict] = field(default_factory=list)
+    matomo_codes: list[dict] = field(default_factory=list)
+    statcounter_project_codes: list[dict] = field(default_factory=list)
+    statcounter_security_codes: list[dict] = field(default_factory=list)
+    registrant_contact: Contact | None = None
+    admin_contact: Contact | None = None
+    technical_contact: Contact | None = None
+    billing_contact: Contact | None = None
+    tags: list[dict] = field(default_factory=list)
 
     def to_table_data(self) -> dict[str, Any]:
         return {
             "Domain": self.domain,
+            "TLD": self.tld or "N/A",
+            "Active": self.active,
             "Risk Category": self.risk_category,
+            "Is Suspicious": self.is_suspicious,
             "Overall Risk Score": self.overall_risk_score,
             "Proximity Risk Score": self.proximity_risk_score,
             "Threat Profile Score": self.threat_profile_risk_score,
             "Threats": ", ".join(self.threat_profile_threats) if self.threat_profile_threats else "N/A",
             "Evidence": ", ".join(self.threat_profile_evidence) if self.threat_profile_evidence else "N/A",
             "Create Date": self.create_date or "N/A",
+            "Expiration Date": self.expiration_date or "N/A",
             "Domain Age (days)": self.domain_age_days if self.domain_age_days is not None else "N/A",
             "Young Domain": self.is_young_domain,
+            "Registrant Name": self.registrant_name or "N/A",
             "Registrant Org": self.registrant_org or "N/A",
+            "Registrar": self.registrar or "N/A",
+            "Registrar Status": ", ".join(self.registrar_status) if self.registrar_status else "N/A",
             "IP Country": self.ip_country_code or "N/A",
+            "Website Title": self.website_title or "N/A",
+            "Server Type": self.server_type or "N/A",
+            "First Seen": self.first_seen or "N/A",
+            "Redirect": self.redirect or "N/A",
+            "Redirect Domain": self.redirect_domain or "N/A",
+            "Popularity Rank": self.popularity_rank if self.popularity_rank is not None else "N/A",
+            "SPF Info": self.spf_info or "N/A",
+            "WHOIS URL": self.whois_url or "N/A",
+            "Tags": ", ".join(t.get("label", "") for t in self.tags if t.get("label")) or "N/A",
             "Iris Link": self.iris_investigate_link,
         }
 

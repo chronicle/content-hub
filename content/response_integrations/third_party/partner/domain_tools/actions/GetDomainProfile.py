@@ -55,6 +55,7 @@ def main() -> None:
     csv_rows: list[dict] = []
     success_entities: list = []
     failed_entities: list = []
+    missing_domains: list[str] = []
 
     target_entities = [
         entity
@@ -78,11 +79,16 @@ def main() -> None:
                 iris_models = dt_manager.investigate_domains(domains=[domain])
                 iris_model = iris_models[0] if iris_models else None
 
-                create_date = iris_model.registration.create_date if iris_model else None
+                if not iris_model:
+                    missing_domains.append(domain)
+                    continue
+
+                create_date_raw = iris_model.registration.create_date if iris_model else None
+                create_date_str = create_date_raw.get("value") if isinstance(create_date_raw, dict) else create_date_raw
                 domain_age_days: int | None = None
-                if create_date:
+                if create_date_str:
                     try:
-                        created = datetime.strptime(create_date[:10], "%Y-%m-%d")
+                        created = datetime.strptime(create_date_str[:10], "%Y-%m-%d")
                         domain_age_days = (datetime.now() - created).days
                     except ValueError:
                         pass
@@ -111,7 +117,7 @@ def main() -> None:
                         "email_domains": iris_model.identity.email_domains if iris_model else [],
                     },
                     "registration": {
-                        "create_date": create_date,
+                        "create_date": create_date_raw,
                         "expiration_date": iris_model.registration.expiration_date if iris_model else None,
                         "domain_status": iris_model.registration.domain_status if iris_model else False,
                         "registrar_status": iris_model.registration.registrar_status if iris_model else [],
@@ -143,6 +149,8 @@ def main() -> None:
 
         if success_entities:
             siemplify.update_entities(success_entities)
+            if missing_domains:
+                json_results.append({"Entity": "MissingDomains", "EntityResult": {"missing_domains": missing_domains}})
             siemplify.result.add_result_json(json_results)
             if csv_rows:
                 siemplify.result.add_data_table("Domain Profile", construct_csv(csv_rows))
@@ -152,6 +160,10 @@ def main() -> None:
             if failed_entities:
                 output_message += (
                     f"\nFailed to profile: {', '.join(str(e.identifier) for e in failed_entities)}"
+                )
+            if missing_domains:
+                output_message += (
+                    f"\nNot returned by API: {', '.join(missing_domains)}"
                 )
         else:
             output_message = "No domain profiles could be built."

@@ -1,7 +1,7 @@
 """
 Action script for DomainTools - Bulk Enrich Domains.
 
-Batch-enriches up to 500 domains and returns aggregate statistics
+Batch-enriches up to 100 domains and returns aggregate statistics
 by risk category, plus per-domain enrichment details.
 """
 
@@ -61,6 +61,9 @@ def main() -> None:
     include_young: bool = extract_action_param(
         siemplify, param_name="Include Young Domains", input_type=bool, default_value=True
     )
+    merge_with_entities: bool = extract_action_param(
+        siemplify, param_name="Merge With Case Entities", input_type=bool, default_value=False
+    )
 
     status: int = EXECUTION_STATE_COMPLETED
     output_message: str = ""
@@ -74,15 +77,20 @@ def main() -> None:
             siemplify_logger=siemplify.LOGGER,
         )
 
-        if domains_param:
-            domains = [d.strip() for d in domains_param.split(",") if d.strip()]
+        manual = [d.strip() for d in domains_param.split(",") if d.strip()] if domains_param else []
+        entity_domains = [
+            domain
+            for entity in siemplify.target_entities
+            if entity.entity_type in SUPPORTED_ENTITY_TYPES
+            if (domain := extract_domain_from_string(entity.identifier))
+        ]
+
+        if manual and merge_with_entities:
+            domains = list(dict.fromkeys(manual + entity_domains))
+        elif manual:
+            domains = manual
         else:
-            domains = list({
-                domain
-                for entity in siemplify.target_entities
-                if entity.entity_type in SUPPORTED_ENTITY_TYPES
-                if (domain := extract_domain_from_string(entity.identifier))
-            })
+            domains = list(dict.fromkeys(entity_domains))
 
         if not domains:
             output_message = "No domains provided or found in scope."
@@ -91,21 +99,27 @@ def main() -> None:
             return
 
         if len(domains) > BULK_ENRICH_MAX_DOMAINS:
-            siemplify.LOGGER.warning(
+            siemplify.LOGGER.warn(
                 f"Domain count {len(domains)} exceeds max {BULK_ENRICH_MAX_DOMAINS}. Truncating."
             )
             domains = domains[:BULK_ENRICH_MAX_DOMAINS]
 
         enriched_results = dt_manager.enrich_domains_with_risk(domains)
 
-        summary: dict[str, int] = {
+        enriched_domain_set = {e.domain for e in enriched_results}
+        missing_domains = [d for d in domains if d not in enriched_domain_set]
+
+        summary: dict[str, Any] = {
             "total_domains": len(enriched_results),
             "high_risk_count": 0,
             "medium_risk_count": 0,
             "suspicious_count": 0,
             "young_domain_count": 0,
             "low_risk_count": 0,
+            "missing_count": len(missing_domains),
         }
+        if missing_domains:
+            summary["missing_domains"] = missing_domains
         domains_output: list[dict[str, Any]] = []
 
         for enriched in enriched_results:
@@ -140,6 +154,10 @@ def main() -> None:
             f"{summary['young_domain_count']} young domains, "
             f"{summary['low_risk_count']} low risk."
         )
+        if missing_domains:
+            output_message += (
+                f"\nNot returned by API ({len(missing_domains)}): {', '.join(missing_domains)}"
+            )
 
     except Exception as err:
         output_message = f"Error running action: {str(err)}"
