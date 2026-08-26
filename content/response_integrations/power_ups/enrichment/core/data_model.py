@@ -231,7 +231,7 @@ def map_rdap_to_whois(rdap_data):
     for ns in ns_list:
         ns_name = ns.get("ldhName")
         if ns_name:
-            nameservers.append(ns_name.lower())
+            nameservers.append(ns_name.upper())
 
     domain_id = rdap_data.get("handle")
     if domain_id:
