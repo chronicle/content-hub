@@ -78,7 +78,6 @@ class ProofPointPSApiClient:
 
         Raises:
             ProofPointPSHTTPError: If the API request fails or returns invalid JSON.
-            FolderNotFoundError: If the specified folder does not exist.
 
         """
         url = f"{self.server_address.rstrip('/')}{QUARANTINE_ENDPOINT}"
