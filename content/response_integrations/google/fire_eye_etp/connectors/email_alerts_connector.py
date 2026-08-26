@@ -23,7 +23,6 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 import arrow
-from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import (
@@ -38,6 +37,11 @@ from TIPCommon.smp_io import read_ids, write_ids
 from TIPCommon.smp_time import is_approaching_timeout, validate_timestamp
 from TIPCommon.transformation import dict_to_flat
 from TIPCommon.utils import is_overflowed
+
+try:
+    from EnvironmentCommon import GetEnvironmentCommonFactory
+except ImportError:
+    from TIPCommon.envcommon import GetEnvironmentCommonFactory
 
 from ..core.fire_eye_etp_constants import (
     ACCEPTABLE_TIME_INTERVAL_IN_MINUTES,
@@ -54,6 +58,8 @@ from ..core.fire_eye_etp_constants import (
 from ..core.fire_eye_etp_manager import FireEyeETPConfig, FireEyeETPManager
 
 if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
     from ..core.datamodels import Alert
 
 MIN_REQUIRED_ARGS = 2
@@ -76,9 +82,11 @@ def filter_recent_alerts(
 
     """
     filtered_groups: list[list[Alert]] = []
+    cutoff_time = arrow.utcnow().shift(minutes=-max_minutes_backwards).timestamp
+    cutoff_timestamp_ms = int((cutoff_time() if callable(cutoff_time) else cutoff_time) * 1000)
 
     for group in alert_groups:
-        if group[0].occurred_time_unix < arrow.utcnow().shift(minutes=-max_minutes_backwards).timestamp * 1000:
+        if group[0].occurred_time_unix < cutoff_timestamp_ms:
             filtered_groups.append(group)
 
         else:
@@ -167,7 +175,8 @@ def create_alert_info(
         The constructed AlertInfo object.
 
     """
-    sorted_alerts_group: list[Alert] = sorted(alerts_group, key=lambda alert: alert.occurred_time_unix)
+    valid_alerts = [a for a in alerts_group if a.timestamp] or alerts_group
+    sorted_alerts_group: list[Alert] = sorted(valid_alerts, key=lambda alert: alert.occurred_time_unix)
 
     alert_info: AlertInfo = AlertInfo()
     alert_info.display_id = str(uuid.uuid4())
@@ -181,7 +190,7 @@ def create_alert_info(
     alert_info.device_vendor = DEVICE_VENDOR
     alert_info.device_product = DEVICE_PRODUCT
 
-    events: list[dict[str, Any]] = []
+    events: list[SingleJson] = []
     for alert in sorted_alerts_group:
         events.extend(alert.events)
 
@@ -197,8 +206,8 @@ def process_single_alert_group(
     siemplify: SiemplifyConnectorExecution,
     etp_manager: FireEyeETPManager,
     alert_group: list[Alert],
-    params: dict[str, Any],
-    context: dict[str, Any],
+    params: SingleJson,
+    context: SingleJson,
 ) -> AlertInfo | None:
     """Process a single alert group and return AlertInfo if successful.
 
@@ -266,8 +275,8 @@ def process_alert_groups(
     siemplify: SiemplifyConnectorExecution,
     etp_manager: FireEyeETPManager,
     alert_groups: list[list[Alert]],
-    params: dict[str, Any],
-    context: dict[str, Any],
+    params: SingleJson,
+    context: SingleJson,
 ) -> list[AlertInfo]:
     """Process a list of alert groups and return created AlertInfo.
 
@@ -342,8 +351,8 @@ def update_connector_timestamp(
 
 def run_connector_cycle(
     siemplify: SiemplifyConnectorExecution,
-    params: dict[str, Any],
-    context: dict[str, Any],
+    params: SingleJson,
+    context: SingleJson,
 ) -> tuple[list[AlertInfo], list[Alert], list[Alert]]:
     """Run the main connector cycle (fetch, filter, process) and return results.
 
