@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 INTEGRATION_NAME = "Azure Security Center"
 INTEGRATION_IDENTIFIER = "AzureSecurityCenter"
 
@@ -23,12 +24,25 @@ DEFAULT_GRAPH_API_ROOT = "https://graph.microsoft.com"
 ENDPOINTS = {
     "get-auth-token": "{login_api_root}/{tenant_id}/oauth2/v2.0/token",
     "ping": "{api_root}/providers/Microsoft.Security/operations",
-    "list-regulatory-standards": "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/regulatoryComplianceStandards/",
-    "list-regulatory-standard-controls": "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/regulatoryComplianceStandards/{standard_name}/regulatoryComplianceControls",
-    "update-alert-status": "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/locations/{location}/alerts/{alert_id}/{status}",
+    "list-regulatory-standards": (
+        "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/regulatoryComplianceStandards/"
+    ),
+    "list-regulatory-standard-controls": (
+        "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/"
+        "regulatoryComplianceStandards/{standard_name}/regulatoryComplianceControls"
+    ),
+    "update-alert-status": (
+        "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/"
+        "locations/{location}/alerts/{alert_id}/{status}"
+    ),
     "get-alert-ids": "{graph_api_root}/v1.0/security/alerts",
-    "get-alert-details": "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/locations/{location}/alerts/{alert_id}",
-    "get-regulatory-compliance-standards": "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/regulatoryComplianceStandards/",
+    "get-alert-details": (
+        "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/"
+        "locations/{location}/alerts/{alert_id}"
+    ),
+    "get-regulatory-compliance-standards": (
+        "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/regulatoryComplianceStandards/"
+    ),
 }
 
 OAUTH_URL = "{login_api_root}/{tenant_id}/oauth2/token"
