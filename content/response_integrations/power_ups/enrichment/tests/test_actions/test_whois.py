@@ -154,6 +154,9 @@ def test_whois_action_standard_domain_rdap(
     assert res_list[0]["Entity"] == "google.com"
     assert res_list[0]["EntityResult"]["registrar"][0] == "MarkMonitor Inc."
     assert res_list[0]["EntityResult"]["id"] == ["2138514_DOMAIN_COM-VRSN"]
+    assert "raw" in res_list[0]["EntityResult"]
+    assert isinstance(res_list[0]["EntityResult"]["raw"], list)
+    assert len(res_list[0]["EntityResult"]["raw"]) == 1
 
 
 @pytest.mark.execution_scope("Alert")
@@ -257,3 +260,5 @@ def test_whois_action_fallback_to_classic_whois(
     assert len(res_list) == 1
     assert res_list[0]["Entity"] == "google.com"
     assert res_list[0]["EntityResult"]["registrar"][0] == "MarkMonitor Inc."
+    assert "raw" in res_list[0]["EntityResult"]
+    assert isinstance(res_list[0]["EntityResult"]["raw"], list)

@@ -251,7 +251,7 @@ def map_rdap_to_whois(rdap_data):
         nameservers=nameservers or None,
         emails=list(set(emails)) if emails else None,
         contacts=contacts,
-        raw=json.dumps(rdap_data),
+        raw=[json.dumps(rdap_data)],
     )
 
     return whois_data.to_dict()
