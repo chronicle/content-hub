@@ -168,6 +168,8 @@ def main():
     json_result = {}
     updated_entities = []
     enriched_entities = {}
+    successful_entities = []
+    failed_entities = []
     suitable_entities = [
         entity
         for entity in siemplify.target_entities
@@ -177,89 +179,105 @@ def main():
     if not suitable_entities:
         siemplify.LOGGER.info("No suitable entities were found to enrich.")
         output_message = "No suitable entities were found to enrich."
-    for entity in suitable_entities:
-        if entity.entity_type == EntityTypes.ADDRESS:
-            try:
-                obj = IPWhois(entity.identifier)
-                obj.lookup_rdap(depth=1)
-                ip_whois = obj.lookup_rdap(depth=1)
-                response = DbIpCity.get(entity.identifier, api_key="free")
-                ip_whois["geo_lookup"] = json.loads(response.to_json())
-                json_result[entity.identifier] = ip_whois
-                enriched_entities[entity.identifier] = ip_whois
-                result_value = "true"
-            except Exception as e:
-                siemplify.LOGGER.error(
-                    f"Failed RDAP lookup for entity {entity.identifier}: {e}"
-                )
-        else:
-            try:
-                domain = get_domain_from_string(entity.identifier)
-                if domain:
-                    whois_data = get_domain_whois(domain, logger=siemplify.LOGGER)
-                    if "creation_date" in whois_data:
-                        whois_data["age_in_days"] = int(
-                            (
-                                datetime.now() - whois_data["creation_date"][0]
-                            ).total_seconds()
-                            / 86400,
-                        )
-                    json_result[entity.identifier] = json.loads(
-                        json.dumps(whois_data, default=json_serial),
+        result_value = "false"
+    else:
+        for entity in suitable_entities:
+            if entity.entity_type == EntityTypes.ADDRESS:
+                try:
+                    obj = IPWhois(entity.identifier)
+                    obj.lookup_rdap(depth=1)
+                    ip_whois = obj.lookup_rdap(depth=1)
+                    response = DbIpCity.get(entity.identifier, api_key="free")
+                    ip_whois["geo_lookup"] = json.loads(response.to_json())
+                    json_result[entity.identifier] = ip_whois
+                    enriched_entities[entity.identifier] = ip_whois
+                    successful_entities.append(entity.identifier)
+                except Exception as e:
+                    siemplify.LOGGER.error(
+                        f"Failed RDAP lookup for entity {entity.identifier}: {e}"
                     )
-                    del whois_data["raw"]
-                    enriched_entities[entity.identifier] = json.loads(
-                        json.dumps(whois_data, default=json_serial),
-                    )
-                    result_value = "true"
-                    if create_entities and domain.upper() != entity.identifier:
-                        create_entity_with_relation(
-                            siemplify,
-                            domain,
-                            entity.identifier,
-                        )
-                        enriched_entities[domain] = json.loads(
-                            json.dumps(whois_data, default=json_serial),
-                        )
-                        json_result[domain] = json.loads(
-                            json.dumps(whois_data, default=json_serial),
-                        )
-
-            except whois_alt.shared.WhoisException:
-                pass
-
-    if enriched_entities:
-        siemplify.load_case_data()
-        alert_entities = get_alert_entities(siemplify)
-        for new_entity in enriched_entities:
-            for entity in alert_entities:
-                if new_entity.strip() == entity.identifier.strip():
-                    entity.additional_properties.update(
-                        add_prefix_to_dict(
-                            dict_to_flat(enriched_entities[new_entity]),
-                            "WHOIS",
-                        ),
-                    )
-                    if (
-                        "age_in_days" in enriched_entities[new_entity]
-                        and enriched_entities[new_entity]["age_in_days"]
-                        < int(age_threshold)
-                        and int(age_threshold) != 0
-                    ):
-                        if create_entities and entity.entity_type == EntityTypes.DOMAIN:
-                            entity.is_suspicious = True
-
-                        elif not create_entities:
-                            entity.is_suspicious = True
-                            siemplify.LOGGER.info(
-                                f"Marking {entity.identifier} as suspicious",
+                    failed_entities.append(entity.identifier)
+            else:
+                try:
+                    domain = get_domain_from_string(entity.identifier)
+                    if domain:
+                        whois_data = get_domain_whois(domain, logger=siemplify.LOGGER)
+                        if "creation_date" in whois_data:
+                            whois_data["age_in_days"] = int(
+                                (
+                                    datetime.now() - whois_data["creation_date"][0]
+                                ).total_seconds()
+                                / 86400,
                             )
-                    entity.is_enriched = True
-                    updated_entities.append(entity)
-                    break
-        siemplify.LOGGER.info(f"updating entities: {updated_entities}")
-        siemplify.update_entities(updated_entities)
-        output_message += f"Enriched the following entities {updated_entities}"
+                        json_result[entity.identifier] = json.loads(
+                            json.dumps(whois_data, default=json_serial),
+                        )
+                        del whois_data["raw"]
+                        enriched_entities[entity.identifier] = json.loads(
+                            json.dumps(whois_data, default=json_serial),
+                        )
+                        successful_entities.append(entity.identifier)
+                        if create_entities and domain.upper() != entity.identifier:
+                            create_entity_with_relation(
+                                siemplify,
+                                domain,
+                                entity.identifier,
+                            )
+                            enriched_entities[domain] = json.loads(
+                                json.dumps(whois_data, default=json_serial),
+                            )
+                            json_result[domain] = json.loads(
+                                json.dumps(whois_data, default=json_serial),
+                            )
+                    else:
+                        failed_entities.append(entity.identifier)
+                except Exception as e:
+                    siemplify.LOGGER.error(
+                        f"Failed WHOIS lookup for entity {entity.identifier}: {e}"
+                    )
+                    failed_entities.append(entity.identifier)
+
+        if enriched_entities:
+            siemplify.load_case_data()
+            alert_entities = get_alert_entities(siemplify)
+            for new_entity in enriched_entities:
+                for entity in alert_entities:
+                    if new_entity.strip() == entity.identifier.strip():
+                        entity.additional_properties.update(
+                            add_prefix_to_dict(
+                                dict_to_flat(enriched_entities[new_entity]),
+                                "WHOIS",
+                            ),
+                        )
+                        if (
+                            "age_in_days" in enriched_entities[new_entity]
+                            and enriched_entities[new_entity]["age_in_days"]
+                            < int(age_threshold)
+                            and int(age_threshold) != 0
+                        ):
+                            if create_entities and entity.entity_type == EntityTypes.DOMAIN:
+                                entity.is_suspicious = True
+
+                            elif not create_entities:
+                                entity.is_suspicious = True
+                                siemplify.LOGGER.info(
+                                    f"Marking {entity.identifier} as suspicious",
+                                )
+                        entity.is_enriched = True
+                        updated_entities.append(entity)
+                        break
+            siemplify.LOGGER.info(f"updating entities: {updated_entities}")
+            siemplify.update_entities(updated_entities)
+
+        if successful_entities:
+            output_message = f"Successfully enriched the following entities: {', '.join(successful_entities)}"
+            result_value = "true"
+        else:
+            output_message = "No entities were enriched."
+            result_value = "false"
+
+        if failed_entities:
+            output_message += f"\nFailed to enrich the following entities: {', '.join(failed_entities)}"
 
     return_json = json.dumps(json_result, default=json_serial)
     siemplify.result.add_result_json(convert_dict_to_json_result_dict(return_json))
