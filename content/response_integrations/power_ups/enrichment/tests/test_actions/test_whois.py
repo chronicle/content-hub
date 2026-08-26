@@ -96,11 +96,12 @@ def setup_whois_action_mocks(
         lambda: mock_siemplify,
     )
 
-    def mock_extract(url, *args, **kwargs):
+    def mock_extract(target, *args, **kwargs):
         mock_res = MagicMock()
-        if "univ-lyon1.fr" in url:
+        identifier = str(target).lower().strip().split("/")[-1]
+        if identifier == "univ-lyon1.fr":
             mock_res.registered_domain = "univ-lyon1.fr"
-        elif "failed.com" in url:
+        elif identifier == "failed.com":
             mock_res.registered_domain = "failed.com"
         else:
             mock_res.registered_domain = "google.com"
@@ -300,22 +301,23 @@ def test_whois_action_with_failed_entities(
 
     # Mock requests.get: google.com returns MOCK_GOOGLE_RDAP, failed.com raises Exception
     with patch("requests.get") as mock_get:
-        def get_side_effect(url, *args, **kwargs):
+        def get_side_effect(request_url, *args, **kwargs):
             mock_res = MagicMock()
-            if "google.com" in url:
+            target_domain = str(request_url).rstrip("/").split("/")[-1]
+            if target_domain == "google.com":
                 mock_res.status_code = 200
                 mock_res.json.return_value = MOCK_GOOGLE_RDAP
                 return mock_res
-            else:
-                mock_res.status_code = 500
-                return mock_res
+            mock_res.status_code = 500
+            return mock_res
+
         mock_get.side_effect = get_side_effect
 
         with patch("whois_alt.net.whois_request") as mock_req:
             mock_req.side_effect = Exception("WHOIS lookup failed")
 
             Whois.main()
-    print("CALL ARGS FOR END:", mock_siemplify.end.call_args)
+
     assert action_output.results.execution_state == ExecutionState.COMPLETED
     assert "Successfully enriched the following entities: google.com" in mock_siemplify.end.call_args[0][0]
     assert "Failed to enrich the following entities: failed.com" in mock_siemplify.end.call_args[0][0]
