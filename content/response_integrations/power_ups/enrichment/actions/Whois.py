@@ -18,7 +18,6 @@ import json
 import re
 from datetime import date, datetime
 
-import whois_alt
 import whois_alt.parse as parse
 from ipwhois import IPWhois
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
