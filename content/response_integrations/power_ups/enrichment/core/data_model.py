@@ -233,7 +233,11 @@ def map_rdap_to_whois(rdap_data):
         if ns_name:
             nameservers.append(ns_name.lower())
 
-    domain_id = rdap_data.get("ldhName", "").lower() or None
+    domain_id = rdap_data.get("handle")
+    if domain_id:
+        domain_id = [domain_id]
+    else:
+        domain_id = [rdap_data.get("ldhName", "").lower()] if rdap_data.get("ldhName") else None
     status = rdap_data.get("status")
 
     whois_data = WhoisData(

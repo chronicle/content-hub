@@ -153,6 +153,7 @@ def test_whois_action_standard_domain_rdap(
     assert len(res_list) == 1
     assert res_list[0]["Entity"] == "google.com"
     assert res_list[0]["EntityResult"]["registrar"][0] == "MarkMonitor Inc."
+    assert res_list[0]["EntityResult"]["id"] == ["2138514_DOMAIN_COM-VRSN"]
 
 
 @pytest.mark.execution_scope("Alert")
@@ -196,6 +197,7 @@ def test_whois_action_afnic_domain_rdap(
     res_list = mock_siemplify.result.add_result_json.call_args[0][0]
     assert len(res_list) == 1
     assert res_list[0]["Entity"] == "univ-lyon1.fr"
+    assert res_list[0]["EntityResult"]["id"] == ["univ-lyon1.fr"]
     contacts = res_list[0]["EntityResult"]["contacts"]
     
     assert contacts["registrant"]["handle"] == "ULUC6-FRNIC"
