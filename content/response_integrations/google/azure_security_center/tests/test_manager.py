@@ -14,15 +14,17 @@
 
 from __future__ import annotations
 
+from typing import Generator
 from unittest.mock import MagicMock, patch
 import pytest
 
-from ..core.AzureSecurityCenterManager import AzureSecurityCenterManager
 from ..core import consts
+from ..core.AzureSecurityCenterManager import AzureSecurityCenterManager
 
 
 @pytest.fixture
-def mock_requests_session():
+def mock_requests_session() -> Generator[MagicMock, None, None]:
+    """Fixture providing a mocked requests session."""
     with patch("azure_security_center.core.AzureSecurityCenterManager.requests.session") as mock_session_cls:
         session_instance = MagicMock()
         mock_session_cls.return_value = session_instance
@@ -38,12 +40,13 @@ def mock_requests_session():
         yield session_instance
 
 
-def test_manager_default_endpoints(mock_requests_session):
+def test_manager_default_endpoints(mock_requests_session: MagicMock) -> None:
+    """Test AzureSecurityCenterManager initializes with default endpoints."""
     manager = AzureSecurityCenterManager(
         client_id="test_client_id",
-        client_secret="test_client_secret",
+        client_secret="test_client_secret",  # noqa: S106
         username="test_user",
-        password="test_password",
+        password="test_password",  # noqa: S106
         tenant_id="test_tenant_id",
         subscription_id="test_sub_id",
     )
@@ -52,12 +55,13 @@ def test_manager_default_endpoints(mock_requests_session):
     assert manager.graph_api_root == consts.DEFAULT_GRAPH_API_ROOT
 
 
-def test_manager_custom_endpoints(mock_requests_session):
+def test_manager_custom_endpoints(mock_requests_session: MagicMock) -> None:
+    """Test AzureSecurityCenterManager formats URLs with custom sovereign endpoints."""
     manager = AzureSecurityCenterManager(
         client_id="test_client_id",
-        client_secret="test_client_secret",
+        client_secret="test_client_secret",  # noqa: S106
         username="test_user",
-        password="test_password",
+        password="test_password",  # noqa: S106
         tenant_id="test_tenant_id",
         subscription_id="test_sub_id",
         login_api_root="https://login.microsoftonline.us/",
@@ -78,7 +82,8 @@ def test_manager_custom_endpoints(mock_requests_session):
     assert url_graph == "https://graph.microsoft.us/v1.0/security/alerts"
 
 
-def test_manager_obtain_refresh_token_custom_login_api_root():
+def test_manager_obtain_refresh_token_custom_login_api_root() -> None:
+    """Test obtain_refresh_token posts to the custom login_api_root."""
     with patch("azure_security_center.core.AzureSecurityCenterManager.requests.post") as mock_post:
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -90,7 +95,7 @@ def test_manager_obtain_refresh_token_custom_login_api_root():
 
         res = AzureSecurityCenterManager.obtain_refresh_token(
             client_id="cid",
-            client_secret="csec",
+            client_secret="csec",  # noqa: S106
             redirect_uri="https://redirect",
             code="code123",
             tenant_id="tid",
@@ -111,15 +116,16 @@ def test_manager_obtain_refresh_token_custom_login_api_root():
         )
 
 
-def test_manager_get_access_token_custom_login_api_root(mock_requests_session):
+def test_manager_get_access_token_custom_login_api_root(mock_requests_session: MagicMock) -> None:
+    """Test get_access_token uses custom login_api_root."""
     manager = AzureSecurityCenterManager(
         client_id="test_client_id",
-        client_secret="test_client_secret",
+        client_secret="test_client_secret",  # noqa: S106
         username="test_user",
-        password="test_password",
+        password="test_password",  # noqa: S106
         tenant_id="test_tenant_id",
         subscription_id="test_sub_id",
-        refresh_token="initial_refresh_token",
+        refresh_token="initial_refresh_token",  # noqa: S106
         login_api_root="https://login.microsoftonline.us/",
     )
     mock_requests_session.post.assert_called_with(
