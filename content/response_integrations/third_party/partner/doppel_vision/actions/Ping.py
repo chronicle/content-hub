@@ -26,9 +26,6 @@ def main():
         param_name="Organization Code",
     )
 
-    # Debugging: Log the retrieved API key
-    siemplify.LOGGER.info(f"Extracted API Key: {api_key}")
-
     if not api_key:
         siemplify.end("API key is missing or could not be retrieved.", "false")
         return
