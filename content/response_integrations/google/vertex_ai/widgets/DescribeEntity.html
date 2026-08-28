@@ -1,0 +1,800 @@
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!-- Custom Widget / Integration Version when it was updated 5.0 -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link
+    href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700,700i"
+    rel="stylesheet"
+  />
+  <link
+    href="https://fonts.googleapis.com/css?family=Source Sans Pro"
+    rel="stylesheet"
+  />
+  <title>Describe Entity</title>
+  <style>
+    /* Root Variables */
+    :root {
+      /* Layout & Colors */
+      --widget-bg: #212c44;
+      --widget-font-family: 'Source Sans Pro', sans-serif;
+      --widget-text-color: #ffffff;
+      --scrollbar-bg-color: #6275a3;
+
+      /* Components */
+      --widget-row-highlight-bg: #2f3d5c;
+      --divider-border-colcor: #3a4a6c;
+      --divider-border-width: 1px;
+
+      /* Sidebar */
+      --sidebar-width: 167px;
+      --sidebar-item-active-bg: #3a4a6c;
+      --sidebar-toggle-bg: rgba(38, 51, 79, 1); /* Custom Widget specific */
+
+      /* Table */
+      --table-color-even-row: #26334f;
+
+      /* Logo */
+      --logo-size: 48px;
+      --logo-color: #ffffff;
+
+      /* UI Elements */
+      --input-border: #6275a3;
+      --dropdown-shadow: rgba(0, 0, 0, 0.6);
+      --modal-overlay: rgba(0, 0, 0, 0.5);
+
+      /* Status & Tags */
+      --tag-bg: #6a7180;
+      --status-text: #b5b5b5;
+      --tooltip-bg: #ccccda;
+      --tooltip-text: #161625;
+      
+      /* Content Gradients (Custom Widget specific) */
+      --content-list-gradient: linear-gradient(to left, rgb(34 43 62), rgba(33, 44, 68, 0));
+      --collapsing-gradient: linear-gradient(transparent, rgb(35 44 66));
+
+      /* Severity Colors (Dark Theme Default) */
+      --sev-unspec: #b2b6bd;
+      --sev-low: #78d9ec;
+      --sev-medium: #fff371;
+      --sev-high: #fa903e;
+      --sev-critical: #ec453b;
+      
+      /* Legacy Mappings */
+      --content-bg: var(--table-color-even-row);
+      --content-button-bg: var(--widget-row-highlight-bg);
+      --details-button-bg: var(--divider-border-colcor);
+      --modal-list-title-bg: var(--sidebar-item-active-bg);
+      
+      /* Font settings (Legacy) */
+      --widget-scrollbar-size: 12px;
+      --list-item-key-font: 600 14px/18px var(--widget-font-family);
+      --list-item-value-font: 400 14px/18px var(--widget-font-family);
+      --table-title-size: 600 14px/18px var(--widget-font-family);
+      --table-th-size: 600 14px/18px var(--widget-font-family);
+      --table-td-size: 400 14px/18px var(--widget-font-family);
+      --header-title-font: 600 16px/22px var(--widget-font-family);
+      --sidebar-item-text-style: 400 14px/18px var(--widget-font-family);
+      --sidebar-item-text-style-active: 600 14px/16px var(--widget-font-family);
+      --sidebar-item-padding: 10px;
+      --risk-score-text: var(--tooltip-text); 
+
+    }
+
+    /*Normalize CSS */
+    * {
+      margin: 0;
+      padding: 0;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    *:hover, *:focus, *:active {
+      outline: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    ol, ul {
+      list-style: none;
+    }
+
+    button,
+    input,
+    textarea {
+      font-family: inherit;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      text-align: left;
+      width: 100%;
+    }
+
+    button, a[href] {
+      cursor: pointer;
+    }
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /*Normalize CSS */
+
+
+    /* Thin Scrollbar */
+    ::-webkit-scrollbar {
+      width: 18px;
+      height: 18px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(137, 151, 180, 1);
+      border: 6px solid var(--widget-bg);
+      border-radius: 63px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+      border: 4px solid transparent;
+      border-radius: 44px;
+    }
+
+    ::-webkit-scrollbar-corner {
+      background-color: transparent;
+      border-color: transparent;
+    }
+
+
+    body {
+      font-family: var(--widget-font-family), serif;
+      color: var(--widget-text-color);
+      background-color: var(--widget-bg);
+    }
+
+    /*Global styles*/
+    .text-ellipsis {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .divider-border-style {
+      border: 0;
+      border-color: var(--divider-border-colcor);
+      border-style: solid;
+    }
+
+    .tooltip, .additional-tooltip-content {
+      max-width: 100%;
+      position: absolute;
+      padding: 8px 16px 8px 16px;
+      border-radius: 4px;
+      background-color: var(--tooltip-bg);
+      color: var(--tooltip-text);
+      font: 400 14px/18px var(--widget-font-family);
+      z-index: 9;
+      word-wrap: break-word;
+    }
+
+    .tooltip-triangle {
+      position: absolute;
+      top: 100%;
+      border-top: solid 8px rgb(195, 210, 232);
+      border-left: solid 8px transparent;
+      border-right: solid 8px transparent;
+    }
+
+    .additional-tooltip {
+      position: relative;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background-color: var(--sidebar-item-active-bg);
+    }
+
+    .additional-tooltip-title {
+      font: 600 14px/16px var(--widget-font-family);
+    }
+
+    .additional-tooltip-content {
+      top: calc(100% - -8px);
+      right: 0;
+      width: max-content;
+      max-width: none;
+      display: none;
+    }
+
+    .additional-tooltip-content-info {
+      font: 400 14px/16px var(--widget-font-family);
+    }
+
+    .additional-tooltip-title:hover + .additional-tooltip-content {
+      display: block;
+    }
+
+    .additional-tooltip-content-triangle {
+      position: absolute;
+      top: -8px;
+      right: 10px;
+      border-top: 0;
+      border-left: solid 8px transparent;
+      border-right: solid 8px transparent;
+      border-bottom: solid 8px rgb(195, 210, 232);
+    }
+
+    /*Global styles*/
+
+    .wrapper {
+      display: flex;
+      height: 100vh;
+    }
+
+    /*left sidebar*/
+    .left-side {
+      min-width: var(--sidebar-width);
+      max-width: var(--sidebar-width);
+      overflow-y: auto;
+      padding-right: 6px;
+      border-right-width: var(--divider-border-width);
+    }
+
+    .left-side-item {
+      padding: var(--sidebar-item-padding);
+      font: var(--sidebar-item-text-style);
+    }
+
+    .left-side-item.active {
+      background-color: var(--sidebar-item-active-bg);
+      font: var(--sidebar-item-text-style-active);
+    }
+
+    /*left sidebar*/
+
+    .right-side {
+      width: calc(100% - 167px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom-width: var(--divider-border-width);
+    }
+
+    .header-title {
+      font: var(--header-title-font);
+      word-break: break-word;
+      padding: 0 6px;
+    }
+
+    .logo {
+      min-width: var(--logo-size);
+      min-height: var(--logo-size);
+      max-width: var(--logo-size);
+      max-height: var(--logo-size);
+      color: var(--logo-color);
+      padding: 3px 0;
+    }
+
+    .main-content {
+      flex: 1;
+      overflow: auto;
+      padding: 12px 6px 6px;
+    }
+
+    .main-content-header {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      margin-bottom: 16px
+    }
+
+    .additional-content {
+      font: 400 14px/18px var(--widget-font-family);
+    }
+
+  
+
+    html.light-theme {
+      --widget-bg: #ffffff !important;
+      --widget-text-color: #0f1029;
+      --scrollbar-bg-color: #d3d8ea;
+      --widget-row-highlight-bg: #e5e8f2;
+      --divider-border-colcor: #d3d8ea;
+      --sidebar-item-active-bg: #d3d8ea;
+      --sidebar-toggle-bg: #d3d8ea;
+      --table-color-even-row: #f4f5fa;
+      --logo-color: #4e4f63;
+      --input-border: #d3d8ea;
+      --tag-bg: #7a8294;
+      --status-text: #6b6d7a;
+      --tooltip-bg: #4e4f63;
+      --tooltip-text: #ffffff;
+      --dropdown-shadow: rgba(0, 0, 0, 0.1);
+      --modal-overlay: rgba(0, 0, 0, 0.2);
+      
+      --content-list-gradient: linear-gradient(to left, #ffffff, rgba(255, 255, 255, 0));
+      --collapsing-gradient: linear-gradient(transparent, #ffffff);
+      
+      /* Severity Colors (Light) */
+      --sev-unspec: #95a5a6;
+      --sev-low: #0088a5; 
+      --sev-medium: #d6a000; 
+      --sev-high: #d35400; 
+      --sev-critical: #c0392b; 
+    }
+
+    html.light-theme body {
+      background-color: #ffffff !important;
+      color: var(--widget-text-color);
+    }
+
+    html.dark-theme {
+      --widget-bg: #232330 !important;
+      --widget-text-color: #ffffff;
+      --scrollbar-bg-color: #303045;
+      --widget-row-highlight-bg: #5f6368;
+      --divider-border-colcor: #303045;
+      --sidebar-item-active-bg: #5f6368;
+      --sidebar-toggle-bg: #303045;
+      --table-color-even-row: #3c4043;
+      --logo-color: #ffffff;
+      --input-border: #80808b;
+      --tooltip-bg: #e8eaed;
+      --tooltip-text: #131314;
+      
+      --content-list-gradient: linear-gradient(to left, #232330, rgba(35, 35, 48, 0));
+      --collapsing-gradient: linear-gradient(transparent, #232330);
+    }
+    
+    html.dark-theme body {
+       background-color: var(--widget-bg) !important;
+       color: var(--widget-text-color);
+    }
+    
+    /* --- CUSTOM WIDGET SPECIFIC FIXES --- */
+    
+    html.light-theme span[class*="risk-score-value-text"],
+    html.light-theme span[class*="risk-score-text"] {
+        color: var(--logo-color) !important;
+    }
+    
+    html.light-theme .additional-tooltip {
+        background-color: var(--widget-row-highlight-bg) !important;
+        color: var(--widget-text-color) !important;
+    }
+    
+    html.light-theme .level-cell[style*="120, 217, 236"] { background-color: #4ebede !important; }
+    html.light-theme .level-cell[style*="255, 243, 113"] { background-color: #f1c40f !important; }
+    html.light-theme .level-cell[style*="250, 144, 62"] { background-color: #e67e22 !important; }
+    html.light-theme .level-cell[style*="236, 69, 59"] { background-color: #e74c3c !important; }
+
+    html.light-theme .indicator-icon {
+        background-color: var(--logo-color) !important;
+    }
+    html.light-theme .indicator-icon::after {
+        border-top-color: var(--logo-color) !important;
+    }
+    
+    html.light-theme .list-item-screenshot {
+        color: var(--logo-color) !important; 
+        background-color: var(--table-color-even-row) !important;
+        border: 1px solid var(--input-border) !important;
+    }
+    
+    html.light-theme .tag-item {
+        background-color: transparent !important;
+        color: inherit !important;
+        border: none !important;
+    }
+    
+    /* --- SCROLLBAR IMPROVEMENTS --- */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-bg-color) transparent;
+    }
+    
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background-color: var(--scrollbar-bg-color); border-radius: 4px; border: none; }
+    ::-webkit-scrollbar-corner { background: transparent; }
+    
+    /* --- GLOBAL ELEMENT FIXES --- */
+    body {
+        font-family: var(--widget-font-family), serif;
+        color: var(--widget-text-color);
+        background-color: var(--widget-bg);
+    }
+    
+    span.container-list-item {
+        color: var(--widget-text-color) !important;
+    }
+    
+    /* FIX: More comprehensive table header selector */
+    .table th, .table thead th, .main-table th, .main-table thead th {
+        background-color: var(--widget-row-highlight-bg) !important;
+        color: var(--widget-text-color) !important;
+    }
+    
+    .left-side-item.active { background-color: var(--sidebar-item-active-bg); }
+    .left-side { border-right-color: var(--divider-border-colcor); }
+    .header { border-bottom-color: var(--divider-border-colcor); }
+    
+    /* MitreAttck Specific Fixes */
+    .fieldName, .descriptionText, .leftMenu, .chainName {
+        color: var(--status-text) !important;
+    }
+    .leftMenu.active {
+        color: var(--widget-text-color) !important;
+    }
+    .chainCircle {
+        border-color: var(--status-text) !important;
+    }
+    .separator {
+        background-color: var(--status-text) !important;
+    }
+
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+  <div class="left-side divider-border-style" id="leftSide"></div>
+  <div class="right-side" id="rightSide">
+    <div class="header divider-border-style">
+      <h1 class="header-title" id="headerTitle"></h1>
+      <svg class="logo" fill="currentColor"
+           xmlns="http://www.w3.org/2000/svg" x="0px" y="0px"
+           viewBox="0 0 512 512" xml:space="preserve">
+        <path class="st0" d="M256,429.55c-22.77,0-41.22,18.46-41.22,41.22S233.23,512,256,512s41.22-18.46,41.22-41.22
+        S278.77,429.55,256,429.55z M256,489.53c-11.38-0.01-20.6-9.25-20.59-20.64c0.01-11.38,9.25-20.6,20.64-20.59
+        c11.38,0.01,20.6,9.25,20.59,20.64c0,0.34-0.01,0.67-0.03,1C276.06,480.93,266.99,489.55,256,489.53z"/>
+        <path class="st1" d="M91.1,93.17c-11.38,0-20.61-9.23-20.61-20.61V20.82c0-11.38,9.23-20.61,20.61-20.61s20.61,9.23,20.61,20.61
+        v51.74C111.72,83.94,102.49,93.17,91.1,93.17z"/>
+        <ellipse transform="matrix(0.1602 -0.9871 0.9871 0.1602 -175.8815 303.6248)"
+                 class="st1" cx="90.5" cy="255.18" rx="20.82" ry="20.82"/>
+        <ellipse transform="matrix(0.1602 -0.9871 0.9871 0.1602 -115.8645 252.5534)"
+                 class="st1" cx="90.49" cy="194.37" rx="20.82" ry="20.82"/>
+        <ellipse class="st1" cx="90.49" cy="133.36" rx="20.82" ry="20.82"/>
+        <path class="st0" d="M420.9,153.56c-11.38,0-20.61-9.23-20.61-20.61V81c0-11.38,9.23-20.61,20.61-20.61
+        c11.38,0,20.61,9.23,20.61,20.61v51.94C441.51,144.33,432.28,153.56,420.9,153.56z"/>
+        <circle class="st0" cx="421.51" cy="255.38" r="20.82"/>
+        <circle class="st0" cx="421.51" cy="193.75" r="20.82"/>
+        <circle class="st0" cx="421.51" cy="20.82" r="20.82"/>
+        <path class="st2" d="M256,337.62c-11.38,0-20.61-9.23-20.61-20.61v-52.35c0-11.38,9.23-20.61,20.61-20.61s20.61,9.23,20.61,20.61
+        v52.35C276.61,328.39,267.38,337.62,256,337.62z"/>
+        <circle class="st2" cx="256" cy="377.4" r="20.82"/>
+        <circle class="st2" cx="256" cy="203.85" r="20.82"/>
+        <circle class="st2" cx="256" cy="143.05" r="20.82"/>
+        <path class="st0" d="M338.45,214.98c-11.38,0-20.61-9.23-20.61-20.61v-51.74c0-11.38,9.23-20.61,20.61-20.61
+        c11.38,0,20.61,9.23,20.61,20.61v51.74C359.06,205.75,349.83,214.98,338.45,214.98z"/>
+        <circle class="st0" cx="338.86" cy="81.62" r="20.82"/>
+        <circle class="st0" cx="338.86" cy="315.36" r="20.82"/>
+        <circle class="st0" cx="338.86" cy="254.56" r="20.82"/>
+        <circle class="st1" cx="173.14" cy="315.36" r="20.82"/>
+        <circle class="st1" cx="173.14" cy="143.05" r="20.82"/>
+        <circle class="st1" cx="173.14" cy="81.62" r="20.82"/>
+        <path class="st1" d="M173.55,275.79c-11.38,0-20.61-9.23-20.61-20.61v-52.35c0-11.38,9.23-20.61,20.61-20.61
+        s20.61,9.23,20.61,20.61v52.35C194.16,266.56,184.94,275.79,173.55,275.79z"/>
+    </svg>
+    </div>
+    <section class="main-content" id="mainContent"></section>
+  </div>
+</div>
+
+<script>
+
+    const ThemeSettings = {
+        LIGHT_THEME_CLASS: 'light-theme',
+        DARK_THEME_CLASS: 'dark-theme',
+    };
+    
+    const LIGHT_THEME_HEX = "#e5e8f2";
+    const DARK_THEME_HEX = "#282837";
+    const GRAY_THEME_HEX = "#2f3d5c";
+
+    function handleThemeUpdate(event) {
+      if (event.source !== window.parent) {
+        return;
+      }
+        const styles = event.data;
+      if (typeof styles !== 'object' || styles === null) return;
+        const bg = styles.background || styles.backgroundColor || '';
+        let isLight = false;
+        let isDark = false;
+        let isGray = false;
+        const colorString = bg.toLowerCase();
+        if (colorString === LIGHT_THEME_HEX) isLight = true;
+        else if (colorString === DARK_THEME_HEX) isDark = true;
+        else if (colorString === GRAY_THEME_HEX) isGray = true;
+        else {
+            let r, g, b;
+            const rgbMatch = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            if (rgbMatch) { r = parseInt(rgbMatch[1]); g = parseInt(rgbMatch[2]); b = parseInt(rgbMatch[3]); }
+            else if (bg.startsWith('#')) {
+                const hex = bg.replace('#', '');
+                const fH = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+                if (fH.length === 6) { r = parseInt(fH.substring(0, 2), 16); g = parseInt(fH.substring(2, 4), 16); b = parseInt(fH.substring(4, 6), 16); }
+            }
+            if (r !== undefined) {
+                const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                if (brightness > 128) isLight = true;
+            }
+        }
+        const html = document.documentElement;
+        if (isLight) {
+          html.classList.add(ThemeSettings.LIGHT_THEME_CLASS); html.classList.remove(ThemeSettings.DARK_THEME_CLASS);
+        } else if (isDark) {
+          html.classList.add(ThemeSettings.DARK_THEME_CLASS); html.classList.remove(ThemeSettings.LIGHT_THEME_CLASS);
+        } else {
+          html.classList.remove(ThemeSettings.LIGHT_THEME_CLASS); html.classList.remove(ThemeSettings.DARK_THEME_CLASS);
+        }
+
+        const prismLink = document.querySelector('link[href*="/themes/prism"]');
+        if (prismLink) {
+            if (isLight && prismLink.href.includes('prism-tomorrow')) {
+                prismLink.href = prismLink.href.replace('prism-tomorrow.min.css', 'prism.min.css').replace('prism-tomorrow.css', 'prism.css');
+            } else if (!isLight && !prismLink.href.includes('prism-tomorrow')) {
+                prismLink.href = prismLink.href.replace('prism.min.css', 'prism-tomorrow.min.css').replace('prism.css', 'prism-tomorrow.css');
+            }
+        }
+    }
+    window.addEventListener('message', handleThemeUpdate);
+    window.onmessage = handleThemeUpdate;
+    document.addEventListener("DOMContentLoaded", function() {
+        var paths = document.querySelectorAll('svg path');
+        paths.forEach(function(path) {
+            var fill = path.getAttribute('fill');
+            if (fill === 'white' || fill === '#fff' || fill === '#ffffff' || fill === 'rgb(255, 255, 255)') {
+                path.setAttribute('fill', 'currentColor');
+            }
+        });
+    });
+
+
+  const actionListData = [{stepInstanceName}.JsonResult];
+
+  // Constants for tooltip positioning
+  const tooltipGap = 25;
+  const tooltipTriangleHeight = 8;
+  const tooltipTriangleMinGap = 5;
+  const triangleWidth = 16;
+  let tooltipTimeout = undefined;
+
+  const tooltipDetectResizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const target = entry.target;
+      if (target) {
+        const {offsetWidth, scrollWidth} = target;
+        if (scrollWidth > offsetWidth) {
+          target.addEventListener("mouseover", createTooltipListener);
+          target.addEventListener("mouseout", removeTooltipListener);
+        } else {
+          target.removeEventListener("mouseover", createTooltipListener);
+          target.removeEventListener("mouseout", removeTooltipListener);
+        }
+      }
+    }
+  });
+
+  additionalContent(actionListData[0].EntityResult);
+
+  headerTitle.textContent = normalizeBackslashes(actionListData[0].Entity);
+
+  const menuItems = actionListData.map((el, index) => {
+    const displayValue = normalizeBackslashes(el.Entity);
+    const cleanDisplayValue = removeSpecialSymbols(displayValue);
+    const button = document.createElement("button");
+    button.classList.add("left-side-item", "text-ellipsis");
+    if (index === 0) button.classList.add("active");
+    button.id = cleanDisplayValue;
+    button.setAttribute("data-menu", "item");
+    button.textContent = normalizeBackslashes(displayValue);
+
+    renderWithTooltip(button, displayValue);
+
+    return button;
+  });
+
+  leftSide.innerHTML = "";
+  menuItems.forEach(item => leftSide.appendChild(item));
+
+  if (actionListData.length === 1) {
+    leftSide.remove();
+    rightSide.style.width = "100%";
+  } else {
+    leftSide.addEventListener("click", event => {
+      const target = event.target.closest("[data-menu='item']");
+      if (!target) return;
+
+      const id = target.id;
+      const object = actionListData.find(el => removeSpecialSymbols(el.Entity) === id);
+      if (object) {
+        mainContent.innerHTML = "";
+        additionalContent(object.EntityResult);
+        headerTitle.textContent = normalizeBackslashes(object.Entity);
+      }
+      document.querySelectorAll("[data-menu='item']").forEach(item => item.classList.remove("active"));
+      target.classList.add("active");
+
+      mainContent.scrollTop = 0;
+    });
+  }
+
+  function normalizeBackslashes(str) {
+    return str.replace(/\\+/g, '\\');
+  }
+
+  function additionalContent(result) {
+    const summary = result.summary || "N/A";
+    const usageMetadata = result.usageMetadata;
+    let tokenDisplay = "N/A";
+    let promptTokenCount = "N/A";
+    let candidatesTokenCount = "N/A";
+
+    if (typeof usageMetadata === "string") {
+      tokenDisplay = usageMetadata;
+    } else if (usageMetadata && typeof usageMetadata === "object") {
+      tokenDisplay = usageMetadata.totalTokenCount !== undefined
+        ? usageMetadata.totalTokenCount
+        : "N/A";
+      promptTokenCount = usageMetadata.promptTokenCount !== undefined
+        ? usageMetadata.promptTokenCount
+        : "N/A";
+      candidatesTokenCount = usageMetadata.candidatesTokenCount !== undefined
+        ? usageMetadata.candidatesTokenCount
+        : "N/A";
+    }
+
+    mainContent.innerHTML = `
+        <div class="main-content-header">
+            <div class="additional-tooltip">
+                <p class="additional-tooltip-title">Tokens used: ${tokenDisplay}</p>
+                ${typeof usageMetadata === "object" ? `
+                    <div class="additional-tooltip-content">
+                        <p class="additional-tooltip-content-info">Tokens Used For Prompt: <strong>${promptTokenCount}</strong></p>
+                        <p class="additional-tooltip-content-info">Tokens Used For Candidates: <strong>${candidatesTokenCount}</strong></p>
+                        <span class="additional-tooltip-content-triangle"></span>
+                    </div>
+                ` : ""}
+            </div>
+        </div>
+        <div class="additional-content">${normalizeBackslashes(summary)}</div>
+    `;
+  }
+
+  /**
+   * Removes special symbols from a string.
+   */
+  function removeSpecialSymbols(str) {
+    return str.replace(/[^\w\s]/gi, "");
+  }
+
+  /**
+   * Creates a tooltip with given text and position.
+   */
+  function createTooltip(text, x, y, trianglePointX, placeAtBottom, contentOverflowWindow) {
+    removeTooltip();
+    const tooltip = document.createElement("div");
+    tooltip.classList.add("tooltip");
+    tooltip.textContent = text;
+    tooltip.style.left = `${x}px`;
+    tooltip.style.top = `${y}px`;
+    if (contentOverflowWindow) {
+      tooltip.style.right = `${tooltipGap}px`;
+    }
+    const tooltipTriangle = document.createElement("span");
+    tooltipTriangle.classList.add("tooltip-triangle");
+    tooltipTriangle.style.left = `${trianglePointX}px`;
+    if (placeAtBottom) {
+      tooltipTriangle.style.top = "-8px";
+      tooltipTriangle.style.borderTop = "0";
+      tooltipTriangle.style.borderBottom = "solid 8px rgb(195, 210, 232)";
+    }
+    tooltip.append(tooltipTriangle);
+    document.body.append(tooltip);
+  }
+
+  /**
+   * Removes any existing tooltip from the DOM.
+   */
+  function removeTooltip() {
+    const tooltip = document.querySelectorAll(".tooltip");
+    tooltip.forEach((item) => {
+      if (item) {
+        item.remove();
+      }
+    });
+  }
+
+  /**
+   * Sets a timeout to calculate and show tooltip position after a delay.
+   */
+  function createTooltipListener(event) {
+    tooltipTimeout = setTimeout(() => calculateTooltipPosition(event), 1000);
+  }
+
+  /**
+   * Clears any existing tooltip timeout and removes the tooltip.
+   */
+  function removeTooltipListener() {
+    if (tooltipTimeout) {
+      clearTimeout(tooltipTimeout);
+    }
+    removeTooltip();
+  }
+
+  /**
+   * Calculates and positions the tooltip relative to the event target.
+   */
+  function calculateTooltipPosition(event) {
+    const target = event.target;
+    if (!target) {
+      return;
+    }
+    const viewportWidth = window.innerWidth;
+    const rect = target.getBoundingClientRect();
+    const tooltipContent = document.createElement("div");
+    tooltipContent.classList.add("tooltip");
+    tooltipContent.style.top = "0";
+    tooltipContent.textContent = target.textContent;
+    document.body.appendChild(tooltipContent);
+    let contentOverflowWindow = false;
+    // Determine if window width would not be enough for content of tooltip
+    if (tooltipGap * 2 + tooltipContent.offsetWidth >= viewportWidth) {
+      // setting left, right positions to get correct tooltipContentWidth and tooltipContentHeight
+      tooltipContent.style.left = `${tooltipGap}px`;
+      tooltipContent.style.right = `${tooltipGap}px`;
+      contentOverflowWindow = true;
+    }
+    const tooltipContentWidth = tooltipContent.offsetWidth;
+    const tooltipContentHeight = tooltipContent.offsetHeight;
+    tooltipContent.remove();
+    const elementMidX = rect.left + (rect.width / 2);
+    const placeOnRight = elementMidX + tooltipContentWidth / 2 + tooltipGap > viewportWidth;
+    const x = Math.max(tooltipGap, placeOnRight ? viewportWidth - tooltipContentWidth - tooltipGap : elementMidX - tooltipContentWidth / 2);
+    const placeAtBottom = rect.top < tooltipContentHeight;
+    const y = placeAtBottom ? rect.bottom + tooltipTriangleHeight : rect.top - tooltipContentHeight;
+    // Calculating trianglePointX relative to window width, to guarantee that it is not out of window
+    const trianglePointX = Math.min(Math.max(elementMidX - x, tooltipTriangleMinGap), tooltipContentWidth - tooltipTriangleMinGap - triangleWidth);
+    createTooltip(target.textContent, x, y, trianglePointX, placeAtBottom, contentOverflowWindow);
+  }
+
+  /**
+   * Renders an item with text and sets up tooltip behavior.
+   */
+  function renderWithTooltip(item, text) {
+    item.innerText = text;
+    item.classList.add("text-ellipsis");
+    tooltipDetectResizeObserver.observe(item);
+  }
+</script>
+</body>
+</html>
