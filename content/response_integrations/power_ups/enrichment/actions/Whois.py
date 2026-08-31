@@ -184,7 +184,6 @@ def main():
             if entity.entity_type == EntityTypes.ADDRESS:
                 try:
                     obj = IPWhois(entity.identifier)
-                    obj.lookup_rdap(depth=1)
                     ip_whois = obj.lookup_rdap(depth=1)
                     response = DbIpCity.get(entity.identifier, api_key="free")
                     ip_whois["geo_lookup"] = json.loads(response.to_json())
