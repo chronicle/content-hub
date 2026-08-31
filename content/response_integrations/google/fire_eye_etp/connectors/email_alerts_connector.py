@@ -162,7 +162,7 @@ def calculate_priority(alerts_group: list[Alert]) -> int:
 
 
 def create_alert_info(
-    environment: Any,  # noqa: ANN401
+    environment: Any,  # ruff: ignore[ANN401]
     alerts_group: list[Alert],
 ) -> AlertInfo:
     """Create a Siemplify AlertInfo object from a group of alerts.
