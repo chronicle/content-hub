@@ -95,11 +95,10 @@ def main() -> None:
         domain = str(domain or "").strip().lower()
         if not domain:
             raise ValueError('the "Domain" parameter must not be empty')
-        # skip_tls is always True: the action never probes MX hosts over SMTP
-        # (see the module docstring).
+        # check_mx_tls is left at its default of False: the action never probes
+        # MX hosts over SMTP (see the module docstring).
         domain_check = checkdmarc.check_domains(
             [domain],
-            skip_tls=True,
             include_tag_descriptions=include_tag_descriptions,
             bimi_selector=str(bimi_selector or "default").strip() or "default",
         )
