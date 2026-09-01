@@ -231,3 +231,12 @@ class TaskDetail(BaseModel):
         self.id = task_id
         self.action = action
         self.status = status
+
+
+class BlocklistResponse(BaseModel):
+
+    def __init__(self, raw_data, task_id=None, url=None, error_message=None):
+        super(BlocklistResponse, self).__init__(raw_data)
+        self.id = task_id
+        self.url = url
+        self.error_message = error_message
