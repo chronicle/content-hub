@@ -20,7 +20,7 @@ from __future__ import annotations
 import sys
 import uuid
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import arrow
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
@@ -39,9 +39,9 @@ from TIPCommon.transformation import dict_to_flat
 from TIPCommon.utils import is_overflowed
 
 try:
-    from EnvironmentCommon import GetEnvironmentCommonFactory
+    from EnvironmentCommon import EnvironmentHandle, GetEnvironmentCommonFactory
 except ImportError:
-    from TIPCommon.envcommon import GetEnvironmentCommonFactory
+    from TIPCommon.envcommon import EnvironmentHandle, GetEnvironmentCommonFactory
 
 from ..core.fire_eye_etp_constants import (
     ACCEPTABLE_TIME_INTERVAL_IN_MINUTES,
@@ -162,7 +162,7 @@ def calculate_priority(alerts_group: list[Alert]) -> int:
 
 
 def create_alert_info(
-    environment: Any,  # ruff: ignore[any-type]
+    environment: EnvironmentHandle,
     alerts_group: list[Alert],
 ) -> AlertInfo:
     """Create a Siemplify AlertInfo object from a group of alerts.
@@ -248,7 +248,7 @@ def process_single_alert_group(
         detailed_alert_group.append(detailed_alert)
 
     siemplify.LOGGER.info(f"Creating AlertInfo for alert group {alert_group[0].etp_message_id}")
-    environment_common: Any = GetEnvironmentCommonFactory.create_environment_manager(
+    environment_common: EnvironmentHandle = GetEnvironmentCommonFactory.create_environment_manager(
         siemplify,
         environment_field_name=params["environment_field_name"],
         environment_regex_pattern=params["environment_regex_pattern"],
