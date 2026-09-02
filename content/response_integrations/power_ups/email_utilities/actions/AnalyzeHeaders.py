@@ -42,15 +42,22 @@ from ..core import AuthenticationResults, EmailParserRouting, EmailUtilitiesMana
 from ..core.IpLocation import DbIpCity
 
 
-def return_domain(email: str) -> str | None:
+def return_domain(email: str | None) -> str | None:
     """Return the domain portion of an email address.
 
     Args:
         email: An address, optionally in ``Display Name <local@domain>`` form.
+            Some parsers hand repeated headers over as a list; the first entry
+            is used in that case.
 
     Returns:
-        The domain after the ``@``, or None if no domain is present.
+        The domain after the ``@``, or None if no domain is present or the
+        input is not a string (e.g. the header is missing).
     """
+    if isinstance(email, list):
+        email = email[0] if email else None
+    if not isinstance(email, str):
+        return None
     f_domain = re.search("<(.*?)>", email)
 
     if f_domain:
@@ -266,9 +273,11 @@ def build_result(
     }
     result["FromDomain"] = return_domain(result["From"])
 
-    ext = tldextract.extract(result["FromDomain"])
-
-    result["FromParentDomain"] = f"{ext.domain}.{ext.suffix}"
+    if result["FromDomain"]:
+        ext = tldextract.extract(result["FromDomain"])
+        result["FromParentDomain"] = f"{ext.domain}.{ext.suffix}"
+    else:
+        result["FromParentDomain"] = None
     # MFromDomain is the RFC 5321 MAIL FROM (envelope) domain, taken from the
     # Return-Path header the final receiver writes from the envelope; when that
     # header is absent it falls back to the RFC 5322 From domain.
