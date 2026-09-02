@@ -17,6 +17,7 @@ from __future__ import annotations
 import base64
 import re
 from email import message_from_string
+from email.header import decode_header
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
@@ -85,7 +86,6 @@ def extract_content(msg):
     """
     html_body = ""
     text_body = ""
-    files = {}
     count = 0
 
     if not msg.is_multipart():

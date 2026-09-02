@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import base64
-import collections
 import datetime
 import hashlib
 import ipaddress
@@ -47,7 +46,6 @@ def json_serial(obj):
 
 
 def parse_headers(msg, denylist=[], is_allowlist=False, stop_transport=""):
-    header = []
     transport = []
     transport_stopped = False
     headers = {}
@@ -211,9 +209,6 @@ def parse_transport(name, header):
     headers_struc["ipv6"] = []
 
     try:
-        found_smtpin: collections.Counter = (
-            collections.Counter()
-        )  # Array for storing potential duplicate "HOP"
         if header:
             line = str(header).lower()
             received_line_flat = re.sub(r"(\r|\n|\s|\t)+", " ", line, flags=re.UNICODE)
@@ -395,7 +390,7 @@ def parse_msg(msg, denylist, is_allowlist, stop_transport):
                     ),
                 )
                 _attached_json["body"].append(body(attachment.data.rtfBody, "text/rtf"))
-            except:
+            except Exception:
                 pass
             for _attach_attached in _attachment.data.attachments:
                 _attached_json["attachment"].append(
@@ -414,9 +409,6 @@ def parse_msg(msg, denylist, is_allowlist, stop_transport):
                     content=_attachment.data,
                 ),
             )
-            # _cur_json['attachment'].append(attachment(filename = msox_obj['AttachLongFilename'], content = msox_obj['AttachDataObject']))
-    #        _cur_json['attached_files'].append({"filename": _attachment.shortFilename, "base64_data":  base64.b64encode
-    #                                (_attachment.data).decode()})
     return _cur_json
 
 
@@ -437,7 +429,7 @@ def process_attachment(attachment, denylist, is_allowlist, stop_transport):
                 is_allowlist,
                 stop_transport,
             )
-    except:
+    except Exception:
         attached_parsed = parse_msg(
             attached_msg,
             denylist,
