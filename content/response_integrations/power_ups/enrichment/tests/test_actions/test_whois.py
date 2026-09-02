@@ -321,3 +321,150 @@ def test_whois_action_with_failed_entities(
     assert action_output.results.execution_state == ExecutionState.COMPLETED
     assert "Successfully enriched the following entities: google.com" in mock_siemplify.end.call_args[0][0]
     assert "Failed to enrich the following entities: failed.com" in mock_siemplify.end.call_args[0][0]
+
+
+@pytest.mark.execution_scope("Alert")
+@set_metadata(
+    parameters={"Create Entities": "true", "Domain Age Threshold": "0"},
+    input_context={"environment": "Default", "alert_id": "alert_1"},
+)
+def test_whois_action_rdap_no_creation_date(
+    product: EnrichmentProduct,
+    script_session: EnrichmentMockSession,
+    action_output: MockActionOutput,
+    mock_siemplify: MagicMock,
+) -> None:
+    product.set_case_metadata({"title": "Simulated Whois Case", "case_id": "case_whois"})
+    product.set_alerts_full_details({
+        "alerts": [
+            {
+                "identifier": "alert_1",
+                "entities": [
+                    {
+                        "identifier": "google.com",
+                        "entity_type": "DOMAIN",
+                        "additional_properties": {},
+                    }
+                ],
+            }
+        ]
+    })
+
+    rdap_without_registration = {
+        "objectClassName": "domain",
+        "handle": "2138514_DOMAIN_COM-VRSN",
+        "ldhName": "GOOGLE.COM",
+        "events": [
+            {"eventAction": "last changed", "eventDate": "2019-09-09T15:39:04Z"}
+        ],
+        "entities": [],
+    }
+
+    with patch("requests.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = rdap_without_registration
+        mock_get.return_value = mock_response
+
+        Whois.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    res_list = mock_siemplify.result.add_result_json.call_args[0][0]
+    assert len(res_list) == 1
+    assert res_list[0]["Entity"] == "google.com"
+    assert res_list[0]["EntityResult"]["creation_date"] is None
+    assert "age_in_days" not in res_list[0]["EntityResult"]
+
+
+@pytest.mark.execution_scope("Alert")
+@set_metadata(
+    parameters={"Create Entities": "true", "Domain Age Threshold": "0"},
+    input_context={"environment": "Default", "alert_id": "alert_1"},
+)
+def test_whois_action_fallback_no_raw_key(
+    product: EnrichmentProduct,
+    script_session: EnrichmentMockSession,
+    action_output: MockActionOutput,
+    mock_siemplify: MagicMock,
+) -> None:
+    product.set_case_metadata({"title": "Simulated Whois Case", "case_id": "case_whois"})
+    product.set_alerts_full_details({
+        "alerts": [
+            {
+                "identifier": "alert_1",
+                "entities": [
+                    {
+                        "identifier": "google.com",
+                        "entity_type": "DOMAIN",
+                        "additional_properties": {},
+                    }
+                ],
+            }
+        ]
+    })
+
+    with patch("requests.get") as mock_get:
+        mock_res = MagicMock()
+        mock_res.status_code = 500
+        mock_get.return_value = mock_res
+
+        with patch("whois_alt.get_whois") as mock_whois:
+            # Fallback returns a dict without "raw" key
+            mock_whois.return_value = {
+                "id": ["google.com"],
+                "status": ["active"],
+                "creation_date": None,
+            }
+
+            Whois.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    res_list = mock_siemplify.result.add_result_json.call_args[0][0]
+    assert len(res_list) == 1
+    assert res_list[0]["Entity"] == "google.com"
+
+
+def test_map_rdap_to_whois_deterministic_emails() -> None:
+    from ...core.data_model import map_rdap_to_whois
+
+    rdap_with_emails = {
+        "handle": "TEST-DOMAIN",
+        "ldhName": "test.com",
+        "events": [],
+        "entities": [
+            {
+                "roles": ["registrant"],
+                "vcardArray": [
+                    "vcard",
+                    [
+                        ["version", {}, "text", "4.0"],
+                        ["email", {}, "text", "b@example.com"],
+                    ],
+                ],
+            },
+            {
+                "roles": ["administrative"],
+                "vcardArray": [
+                    "vcard",
+                    [
+                        ["version", {}, "text", "4.0"],
+                        ["email", {}, "text", "a@example.com"],
+                    ],
+                ],
+            },
+            {
+                "roles": ["technical"],
+                "vcardArray": [
+                    "vcard",
+                    [
+                        ["version", {}, "text", "4.0"],
+                        ["email", {}, "text", "b@example.com"],
+                    ],
+                ],
+            },
+        ],
+    }
+
+    result = map_rdap_to_whois(rdap_with_emails)
+    assert result["emails"] == ["b@example.com", "a@example.com"]
+

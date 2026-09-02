@@ -12,27 +12,133 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import json
 from datetime import datetime
+from typing import Any
 
 import requests
 import whois_alt
+import whois_alt.parse as parse
+
+# Monkeypatch whois_alt to prevent catastrophic backtracking on AFNIC (nic.fr) whois contacts.
+safe_regexes = []
+for r in parse.nic_contact_regexes:
+    pattern = r.pattern
+    if "type:\\s*(?P<type>.+)" in pattern and "contact:\\s*(?P<name>.+)" in pattern:
+        pass
+    else:
+        safe_regexes.append(r)
+parse.nic_contact_regexes = safe_regexes
+
+
+def parse_afnic_contact_blocks(data: list[str]) -> list[dict[str, Any]]:
+    """Parse AFNIC contact blocks to prevent catastrophic backtracking in whois_alt.
+
+    Args:
+        data: List of raw WHOIS text segments from AFNIC server.
+
+    Returns:
+        List of parsed contact dictionaries containing handle, type, name, etc.
+    """
+    handle_contacts = []
+    for segment in data:
+        blocks = segment.split("\n\n")
+        for block in blocks:
+            if "nic-hdl:" not in block:
+                continue
+            contact: dict[str, Any] = {}
+            address_lines = []
+            for line in block.splitlines():
+                line = line.strip()
+                if not line or ":" not in line:
+                    continue
+                key, val = line.split(":", 1)
+                key = key.strip().lower()
+                val = val.strip()
+                if key == "nic-hdl":
+                    contact["handle"] = val
+                elif key == "type":
+                    contact["type"] = val
+                elif key == "contact":
+                    contact["name"] = val
+                elif key == "address":
+                    address_lines.append(val)
+                elif key == "country":
+                    contact["country"] = val
+                elif key == "phone":
+                    contact["phone"] = val
+                elif key == "fax-no":
+                    contact["fax"] = val
+                elif key == "e-mail":
+                    contact["email"] = val
+                elif key == "changed":
+                    contact["changedate"] = val
+
+            for idx, addr in enumerate(address_lines[:4]):
+                contact[f"street{idx + 1}"] = addr
+
+            if "handle" in contact:
+                handle_contacts.append(contact)
+    return handle_contacts
+
+
+orig_parse_nic_contact = parse.parse_nic_contact
+
+
+def my_parse_nic_contact(data: list[str]) -> list[dict[str, Any]]:
+    """Augment parsed nic contacts with AFNIC contact blocks.
+
+    Args:
+        data: List of raw WHOIS text segments.
+
+    Returns:
+        List of combined and deduplicated contact dictionaries.
+    """
+    contacts = orig_parse_nic_contact(data)
+    afnic_contacts = parse_afnic_contact_blocks(data)
+    existing_handles = {c["handle"] for c in contacts if "handle" in c}
+    for ac in afnic_contacts:
+        if ac["handle"] not in existing_handles:
+            contacts.append(ac)
+            existing_handles.add(ac["handle"])
+    return contacts
+
+
+parse.parse_nic_contact = my_parse_nic_contact
 
 
 class ContactInfo:
+    """Model representing contact information for a domain registrant, admin, or tech contact."""
+
     def __init__(
         self,
-        handle=None,
-        name=None,
-        organization=None,
-        email=None,
-        phone=None,
-        street=None,
-        city=None,
-        state=None,
-        postalcode=None,
-        country=None,
-    ):
+        handle: str | None = None,
+        name: str | None = None,
+        organization: str | None = None,
+        email: str | None = None,
+        phone: str | None = None,
+        street: str | None = None,
+        city: str | None = None,
+        state: str | None = None,
+        postalcode: str | None = None,
+        country: str | None = None,
+    ) -> None:
+        """Initialize ContactInfo with contact details.
+
+        Args:
+            handle: Contact handle or ID.
+            name: Contact name.
+            organization: Contact organization name.
+            email: Contact email address.
+            phone: Contact phone number.
+            street: Contact street address.
+            city: Contact city.
+            state: Contact state or province.
+            postalcode: Contact postal or zip code.
+            country: Contact country or country code.
+        """
         self.handle = handle
         self.name = name
         self.organization = organization
@@ -44,25 +150,47 @@ class ContactInfo:
         self.postalcode = postalcode
         self.country = country
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
+        """Convert ContactInfo to a dictionary containing only non-None fields.
+
+        Returns:
+            Dictionary representation of contact info with None values omitted.
+        """
         return {k: v for k, v in self.__dict__.items() if v is not None}
 
 
 class WhoisData:
+    """Model representing domain WHOIS/RDAP data matching classic WHOIS output format."""
+
     def __init__(
         self,
-        id=None,
-        status=None,
-        creation_date=None,
-        expiration_date=None,
-        updated_date=None,
-        registrar=None,
-        whois_server=None,
-        nameservers=None,
-        emails=None,
-        contacts=None,
-        raw=None,
-    ):
+        id: list[str] | None = None,
+        status: list[str] | str | None = None,
+        creation_date: list[datetime] | None = None,
+        expiration_date: list[datetime] | None = None,
+        updated_date: list[datetime] | None = None,
+        registrar: list[str] | None = None,
+        whois_server: str | None = None,
+        nameservers: list[str] | None = None,
+        emails: list[str] | None = None,
+        contacts: dict[str, ContactInfo | dict[str, Any] | None] | None = None,
+        raw: list[str] | None = None,
+    ) -> None:
+        """Initialize WhoisData with domain attributes.
+
+        Args:
+            id: Domain ID or name list.
+            status: Domain registration status list or string.
+            creation_date: Domain creation / registration date(s).
+            expiration_date: Domain expiration date(s).
+            updated_date: Domain last updated date(s).
+            registrar: Domain registrar list.
+            whois_server: WHOIS server host name.
+            nameservers: Domain name servers list.
+            emails: Associated contact email list.
+            contacts: Role-based contacts dictionary.
+            raw: Raw RDAP or WHOIS payload list.
+        """
         self.id = id
         self.status = status
         self.creation_date = creation_date
@@ -80,8 +208,13 @@ class WhoisData:
         }
         self.raw = raw
 
-    def to_dict(self):
-        res = {
+    def to_dict(self) -> dict[str, Any]:
+        """Convert WhoisData to dictionary format compatible with classic WHOIS schema.
+
+        Returns:
+            Dictionary representation of WHOIS domain data.
+        """
+        res: dict[str, Any] = {
             "id": self.id,
             "status": self.status,
             "creation_date": self.creation_date,
@@ -100,11 +233,19 @@ class WhoisData:
         return res
 
 
-def parse_vcard(vcard_array):
+def parse_vcard(vcard_array: list[Any] | None) -> dict[str, Any]:
+    """Parse a jCard/vCard JSON array into a normalized contact dictionary.
+
+    Args:
+        vcard_array: Raw vCard array from RDAP entity representation.
+
+    Returns:
+        Dictionary containing parsed contact properties.
+    """
     if not vcard_array or len(vcard_array) < 2:
         return {}
     properties = vcard_array[1]
-    card = {}
+    card: dict[str, Any] = {}
     for prop in properties:
         if len(prop) < 4:
             continue
@@ -149,7 +290,15 @@ def parse_vcard(vcard_array):
     return card
 
 
-def map_rdap_to_whois(rdap_data):
+def map_rdap_to_whois(rdap_data: dict[str, Any]) -> dict[str, Any]:
+    """Map RDAP JSON response to a dictionary compatible with whois-alt output.
+
+    Args:
+        rdap_data: Parsed JSON payload returned by an RDAP server.
+
+    Returns:
+        Normalized dictionary representing domain registration details.
+    """
     creation_dates = []
     expiration_dates = []
     updated_dates = []
@@ -172,15 +321,15 @@ def map_rdap_to_whois(rdap_data):
             pass
 
     registrar = None
-    emails = []
-    contacts = {
+    emails: list[str] = []
+    contacts: dict[str, ContactInfo | None] = {
         "registrant": None,
         "tech": None,
         "admin": None,
         "billing": None,
     }
 
-    def process_entities(entity_list):
+    def process_entities(entity_list: list[dict[str, Any]]) -> None:
         nonlocal registrar
         for entity in entity_list:
             roles = entity.get("roles", [])
@@ -237,7 +386,9 @@ def map_rdap_to_whois(rdap_data):
     if domain_id:
         domain_id = [domain_id]
     else:
-        domain_id = [rdap_data.get("ldhName", "").lower()] if rdap_data.get("ldhName") else None
+        domain_id = (
+            [rdap_data.get("ldhName", "").lower()] if rdap_data.get("ldhName") else None
+        )
     status = rdap_data.get("status")
 
     whois_data = WhoisData(
@@ -249,7 +400,7 @@ def map_rdap_to_whois(rdap_data):
         registrar=registrar,
         whois_server=None,
         nameservers=nameservers or None,
-        emails=list(set(emails)) if emails else None,
+        emails=list(dict.fromkeys(emails)) if emails else None,
         contacts=contacts,
         raw=[json.dumps(rdap_data)],
     )
@@ -257,7 +408,16 @@ def map_rdap_to_whois(rdap_data):
     return whois_data.to_dict()
 
 
-def get_domain_whois(domain, logger=None):
+def get_domain_whois(domain: str, logger: Any = None) -> dict[str, Any]:
+    """Retrieve domain WHOIS information via RDAP with fallback to classic WHOIS.
+
+    Args:
+        domain: Domain name to query.
+        logger: Optional logger instance for logging informational or warning messages.
+
+    Returns:
+        Dictionary containing WHOIS/RDAP domain data.
+    """
     try:
         url = f"https://rdap.org/domain/{domain}"
         headers = {
