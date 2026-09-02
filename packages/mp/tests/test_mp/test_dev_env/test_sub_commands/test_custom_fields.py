@@ -14,13 +14,16 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
 from unittest import mock
 
-import pytest  # ruff:ignore[typing-only-third-party-import]
+import pytest
+import requests
 import yaml
 from typer.testing import CliRunner
 
+from mp.dev_env.api import BackendAPI
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.sub_commands.push import push_app
 
@@ -869,3 +872,141 @@ def test_pull_all_custom_fields_shared_scope(
     assert (tmp_path / "shared" / "Field_3_alert_case.yaml").exists()
     assert not (tmp_path / "alert" / "Field_1_alert.yaml").exists()
     assert not (tmp_path / "case" / "Field_2_case.yaml").exists()
+
+
+def test_backend_api_list_custom_fields_pagination() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp_page_1 = mock.MagicMock()
+    resp_page_1.ok = True
+    resp_page_1.status_code = HTTPStatus.OK
+    resp_page_1.json.return_value = {
+        "items": [{"id": i, "displayName": f"Field {i}"} for i in range(1, 51)],
+        "nextPageToken": "token_page_2",
+    }
+
+    resp_page_2 = mock.MagicMock()
+    resp_page_2.ok = True
+    resp_page_2.status_code = HTTPStatus.OK
+    resp_page_2.json.return_value = {
+        "items": [{"id": i, "displayName": f"Field {i}"} for i in range(51, 81)],
+        "nextPageToken": None,
+    }
+
+    api.session.get.side_effect = [resp_page_1, resp_page_2]
+
+    fields = api.list_custom_fields()
+    assert len(fields) == 80
+    assert api.session.get.call_count == 2
+    api.session.get.assert_any_call("https://soar.test/api/1p/external/v1/customFields", params=None)
+    api.session.get.assert_any_call(
+        "https://soar.test/api/1p/external/v1/customFields", params={"pageToken": "token_page_2"}
+    )
+
+
+def test_backend_api_list_custom_fields_cyclical_page_token() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp_page_1 = mock.MagicMock()
+    resp_page_1.ok = True
+    resp_page_1.status_code = HTTPStatus.OK
+    resp_page_1.json.return_value = {
+        "items": [{"id": 1, "displayName": "Field 1"}],
+        "nextPageToken": "token_repeat",
+    }
+
+    resp_page_2 = mock.MagicMock()
+    resp_page_2.ok = True
+    resp_page_2.status_code = HTTPStatus.OK
+    resp_page_2.json.return_value = {
+        "items": [{"id": 2, "displayName": "Field 2"}],
+        "nextPageToken": "token_repeat",
+    }
+
+    api.session.get.side_effect = [resp_page_1, resp_page_2]
+
+    fields = api.list_custom_fields()
+    assert len(fields) == 2
+    assert api.session.get.call_count == 2
+
+
+def test_backend_api_paginate_1p_get_null_items() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp = mock.MagicMock()
+    resp.ok = True
+    resp.status_code = HTTPStatus.OK
+    resp.json.return_value = {"items": None, "nextPageToken": None}
+
+    api.session.get.return_value = resp
+
+    fields = api.list_custom_fields()
+    assert fields == []
+
+
+def test_backend_api_paginate_1p_get_no_content_204() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp = mock.MagicMock()
+    resp.ok = True
+    resp.status_code = HTTPStatus.NO_CONTENT
+
+    api.session.get.return_value = resp
+
+    fields = api.list_custom_fields()
+    assert fields == []
+
+
+def test_backend_api_paginate_1p_get_list_response() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp = mock.MagicMock()
+    resp.ok = True
+    resp.status_code = HTTPStatus.OK
+    resp.json.return_value = [{"id": 1, "displayName": "Field 1"}]
+
+    api.session.get.return_value = resp
+
+    fields = api.list_custom_fields()
+    assert fields == [{"id": 1, "displayName": "Field 1"}]
+
+
+def test_backend_api_paginate_1p_get_custom_root_key() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp = mock.MagicMock()
+    resp.ok = True
+    resp.status_code = HTTPStatus.OK
+    resp.json.return_value = {
+        "customLists": [{"id": 1, "name": "List 1"}],
+        "nextPageToken": None,
+    }
+
+    api.session.get.return_value = resp
+
+    result = api._paginate_1p_get(  # ruff:ignore[private-member-access]
+        "https://soar.test/api/1p/external/v1/customLists", root_response_key="customLists"
+    )
+    assert result == [{"id": 1, "name": "List 1"}]
+
+
+def test_backend_api_paginate_1p_get_json_decode_error() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp = mock.MagicMock()
+    resp.ok = True
+    resp.status_code = HTTPStatus.OK
+    resp.text = "invalid json"
+    resp.json.side_effect = requests.exceptions.JSONDecodeError("Expecting value", "doc", 0)
+
+    api.session.get.return_value = resp
+
+    with pytest.raises(requests.exceptions.JSONDecodeError):
+        api.list_custom_fields()
