@@ -337,6 +337,12 @@ def get_authentication_results(
         (value for key, value in headers.items() if key.lower() == "from"),
         None,
     )
+    # Depending on the parser, a header value may arrive as a list of strings;
+    # normalize to the first entry so parse_email_address always gets a string.
+    if isinstance(from_value, list):
+        from_value = from_value[0] if from_value else None
+    if not isinstance(from_value, str):
+        from_value = None
     if from_value:
         try:
             from_domain = parse_email_address(from_value).get("domain")

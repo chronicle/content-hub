@@ -16,7 +16,85 @@
 
 from __future__ import annotations
 
-from ..actions.AnalyzeDomainEmailSecurity import build_result
+from typing import Any
+
+import pytest
+from soar_sdk.ScriptResult import (
+    EXECUTION_STATE_COMPLETED,
+    EXECUTION_STATE_FAILED,
+)
+
+from ..actions import AnalyzeDomainEmailSecurity
+from ..actions.AnalyzeDomainEmailSecurity import build_result, main
+
+
+class _FakeLogger:
+    def __init__(self) -> None:
+        self.errors: list[str] = []
+
+    def error(self, message: str) -> None:
+        self.errors.append(message)
+
+
+class _FakeResult:
+    def __init__(self) -> None:
+        self.json_results: list[dict] = []
+
+    def add_result_json(self, result: dict) -> None:
+        self.json_results.append(result)
+
+
+class _FakeSiemplifyAction:
+    """Minimal SiemplifyAction stand-in that records the end() call."""
+
+    def __init__(self, params: dict) -> None:
+        self._params = params
+        self.script_name: str | None = None
+        self.result = _FakeResult()
+        self.LOGGER = _FakeLogger()
+        self.end_message: str | None = None
+        self.end_result_value: str | None = None
+        self.end_status: int | None = None
+
+    def extract_action_param(
+        self,
+        param_name: str,
+        print_value: bool = False,
+        input_type: type = str,
+        default_value: Any = None,
+    ) -> Any:
+        return self._params.get(param_name, default_value)
+
+    def end(self, message: str, result_value: str, status: int) -> None:
+        self.end_message = message
+        self.end_result_value = result_value
+        self.end_status = status
+
+
+def _run_main(
+    monkeypatch: pytest.MonkeyPatch,
+    params: dict,
+    domain_check: dict | None = None,
+) -> _FakeSiemplifyAction:
+    """Run the action's main() with a stubbed platform and checkdmarc."""
+    siemplify = _FakeSiemplifyAction(params)
+    monkeypatch.setattr(
+        AnalyzeDomainEmailSecurity,
+        "SiemplifyAction",
+        lambda: siemplify,
+    )
+
+    def fake_check_domains(domains: list[str], **kwargs: Any) -> dict:
+        assert domain_check is not None, "checkdmarc must not be called"
+        return domain_check
+
+    monkeypatch.setattr(
+        AnalyzeDomainEmailSecurity.checkdmarc,
+        "check_domains",
+        fake_check_domains,
+    )
+    main()
+    return siemplify
 
 
 def _domain_check(spf: dict | None) -> dict:
@@ -58,3 +136,48 @@ def test_build_result_does_not_reproduce_strong_spf() -> None:
 def test_build_result_tolerates_missing_spf() -> None:
     result = build_result("x.example", _domain_check(None))
     assert result["SPF"] is None
+
+
+@pytest.mark.parametrize("domain", [None, "", "   ", "\t\n"])
+def test_main_fails_on_empty_domain(
+    monkeypatch: pytest.MonkeyPatch,
+    domain: str | None,
+) -> None:
+    # An empty or whitespace-only Domain must raise ValueError inside main(),
+    # which surfaces as EXECUTION_STATE_FAILED without ever calling checkdmarc.
+    siemplify = _run_main(monkeypatch, {"Domain": domain}, domain_check=None)
+    assert siemplify.end_status == EXECUTION_STATE_FAILED
+    assert siemplify.end_result_value == "false"
+    assert 'the "Domain" parameter must not be empty' in siemplify.end_message
+    assert siemplify.LOGGER.errors
+    assert siemplify.result.json_results == []
+
+
+def test_main_result_value_false_when_spf_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    check = _domain_check({"record": "v=spf1 +all", "valid": False})
+    siemplify = _run_main(monkeypatch, {"Domain": "x.example"}, check)
+    assert siemplify.end_status == EXECUTION_STATE_COMPLETED
+    assert siemplify.end_result_value == "false"
+
+
+def test_main_result_value_false_when_dmarc_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    check = _domain_check({"record": "v=spf1 -all", "valid": True})
+    check["dmarc"] = None
+    siemplify = _run_main(monkeypatch, {"Domain": "x.example"}, check)
+    assert siemplify.end_status == EXECUTION_STATE_COMPLETED
+    assert siemplify.end_result_value == "false"
+
+
+def test_main_result_value_true_when_spf_and_dmarc_valid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    check = _domain_check({"record": "v=spf1 -all", "valid": True})
+    siemplify = _run_main(monkeypatch, {"Domain": "X.Example"}, check)
+    assert siemplify.end_status == EXECUTION_STATE_COMPLETED
+    assert siemplify.end_result_value == "true"
+    # The Domain parameter is normalized before use.
+    assert siemplify.result.json_results[0]["Domain"] == "x.example"
