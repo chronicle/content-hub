@@ -742,7 +742,9 @@ class DomainSigner:
             b_header = {}
 
             for h in headers:
-                b_header[h.encode("utf-8")] = headers[h][0].encode("utf-8")
+                b_header[h.encode("utf-8", errors="surrogatepass")] = headers[h][0].encode(
+                    "utf-8", errors="surrogatepass"
+                )
 
             self.headers = b_header
             self.body = b""
@@ -2241,8 +2243,8 @@ def fix_malformed_eml_content(content_bytes: bytes) -> bytes:
         and str(main_content_type[0]) == "text/plain"
         and "multipart" in str(main_content_type[1])
     ):
-        text_content_type = str(main_content_type[0]).encode("utf-8")
-        next_content_type = str(main_content_type[1]).encode("utf-8")
+        text_content_type = str(main_content_type[0]).encode("utf-8", errors="surrogatepass")
+        next_content_type = str(main_content_type[1]).encode("utf-8", errors="surrogatepass")
         content_bytes = content_bytes.replace(text_content_type, next_content_type, 1)
 
     return content_bytes
