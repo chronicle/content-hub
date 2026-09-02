@@ -25,6 +25,8 @@ import urllib3
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+NO_CONTENT_STATUS_CODE: int = 204
+
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -178,14 +180,22 @@ class BackendAPI:
         resp.raise_for_status()
         return resp
 
-    def _paginate_1p_get(self, url: str) -> list[dict[str, Any]]:
+    def _paginate_1p_get(
+        self,
+        url: str,
+        root_response_key: str = "items",
+    ) -> list[dict[str, Any]]:
         """Fetch all items from a 1P API endpoint with pagination support.
 
         Args:
             url: The 1P endpoint URL.
+            root_response_key: The key in the response JSON where records are stored. Defaults to 'items'.
 
         Returns:
             list[dict[str, Any]]: Aggregated list of items from all pages.
+
+        Raises:
+            requests.exceptions.JSONDecodeError: If the response body cannot be decoded as JSON.
 
         """
         all_items: list[dict[str, Any]] = []
@@ -198,16 +208,16 @@ class BackendAPI:
             if not resp.ok:
                 logger.error("Request to '%s' failed: %s - %s", url, resp.status_code, resp.text)
             resp.raise_for_status()
-            if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
+            if resp.status_code == NO_CONTENT_STATUS_CODE:
                 break
             try:
                 data = resp.json()
-            except Exception:
+            except requests.exceptions.JSONDecodeError:
                 logger.exception("JSON Decode Error for '%s'. Response text: %s", url, resp.text)
                 raise
 
             if isinstance(data, dict):
-                items = data.get("items") or []
+                items = data.get(root_response_key) or []
                 all_items.extend(items)
                 page_token = data.get("nextPageToken")
                 if not page_token or not items or page_token in seen_tokens:

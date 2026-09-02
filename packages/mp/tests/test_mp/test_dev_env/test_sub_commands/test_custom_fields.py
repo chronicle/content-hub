@@ -928,3 +928,23 @@ def test_backend_api_list_custom_fields_cyclical_page_token() -> None:
     fields = api.list_custom_fields()
     assert len(fields) == 2
     assert api.session.get.call_count == 2
+
+
+def test_backend_api_paginate_custom_root_response_key() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp = mock.MagicMock()
+    resp.ok = True
+    resp.status_code = 200
+    resp.json.return_value = {
+        "customEntities": [{"id": 100}],
+        "nextPageToken": None,
+    }
+
+    api.session.get.return_value = resp
+
+    results = api._paginate_1p_get(  # ruff:ignore[private-member-access]
+        "https://soar.test/endpoint", root_response_key="customEntities"
+    )
+    assert results == [{"id": 100}]
