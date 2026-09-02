@@ -902,3 +902,29 @@ def test_backend_api_list_custom_fields_pagination() -> None:
         "https://soar.test/api/1p/external/v1/customFields", params={"pageToken": "token_page_2"}
     )
 
+
+def test_backend_api_list_custom_fields_cyclical_page_token() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp_page_1 = mock.MagicMock()
+    resp_page_1.ok = True
+    resp_page_1.status_code = 200
+    resp_page_1.json.return_value = {
+        "items": [{"id": 1, "displayName": "Field 1"}],
+        "nextPageToken": "token_repeat",
+    }
+
+    resp_page_2 = mock.MagicMock()
+    resp_page_2.ok = True
+    resp_page_2.status_code = 200
+    resp_page_2.json.return_value = {
+        "items": [{"id": 2, "displayName": "Field 2"}],
+        "nextPageToken": "token_repeat",
+    }
+
+    api.session.get.side_effect = [resp_page_1, resp_page_2]
+
+    fields = api.list_custom_fields()
+    assert len(fields) == 2
+    assert api.session.get.call_count == 2

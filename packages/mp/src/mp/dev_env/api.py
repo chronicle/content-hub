@@ -190,6 +190,7 @@ class BackendAPI:
         """
         all_items: list[dict[str, Any]] = []
         page_token: str | None = None
+        seen_tokens: set[str] = set()
 
         while True:
             params = {"pageToken": page_token} if page_token else None
@@ -206,11 +207,12 @@ class BackendAPI:
                 raise
 
             if isinstance(data, dict):
-                items = data.get("items", [])
+                items = data.get("items") or []
                 all_items.extend(items)
                 page_token = data.get("nextPageToken")
-                if not page_token or not items:
+                if not page_token or not items or page_token in seen_tokens:
                     break
+                seen_tokens.add(page_token)
             elif isinstance(data, list):
                 all_items.extend(data)
                 break
