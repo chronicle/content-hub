@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import copy
+import urllib.parse
 from typing import Any
 from unittest.mock import MagicMock, call
 
@@ -103,9 +104,11 @@ def test_get_installed_integrations_of_environment_shared_instances(
     instances = client.get_installed_integrations_of_environment()
 
     assert instances == [{"id": "inst_1"}]
+    expected_filter = "environment eq '*'"
+    expected_url = f"https://mock-soar-api.com/integrations/intel_1/integrationInstances?$filter={urllib.parse.quote(expected_filter)}&pageSize=1000"
     mock_chronicle_soar.session.request.assert_called_once_with(
         "GET",
-        "https://mock-soar-api.com/integrations/intel_1/integrationInstances?$filter=environment eq '*'&pageSize=1000",
+        expected_url,
         params=None,
         json=None,
     )
@@ -128,9 +131,11 @@ def test_get_installed_integrations_of_environment_specific_env(
     instances = client.get_installed_integrations_of_environment()
 
     assert instances == [{"id": "inst_1"}]
+    expected_filter = "environment eq 'Production Environment'"
+    expected_url = f"https://mock-soar-api.com/integrations/intel_1/integrationInstances?$filter={urllib.parse.quote(expected_filter)}&pageSize=1000"
     mock_chronicle_soar.session.request.assert_called_once_with(
         "GET",
-        "https://mock-soar-api.com/integrations/intel_1/integrationInstances?$filter=environment eq 'Production Environment'&pageSize=1000",
+        expected_url,
         params=None,
         json=None,
     )
@@ -321,9 +326,7 @@ def test_save_or_update_job_success(
     )
 
 
-def test_save_or_update_job_missing_name(
-    mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
-) -> None:
+def test_save_or_update_job_missing_name(mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock) -> None:
     """Test save_or_update_job raises EmptyMandatoryValues if 'name' is missing."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
     params: Any = client.params
@@ -337,9 +340,7 @@ def test_save_or_update_job_missing_name(
     assert "Job data must include a 'name' field" in str(exc_info.value)
 
 
-def test_save_or_update_job_missing_parameters(
-    mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
-) -> None:
+def test_save_or_update_job_missing_parameters(mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock) -> None:
     """Test save_or_update_job raises EmptyMandatoryValues if 'parameters' is missing."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
     params: Any = client.params
@@ -369,3 +370,61 @@ def test_save_or_update_job_invalid_resource_path(
 
     assert "Cannot parse resource path" in str(exc_info.value)
     assert 'Invalid parameter "name"' in str(exc_info.value)
+
+
+def test_get_traking_list_records_filtered_url_encoded(
+    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
+
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.environment = "Indevis GmbH & Co. KG"
+    params.category_name = "Indevis_Test_&_München"
+    params.entity_id = "192.168.1.100"
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"customLists": [{"id": "list_1"}], "nextPageToken": None}
+    mock_chronicle_soar.session.request.return_value = mock_response
+
+    records = client.get_traking_list_records_filtered()
+
+    assert records == [{"id": "list_1"}]
+    expected_filter = client._build_tracking_list_filter_string(
+        params.category_name, params.entity_id, environment=params.environment
+    )
+    expected_url = f"https://mock-soar-api.com/system/settings/customLists?$filter={urllib.parse.quote(expected_filter)}&pageSize=1000"
+    mock_chronicle_soar.session.request.assert_called_once_with(
+        "GET",
+        expected_url,
+        params=None,
+        json=None,
+    )
+
+
+def test_get_traking_list_record_url_encoded(
+    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
+    """Test get_traking_list_record URL-encodes special characters in OData filter."""
+
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.category_name = "Indevis_Test_&_München"
+    params.entity_id = "192.168.1.100"
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"customLists": [{"id": "list_2"}], "nextPageToken": None}
+    mock_chronicle_soar.session.request.return_value = mock_response
+
+    records = client.get_traking_list_record()
+
+    assert records == [{"id": "list_2"}]
+    expected_filter = client._build_tracking_list_filter_string(params.category_name, params.entity_id)
+    expected_url = f"https://mock-soar-api.com/system/settings/customLists?$filter={urllib.parse.quote(expected_filter)}&pageSize=1000"
+    mock_chronicle_soar.session.request.assert_called_once_with(
+        "GET",
+        expected_url,
+        params=None,
+        json=None,
+    )
