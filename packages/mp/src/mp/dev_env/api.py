@@ -28,6 +28,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
 
     from requests.models import Response
@@ -179,52 +180,126 @@ class BackendAPI:
         resp.raise_for_status()
         return resp
 
-    def _paginate_1p_get(self, url: str, root_response_key: str = "items") -> list[dict[str, Any]]:
-        """Fetch all items from a 1P API endpoint with pagination support.
+    def _paginate_1p_get_stream(  # ruff:ignore[complex-structure, too-many-arguments, too-many-branches, too-many-positional-arguments]
+        self,
+        url: str,
+        params: dict[str, Any] | None = None,
+        root_response_key: str = "items",
+        page_size: int | None = None,
+        token_param_key: str = "pageToken",  # ruff:ignore[hardcoded-password-default]
+        token_response_key: str = "nextPageToken",  # ruff:ignore[hardcoded-password-default]
+        max_pages: int | None = None,
+    ) -> Iterator[dict[str, Any]]:
+        """Yield items across paginated requests without buffering entire datasets in memory.
 
         Args:
             url: The 1P endpoint URL.
-            root_response_key: The key in the response JSON where records are stored. Defaults to "items".
+            params: Optional query parameters for the request.
+            root_response_key: The response JSON key containing the item list. Defaults to "items".
+            page_size: Optional page size limit to request per page.
+            token_param_key: Query parameter key used to pass the token. Defaults to "pageToken".
+            token_response_key: Response key containing the next page token. Defaults to "nextPageToken".
+            max_pages: Optional maximum number of pages to fetch before stopping.
 
-        Returns:
-            list[dict[str, Any]]: Aggregated list of items from all pages.
+        Yields:
+            dict[str, Any]: Individual item records from each page.
 
         Raises:
-            JSONDecodeError: If the response cannot be decoded as JSON.
+            JSONDecodeError: If a response body cannot be decoded as JSON.
 
         """
-        all_items: list[dict[str, Any]] = []
         page_token: str | None = None
         seen_tokens: set[str] = set()
+        pages_fetched = 0
+        request_params: dict[str, Any] = dict(params) if params else {}
+        if page_size is not None:
+            request_params["pageSize"] = page_size
 
         while True:
-            params = {"pageToken": page_token} if page_token else None
-            resp = self.session.get(url, params=params)
+            if max_pages is not None and pages_fetched >= max_pages:
+                logger.debug("Reached max page limit of %d for URL: %s", max_pages, url)
+                break
+            if page_token:
+                request_params[token_param_key] = page_token
+            else:
+                request_params.pop(token_param_key, None)
+
+            resp = self.session.get(url, params=dict(request_params))
             if not resp.ok:
-                logger.error("Request to '%s' failed: %s - %s", url, resp.status_code, resp.text)
+                logger.error(
+                    "Request to '%s' failed: %d - %s",
+                    url,
+                    resp.status_code,
+                    resp.text,
+                )
             resp.raise_for_status()
             if resp.status_code == HTTPStatus.NO_CONTENT:
                 break
             try:
-                data = resp.json()
+                payload = resp.json()
             except requests.exceptions.JSONDecodeError:
                 logger.exception("JSON Decode Error for '%s'. Response text: %s", url, resp.text)
                 raise
 
-            if isinstance(data, dict):
-                items = data.get(root_response_key) or []
-                all_items.extend(items)
-                page_token = data.get("nextPageToken")
-                if not page_token or not items or page_token in seen_tokens:
-                    break
-                seen_tokens.add(page_token)
-            elif isinstance(data, list):
-                all_items.extend(data)
-                break
-            else:
+            if not isinstance(payload, dict):
+                logger.error("Expected dictionary response from '%s', got %s", url, type(payload))
                 break
 
-        return all_items
+            items = payload.get(root_response_key, [])
+            if isinstance(items, list):
+                for item in items:
+                    if isinstance(item, dict):
+                        yield item
+
+            page_token = payload.get(token_response_key)
+            pages_fetched += 1
+            if not page_token:
+                break
+            if page_token in seen_tokens:
+                logger.warning(
+                    "Detected duplicate page token '%s' from URL '%s'. Breaking to prevent loop.",
+                    page_token,
+                    url,
+                )
+                break
+            seen_tokens.add(page_token)
+
+    def _paginate_1p_get(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
+        self,
+        url: str,
+        params: dict[str, Any] | None = None,
+        root_response_key: str = "items",
+        page_size: int | None = None,
+        token_param_key: str = "pageToken",  # ruff:ignore[hardcoded-password-default]
+        token_response_key: str = "nextPageToken",  # ruff:ignore[hardcoded-password-default]
+        max_pages: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch all items from a 1P API endpoint with pagination support.
+
+        Args:
+            url: The 1P endpoint URL.
+            params: Optional query parameters for the request.
+            root_response_key: The response JSON key containing the item list. Defaults to "items".
+            page_size: Optional page size limit to request per page.
+            token_param_key: Query parameter key used to pass the token. Defaults to "pageToken".
+            token_response_key: Response key containing the next page token. Defaults to "nextPageToken".
+            max_pages: Optional maximum number of pages to fetch before stopping.
+
+        Returns:
+            list[dict[str, Any]]: Aggregated list of items from all pages.
+
+        """
+        return list(
+            self._paginate_1p_get_stream(
+                url=url,
+                params=params,
+                root_response_key=root_response_key,
+                page_size=page_size,
+                token_param_key=token_param_key,
+                token_response_key=token_response_key,
+                max_pages=max_pages,
+            )
+        )
 
     def list_installed_integrations(self) -> list[dict[str, Any]]:
         """List all installed integrations on the SOAR platform.
