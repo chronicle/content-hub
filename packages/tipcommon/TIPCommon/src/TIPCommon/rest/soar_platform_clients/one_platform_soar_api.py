@@ -594,7 +594,6 @@ class OnePlatformSoarApi(BaseSoarApi):
                 ),
             )
 
-
         endpoint = f"/{resource_path[segment_pos:]}"
 
         return self._make_request(
