@@ -30,6 +30,19 @@ class SpyCloudException(Exception):
     pass
 
 
+class SpyCloudInvalidCursorException(SpyCloudException):
+    """
+    Raised when SpyCloud rejects a pagination cursor (HTTP 400, e.g.
+    "Invalid parameter: 'cursor'. Cursor not found.").
+
+    Cursors are short-lived server-side handles. A resumable drain that persists
+    one across connector cycles must be able to recognize this specific failure
+    and restart the current window from its start, rather than re-sending a dead
+    cursor on every subsequent cycle.
+    """
+    pass
+
+
 class APIClient:
     """
     API handler class for making HTTP requests with configurable headers and base URL.
@@ -296,6 +309,13 @@ class APIClient:
                     body_text = str(response.content)
 
             detail = message or body_text or "No response body returned"
+
+            # A rejected cursor is recoverable (restart the window) whereas other
+            # 400s are not, so surface it as a distinct type instead of forcing
+            # callers to string-match on the message.
+            if response.status_code == 400 and "cursor" in str(detail).lower():
+                raise SpyCloudInvalidCursorException(f"{error_msg}: {error} {detail}")
+
             raise SpyCloudException(f"{error_msg}: {error} {detail}")
 
     def close(self) -> None:

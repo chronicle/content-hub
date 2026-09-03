@@ -240,3 +240,110 @@ class TestCaseInsight:
         # collapsible "Show all fields" block below renders every row uncapped).
         summary = markup.split("<details", 1)[0]
         assert summary.count("<tr>") == datamodels.INSIGHT_MAX_ROWS + 1
+
+
+class TestPasswordPolicy:
+    """Policy helpers used by the Entra ID password-response playbook."""
+
+    def test_has_symbol(self) -> None:
+        assert datamodels.has_symbol("hunter2!")
+        assert not datamodels.has_symbol("hunter2")
+        assert not datamodels.has_symbol("")
+
+    def test_matches_policy_length_and_symbol(self) -> None:
+        # Long enough and has a symbol -> matches.
+        assert datamodels.password_matches_policy("Sup3r$ecret", 8, True)
+
+    def test_matches_policy_rejects_short(self) -> None:
+        assert not datamodels.password_matches_policy("a$1", 8, True)
+
+    def test_matches_policy_rejects_missing_symbol_when_required(self) -> None:
+        assert not datamodels.password_matches_policy("longenough12", 8, True)
+
+    def test_matches_policy_allows_missing_symbol_when_not_required(self) -> None:
+        assert datamodels.password_matches_policy("longenough12", 8, False)
+
+    def test_matches_policy_rejects_empty(self) -> None:
+        assert not datamodels.password_matches_policy("", 0, False)
+
+    def test_collect_plaintext_passwords_reads_password_fields(self) -> None:
+        props = {
+            "spycloud_password_plaintext": "hunter2!",
+            "spycloud_password": "hunter2!",  # duplicate is de-duplicated
+            "spycloud_old_password": "oldpass1$",
+            "spycloud_cookies": "session=abc",  # not a password field
+        }
+        passwords = datamodels.collect_plaintext_passwords(props)
+        assert passwords == ["hunter2!", "oldpass1$"]
+
+    def test_collect_plaintext_passwords_empty_when_none_persisted(self) -> None:
+        assert datamodels.collect_plaintext_passwords({"spycloud_email": "a@b.com"}) == []
+        assert datamodels.collect_plaintext_passwords(None) == []
+
+    def test_mask_password_hides_value_keeps_length(self) -> None:
+        masked = datamodels.mask_password("hunter2!")
+        assert "hunter2" not in masked
+        assert "length 8" in masked
+
+
+class TestTimestamps:
+    """The rotation check compares timestamps from producers that disagree on format."""
+
+    def test_parses_iso_with_z_and_milliseconds(self) -> None:
+        """Okta's passwordChanged shape."""
+        parsed = datamodels.parse_timestamp("2026-07-01T09:15:00.000Z")
+        assert parsed is not None
+        assert parsed.isoformat() == "2026-07-01T09:15:00+00:00"
+
+    def test_parses_iso_with_offset(self) -> None:
+        parsed = datamodels.parse_timestamp("2026-07-01T11:15:00+02:00")
+        assert parsed is not None
+        assert parsed.isoformat() == "2026-07-01T09:15:00+00:00"
+
+    def test_parses_bare_date_as_utc_midnight(self) -> None:
+        """SpyCloud publish dates are frequently date-only."""
+        parsed = datamodels.parse_timestamp("2026-06-14")
+        assert parsed is not None
+        assert parsed.isoformat() == "2026-06-14T00:00:00+00:00"
+
+    def test_parses_naive_timestamp_as_utc(self) -> None:
+        parsed = datamodels.parse_timestamp("2026-06-14 08:30:00")
+        assert parsed is not None
+        assert parsed.isoformat() == "2026-06-14T08:30:00+00:00"
+
+    def test_trims_over_long_fractional_seconds(self) -> None:
+        """Nanosecond precision would otherwise raise inside fromisoformat."""
+        assert datamodels.parse_timestamp("2026-07-01T09:15:00.123456789Z") is not None
+
+    def test_parses_epoch_seconds_and_milliseconds(self) -> None:
+        seconds = datamodels.parse_timestamp("1782810900")
+        millis = datamodels.parse_timestamp("1782810900000")
+        assert seconds is not None and millis is not None
+        assert seconds == millis
+
+    def test_returns_none_for_unusable_values(self) -> None:
+        assert datamodels.parse_timestamp("") is None
+        assert datamodels.parse_timestamp(None) is None
+        assert datamodels.parse_timestamp("never") is None
+
+    def test_event_publish_date_prefers_publish_over_record_dates(self) -> None:
+        props = {
+            "spycloud_publish_date": "2026-06-14",
+            "spycloud_record_addition_date": "2026-01-01",
+            "spycloud_infected_time": "2025-01-01",
+        }
+        assert datamodels.event_publish_date(props) == "2026-06-14"
+
+    def test_event_publish_date_falls_back_through_record_dates(self) -> None:
+        assert (
+            datamodels.event_publish_date({"spycloud_record_addition_date": "2026-01-01"})
+            == "2026-01-01"
+        )
+        assert (
+            datamodels.event_publish_date({"spycloud_infected_time": "2025-01-01"})
+            == "2025-01-01"
+        )
+
+    def test_event_publish_date_empty_when_absent(self) -> None:
+        assert datamodels.event_publish_date({"spycloud_email": "a@b.com"}) == ""
+        assert datamodels.event_publish_date(None) == ""
