@@ -8,9 +8,12 @@ import requests
 from TIPCommon.oauth import AuthorizedOauthClient, CredStorage
 
 from .constants import (
+    CONNECTOR_NAME_VERSION_HEADER,
     ENRICH_ENTITIES_ENDPOINT,
     ERRORS,
+    INTEGRATION_IDENTIFIER,
     INTEGRATION_NAME,
+    INTEGRATION_VERSION,
     PING_ENDPOINT,
     PUSH_BREACH_POINT_ENDPOINT,
 )
@@ -37,8 +40,15 @@ class ApiManager:
         self.api_key = api_key
         self.logger = siemplify.LOGGER
 
+        self.connector_name_version = f"{INTEGRATION_IDENTIFIER}-v{INTEGRATION_VERSION}"
+
         self.session = requests.Session()
-        self.session.headers.update({"Content-Type": "application/json"})
+        self.session.headers.update(
+            {
+                "Content-Type": "application/json",
+                CONNECTOR_NAME_VERSION_HEADER: self.connector_name_version,
+            }
+        )
         self.error = ""
 
         # Initialize OAuth components if using token-based auth
@@ -75,6 +85,7 @@ class ApiManager:
 
         # Create authorized client
         self.session = AuthorizedOauthClient(self.oauth_manager)
+        self.session.headers.update({CONNECTOR_NAME_VERSION_HEADER: self.connector_name_version})
         oauth_adapter._refresh_token = self.oauth_manager._token.refresh_token
 
     def __del__(self):
