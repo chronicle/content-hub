@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import urllib.parse
 from typing import TYPE_CHECKING
 
 from TIPCommon.consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE
@@ -98,7 +99,8 @@ class OnePlatformSoarApi(BaseSoarApi):
     def get_installed_integrations_of_environment(self) -> list[SingleJson]:
         """Get installed integrations of environment using legacy API."""
         name = "*" if self.params.environment == "Shared Instances" else self.params.environment
-        query_string = f"$filter=environment eq '{escape_odata_literal(name)}'&pageSize={_PAGE_SIZE}"
+        filter_str = f"environment eq '{escape_odata_literal(name)}'"
+        query_string = f"$filter={urllib.parse.quote(filter_str)}&pageSize={_PAGE_SIZE}"
         endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances?{query_string}"
 
         return self._paginate_results(endpoint, "integrationInstances")
@@ -390,7 +392,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         base_endpoint = "/system/settings/customLists"
 
         if filter_string:
-            initial_endpoint = f"{base_endpoint}?$filter={filter_string}&pageSize={_PAGE_SIZE}"
+            initial_endpoint = f"{base_endpoint}?$filter={urllib.parse.quote(filter_string)}&pageSize={_PAGE_SIZE}"
         else:
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
 
@@ -411,7 +413,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         base_endpoint = "/system/settings/customLists"
 
         if filter_string:
-            initial_endpoint = f"{base_endpoint}?$filter={filter_string}&pageSize={_PAGE_SIZE}"
+            initial_endpoint = f"{base_endpoint}?$filter={urllib.parse.quote(filter_string)}&pageSize={_PAGE_SIZE}"
         else:
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
 
@@ -591,6 +593,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                     "Expected path to contain 'integrations/'"
                 ),
             )
+
 
         endpoint = f"/{resource_path[segment_pos:]}"
 
@@ -845,7 +848,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         base_endpoint = "/cases"
         initial_endpoint = (
-            f"{base_endpoint}?$filter={filter_string}"
+            f"{base_endpoint}?$filter={urllib.parse.quote(filter_string)}"
             "&$select=id, updateTime"
             "&$expand=tags"
             f"&pageSize={_PAGE_SIZE}"
