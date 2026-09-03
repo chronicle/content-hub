@@ -309,7 +309,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/integrations"
-        return self._paginate_1p_get(url)
+        return self._paginate_1p_get(url, root_response_key="integrations")
 
     def list_integration_instances(self, integration_id: str = "$all") -> list[dict[str, Any]]:
         """List integration instances for a given integration identifier or all integrations.
@@ -322,7 +322,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/integrations/{integration_id}/integrationInstances"
-        return self._paginate_1p_get(url)
+        return self._paginate_1p_get(url, root_response_key="integrationInstances")
 
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
         """Upload a zipped playbook package to the backend.
@@ -425,7 +425,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/customFields"
-        return self._paginate_1p_get(url)
+        return self._paginate_1p_get(url, root_response_key="customFields")
 
     def download_custom_field(self, field_id: int) -> dict[str, Any]:
         """Download a custom field by ID from the SOAR platform.
@@ -481,7 +481,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
-        return self._paginate_1p_get(url)
+        return self._paginate_1p_get(url, root_response_key="alertGroupingRules")
 
     def create_alert_grouping_rule(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new alert grouping rule on the SOAR platform.

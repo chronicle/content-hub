@@ -882,7 +882,7 @@ def test_backend_api_list_custom_fields_pagination() -> None:
     resp_page_1.ok = True
     resp_page_1.status_code = HTTPStatus.OK
     resp_page_1.json.return_value = {
-        "items": [{"id": i, "displayName": f"Field {i}"} for i in range(1, 51)],
+        "customFields": [{"id": i, "displayName": f"Field {i}"} for i in range(1, 51)],
         "nextPageToken": "token_page_2",
     }
 
@@ -890,7 +890,7 @@ def test_backend_api_list_custom_fields_pagination() -> None:
     resp_page_2.ok = True
     resp_page_2.status_code = HTTPStatus.OK
     resp_page_2.json.return_value = {
-        "items": [{"id": i, "displayName": f"Field {i}"} for i in range(51, 81)],
+        "customFields": [{"id": i, "displayName": f"Field {i}"} for i in range(51, 81)],
         "nextPageToken": None,
     }
 
@@ -905,6 +905,75 @@ def test_backend_api_list_custom_fields_pagination() -> None:
     )
 
 
+def test_backend_api_list_installed_integrations_pagination() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp = mock.MagicMock()
+    resp.ok = True
+    resp.status_code = HTTPStatus.OK
+    resp.json.return_value = {
+        "integrations": [{"identifier": "Integration1"}, {"identifier": "Integration2"}],
+        "nextPageToken": None,
+    }
+
+    api.session.get.return_value = resp
+
+    integrations = api.list_installed_integrations()
+    assert len(integrations) == 2
+    assert integrations[0]["identifier"] == "Integration1"
+    api.session.get.assert_called_once_with(
+        "https://soar.test/api/1p/external/v1/integrations",
+        params={},
+    )
+
+
+def test_backend_api_list_integration_instances_pagination() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp = mock.MagicMock()
+    resp.ok = True
+    resp.status_code = HTTPStatus.OK
+    resp.json.return_value = {
+        "integrationInstances": [{"identifier": "Instance1"}],
+        "nextPageToken": None,
+    }
+
+    api.session.get.return_value = resp
+
+    instances = api.list_integration_instances("Integration1")
+    assert len(instances) == 1
+    assert instances[0]["identifier"] == "Instance1"
+    api.session.get.assert_called_once_with(
+        "https://soar.test/api/1p/external/v1/integrations/Integration1/integrationInstances",
+        params={},
+    )
+
+
+def test_backend_api_list_alert_grouping_rules_pagination() -> None:
+    api = BackendAPI(api_root="https://soar.test", api_key="test_key")
+    api.session = mock.MagicMock()
+
+    resp = mock.MagicMock()
+    resp.ok = True
+    resp.status_code = HTTPStatus.OK
+    resp.json.return_value = {
+        "alertGroupingRules": [{"id": 10, "ruleName": "Rule 1"}],
+        "nextPageToken": None,
+    }
+
+    api.session.get.return_value = resp
+
+    rules = api.list_alert_grouping_rules()
+    assert len(rules) == 1
+    assert rules[0]["ruleName"] == "Rule 1"
+    api.session.get.assert_called_once_with(
+        "https://soar.test/api/1p/external/v1/system/settings/alert-grouping-rules",
+        params={},
+    )
+
+
 def test_backend_api_list_custom_fields_cyclical_page_token() -> None:
     api = BackendAPI(api_root="https://soar.test", api_key="test_key")
     api.session = mock.MagicMock()
@@ -913,7 +982,7 @@ def test_backend_api_list_custom_fields_cyclical_page_token() -> None:
     resp_page_1.ok = True
     resp_page_1.status_code = HTTPStatus.OK
     resp_page_1.json.return_value = {
-        "items": [{"id": 1, "displayName": "Field 1"}],
+        "customFields": [{"id": 1, "displayName": "Field 1"}],
         "nextPageToken": "token_repeat",
     }
 
@@ -921,7 +990,7 @@ def test_backend_api_list_custom_fields_cyclical_page_token() -> None:
     resp_page_2.ok = True
     resp_page_2.status_code = HTTPStatus.OK
     resp_page_2.json.return_value = {
-        "items": [{"id": 2, "displayName": "Field 2"}],
+        "customFields": [{"id": 2, "displayName": "Field 2"}],
         "nextPageToken": "token_repeat",
     }
 
@@ -939,7 +1008,7 @@ def test_backend_api_paginate_1p_get_null_items() -> None:
     resp = mock.MagicMock()
     resp.ok = True
     resp.status_code = HTTPStatus.OK
-    resp.json.return_value = {"items": None, "nextPageToken": None}
+    resp.json.return_value = {"customFields": None, "nextPageToken": None}
 
     api.session.get.return_value = resp
 
