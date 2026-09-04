@@ -41,15 +41,6 @@ logger: logging.Logger = logging.getLogger(__name__)
 class FatalCommandError(FatalValidationError):
     """Fatal error that happens during commands."""
 
-    def __init__(self, error: sp.CalledProcessError | str) -> None:
-        if isinstance(error, sp.CalledProcessError):
-            message: str = COMMAND_ERR_MSG.format(error)
-            if error.stderr:
-                message = f"{message}: {error.stderr.strip()}"
-            super().__init__(message)
-        else:
-            super().__init__(error)
-
 
 class NonFatalCommandError(NonFatalValidationError):
     """Non-fatal error that happens during shell commands."""
@@ -67,6 +58,7 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
         FatalCommandError: if a project is already initialized
 
     """
+    python_version: str = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     command: list[str] = [
         sys.executable,
         "-m",
@@ -79,7 +71,7 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
         "--no-hashes",
         "--no-dev",
         "--python",
-        sys.executable,
+        python_version,
         "--default-index",
         "https://pypi.org/simple",
     ]
@@ -229,14 +221,14 @@ def add_dependencies_to_toml(
         dev_deps_to_add: A list of dev dependency specifiers for `uv add`.
 
     """
+    python_version: str = _get_python_version()
     base_command: list[str] = [
         sys.executable,
         "-m",
         "uv",
         "add",
-        "--no-sync",
         "--python",
-        sys.executable,
+        python_version,
         "--default-index",
         "https://pypi.org/simple",
     ]
@@ -262,7 +254,7 @@ def _add_regular_dependencies_to_toml(deps_to_add: list[str], base_command: list
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
-        raise FatalCommandError(e) from e
+        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
 def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list[str], project_path: Path) -> None:
@@ -284,7 +276,7 @@ def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
-        raise FatalCommandError(e) from e
+        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
 def _get_base_dev_dependencies() -> list[str]:
@@ -331,6 +323,7 @@ def init_python_project(project_path: Path) -> None:
         FatalCommandError: if a project is already initialized
 
     """
+    python_version: str = _get_python_version()
     command: list[str] = [
         sys.executable,
         "-m",
@@ -338,9 +331,8 @@ def init_python_project(project_path: Path) -> None:
         "init",
         "--no-readme",
         "--no-workspace",
-        "--no-package",
         "--python",
-        sys.executable,
+        python_version,
     ]
 
     runtime_config: list[str] = _get_runtime_config()
@@ -353,7 +345,7 @@ def init_python_project(project_path: Path) -> None:
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
-        raise FatalCommandError(e) from e
+        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
 def ruff_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
@@ -556,6 +548,8 @@ def check_lock_file(project_path: Path) -> None:
                       occurs during the check.
 
     """
+    python_version: str = _get_python_version()
+
     command: list[str] = [
         sys.executable,
         "-m",
@@ -565,7 +559,7 @@ def check_lock_file(project_path: Path) -> None:
         "--project",
         str(project_path),
         "--python",
-        sys.executable,
+        python_version,
         "--default-index",
         "https://pypi.org/simple",
     ]
