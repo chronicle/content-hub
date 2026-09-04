@@ -49,6 +49,7 @@ class Alert(BaseModel):
         asset_name,
         asset_type,
         type_string,
+        last_sync=None,
     ):
         super(Alert, self).__init__(raw_data)
         self.flat_raw_data = dict_to_flat(raw_data)
@@ -58,6 +59,10 @@ class Alert(BaseModel):
         self.severity = severity
         self.created_at = created_at
         self.created_at_ms = convert_string_to_unix_time(self.created_at)
+        self.last_sync = last_sync
+        # Fall back to creation time so the connector can still save a timestamp
+        # if the API response is missing last_sync
+        self.last_sync_ms = convert_string_to_unix_time(self.last_sync) if self.last_sync else self.created_at_ms
         self.type_string = type_string
         self.asset_name = asset_name or f"{self.title}-{self.alert_id}"
         self.asset_type = asset_type or f"{self.type_string}-{self.alert_id}"

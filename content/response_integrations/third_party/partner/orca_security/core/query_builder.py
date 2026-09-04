@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from soar_sdk.SiemplifyUtils import unix_now
@@ -17,6 +18,10 @@ from .constants import (
 
 if TYPE_CHECKING:
     from typing import Any
+
+
+def _ms_to_iso(timestamp_ms: int) -> str:
+    return datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc).isoformat()
 
 
 class BaseQueryBuilder:
@@ -81,29 +86,53 @@ class AlertQueryBuilder(BaseQueryBuilder):
         self,
         start_timestamp: int | None = None,
         limit: int = DEFAULT_MAX_LIMIT,
+        last_sync_start_timestamp: int | None = None,
     ) -> None:
         super().__init__()
         self.payload["limit"] = limit
         self.payload["query"]["models"] = ["Alert"]
-        self.payload["order_by[]"] = ["CreatedAt"]
+        # last_sync is the DB write time - pagination cursor must match the order field
+        self.payload["order_by[]"] = ["last_sync"] if last_sync_start_timestamp is not None else ["CreatedAt"]
 
         if start_timestamp is not None:
             self.with_created_at_range(start_timestamp)
 
+        if last_sync_start_timestamp is not None:
+            self.with_last_sync_range(last_sync_start_timestamp)
+
     def with_created_at_range(self, start_timestamp: int) -> AlertQueryBuilder:
         """Create a range filter for CreatedAt field.
         Args:
-            start_timestamp (int): The start timestamp to filter by.
+            start_timestamp (int): The start timestamp in milliseconds to filter by.
+
+        Returns:
+            AlertQueryBuilder: The instance of the builder.
+        """
+        # The "range" operator with ISO values compares full datetimes (inclusive
+        # on both ends). "date_range" must not be used for watermarking: it rounds
+        # the range start UP to the next UTC day boundary.
+        self._add_filter(
+            key="CreatedAt",
+            values=[_ms_to_iso(start_timestamp), _ms_to_iso(unix_now())],
+            type_str="datetime",
+            operator="range",
+        )
+        return self
+
+    def with_last_sync_range(self, start_timestamp: int) -> AlertQueryBuilder:
+        """Create a range filter for last_sync field (time the alert row was
+        written to the database).
+        Args:
+            start_timestamp (int): The start timestamp in milliseconds to filter by.
 
         Returns:
             AlertQueryBuilder: The instance of the builder.
         """
         self._add_filter(
-            key="CreatedAt",
-            values=[start_timestamp, unix_now()],
+            key="last_sync",
+            values=[_ms_to_iso(start_timestamp), _ms_to_iso(unix_now())],
             type_str="datetime",
-            operator="date_range",
-            value_type="days",
+            operator="range",
         )
         return self
 
