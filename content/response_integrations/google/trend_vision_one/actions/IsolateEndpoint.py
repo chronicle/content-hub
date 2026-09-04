@@ -278,7 +278,7 @@ def main(is_first_run):
         print_value=True,
     )
     description = extract_action_param(
-        siemplify, param_name="Description", print_value=True, is_mandatory=False
+        siemplify, param_name="Description", print_value=True, is_mandatory=True
     )
     agent_uuids = string_to_multi_value(
         extract_action_param(
