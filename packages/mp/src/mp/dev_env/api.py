@@ -25,6 +25,8 @@ import urllib3
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+NO_CONTENT_STATUS_CODE: int = 204
+
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -178,6 +180,57 @@ class BackendAPI:
         resp.raise_for_status()
         return resp
 
+    def _paginate_1p_get(
+        self,
+        url: str,
+        root_response_key: str = "items",
+    ) -> list[dict[str, Any]]:
+        """Fetch all items from a 1P API endpoint with pagination support.
+
+        Args:
+            url: The 1P endpoint URL.
+            root_response_key: The key in the response JSON where records are stored. Defaults to 'items'.
+
+        Returns:
+            list[dict[str, Any]]: Aggregated list of items from all pages.
+
+        Raises:
+            requests.exceptions.JSONDecodeError: If the response body cannot be decoded as JSON.
+
+        """
+        all_items: list[dict[str, Any]] = []
+        page_token: str | None = None
+        seen_tokens: set[str] = set()
+
+        while True:
+            params = {"pageToken": page_token} if page_token else None
+            resp = self.session.get(url, params=params)
+            if not resp.ok:
+                logger.error("Request to '%s' failed: %s - %s", url, resp.status_code, resp.text)
+            resp.raise_for_status()
+            if resp.status_code == NO_CONTENT_STATUS_CODE:
+                break
+            try:
+                data = resp.json()
+            except requests.exceptions.JSONDecodeError:
+                logger.exception("JSON Decode Error for '%s'. Response text: %s", url, resp.text)
+                raise
+
+            if isinstance(data, dict):
+                items = data.get(root_response_key) or []
+                all_items.extend(items)
+                page_token = data.get("nextPageToken")
+                if not page_token or not items or page_token in seen_tokens:
+                    break
+                seen_tokens.add(page_token)
+            elif isinstance(data, list):
+                all_items.extend(data)
+                break
+            else:
+                break
+
+        return all_items
+
     def list_installed_integrations(self) -> list[dict[str, Any]]:
         """List all installed integrations on the SOAR platform.
 
@@ -186,14 +239,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/integrations"
-        resp = self.session.get(url)
-        resp.raise_for_status()
-        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
-            return []
-        data = resp.json()
-        if isinstance(data, dict):
-            return data.get("items", [])
-        return data if isinstance(data, list) else []
+        return self._paginate_1p_get(url)
 
     def list_integration_instances(self, integration_id: str = "$all") -> list[dict[str, Any]]:
         """List integration instances for a given integration identifier or all integrations.
@@ -206,14 +252,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/integrations/{integration_id}/integrationInstances"
-        resp = self.session.get(url)
-        resp.raise_for_status()
-        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
-            return []
-        data = resp.json()
-        if isinstance(data, dict):
-            return data.get("items", [])
-        return data if isinstance(data, list) else []
+        return self._paginate_1p_get(url)
 
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
         """Upload a zipped playbook package to the backend.
@@ -316,17 +355,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/customFields"
-        resp = self.session.get(url)
-        if not resp.ok:
-            logger.error("list_custom_fields failed: %s - %s", resp.status_code, resp.text)
-        resp.raise_for_status()
-        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
-            return []
-        try:
-            return resp.json().get("items", [])
-        except Exception:
-            logger.exception("JSON Decode Error in list_custom_fields. Response text: %s", resp.text)
-            raise
+        return self._paginate_1p_get(url)
 
     def download_custom_field(self, field_id: int) -> dict[str, Any]:
         """Download a custom field by ID from the SOAR platform.
@@ -382,11 +411,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
-        resp = self.session.get(url)
-        resp.raise_for_status()
-        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
-            return []
-        return resp.json().get("items", [])
+        return self._paginate_1p_get(url)
 
     def create_alert_grouping_rule(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new alert grouping rule on the SOAR platform.
