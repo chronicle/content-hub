@@ -172,9 +172,9 @@ class TestCyberintAlertsConnector(unittest.TestCase):
             with patch("cyberint.connectors.AlertsConnector.pass_filters", return_value=True):
                 AlertsConnector.main(is_test_run=False)
 
-        mock_is_overflowed.assert_called_once()
+        mock_is_overflowed.assert_not_called()
         mock_siemplify.LOGGER.info.assert_any_call(
-            "phishing-alert-123-Default-CyberInt found as overflow alert, but overflow is disabled. Processing..."
+            "phishing-alert-123-Default-CyberInt is processing (overflow protection disabled)."
         )
         mock_siemplify.LOGGER.info.assert_any_call("Alert alert-123 was created.")
 
