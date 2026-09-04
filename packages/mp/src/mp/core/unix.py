@@ -41,6 +41,15 @@ logger: logging.Logger = logging.getLogger(__name__)
 class FatalCommandError(FatalValidationError):
     """Fatal error that happens during commands."""
 
+    def __init__(self, error: sp.CalledProcessError | str) -> None:
+        if isinstance(error, sp.CalledProcessError):
+            message: str = COMMAND_ERR_MSG.format(error)
+            if error.stderr:
+                message = f"{message}: {error.stderr.strip()}"
+            super().__init__(message)
+        else:
+            super().__init__(error)
+
 
 class NonFatalCommandError(NonFatalValidationError):
     """Non-fatal error that happens during shell commands."""
@@ -225,6 +234,7 @@ def add_dependencies_to_toml(
         "-m",
         "uv",
         "add",
+        "--no-sync",
         "--python",
         sys.executable,
         "--default-index",
@@ -252,7 +262,7 @@ def _add_regular_dependencies_to_toml(deps_to_add: list[str], base_command: list
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
-        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
+        raise FatalCommandError(e) from e
 
 
 def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list[str], project_path: Path) -> None:
@@ -274,7 +284,7 @@ def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
-        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
+        raise FatalCommandError(e) from e
 
 
 def _get_base_dev_dependencies() -> list[str]:
@@ -342,7 +352,7 @@ def init_python_project(project_path: Path) -> None:
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
-        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
+        raise FatalCommandError(e) from e
 
 
 def ruff_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
