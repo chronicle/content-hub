@@ -20,8 +20,16 @@ CLASSIFICATION_FALSE_POSITIVE: str = "False Positive"
 CLASSIFICATION_OTHER: str = "Other"
 ROOT_CAUSE_OTHER: str = "Other"
 REASON_RESOLVED_IN_PAGERDUTY: str = "Resolved in PagerDuty"
-SEVERITY_HIGH: str = "80"
-SEVERITY_LOW: str = "40"
+
+
+HIGH_PRIORITY: int = 80
+LOW_PRIORITY: int = 40
+
+# PagerDuty Specific Severity/Priority Mapping
+PAGERDUTY_SEVERITY_MAPPING: dict[str, int] = {
+    "high": HIGH_PRIORITY,
+    "low": LOW_PRIORITY
+}
 
 PAGERDUTY_COMMENT_PREFIX: str = "PagerDuty:"
 SIEM_COMMENT_PREFIX: str = "Google SecOps "
