@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import gspread
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
@@ -29,11 +29,9 @@ def main():
         client.import_csv(sheet_id, content)
 
     except Exception as err:
-        status = EXECUTION_STATE_FAILED
         message = str(err)
         sheet_id = -1
     else:
-        status = EXECUTION_STATE_COMPLETED
         message = "CSV imported successfully"
         sheet_id = sheet.id
 
