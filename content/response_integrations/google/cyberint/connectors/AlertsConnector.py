@@ -13,26 +13,28 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler, unix_now
-from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
-from TIPCommon import extract_connector_param
-from ..core.constants import CONNECTOR_NAME, DEFAULT_LIMIT, DEFAULT_TIME_FRAME, SEVERITIES
-from ..core.UtilsManager import (
-    read_ids,
-    write_ids,
-    is_approaching_timeout,
-    get_environment_common,
-    pass_whitelist_filter,
-    convert_list_to_comma_string,
-    save_timestamp,
-    get_last_success_time,
-    DATETIME_FORMAT,
-    is_overflowed,
-)
-from ..core.CyberintManager import CyberintManager
-from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
+
 import sys
 
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
+from soar_sdk.SiemplifyUtils import output_handler, unix_now
+from TIPCommon import extract_connector_param
+
+from ..core.constants import CONNECTOR_NAME, DEFAULT_LIMIT, DEFAULT_TIME_FRAME, SEVERITIES
+from ..core.CyberintManager import CyberintManager
+from ..core.UtilsManager import (
+    DATETIME_FORMAT,
+    convert_list_to_comma_string,
+    get_environment_common,
+    get_last_success_time,
+    is_approaching_timeout,
+    is_overflowed,
+    pass_whitelist_filter,
+    read_ids,
+    save_timestamp,
+    write_ids,
+)
 
 connector_starting_time = unix_now()
 
