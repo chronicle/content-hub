@@ -42,3 +42,16 @@ class TestValidations:
     @given(valid_built=ST_VALID_BUILT_CONNECTOR_PARAM_DICT)
     def test_valid_built(self, valid_built: BuiltConnectorParameter) -> None:
         ConnectorParameter.from_built(valid_built)
+
+    def test_built_with_none_description(self) -> None:
+        built: BuiltConnectorParameter = {
+            "Name": "param_1",
+            "Description": None,
+            "IsMandatory": False,
+            "IsAdvanced": False,
+            "Type": 2,
+            "Mode": 0,
+            "DefaultValue": None,
+        }
+        param = ConnectorParameter.from_built(built)
+        assert param.description == ""
