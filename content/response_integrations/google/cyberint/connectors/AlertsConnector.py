@@ -113,7 +113,6 @@ def main(is_test_run):
         print_value=True,
     )
 
-
     try:
         siemplify.LOGGER.info("------------------- Main - Started -------------------")
 
@@ -224,7 +223,6 @@ def main(is_test_run):
                     )
                     # If is overflowed we should skip
                     continue
-
 
                 processed_alerts.append(alert_info)
                 siemplify.LOGGER.info(f"Alert {alert.id} was created.")
