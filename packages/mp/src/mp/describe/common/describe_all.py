@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskID, TextColumn, TimeRemainingColumn
 
 import mp.core.config
-from mp.core.file_utils import get_all_marketplace_integrations_paths, get_integrations_from_paths
+from mp.core.file_utils import get_all_marketplace_integrations_paths, get_integrations_from_paths, is_integration
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -175,6 +175,10 @@ def get_all_integrations_paths(src: Path | None = None) -> list[Path]:
 
     """
     if src:
-        return sorted(get_integrations_from_paths(src)) if src.exists() else []
+        if not src.exists():
+            return []
+        if is_integration(src):
+            return [src]
+        return sorted(get_integrations_from_paths(src))
 
     return get_all_marketplace_integrations_paths()

@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import pathlib
 from typing import Annotated
 
 from pydantic import BaseModel, Field
@@ -36,59 +35,6 @@ from mp.core.data_models.integrations.action.ai.metadata import (
 from mp.core.data_models.integrations.action.ai.outcome_categories import (
     OutcomeCategories,  # ruff:ignore[typing-only-first-party-import]
 )
-
-_TYPE_MAPPING: dict[str, type] = {
-    "str": str,
-    "string": str,
-    "int": int,
-    "integer": int,
-    "float": float,
-    "number": float,
-    "bool": bool,
-    "boolean": bool,
-    "dict": dict,
-    "object": dict,
-    "list": list,
-    "array": list,
-}
-
-
-class FieldSchemaConfig(BaseModel):
-    """Configuration schema definition for custom prompt override fields."""
-
-    model_name: str | None = None
-    type: str | None = None
-    description: str | None = None
-    required: bool | None = None
-
-
-class PromptOverrideConfig(BaseModel):
-    """Configuration item mapping a prompt template file to a field override."""
-
-    location: str
-    field_name: str
-    schema_def: FieldSchemaConfig | None = Field(default=None, alias="schema")
-
-    def resolve_location(self, base_dir: pathlib.Path | None = None) -> pathlib.Path:
-        """Resolve prompt template path relative to base_dir if relative.
-
-        Args:
-            base_dir: Optional base directory to resolve relative paths against.
-
-        Returns:
-            pathlib.Path: Absolute or resolved path to the prompt template.
-
-        """
-        path = pathlib.Path(self.location)
-        if path.is_absolute() or base_dir is None:
-            return path
-        return (base_dir / path).resolve()
-
-
-class PromptOverridesFile(BaseModel):
-    """Root model for prompt overrides configuration JSON file."""
-
-    prompt_config: list[PromptOverrideConfig] = Field(default_factory=list)
 
 
 class AiDescriptionOverride(BaseModel):

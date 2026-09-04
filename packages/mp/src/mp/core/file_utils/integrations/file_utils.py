@@ -234,6 +234,10 @@ def get_integrations_from_paths(*paths: Path) -> set[Path]:
         if not path.exists():
             continue
 
+        if is_integration(path):
+            integrations.add(path)
+            continue
+
         for dir_ in path.iterdir():
             with contextlib.suppress(Exception):
                 if is_integration(dir_):

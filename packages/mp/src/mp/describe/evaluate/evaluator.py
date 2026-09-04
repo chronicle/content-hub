@@ -701,6 +701,8 @@ class EvaluationEngine:
         active_rules = load_rules_from_yaml(ruleset) if ruleset else EVALUATION_RULES
         if db_path and not self.storage:
             self.storage = EvaluationStorage(db_path)
+        if self.storage:
+            self.storage.save_rules(active_rules)
 
         input_file_paths = analyzed_files or []
 
@@ -792,6 +794,7 @@ class EvaluationEngine:
                         action_id=action_name,
                         run_id=run_id,
                         evaluated_at=evaluated_at,
+                        rule_id=rule.rule_id,
                         rule_title=rule.title,
                         actual_value=fields.get(rule.target_field, "-"),
                         verdict=VerdictEnum.FAIL,
@@ -801,6 +804,7 @@ class EvaluationEngine:
                         suggested_fix=f"Define a valid '{rule.target_field}' in the action YAML.",
                         prompt=None,
                     )
+
                     results.append(res_fail)
                     if self.storage:
                         self.storage.save_evaluation(res_fail)
@@ -877,6 +881,7 @@ class EvaluationEngine:
                 action_id=action_name,
                 run_id=run_id,
                 evaluated_at=evaluated_at,
+                rule_id=rule.rule_id,
                 rule_title=rule.title,
                 actual_value=target_val,
                 verdict=verdict_val,
