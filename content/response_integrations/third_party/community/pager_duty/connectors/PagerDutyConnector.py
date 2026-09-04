@@ -5,15 +5,15 @@ from typing import Any
 from urllib.parse import urlparse
 
 from SiemplifyConnectorsDataModel import AlertInfo
-from ..core.constants import INTEGRATION_NAME
-from ..core.PagerDutyManager import PagerDutyManager
-from ..core.datamodels import PagerDutyIncident
-
 from TIPCommon.base.connector import Connector
 from TIPCommon.consts import DATETIME_FORMAT
 from TIPCommon.filters import filter_old_alerts
 from TIPCommon.smp_io import read_ids, write_ids
 from TIPCommon.utils import is_test_run
+
+from ..core.constants import INTEGRATION_NAME
+from ..core.datamodels import PagerDutyIncident
+from ..core.PagerDutyManager import PagerDutyManager
 
 
 class PagerDutyConnector(Connector):
