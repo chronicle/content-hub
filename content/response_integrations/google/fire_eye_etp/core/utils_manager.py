@@ -23,10 +23,14 @@ import requests
 from dateutil import parser
 from dateutil.tz import tzoffset
 
+from .fire_eye_etp_constants import COMPACT_TIMESTAMP_LENGTH
 from .fire_eye_etp_exceptions import FireEyeETPError
 
 
-def naive_time_converted_to_aware(time_param: str, timezone_offset: str) -> datetime.datetime:
+def naive_time_converted_to_aware(
+    time_param: str | None,
+    timezone_offset: str | float | None = 0,
+) -> datetime.datetime:
     """Convert naive time string to aware datetime object.
 
     Args:
@@ -37,7 +41,18 @@ def naive_time_converted_to_aware(time_param: str, timezone_offset: str) -> date
         The timezone-aware datetime object.
 
     """
-    parsed_date = parser.parse(time_param)
+    if not time_param:
+        return datetime.datetime.now(tz=get_server_tzoffset(timezone_offset))
+
+    # Handle compact timestamp format YYYYMMDDhhmmss (14 digits)
+    if isinstance(time_param, str) and len(time_param) == COMPACT_TIMESTAMP_LENGTH and time_param.isdigit():
+        try:
+            parsed_date = datetime.datetime.strptime(time_param, "%Y%m%d%H%M%S").replace(tzinfo=datetime.UTC)
+        except ValueError:
+            parsed_date = parser.parse(time_param)
+    else:
+        parsed_date = parser.parse(str(time_param))
+
     return datetime.datetime(
         parsed_date.year,
         parsed_date.month,
@@ -49,7 +64,7 @@ def naive_time_converted_to_aware(time_param: str, timezone_offset: str) -> date
     )
 
 
-def get_server_tzoffset(server_timezone: str) -> tzoffset:
+def get_server_tzoffset(server_timezone: str | float | None) -> tzoffset:
     """Get server timezone offset from UTC.
 
     Args:
@@ -59,7 +74,12 @@ def get_server_tzoffset(server_timezone: str) -> tzoffset:
         The tzoffset object.
 
     """
-    return tzoffset(None, float(server_timezone) * 60 * 60)
+    if server_timezone is None:
+        return tzoffset(None, 0)
+    try:
+        return tzoffset(None, float(server_timezone) * 60 * 60)
+    except (ValueError, TypeError):
+        return tzoffset(None, 0)
 
 
 def current_server_time(timezone_offset: str) -> datetime.datetime:
