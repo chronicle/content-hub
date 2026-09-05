@@ -18,7 +18,11 @@ from typing import List
 from .datamodels import *
 from typing import Any, List, Dict, Optional
 
-from .constants import SUCCESSFUL_STATUS_CODES, TOO_MANY_REQUESTS
+from .constants import (
+    OPERATION_LOCATION_HEADER,
+    SUCCESSFUL_STATUS_CODES,
+    TOO_MANY_REQUESTS,
+)
 
 
 class TrendVisionOneParser:
@@ -203,4 +207,49 @@ class TrendVisionOneParser:
             task_id=raw_json.get("id"),
             action=raw_json.get("action"),
             status=raw_json.get("status"),
+        )
+
+    @staticmethod
+    def build_blocklist_response_object(raw_json: dict[str, Any]) -> BlocklistResponse:
+        """
+        Build BlocklistResponse object from raw data
+        Args:
+            raw_json (dict): raw data
+
+        Returns:
+            (BlocklistResponse): BlocklistResponse object
+        """
+        task_id: Optional[str] = None
+        task_location_url: Optional[str] = None
+        if raw_json.get("status") in SUCCESSFUL_STATUS_CODES:
+            headers = raw_json.get("headers") or []
+            if isinstance(headers, dict):
+                task_location_url = headers.get("Operation-Location") or headers.get(OPERATION_LOCATION_HEADER)
+            elif isinstance(headers, list):
+                for header in headers:
+                    if isinstance(header, dict) and header.get("name", "").lower() == OPERATION_LOCATION_HEADER:
+                        task_location_url = header.get("value")
+                        break
+
+            if task_location_url:
+                task_id = task_location_url.split("tasks/")[-1].split("?")[0].rstrip("/")
+                return BlocklistResponse(raw_json, task_id=task_id, url=task_location_url)
+
+        body = raw_json.get("body")
+        error_message = None
+        if isinstance(body, dict):
+            error_message = body.get("error", {}).get("message") or body.get("message") or body.get("errorDescription")
+        elif isinstance(body, str):
+            error_message = body
+
+        if not error_message:
+            error_message = (
+                raw_json.get("error", {}).get("message")
+                if isinstance(raw_json.get("error"), dict)
+                else raw_json.get("message")
+            )
+
+        return BlocklistResponse(
+            raw_json,
+            error_message=error_message or "Unknown error",
         )

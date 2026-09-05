@@ -465,3 +465,45 @@ class TrendVisionOneManager:
         validate_response(response)
 
         return response.json()
+
+    def _submit_blocklist_objects(
+        self, endpoint_key: str, objects: list[dict]
+    ) -> list[datamodels.BlocklistResponse]:
+        uri = self._get_full_url(endpoint_key)
+        response = self.session.post(uri, json=objects)
+        validate_response(response)
+        raw_response = response.json()
+        if isinstance(raw_response, dict):
+            raw_response = [raw_response]
+        return [
+            self.parser.build_blocklist_response_object(item)
+            for item in raw_response
+        ]
+
+    def add_entities_to_blocklist(
+        self, objects: list[dict]
+    ) -> list[datamodels.BlocklistResponse]:
+        """
+        Add entities to blocklist
+
+        Args:
+            objects (list[dict]): list of objects to blocklist
+
+        Returns:
+            list[datamodels.BlocklistResponse]: list of parsed responses
+        """
+        return self._submit_blocklist_objects("add_to_blocklist", objects)
+
+    def remove_entities_from_blocklist(
+        self, objects: list[dict]
+    ) -> list[datamodels.BlocklistResponse]:
+        """
+        Remove entities from blocklist
+
+        Args:
+            objects (list[dict]): list of objects to remove from blocklist
+
+        Returns:
+            list[datamodels.BlocklistResponse]: list of parsed responses
+        """
+        return self._submit_blocklist_objects("remove_from_blocklist", objects)

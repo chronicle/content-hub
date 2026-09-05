@@ -29,6 +29,8 @@ UPDATE_WORKBENCH_ALERT_SCRIPT_NAME = (
 SUBMIT_FILE_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Submit File"
 SUBMIT_URL_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Submit URL"
 EXECUTE_EMAIL_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Execute Email"
+ADD_ENTITY_TO_BLOCKLIST_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Add Entity To Blocklist"
+REMOVE_ENTITY_FROM_BLOCKLIST_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Remove Entity From Blocklist"
 
 ENDPOINTS = {
     "healthcheck": "/v3.0/healthcheck/connectivity",
@@ -46,9 +48,30 @@ ENDPOINTS = {
     "get_task_detail": "/v3.0/sandbox/tasks/{task_id}",
     "get_email_task_detail": "/v3.0/response/tasks/{task_id}",
     "get_task_result": "/v3.0/sandbox/analysisResults/{task_id}",
+    "add_to_blocklist": "/v3.0/response/suspiciousObjects",
+    "remove_from_blocklist": "/v3.0/response/suspiciousObjects/delete",
 }
 
 ENRICHMENT_PREFIX = "TrendVisionOne"
+IN_BLOCKLIST_KEY = "in_blocklist"
+OPERATION_LOCATION_HEADER = "operation-location"
+
+# Blocklist Object Types (API fields)
+OBJECT_TYPE_IP = "ip"
+OBJECT_TYPE_DOMAIN = "domain"
+OBJECT_TYPE_URL = "url"
+OBJECT_TYPE_FILE_SHA1 = "fileSha1"
+OBJECT_TYPE_FILE_SHA256 = "fileSha256"
+OBJECT_TYPE_SENDER_MAIL_ADDRESS = "senderMailAddress"
+
+# Blocklist Action Parameters
+PARAM_IPS = "IPs"
+PARAM_DOMAINS = "Domains"
+PARAM_URLS = "URLs"
+PARAM_FILE_HASHES = "File Hashes"
+PARAM_EMAIL_ADDRESSES = "Email Addresses"
+PARAM_DESCRIPTION = "Description"
+
 SUCCESS_STATUS = "succeeded"
 FAILED_STATUS = "failed"
 REJECTED_STATUS = "rejected"
