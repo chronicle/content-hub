@@ -159,7 +159,7 @@ def main() -> None:
             if failed_entities:
                 output_message += (
                     f"Action wasn't able to enrich the following entities using information from "
-                    f"{INTEGRATION_NAME}: {', '.join(failed_entities)}\n"
+                    f"{INTEGRATION_NAME}: {', '.join(str(e.identifier) for e in failed_entities)}\n"
                 )
 
             # create a summary table for all entities enriched
