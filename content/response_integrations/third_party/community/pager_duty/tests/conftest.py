@@ -153,7 +153,9 @@ def job_case_sync():
     alert.status = "close"
     alert.closure_details = {"reason": "Malicious"}
 
-    meta = SyncMetadata(status="triggered", incident_number="P123", closure_reason=None)
+    meta = SyncMetadata(
+        status="triggered", incident_number="P123", closure_reason=None
+    )
 
     res.incidents_to_close_in_product = [
         {
@@ -168,8 +170,61 @@ def job_case_sync():
     job_case.get_status_to_sync.return_value = res
     job_case.case_detail.id_ = 1
     job_case.case_detail.is_closed = False
+    job_case.case_detail.alerts = [alert]
+    job_case.product_ids_from_secops_alerts = {"P123": alert}
 
     return job_case
+
+
+@pytest.fixture
+def job_case_with_rich_comments() -> JobCase:
+    """Fixture providing a JobCase mock with rich-text case comments."""
+    job_case = MagicMock(spec=JobCase)
+    job_case.case_comments = [
+        {"comment": '!<@>@</@>#$%^&amp;*()_+} {}|":&gt;?&lt;&lt;&lt;'},
+        {"comment": "<p>Another &lt;clean&gt; comment</p>"},
+    ]
+    return job_case
+
+
+@pytest.fixture
+def job_case_sync_comments():
+    """Fixture providing a JobCase mock configured for comment sync."""
+    job_case = MagicMock(spec=JobCase)
+    alert = MagicMock()
+    alert.identifier = "alert_1"
+    alert.alert_group_identifier = "alert_1"
+    alert.incident = MagicMock(id="P123", comments=[])
+
+    job_case.case_detail.id_ = 1
+    job_case.case_detail.is_closed = False
+    job_case.case_detail.alerts = [alert]
+    job_case.case_comments = [
+        {"comment": '!<@>@</@>#$%^&amp;*()_+} {}|":&gt;?&lt;&lt;&lt;'}
+    ]
+    return job_case
+
+
+@pytest.fixture
+def job_comments_sync(job):
+    """Fixture providing a job configured to sync rich-text comments."""
+    job.processed_items = {"1": ["P123"]}
+    job.get_comments_to_sync = lambda jc, **kwargs: MagicMock(
+        product_comments_sync_to_case=[],
+        case_comments_sync_to_product=[
+            f"Google SecOps 1: {jc.case_comments[0]['comment']}"
+        ],
+    )
+    return job
+
+
+@pytest.fixture
+def job_with_closure_comment(job):
+    """Fixture providing a job instance with a rich-text closure comment."""
+    job.get_secops_closure_comment = (
+        lambda jc, req: "<p>Issue resolved with &amp; &lt;system fix&gt;</p>"
+    )
+    return job
 
 
 @pytest.fixture

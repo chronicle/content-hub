@@ -24,6 +24,7 @@ from ..core.constants import (
     SIEM_COMMENT_PREFIX,
 )
 from ..core.PagerDutyManager import PagerDutyManager
+from ..core.utils import clean_secops_comment, sanitize_case_comments
 
 
 class SyncIncidents(BaseSyncJob[PagerDutyManager]):
@@ -391,10 +392,12 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 closing_comment = self.get_secops_closure_comment(job_case, req)
 
                 if closing_comment:
-                    self.api_client.add_incident_note(
-                        meta.incident_number, closing_comment
-                    )
-                    self._notes_cache.pop(meta.incident_number, None)
+                    cleaned_comment = clean_secops_comment(closing_comment)
+                    if cleaned_comment:
+                        self.api_client.add_incident_note(
+                            meta.incident_number, cleaned_comment
+                        )
+                        self._notes_cache.pop(meta.incident_number, None)
                 self.api_client.resolve_incident(meta.incident_number)
                 self._incident_cache.pop(meta.incident_number, None)
                 self.logger.info(
@@ -413,6 +416,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         """Syncs comments between SecOps and PagerDuty."""
         if job_case.case_detail.is_closed:
             return
+
+        sanitize_case_comments(job_case)
 
         comments_to_sync = self.get_comments_to_sync(
             job_case,

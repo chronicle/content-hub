@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pager_duty.core.utils import clean_secops_comment, sanitize_case_comments
 from pager_duty.tests.core.product import PagerDuty
 from pager_duty.tests.core.session import PagerDutySession
 
@@ -17,9 +18,11 @@ def test_map_product_data_to_case_success(
 
     job.map_product_data_to_case(job_case_map)
 
-    assert len(script_session.request_history) == 1
-    req_path = script_session.request_history[0].request.url.path
-    assert req_path.endswith("/incidents/P123")
+    assert len(script_session.request_history) == 2
+    req_path_0 = script_session.request_history[0].request.url.path
+    req_path_1 = script_session.request_history[1].request.url.path
+    assert req_path_0.endswith("/incidents/P123")
+    assert req_path_1.endswith("/incidents/P123/notes")
     assert "alert_1" in job_case_map.alert_metadata
     assert job_case_map.alert_metadata["alert_1"].status == "resolved"
 
@@ -178,25 +181,132 @@ def test_extract_product_id_from_context_property(job, ticket_with_context) -> N
 
 def test_is_alert_and_product_closed(job, job_case_sync) -> None:
     """Tests checking if alert and product are both closed."""
-    alert_mock = job_case_sync.case_detail.alerts[0]
-    alert_mock.status = "close"
-    job_case_sync.product_ids_from_secops_alerts = {"P123": alert_mock}
-
-    # Both closed
-    is_closed = job.is_alert_and_product_closed(
-        job_case_sync, {"id": "P123", "status": "resolved"}
+    assert (
+        job.is_alert_and_product_closed(
+            job_case_sync, {"id": "P123", "status": "resolved"}
+        )
+        is True
     )
-    assert is_closed is True
 
-    # Product open
-    is_closed = job.is_alert_and_product_closed(
-        job_case_sync, {"id": "P123", "status": "triggered"}
+    assert (
+        job.is_alert_and_product_closed(
+            job_case_sync, {"id": "P123", "status": "triggered"}
+        )
+        is False
     )
-    assert is_closed is False
 
-    # Alert open
-    alert_mock.status = "open"
-    is_closed = job.is_alert_and_product_closed(
-        job_case_sync, {"id": "P123", "status": "resolved"}
+    job_case_sync.case_detail.alerts[0].status = "open"
+    assert (
+        job.is_alert_and_product_closed(
+            job_case_sync, {"id": "P123", "status": "resolved"}
+        )
+        is False
     )
-    assert is_closed is False
+
+
+def test_clean_secops_comment_special_characters() -> None:
+    """Tests cleaning special characters, mentions, and HTML entities."""
+    raw = '!<@>@</@>#$%^&amp;*()_+} {}|":&gt;?&lt;&lt;&lt;'
+    cleaned = clean_secops_comment(raw)
+    assert cleaned == '!@#$%^&*()_+} {}|":>?<<<'
+
+
+def test_clean_secops_comment_mentions_and_html_tags() -> None:
+    """Tests cleaning various mentions, HTML tags, breaks, and entities."""
+    raw = (
+        "<p>Hello <@>john</@> &amp; <@>@sarah</@>!</p>"
+        '<p>Check &lt;code&gt; &amp; &quot;quotes&quot;</p>'
+    )
+    cleaned = clean_secops_comment(raw)
+    assert cleaned == 'Hello @john & @sarah!\nCheck <code> & "quotes"'
+
+    assert (
+        clean_secops_comment("Line 1<br>Line 2<br/>Line 3")
+        == "Line 1\nLine 2\nLine 3"
+    )
+    assert clean_secops_comment("") == ""
+
+
+def test_clean_secops_comment_urls_and_rich_styling() -> None:
+    """Tests cleaning URLs with query parameters and rich text styles."""
+    url_raw = (
+        '<p>Check <a href="https://example.com/api?user=admin&amp;'
+        'tag=&lt;threat&gt;">https://example.com/api?user=admin&amp;'
+        "tag=&lt;threat&gt;</a></p>"
+    )
+    assert (
+        clean_secops_comment(url_raw)
+        == "Check https://example.com/api?user=admin&tag=<threat>"
+    )
+
+    rich_raw = (
+        "<p><strong>Critical:</strong> <em>Malicious payload</em> in "
+        "<code>C:\\Windows\\System32\\</code>. "
+        "Please <del>ignore</del> <u>check now</u>!</p>"
+    )
+    assert (
+        clean_secops_comment(rich_raw)
+        == "Critical: Malicious payload in C:\\Windows\\System32\\. "
+        "Please ignore check now!"
+    )
+
+    complex_raw = (
+        "<p>Alert: CPU &gt;= 95% &amp; memory leak! "
+        "Contact <@>soc-lead</@> on-call.<br>"
+        'Run: <code>curl -H "Auth: Bearer &lt;key&gt;"</code></p>'
+    )
+    assert (
+        clean_secops_comment(complex_raw)
+        == "Alert: CPU >= 95% & memory leak! Contact @soc-lead on-call.\n"
+        'Run: curl -H "Auth: Bearer <key>"'
+    )
+
+
+def test_sanitize_case_comments(job_case_with_rich_comments) -> None:
+    """Tests sanitizing case comments in JobCase."""
+    sanitize_case_comments(job_case_with_rich_comments)
+    assert (
+        job_case_with_rich_comments.case_comments[0]["comment"]
+        == '!@#$%^&*()_+} {}|":>?<<<'
+    )
+    assert (
+        job_case_with_rich_comments.case_comments[1]["comment"]
+        == "Another <clean> comment"
+    )
+
+
+def test_sync_comments_special_characters_soar_to_pagerduty(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_comments_sync,
+    job_case_sync_comments,
+) -> None:
+    """Tests that rich-text comments are sanitized and synced to PagerDuty."""
+    job_comments_sync.sync_comments(job_case_sync_comments)
+
+    assert len(script_session.request_history) == 1
+    resp = script_session.request_history[0].response
+    assert (
+        resp.json()["note"]["content"]
+        == 'Google SecOps 1: !@#$%^&*()_+} {}|":>?<<<'
+    )
+
+
+def test_sync_case_status_to_product_cleans_closure_comment(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_with_closure_comment,
+    job_case_sync,
+) -> None:
+    """Tests that rich-text closure comments are sanitized in PagerDuty."""
+    pagerduty.set_incidents({
+        "incidents": [{"id": "P123", "status": "triggered", "incident_key": "key1"}]
+    })
+
+    job_with_closure_comment._sync_case_status_to_product(
+        job_case_sync.get_status_to_sync(), job_case_sync
+    )
+
+    assert len(script_session.request_history) == 2
+    note_resp = script_session.request_history[0].response
+    assert note_resp.json()["note"]["content"] == "Issue resolved with & <system fix>"

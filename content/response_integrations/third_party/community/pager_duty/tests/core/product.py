@@ -12,6 +12,9 @@ class PagerDuty:
     incidents: SingleJson = dataclasses.field(default_factory=dict)
     users: SingleJson = dataclasses.field(default_factory=dict)
     snoozed_incidents: dict[str, SingleJson] = dataclasses.field(default_factory=dict)
+    incident_notes: dict[str, list[SingleJson]] = dataclasses.field(
+        default_factory=dict
+    )
 
     def get_incidents(self, params: SingleJson) -> SingleJson:
         """Get incidents, optionally filtered by incident_key."""
@@ -64,7 +67,21 @@ class PagerDuty:
 
     def add_incident_note(self, incident_id: str, content: str) -> SingleJson:
         """Simulate adding a note to an incident."""
-        return {"note": {"content": content}}
+        note = {"content": content}
+        if incident_id not in self.incident_notes:
+            self.incident_notes[incident_id] = []
+        self.incident_notes[incident_id].append(note)
+        return {"note": note}
+
+    def get_incident_notes(self, incident_id: str) -> list[SingleJson]:
+        """Get notes for a specific incident."""
+        return self.incident_notes.get(incident_id, [])
+
+    def set_incident_notes(
+        self, incident_id: str, notes: list[SingleJson]
+    ) -> None:
+        """Set notes for a specific incident."""
+        self.incident_notes[incident_id] = notes
 
     def set_incidents(self, mock_incidents: SingleJson) -> None:
         """Set the mock incidents data."""

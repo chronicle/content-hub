@@ -26,6 +26,7 @@ class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
             self.get_incident_by_id,
             self.update_incident_by_id,
             self.add_incident_note,
+            self.get_incident_notes,
             self.create_incident,
             self.get_user_by_id_endpoint,
             self.list_oncalls,
@@ -140,6 +141,13 @@ class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
         content = payload.get("note", {}).get("content", "")
         res = self._product.add_incident_note(incident_id, content)
         return MockResponse(content=res)
+
+    @router.get(r"/incidents/(?P<incident_id>[^/]+)/notes")
+    def get_incident_notes(self, request: MockRequest) -> MockResponse:
+        """Mock for getting notes for an incident."""
+        incident_id = request.url.path.split("/")[-2]
+        notes = self._product.get_incident_notes(incident_id)
+        return MockResponse(content={"notes": notes})
 
     @router.post(r"/incidents")
     def create_incident(self, request: MockRequest) -> MockResponse:
