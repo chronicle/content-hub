@@ -151,22 +151,18 @@ Cancel Host Contain:
   ai_description: >-
     ### General Description
 
-    Cancels the containment of a host on the FireEye HX server based on Address or
-    Hostname entities. This action restores network communication capabilities for
-    the specified endpoints.
+    Cancels the containment of a host on the FireEye HX server based on direct Agent Id parameter or Address / Hostname entities. This action restores network communication capabilities for the specified endpoints.
 
 
     ### Flow Description
 
-    1. Iterates through the target Address and Hostname entities.
+    1. Checks if the 'Agent Id' parameter is provided. If provided, proceeds directly with this agent ID.
 
-    2. Queries the FireEye HX API (`GET /hosts`) to find the matching host agent ID
-    for each entity.
+    2. If 'Agent Id' is not provided, iterates through target Address and Hostname entities to resolve the matching host agent ID from the FireEye HX API (`GET /hosts`).
 
-    3. If multiple hosts match, selects the one with the most recent poll timestamp.
+    3. If multiple hosts match an entity, selects the one with the most recent poll timestamp.
 
-    4. Sends a `DELETE` request to the FireEye HX API (`/hosts/{agent_id}/containment`)
-    to cancel the containment status of the identified host.
+    4. Sends a `DELETE` request to the FireEye HX API (`/hosts/{agent_id}/containment`) to cancel the containment status of the identified host.
 
     5. Returns a summary of successful and failed operations.
 
@@ -175,8 +171,7 @@ Cancel Host Contain:
 
     Action is not supported for Linux hosts by FireEye HX.
   ai_short_description: >-
-    Cancels the containment of a host on the FireEye HX server based on Address or
-    Hostname entities.
+    Cancels the containment of a host on the FireEye HX server based on direct Agent Id parameter or Address / Hostname entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -189,9 +184,7 @@ Cancel Host Contain:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a DELETE request to the FireEye HX API to cancel host containment,
-      which mutates external data. It does not fetch data to enrich the case, nor
-      does it mutate internal data, update entities, or create insights.
+      The action performs a DELETE request to the FireEye HX API to cancel host containment, which mutates external data. It does not fetch data to enrich the case, nor does it mutate internal data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: true
@@ -243,10 +236,7 @@ Cancel Host Contain:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
-      not in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES = [EntityTypes.ADDRESS,
-      EntityTypes.HOSTNAME]`. Therefore, it targets Address and Hostname entities
-      and filters by entity_type.
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type not in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`. Therefore, it targets Address and Hostname entities and filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -262,10 +252,7 @@ Cancel Host Contain:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action makes a DELETE request to the FireEye HX API to cancel the containment
-      of a host. This directly aligns with the 'Uncontain Host' expected outcome,
-      which removes network isolation and restores the endpoint's full communication
-      capabilities.
+      The action makes a DELETE request to the FireEye HX API to cancel the containment of a host. This directly aligns with the 'Uncontain Host' expected outcome, which removes network isolation and restores the endpoint's full communication capabilities.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -280,58 +267,47 @@ Cancel Host Contain:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: There are no parameters for this action
-Contain Host:
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Agent Id | String | No | Agent Id of host to cancel containment. If not provided, action will try to resolve Agent Id from attached Hostname or Address entities. |
+Check Containment Status:
   ai_description: >-
     ### General Description
 
-    Initiates a containment task on the FireEye HX server for specified IP Address
-    and Hostname entities. This action isolates the endpoint from the network to prevent
-    further communication during a security incident.
+    Checks the containment status of a host on the FireEye HX server based on direct Agent Id parameter or Address / Hostname entities.
 
 
     ### Flow Description
 
-    1. Iterates through the target entities, filtering for IP Address and Hostname
-    entity types.
+    1. Checks if the 'Agent Id' parameter is provided. If provided, queries the FireEye HX API (`GET /hosts/{agent_id}`) directly.
 
-    2. For each valid entity, queries the FireEye HX API to find matching hosts based
-    on the IP address or hostname.
+    2. If 'Agent Id' is not provided, iterates through target Address and Hostname entities to resolve the matching host agent ID from the FireEye HX API (`GET /hosts`).
 
-    3. If multiple hosts are found for a single entity, selects the host with the
-    most recent poll timestamp.
+    3. Retrieves the endpoint metadata and inspects the containment state.
 
-    4. Sends a POST request to the FireEye HX API to contain the identified host,
-    optionally approving the containment automatically based on the provided parameter.
-
-    5. Returns a summary of successfully contained entities, missing entities, and
-    any errors encountered.
+    4. Returns the normalized containment status ('contained' or 'uncontained') and detailed device metadata in the JSON result.
 
 
     ### Additional Notes
 
-    This action is not supported for Linux hosts by FireEye HX.
+    None
   ai_short_description: >-
-    Initiates a containment task on the FireEye HX server to isolate specified IP
-    Address and Hostname entities from the network.
+    Checks the containment status of an endpoint in FireEye HX using direct Agent Id parameter or Address / Hostname entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Initiates a containment task on the FireEye HX server to isolate the host from
-      the network.
-    fetches_data: false
+    external_data_mutation_explanation: null
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action queries FireEye HX to resolve entity identifiers to agent IDs, then
-      makes a POST request to the FireEye HX API to contain the host. This mutates
-      external data by changing the host's network containment state. It does not
-      fetch data for enrichment purposes, update internal entities, create insights,
-      or modify alert data.
+      The action queries the FireEye HX API to check host containment status and metadata. It fetches data without modifying external state or internal SecOps records.
   entity_usage:
     entity_types:
       address: true
@@ -383,9 +359,133 @@ Contain Host:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them by checking
-      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (ADDRESS and HOSTNAME). Therefore,
-      it targets Address and Hostname entities and filters by entity_type.
+      When Agent Id parameter is not supplied, the action falls back to iterating over Address and Hostname target entities to resolve the agent ID.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves host containment status and device metadata, aligning with the 'Enrich Asset' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: true
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Agent Id | String | No | Agent Id of the host to check containment status for. If not provided, action will try to resolve Agent Id from attached Hostname or Address entities. |
+Contain Host:
+  ai_description: >-
+    ### General Description
+
+    Initiates a containment task on the FireEye HX server based on direct Agent Id parameter or Address and Hostname entities. This action isolates the endpoint from the network to prevent further communication during a security incident.
+
+
+    ### Flow Description
+
+    1. Checks if the 'Agent Id' parameter is provided. If provided, proceeds directly with this agent ID.
+
+    2. If 'Agent Id' is not provided, iterates through target Address and Hostname entities to resolve the matching host agent ID from the FireEye HX API (`GET /hosts`).
+
+    3. If multiple hosts match an entity, selects the one with the most recent poll timestamp.
+
+    4. Sends a POST request to the FireEye HX API (`/hosts/{agent_id}/containment`) to contain the identified host, optionally approving the containment automatically based on the provided parameter.
+
+    5. Returns a summary of successfully contained entities, missing entities, and any errors encountered.
+
+
+    ### Additional Notes
+
+    This action is not supported for Linux hosts by FireEye HX.
+  ai_short_description: >-
+    Initiates a containment task on the FireEye HX server to isolate specified targets from the network based on direct Agent Id parameter or Address / Hostname entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a containment task on the FireEye HX server to isolate the host from the network.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action queries FireEye HX to resolve entity identifiers to agent IDs, then makes a POST request to the FireEye HX API to contain the host. This mutates external data by changing the host's network containment state. It does not fetch data for enrichment purposes, update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking if `entity.entity_type` is in `SUPPORTED_ENTITIES` (ADDRESS and HOSTNAME). Therefore, it targets Address and Hostname entities and filters by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -401,8 +501,7 @@ Contain Host:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action makes a POST request to FireEye HX to contain a host, isolating it
-      from the network. This directly matches the 'Contain Host' expected outcome.
+      The action makes a POST request to FireEye HX to contain a host, isolating it from the network. This directly matches the 'Contain Host' expected outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -422,10 +521,9 @@ Contain Host:
 
     | --- | --- | --- | --- |
 
-    | Approve Containment | Boolean | Yes | Specify if containment request for host
-    should be automatically approved to create contain host task on FireEye HX server.
-    If not approved automatically, containment request can be approved in FireEye
-    HX web console. |
+    | Agent Id | String | No | Agent Id of host to contain. If not provided, action will try to resolve Agent Id from attached Hostname or Address entities. |
+
+    | Approve Containment | Boolean | Yes | Specify if containment request for host should be automatically approved to create contain host task on FireEye HX server. If not approved automatically, containment request can be approved in FireEye HX web console. |
 Get Alert Group Details:
   ai_description: >-
     ### General Description
@@ -868,6 +966,136 @@ Get Alerts in Alert Group:
 
     | Limit | String | No | Specify the maximum amount of alerts listings coming back
     from the API, for the alert group. Default is 50. |
+Get File:
+  ai_description: >-
+    ### General Description
+
+    Initiates a file acquisition task on a specific host using FireEye HX (Trellix HX). It allows retrieving a file from the endpoint by specifying its full file path and the target Agent ID (or attached Hostname / Address entities). The acquired file is downloaded as an encrypted ZIP archive and attached to the alert.
+
+
+    ### Flow Description
+
+    1. Resolves the target host Agent ID either from the direct 'Agent Id' parameter or from attached Hostname / Address entities.
+
+    2. Sends a POST request to the FireEye HX API (`POST /hosts/{agent_id}/files`) to create a file acquisition task with the specified file path and API mode setting.
+
+    3. Polls the file acquisition status until the task reaches 'COMPLETE' state.
+
+    4. Downloads the acquired file package from the FireEye HX server, saves the ZIP archive locally, and attaches it to the Chronicle SOAR alert along with the ZIP passphrase.
+
+
+    ### Additional Notes
+
+    None
+  ai_short_description: >-
+    Initiates a file acquisition task on a FireEye HX host to retrieve a file by its full file path and Agent ID.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a file acquisition task on the FireEye HX server.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action creates a file acquisition job on the FireEye HX server and downloads the acquired file archive to attach to the SOAR alert.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      When Agent Id parameter is not supplied, the action falls back to iterating over Address and Hostname target entities to resolve the agent ID.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action acquires and downloads a forensic file from the target endpoint.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Agent Id | String | No | Agent Id of the host to acquire the file from. If not provided, action will try to resolve Agent Id from attached Hostname or Address entities. |
+
+    | File Path | String | Yes | Full path of the file to acquire on the target endpoint (e.g. C:\Windows\System32\notepad.exe or /etc/os-release). |
+
+    | Use API Mode | Boolean | No | Specify if file acquisition should use OS file system APIs instead of raw disk reads. Required for Linux endpoints. Default is false. |
+
+    | External Id | String | No | Custom external identifier to associate with the file acquisition task. |
 Get Host Alert Groups:
   ai_description: >-
     ### General Description
