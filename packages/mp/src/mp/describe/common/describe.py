@@ -208,14 +208,15 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
         return len(resources)
 
     async def _prepare_resources(self, status: IntegrationStatus, metadata: dict[str, Any]) -> set[str]:
+        all_resources: set[str] = await self._get_all_resources(status)
         if not self.resource_names:
-            self.resource_names = await self._get_all_resources(status)
+            self.resource_names = all_resources
 
         # Prune metadata for resources that no longer exist
         # Only for non-integration types which use resource names as keys
         if self.resource_type_name != "integration":
             for key in list(metadata.keys()):
-                if key not in self.resource_names:
+                if key not in all_resources:
                     del metadata[key]
 
         if not self.override:
