@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import logging
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -27,6 +28,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
 
     from requests.models import Response
@@ -178,6 +180,127 @@ class BackendAPI:
         resp.raise_for_status()
         return resp
 
+    def _paginate_1p_get_stream(  # ruff:ignore[complex-structure, too-many-arguments, too-many-branches, too-many-positional-arguments]
+        self,
+        url: str,
+        params: dict[str, Any] | None = None,
+        root_response_key: str = "items",
+        page_size: int | None = None,
+        token_param_key: str = "pageToken",  # ruff:ignore[hardcoded-password-default]
+        token_response_key: str = "nextPageToken",  # ruff:ignore[hardcoded-password-default]
+        max_pages: int | None = None,
+    ) -> Iterator[dict[str, Any]]:
+        """Yield items across paginated requests without buffering entire datasets in memory.
+
+        Args:
+            url: The 1P endpoint URL.
+            params: Optional query parameters for the request.
+            root_response_key: The response JSON key containing the item list. Defaults to "items".
+            page_size: Optional page size limit to request per page.
+            token_param_key: Query parameter key used to pass the token. Defaults to "pageToken".
+            token_response_key: Response key containing the next page token. Defaults to "nextPageToken".
+            max_pages: Optional maximum number of pages to fetch before stopping.
+
+        Yields:
+            dict[str, Any]: Individual item records from each page.
+
+        Raises:
+            JSONDecodeError: If a response body cannot be decoded as JSON.
+
+        """
+        page_token: str | None = None
+        seen_tokens: set[str] = set()
+        pages_fetched = 0
+        request_params: dict[str, Any] = dict(params) if params else {}
+        if page_size is not None:
+            request_params["pageSize"] = page_size
+
+        while True:
+            if max_pages is not None and pages_fetched >= max_pages:
+                logger.debug("Reached max page limit of %d for URL: %s", max_pages, url)
+                break
+            if page_token:
+                request_params[token_param_key] = page_token
+            else:
+                request_params.pop(token_param_key, None)
+
+            resp = self.session.get(url, params=dict(request_params))
+            if not resp.ok:
+                logger.error(
+                    "Request to '%s' failed: %d - %s",
+                    url,
+                    resp.status_code,
+                    resp.text,
+                )
+            resp.raise_for_status()
+            if resp.status_code == HTTPStatus.NO_CONTENT:
+                break
+            try:
+                payload = resp.json()
+            except requests.exceptions.JSONDecodeError:
+                logger.exception("JSON Decode Error for '%s'. Response text: %s", url, resp.text)
+                raise
+
+            if not isinstance(payload, dict):
+                logger.error("Expected dictionary response from '%s', got %s", url, type(payload))
+                break
+
+            items = payload.get(root_response_key, [])
+            if isinstance(items, list):
+                for item in items:
+                    if isinstance(item, dict):
+                        yield item
+
+            page_token = payload.get(token_response_key)
+            pages_fetched += 1
+            if not page_token:
+                break
+            if page_token in seen_tokens:
+                logger.warning(
+                    "Detected duplicate page token '%s' from URL '%s'. Breaking to prevent loop.",
+                    page_token,
+                    url,
+                )
+                break
+            seen_tokens.add(page_token)
+
+    def _paginate_1p_get(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
+        self,
+        url: str,
+        params: dict[str, Any] | None = None,
+        root_response_key: str = "items",
+        page_size: int | None = None,
+        token_param_key: str = "pageToken",  # ruff:ignore[hardcoded-password-default]
+        token_response_key: str = "nextPageToken",  # ruff:ignore[hardcoded-password-default]
+        max_pages: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch all items from a 1P API endpoint with pagination support.
+
+        Args:
+            url: The 1P endpoint URL.
+            params: Optional query parameters for the request.
+            root_response_key: The response JSON key containing the item list. Defaults to "items".
+            page_size: Optional page size limit to request per page.
+            token_param_key: Query parameter key used to pass the token. Defaults to "pageToken".
+            token_response_key: Response key containing the next page token. Defaults to "nextPageToken".
+            max_pages: Optional maximum number of pages to fetch before stopping.
+
+        Returns:
+            list[dict[str, Any]]: Aggregated list of items from all pages.
+
+        """
+        return list(
+            self._paginate_1p_get_stream(
+                url=url,
+                params=params,
+                root_response_key=root_response_key,
+                page_size=page_size,
+                token_param_key=token_param_key,
+                token_response_key=token_response_key,
+                max_pages=max_pages,
+            )
+        )
+
     def list_installed_integrations(self) -> list[dict[str, Any]]:
         """List all installed integrations on the SOAR platform.
 
@@ -186,14 +309,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/integrations"
-        resp = self.session.get(url)
-        resp.raise_for_status()
-        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
-            return []
-        data = resp.json()
-        if isinstance(data, dict):
-            return data.get("items", [])
-        return data if isinstance(data, list) else []
+        return self._paginate_1p_get(url, root_response_key="integrations")
 
     def list_integration_instances(self, integration_id: str = "$all") -> list[dict[str, Any]]:
         """List integration instances for a given integration identifier or all integrations.
@@ -206,14 +322,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/integrations/{integration_id}/integrationInstances"
-        resp = self.session.get(url)
-        resp.raise_for_status()
-        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
-            return []
-        data = resp.json()
-        if isinstance(data, dict):
-            return data.get("items", [])
-        return data if isinstance(data, list) else []
+        return self._paginate_1p_get(url, root_response_key="integrationInstances")
 
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
         """Upload a zipped playbook package to the backend.
@@ -316,17 +425,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/customFields"
-        resp = self.session.get(url)
-        if not resp.ok:
-            logger.error("list_custom_fields failed: %s - %s", resp.status_code, resp.text)
-        resp.raise_for_status()
-        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
-            return []
-        try:
-            return resp.json().get("items", [])
-        except Exception:
-            logger.exception("JSON Decode Error in list_custom_fields. Response text: %s", resp.text)
-            raise
+        return self._paginate_1p_get(url, root_response_key="customFields")
 
     def download_custom_field(self, field_id: int) -> dict[str, Any]:
         """Download a custom field by ID from the SOAR platform.
@@ -382,11 +481,7 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
-        resp = self.session.get(url)
-        resp.raise_for_status()
-        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
-            return []
-        return resp.json().get("items", [])
+        return self._paginate_1p_get(url, root_response_key="alertGroupingRules")
 
     def create_alert_grouping_rule(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new alert grouping rule on the SOAR platform.
