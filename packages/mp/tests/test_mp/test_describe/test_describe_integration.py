@@ -83,3 +83,27 @@ def test_describe_integration_command(tmp_path: Path, non_built_integration: Pat
                 integration / constants.RESOURCES_DIR / constants.AI_DIR / constants.INTEGRATIONS_AI_DESCRIPTION_FILE
             )
             assert ai_file.exists()
+
+
+import pytest
+from mp.describe.action.describe import DescribeAction
+
+@pytest.mark.anyio
+async def test_source_integration_status_precedence_over_out_path(tmp_path: Path) -> None:
+    integration_dir = tmp_path / "mock_integration"
+    integration_dir.mkdir()
+    (integration_dir / constants.PROJECT_FILE).touch()
+
+    stale_out_dir = tmp_path / "out" / "mock_integration"
+    stale_out_dir.mkdir(parents=True)
+
+    describer = DescribeAction(
+        integration="mock_integration",
+        actions=set(),
+        src=tmp_path,
+    )
+
+    status = await describer._get_integration_status()
+    assert status.is_built is False
+    assert status.out_path == anyio.Path(integration_dir)
+

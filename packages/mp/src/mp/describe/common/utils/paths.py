@@ -71,9 +71,12 @@ def get_out_path(integration_name: str, src: pathlib.Path | None = None) -> anyi
         anyio.Path: The output path.
 
     """
-    base_out: pathlib.Path = create_or_get_out_integrations_dir()
     if src:
-        return anyio.Path(base_out / src.name / integration_name)
+        repo_root = src.parent.parent if len(src.parents) >= 2 else src
+        worktree_out = repo_root / constants.OUT_DIR_NAME / constants.CONTENT_DIR_NAME / constants.OUT_INTEGRATIONS_DIR_NAME / src.name / integration_name
+        return anyio.Path(worktree_out)
+
+    base_out: pathlib.Path = create_or_get_out_integrations_dir()
 
     identifier: str = _resolve_integration_identifier(integration_name)
 
