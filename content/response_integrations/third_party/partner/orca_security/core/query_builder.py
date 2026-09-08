@@ -108,9 +108,8 @@ class AlertQueryBuilder(BaseQueryBuilder):
         Returns:
             AlertQueryBuilder: The instance of the builder.
         """
-        # The "range" operator with ISO values compares full datetimes (inclusive
-        # on both ends). "date_range" must not be used for watermarking: it rounds
-        # the range start UP to the next UTC day boundary.
+        # "range" with ISO values compares full datetimes, inclusive on both ends.
+        # "date_range" must not be used here: it rounds the start UP to the next UTC day.
         self._add_filter(
             key="CreatedAt",
             values=[_ms_to_iso(start_timestamp), _ms_to_iso(unix_now())],

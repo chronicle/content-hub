@@ -37,7 +37,6 @@ DEFAULT_LIMIT = 100
 # populated later), but alerts older than this are treated as updates and never
 # re-ingested. Does not restrict the first run, which honors "Max Hours Backwards".
 CREATED_AT_LOOKBACK_HOURS = 3
-# Dedup ID cache size - must cover all alerts fetched within the lookback window
 STORED_IDS_LIMIT = 10000
 DEFAULT_ASSET_LIMIT: int = 20
 DEFAULT_RESULTS_LIMIT: int = 1000

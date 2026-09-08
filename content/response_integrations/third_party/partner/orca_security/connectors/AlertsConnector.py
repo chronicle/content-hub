@@ -190,20 +190,17 @@ def main(is_test_run):
         )
 
         # The watermark tracks last_sync (DB write time), so alerts that become
-        # visible or eligible after creation (e.g. Orca Score populated later) still
-        # enter the fetch window. The CreatedAt bound keeps updates of alerts older
-        # than the lookback out of the window, preserving "new alerts only" semantics.
+        # eligible after creation (e.g. Orca Score populated later) re-enter the
+        # window. The CreatedAt bound keeps updates of older alerts out of it.
         lookback_ms = CREATED_AT_LOOKBACK_HOURS * 60 * 60 * 1000
         saved_timestamp = siemplify.fetch_timestamp()
         if saved_timestamp:
-            # Tolerate downtime up to the CreatedAt lookback - alerts older than
-            # that age out of the fetch window anyway
+            # Downtime longer than the lookback cannot be recovered - those age out
             last_sync_cursor = max(saved_timestamp, unix_now() - lookback_ms)
         else:
             last_sync_cursor = unix_now() - hours_backwards * 60 * 60 * 1000
-        # On the first run the cursor reaches further back than the lookback, so
-        # honor "Max Hours Backwards" instead of capping the backfill. On later
-        # runs the cursor is already clamped to the lookback, so this is a no-op.
+        # The first run has no saved cursor and must not be capped by the lookback;
+        # on later runs the cursor is already clamped, so this is a no-op.
         created_at_start = min(unix_now() - lookback_ms, last_sync_cursor)
         siemplify.LOGGER.info(
             f"Fetching alerts from last_sync cursor {last_sync_cursor}, "
@@ -246,9 +243,8 @@ def main(is_test_run):
                         break
 
                     if alert.alert_id in existing_ids_set:
-                        # Already ingested in a previous run - advance the watermark
-                        # over it so the connector makes progress even when a page
-                        # contains only duplicates
+                        # Advance the watermark over duplicates so a page of only
+                        # already-ingested alerts still makes progress
                         watermark = max(watermark, alert.last_sync_ms)
                         continue
 
@@ -289,9 +285,6 @@ def main(is_test_run):
                     siemplify.LOGGER.info(f"Alert {alert.alert_id} was created.")
 
                 except Exception as e:
-                    # The watermark may advance past this alert via later alerts in
-                    # the page, so it will not be fetched again - log it as dropped
-                    # rather than letting it disappear silently.
                     siemplify.LOGGER.error(
                         f"Failed to process alert {alert.alert_id}. It will be dropped and not retried."
                     )
@@ -307,20 +300,15 @@ def main(is_test_run):
                 or len(alerts) < fetch_limit
                 or len(processed_alerts) >= fetch_limit
             ):
-                # A short page means there are no more alerts in the window, and a
-                # full per-cycle quota means the next page would be discarded anyway
+                # Short page - window exhausted; full quota - next page is discarded
                 break
 
             next_cursor = alerts[-1].last_sync_ms
             if next_cursor <= last_sync_cursor:
-                # A full page within a single last_sync second (second-resolution
-                # ties) - the range start can't move, so page deeper with an offset.
-                # Never skip past the tie: rows beyond this page may be unseen.
-                # Tie ordering has no secondary sort key, so offsets are only
-                # meaningful within this run's back-to-back requests - do not carry
-                # the offset across runs. A row that shuffles out of view returns on
-                # its next last_sync rewrite, unless its CreatedAt has meanwhile aged
-                # out of the lookback window; dedup absorbs the rest.
+                # A full page inside a single last_sync second: the range start
+                # cannot move, so page deeper instead of skipping the rest of the
+                # tie. Ties have no secondary sort key, so the offset is only valid
+                # within this run's back-to-back requests - never persist it.
                 offset += len(alerts)
             else:
                 last_sync_cursor = next_cursor
