@@ -310,3 +310,103 @@ def test_sync_case_status_to_product_cleans_closure_comment(
     assert len(script_session.request_history) == 2
     note_resp = script_session.request_history[0].response
     assert note_resp.json()["note"]["content"] == "Issue resolved with & <system fix>"
+
+
+def test_sync_comments_fetches_and_sanitizes_all_case_comments(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_with_fetched_case_comments,
+    job_case_sync,
+) -> None:
+    """Tests that sync_comments fetches and sanitizes all case comments."""
+    job_with_fetched_case_comments.processed_items = {"1": ["P123"]}
+    job_with_fetched_case_comments.sync_comments(job_case_sync)
+
+    job_with_fetched_case_comments.soar_job.fetch_case_comments.assert_called_once_with(
+        case_id=job_case_sync.case_detail.id_
+    )
+    assert job_case_sync.case_comments == [
+        {"comment": "PagerDuty:P123: Existing Note"}
+    ]
+
+
+def test_sync_comments_fetch_error_handled(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_with_failing_fetch_comments,
+    job_case_sync,
+) -> None:
+    """Tests that sync_comments handles fetch_case_comments failure gracefully."""
+    initial_comments = [{"comment": "Initial"}]
+    job_case_sync.case_comments = initial_comments
+    job_with_failing_fetch_comments.processed_items = {"1": ["P123"]}
+
+    job_with_failing_fetch_comments.sync_comments(job_case_sync)
+
+    assert job_with_failing_fetch_comments.logger.error.called
+    assert job_case_sync.case_comments == [{"comment": "Initial"}]
+
+
+def test_sync_comments_no_duplicate_when_already_on_case_wall(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job,
+    job_case_deduplication,
+) -> None:
+    """Tests that comments already on the Case Wall are not duplicated."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": "<p>PagerDuty:P123: Note 1</p>"},
+        {"comment": "<div>PagerDuty:P123: Note 2</div>"},
+    ]
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_comments(job_case_deduplication)
+
+    assert not job.soar_job.add_comment.called
+    assert len(script_session.request_history) == 0
+
+
+def test_sync_comments_only_new_note_synced_no_misses_no_duplicates(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job,
+    job_case_deduplication,
+) -> None:
+    """Tests that only new notes are synced without missing or duplicating."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": "<p>PagerDuty:P123: Note 1</p>"}
+    ]
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_comments(job_case_deduplication)
+
+    job.soar_job.add_comment.assert_called_once_with(
+        case_id=1,
+        comment="PagerDuty:P123: Note 2",
+        alert_identifier="alert_1",
+    )
+    assert len(script_session.request_history) == 0
+
+
+def test_sync_comments_secops_to_pagerduty_deduplication(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job,
+    job_case_secops_deduplication,
+) -> None:
+    """Tests that existing SecOps comments are not duplicated to PagerDuty."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": "<p>Existing analyst note</p>"},
+        {"comment": "<p>Brand new analyst note</p>"},
+    ]
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_comments(job_case_secops_deduplication)
+
+    assert not job.soar_job.add_comment.called
+    assert len(script_session.request_history) == 1
+    resp = script_session.request_history[0].response
+    assert (
+        resp.json()["note"]["content"]
+        == "Google SecOps 1: Brand new analyst note"
+    )

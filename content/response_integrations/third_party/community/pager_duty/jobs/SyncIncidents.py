@@ -417,6 +417,16 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         if job_case.case_detail.is_closed:
             return
 
+        case_id = job_case.case_detail.id_
+        try:
+            case_comments = self.soar_job.fetch_case_comments(case_id=case_id)
+            if isinstance(case_comments, list):
+                job_case.case_comments = case_comments
+        except Exception as e:
+            self.logger.error(
+                f"Failed to fetch all comments for case [{case_id}]: {e}"
+            )
+
         sanitize_case_comments(job_case)
 
         comments_to_sync = self.get_comments_to_sync(

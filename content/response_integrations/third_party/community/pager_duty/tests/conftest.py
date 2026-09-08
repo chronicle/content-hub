@@ -299,3 +299,77 @@ def ticket_with_context():
     ticket.ticket_id = "550e8400-e29b-41d4-a716-446655440000"
     ticket.alert_group_identifier = "group_1"
     return ticket
+
+
+@pytest.fixture
+def job_with_fetched_case_comments(job):
+    """Fixture providing a job that returns specific case comments on fetch."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": "<p>PagerDuty:P123: Existing Note</p>"}
+    ]
+    return job
+
+
+@pytest.fixture
+def job_with_failing_fetch_comments(job):
+    """Fixture providing a job where fetch_case_comments raises an exception."""
+    job.soar_job.fetch_case_comments.side_effect = Exception("Fetch failed")
+    return job
+
+
+@pytest.fixture
+def job_case_deduplication():
+    """Fixture providing a JobCase using real deduplication logic."""
+    job_case = MagicMock(spec=JobCase)
+    alert = MagicMock()
+    alert.alert_group_identifier = "alert_1"
+    alert.incident = MagicMock(
+        id="P123",
+        comments=[
+            MagicMock(message="Note 1"),
+            MagicMock(message="Note 2"),
+        ],
+    )
+    job_case.case_detail.id_ = 1
+    job_case.case_detail.is_closed = False
+    job_case.case_detail.alerts = [alert]
+    job_case.case_comments = []
+
+    job_case.get_comments_to_sync = (
+        lambda **kw: JobCase.get_comments_to_sync(job_case, **kw)
+    )
+    job_case.get_case_comments_hashes = (
+        lambda: JobCase.get_case_comments_hashes(job_case)
+    )
+    job_case.get_product_comments_hashes = (
+        lambda: JobCase.get_product_comments_hashes(job_case)
+    )
+    job_case._generate_string_hash = (
+        lambda text: JobCase._generate_string_hash(job_case, text)
+    )
+    job_case._collect_product_comments_to_sync_to_case = (
+        lambda *args: JobCase._collect_product_comments_to_sync_to_case(
+            job_case, *args
+        )
+    )
+    job_case._collect_case_comments_to_sync_to_product = (
+        lambda *args: JobCase._collect_case_comments_to_sync_to_product(
+            job_case, *args
+        )
+    )
+    job_case._is_valid_product_comment = (
+        lambda c, p: JobCase._is_valid_product_comment(job_case, c, p)
+    )
+    job_case._is_valid_secops_comment = (
+        lambda c, p: JobCase._is_valid_secops_comment(job_case, c, p)
+    )
+    return job_case
+
+
+@pytest.fixture
+def job_case_secops_deduplication(job_case_deduplication):
+    """Fixture with an existing SecOps comment already in PagerDuty."""
+    job_case_deduplication.case_detail.alerts[0].incident.comments = [
+        MagicMock(message="Google SecOps 1: Existing analyst note"),
+    ]
+    return job_case_deduplication
