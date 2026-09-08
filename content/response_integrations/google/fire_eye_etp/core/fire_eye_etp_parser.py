@@ -17,15 +17,18 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from .datamodels import Alert
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 class FireEyeETPParser:
     """Parser class for converting ETP raw data into datamodels."""
 
-    def build_first_alert(self, raw_data: dict[str, Any], timezone_offset: str | None = None) -> Alert | None:
+    def build_first_alert(self, raw_data: SingleJson, timezone_offset: str | None = None) -> Alert | None:
         """Build the first alert from raw data.
 
         Args:
@@ -36,12 +39,12 @@ class FireEyeETPParser:
             The parsed Alert object, or None if no alerts found.
 
         """
-        data_json: list[dict[str, Any]] = raw_data.get("data", [])
+        data_json: list[SingleJson] = raw_data.get("data", [])
         if data_json:
             return self.build_siemplify_alert_obj(alert_data=data_json[0], timezone_offset=timezone_offset)
         return None
 
-    def build_alerts_array(self, raw_json: dict[str, Any], timezone_offset: str | None = None) -> list[Alert]:
+    def build_alerts_array(self, raw_json: SingleJson, timezone_offset: str | None = None) -> list[Alert]:
         """Build an array of alerts from raw JSON response.
 
         Args:
@@ -52,14 +55,14 @@ class FireEyeETPParser:
             A list of parsed Alert objects.
 
         """
-        alerts_data: list[dict[str, Any]] = raw_json.get("data", []) or []
+        alerts_data: list[SingleJson] = raw_json.get("data", []) or []
         return [
             self.build_siemplify_alert_obj(alert_data=alert_data, timezone_offset=timezone_offset)
             for alert_data in alerts_data
         ]
 
     @staticmethod
-    def build_siemplify_alert_obj(alert_data: dict[str, Any], timezone_offset: str | None = None) -> Alert:
+    def build_siemplify_alert_obj(alert_data: SingleJson, timezone_offset: str | None = None) -> Alert:
         """Build a single Alert object from alert data.
 
         Args:
