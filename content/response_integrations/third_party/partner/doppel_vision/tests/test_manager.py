@@ -133,17 +133,6 @@ class TestDoppelManagerRequests(unittest.TestCase):
             {"queue_state": "actioned", "entity_state": "down"},
         )
 
-    @patch.object(dm_module.requests, "request")
-    def test_create_abuse_alert_posts_to_abuse_endpoint(self, mock_request):
-        mock_request.return_value = build_response({"id": "TST-1"})
-
-        self.manager.create_abuse_alert(entity="https://example.com")
-
-        args, kwargs = mock_request.call_args
-        self.assertEqual(args[0], "POST")
-        self.assertTrue(args[1].endswith("/alert/abuse"))
-        self.assertEqual(kwargs["json"], {"entity": "https://example.com"})
-
 
 class TestDoppelManagerErrorPropagation(unittest.TestCase):
     """API failures must reach the caller so actions can report the real cause."""

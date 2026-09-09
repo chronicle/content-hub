@@ -81,15 +81,6 @@ class DoppelManager:
             json_body={"queue_state": queue_state, "entity_state": entity_state},
         )
 
-    def create_abuse_alert(self, entity):
-        """Creates an abuse alert for a given entity in Doppel.
-
-        :param entity: (str) The entity for which to create the abuse alert.
-        :return: (dict) The JSON response from Doppel.
-        :raises requests.RequestException: If the Doppel API call fails.
-        """
-        return self._request("POST", "/alert/abuse", json_body={"entity": entity})
-
     @staticmethod
     def _identifier_params(entity, alert_id):
         """Builds the query params identifying a single alert by entity or by ID.
