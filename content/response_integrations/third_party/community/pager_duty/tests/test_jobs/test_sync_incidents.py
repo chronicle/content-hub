@@ -209,6 +209,13 @@ def test_clean_secops_comment_special_characters() -> None:
     raw = '!<@>@</@>#$%^&amp;*()_+} {}|":&gt;?&lt;&lt;&lt;'
     cleaned = clean_secops_comment(raw)
     assert cleaned == '!@#$%^&*()_+} {}|":>?<<<'
+    assert clean_secops_comment("<<<>>>>><<>>>") == "<<<>>>>><<>>>"
+    assert clean_secops_comment("<<<>>><<<>>>") == "<<<>>><<<>>>"
+    assert (
+        clean_secops_comment("Alert: x < 5 and y > 3")
+        == "Alert: x < 5 and y > 3"
+    )
+
 
 
 def test_clean_secops_comment_mentions_and_html_tags() -> None:
@@ -410,3 +417,22 @@ def test_sync_comments_secops_to_pagerduty_deduplication(
         resp.json()["note"]["content"]
         == "Google SecOps 1: Brand new analyst note"
     )
+
+
+def test_sync_comments_no_duplicate_with_angle_bracket_characters(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job,
+    job_case_angle_brackets_deduplication,
+) -> None:
+    """Tests that comments with angle brackets are not duplicated."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": "<p>PagerDuty:P123: <<<>>>>><<>>></p>"}
+    ]
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_comments(job_case_angle_brackets_deduplication)
+
+    assert not job.soar_job.add_comment.called
+    assert len(script_session.request_history) == 0
+

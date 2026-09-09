@@ -12,7 +12,10 @@ _LINE_BREAK_PATTERN = re.compile(r"<br\s*/?>", flags=re.IGNORECASE)
 _PARAGRAPH_BREAK_PATTERN = re.compile(
     r"</(?:p|div)>\s*<(?:p|div)[^>]*>", flags=re.IGNORECASE
 )
-_HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+_HTML_TAG_PATTERN = re.compile(
+    r"</?[a-zA-Z][a-zA-Z0-9]*(?:\s+[^>]*)?/?>|<!--.*?-->",
+    flags=re.DOTALL,
+)
 
 
 def _normalize_mentions(text: str) -> str:

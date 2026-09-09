@@ -373,3 +373,13 @@ def job_case_secops_deduplication(job_case_deduplication):
         MagicMock(message="Google SecOps 1: Existing analyst note"),
     ]
     return job_case_deduplication
+
+
+@pytest.fixture
+def job_case_angle_brackets_deduplication(job_case_deduplication):
+    """Fixture with special angle-bracket comments in PagerDuty."""
+    job_case_deduplication.case_detail.alerts[0].incident.comments = [
+        MagicMock(message="<<<>>>>><<>>>"),
+    ]
+    return job_case_deduplication
+
