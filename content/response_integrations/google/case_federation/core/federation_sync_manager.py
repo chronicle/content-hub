@@ -113,7 +113,7 @@ class FederationSyncManager:
         self,
         continuation_token: str | None,
     ) -> TIPCommon.types.SingleJson:
-        """Retrieve a list of cases that have been created or modified since the last sync execution.
+        """Retrieve list of cases that have been created or modified since the last sync execution.
 
         Args:
             continuation_token: Token received from the server for fetching the next
