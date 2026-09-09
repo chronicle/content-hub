@@ -32,7 +32,7 @@ class ParamMode(RepresentableEnum):
 
 class BuiltConnectorParameter(TypedDict):
     Name: str
-    Description: str
+    Description: NotRequired[str | None]
     IsMandatory: bool
     IsAdvanced: bool
     Type: int | str
@@ -72,7 +72,7 @@ class ConnectorParameter(Buildable[BuiltConnectorParameter, NonBuiltConnectorPar
     def _from_built(cls, built: BuiltConnectorParameter) -> ConnectorParameter:
         return cls(
             name=built["Name"],
-            description=built["Description"],
+            description=built.get("Description") or "",
             is_mandatory=built["IsMandatory"],
             is_advanced=built.get("IsAdvanced", False),
             type_=ScriptParamType(int(built["Type"])),
