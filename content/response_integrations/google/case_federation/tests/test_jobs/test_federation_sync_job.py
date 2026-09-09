@@ -145,6 +145,7 @@ def test_sync_failure_does_not_save_execution_data(
 def test_continuation_token_is_reused_on_next_run(
     federation_cases: GetFederationCasesStub,
     mock_http_client: MockHttpClient,
+    job_context: dict,
 ) -> None:
     # Arrange - first run returns a case and a continuation token
     federation_cases.response.json.return_value = {

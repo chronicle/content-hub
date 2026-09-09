@@ -19,7 +19,7 @@ from TIPCommon.base.utils import CreateSession
 pytest_plugins = ("integration_testing.conftest",)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def script_session(monkeypatch: pytest.MonkeyPatch) -> requests.Session:
     session = requests.Session()
     monkeypatch.setattr(CreateSession, "create_session", lambda *args, **kwargs: session)
