@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from pager_duty.core.utils import clean_secops_comment, sanitize_case_comments
+from pager_duty.core.utils import (
+    clean_pagerduty_comment,
+    clean_secops_comment,
+    escape_comment_for_secops,
+    sanitize_case_comments,
+)
 from pager_duty.tests.core.product import PagerDuty
 from pager_duty.tests.core.session import PagerDutySession
 
@@ -214,6 +219,27 @@ def test_clean_secops_comment_special_characters() -> None:
     assert (
         clean_secops_comment("Alert: x < 5 and y > 3")
         == "Alert: x < 5 and y > 3"
+    )
+
+
+def test_clean_pagerduty_comment_preserves_special_characters_and_tags() -> None:
+    """Tests that clean_pagerduty_comment preserves all user content."""
+    raw = '<p>PagerDuty:Q1: !@#$%^&*()_+":??>><<qAA  ER34</p>'
+    cleaned = clean_pagerduty_comment(raw)
+    assert cleaned == 'PagerDuty:Q1: !@#$%^&*()_+":??>><<qAA  ER34'
+
+    raw_url = (
+        '<p>PagerDuty:Q1: Visit <a href="https://example.com/api?a=1&amp;b=2">'
+        'https://example.com/api?a=1&amp;b=2</a></p>'
+    )
+    assert (
+        clean_pagerduty_comment(raw_url)
+        == "PagerDuty:Q1: Visit https://example.com/api?a=1&b=2"
+    )
+
+    raw_angle = "<p>PagerDuty:Q1: <<<>>>>><<>>></p>"
+    assert (
+        clean_pagerduty_comment(raw_angle) == "PagerDuty:Q1: <<<>>>>><<>>>"
     )
 
 
@@ -434,4 +460,73 @@ def test_sync_comments_no_duplicate_with_angle_bracket_characters(
 
     assert not job.soar_job.add_comment.called
     assert len(script_session.request_history) == 0
+
+
+def test_sync_comments_no_duplicate_with_complex_special_characters(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job,
+    job_case_special_chars_deduplication,
+) -> None:
+    """Tests that complex special characters are not duplicated."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": '<p>PagerDuty:P123: !@#$%^&*()_+":??>><<qAA  ER34</p>'}
+    ]
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_comments(job_case_special_chars_deduplication)
+
+    assert not job.soar_job.add_comment.called
+    assert len(script_session.request_history) == 0
+
+
+def test_escape_comment_for_secops() -> None:
+    """Tests that escape_comment_for_secops escapes HTML special characters."""
+    assert escape_comment_for_secops("") == ""
+    assert (
+        escape_comment_for_secops('!@#$%^&*()_+":??>><<qAA  ER355')
+        == '!@#$%^&amp;*()_+&quot;:??&gt;&gt;&lt;&lt;qAA  ER355'
+    )
+    assert (
+        escape_comment_for_secops("https://example.com?a=1&b=2")
+        == "https://example.com?a=1&amp;b=2"
+    )
+    assert escape_comment_for_secops("x < 5 and y > 3") == "x &lt; 5 and y &gt; 3"
+
+
+def test_clean_pagerduty_comment_with_line_breaks_and_nested_tags() -> None:
+    """Tests cleaning PagerDuty comments with line breaks and nested tags."""
+    raw_nested = "<div><p><span>PagerDuty:Q1: Line 1<br>Line 2</span></p></div>"
+    assert clean_pagerduty_comment(raw_nested) == "PagerDuty:Q1: Line 1\nLine 2"
+
+    raw_escaped = '<p>PagerDuty:Q1: !@#$%^&amp;*()_+&quot;:??&gt;&gt;&lt;&lt;qAA  ER355</p>'
+    assert (
+        clean_pagerduty_comment(raw_escaped)
+        == 'PagerDuty:Q1: !@#$%^&*()_+":??>><<qAA  ER355'
+    )
+
+
+def test_sync_product_comments_to_case_escapes_html(job) -> None:
+    """Tests that sync_product_comments_to_case escapes HTML before posting."""
+    comments = [
+        'alert_1:PagerDuty:Q1: !@#$%^&*()_+":??>><<qAA  ER355',
+    ]
+    job.sync_product_comments_to_case(case_id=1, comments=comments)
+
+    job.soar_job.add_comment.assert_called_once_with(
+        case_id=1,
+        comment='PagerDuty:Q1: !@#$%^&amp;*()_+&quot;:??&gt;&gt;&lt;&lt;qAA  ER355',
+        alert_identifier="alert_1",
+    )
+
+
+def test_sync_product_comments_to_case_error_handling(job) -> None:
+    """Tests that sync_product_comments_to_case handles exceptions gracefully."""
+    job.soar_job.add_comment.side_effect = Exception("API error")
+    comments = ["alert_1:PagerDuty:Q1: test note"]
+
+    # Should not raise
+    job.sync_product_comments_to_case(case_id=1, comments=comments)
+    job.soar_job.add_comment.assert_called_once()
+
 

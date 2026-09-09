@@ -24,7 +24,11 @@ from ..core.constants import (
     SIEM_COMMENT_PREFIX,
 )
 from ..core.PagerDutyManager import PagerDutyManager
-from ..core.utils import clean_secops_comment, sanitize_case_comments
+from ..core.utils import (
+    clean_secops_comment,
+    escape_comment_for_secops,
+    sanitize_case_comments,
+)
 
 
 class SyncIncidents(BaseSyncJob[PagerDutyManager]):
@@ -446,6 +450,29 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             job_case=job_case,
             comments=comments_to_sync.case_comments_sync_to_product,
         )
+
+    def sync_product_comments_to_case(
+        self, case_id: int, comments: list[str]
+    ) -> None:
+        """Syncs product comments to the SecOps case with HTML escaping."""
+        for comment in comments:
+            alert_identifier = comment.split(":")[0]
+            comment = comment.replace(f"{alert_identifier}:", "", 1)
+            escaped_comment = escape_comment_for_secops(comment)
+            try:
+                self.soar_job.add_comment(
+                    case_id=case_id,
+                    comment=escaped_comment,
+                    alert_identifier=alert_identifier,
+                )
+                self.logger.info(
+                    f"Successfully synced comments to case {case_id}."
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to add comment to case {case_id}: {e}",
+                    exc_info=True,
+                )
 
     def sync_case_comments_to_product(
         self, job_case: JobCase, comments: list[str]

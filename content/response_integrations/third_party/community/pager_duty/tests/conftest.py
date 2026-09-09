@@ -383,3 +383,12 @@ def job_case_angle_brackets_deduplication(job_case_deduplication):
     ]
     return job_case_deduplication
 
+
+@pytest.fixture
+def job_case_special_chars_deduplication(job_case_deduplication):
+    """Fixture with special characters and letters after brackets in PD."""
+    job_case_deduplication.case_detail.alerts[0].incident.comments = [
+        MagicMock(message='!@#$%^&*()_+":??>><<qAA  ER34'),
+    ]
+    return job_case_deduplication
+
