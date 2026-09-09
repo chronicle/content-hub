@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 
@@ -27,20 +27,25 @@ from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
 
-logger: logging.Logger = logging.getLogger(__name__)
-
-
 if TYPE_CHECKING:
-    from mp.dev_env.api import BackendAPI
+    from mp.core.custom_types import SingleJson
+    from mp.dev_env.interfaces import DevEnvClient
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @pull_app.command(name="playbook")
 @track_command
 def pull_playbook(
-    playbook: Annotated[str, typer.Argument(help="Playbook to pull and deconstruct.")],
+    playbook: Annotated[
+        str,
+        typer.Argument(help="Playbook to pull and deconstruct."),
+    ],
     dst: Annotated[
         Path | None,
-        typer.Option(help="Destination folder. the 'download' directory in content-hub repo."),
+        typer.Option(
+            help="Destination folder. the 'download' directory in content-hub repo.",
+        ),
     ] = None,
     *,
     include_blocks: Annotated[
@@ -89,24 +94,35 @@ def pull_playbook(
 
 
 def _pull_playbook_zip_from_soar(playbook: str, dst: Path) -> Path:
-    config = load_dev_env_config()
-    backend_api: BackendAPI = get_backend_api(config)
-    installed_playbook: list[dict[str, Any]] = backend_api.list_playbooks()
-    playbook_identifier = utils.find_playbook_identifier(playbook, installed_playbook)
-    data_json: dict[str, Any] = backend_api.download_playbook(playbook_identifier)
+    config: SingleJson = load_dev_env_config()
+    backend_api: DevEnvClient = get_backend_api(config)
+    installed_playbook: list[SingleJson] = backend_api.list_playbooks()
+    playbook_identifier: str = str(
+        utils.find_playbook_identifier(playbook, installed_playbook)
+    )
+    data_json: SingleJson = backend_api.download_playbook(playbook_identifier)
     return utils.save_playbook_as_zip(playbook, data_json, dst)
 
 
 def _deconstruct_playbook(zip_path: Path, dst: Path, playbook: str) -> None:
     with tempfile.TemporaryDirectory() as tmp_dir:
-        temp_path = Path(tmp_dir)
-        playbook_file: list[Path] = utils.unzip_playbooks(zip_path, temp_path, include_playbook=playbook)
+        temp_path: Path = Path(tmp_dir)
+        playbook_file: list[Path] = utils.unzip_playbooks(
+            zip_path,
+            temp_path,
+            include_playbook=playbook,
+        )
         utils.deconstruct_playbook(playbook_file[0], dst)
 
 
 def _deconstruct_blocks(zip_path: Path, dst: Path, playbook: str) -> None:
     with tempfile.TemporaryDirectory() as tmp_dir:
-        temp_path = Path(tmp_dir)
-        all_built_files: list[Path] = utils.unzip_playbooks(zip_path, temp_path, "", playbook)
+        temp_path: Path = Path(tmp_dir)
+        all_built_files: list[Path] = utils.unzip_playbooks(
+            zip_path,
+            temp_path,
+            "",
+            playbook,
+        )
         for built_file in all_built_files:
             utils.deconstruct_playbook(built_file, dst)

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 
@@ -31,7 +31,8 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
-    from mp.dev_env.api import BackendAPI
+    from mp.core.custom_types import SingleJson
+    from mp.dev_env.interfaces import DevEnvClient
 
 
 @push_app.command(name="integration")
@@ -78,7 +79,7 @@ def push_integration(
     logger.info("Zipped built integration at %s", zip_path)
 
     try:
-        result = _push_zip_to_soar(zip_path, is_staging=is_staging)
+        result: SingleJson = _push_zip_to_soar(zip_path, is_staging=is_staging)
         logger.info("Upload result: %s", result)
         logger.info("✅ Integration pushed successfully.")
 
@@ -100,11 +101,19 @@ def _zip_integration(integration: str, src: Path | None = None, *, custom: bool)
     return zip_path
 
 
-def _push_zip_to_soar(zip_path: Path, *, is_staging: bool) -> dict[str, Any]:
-    config = load_dev_env_config()
-    backend_api: BackendAPI = get_backend_api(config)
-    details = backend_api.get_integration_details(zip_path, is_staging=is_staging)
-    return backend_api.upload_integration(zip_path, details["identifier"], is_staging=is_staging)
+def _push_zip_to_soar(zip_path: Path, *, is_staging: bool) -> SingleJson:
+    config: SingleJson = load_dev_env_config()
+    backend_api: DevEnvClient = get_backend_api(config)
+    details: SingleJson = backend_api.get_integration_details(
+        zip_path,
+        is_staging=is_staging,
+    )
+    result: SingleJson = backend_api.upload_integration(
+        zip_path,
+        details["identifier"],
+        is_staging=is_staging,
+    )
+    return result
 
 
 @push_app.command(name="custom-integration-repository")
@@ -112,23 +121,26 @@ def _push_zip_to_soar(zip_path: Path, *, is_staging: bool) -> dict[str, Any]:
 def push_custom_integration_repository() -> None:
     """Build, zip, and upload the entire custom integration repository."""
     utils.build_integrations_custom_repository()
-    zipped_paths = utils.zip_integration_custom_repository()
+    zipped_paths: list[Path] = utils.zip_integration_custom_repository()
     _push_custom_integrations(zipped_paths)
 
 
 def _push_custom_integrations(zipped_paths: list[Path]) -> None:
-    config = load_dev_env_config()
-    backend_api = get_backend_api(config)
+    config: SingleJson = load_dev_env_config()
+    backend_api: DevEnvClient = get_backend_api(config)
     results: list[str] = []
 
     for zip_path in zipped_paths:
         try:
-            details = backend_api.get_integration_details(zip_path)
+            details: SingleJson = backend_api.get_integration_details(zip_path)
             backend_api.upload_integration(zip_path, details["identifier"])
             logger.info("Successfully pushed: %s", zip_path.name)
 
         except Exception as e:  # ruff:ignore[blind-except]
             results.append(f"{zip_path.name}: {e}")
+
+        finally:
+            zip_path.unlink()
 
     if results:
         logger.error("\nUpload errors detected:")
