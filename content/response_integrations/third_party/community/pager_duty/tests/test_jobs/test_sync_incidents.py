@@ -217,7 +217,6 @@ def test_clean_secops_comment_special_characters() -> None:
     )
 
 
-
 def test_clean_secops_comment_mentions_and_html_tags() -> None:
     """Tests cleaning various mentions, HTML tags, breaks, and entities."""
     raw = (
