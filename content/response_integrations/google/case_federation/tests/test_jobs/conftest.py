@@ -22,16 +22,9 @@ from ..core.mocks import GetFederationCasesStub, MockHttpClient
 
 
 @pytest.fixture
-def mock_http_client() -> MockHttpClient:
-    return MockHttpClient()
-
-
-@pytest.fixture(autouse=True)
-def mock_manager_auth(
-    monkeypatch: pytest.MonkeyPatch,
-    mock_http_client: MockHttpClient,
-) -> None:
-    """Bypass GCP credentials creation and replace the AuthorizedSession client."""
+def mock_http_client(monkeypatch: pytest.MonkeyPatch) -> MockHttpClient:
+    """Mock HTTP client that bypasses GCP credentials and replaces the AuthorizedSession."""
+    client = MockHttpClient()
     monkeypatch.setattr(
         manager_module.FederationSyncManager,
         "_get_credentials_using_p4sa",
@@ -40,8 +33,9 @@ def mock_manager_auth(
     monkeypatch.setattr(
         manager_module.FederationSyncManager,
         "_prepare_http_client",
-        lambda self: setattr(self, "http_client", mock_http_client),
+        lambda self: setattr(self, "http_client", client),
     )
+    return client
 
 
 @pytest.fixture
@@ -53,18 +47,16 @@ def federation_cases(monkeypatch: pytest.MonkeyPatch) -> GetFederationCasesStub:
 
 
 @pytest.fixture
-def job_context() -> dict:
+def job_context(monkeypatch: pytest.MonkeyPatch) -> dict:
     """In-memory replacement for the job context properties storage."""
-    return {}
+    context: dict = {}
 
-
-@pytest.fixture(autouse=True)
-def mock_job_context(monkeypatch: pytest.MonkeyPatch, job_context: dict) -> None:
     def get_property(identifier: str, property_key: str) -> str | None:
-        return job_context.get((identifier, property_key))
+        return context.get((identifier, property_key))
 
     def set_property(identifier: str, property_key: str, property_value: str) -> None:
-        job_context[identifier, property_key] = property_value
+        context[identifier, property_key] = property_value
 
     monkeypatch.setattr(SiemplifyJob, "get_job_context_property", get_property)
     monkeypatch.setattr(SiemplifyJob, "set_job_context_property", set_property)
+    return context
