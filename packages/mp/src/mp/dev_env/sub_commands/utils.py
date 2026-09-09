@@ -14,58 +14,58 @@
 
 """Helper utilities for developer environment subcommands."""
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import requests
 import typer
 
-from mp.dev_env import api
+from mp.dev_env import utils
+
+if TYPE_CHECKING:
+    from mp.core.custom_types import SingleJson
+    from mp.dev_env.interfaces import DevEnvClient
 
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def get_backend_api_clean(config: dict[str, str]) -> api.BackendAPI:
-    """Initialize and authenticates the backend API client without logging tracebacks on failure.
+def get_backend_api_clean(config: SingleJson) -> DevEnvClient:
+    """Initialize and authenticate the backend API client.
 
     Args:
         config: Environment configuration containing api_root and credentials.
 
     Returns:
-        The authenticated BackendAPI client.
+        The authenticated DevEnvClient client.
 
     Raises:
         typer.Exit: If authentication fails.
 
     """
     try:
-        if config.get("api_key"):
-            backend_api = api.BackendAPI(api_root=config["api_root"], api_key=config["api_key"])
-        else:
-            backend_api = api.BackendAPI(
-                api_root=config["api_root"],
-                username=config["username"],
-                password=config["password"],
-            )
-
-        backend_api.login()
+        return utils.get_backend_api(config)
     except requests.exceptions.HTTPError as e:
         if e.response is not None and e.response.status_code in {401, 403}:
+            target: str = str(config.get("api_root") or config.get("instance"))
             logger.error("=" * 80)  # ruff:ignore[error-instead-of-exception]
             logger.error(  # ruff:ignore[error-instead-of-exception]
-                "[AUTHENTICATION ERROR] Invalid API Key or Unauthorized Access (Status Code %s)",
+                "[AUTHENTICATION ERROR] Unauthorized Access (Status Code %s)",
                 e.response.status_code,
             )
             logger.error(  # ruff:ignore[error-instead-of-exception]
-                "The API key or credentials configured for '%s' are invalid or expired.",
-                config.get("api_root"),
+                "The credentials configured for '%s' are invalid or expired.",
+                target,
             )
-            logger.error("Please update your credentials using: uv run --project packages/mp mp login")  # ruff:ignore[error-instead-of-exception]
+            msg: str = "Please update your credentials using: mp login"
+            logger.error(msg)  # ruff:ignore[error-instead-of-exception]
             logger.error("=" * 80)  # ruff:ignore[error-instead-of-exception]
             raise typer.Exit(1) from None
         logger.error("Authentication failed: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
+    except typer.Exit:
+        raise
     except Exception as e:  # ruff:ignore[blind-except]
         logger.error("Authentication failed: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
-    else:
-        return backend_api
