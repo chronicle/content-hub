@@ -5,18 +5,17 @@ import json
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+from TIPCommon.transformation import construct_csv
 
 from ..core.constants import (
     COMMON_ACTION_ERROR_MESSAGE,
-    INTEGRATION_NAME,
     LIST_ENTITIES_SCRIPT_NAME,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
     URL_API_VERSION,
 )
-from ..core.UtilsManager import extract_fields, validate_limit_param, validator
-from ..core.VectraRUXExceptions import InvalidIntegerException
+from ..core.UtilsManager import extract_fields, get_integration_params, validate_limit_param, validate_integer, process_action_parameter
+from ..core.VectraRUXExceptions import InvalidIntegerException, VectraRUXException
 from ..core.VectraRUXManager import VectraRUXManager
 
 
@@ -64,126 +63,82 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameter
-    api_root = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Root",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_id = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client ID",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_secret = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client Secret",
-        print_value=False,
-        is_mandatory=True,
-    )
+    api_root, client_id, client_secret = get_integration_params(siemplify)
 
     # Action Parameters
-    entity_type = extract_action_param(
-        siemplify,
+    entity_type = siemplify.extract_action_param(
         param_name="Entity Type",
         input_type=str,
         is_mandatory=True,
-        print_value=True,
     ).lower()
 
-    order_by = extract_action_param(
-        siemplify,
+    order_by = siemplify.extract_action_param(
         param_name="Order By",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
-    fields = extract_action_param(
-        siemplify,
+    fields = siemplify.extract_action_param(
         param_name="Fields",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
-    name = extract_action_param(
-        siemplify,
+    name = siemplify.extract_action_param(
         param_name="Name",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
-    state = extract_action_param(
-        siemplify,
+    state = siemplify.extract_action_param(
         param_name="State",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
-    last_detection_timestamp_gte = extract_action_param(
-        siemplify,
+    last_detection_timestamp_gte = siemplify.extract_action_param(
         param_name="Last Detection Timestamp GTE",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
-    last_detection_timestamp_lte = extract_action_param(
-        siemplify,
+    last_detection_timestamp_lte = siemplify.extract_action_param(
         param_name="Last Detection Timestamp LTE",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
-    tags = extract_action_param(
-        siemplify,
+    tags = siemplify.extract_action_param(
         param_name="Tags",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
-    note_modified_timestamp_gte = extract_action_param(
-        siemplify,
+    note_modified_timestamp_gte = siemplify.extract_action_param(
         param_name="Note Modified Timestamp GTE",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
-    is_prioritized = extract_action_param(
-        siemplify,
+    is_prioritized = siemplify.extract_action_param(
         param_name="Prioritized",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
-    limit = extract_action_param(
-        siemplify,
+    limit = siemplify.extract_action_param(
         param_name="Limit",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
-    order = extract_action_param(
-        siemplify,
+    order = siemplify.extract_action_param(
         param_name="Order",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
     field = ",".join(json.loads(fields))
-    if order == "Descending" and order_by:
+    if order == "Descending" and order_by and order_by != "None":
         order_by = "-" + order_by
 
     status = EXECUTION_STATE_COMPLETED
@@ -191,9 +146,21 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     try:
-        limit = validator(validate_limit_param(limit), name="Limit", zero_allowed=True)
-        state = state.lower() if state else None
-        is_prioritized = is_prioritized.lower() if is_prioritized else None
+        limit = validate_integer(
+            validate_limit_param(limit),
+            zero_allowed=True,
+            field_name="Limit",
+        )
+        state = state.lower() if state and state != "None" else None
+        is_prioritized = is_prioritized.lower() if is_prioritized and is_prioritized != "None" else None
+        tags = process_action_parameter(tags)
+        if tags:
+            tags = ",".join(tags)
+
+        name = name.strip() if name else None
+        last_detection_timestamp_gte = last_detection_timestamp_gte.strip() if last_detection_timestamp_gte else None
+        last_detection_timestamp_lte = last_detection_timestamp_lte.strip() if last_detection_timestamp_lte else None
+        note_modified_timestamp_gte = note_modified_timestamp_gte.strip() if note_modified_timestamp_gte else None
 
         vectra_manager = VectraRUXManager(
             api_root,
@@ -253,6 +220,14 @@ def main():
         result_value = RESULT_VALUE_FALSE
         output_message = f"{e}"
         siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
+    except VectraRUXException as e:
+        output_message = str(e)
+        result_value = RESULT_VALUE_FALSE
+        status = EXECUTION_STATE_FAILED
+        siemplify.LOGGER.error(
+            f"{e}, while performing action {LIST_ENTITIES_SCRIPT_NAME}",
+        )
         siemplify.LOGGER.exception(e)
     except Exception as e:
         status = EXECUTION_STATE_FAILED

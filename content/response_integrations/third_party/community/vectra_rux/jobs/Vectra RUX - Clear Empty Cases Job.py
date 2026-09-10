@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from soar_sdk.SiemplifyJob import SiemplifyJob
-from TIPCommon import extract_action_param
 
 from ..core.constants import (
     CASES_TIMESTAMP_DB_KEY,
@@ -23,24 +22,21 @@ def main():
     siemplify.script_name = JOB_SCRIPT_NAME  # In order to use the SiemplifyLogger
 
     # INIT ACTION PARAMETERS:
-    hours_backwards = extract_action_param(
-        siemplify=siemplify,
+    hours_backwards = siemplify.extract_job_param(
         param_name="Max Hours Backwards",
         input_type=str,
         print_value=True,
         default_value=DEFAULT_HOURS_BACKWARDS,
-    ).strip()
+    ).strip() or DEFAULT_HOURS_BACKWARDS
 
-    environments = extract_action_param(
-        siemplify=siemplify,
+    environments = siemplify.extract_job_param(
         param_name="Environments",
         is_mandatory=True,
         print_value=True,
         default_value="Default Environment",
     )
 
-    product_names = extract_action_param(
-        siemplify=siemplify,
+    product_names = siemplify.extract_job_param(
         param_name="Products",
         is_mandatory=True,
         print_value=True,
