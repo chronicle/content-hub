@@ -63,3 +63,4 @@ ALERT_NAME = "Malicious Email"
 
 PRINT_TIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 API_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+COMPACT_TIMESTAMP_LENGTH = 14
