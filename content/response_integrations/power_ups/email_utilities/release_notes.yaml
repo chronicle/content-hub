@@ -352,3 +352,62 @@
   item_type: Integration
   publish_time: '2026-07-17'
   ticket_number: ''
+- description: 'Analyze Headers, Analyze EML Headers - The SPF, DKIM, and DMARC checks
+    now report the authentication results recorded for the message in its Authentication-Results
+    headers (via the mailsuite library), including a normalized summary and a per-authentication-server
+    breakdown, alongside the existing DKIM and ARC signature verification. In Analyze
+    Headers, the SPF, DMARC, MX, and DNSSec fields that described the sending domain''s
+    published DNS records have been replaced by these per-message results. Also fixes
+    a bug in Analyze EML Headers where the "X-Authenticated-User" header check raised
+    an error, and brings both actions up to the repository style guide (type hints,
+    no bare exception handlers). By default the authentication summary is based only
+    on the topmost Authentication-Results header (the one stamped by the receiving
+    server), so extra headers forged by a sender are ignored. Two optional parameters
+    (disabled by default) adjust this for specific environments: "Allow Multiple
+    Authentication-Results Headers" merges verdicts across separate headers for
+    receiving services that record each check in its own header (e.g. Proton Mail),
+    and "Use Authentication-Results-Original Header" bases the results on the header
+    preserved by a Secure Email Gateway (e.g. Proofpoint, Cisco Secure Email). An
+    audit of the remaining Analyze Headers fields also fixed several accuracy issues:
+    DmarcDomain now reports the domain DMARC actually evaluated (the dmarc method''s
+    header.from property; it previously scraped the dkim method''s header.i identity,
+    which only matches when DKIM is aligned); SPFDomain now prefers the spf method''s
+    smtp.mailfrom property over scraping the free-form Received-SPF comment; SourceServer
+    and SourceServerIP now report the origin-side server from the oldest Received
+    hop (previously the loop kept overwriting and named the recipient''s own server)
+    and the IP is resolved with an A query instead of the deprecated ANY type; DKIMVerify
+    now tries every DKIM signature instead of only the first; and relay enrichment
+    no longer sends private or reserved IP addresses to public RBL, WHOIS, and geo-IP
+    services. The StrongSPF field has been removed: like the other removed fields
+    it described the sending domain''s published DNS policy (and counted a softfail
+    record as strong), not anything about the message being analyzed.'
+  version: 53.0
+  item_name: Analyze Headers, Analyze EML Headers
+  item_type: Action
+  publish_time: '2026-07-21'
+  ticket_number: ''
+  regressive: true
+- description: 'New Analyze Domain Email Security action: checks the email-security
+    posture of a domain''s published records via checkdmarc (SPF and DMARC record
+    presence and validity, MX hosts, DNSSEC, MTA-STS, SMTP TLS reporting, and BIMI),
+    returning the same SPF, DMARC, MX, and DNSSec structures that Analyze Headers
+    emitted before version 53.0, so playbooks that referenced those removed fields
+    have a supported migration target. Unlike the old Analyze Headers fields, the
+    action is explicitly about the domain''s published policy, not about any individual
+    message. It only reads published state and never connects to MX hosts over SMTP:
+    STARTTLS/TLS probing is blocked in many runtimes (such as Google Cloud, which
+    blocks destination TCP port 25), where each probe would time out and record misleading
+    results. The old StrongSPF boolean is deliberately not reproduced: it is not
+    a standard concept and gave a false sense of security (it counted a softfail
+    "~all" policy as strong, although receivers commonly deliver softfailing mail);
+    the policy it summarized is available verbatim as the SPF "parsed" object''s
+    "all" value. MX STARTTLS/TLS
+    probing is off by default because environments that block outbound SMTP (such
+    as Google Cloud, which blocks destination TCP port 25) would report misleading
+    results; it can be enabled with the "Test MX Hosts For STARTTLS/TLS" parameter.'
+  version: 53.0
+  item_name: Analyze Domain Email Security
+  item_type: Action
+  publish_time: '2026-08-19'
+  ticket_number: ''
+  new: true
