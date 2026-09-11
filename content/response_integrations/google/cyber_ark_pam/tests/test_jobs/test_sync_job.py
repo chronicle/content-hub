@@ -25,11 +25,12 @@ import pytest
 from cyber_ark_pam.core.constants import SYNC_CREDENTIAL_JOB_REASON
 from cyber_ark_pam.core.datamodels import IntegrationParameters
 from cyber_ark_pam.core.exceptions import (
+    CyberArkPamConnectionError,
     IntegrationCredentialSyncError,
     InvalidConfigurationError,
     JobSaveError,
 )
-from cyber_ark_pam.jobs.sync_integration_credential_job import (
+from cyber_ark_pam.jobs.sync_integration_credentials_job import (
     SyncIntegrationCredentialJob,
 )
 
@@ -97,14 +98,38 @@ class TestValidateParams:
 
         assert "integration_instances" in job.credential_mapping
 
-    def test_empty_mapping(self) -> None:
-        """Empty string results in empty dict."""
+    def test_empty_mapping_raises(self) -> None:
+        """Empty string raises InvalidConfigurationError."""
         job = _make_job()
         job.params.credential_mapping = ""
 
-        job._validate_params()
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Credential Mapping cannot be empty",
+        ):
+            job._validate_params()
 
-        assert job.credential_mapping == {}
+    def test_empty_dict_mapping_raises(self) -> None:
+        """Empty dict mapping raises InvalidConfigurationError."""
+        job = _make_job()
+        job.params.credential_mapping = "{}"
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Credential Mapping must be a non-empty dictionary",
+        ):
+            job._validate_params()
+
+    def test_empty_categories_mapping_raises(self) -> None:
+        """Mapping with no parameters mapped raises InvalidConfigurationError."""
+        job = _make_job()
+        job.params.credential_mapping = '{"integration_instances": {}}'
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Credential Mapping must contain at least one mapped parameter",
+        ):
+            job._validate_params()
 
     def test_invalid_yaml_raises(self) -> None:
         """Raises InvalidConfigurationError on bad YAML."""
@@ -517,8 +542,8 @@ class TestTimeoutHandling:
             patch.object(job, "_init_cyber_ark_pam_client"),
             patch.object(job, "_load_context"),
             patch.object(job, "_save_context"),
-            patch("cyber_ark_pam.jobs.sync_integration_credential_job.AsyncChronicleSOAR") as mock_soar_cls,
-            patch("cyber_ark_pam.jobs.sync_integration_credential_job.AsyncMarketplaceApi") as mock_market_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credentials_job.AsyncChronicleSOAR") as mock_soar_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credentials_job.AsyncMarketplaceApi") as mock_market_cls,
         ):
             mock_soar = AsyncMock()
             mock_soar_cls.return_value = mock_soar
@@ -546,7 +571,9 @@ class TestAggregatedErrors:
         job = _make_job()
         job._soar_job = MagicMock()
         job.params.credential_mapping = (
-            '{"integration_instances": {"inst1": {}}, "connectors": {"conn1": {}}, "jobs": {"job1": {}}}'
+            '{"integration_instances": {"inst1": {"p1": "accounts/1"}}, '
+            '"connectors": {"conn1": {"p1": "accounts/2"}}, '
+            '"jobs": {"job1": {"p1": "accounts/3"}}}'
         )
         job._validate_params()
         job._sync_errors = []
@@ -582,8 +609,8 @@ class TestAggregatedErrors:
             patch.object(job, "_init_cyber_ark_pam_client"),
             patch.object(job, "_load_context"),
             patch.object(job, "_save_context"),
-            patch("cyber_ark_pam.jobs.sync_integration_credential_job.AsyncChronicleSOAR") as mock_soar_cls,
-            patch("cyber_ark_pam.jobs.sync_integration_credential_job.AsyncMarketplaceApi") as mock_market_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credentials_job.AsyncChronicleSOAR") as mock_soar_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credentials_job.AsyncMarketplaceApi") as mock_market_cls,
         ):
             mock_soar = AsyncMock()
             mock_soar_cls.return_value = mock_soar
@@ -627,9 +654,9 @@ class TestInitCyberArkPamClient:
         job.params.client_certificate_passphrase = "job_cert_pass"  # ruff: ignore[hardcoded-password-string]
 
         with (
-            patch("cyber_ark_pam.jobs.sync_integration_credential_job.CyberArkPamManager") as mock_manager_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credentials_job.CyberArkPamManager") as mock_manager_cls,
             patch(
-                "cyber_ark_pam.jobs.sync_integration_credential_job.extract_integration_parameters"
+                "cyber_ark_pam.jobs.sync_integration_credentials_job.extract_integration_parameters"
             ) as mock_extract_config,
         ):
             await job._init_cyber_ark_pam_client()
@@ -645,6 +672,7 @@ class TestInitCyberArkPamClient:
                 client_certificate="job_cert",
                 client_certificate_passphrase="job_cert_pass",  # ruff: ignore[hardcoded-password-func-arg]
             )
+            mock_manager_cls.return_value.test_connectivity.assert_called_once()
 
     @pytest.mark.anyio
     async def test_init_client_falls_back_to_integration_params(self) -> None:
@@ -670,9 +698,9 @@ class TestInitCyberArkPamClient:
         )
 
         with (
-            patch("cyber_ark_pam.jobs.sync_integration_credential_job.CyberArkPamManager") as mock_manager_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credentials_job.CyberArkPamManager") as mock_manager_cls,
             patch(
-                "cyber_ark_pam.jobs.sync_integration_credential_job.extract_integration_parameters",
+                "cyber_ark_pam.jobs.sync_integration_credentials_job.extract_integration_parameters",
                 return_value=fallback_params,
             ) as mock_extract,
         ):
@@ -689,3 +717,20 @@ class TestInitCyberArkPamClient:
                 client_certificate="integration_cert",
                 client_certificate_passphrase="integration_cert_pass",  # ruff: ignore[hardcoded-password-func-arg]
             )
+            mock_manager_cls.return_value.test_connectivity.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_init_client_connectivity_failure_raises(self) -> None:
+        """Raises CyberArkPamConnectionError when test_connectivity fails."""
+        job = _make_job()
+        job.params.api_root = "https://bad-pam-url"
+        job.params.username = "bad_user"
+        job.params.password = "bad_pass"  # ruff: ignore[hardcoded-password-string]
+
+        with patch("cyber_ark_pam.jobs.sync_integration_credentials_job.CyberArkPamManager") as mock_manager_cls:
+            mock_manager = MagicMock()
+            mock_manager.test_connectivity.side_effect = Exception("Connection refused")
+            mock_manager_cls.return_value = mock_manager
+
+            with pytest.raises(CyberArkPamConnectionError, match="Failed to connect or authenticate to CyberArk PAM"):
+                await job._init_cyber_ark_pam_client()

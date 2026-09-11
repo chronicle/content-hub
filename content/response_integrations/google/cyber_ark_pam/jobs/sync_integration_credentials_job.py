@@ -43,6 +43,7 @@ from ..core.constants import (
 from ..core.cyber_ark_pam_manager import CyberArkPamManager
 from ..core.datamodels import IntegrationParameters
 from ..core.exceptions import (
+    CyberArkPamConnectionError,
     CyberArkPamNotFoundError,
     IntegrationCredentialSyncError,
     InvalidConfigurationError,
@@ -142,7 +143,12 @@ class SyncIntegrationCredentialJob(Job):
         return self._extract_from_fallback_configuration()
 
     async def _init_cyber_ark_pam_client(self) -> None:
-        """Initialize the CyberArk PAM manager."""
+        """Initialize the CyberArk PAM manager and verify connectivity.
+
+        Raises:
+            CyberArkPamConnectionError: If connection or authentication to CyberArk PAM fails.
+
+        """
         params = self._get_integration_parameters()
 
         self.cyber_ark_manager = await asyncio.to_thread(
@@ -156,6 +162,14 @@ class SyncIntegrationCredentialJob(Job):
             client_certificate=params.client_certificate,
             client_certificate_passphrase=params.client_certificate_passphrase,
         )
+        self.logger.info("Testing connectivity to CyberArk PAM...")
+        try:
+            await asyncio.to_thread(self.cyber_ark_manager.test_connectivity)
+        except Exception as e:
+            msg = f"Failed to connect or authenticate to CyberArk PAM: {e}"
+            self.logger.exception(msg)
+            raise CyberArkPamConnectionError(msg) from e
+        self.logger.info("Successfully connected and authenticated to CyberArk PAM.")
 
     def _validate_params(self) -> None:
         """Validate job parameters before execution.
@@ -165,17 +179,22 @@ class SyncIntegrationCredentialJob(Job):
 
         Raises:
             InvalidConfigurationError: If the YAML/JSON string
-                is invalid or if the mapped values are in an invalid format.
+                is invalid, empty, or if the mapped values are in an invalid format.
 
         """
+        raw_mapping = getattr(self.params, "credential_mapping", None)
+        if not raw_mapping or not str(raw_mapping).strip():
+            msg = "Credential Mapping cannot be empty."
+            raise InvalidConfigurationError(msg)
+
         try:
-            self.credential_mapping = yaml.safe_load(self.params.credential_mapping) or {}
+            self.credential_mapping = yaml.safe_load(raw_mapping)
         except yaml.YAMLError as e:
             msg = f"Invalid Credential Mapping syntax: {e}"
             raise InvalidConfigurationError(msg) from e
 
-        if not isinstance(self.credential_mapping, dict):
-            msg = "Credential Mapping must be a dictionary."
+        if not isinstance(self.credential_mapping, dict) or not self.credential_mapping:
+            msg = "Credential Mapping must be a non-empty dictionary."
             raise InvalidConfigurationError(msg)
 
         valid_keys = {INTEGRATION_INSTANCES_KEY, CONNECTORS_KEY, JOBS_KEY}
@@ -186,33 +205,65 @@ class SyncIntegrationCredentialJob(Job):
             )
             raise InvalidConfigurationError(msg)
 
-        for category in valid_keys:
-            category_mapping = self.credential_mapping.get(category, {})
-            if not isinstance(category_mapping, dict):
-                msg = f"Category '{category}' must be a dictionary."
+        total_mappings: int = sum(
+            self._validate_param_mappings(category, self.credential_mapping.get(category, {}))
+            for category in valid_keys
+        )
+
+        if total_mappings == 0:
+            msg = (
+                "Credential Mapping must contain at least one mapped parameter under "
+                f"'{INTEGRATION_INSTANCES_KEY}', '{CONNECTORS_KEY}', or '{JOBS_KEY}'."
+            )
+            raise InvalidConfigurationError(msg)
+
+    @staticmethod
+    def _validate_param_mappings(
+        category: str,
+        category_mapping: SingleJson,
+    ) -> int:
+        """Validate component parameter mappings within a category.
+
+        Args:
+            category (str): Category name (instances, connectors, or jobs).
+            category_mapping (SingleJson): Dictionary of component to param mappings.
+
+        Returns:
+            int: Number of valid mapped parameters found.
+
+        Raises:
+            InvalidConfigurationError: If any component or parameter format is invalid.
+
+        """
+        if not isinstance(category_mapping, dict):
+            msg = f"Category '{category}' must be a dictionary."
+            raise InvalidConfigurationError(msg)
+
+        mappings_count: int = 0
+        for component_name, param_mapping in category_mapping.items():
+            if not isinstance(param_mapping, dict):
+                msg = f"Parameters for '{component_name}' in category '{category}' must be a dictionary."
                 raise InvalidConfigurationError(msg)
 
-            for component_name, param_mapping in category_mapping.items():
-                if not isinstance(param_mapping, dict):
-                    msg = f"Parameters for '{component_name}' in category '{category}' must be a dictionary."
+            for param_name, mapped_value in param_mapping.items():
+                mappings_count += 1
+                val = str(mapped_value).strip()
+                if not ACCOUNTS_PATTERN.match(val):
+                    msg = (
+                        f"Invalid format for parameter '{param_name}' of '{component_name}' "
+                        f"in category '{category}': '{val}'. "
+                        f"Expected format: 'accounts/{{account_id}}' "
+                        f"or 'accounts/{{account_id}}/versions/{{version_id}}'."
+                    )
                     raise InvalidConfigurationError(msg)
 
-                for param_name, mapped_value in param_mapping.items():
-                    val = str(mapped_value).strip()
-                    if not ACCOUNTS_PATTERN.match(val):
-                        msg = (
-                            f"Invalid format for parameter '{param_name}' of '{component_name}' "
-                            f"in category '{category}': '{val}'. "
-                            f"Expected format: 'accounts/{{account_id}}' "
-                            f"or 'accounts/{{account_id}}/versions/{{version_id}}'."
-                        )
-                        raise InvalidConfigurationError(msg)
+        return mappings_count
 
     def _perform_job(self) -> None:
         """Fetch secrets and sync to SOAR platform."""
-        self.logger.info("Starting 'Sync Integration Credential Job'.")
+        self.logger.info("Starting 'Sync Integration Credentials Job'.")
         asyncio.run(self._async_main())
-        self.logger.info("'Sync Integration Credential Job' completed.")
+        self.logger.info("'Sync Integration Credentials Job' completed.")
 
     async def _async_main(self) -> None:
         """Execute the main asynchronous flow."""

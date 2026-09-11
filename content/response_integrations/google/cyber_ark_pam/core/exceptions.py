@@ -59,3 +59,7 @@ class JobSaveError(CyberArkPamSyncJobError):
 
 class IntegrationCredentialSyncError(CyberArkPamSyncJobError):
     """Raised when one or more credentials fail to sync during the job."""
+
+
+class CyberArkPamConnectionError(CyberArkPamSyncJobError):
+    """Raised when connection or authentication to CyberArk PAM fails."""
