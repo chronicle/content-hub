@@ -1,0 +1,78 @@
+name: Condition
+description: Evaluate whether either remediation actually succeeded - the Okta password
+    reset or the Okta session clear. This step is a join - it is reached both from the
+    session-clear audit step (sessions were cleared) and directly from the "No" branch
+    of "Severity 30 Present?" (no session cookie theft exposure), so it runs on every
+    path through the playbook. The "Yes" branch closes the case; the "No" branch ends
+    the playbook and leaves the case open for an analyst.
+identifier: 633b1718-2489-42a5-a26c-9f85dea72ccb
+original_step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
+playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
+parent_step_ids:
+- 3dd7e161-afa4-4e72-8dca-d67d369b08c5
+- f9e8fcd9-8a81-4f42-9cc7-68c84842ae60
+parent_step_id: 3dd7e161-afa4-4e72-8dca-d67d369b08c5;f9e8fcd9-8a81-4f42-9cc7-68c84842ae60
+instance_name: Remediation Performed?
+is_automatic: true
+is_skippable: false
+action_provider: Flow
+start_loop_step_id: null
+parameters:
+-   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
+    playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
+    name: AssignedUsers
+    value: null
+# LogicalOperator 1 is OR: the "Yes" branch is taken when the reset succeeded, or the
+# session clear succeeded, or both. A step that did not run on this path resolves to an
+# empty value, which does not equal "true", so the skipped remediation cannot satisfy
+# the branch on its own.
+-   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
+    playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
+    name: Branches
+    value: '[{"LogicalOperator":1,"Conditions":[{"Operator":0,"FieldName":"[Reset User
+        Password.is_success]","Type":7,"Value":"true","CustomOperatorName":"Core
+        Functions.Equal"},{"Operator":0,"FieldName":"[Clear User
+        Sessions.is_success]","Type":7,"Value":"true","CustomOperatorName":"Core
+        Functions.Equal"}],"Order":1,"IsDefaultBranch":false,"Name":"Yes"},{"LogicalOperator":0,"Conditions":[],"Order":2,"IsDefaultBranch":true,"Name":"No"}]'
+-   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
+    playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
+    name: DistinctDuplicateEntities
+    value: 'true'
+# Fall back to branch 2 ("No") if a placeholder cannot be resolved - a failure to read
+# a remediation result should leave the case open rather than error the playbook.
+-   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
+    playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
+    name: ErrorFallbackBranch
+    value: '2'
+-   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
+    playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
+    name: HasApprovalLink
+    value: null
+-   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
+    playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
+    name: MessageToAssignee
+    value: null
+-   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
+    playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
+    name: PendingActionTimeout
+    value: null
+-   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
+    playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
+    name: SelectedScopeName
+    value: All entities
+-   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
+    playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
+    name: UseEntitiesLoopScope
+    value: null
+action_name: IfFlowCondition
+parallel_actions: []
+integration: Flow
+parent_container_id: null
+is_touched_by_ai: false
+is_debug_mock_data: false
+step_debug_data: null
+auto_skip_on_failure: false
+# Reached from "Severity 30 Present?" branch 2 ("No"), or unconditionally from
+# "Audit: Clear Sessions Result" on the "Yes" path.
+previous_result_condition: '{"f9e8fcd9-8a81-4f42-9cc7-68c84842ae60":"2"}'
+type: condition
