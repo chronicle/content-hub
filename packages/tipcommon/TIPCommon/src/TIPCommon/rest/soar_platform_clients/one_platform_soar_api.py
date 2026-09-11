@@ -874,7 +874,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)
 
     def attach_case_playbook_to_case(self) -> requests.Response:
-        """Attach case playbook to the case."""
+        """Attach case playbook to the case.
+        Returns:
+            requests.Response: The HTTP response from the OnePlatform endpoint.
+        """
         endpoint: str = "/legacyPlaybooks:legacyAttachWorkflowToCase"
         payload = {
             "cyberCaseId": self.params.case_id,
@@ -888,7 +891,6 @@ class OnePlatformSoarApi(BaseSoarApi):
             payload["originalWorkflowDefinitionIdentifier"] = (
                 self.params.original_workflow_definition_identifier
             )
-
         return self._make_request(
             HttpMethod.POST,
             endpoint,
@@ -897,11 +899,14 @@ class OnePlatformSoarApi(BaseSoarApi):
         )
 
     def get_enabled_workflow_cards(self) -> requests.Response:
-        """Get enabled workflow cards."""
+        """Get enabled workflow cards.
+        Returns:
+            requests.Response: The HTTP response from the OnePlatform endpoint.
+        """
         endpoint: str = "/legacyPlaybooks:legacyGetEnabledWFCards"
         payload = {
             "caseEnvironment": self.params.environment,
-            "executionScope": "CASE"
+            "executionScope": "CASE",
         }
         return self._make_request(
             HttpMethod.POST,

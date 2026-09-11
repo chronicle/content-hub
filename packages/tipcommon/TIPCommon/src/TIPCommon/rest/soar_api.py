@@ -1999,7 +1999,16 @@ def attach_case_playbook_to_case(
     should_run_automatic: bool,
     original_workflow_definition_identifier: str | None = None,
 ) -> None:
-    """Attach case playbook to the case."""
+    """Attach case playbook to the case.
+    Args:
+        chronicle_soar: The ChronicleSOAR SDK object.
+        case_id: The identifier of the cyber case.
+        playbook_name: The name of the playbook to attach.
+        should_run_automatic: Whether the playbook should execute automatically.
+        original_workflow_definition_identifier: Optional workflow definition identifier.
+    Raises:
+        requests.HTTPError: If the API request fails.
+    """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.case_id = case_id
     api_client.params.playbook_name = playbook_name
@@ -2007,7 +2016,6 @@ def attach_case_playbook_to_case(
     api_client.params.original_workflow_definition_identifier = (
         original_workflow_definition_identifier
     )
-
     response = api_client.attach_case_playbook_to_case()
     validate_response(response, validate_json=False)
 
@@ -2016,13 +2024,23 @@ def get_enabled_workflow_cards(
     chronicle_soar: ChronicleSOAR,
     environment: str,
 ) -> list[SingleJson]:
-    """Get enabled workflow cards."""
+    """Get enabled workflow cards.
+    Args:
+        chronicle_soar: The ChronicleSOAR SDK object.
+        environment: The environment name to query workflow cards for.
+    Returns:
+        list[SingleJson]: List of enabled workflow card objects.
+    Raises:
+        requests.HTTPError: If the API request fails.
+        InternalJSONDecoderError: If the response cannot be parsed as JSON.
+    """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.environment = environment
-
     response = api_client.get_enabled_workflow_cards()
     validate_response(response, validate_json=True)
     res_json = response.json()
     if isinstance(res_json, dict):
         return res_json.get("payload", [])
-    return res_json
+    if isinstance(res_json, list):
+        return res_json
+    return []

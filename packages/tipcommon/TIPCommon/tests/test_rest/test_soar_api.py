@@ -20,7 +20,9 @@ from pytest_mock import MockerFixture
 
 from TIPCommon.data_models import InstalledIntegrationInstance, UserDetails
 from TIPCommon.rest.soar_api import (
+    attach_case_playbook_to_case,
     get_case_insights,
+    get_enabled_workflow_cards,
     get_installed_integrations_of_environment,
     get_siemplify_user_details,
     get_user_profile_cards,
@@ -277,3 +279,66 @@ def test_save_or_update_job_legacy(
     assert res == {"status": "success"}
     params: Any = mock_legacy_client.params
     assert params.job_data == job_data
+
+
+def test_attach_case_playbook_to_case_one_platform(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test attach_case_playbook_to_case wrapper function sets params and calls OnePlatform client."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_oneplatform_client.attach_case_playbook_to_case = mocker.MagicMock(return_value=mock_response)
+
+    attach_case_playbook_to_case(
+        mock_chronicle_soar,
+        case_id=123,
+        playbook_name="Playbook A",
+        should_run_automatic=True,
+        original_workflow_definition_identifier="wf_def_1",
+    )
+
+    params: Any = mock_oneplatform_client.params
+    assert params.case_id == 123
+    assert params.playbook_name == "Playbook A"
+    assert params.should_run_automatic is True
+    assert params.original_workflow_definition_identifier == "wf_def_1"
+    mock_oneplatform_client.attach_case_playbook_to_case.assert_called_once()
+
+
+def test_get_enabled_workflow_cards_one_platform_dict_payload(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test get_enabled_workflow_cards extracts payload from dict response under OnePlatform client."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"payload": [{"id": "card_1"}]}
+    mock_oneplatform_client.get_enabled_workflow_cards = mocker.MagicMock(return_value=mock_response)
+
+    res = get_enabled_workflow_cards(mock_chronicle_soar, "Production")
+
+    assert res == [{"id": "card_1"}]
+    params: Any = mock_oneplatform_client.params
+    assert params.environment == "Production"
+
+
+def test_get_enabled_workflow_cards_one_platform_list_response(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test get_enabled_workflow_cards returns list response directly if not wrapped in dict."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = [{"id": "card_2"}]
+    mock_oneplatform_client.get_enabled_workflow_cards = mocker.MagicMock(return_value=mock_response)
+
+    res = get_enabled_workflow_cards(mock_chronicle_soar, "Production")
+
+    assert res == [{"id": "card_2"}]
