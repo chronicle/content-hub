@@ -66,6 +66,8 @@ def parse_chronicle_api_root(
 
 
 class DevEnvParams(NamedTuple):
+    """Parameters collected during login to persist to dev-env config file."""
+
     api_root: str | None
     auth_mode: str
     username: str | None
