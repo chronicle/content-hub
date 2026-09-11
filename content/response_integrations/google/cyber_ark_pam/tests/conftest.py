@@ -14,7 +14,6 @@
 
 """Pytest configuration and fixtures for CyberArk PAM integration tests."""
 
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
