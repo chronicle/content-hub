@@ -342,6 +342,44 @@ def _normalize_unzipped_integration(dest: Path) -> None:
         _normalize_subfolder(dest, cfg, identifier)
 
 
+def _normalize_script_param_type(
+    raw_type: Any,
+    default: int = ScriptParamType.STRING.value,
+) -> int:
+    """Normalize a raw script or connector parameter type to its integer enum value."""
+    if isinstance(raw_type, str):
+        try:
+            return ScriptParamType.from_string(raw_type).value
+        except KeyError:
+            try:
+                return int(raw_type)
+            except ValueError:
+                return default
+    try:
+        return int(raw_type)
+    except (ValueError, TypeError):
+        return default
+
+
+def _normalize_action_param_type(
+    raw_type: Any,
+    default: int = ActionParamType.STRING.value,
+) -> int:
+    """Normalize a raw action parameter type to its integer enum value."""
+    if isinstance(raw_type, str):
+        try:
+            return ActionParamType.from_string(raw_type).value
+        except KeyError:
+            try:
+                return int(raw_type)
+            except ValueError:
+                return default
+    try:
+        return int(raw_type)
+    except (ValueError, TypeError):
+        return default
+
+
 def _normalize_integration_properties(def_data: SingleJson, identifier: str) -> None:
     props: Any = (
         def_data.get("IntegrationProperties") or def_data.get("Parameters") or []
@@ -357,16 +395,10 @@ def _normalize_integration_properties(def_data: SingleJson, identifier: str) -> 
             prop.setdefault("PropertyDescription", prop.get("Description", ""))
             prop.setdefault("IsMandatory", prop.get("Mandatory", False))
             prop.setdefault("IntegrationIdentifier", identifier)
-            ptype = prop.get("PropertyType", prop.get("Type", 2))
-            if isinstance(ptype, str):
-                try:
-                    ptype = ScriptParamType.from_string(ptype).value
-                except KeyError:
-                    try:
-                        ptype = int(ptype)
-                    except ValueError:
-                        ptype = ScriptParamType.STRING.value
-            prop["PropertyType"] = ptype
+            prop["PropertyType"] = _normalize_script_param_type(
+                prop.get("PropertyType", prop.get("Type", 2)),
+                default=ScriptParamType.STRING.value,
+            )
 
     def_data["IntegrationProperties"] = props
 
@@ -446,16 +478,10 @@ def _normalize_action_def(item_def: SingleJson, identifier: str) -> None:
             ap.setdefault("Description", ap.get("Description", ""))
             ap.setdefault("IsMandatory", ap.get("Mandatory", False))
             ap.setdefault("OptionalValues", ap.get("OptionalValues") or [])
-            ap_type = ap.get("Type", 0)
-            if isinstance(ap_type, str):
-                try:
-                    ap_type = ActionParamType.from_string(ap_type).value
-                except KeyError:
-                    try:
-                        ap_type = int(ap_type)
-                    except ValueError:
-                        ap_type = ActionParamType.STRING.value
-            ap["Type"] = ap_type
+            ap["Type"] = _normalize_action_param_type(
+                ap.get("Type", 0),
+                default=ActionParamType.STRING.value,
+            )
             ap.setdefault("DefaultValue", ap.get("DefaultValue"))
 
 
@@ -482,16 +508,10 @@ def _normalize_connector_def(item_def: SingleJson, identifier: str) -> None:
             cp.setdefault("IsAdvanced", cp.get("IsAdvanced", False))
             cp.setdefault("DefaultValue", cp.get("DefaultValue"))
             cp.setdefault("Mode", cp.get("Mode", 0))
-            cp_type = cp.get("Type", 2)
-            if isinstance(cp_type, str):
-                try:
-                    cp_type = ScriptParamType.from_string(cp_type).value
-                except KeyError:
-                    try:
-                        cp_type = int(cp_type)
-                    except ValueError:
-                        cp_type = ScriptParamType.STRING.value
-            cp["Type"] = cp_type
+            cp["Type"] = _normalize_script_param_type(
+                cp.get("Type", 2),
+                default=ScriptParamType.STRING.value,
+            )
 
 
 def _normalize_job_def(item_def: SingleJson, identifier: str) -> None:
@@ -511,16 +531,10 @@ def _normalize_job_def(item_def: SingleJson, identifier: str) -> None:
             jp.setdefault("Description", jp.get("Description", ""))
             jp.setdefault("IsMandatory", jp.get("Mandatory", False))
             jp.setdefault("DefaultValue", jp.get("DefaultValue"))
-            jp_type = jp.get("Type", 2)
-            if isinstance(jp_type, str):
-                try:
-                    jp_type = ScriptParamType.from_string(jp_type).value
-                except KeyError:
-                    try:
-                        jp_type = int(jp_type)
-                    except ValueError:
-                        jp_type = ScriptParamType.STRING.value
-            jp["Type"] = jp_type
+            jp["Type"] = _normalize_script_param_type(
+                jp.get("Type", 2),
+                default=ScriptParamType.STRING.value,
+            )
 
 
 def _normalize_widget_def(item_def: SingleJson, _identifier: str) -> None:
