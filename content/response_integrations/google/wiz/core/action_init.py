@@ -44,7 +44,9 @@ def create_api_client(soar_action: ChronicleSOAR) -> api_client.WizApiClient:
         client_id=params.client_id,
         client_secret=params.client_secret,
         verify_ssl=params.verify_ssl,
+        auth_url=params.auth_url,
     )
+
     authenticator.authenticate_session(auth_params_for_session)
     authenticated_session: requests.Session = authenticator.session
 

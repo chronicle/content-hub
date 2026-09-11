@@ -25,8 +25,11 @@
 
 # ============================= IMPORTS ===================================== #
 from __future__ import annotations
-import requests
+
 import json
+import pathlib
+
+import requests
 
 from .FireEyeHXParser import FireEyeHXParser
 from .UtilsManager import get_earliest_event_at_datetime
@@ -44,70 +47,51 @@ SEARCH_LIMIT_HAS_BEEN_REACHED_STATUS_CODE = 409
 
 # ============================= CLASSES ===================================== #
 class FireEyeHXManagerError(Exception):
-    """
-    General Exception for FireEye HX manager
-    """
-
-    pass
+    """General Exception for FireEye HX manager."""
 
 
 class FireEyeHXNotFoundError(Exception):
-    """
-    Not Found Exception for FireEye HX manager
-    """
-
-    pass
+    """Not Found Exception for FireEye HX manager."""
 
 
 class FireEyeHXManager:
-    """
-    FireEye HX Manager
-    """
+    """FireEye HX Manager."""
 
-    def __init__(self, api_root, username, password, version="v3", verify_ssl=False):
+    def __init__(self, api_root, username, password, version="v3", verify_ssl=False) -> None:
         self.session = requests.Session()
         self.session.verify = verify_ssl
         self.session.headers = HEADERS
         self.session.auth = (username, password)
-        self.api_root = BASE_PATH.format(
-            api_root[:-1] if api_root.endswith("/") else api_root, version
-        )
+        self.api_root = BASE_PATH.format(api_root.removesuffix("/"), version)
         self.session.headers["X-FeApi-Token"] = self.get_token()
         self.parser = FireEyeHXParser()
         self.loaded_hosts = {}
 
     def get_token(self):
-        """
-        Get a token (equals to login)
-        """
+        """Get a token (equals to login)."""
         url = f"{self.api_root}/token"
         response = self.session.get(url)
         self.validate_response(response, "Unable to obtain token")
         token = response.headers.get("X-FeApi-Token")
 
         if not token:
-            raise FireEyeHXManagerError(
-                "Authentication failed. No X-FeApi-Token found."
-            )
+            msg = "Authentication failed. No X-FeApi-Token found."
+            raise FireEyeHXManagerError(msg)
 
         return token
 
-    def delete_token(self):
-        """
-        Delete a token (equals to logout)
-        """
+    def delete_token(self) -> None:
+        """Delete a token (equals to logout)."""
         old_session = self.session
         self.session = requests.Session()
         self.session.verify = old_session.verify
         self.session.headers = HEADERS
         self.session.headers["X-FeApi-Token"] = old_session.headers["X-FeApi-Token"]
         url = f"{self.api_root}/token"
-        response = self.session.delete(url)
+        self.session.delete(url)
 
-    def close_connection(self):
-        """
-        Close all active connection
-        """
+    def close_connection(self) -> None:
+        """Close all active connection."""
         self.delete_token()
 
     def get_hosts(
@@ -123,8 +107,7 @@ class FireEyeHXManager:
         time_zone=None,
         query=None,
     ):
-        """
-        Get hosts
+        """Get hosts
         :param limit: {int} The limit of hosts to search for
         :param has_active_threats: {bool} Whether the host has active threats
         :param has_alerts: {bool} Whether the host has alerts
@@ -137,7 +120,7 @@ class FireEyeHXManager:
         :param time_zone: {str} Filter by the timezone of the host
         :param query: {str} Searches all hosts connected to the specified Endpoint Security server.
             The search_term can be any hostname, IP address, or agent ID.
-        :return: {list} List of found hosts
+        :return: {list} List of found hosts.
         """
         url = f"{self.api_root}/hosts"
 
@@ -171,37 +154,30 @@ class FireEyeHXManager:
         return [self.parser.build_siemplify_host_obj(host) for host in hosts]
 
     def get_host_by_name(self, host_name):
-        """
-        Get host by name
+        """Get host by name
         :param host_name: {str} The host name
-        :return: {dict} The host
+        :return: {dict} The host.
         """
         try:
             # Return the first host that matches the host name
             return self.get_hosts(host_name=host_name, limit=1)[0]
         except Exception:
-            raise FireEyeHXNotFoundError(f"Host {host_name} was not found.")
+            msg = f"Host {host_name} was not found."
+            raise FireEyeHXNotFoundError(msg)
 
     def get_hosts_by_ip(self, ip_address):
-        """
-        Get hosts by IP Address
+        """Get hosts by IP Address
         :param ip_address: {str} The IP address
-        :return: {[host]} The matching hosts
+        :return: {[host]} The matching hosts.
         """
         hosts = self.get_hosts(query=ip_address)
-        matching_hosts = []
 
-        for host in hosts:
-            if host.primary_ip_address == ip_address:
-                matching_hosts.append(host)
-
-        return matching_hosts
+        return [host for host in hosts if host.primary_ip_address == ip_address]
 
     def get_host_by_agent_id(self, agent_id):
-        """
-        Get host by agent id
+        """Get host by agent id
         :param agent_id: {str} The agent id
-        :return: {dict} The matching host
+        :return: {dict} The matching host.
         """
         url = f"{self.api_root}/hosts/{agent_id}"
         response = self.session.get(url)
@@ -209,93 +185,117 @@ class FireEyeHXManager:
         return self.parser.build_siemplify_host_obj(response.json().get("data", {}))
 
     def get_all_agents_ids(self):
-        """
-        Get a list of all agents ids
-        :return: {list} The agent ids
+        """Get a list of all agents ids
+        :return: {list} The agent ids.
         """
         hosts = self.get_hosts()
         return [host._id for host in hosts]
 
     def get_agent_id(self, host_name):
-        """
-        Get agent id by host name
+        """Get agent id by host name
         :param host_name: {str} The host name
-        :return: {str} The matching agent id
+        :return: {str} The matching agent id.
         """
         host = self.get_host_by_name(host_name)
         return host._id
 
-    def contain_host_by_id(self, agent_id, approve=False):
-        """
-        Contain a host by id
+    def contain_host_by_id(self, agent_id, approve=False) -> bool:
+        """Contain a host by id
         :param agent_id: {str} The agent id of the host to contain
         :param approve: {bool} Whether to approve containment or not
         :return: {bool} True if successful, exception otherwise.
         """
         url = f"{self.api_root}/hosts/{agent_id}/containment"
 
-        if approve:
-            payload = {"state": "contain"}
-
-        else:
-            payload = None
+        payload = {"state": "contain"} if approve else None
 
         response = self.session.post(url, json=payload)
         self.validate_response(response, f"Unable to contain host {agent_id}")
         return True
 
     def contain_host_by_name(self, host_name):
-        """
-        Contain a host by hostname
+        """Contain a host by hostname
         :param host_name: {str} The hostname of the host to contain
         :return: {bool} True if successful, exception otherwise.
         """
         agent_id = self.get_agent_id(host_name)
         return self.contain_host_by_id(agent_id)
 
-    def cancel_containment_by_id(self, agent_id):
-        """
-        Cancel containment by agent id
+    def cancel_containment_by_id(self, agent_id) -> bool:
+        """Cancel containment by agent id
         :param agent_id: {str} The agent id of the host to un-contain
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         url = f"{self.api_root}/hosts/{agent_id}/containment"
         response = self.session.delete(url)
-        self.validate_response(
-            response, f"Unable to cancel containment for host {agent_id}"
-        )
+        self.validate_response(response, f"Unable to cancel containment for host {agent_id}")
         return True
 
     def cancel_containment_by_name(self, host_name):
-        """
-        Cancel containment by hostname
+        """Cancel containment by hostname
         :param host_name: {str} The hostname of the host to un-contain
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         agent_id = self.get_agent_id(host_name)
         return self.cancel_containment_by_id(agent_id)
 
     def approve_containment_by_name(self, host_name):
-        """
-        Approve containment by hostname
+        """Approve containment by hostname
         :param host_name: {str} The hostname of the host to approve its containment
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         agent_id = self.get_agent_id(host_name)
         return self.approve_containment_by_id(agent_id)
 
-    def approve_containment_by_id(self, agent_id):
-        """
-        Approve containment by agent id
+    def approve_containment_by_id(self, agent_id) -> bool:
+        """Approve containment by agent id
         :param agent_id: {str} The agent id of the host to approve its containment
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         url = f"{self.api_root}/hosts/{agent_id}/containment"
         response = self.session.patch(url, json={"state": "contain"})
-        self.validate_response(
-            response, f"Unable to approve containment for host {agent_id}"
-        )
+        self.validate_response(response, f"Unable to approve containment for host {agent_id}")
         return True
+
+    def get_containment_status(self, agent_id):
+        """Get containment status for a host by agent id
+        :param agent_id: {str} The agent id of the host
+        :return: {dict} Containment status data.
+        """
+        url = f"{self.api_root}/hosts/{agent_id}/containment"
+        response = self.session.get(url)
+        self.validate_response(response, f"Unable to get containment status for host {agent_id}")
+        return response.json().get("data", {})
+
+    def resolve_agent_id_from_entities(self, target_entities, agent_id_param=None):
+        """Resolve agent ID from explicit parameter or target entities (HOSTNAME / ADDRESS)
+        :param target_entities: {list} Target entities from Siemplify
+        :param agent_id_param: {str} Explicit Agent Id parameter if provided
+        :return: {str|None} Resolved agent ID.
+        """
+        if agent_id_param and str(agent_id_param).strip():
+            return str(agent_id_param).strip()
+
+        hostname_entities = [e.identifier for e in target_entities if getattr(e, "entity_type", "") == "HOSTNAME"]
+        for hostname in hostname_entities:
+            try:
+                agent_id = self.get_agent_id(hostname)
+                if agent_id:
+                    return agent_id
+            except FireEyeHXNotFoundError:
+                continue
+
+        ip_entities = [e.identifier for e in target_entities if getattr(e, "entity_type", "") == "ADDRESS"]
+        for ip in ip_entities:
+            try:
+                hosts = self.get_hosts_by_ip(ip)
+                if hosts:
+                    latest_host = max(hosts, key=lambda h: h.last_poll_timestamp)
+                    return latest_host._id
+            except FireEyeHXNotFoundError:
+                continue
+
+        return None
 
     def get_alerts(
         self,
@@ -310,8 +310,7 @@ class FireEyeHXManager:
         reported_at=None,
         source=None,
     ):
-        """
-        Get alerts
+        """Get alerts
         :param limit: {int} The limit of alerts to search for
         :param has_share_mode: {str} Filter alerts that result from indicators with the specified
         share mode. Available values:
@@ -333,7 +332,7 @@ class FireEyeHXManager:
             - "EXD" (exploit detection)
             - "MAL" (malware alert)
             - dynamic source types such as RWARE, GEN, and so on.
-        :return: {[Alert]}
+        :return: {[Alert]}.
         """
         url = f"{self.api_root}/alerts"
         url_params = {
@@ -350,9 +349,7 @@ class FireEyeHXManager:
         }
 
         if reported_at:
-            url_params["filterQuery"] = json.dumps(
-                {"operator": "gte", "arg": [reported_at], "field": "reported_at"}
-            )
+            url_params["filterQuery"] = json.dumps({"operator": "gte", "arg": [reported_at], "field": "reported_at"})
 
         # Remove None values
         url_params = {k: v for k, v in list(url_params.items()) if v is not None}
@@ -373,18 +370,15 @@ class FireEyeHXManager:
         return [self.parser.build_siemplify_alert_obj(alert) for alert in alerts]
 
     def get_host_information(self, siemplify, host_id):
-        """
-        Get host information
+        """Get host information
         :param siemplify: {Siemplify} Siemplify object.
         :param host_id: {str} FireEye HX host id.
-        :return: {dict} host information
+        :return: {dict} host information.
         """
         host_data = self.read_host_info_from_loaded_data(host_id)
 
         if not host_data:
-            siemplify.LOGGER.info(
-                f"Host info for host {host_id} is not loaded. Sending request to load"
-            )
+            siemplify.LOGGER.info(f"Host info for host {host_id} is not loaded. Sending request to load")
             url = f"{self.api_root}/hosts/{host_id}"
             response = self.session.get(url)
             self.validate_response(response, "Unable to get host information")
@@ -396,28 +390,25 @@ class FireEyeHXManager:
         return host_data
 
     def read_host_info_from_loaded_data(self, host_id):
-        """
-        Read host info from loaded data
+        """Read host info from loaded data
         :param host_id: {str} The host id
-        :return: {dict} Host info
+        :return: {dict} Host info.
         """
         return self.loaded_hosts.get(host_id, {})
 
-    def save_host_info(self, host_id, host_data):
-        """
-        Save host info
+    def save_host_info(self, host_id, host_data) -> None:
+        """Save host info
         :param host_id: {str} The host id
-        :param host_data: {dict} Host information
+        :param host_data: {dict} Host information.
         """
         self.loaded_hosts[host_id] = host_data
 
     def get_alerts_for_connector(self, start_time, limit, alert_type):
-        """
-        Get alerts
+        """Get alerts
         :param start_time: {str} Filter alerts that result from indicators with the specified
         :param limit: {int} A value Specified a number of alerts.
         :param alert_type: {str} FireEye HX alert types to ingest.
-        :return: {[Alert]}
+        :return: {[Alert]}.
         """
         url = f"{self.api_root}/alerts"
         url_params = {
@@ -425,9 +416,7 @@ class FireEyeHXManager:
             "limit": limit or LIMIT,
             "offset": 0,
             "sort": "reported_at",
-            "filterQuery": json.dumps(
-                {"operator": "gt", "arg": [start_time], "field": "reported_at"}
-            ),
+            "filterQuery": json.dumps({"operator": "gt", "arg": [start_time], "field": "reported_at"}),
         }
 
         response = self.session.get(url, params=url_params)
@@ -439,44 +428,34 @@ class FireEyeHXManager:
 
         return [self.parser.build_siemplify_alert_obj(alert) for alert in alerts]
 
-    def set_alerts_groups_ids(self, alerts):
-        """
-        Set group ids to alerts
-        :param alerts: The list of alerts
+    def set_alerts_groups_ids(self, alerts) -> None:
+        """Set group ids to alerts
+        :param alerts: The list of alerts.
         """
         earliest_event_at = get_earliest_event_at_datetime(alerts)
         group_ids = self.get_alerts_groups_ids(earliest_event_at)
-        ids_pairs = []
 
-        for group_id in group_ids:
-            ids_pairs.append((group_id, self.get_group_alerts_ids(group_id)))
+        ids_pairs = [(group_id, self.get_group_alerts_ids(group_id)) for group_id in group_ids]
 
         for alert in alerts:
             group_id = next(
-                (
-                    group_id
-                    for group_id, alerts_ids in ids_pairs
-                    if alert.get("_id") in alerts_ids
-                ),
+                (group_id for group_id, alerts_ids in ids_pairs if alert.get("_id") in alerts_ids),
                 "",
             )
             alert["group_id"] = group_id
 
     def get_alerts_groups_ids(self, earliest_event_time):
-        """
-        Get alert groups ids
+        """Get alert groups ids
         :param earliest_event_time: {str} The earliest event time to fetch data from
-        :return: {list} The list of alert groups ids
+        :return: {list} The list of alert groups ids.
         """
         url = f"{self.api_root}/alert_groups"
         params = {
-            "filterQuery": json.dumps(
-                {
-                    "operator": "gte",
-                    "arg": [earliest_event_time],
-                    "field": "last_event_at",
-                }
-            )
+            "filterQuery": json.dumps({
+                "operator": "gte",
+                "arg": [earliest_event_time],
+                "field": "last_event_at",
+            })
         }
 
         response = self.session.get(url, params=params)
@@ -485,10 +464,9 @@ class FireEyeHXManager:
         return [alert_group.get("_id") for alert_group in alert_groups]
 
     def get_group_alerts_ids(self, group_id):
-        """
-        Get group alerts ids
+        """Get group alerts ids
         :param group_id: {str} The group id
-        :return: {list} The list of alert ids
+        :return: {list} The list of alert ids.
         """
         url = f"{self.api_root}/alert_groups/{group_id}/alerts"
         response = self.session.get(url)
@@ -499,29 +477,26 @@ class FireEyeHXManager:
         ]
 
     def get_alert_by_id(self, alert_id):
-        """
-        Get alert by id
+        """Get alert by id
         :param alert_id: {str} The alert id
-        :return: {dict} The alert info
+        :return: {dict} The alert info.
         """
         url = f"{self.api_root}/alerts/{alert_id}"
         response = self.session.get(url)
         self.validate_response(response, f"Alert {alert_id} was not found")
         return self.parser.build_siemplify_alert_obj(response.json().get("data", {}))
 
-    def logout(self):
-        """
-        Logout from FireEye HX
-        :return: {bool} True if successful, exception otherwise
+    def logout(self) -> bool:
+        """Logout from FireEye HX
+        :return: {bool} True if successful, exception otherwise.
         """
         url = f"{self.api_root}/token"
         response = self.session.delete(url)
         self.validate_response(response, "Failed to logout with token")
         return True
 
-    def suppress_alert(self, alert_id):
-        """
-        Suppress an alert
+    def suppress_alert(self, alert_id) -> bool:
+        """Suppress an alert
         :param alert_id: {str} The id of the alert to suppress
         :return: {bool} True if successful, exception otherwise.
         """
@@ -531,18 +506,15 @@ class FireEyeHXManager:
         return True
 
     def get_indicator(self, category, name):
-        """
-        Get an indicator by category and name
+        """Get an indicator by category and name
         :param category: {str} The category name
         :param name: {str} The name of the indicator
-        :return: {dict} The indicator info
+        :return: {dict} The indicator info.
         """
         url = f"{self.api_root}/indicators/{category}/{name}"
         response = self.session.get(url)
         self.validate_response(response, f"Unable to get indicator {category}-{name}")
-        return self.parser.build_siemplify_indicator_obj(
-            response.json().get("data", {})
-        )
+        return self.parser.build_siemplify_indicator_obj(response.json().get("data", {}))
 
     def get_indicators(
         self,
@@ -554,8 +526,7 @@ class FireEyeHXManager:
         created_by=None,
         alerted=None,
     ):
-        """
-        Get indicators
+        """Get indicators
         :param category: {str} The indicator category
         :param search: {str} The searchTerm can be any name, category, signature, source, or
         condition value.
@@ -566,7 +537,7 @@ class FireEyeHXManager:
         :param sort: {str} Sorts the results by the specified field in ascending order.
         :param created_by: {str} Person who created the indicator
         :param alerted: {bool} Whether the indicator resulted in alerts
-        :return: {list} The found indicators
+        :return: {list} The found indicators.
         """
         url = f"{self.api_root}/indicators"
 
@@ -593,22 +564,16 @@ class FireEyeHXManager:
         else:
             indicators = self.paginate(url, url_params, "Unable to get indicators")
 
-        return [
-            self.parser.build_siemplify_indicator_obj(indicator)
-            for indicator in indicators
-        ]
+        return [self.parser.build_siemplify_indicator_obj(indicator) for indicator in indicators]
 
-    def get_indicator_conditions(
-        self, category, name, limit=None, enabled=None, has_alerts=None
-    ):
-        """
-        Get indicator's conditions
+    def get_indicator_conditions(self, category, name, limit=None, enabled=None, has_alerts=None):
+        """Get indicator's conditions
         :param category: {str} The indicator category
         :param name: {str} The indicator name
         :param limit: {int} The limit of indicators to search for
         :param enabled: {bool} Whether the condition is enabled or not
         :param has_alerts: {bool} Wheter the condition has raised alerts or not
-        :return: {list} List of the indicator's conditions
+        :return: {list} List of the indicator's conditions.
         """
         url = f"{self.api_root}/indicators/{category}/{name}/conditions"
         url_params = {
@@ -630,24 +595,20 @@ class FireEyeHXManager:
         return self.paginate(url, url_params, "Unable to get indicator conditions")
 
     def get_all_enabled_conditions(self, indicator_category, indicator_name):
-        """
-        Get the enabled conditions of an indicator
+        """Get the enabled conditions of an indicator
         :param indicator_category: {str} The indicator category
         :param indicator_name: {str} The indicator name
-        :return: {list} List of the indicator's enabled conditions
+        :return: {list} List of the indicator's enabled conditions.
         """
-        return self.get_indicator_conditions(
-            indicator_category, indicator_name, enabled=True
-        )
+        return self.get_indicator_conditions(indicator_category, indicator_name, enabled=True)
 
     def search(self, query, host_set=None, hosts=None, exhaustive=False):
-        """
-        Search hosts
+        """Search hosts
         :param query: {str} The search query
         :param host_set:
         :param hosts: {list} Hosts to search among
         :param exhaustive: {bool}
-        :return: {dict} The created search info
+        :return: {dict} The created search info.
         """
         url = f"{self.api_root}/searches"
         data = {"query": query, "exhaustive": exhaustive}
@@ -663,21 +624,17 @@ class FireEyeHXManager:
         return response.json().get("data", {})
 
     def get_search_information(self, search_id):
-        """
-        Get search information
+        """Get search information
         :param search_id: {str} The search id
-        :return: {dict} The search info
+        :return: {dict} The search info.
         """
         url = f"{self.api_root}/searches/{search_id}"
         response = self.session.get(url)
-        self.validate_response(
-            response, f"Unable to get search {search_id} information"
-        )
+        self.validate_response(response, f"Unable to get search {search_id} information")
         return response.json().get("data", {})
 
     def is_search_completed(self, search_id):
-        """
-        Check whether a search is completed or not
+        """Check whether a search is completed or not
         :param search_id: {str} The search id
         :return: {bool} True if completed, False otherwise.
         """
@@ -690,19 +647,17 @@ class FireEyeHXManager:
         return search_info.get("state") == STOPPED_STATE or pending == 0
 
     def get_search_results(self, search_id):
-        """
-        Get search results
+        """Get search results
         :param search_id: {str} The search id
-        :return: {list} List of the results
+        :return: {list} List of the results.
         """
         url = f"{self.api_root}/searches/{search_id}/results"
         response = self.session.get(url)
         self.validate_response(response, f"Unable to get search {search_id} results")
         return response.json().get("entries", [])
 
-    def stop_search(self, search_id):
-        """
-        Stop a search
+    def stop_search(self, search_id) -> bool:
+        """Stop a search
         :param search_id: {str} The search id to stop
         :return: {bool} True if successful, exception otherwise.
         """
@@ -711,9 +666,8 @@ class FireEyeHXManager:
         self.validate_response(response, f"Unable to stop search {search_id}")
         return True
 
-    def delete_search(self, search_id):
-        """
-        Delete a search
+    def delete_search(self, search_id) -> bool:
+        """Delete a search
         :param search_id: {str} The search id to delete
         :return: {bool} True if successful, exception otherwise.
         """
@@ -723,12 +677,11 @@ class FireEyeHXManager:
         return True
 
     def paginate(self, url, params, error_message):
-        """
-        Paginate through results and get all results
+        """Paginate through results and get all results
         :param url: {str} The url to target at
         :param params: {str} The request params
         :param error_message: {stt} The error message to display on failure
-        :return: {list} The found results
+        :return: {list} The found results.
         """
         response = self.session.get(url, params=params)
         self.validate_response(response, error_message)
@@ -743,16 +696,13 @@ class FireEyeHXManager:
 
         return results
 
-    def get_file_acquisitions_for_host(
-        self, agent_id, search_term=None, limit=None, filter_field=None
-    ):
-        """
-        Get list of file acquisitions for a host.
+    def get_file_acquisitions_for_host(self, agent_id, search_term=None, limit=None, filter_field=None):
+        """Get list of file acquisitions for a host.
         :param agent_id: host's agent id {string}
         :param search_term: {string} Searches all file acquisitions for hosts connected to the specified Endpoint Security server. The search_term can be any condition value.
         :param limit: {integer} Specifies how many records are returned. The limit_value must be an unsigned 32-bit integer. The default is 50.
         :param filter_field: Lists only results with the specified field value, results can be filtered by external correlation identifier (external_id).
-        :return: list of entries {list}
+        :return: list of entries {list}.
         """
         url = f"{self.api_root}/hosts/{agent_id}/files"
         url_params = {
@@ -771,23 +721,108 @@ class FireEyeHXManager:
 
         else:
             # Paginate through results and return the conditions
-            acquisitions = self.paginate(
-                url, url_params, "Error getting file acquisitions for host"
-            )
+            acquisitions = self.paginate(url, url_params, "Error getting file acquisitions for host")
 
-        return [
-            self.parser.build_siemplify_file_acquisition_obj(acquisition)
-            for acquisition in acquisitions
-        ]
+        return [self.parser.build_siemplify_file_acquisition_obj(acquisition) for acquisition in acquisitions]
+
+    def get_file_acquisition_by_id(self, acquisition_id):
+        """Get file acquisition details by acquisition id
+        :param acquisition_id: {str|int} File acquisition ID
+        :return: {dict} File acquisition data.
+        """
+        url = f"{self.api_root}/acqs/files/{acquisition_id}"
+        response = self.session.get(url)
+        self.validate_response(response, f"Unable to fetch status for file acquisition {acquisition_id}")
+        return response.json().get("data", {})
+
+    def delete_file_acquisition(self, acquisition_id) -> bool:
+        """Delete a file acquisition by acquisition id
+        :param acquisition_id: {str|int} File acquisition ID
+        :return: {bool} True if successful.
+        """
+        url = f"{self.api_root}/acqs/files/{acquisition_id}"
+        response = self.session.delete(url)
+        self.validate_response(response, f"Unable to delete acquisition {acquisition_id}")
+        return True
+
+    def create_file_acquisition(
+        self,
+        agent_id,
+        file_path,
+        file_name,
+        external_id=None,
+        use_api_mode=None,
+        comment=None,
+    ):
+        """Create a file acquisition task on an agent host
+        :param agent_id: {str} Target agent ID
+        :param file_path: {str} Directory path
+        :param file_name: {str} File name
+        :param external_id: {str} External correlation ID
+        :param use_api_mode: {bool} API mode flag
+        :param comment: {str} Comment string
+        :return: {dict} Created acquisition object.
+        """
+        url = f"{self.api_root}/hosts/{agent_id}/files"
+        payload = {
+            "req_path": file_path,
+            "req_filename": file_name,
+        }
+        if external_id:
+            payload["external_id"] = external_id
+        if use_api_mode is not None:
+            payload["req_use_api"] = use_api_mode
+        if comment:
+            payload["comment"] = comment
+
+        response = self.session.post(url, json=payload)
+        if response.status_code == 404:
+            content = response.content.decode("utf-8", errors="ignore").lower()
+            if "host not found" in content:
+                msg = f"HTTP Error 404: Host with the specified agent id ({agent_id}) was not found"
+                raise FireEyeHXNotFoundError(
+                    msg
+                )
+            if "device not found" in content:
+                msg = "HTTP Error 404: The specified device was not found by device-proxy. It may have a non-Operational status."
+                raise FireEyeHXNotFoundError(
+                    msg
+                )
+            msg = f"HTTP Error 404: The URL {getattr(response, 'url', '')} was not found."
+            raise FireEyeHXNotFoundError(msg)
+
+        if response.status_code == 405:
+            msg = "HTTP Error 405: File acquisitions are not supported by the target host"
+            raise FireEyeHXManagerError(msg)
+
+        self.validate_response(response, f"Unable to create file acquisition for agent {agent_id}")
+        return response.json().get("data", {})
+
+    def download_file_acquisition(self, acquisition_id, output_path):
+        """Download file acquisition zip archive to output_path.
+        :param acquisition_id: {str|int} File acquisition ID
+        :param output_path: {str} Path to save the downloaded zip package
+        :return: {str} Path to the saved zip file.
+        """
+        url = f"{self.api_root}/acqs/files/{acquisition_id}.zip"
+        res = self.session.get(
+            url,
+            stream=True,
+            headers={"Accept": "application/zip, application/octet-stream, application/json"},
+        )
+        self.validate_response(res, f"Unable to download acquisition package {acquisition_id}")
+        with pathlib.Path(output_path).open("wb") as f:
+            for chunk in res.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+        return output_path
 
     def get_alerts_by_alert_group_id(self, alert_group_id, limit=None):
-        """
-        Function to get alerts by alert group ID
+        """Function to get alerts by alert group ID
         :param alert_group_id {str}: Alert Group ID to fetch alerts from
         :param limit {int}: Limit of number of alerts to fetch
-        :return: List Of GroupAlerts objects {list}
+        :return: List Of GroupAlerts objects {list}.
         """
-
         url = f"{self.api_root}/alert_groups/{alert_group_id}/alerts"
         url_params = {"offset": 0, "limit": limit or LIMIT}
         url_params = {k: v for k, v in list(url_params.items()) if v is not None}
@@ -795,9 +830,7 @@ class FireEyeHXManager:
         if limit:
             # If limit is specified - return the found results
             response = self.session.get(url, params=url_params)
-            self.validate_response(
-                response, f"Error getting alerts for given group id {alert_group_id}"
-            )
+            self.validate_response(response, f"Error getting alerts for given group id {alert_group_id}")
             alerts = response.json().get("data", {}).get("entries", [])
 
         else:
@@ -810,18 +843,14 @@ class FireEyeHXManager:
 
         return [self.parser.build_siemplify_group_alert_obj(alert) for alert in alerts]
 
-    def ackowledge_alert_groups(
-        self, list_of_alert_ids, ack_comment, acknowledgement, limit=None
-    ):
-        """
-        Function that acknowledges the alert group
+    def ackowledge_alert_groups(self, list_of_alert_ids, ack_comment, acknowledgement, limit=None):
+        """Function that acknowledges the alert group
         :param list_of_alert_ids {list}: List of Alert IDs
         :param ack_comment {int}: Acknowledgement Comment
         :param acknowledgement {bool}: True is we acknowledge False it not
         :param limit {bool}: Limit of results to return
-        :return: Ack object {Ack}
+        :return: Ack object {Ack}.
         """
-
         url = f"{self.api_root}/alert_groups"
         payload = {
             "alert_ids": list_of_alert_ids,
@@ -836,37 +865,30 @@ class FireEyeHXManager:
             payload["acknowledgement"]["comment"] = ack_comment
 
         response = self.session.patch(url, json=payload, params=params)
-        self.validate_response(
-            response, "Error occured when trying to acknowledge alerts"
-        )
+        self.validate_response(response, "Error occured when trying to acknowledge alerts")
         ack_response = response.json().get("data", {})
 
         return self.parser.build_siemplify_ack_obj(ack_response)
 
     def get_alert_group_details(self, alert_group_id):
-        """
-        Function to get details about an alert group
+        """Function to get details about an alert group
         :param alert_group_id {str}: Alert Group ID to fetch details about
-        :return: GroupAlerts objects {GroupAlerts}
+        :return: GroupAlerts objects {GroupAlerts}.
         """
-
         url = f"{self.api_root}/alert_groups/{alert_group_id}"
 
         response = self.session.get(url)
-        self.validate_response(
-            response, f"Error getting details for given group id {alert_group_id}"
-        )
+        self.validate_response(response, f"Error getting details for given group id {alert_group_id}")
         alert_details = response.json().get("data", {})
 
         return self.parser.build_siemplify_group_obj(alert_details)
 
     def get_alert_groups(self, host_id, acknowledgement, limit):
-        """
-        Get alert groups
+        """Get alert groups
         :param host_id: {str} The host id.
         :param limit: {int} A number of alert groups to return.
         :param acknowledgement: {bool} Whether to return only acknowledged/unacknowledged.
-        :return: {[Group]}
+        :return: {[Group]}.
         """
         url = f"{self.api_root}/alert_groups"
         url_params = {
@@ -889,35 +911,36 @@ class FireEyeHXManager:
         return [self.parser.build_siemplify_group_obj(group) for group in alert_groups]
 
     @staticmethod
-    def validate_response(response, error_msg="An error occurred"):
-        """
-        Validate a response
+    def validate_response(response, error_msg="An error occurred") -> None:
+        """Validate a response
         :param response: {requests.Response} The response
-        :param error_msg: {unicode} The error message to display on failure
+        :param error_msg: {unicode} The error message to display on failure.
         """
         try:
             response.raise_for_status()
 
         except requests.HTTPError as error:
             if response.status_code == SEARCH_LIMIT_HAS_BEEN_REACHED_STATUS_CODE:
-                raise FireEyeHXManagerError("Search limit have been reached")
+                msg = "Search limit have been reached"
+                raise FireEyeHXManagerError(msg)
 
             try:
-                error_messages = ", ".join(
-                    [err.get("message") for err in response.json().get("details", [])]
-                )
+                error_messages = ", ".join([err.get("message") for err in response.json().get("details", [])])
 
                 if not error_messages:
                     error_messages = response.json()["message"]
 
                 if response.status_code == 404:
-                    raise FireEyeHXNotFoundError(f"{error_msg}: {error_messages}")
+                    msg = f"{error_msg}: {error_messages}"
+                    raise FireEyeHXNotFoundError(msg)
 
-                raise FireEyeHXManagerError(f"{error_msg}: {error_messages}")
+                msg = f"{error_msg}: {error_messages}"
+                raise FireEyeHXManagerError(msg)
 
             except (FireEyeHXManagerError, FireEyeHXNotFoundError):
                 raise
 
             except Exception:
                 # Unable to parse JSON - return content of response
-                raise FireEyeHXManagerError(f"{error_msg}: {error} {response.content}")
+                msg = f"{error_msg}: {error} {response.content}"
+                raise FireEyeHXManagerError(msg)
