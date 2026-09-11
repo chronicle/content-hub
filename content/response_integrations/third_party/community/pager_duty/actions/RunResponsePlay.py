@@ -14,12 +14,13 @@ def main():
 
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
     api_token = configurations["api_key"]
+    verify_ssl = str(configurations.get("Verify SSL", "true")).lower() == "true"
     user_email = siemplify.extract_action_param("Email").strip()
     response_plays_id = siemplify.extract_action_param("Response ID").strip()
     user_id = siemplify.extract_action_param("Incident_ID")
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
-    pager_duty = PagerDutyManager(api_token)
+    pager_duty = PagerDutyManager(api_token, verify_ssl=verify_ssl)
 
     try:
         siemplify.LOGGER.info("Starting the incident response ")

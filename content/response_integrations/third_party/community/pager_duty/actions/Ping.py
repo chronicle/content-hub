@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_configuration_param
@@ -12,9 +12,7 @@ if TYPE_CHECKING:
     from typing import NoReturn
 
 
-SUCCESS_MESSAGE: str = (
-    "Successfully connected to the PagerDuty API."
-)
+SUCCESS_MESSAGE: str = "Successfully connected to the PagerDuty API."
 ERROR_MESSAGE: str = "Failed to connect to the PagerDuty API."
 
 
@@ -31,12 +29,19 @@ class Ping(Action):
             param_name="api_key",
             is_mandatory=True,
         )
+        self.verify_ssl = extract_configuration_param(
+            self.soar_action,
+            provider_name=INTEGRATION_NAME,
+            param_name="Verify SSL",
+            default_value=True,
+            input_type=bool,
+        )
 
-    def _init_api_clients(self):
+    def _init_api_clients(self) -> PagerDutyManager:
         """Prepare API client"""
-        return PagerDutyManager(self.api_key)
+        return PagerDutyManager(self.api_key, verify_ssl=self.verify_ssl)
 
-    def _perform_action(self, _=None) -> None:
+    def _perform_action(self, _: Any = None) -> None:
         self.api_client.test_connectivity()
 
 

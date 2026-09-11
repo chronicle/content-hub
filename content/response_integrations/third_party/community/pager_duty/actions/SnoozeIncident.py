@@ -15,11 +15,12 @@ def main():
 
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
     api_token = configurations["api_key"]
+    verify_ssl = str(configurations.get("Verify SSL", "true")).lower() == "true"
     email_from = siemplify.extract_action_param("Email")
     incident_id = siemplify.extract_action_param("IncidentID")
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
-    pager_duty = PagerDutyManager(api_token)
+    pager_duty = PagerDutyManager(api_token, verify_ssl=verify_ssl)
     try:
         siemplify.LOGGER.info("Starting Snoozing process")
         incident = pager_duty.snooze_incident(email_from, incident_id)

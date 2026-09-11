@@ -1,0 +1,560 @@
+from __future__ import annotations
+
+from pager_duty.core.utils import (
+    clean_pagerduty_comment,
+    clean_secops_comment,
+    escape_comment_for_secops,
+    sanitize_case_comments,
+)
+from pager_duty.jobs.SyncIncidents import SyncIncidents
+from pager_duty.tests.core.product import PagerDuty
+from pager_duty.tests.core.session import PagerDutySession
+from TIPCommon.base.job.job_case import JobCase
+from TIPCommon.data_models import AlertCard
+
+
+def test_map_product_data_to_case_success(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_map: JobCase,
+) -> None:
+    """Tests mapping product data to case successfully."""
+    pagerduty.set_incidents({
+        "incidents": [{"id": "P123", "status": "resolved", "incident_key": "key1"}]
+    })
+
+    job.map_product_data_to_case(job_case_map)
+
+    assert len(script_session.request_history) == 2
+    req_path_0 = script_session.request_history[0].request.url.path
+    req_path_1 = script_session.request_history[1].request.url.path
+    assert req_path_0.endswith("/incidents/P123")
+    assert req_path_1.endswith("/incidents/P123/notes")
+    assert "alert_1" in job_case_map.alert_metadata
+    assert job_case_map.alert_metadata["alert_1"].status == "resolved"
+
+
+def test_map_product_data_to_case_not_found_success(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_map: JobCase,
+) -> None:
+    """Tests mapping product data to case when incident is not found."""
+    job.map_product_data_to_case(job_case_map)
+
+    assert len(script_session.request_history) == 1
+    req_path = script_session.request_history[0].request.url.path
+    assert req_path.endswith("/incidents/P123")
+    assert "alert_1" not in job_case_map.alert_metadata
+
+
+def test_sync_status_soar_to_pagerduty_success(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_sync: JobCase,
+) -> None:
+    """Tests syncing status from SOAR to PagerDuty successfully."""
+    pagerduty.set_incidents({
+        "incidents": [
+            {"id": "P123", "status": "triggered", "incident_key": "key1"}
+        ]
+    })
+
+    job.sync_status(job_case_sync)
+
+    assert len(script_session.request_history) == 2
+    req_path_0 = script_session.request_history[0].request.url.path
+    req_path_1 = script_session.request_history[1].request.url.path
+    assert req_path_0.endswith("/incidents/P123/notes")
+    assert req_path_1.endswith("/incidents/P123")
+
+    incident = pagerduty.get_incident("P123")
+    assert incident["status"] == "resolved"
+
+
+def test_sync_status_pagerduty_to_soar_close_case_success(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_sync_close_case: JobCase,
+) -> None:
+    """Tests syncing status from PagerDuty to SOAR resulting in closing the
+    alert.
+    """
+    job.sync_status(job_case_sync_close_case)
+
+    assert job.soar_job.close_alert.called
+    assert job._remove_synced_entries.called
+
+
+def test_sync_status_pagerduty_to_soar_close_alert_success(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_sync_close_alert: JobCase,
+) -> None:
+    """Tests syncing status from PagerDuty to SOAR (close alert)."""
+    job.sync_status(job_case_sync_close_alert)
+
+    assert job.soar_job.close_alert.called
+    assert job._remove_synced_entries.called
+
+
+def test_sync_status_soar_to_pagerduty_failure(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_failing_api: SyncIncidents,
+    job_case_sync: JobCase,
+) -> None:
+    """Tests syncing status from SOAR to PagerDuty with API failure handling."""
+    pagerduty.set_incidents({
+        "incidents": [
+            {"id": "P123", "status": "triggered", "incident_key": "key1"}
+        ]
+    })
+
+    job_failing_api.sync_status(job_case_sync)
+
+    assert job_failing_api.logger.error.called
+
+
+def test_sync_status_pagerduty_to_soar_close_alert_failure_retains_tracking(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_failing_soar_close_alert: SyncIncidents,
+    job_case_sync_close_alert: JobCase,
+) -> None:
+    """Tests that close_alert failure does not remove the synced tracking entry."""
+    job_failing_soar_close_alert.sync_status(job_case_sync_close_alert)
+
+    assert not job_failing_soar_close_alert._remove_synced_entries.called
+    assert job_failing_soar_close_alert.logger.error.called
+
+
+def test_sync_comments_case_closed_skips(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_closed: JobCase,
+) -> None:
+    """Tests that sync_comments skips when the case is already closed."""
+    job.sync_comments(job_case_closed)
+
+    assert not job.soar_job.add_comment.called
+
+
+def test_sync_case_comments_to_product_success(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_sync: JobCase,
+) -> None:
+    """Tests syncing SecOps comments to PagerDuty incident notes via session."""
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_case_comments_to_product(
+        job_case_sync, ["SecOps investigation comment"]
+    )
+
+    assert len(script_session.request_history) == 1
+    req = script_session.request_history[0].request
+    assert req.method.value == "POST"
+    assert req.url.path.endswith("/incidents/P123/notes")
+
+
+def test_sync_case_comments_to_product_failure(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_failing_api: SyncIncidents,
+    job_case_sync: JobCase,
+) -> None:
+    """Tests handling failure when adding note to PagerDuty incident."""
+    job_failing_api.processed_items = {"1": ["P123"]}
+
+    job_failing_api.sync_case_comments_to_product(
+        job_case_sync, ["SecOps investigation comment"]
+    )
+
+    assert job_failing_api.logger.error.called
+
+
+def test_extract_product_id_from_ticket_id(
+    job: SyncIncidents, ticket_with_id: AlertCard
+) -> None:
+    """Tests extracting PagerDuty incident ID directly from non-UUID ticket_id."""
+    extracted_id = job._extract_product_id_from_ticket(ticket_with_id)
+
+    assert extracted_id == "P12345"
+
+
+def test_extract_product_id_from_context_property(
+    job: SyncIncidents, ticket_with_context: AlertCard
+) -> None:
+    """Tests extracting PagerDuty ID from context when ticket_id is a UUID."""
+    extracted_id = job._extract_product_id_from_ticket(ticket_with_context)
+
+    assert extracted_id == "P99999"
+
+
+def test_is_alert_and_product_closed(
+    job: SyncIncidents, job_case_sync: JobCase
+) -> None:
+    """Tests checking if alert and product are both closed."""
+    assert (
+        job.is_alert_and_product_closed(
+            job_case_sync, {"id": "P123", "status": "resolved"}
+        )
+        is True
+    )
+
+    assert (
+        job.is_alert_and_product_closed(
+            job_case_sync, {"id": "P123", "status": "triggered"}
+        )
+        is False
+    )
+
+    job_case_sync.case_detail.alerts[0].status = "open"
+    assert (
+        job.is_alert_and_product_closed(
+            job_case_sync, {"id": "P123", "status": "resolved"}
+        )
+        is False
+    )
+
+
+def test_clean_secops_comment_special_characters() -> None:
+    """Tests cleaning special characters, mentions, and HTML entities."""
+    raw = '!<@>@</@>#$%^&amp;*()_+} {}|":&gt;?&lt;&lt;&lt;'
+    cleaned = clean_secops_comment(raw)
+    assert cleaned == '!@#$%^&*()_+} {}|":>?<<<'
+    assert clean_secops_comment("<<<>>>>><<>>>") == "<<<>>>>><<>>>"
+    assert clean_secops_comment("<<<>>><<<>>>") == "<<<>>><<<>>>"
+    assert (
+        clean_secops_comment("Alert: x < 5 and y > 3")
+        == "Alert: x < 5 and y > 3"
+    )
+
+
+def test_clean_pagerduty_comment_preserves_special_characters_and_tags() -> None:
+    """Tests that clean_pagerduty_comment preserves all user content."""
+    raw = '<p>PagerDuty:Q1: !@#$%^&*()_+":??>><<qAA  ER34</p>'
+    cleaned = clean_pagerduty_comment(raw)
+    assert cleaned == 'PagerDuty:Q1: !@#$%^&*()_+":??>><<qAA  ER34'
+
+    raw_url = (
+        '<p>PagerDuty:Q1: Visit <a href="https://example.com/api?a=1&amp;b=2">'
+        "https://example.com/api?a=1&amp;b=2</a></p>"
+    )
+    assert (
+        clean_pagerduty_comment(raw_url)
+        == "PagerDuty:Q1: Visit https://example.com/api?a=1&b=2"
+    )
+
+    raw_angle = "<p>PagerDuty:Q1: <<<>>>>><<>>></p>"
+    assert clean_pagerduty_comment(raw_angle) == "PagerDuty:Q1: <<<>>>>><<>>>"
+
+
+def test_clean_secops_comment_mentions_and_html_tags() -> None:
+    """Tests cleaning various mentions, HTML tags, breaks, and entities."""
+    raw = (
+        "<p>Hello <@>john</@> &amp; <@>@sarah</@>!</p>"
+        "<p>Check &lt;code&gt; &amp; &quot;quotes&quot;</p>"
+    )
+    cleaned = clean_secops_comment(raw)
+    assert cleaned == 'Hello @john & @sarah!\nCheck <code> & "quotes"'
+
+    assert (
+        clean_secops_comment("Line 1<br>Line 2<br/>Line 3")
+        == "Line 1\nLine 2\nLine 3"
+    )
+    assert clean_secops_comment("") == ""
+
+
+def test_clean_secops_comment_urls_and_rich_styling() -> None:
+    """Tests cleaning URLs with query parameters and rich text styles."""
+    url_raw = (
+        '<p>Check <a href="https://example.com/api?user=admin&amp;'
+        'tag=&lt;threat&gt;">https://example.com/api?user=admin&amp;'
+        "tag=&lt;threat&gt;</a></p>"
+    )
+    assert (
+        clean_secops_comment(url_raw)
+        == "Check https://example.com/api?user=admin&tag=<threat>"
+    )
+
+    rich_raw = (
+        "<p><strong>Critical:</strong> <em>Malicious payload</em> in "
+        "<code>C:\\Windows\\System32\\</code>. "
+        "Please <del>ignore</del> <u>check now</u>!</p>"
+    )
+    assert (
+        clean_secops_comment(rich_raw)
+        == "Critical: Malicious payload in C:\\Windows\\System32\\. "
+        "Please ignore check now!"
+    )
+
+    complex_raw = (
+        "<p>Alert: CPU &gt;= 95% &amp; memory leak! "
+        "Contact <@>soc-lead</@> on-call.<br>"
+        'Run: <code>curl -H "Auth: Bearer &lt;key&gt;"</code></p>'
+    )
+    assert (
+        clean_secops_comment(complex_raw)
+        == "Alert: CPU >= 95% & memory leak! Contact @soc-lead on-call.\n"
+        'Run: curl -H "Auth: Bearer <key>"'
+    )
+
+
+def test_sanitize_case_comments(
+    job_case_with_rich_comments: JobCase,
+) -> None:
+    """Tests sanitizing case comments in JobCase."""
+    sanitize_case_comments(job_case_with_rich_comments)
+    assert (
+        job_case_with_rich_comments.case_comments[0]["comment"]
+        == '!@#$%^&*()_+} {}|":>?<<<'
+    )
+    assert (
+        job_case_with_rich_comments.case_comments[1]["comment"]
+        == "Another <clean> comment"
+    )
+
+
+def test_sync_comments_special_characters_soar_to_pagerduty(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_comments_sync: SyncIncidents,
+    job_case_sync_comments: JobCase,
+) -> None:
+    """Tests that rich-text comments are sanitized and synced to PagerDuty."""
+    job_comments_sync.sync_comments(job_case_sync_comments)
+
+    assert len(script_session.request_history) == 1
+    resp = script_session.request_history[0].response
+    assert (
+        resp.json()["note"]["content"]
+        == 'Google SecOps 1: !@#$%^&*()_+} {}|":>?<<<'
+    )
+
+
+def test_sync_case_status_to_product_cleans_closure_comment(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_with_closure_comment: SyncIncidents,
+    job_case_sync: JobCase,
+) -> None:
+    """Tests that rich-text closure comments are sanitized in PagerDuty."""
+    pagerduty.set_incidents({
+        "incidents": [
+            {"id": "P123", "status": "triggered", "incident_key": "key1"}
+        ]
+    })
+
+    job_with_closure_comment._sync_case_status_to_product(
+        job_case_sync.get_status_to_sync(), job_case_sync
+    )
+
+    assert len(script_session.request_history) == 2
+    note_resp = script_session.request_history[0].response
+    assert (
+        note_resp.json()["note"]["content"]
+        == "Issue resolved with & <system fix>"
+    )
+
+
+def test_sync_comments_fetches_and_sanitizes_all_case_comments(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_with_fetched_case_comments: SyncIncidents,
+    job_case_sync: JobCase,
+) -> None:
+    """Tests that sync_comments fetches and sanitizes all case comments."""
+    job_with_fetched_case_comments.processed_items = {"1": ["P123"]}
+    job_with_fetched_case_comments.sync_comments(job_case_sync)
+
+    soar_job = job_with_fetched_case_comments.soar_job
+    soar_job.fetch_case_comments.assert_called_once_with(
+        case_id=job_case_sync.case_detail.id_
+    )
+    assert job_case_sync.case_comments == [
+        {"comment": "PagerDuty:P123: Existing Note"}
+    ]
+
+
+def test_sync_comments_fetch_error_handled(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job_with_failing_fetch_comments: SyncIncidents,
+    job_case_sync: JobCase,
+) -> None:
+    """Tests that sync_comments handles fetch_case_comments failure gracefully."""
+    initial_comments = [{"comment": "Initial"}]
+    job_case_sync.case_comments = initial_comments
+    job_with_failing_fetch_comments.processed_items = {"1": ["P123"]}
+
+    job_with_failing_fetch_comments.sync_comments(job_case_sync)
+
+    assert job_with_failing_fetch_comments.logger.error.called
+    assert job_case_sync.case_comments == [{"comment": "Initial"}]
+
+
+def test_sync_comments_no_duplicate_when_already_on_case_wall(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_deduplication: JobCase,
+) -> None:
+    """Tests that comments already on the Case Wall are not duplicated."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": "<p>PagerDuty:P123: Note 1</p>"},
+        {"comment": "<div>PagerDuty:P123: Note 2</div>"},
+    ]
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_comments(job_case_deduplication)
+
+    assert not job.soar_job.add_comment.called
+    assert len(script_session.request_history) == 0
+
+
+def test_sync_comments_only_new_note_synced_no_misses_no_duplicates(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_deduplication: JobCase,
+) -> None:
+    """Tests that only new notes are synced without missing or duplicating."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": "<p>PagerDuty:P123: Note 1</p>"}
+    ]
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_comments(job_case_deduplication)
+
+    job.soar_job.add_comment.assert_called_once_with(
+        case_id=1,
+        comment="PagerDuty:P123: Note 2",
+        alert_identifier="alert_1",
+    )
+    assert len(script_session.request_history) == 0
+
+
+def test_sync_comments_secops_to_pagerduty_deduplication(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_secops_deduplication: JobCase,
+) -> None:
+    """Tests that existing SecOps comments are not duplicated to PagerDuty."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": "<p>Existing analyst note</p>"},
+        {"comment": "<p>Brand new analyst note</p>"},
+    ]
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_comments(job_case_secops_deduplication)
+
+    assert not job.soar_job.add_comment.called
+    assert len(script_session.request_history) == 1
+    resp = script_session.request_history[0].response
+    assert (
+        resp.json()["note"]["content"]
+        == "Google SecOps 1: Brand new analyst note"
+    )
+
+
+def test_sync_comments_no_duplicate_with_angle_bracket_characters(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_angle_brackets_deduplication: JobCase,
+) -> None:
+    """Tests that comments with angle brackets are not duplicated."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": "<p>PagerDuty:P123: <<<>>>>><<>>></p>"}
+    ]
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_comments(job_case_angle_brackets_deduplication)
+
+    assert not job.soar_job.add_comment.called
+    assert len(script_session.request_history) == 0
+
+
+def test_sync_comments_no_duplicate_with_complex_special_characters(
+    script_session: PagerDutySession,
+    pagerduty: PagerDuty,
+    job: SyncIncidents,
+    job_case_special_chars_deduplication: JobCase,
+) -> None:
+    """Tests that complex special characters are not duplicated."""
+    job.soar_job.fetch_case_comments.return_value = [
+        {"comment": '<p>PagerDuty:P123: !@#$%^&*()_+":??>><<qAA  ER34</p>'}
+    ]
+    job.processed_items = {"1": ["P123"]}
+
+    job.sync_comments(job_case_special_chars_deduplication)
+
+    assert not job.soar_job.add_comment.called
+    assert len(script_session.request_history) == 0
+
+
+def test_escape_comment_for_secops() -> None:
+    """Tests that escape_comment_for_secops escapes HTML special characters."""
+    assert escape_comment_for_secops("") == ""
+    assert (
+        escape_comment_for_secops('!@#$%^&*()_+":??>><<qAA  ER355')
+        == "!@#$%^&amp;*()_+&quot;:??&gt;&gt;&lt;&lt;qAA  ER355"
+    )
+    assert (
+        escape_comment_for_secops("https://example.com?a=1&b=2")
+        == "https://example.com?a=1&amp;b=2"
+    )
+    assert escape_comment_for_secops("x < 5 and y > 3") == "x &lt; 5 and y &gt; 3"
+
+
+def test_clean_pagerduty_comment_with_line_breaks_and_nested_tags() -> None:
+    """Tests cleaning PagerDuty comments with line breaks and nested tags."""
+    raw_nested = "<div><p><span>PagerDuty:Q1: Line 1<br>Line 2</span></p></div>"
+    assert clean_pagerduty_comment(raw_nested) == "PagerDuty:Q1: Line 1\nLine 2"
+
+    raw_escaped = (
+        "<p>PagerDuty:Q1: !@#$%^&amp;*()_+&quot;:??&gt;&gt;&lt;&lt;qAA  ER355</p>"
+    )
+    assert (
+        clean_pagerduty_comment(raw_escaped)
+        == 'PagerDuty:Q1: !@#$%^&*()_+":??>><<qAA  ER355'
+    )
+
+
+def test_sync_product_comments_to_case_escapes_html(job: SyncIncidents) -> None:
+    """Tests that sync_product_comments_to_case escapes HTML before posting."""
+    comments = [
+        'alert_1:PagerDuty:Q1: !@#$%^&*()_+":??>><<qAA  ER355',
+    ]
+    job.sync_product_comments_to_case(case_id=1, comments=comments)
+
+    job.soar_job.add_comment.assert_called_once_with(
+        case_id=1,
+        comment=(
+            "PagerDuty:Q1: "
+            "!@#$%^&amp;*()_+&quot;:??&gt;&gt;&lt;&lt;qAA  ER355"
+        ),
+        alert_identifier="alert_1",
+    )
+
+
+def test_sync_product_comments_to_case_error_handling(
+    job: SyncIncidents,
+) -> None:
+    """Tests that sync_product_comments_to_case handles exceptions gracefully."""
+    job.soar_job.add_comment.side_effect = Exception("API error")
+    comments = ["alert_1:PagerDuty:Q1: test note"]
+
+    # Should not raise
+    job.sync_product_comments_to_case(case_id=1, comments=comments)
+    job.soar_job.add_comment.assert_called_once()

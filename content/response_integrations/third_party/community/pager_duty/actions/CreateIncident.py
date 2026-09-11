@@ -16,13 +16,14 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
     api_token = configurations["api_key"]
     service = configurations["Services"]
+    verify_ssl = str(configurations.get("Verify SSL", "true")).lower() == "true"
     title = siemplify.parameters["Title"]
     email_from = siemplify.parameters["Email"]
     urgency = siemplify.parameters["Urgency"]
     body = siemplify.parameters["Details"]
 
     siemplify.LOGGER.info("----------------- Main - Start -----------------")
-    pager_duty = PagerDutyManager(api_token)
+    pager_duty = PagerDutyManager(api_token, verify_ssl=verify_ssl)
 
     try:
         siemplify.LOGGER.info("Started Creating a new incident")

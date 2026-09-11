@@ -11,6 +11,9 @@ from pager_duty.tests.common import CONFIG_PATH, MOCK_INCIDENTS_FILE
 from pager_duty.tests.core.product import PagerDuty
 from pager_duty.tests.core.session import PagerDutySession
 
+EXPECTED_SUCCESS_OUTPUT_MSG = "Successfully retrieved Incident\n"
+EXPECTED_NOT_FOUND_OUTPUT_MSG = "No Incident Found\n"
+
 SUCCESS_INCIDENT_KEY = "65245cf57ed7427a84e64b418049b78f"
 INVALID_INCIDENT_KEY = "invalid_incident_key"
 DEFAULT_PARAMETERS: dict[str, str] = {
@@ -29,7 +32,6 @@ def test_get_incident_by_id_success(
     pagerduty: PagerDuty,
 ) -> None:
     """Tests the GetIncidentById action for a successful API call."""
-
     mock_incidents = json.loads(MOCK_INCIDENTS_FILE.read_text())
     pagerduty.set_incidents(mock_incidents)
 
@@ -38,7 +40,7 @@ def test_get_incident_by_id_success(
     assert len(script_session.request_history) == 1
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
     assert action_output.results.result_value is True
-    assert "Successfully retrieved Incident" in action_output.results.output_message
+    assert EXPECTED_SUCCESS_OUTPUT_MSG in action_output.results.output_message
 
 
 @set_metadata(
@@ -54,7 +56,6 @@ def test_get_incident_by_id_not_found(
     pagerduty: PagerDuty,
 ) -> None:
     """Tests the GetIncidentById action when no incident is found for the key."""
-
     mock_incidents = json.loads(MOCK_INCIDENTS_FILE.read_text())
     pagerduty.set_incidents(mock_incidents)
 
@@ -63,4 +64,4 @@ def test_get_incident_by_id_not_found(
     assert len(script_session.request_history) == 1
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
     assert action_output.results.result_value is True
-    assert "No Incident Found" in action_output.results.output_message
+    assert EXPECTED_NOT_FOUND_OUTPUT_MSG in action_output.results.output_message
