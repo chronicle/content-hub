@@ -875,8 +875,10 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def attach_case_playbook_to_case(self) -> requests.Response:
         """Attach case playbook to the case.
+
         Returns:
             requests.Response: The HTTP response from the OnePlatform endpoint.
+
         """
         endpoint: str = "/legacyPlaybooks:legacyAttachWorkflowToCase"
         payload = {
@@ -884,10 +886,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             "shouldRunAutomatic": self.params.should_run_automatic,
             "wfName": self.params.playbook_name,
         }
-        if (
-            getattr(self.params, "original_workflow_definition_identifier", None)
-            is not None
-        ):
+        if getattr(self.params, "original_workflow_definition_identifier", None) is not None:
             payload["originalWorkflowDefinitionIdentifier"] = (
                 self.params.original_workflow_definition_identifier
             )
@@ -900,8 +899,10 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def get_enabled_workflow_cards(self) -> requests.Response:
         """Get enabled workflow cards.
+
         Returns:
             requests.Response: The HTTP response from the OnePlatform endpoint.
+
         """
         endpoint: str = "/legacyPlaybooks:legacyGetEnabledWFCards"
         payload = {

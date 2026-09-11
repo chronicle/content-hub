@@ -2000,14 +2000,17 @@ def attach_case_playbook_to_case(
     original_workflow_definition_identifier: str | None = None,
 ) -> None:
     """Attach case playbook to the case.
+
     Args:
         chronicle_soar: The ChronicleSOAR SDK object.
         case_id: The identifier of the cyber case.
         playbook_name: The name of the playbook to attach.
         should_run_automatic: Whether the playbook should execute automatically.
         original_workflow_definition_identifier: Optional workflow definition identifier.
+
     Raises:
         requests.HTTPError: If the API request fails.
+
     """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.case_id = case_id
@@ -2025,14 +2028,18 @@ def get_enabled_workflow_cards(
     environment: str,
 ) -> list[SingleJson]:
     """Get enabled workflow cards.
+
     Args:
         chronicle_soar: The ChronicleSOAR SDK object.
         environment: The environment name to query workflow cards for.
+
     Returns:
         list[SingleJson]: List of enabled workflow card objects.
+
     Raises:
         requests.HTTPError: If the API request fails.
         InternalJSONDecoderError: If the response cannot be parsed as JSON.
+
     """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.environment = environment
