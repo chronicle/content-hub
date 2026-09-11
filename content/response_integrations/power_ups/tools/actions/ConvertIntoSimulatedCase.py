@@ -16,12 +16,12 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-
 from TIPCommon.rest.soar_api import import_simulator_custom_case
 from TIPCommon.types import SingleJson
 
@@ -81,9 +81,7 @@ def main():
     if "SourceFileContent" in siemplify.current_alert.entities[0].additional_properties:
         # Load the alert data from the 'SourceFileContent' property.
         case_data = json.loads(
-            siemplify.current_alert.entities[0].additional_properties[
-                "SourceFileContent"
-            ],
+            siemplify.current_alert.entities[0].additional_properties["SourceFileContent"],
         )
     else:
         siemplify.LOGGER.error("Alert data is missing 'SourceFileContent' property")
@@ -92,29 +90,19 @@ def main():
     # Modify the 'Event Name' fields in the alert data.
     for i, event in enumerate(case_data["Events"]):
         if "DeviceEventClassId" in case_data["Events"][i]["_fields"]:
-            case_data["Events"][i]["_rawDataFields"]["DeviceEventClassId"] = case_data[
-                "Events"
-            ][i]["_fields"]["DeviceEventClassId"]
-            case_data["Events"][i]["_rawDataFields"]["Name"] = case_data["Events"][i][
-                "_fields"
-            ]["DeviceEventClassId"]
+            case_data["Events"][i]["_rawDataFields"]["DeviceEventClassId"] = case_data["Events"][i]["_fields"][
+                "DeviceEventClassId"
+            ]
+            case_data["Events"][i]["_rawDataFields"]["Name"] = case_data["Events"][i]["_fields"]["DeviceEventClassId"]
         if "deviceEventClassId" in case_data["Events"][i]["_fields"]:
-            case_data["Events"][i]["_rawDataFields"]["DeviceEventClassId"] = case_data[
-                "Events"
-            ][i]["_fields"]["deviceEventClassId"]
-            case_data["Events"][i]["_rawDataFields"]["Name"] = case_data["Events"][i][
-                "_fields"
-            ]["deviceEventClassId"]
+            case_data["Events"][i]["_rawDataFields"]["DeviceEventClassId"] = case_data["Events"][i]["_fields"][
+                "deviceEventClassId"
+            ]
+            case_data["Events"][i]["_rawDataFields"]["Name"] = case_data["Events"][i]["_fields"]["deviceEventClassId"]
 
     # Optionally modify the 'Name' field in the alert data.
     if fullPathName:
-        case_data["Name"] = (
-            case_data["SourceSystemName"]
-            + "_"
-            + case_data["DeviceProduct"]
-            + "_"
-            + case_data["Name"]
-        )
+        case_data["Name"] = case_data["SourceSystemName"] + "_" + case_data["DeviceProduct"] + "_" + case_data["Name"]
     if overrideName:
         case_data["Name"] = overrideName
 
@@ -134,7 +122,7 @@ def main():
         # Add the JSON data as an attachment to the case wall.
         siemplify.result.add_attachment(
             title="<<file in here>>",
-            filename=case_data["Name"] + ".case",
+            filename=sanitize_case_filename(case_data.get("Name", "")),
             file_contents=t,
         )
         output_message += " Saved to Casewall "
@@ -145,6 +133,21 @@ def main():
     # Add the JSON data to the action result and end the action.
     siemplify.result.add_result_json(myJson)
     siemplify.end(output_message, result_value, status)
+
+
+def sanitize_case_filename(name: str) -> str:
+    """Sanitize case name to construct a clean .case attachment filename.
+    Args:
+        name: The raw case or alert name.
+
+    Returns:
+        The sanitized filename ending with '.case'.
+    """
+    if not name:
+        return "case.case"
+    clean_name = re.sub(r"(\.(case|json|txt))+$", "", name.strip(), flags=re.IGNORECASE)
+    clean_name = re.sub(r'[\\/*?:"<>|\n\r\t]', "_", clean_name).strip(" ._")
+    return f"{clean_name or 'case'}.case"
 
 
 def align_case_data(case_data: SingleJson) -> SingleJson:
@@ -170,6 +173,9 @@ def align_case_data(case_data: SingleJson) -> SingleJson:
             new_case[camel_k] = transform_events_list(v)
         else:
             new_case[camel_k] = v
+
+    if "caseType" in new_case and "type" not in new_case:
+        new_case["type"] = new_case["caseType"]
 
     return new_case
 
@@ -206,11 +212,18 @@ def align_enum_field(
     for key in keys:
         if key in data:
             val: Any = data[key]
-            if isinstance(val, int) and not isinstance(val, bool):
+            if isinstance(val, bool):
+                continue
+            if isinstance(val, int):
                 if val in value_map:
                     data[key] = value_map[val]
                 else:
                     data.pop(key, None)
+            elif isinstance(val, str):
+                if val.isdigit() and int(val) in value_map:
+                    data[key] = value_map[int(val)]
+                elif val.upper() in value_map.values():
+                    data[key] = val.upper()
 
 
 def transform_events_list(events: list[Any]) -> list[Any]:
@@ -245,16 +258,14 @@ def transform_event(event: SingleJson) -> SingleJson:
         camel_ek: str = to_camel_case(ek)
 
         if camel_ek in (constants.FIELDS_KEY, constants.DATA_FIELDS_KEY) and isinstance(ev, dict):
-            new_event[camel_ek] = {
-                k2: v2 for k2, v2 in ev.items() if not k2.startswith("__")
-            }
+            new_event[camel_ek] = {k2: v2 for k2, v2 in ev.items() if not k2.startswith("__")}
         else:
             new_event[camel_ek] = ev
     return new_event
 
 
 def to_camel_case(key_name: str) -> str:
-    """Convert PascalCase property names to camelCase.
+    """Convert PascalCase or snake_case property names to camelCase.
     Args:
         key_name: The string to convert.
 
@@ -267,6 +278,9 @@ def to_camel_case(key_name: str) -> str:
         return constants.FIELDS_KEY
     if key_name == constants.RAW_DATA_FIELDS_KEY:
         return constants.DATA_FIELDS_KEY
+    if "_" in key_name and not key_name.startswith("_"):
+        parts = key_name.split("_")
+        return parts[0].lower() + "".join(p.capitalize() for p in parts[1:])
     return key_name[0].lower() + key_name[1:]
 
 
