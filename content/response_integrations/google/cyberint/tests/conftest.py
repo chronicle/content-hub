@@ -14,14 +14,17 @@
 
 from __future__ import annotations
 
+"""Pytest configuration and test bootstrap for Cyberint integration tests."""
+
 import importlib
 import os
 import pkgutil
 import sys
+from pathlib import Path
 
 import soar_sdk
 
-sdk_dir = os.path.dirname(soar_sdk.__file__)
+sdk_dir = str(Path(soar_sdk.__file__).resolve().parent)
 if sdk_dir not in sys.path:
     sys.path.insert(0, sdk_dir)
 
@@ -31,6 +34,6 @@ for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
         flat_mod = importlib.import_module(name)
         sys.modules[f"soar_sdk.{name}"] = flat_mod
         setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
+    except (ImportError, AttributeError):
+        continue
 sys.stdout = original_stdout
