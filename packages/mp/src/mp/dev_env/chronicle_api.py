@@ -109,8 +109,11 @@ class ChronicleClient(DevEnvClient):
         resp: requests.Response = self.session.get(url, params={"pageSize": 1})
         resp.raise_for_status()
 
-    def list_integrations(self) -> list[Integration]:
+    def list_integrations(self, *, max_pages: int = 100) -> list[Integration]:
         """List all integrations installed in the instance.
+
+        Args:
+            max_pages: Maximum number of pages to retrieve to prevent infinite loops.
 
         Returns:
             The list of Integration resources.
@@ -120,7 +123,7 @@ class ChronicleClient(DevEnvClient):
         params: dict[str, Any] = {"pageSize": 1000}
         results: list[Integration] = []
 
-        while True:
+        for _ in range(max_pages):
             resp: requests.Response = self.session.get(url, params=params)
             resp.raise_for_status()
             page: ListIntegrationsResponse = ListIntegrationsResponse.model_validate(
@@ -130,6 +133,12 @@ class ChronicleClient(DevEnvClient):
             if not page.next_page_token:
                 return results
             params = {**params, "pageToken": page.next_page_token}
+
+        logger.warning(
+            "Reached maximum pagination limit (%d pages) while listing integrations.",
+            max_pages,
+        )
+        return results
 
     def _resolve_integration_name(self, integration: str) -> str:
         target: str = integration.strip().lower()
@@ -386,6 +395,18 @@ class ChronicleClient(DevEnvClient):
 
 
 def _extract_zip_bytes(resp: requests.Response) -> bytes:
+    """Extract raw ZIP bytes from an HTTP response or inline base64 JSON envelope.
+
+    Args:
+        resp: The HTTP response from the Chronicle export API.
+
+    Returns:
+        The decoded raw ZIP package bytes.
+
+    Raises:
+        typer.Exit: If the export response contains no inline media content.
+
+    """
     content_type: str = resp.headers.get("Content-Type", "").lower()
     if "application/json" not in content_type:
         return resp.content
