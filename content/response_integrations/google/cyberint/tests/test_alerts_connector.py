@@ -179,5 +179,3 @@ class TestCyberintAlertsConnector(unittest.TestCase):
         mock_siemplify.LOGGER.info.assert_any_call("Alert alert-123 was created.")
 
 
-if __name__ == "__main__":
-    unittest.main()
