@@ -24,11 +24,12 @@ REASON_RESOLVED_IN_PAGERDUTY: str = "Resolved in PagerDuty"
 
 HIGH_PRIORITY: int = 80
 LOW_PRIORITY: int = 40
+DEFAULT_TIMEOUT: int = 10
 
 # PagerDuty Specific Severity/Priority Mapping
 PAGERDUTY_SEVERITY_MAPPING: dict[str, int] = {
     "high": HIGH_PRIORITY,
-    "low": LOW_PRIORITY
+    "low": LOW_PRIORITY,
 }
 
 PAGERDUTY_COMMENT_PREFIX: str = "PagerDuty:"

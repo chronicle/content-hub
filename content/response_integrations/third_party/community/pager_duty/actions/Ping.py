@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_configuration_param
@@ -37,11 +37,11 @@ class Ping(Action):
             input_type=bool,
         )
 
-    def _init_api_clients(self):
+    def _init_api_clients(self) -> PagerDutyManager:
         """Prepare API client"""
         return PagerDutyManager(self.api_key, verify_ssl=self.verify_ssl)
 
-    def _perform_action(self, _=None) -> None:
+    def _perform_action(self, _: Any = None) -> None:
         self.api_client.test_connectivity()
 
 

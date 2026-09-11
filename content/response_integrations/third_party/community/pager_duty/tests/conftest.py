@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import io
 import sys
+import urllib.parse
+from collections.abc import Generator
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 from integration_testing.common import use_live_api
+from integration_testing.request import HttpMethod, MockRequest
+from integration_testing.requests.response import MockResponse
+from integration_testing.requests.session import HistoryRecord
 from TIPCommon.base.job.job_case import JobCase, SyncMetadata
+from TIPCommon.data_models import AlertCard
 
 from pager_duty.jobs.SyncIncidents import SyncIncidents
 
@@ -31,13 +38,39 @@ def script_session(
     session: PagerDutySession = PagerDutySession(pagerduty)
 
     if not use_live_api():
+
+        def mock_request(
+            method: str, url: str, *args: Any, **kwargs: Any
+        ) -> MockResponse:
+            """Mock general request method, ensuring per-request headers are
+            merged.
+            """
+            headers: dict[str, str] = dict(session.headers)
+            if "headers" in kwargs and kwargs["headers"]:
+                headers.update(kwargs["headers"])
+
+            parsed_url: urllib.parse.ParseResult = urllib.parse.urlparse(url)
+            request: MockRequest = MockRequest(
+                method=HttpMethod(method),
+                url=parsed_url,
+                headers=headers,
+                args=args,
+                kwargs=kwargs,
+            )
+            response: MockResponse = session._do_request(method, request)
+            response.request = request
+
+            session.request_history.append(HistoryRecord(request, response))
+            return response
+
+        monkeypatch.setattr(session, "request", mock_request)
         monkeypatch.setattr("requests.Session", lambda: session)
 
     return session
 
 
 @pytest.fixture
-def mock_job_env():
+def mock_job_env() -> Generator[None, None, None]:
     """Fixture to mock sys.stdin for job execution."""
 
     class MockStdin:
@@ -51,7 +84,7 @@ def mock_job_env():
 
 
 @pytest.fixture
-def job(mock_job_env):
+def job(mock_job_env: None) -> Generator[SyncIncidents, None, None]:
     """Fixture providing a SyncIncidents job instance with mocked properties."""
     original_params = SyncIncidents.params
     original_api_client = SyncIncidents.api_client
@@ -87,7 +120,7 @@ def job(mock_job_env):
 
 
 @pytest.fixture
-def job_failing_api(mock_job_env):
+def job_failing_api(mock_job_env: None) -> Generator[SyncIncidents, None, None]:
     """Fixture providing a SyncIncidents job instance with a failing API client."""
     original_params = SyncIncidents.params
     original_api_client = SyncIncidents.api_client
@@ -123,7 +156,7 @@ def job_failing_api(mock_job_env):
 
 
 @pytest.fixture
-def job_failing_soar_close_alert(job):
+def job_failing_soar_close_alert(job: SyncIncidents) -> SyncIncidents:
     """Fixture providing a job instance where soar_job.close_alert fails."""
     job.soar_job.close_alert.side_effect = Exception("SecOps API Error")
     job._remove_synced_entries.reset_mock()
@@ -131,7 +164,7 @@ def job_failing_soar_close_alert(job):
 
 
 @pytest.fixture
-def job_case_map():
+def job_case_map() -> JobCase:
     """Fixture providing a JobCase mock for mapping tests."""
     job_case = MagicMock(spec=JobCase)
     alert = MagicMock()
@@ -144,15 +177,13 @@ def job_case_map():
 
 
 @pytest.fixture
-def job_case_sync():
+def job_case_sync() -> JobCase:
     """Fixture providing a JobCase mock for syncing status (SOAR to PagerDuty)."""
     job_case = MagicMock(spec=JobCase)
     res = MagicMock()
 
     alert = MagicMock()
     alert.status = "close"
-    alert.closure_details = {"reason": "Malicious"}
-
     meta = SyncMetadata(
         status="triggered", incident_number="P123", closure_reason=None
     )
@@ -188,7 +219,7 @@ def job_case_with_rich_comments() -> JobCase:
 
 
 @pytest.fixture
-def job_case_sync_comments():
+def job_case_sync_comments() -> JobCase:
     """Fixture providing a JobCase mock configured for comment sync."""
     job_case = MagicMock(spec=JobCase)
     alert = MagicMock()
@@ -206,7 +237,7 @@ def job_case_sync_comments():
 
 
 @pytest.fixture
-def job_comments_sync(job):
+def job_comments_sync(job: SyncIncidents) -> SyncIncidents:
     """Fixture providing a job configured to sync rich-text comments."""
     job.processed_items = {"1": ["P123"]}
     job.get_comments_to_sync = lambda jc, **kwargs: MagicMock(
@@ -219,16 +250,16 @@ def job_comments_sync(job):
 
 
 @pytest.fixture
-def job_with_closure_comment(job):
+def job_with_closure_comment(job: SyncIncidents) -> SyncIncidents:
     """Fixture providing a job instance with a rich-text closure comment."""
-    job.get_secops_closure_comment = (
-        lambda jc, req: "<p>Issue resolved with &amp; &lt;system fix&gt;</p>"
+    job.get_secops_closure_comment = lambda jc, req: (
+        "<p>Issue resolved with &amp; &lt;system fix&gt;</p>"
     )
     return job
 
 
 @pytest.fixture
-def job_case_closed():
+def job_case_closed() -> JobCase:
     """Fixture providing a closed JobCase mock."""
     job_case = MagicMock(spec=JobCase)
     job_case.case_detail.id_ = 1
@@ -237,7 +268,7 @@ def job_case_closed():
 
 
 @pytest.fixture
-def job_case_sync_close_case():
+def job_case_sync_close_case() -> JobCase:
     """Fixture providing a JobCase mock for syncing status (close case)."""
     job_case = MagicMock(spec=JobCase)
     res = MagicMock()
@@ -246,7 +277,9 @@ def job_case_sync_close_case():
     alert.identifier = "alert_1"
     alert.status = "open"
 
-    meta = SyncMetadata(status="resolved", incident_number="P123", closure_reason=None)
+    meta = SyncMetadata(
+        status="resolved", incident_number="P123", closure_reason=None
+    )
 
     res.incidents_to_close_in_product = []
     res.alerts_to_close_in_soar = [(alert, meta)]
@@ -259,7 +292,7 @@ def job_case_sync_close_case():
 
 
 @pytest.fixture
-def job_case_sync_close_alert():
+def job_case_sync_close_alert() -> JobCase:
     """Fixture providing a JobCase mock for syncing status (close alert only)."""
     job_case = MagicMock(spec=JobCase)
     res = MagicMock()
@@ -272,7 +305,9 @@ def job_case_sync_close_alert():
     alert2.identifier = "alert_2"
     alert2.status = "open"
 
-    meta = SyncMetadata(status="resolved", incident_number="P123", closure_reason=None)
+    meta = SyncMetadata(
+        status="resolved", incident_number="P123", closure_reason=None
+    )
 
     res.incidents_to_close_in_product = []
     res.alerts_to_close_in_soar = [(alert1, meta)]
@@ -285,24 +320,26 @@ def job_case_sync_close_alert():
 
 
 @pytest.fixture
-def ticket_with_id():
+def ticket_with_id() -> AlertCard:
     """Fixture providing an AlertCard mock with standard PagerDuty ticket_id."""
-    ticket = MagicMock()
+    ticket = MagicMock(spec=AlertCard)
     ticket.ticket_id = "P12345"
     return ticket
 
 
 @pytest.fixture
-def ticket_with_context():
-    """Fixture providing an AlertCard mock with UUID ticket_id and context group."""
-    ticket = MagicMock()
+def ticket_with_context() -> AlertCard:
+    """Fixture providing an AlertCard mock with UUID ticket_id and context
+    group.
+    """
+    ticket = MagicMock(spec=AlertCard)
     ticket.ticket_id = "550e8400-e29b-41d4-a716-446655440000"
     ticket.alert_group_identifier = "group_1"
     return ticket
 
 
 @pytest.fixture
-def job_with_fetched_case_comments(job):
+def job_with_fetched_case_comments(job: SyncIncidents) -> SyncIncidents:
     """Fixture providing a job that returns specific case comments on fetch."""
     job.soar_job.fetch_case_comments.return_value = [
         {"comment": "<p>PagerDuty:P123: Existing Note</p>"}
@@ -311,14 +348,14 @@ def job_with_fetched_case_comments(job):
 
 
 @pytest.fixture
-def job_with_failing_fetch_comments(job):
+def job_with_failing_fetch_comments(job: SyncIncidents) -> SyncIncidents:
     """Fixture providing a job where fetch_case_comments raises an exception."""
     job.soar_job.fetch_case_comments.side_effect = Exception("Fetch failed")
     return job
 
 
 @pytest.fixture
-def job_case_deduplication():
+def job_case_deduplication() -> JobCase:
     """Fixture providing a JobCase using real deduplication logic."""
     job_case = MagicMock(spec=JobCase)
     alert = MagicMock()
@@ -367,7 +404,9 @@ def job_case_deduplication():
 
 
 @pytest.fixture
-def job_case_secops_deduplication(job_case_deduplication):
+def job_case_secops_deduplication(
+    job_case_deduplication: JobCase,
+) -> JobCase:
     """Fixture with an existing SecOps comment already in PagerDuty."""
     job_case_deduplication.case_detail.alerts[0].incident.comments = [
         MagicMock(message="Google SecOps 1: Existing analyst note"),
@@ -376,7 +415,9 @@ def job_case_secops_deduplication(job_case_deduplication):
 
 
 @pytest.fixture
-def job_case_angle_brackets_deduplication(job_case_deduplication):
+def job_case_angle_brackets_deduplication(
+    job_case_deduplication: JobCase,
+) -> JobCase:
     """Fixture with special angle-bracket comments in PagerDuty."""
     job_case_deduplication.case_detail.alerts[0].incident.comments = [
         MagicMock(message="<<<>>>>><<>>>"),
@@ -385,10 +426,11 @@ def job_case_angle_brackets_deduplication(job_case_deduplication):
 
 
 @pytest.fixture
-def job_case_special_chars_deduplication(job_case_deduplication):
+def job_case_special_chars_deduplication(
+    job_case_deduplication: JobCase,
+) -> JobCase:
     """Fixture with special characters and letters after brackets in PD."""
     job_case_deduplication.case_detail.alerts[0].incident.comments = [
         MagicMock(message='!@#$%^&*()_+":??>><<qAA  ER34'),
     ]
     return job_case_deduplication
-

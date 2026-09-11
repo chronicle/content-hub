@@ -7,4 +7,3 @@ class PagerDutyException(Exception):
 
 class PagerDutyNotFoundError(PagerDutyException):
     """Exception raised when a requested PagerDuty resource is not found."""
-

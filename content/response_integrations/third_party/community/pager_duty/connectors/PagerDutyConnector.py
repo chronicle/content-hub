@@ -31,19 +31,16 @@ class PagerDutyConnector(Connector):
             value=self.params.max_incidents_to_fetch,
         )
         if self.params.acknowledge and not self.params.requester_email:
-            raise ValueError("Requester Email is required when Acknowledge is enabled.")
+            raise ValueError(
+                "Requester Email is required when Acknowledge is enabled."
+            )
 
     def read_context_data(self) -> None:
         self.logger.info("Reading already existing alerts ids...")
         self.context.existing_ids = read_ids(self.siemplify)
 
     def init_managers(self) -> None:
-        self.manager = PagerDutyManager(
-            api_key=self.params.api_key,
-            verify_ssl=self.params.verify_ssl,
-            from_email=self.params.requester_email
-        )
-        
+        proxies: dict[str, str] | None = None
         if self.params.proxy_server_address:
             proxy_address = self.params.proxy_server_address
             if "://" not in proxy_address:
@@ -65,12 +62,19 @@ class PagerDutyConnector(Connector):
             proxy_str: str = f"{scheme}://{credentials}{hostname}"
             if port:
                 proxy_str += f":{port}"
-            self.manager.requests_session.proxies = {
+            proxies = {
                 "http": proxy_str,
                 "https": proxy_str,
             }
 
-    def get_last_success_time(self, **kwargs) -> str:
+        self.manager = PagerDutyManager(
+            api_key=self.params.api_key,
+            verify_ssl=self.params.verify_ssl,
+            from_email=self.params.requester_email,
+            proxies=proxies,
+        )
+
+    def get_last_success_time(self, **kwargs: Any) -> str:
         return super().get_last_success_time(
             max_backwards_param_name="max_hours_backwards",
             time_format=DATETIME_FORMAT,
@@ -81,28 +85,29 @@ class PagerDutyConnector(Connector):
     def get_alerts(self) -> list[PagerDutyIncident]:
         params: dict[str, Any] = {
             "since": self.context.last_success_timestamp,
-            "limit": self.params.max_incidents_to_fetch
+            "limit": self.params.max_incidents_to_fetch,
         }
-        
+
         self.logger.info(f"PagerDuty get_alerts params: {params}")
-        
-        incidents_list: list[dict[str, Any]] = self.manager.list_filtered_incidents(
-            params=params
+
+        incidents_list: list[dict[str, Any]] = (
+            self.manager.list_filtered_incidents(params=params)
         )
-        
+
         if incidents_list is None:
             self.logger.info(
-                "No events were retrieved for the specified timeframe from PagerDuty"
+                "No events were retrieved for the specified timeframe from "
+                "PagerDuty"
             )
             return []
-            
+
         self.logger.info(f"Retrieved {len(incidents_list)} events from PagerDuty")
-        
+
         alerts = []
         for incident in incidents_list:
             alert_id = incident["id"]
             alerts.append(PagerDutyIncident(incident, alert_id))
-            
+
         return alerts
 
     def filter_alerts(
@@ -113,9 +118,7 @@ class PagerDutyConnector(Connector):
         )
 
     def max_alerts_processed(self, processed_alerts: list[AlertInfo]) -> bool:
-        if len(processed_alerts) >= self.params.max_incidents_to_fetch:
-            return True
-        return False
+        return len(processed_alerts) >= self.params.max_incidents_to_fetch
 
     def store_alert_in_cache(self, processed_alert: PagerDutyIncident) -> None:
         self.context.existing_ids.append(processed_alert.alert_id)
@@ -129,13 +132,15 @@ class PagerDutyConnector(Connector):
         self.logger.info("Saving existing ids.")
         write_ids(self.siemplify, self.context.existing_ids)
 
-    def set_last_success_time(self, alerts: list[PagerDutyIncident], **kwargs) -> None:
+    def set_last_success_time(
+        self, alerts: list[PagerDutyIncident], **kwargs: Any
+    ) -> None:
         """Set connector's last success time."""
         super().set_last_success_time(
             alerts=alerts,
             timestamp_key="created_at",
             convert_a_string_timestamp_to_unix=True,
-            **kwargs
+            **kwargs,
         )
 
     def process_alert(self, alert: PagerDutyIncident) -> PagerDutyIncident:

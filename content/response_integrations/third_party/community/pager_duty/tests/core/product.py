@@ -77,9 +77,7 @@ class PagerDuty:
         """Get notes for a specific incident."""
         return self.incident_notes.get(incident_id, [])
 
-    def set_incident_notes(
-        self, incident_id: str, notes: list[SingleJson]
-    ) -> None:
+    def set_incident_notes(self, incident_id: str, notes: list[SingleJson]) -> None:
         """Set notes for a specific incident."""
         self.incident_notes[incident_id] = notes
 

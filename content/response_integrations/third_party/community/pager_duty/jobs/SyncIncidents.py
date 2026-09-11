@@ -111,7 +111,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         alert_ids: list[str],
         sorted_modified_ids: list[tuple[str, int]],
     ) -> list[tuple[str, int]]:
-        """Fetches modified incidents from PagerDuty and maps them to SecOps case IDs.
+        """Fetches modified incidents from PagerDuty and maps them to SecOps
+        case IDs.
 
         Args:
             alert_ids: list of alert IDs to check for modifications.
@@ -119,7 +120,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 last modified timestamps.
 
         Returns:
-            A list of tuples containing SecOps case IDs and their last modified times.
+            A list of tuples containing SecOps case IDs and their last
+            modified times.
         """
         if not alert_ids:
             return []
@@ -157,7 +159,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             incident = self._get_cached_incident(incident_id)
             if incident:
                 timestamp_str = (
-                    incident.get("updated_at") or incident.get("created_at")
+                    incident.get("updated_at")
+                    or incident.get("created_at")
                 )
                 if timestamp_str:
                     dt = datetime.fromisoformat(
@@ -197,7 +200,9 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                         )
                         continue
         except Exception as e:
-            self.logger.error(f"Failed to get notes timestamp for {incident_id}: {e}")
+            self.logger.error(
+                f"Failed to get notes timestamp for {incident_id}: {e}"
+            )
         return latest_timestamp
 
     def _is_incident_modified(
@@ -250,7 +255,10 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             except ValueError:
                 return ticket.ticket_id
 
-        if hasattr(ticket, "alert_group_identifier") and ticket.alert_group_identifier:
+        if (
+            hasattr(ticket, "alert_group_identifier")
+            and ticket.alert_group_identifier
+        ):
             val: str | None = self.soar_job.get_context_property(
                 ENTITY_TYPE_ALERT,
                 str(ticket.alert_group_identifier),
@@ -348,7 +356,9 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 )
 
     def sync_status(self, job_case: JobCase) -> None:
-        """Syncs closure status between SecOps case alerts and PagerDuty incidents."""
+        """Syncs closure status between SecOps case alerts and PagerDuty
+        incidents.
+        """
         res = job_case.get_status_to_sync(product_closed_status="resolved")
         self._sync_product_status_to_case(res, job_case)
         self._sync_case_status_to_product(res, job_case)
@@ -360,7 +370,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         case_id = str(job_case.case_detail.id_)
         for alert, meta in res.alerts_to_close_in_soar:
             comment = (
-                f"{PAGERDUTY_COMMENT_PREFIX}{meta.incident_number}: Ticket was closed"
+                f"{PAGERDUTY_COMMENT_PREFIX}{meta.incident_number}: "
+                "Ticket was closed"
             )
             try:
                 self.soar_job.close_alert(
@@ -372,13 +383,18 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 )
                 alert.status = "close"
                 self.logger.info(
-                    f"Successfully closed alert {alert.identifier} in case {case_id}."
+                    f"Successfully closed alert {alert.identifier} in case "
+                    f"{case_id}."
                 )
                 self._remove_synced_entries(
-                    synced_list=[(job_case.case_detail.id_, f"{meta.incident_number}")],
+                    synced_list=[
+                        (job_case.case_detail.id_, f"{meta.incident_number}")
+                    ],
                 )
             except Exception as e:
-                self.logger.error(f"Failed to close alert {alert.identifier}: {e}")
+                self.logger.error(
+                    f"Failed to close alert {alert.identifier}: {e}"
+                )
 
     def _sync_case_status_to_product(
         self, res: JobStatusResult, job_case: JobCase
@@ -405,14 +421,18 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                 self.api_client.resolve_incident(meta.incident_number)
                 self._incident_cache.pop(meta.incident_number, None)
                 self.logger.info(
-                    f"Successfully resolved PagerDuty incident {meta.incident_number}."
+                    "Successfully resolved PagerDuty incident "
+                    f"{meta.incident_number}."
                 )
                 self._remove_synced_entries(
-                    synced_list=[(job_case.case_detail.id_, f"{meta.incident_number}")],
+                    synced_list=[
+                        (job_case.case_detail.id_, f"{meta.incident_number}")
+                    ],
                 )
             except Exception as e:
                 self.logger.error(
-                    f"Failed to resolve PagerDuty incident {meta.incident_number}: {e}",
+                    f"Failed to resolve PagerDuty incident "
+                    f"{meta.incident_number}: {e}",
                     exc_info=True,
                 )
 
@@ -486,12 +506,13 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
                     self.api_client.add_incident_note(incident_id, comment)
                     self._notes_cache.pop(incident_id, None)
                     self.logger.info(
-                        f"Successfully synced comments from SecOps to PagerDuty "
+                        "Successfully synced comments from SecOps to PagerDuty "
                         f"incident {incident_id}."
                     )
                 except Exception as e:
                     self.logger.error(
-                        f"Failed to add note to PagerDuty incident {incident_id}: {e}",
+                        "Failed to add note to PagerDuty incident "
+                        f"{incident_id}: {e}",
                         exc_info=True,
                     )
 
@@ -527,7 +548,9 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             if not product_id:
                 continue
             if self.is_alert_and_product_closed(job_case, product):
-                self._remove_synced_entries([(job_case.case_detail.id_, product_id)])
+                self._remove_synced_entries(
+                    [(job_case.case_detail.id_, product_id)]
+                )
 
 
 def main() -> None:

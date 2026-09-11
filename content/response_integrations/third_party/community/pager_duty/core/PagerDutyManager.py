@@ -6,6 +6,7 @@ from urllib.parse import quote_plus
 import requests
 from TIPCommon.types import SingleJson
 
+from .constants import DEFAULT_TIMEOUT
 from .Exceptions import PagerDutyNotFoundError
 
 
@@ -18,6 +19,7 @@ class PagerDutyManager:
         api_key: str,
         verify_ssl: bool = True,
         from_email: str | None = None,
+        proxies: dict[str, str] | None = None,
     ) -> None:
         """Initializes PagerDutyManager with params as set in connector config.
 
@@ -25,13 +27,17 @@ class PagerDutyManager:
             api_key: PagerDuty API key.
             verify_ssl: Whether to verify SSL certificates.
             from_email: The email address of the user performing the action.
+            proxies: Optional proxy configuration dictionary.
         """
         self.api_key: str = api_key
         self.verify_ssl: bool = verify_ssl
         self.from_email: str | None = from_email
+        self.proxies: dict[str, str] | None = proxies
 
         self.requests_session: requests.Session = requests.Session()
-        self.requests_session.verify: bool = self.verify_ssl
+        self.requests_session.verify = self.verify_ssl
+        if self.proxies:
+            self.requests_session.proxies = self.proxies
 
     def test_connectivity(self) -> None:
         """Tests connectivity and authentication to the PagerDuty API."""
@@ -43,7 +49,7 @@ class PagerDutyManager:
         response: requests.Response = self.requests_session.get(
             url,
             headers=headers,
-            timeout=10,
+            timeout=DEFAULT_TIMEOUT,
         )
         response.raise_for_status()
 
@@ -69,7 +75,7 @@ class PagerDutyManager:
             url,
             json=payload,
             headers=headers,
-            timeout=10,
+            timeout=DEFAULT_TIMEOUT,
         )
         response.raise_for_status()
         return response.json()
@@ -84,14 +90,16 @@ class PagerDutyManager:
             SingleJson: The API response.
         """
         url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}"
-        payload: SingleJson = {"incident": {"type": "incident", "status": "resolved"}}
+        payload: SingleJson = {
+            "incident": {"type": "incident", "status": "resolved"}
+        }
         headers: dict[str, str] = self._get_auth_headers()
         headers["Content-Type"] = "application/json"
         response = self.requests_session.put(
             url,
             json=payload,
             headers=headers,
-            timeout=10,
+            timeout=DEFAULT_TIMEOUT,
         )
         response.raise_for_status()
         return response.json()
@@ -114,7 +122,7 @@ class PagerDutyManager:
             url,
             json=payload,
             headers=headers,
-            timeout=10,
+            timeout=DEFAULT_TIMEOUT,
         )
         response.raise_for_status()
         return response.json()
@@ -132,25 +140,25 @@ class PagerDutyManager:
         response = self.requests_session.get(
             url,
             headers=self._get_auth_headers(),
-            timeout=10,
+            timeout=DEFAULT_TIMEOUT,
         )
         response.raise_for_status()
         return response.json().get("notes", [])
 
-    def get_incident(self, incident_id: str) -> SingleJson:
+    def get_incident(self, incident_id: str) -> SingleJson | None:
         """Gets an incident from PagerDuty by ID.
 
         Args:
             incident_id: The ID of the incident to retrieve.
 
         Returns:
-            SingleJson: The incident details.
+            SingleJson | None: The incident details.
         """
         url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}"
         response = self.requests_session.get(
             url,
             headers=self._get_auth_headers(),
-            timeout=10,
+            timeout=DEFAULT_TIMEOUT,
         )
         response.raise_for_status()
         return response.json().get("incident")
@@ -163,7 +171,7 @@ class PagerDutyManager:
         """
         url: str = f"{self.BASE_URL}/oncalls"
         response = self.requests_session.get(
-            url=url, headers=self._get_auth_headers(), timeout=10
+            url=url, headers=self._get_auth_headers(), timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
         return response.json().get("oncalls", [])
@@ -178,26 +186,25 @@ class PagerDutyManager:
             {"Authorization": f"Token token={self.api_key}"},
         )
         url: str = self.BASE_URL + "/incidents"
-        response: requests.Response = self.requests_session.get(url=url, timeout=10)
+        response: requests.Response = self.requests_session.get(
+            url=url, timeout=DEFAULT_TIMEOUT
+        )
         response.raise_for_status()
         incident_data: SingleJson = response.json()
         return incident_data.get("incidents")
 
-    def list_incidents(self) -> list[SingleJson] | str:
+    def list_incidents(self) -> list[SingleJson]:
         """Lists incidents.
 
         Returns:
-            list[SingleJson] | str: List of incidents or "No Incidents Found".
+            list[SingleJson]: List of incidents.
         """
         url: str = f"{self.BASE_URL}/incidents"
         response: requests.Response = self.requests_session.get(
-            url=url, headers=self._get_auth_headers(), timeout=10
+            url=url, headers=self._get_auth_headers(), timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
-        incidents: list[SingleJson] = response.json().get("incidents")
-        if incidents:
-            return incidents
-        return "No Incidents Found"
+        return response.json().get("incidents") or []
 
     def list_users(self) -> list[SingleJson]:
         """Lists users.
@@ -207,7 +214,7 @@ class PagerDutyManager:
         """
         url: str = f"{self.BASE_URL}/users"
         response: requests.Response = self.requests_session.get(
-            url=url, headers=self._get_auth_headers(), timeout=10
+            url=url, headers=self._get_auth_headers(), timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
         return response.json().get("users", [])
@@ -232,9 +239,9 @@ class PagerDutyManager:
         Returns:
             SingleJson: The created incident or message.
         """
-        self.requests_session.headers.update(
-            {"Authorization": f"Token token={self.api_key}", "From": f"{email_from}"},
-        )
+        headers: dict[str, str] = self._get_auth_headers()
+        headers["From"] = email_from
+        headers["Content-Type"] = "application/json"
         payload: SingleJson = {
             "incident": {
                 "type": "incident",
@@ -246,7 +253,9 @@ class PagerDutyManager:
         }
         url: str = self.BASE_URL + "/incidents"
 
-        response = self.requests_session.post(url=url, json=payload, timeout=10)
+        response = self.requests_session.post(
+            url=url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT
+        )
         if response.status_code == 400:
             raise Exception(f"400 Bad Request: {response.text}")
         response.raise_for_status()
@@ -258,19 +267,18 @@ class PagerDutyManager:
         """Gets incident by ID.
 
         Args:
-            incident_id (str): Incident ID or key.
-            email_from (str): Email address.
+            incident_id: Incident ID or key.
+            email_from: Email address.
 
         Returns:
             SingleJson: Incident data.
         """
-        self.requests_session.headers.update(
-            {"Authorization": f"Token token={self.api_key}", "From": f"{email_from}"},
-        )
+        headers: dict[str, str] = self._get_auth_headers()
+        headers["From"] = email_from
         payload: dict[str, str] = {"user_ids[]": incident_id}
         url: str = self.BASE_URL + self.INCIDENTS_URI
         response: requests.Response = self.requests_session.get(
-            url=url, json=payload, timeout=10
+            url=url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
         incident_data: SingleJson = {}
@@ -286,7 +294,7 @@ class PagerDutyManager:
         """Gets user by email.
 
         Args:
-            email (str): User email.
+            email: User email.
 
         Returns:
             SingleJson: User dict.
@@ -297,7 +305,10 @@ class PagerDutyManager:
         url: str = f"{self.BASE_URL}/users"
         params: dict[str, str] = {"query": email}
         response: requests.Response = self.requests_session.get(
-            url=url, headers=self._get_auth_headers(), params=params, timeout=10
+            url=url,
+            headers=self._get_auth_headers(),
+            params=params,
+            timeout=DEFAULT_TIMEOUT,
         )
         response.raise_for_status()
         users: list[SingleJson] = response.json().get("users", [])
@@ -326,7 +337,7 @@ class PagerDutyManager:
         }
         url: str = self.BASE_URL + "/users/" + user_id
         response = self.requests_session.request(
-            "GET", url, headers=headers, timeout=10
+            "GET", url, headers=headers, timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
         if response.json().get("user"):
@@ -337,7 +348,7 @@ class PagerDutyManager:
         """Lists filtered incidents.
 
         Args:
-            params (dict[str, Any]): Filter parameters.
+            params: Filter parameters.
 
         Returns:
             list[SingleJson]: List of incidents.
@@ -352,10 +363,12 @@ class PagerDutyManager:
             if isinstance(value, list):
                 for item in value:
                     if item is not None:
-                        query_parts.append(f"{encoded_key}={quote_plus(str(item))}")
+                        param_str = f"{encoded_key}={quote_plus(str(item))}"
+                        query_parts.append(param_str)
             else:
                 if value is not None:
-                    query_parts.append(f"{encoded_key}={quote_plus(str(value))}")
+                    param_str = f"{encoded_key}={quote_plus(str(value))}"
+                    query_parts.append(param_str)
 
         query_string = "&".join(query_parts)
 
@@ -366,7 +379,7 @@ class PagerDutyManager:
         response: requests.Response = self.requests_session.get(
             full_url,
             headers=headers,
-            timeout=10,
+            timeout=DEFAULT_TIMEOUT,
         )
 
         response.raise_for_status()
@@ -376,19 +389,20 @@ class PagerDutyManager:
         """Snoozes an incident.
 
         Args:
-            email_from (str): Email address.
-            incident_id (str): Incident ID.
+            email_from: Email address.
+            incident_id: Incident ID.
 
         Returns:
             SingleJson: API response.
         """
-        self.requests_session.headers.update(
-            {"Authorization": f"Token token={self.api_key}", "From": f"{email_from}"},
-        )
+        headers: dict[str, str] = self._get_auth_headers()
+        headers["From"] = email_from
         payload: dict[str, int] = {"duration": 3600}
-        url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}" + "/snooze"
+        url: str = (
+            self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}/snooze"
+        )
         response: requests.Response = self.requests_session.post(
-            url=url, json=payload, timeout=10
+            url=url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
         return response.json()
@@ -414,13 +428,15 @@ class PagerDutyManager:
         headers["Content-Type"] = "application/json"
         headers["From"] = f"{email}"
 
-        full_url: str = self.BASE_URL + "/response_plays/" + response_plays_id + "/run"
+        full_url: str = (
+            f"{self.BASE_URL}/response_plays/{response_plays_id}/run"
+        )
         response = self.requests_session.request(
             "POST",
             full_url,
             json=payload,
             headers=headers,
-            timeout=10,
+            timeout=DEFAULT_TIMEOUT,
         )
         response.raise_for_status()
         return response.json() if response.content else {"status": "ok"}

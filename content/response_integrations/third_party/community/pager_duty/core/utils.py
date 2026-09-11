@@ -4,6 +4,8 @@ import html
 import re
 from typing import TYPE_CHECKING
 
+from .constants import PAGERDUTY_COMMENT_PREFIX
+
 if TYPE_CHECKING:
     from TIPCommon.base.job.job_case import JobCase
 
@@ -86,7 +88,7 @@ def clean_pagerduty_comment(text: str) -> str:
     if not text:
         return ""
 
-    idx = text.find("PagerDuty:")
+    idx = text.find(PAGERDUTY_COMMENT_PREFIX)
     if idx != -1:
         text = text[idx:]
 
@@ -97,7 +99,8 @@ def clean_pagerduty_comment(text: str) -> str:
 
 
 def clean_secops_comment(text: str) -> str:
-    """Converts a rich-text/HTML SecOps comment into clean plain text for PagerDuty.
+    """Converts a rich-text/HTML SecOps comment into clean plain text for
+    PagerDuty.
 
     Args:
         text: The raw comment string from SecOps.
@@ -134,10 +137,8 @@ def sanitize_case_comments(job_case: JobCase) -> None:
             sanitized_dict = dict(comment)
             raw_text = sanitized_dict.get("comment")
             if isinstance(raw_text, str):
-                if "PagerDuty:" in raw_text:
-                    sanitized_dict["comment"] = clean_pagerduty_comment(
-                        raw_text
-                    )
+                if PAGERDUTY_COMMENT_PREFIX in raw_text:
+                    sanitized_dict["comment"] = clean_pagerduty_comment(raw_text)
                 else:
                     sanitized_dict["comment"] = clean_secops_comment(raw_text)
             sanitized_comments.append(sanitized_dict)
