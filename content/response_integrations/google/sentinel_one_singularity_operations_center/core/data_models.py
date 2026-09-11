@@ -193,9 +193,19 @@ class SentinelOneAlert(BaseAlert):
         if self.details:
             events.append(self.details.as_event())
 
-        events.extend(obs.as_event(self.last_seen_at) for obs in self.observables)
+        seen_observable_keys = set()
+        for ind in self.indicators:
+            events.append(ind.as_event(self.last_seen_at))
+            for obs in ind.observables:
+                events.append(obs.as_event(self.last_seen_at))
+                obs_key = (obs.type, obs.value, obs.name)
+                seen_observable_keys.add(obs_key)
 
-        events.extend(ind.as_event(self.last_seen_at) for ind in self.indicators)
+        for obs in self.observables:
+            obs_key = (obs.type, obs.value, obs.name)
+            if obs_key in seen_observable_keys:
+                continue
+            events.append(obs.as_event(self.last_seen_at))
 
         events.extend(asset.as_event(self.last_seen_at) for asset in self.assets)
 
@@ -312,8 +322,13 @@ class SentinelOneAlertDetails:
 class AlertObservable:
     """Data model representing a SentinelOne Alert Observable."""
 
-    def __init__(self, raw_data: dict) -> None:
+    def __init__(
+        self,
+        raw_data: dict,
+        parent_indicator: AlertIndicator | None = None,
+    ) -> None:
         self.raw_data = raw_data
+        self.parent_indicator = parent_indicator
 
     @property
     def id(self) -> str | None:
@@ -335,6 +350,11 @@ class AlertObservable:
         """The observable type."""
         return self.raw_data.get("type")
 
+    @property
+    def type_name(self) -> str | None:
+        """The observable type name."""
+        return self.raw_data.get("typeName")
+
     def as_event(self, alert_timestamp: str | None) -> dict:
         """Serialize observable to a flat Siemplify event dictionary.
 
@@ -349,6 +369,27 @@ class AlertObservable:
         data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt")
         if self.name:
             data[self.name] = self.value
+        if self.type:
+            type_lower = self.type.lower()
+            data[type_lower] = self.value
+            if type_lower in ("ip", "ipv4", "ipv6"):
+                data["ip"] = self.value
+            elif type_lower in ("dns", "domain"):
+                data["dns"] = self.value
+                data["domain"] = self.value
+            elif type_lower in ("url", "uri"):
+                data["url"] = self.value
+            elif type_lower in ("file_hash", "hash", "md5", "sha1", "sha256"):
+                data["file_hash"] = self.value
+        if self.parent_indicator:
+            if self.parent_indicator.uid:
+                data["indicator_uid"] = self.parent_indicator.uid
+            if self.parent_indicator.type:
+                data["indicator_type"] = self.parent_indicator.type
+            if self.parent_indicator.message:
+                data["indicator_message"] = self.parent_indicator.message
+            if self.parent_indicator.severity:
+                data["indicator_severity"] = self.parent_indicator.severity
         return dict_to_flat(data)
 
 
@@ -364,6 +405,11 @@ class AlertIndicator:
         return self.raw_data.get("id")
 
     @property
+    def uid(self) -> str | None:
+        """The indicator UID."""
+        return self.raw_data.get("uid")
+
+    @property
     def value(self) -> str | None:
         """The indicator value."""
         return self.raw_data.get("value")
@@ -372,6 +418,27 @@ class AlertIndicator:
     def type(self) -> str | None:
         """The indicator type."""
         return self.raw_data.get("type")
+
+    @property
+    def message(self) -> str | None:
+        """The indicator message."""
+        return self.raw_data.get("message")
+
+    @property
+    def event_time(self) -> str | None:
+        """The indicator event timestamp string."""
+        return self.raw_data.get("eventTime")
+
+    @property
+    def severity(self) -> str | None:
+        """The indicator severity."""
+        return self.raw_data.get("severity")
+
+    @property
+    def observables(self) -> list[AlertObservable]:
+        """Observables linked directly under this indicator."""
+        raw_obs = self.raw_data.get("observables") or []
+        return [AlertObservable(obs, parent_indicator=self) for obs in raw_obs]
 
     def as_event(self, alert_timestamp: str | None) -> dict:
         """Serialize indicator to a flat Siemplify event dictionary.
@@ -383,6 +450,7 @@ class AlertIndicator:
             dict: The flattened event dictionary.
         """
         data = self.raw_data.copy()
+        data.pop("observables", None)
         data[EVENT_TYPE_FIELD] = EventType.INDICATOR.value
         data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt")
         return dict_to_flat(data)
@@ -494,7 +562,11 @@ class AlertUpdateResult:
                         f"Singularity Operations Center. Please check the spelling."
                     )
                 else:
-                    msg = f"Alert update encountered failures for alert '{alert_id}': {', '.join(failures)}"
+                    failures_str = ", ".join(failures)
+                    msg = (
+                        f"Alert update encountered failures for alert "
+                        f"'{alert_id}': {failures_str}"
+                    )
                 raise AlertUpdateError(msg)
 
             return cls(
@@ -508,7 +580,11 @@ class AlertUpdateResult:
             error_msgs = [
                 e.get("errorMessage") for e in errors if e.get("errorMessage")
             ]
-            msg = f"Failed to update SentinelOne alert '{alert_id}' due to API error: {', '.join(error_msgs)}"
+            err_str = ", ".join(error_msgs)
+            msg = (
+                f"Failed to update SentinelOne alert '{alert_id}' due to "
+                f"API error: {err_str}"
+            )
             raise AlertUpdateError(msg)
 
         if typename == "TriggerActionsScheduled":
