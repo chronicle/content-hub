@@ -46,7 +46,8 @@ except ImportError:
 else:
     if not hasattr(magic, "open"):
         logger.warning(
-            "You are using python-magic, though this module requires file-magic. Disabling magic usage due to incompatibilities.",
+            "You are using python-magic, though this module requires file-magic. "
+            "Disabling magic usage due to incompatibilities.",
         )
 
         magic = None
@@ -406,7 +407,7 @@ class EmlParser:
                         try:
                             dom = get_fld(m.lower(), fix_protocol=True)
                             headers_struc["received_domain"].append(dom)
-                        except:
+                        except Exception:
                             headers_struc["received_domains_internal"].append(m.lower())
 
                 # search for e-mail addresses
@@ -590,7 +591,7 @@ class EmlParser:
                 bodie["content_type"] = header_val.split(";", 1)[0].strip()
 
             # Hash the body
-            bodie["hash"] = hashlib.sha256(body.encode("utf-8")).hexdigest()
+            bodie["hash"] = hashlib.sha256(body.encode("utf-8", errors="surrogatepass")).hexdigest()
 
             uid = str(uuid.uuid1())
             bodys[uid] = bodie
@@ -802,7 +803,8 @@ class EmlParser:
             msg (email.message.Message): The actual e-mail message or sub-message.
 
         Returns:
-            list: Returns a list of sets which are in the form of "set(encoding, raw_body_string, message field headers)"
+            list: Returns a list of sets which are in the form of
+                "set(encoding, raw_body_string, message field headers)"
 
         """
         raw_body: list[tuple[typing.Any, typing.Any, typing.Any]] = []
@@ -819,7 +821,8 @@ class EmlParser:
                 filename = msg.get_filename("").lower()
             except (binascii.Error, AssertionError):
                 logger.exception(
-                    "Exception occurred while trying to parse the content-disposition header. Collected data will not be complete.",
+                    "Exception occurred while trying to parse the content-disposition header. "
+                    "Collected data will not be complete.",
                 )
                 filename = ""
 
@@ -903,7 +906,7 @@ class EmlParser:
             str: Returns the calculated hash as a string.
 
         """
-        _string = string.encode("utf-8")
+        _string = string.encode("utf-8", errors="surrogatepass")
 
         return hashlib.sha256(_string).hexdigest()
 
@@ -979,7 +982,8 @@ class EmlParser:
                 payload = msg.get_payload()
                 if len(payload) > 1:
                     logger.warning(
-                        'More than one payload for "message/rfc822" part detected. This is not supported, please report!',
+                        'More than one payload for "message/rfc822" part detected. '
+                        "This is not supported, please report!",
                     )
 
                 try:
@@ -1052,8 +1056,9 @@ class EmlParser:
             data: Binary data.
 
         Returns:
-            typing.Tuple[str, str]: Identified mime information and mime-type. If **magic** is not available, returns *None, None*.
-                                    E.g. *"ELF 64-bit LSB shared object, x86-64, version 1 (SYSV)", "application/x-sharedlib"*
+            typing.Tuple[str, str]: Identified mime information and mime-type. If **magic** is not available,
+                returns *None, None*. E.g. *"ELF 64-bit LSB shared object, x86-64, version 1 (SYSV)",
+                "application/x-sharedlib"*
 
         """
         if magic is None:

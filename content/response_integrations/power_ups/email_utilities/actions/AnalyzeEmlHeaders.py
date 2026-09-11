@@ -30,12 +30,16 @@ INTEGRATION_NAME = "EmailUtilties"
 SCRIPT_NAME = "Analyze EML Headers"
 EXCLUDED_DOMAINS_ADDRESSES = ["127.0.0.1", "localhost"]
 
-EMAIL_ADDRESS_REGEX = r"""(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"""
+EMAIL_ADDRESS_REGEX = (  # noqa: E501
+    r"""(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"""
+)
 
 RED_COLOR = "FF0000"
 GREEN_COLOR = "00FF00"
-DOT_HTML_SNNIPET = """<div style="text-align:center"><span style="height: 5px;  width: 5px;  background-color: #{};  border-radius: 50%;  display: inline-block;"></span></div>"""
-# DOT_HTML_SNNIPET = """<style>.dot_insight {{{{  height: 5px;  width: 5px;  background-color: #{};  border-radius: 50%;  display: inline-block;}}}}</style><div style="text-align:center">  <span class="dot_insight"></span>{{}}</div>"""
+DOT_HTML_SNNIPET = (
+    '<div style="text-align:center"><span style="height: 5px;  width: 5px;  '
+    'background-color: #{};  border-radius: 50%;  display: inline-block;"></span></div>'
+)
 RED_DOT_HTML_SNNIPET = DOT_HTML_SNNIPET.format(RED_COLOR)
 GREEN_DOT_HTML_SNNIPET = DOT_HTML_SNNIPET.format(GREEN_COLOR)
 
@@ -149,8 +153,7 @@ def get_generic_siemplify_recommendations(headers):
                     "status": GREEN_DOT_HTML_SNNIPET,
                 },
             )
-    else:  # "Reply-To" does bit exist
-        # return_list.append({"message": "\"Reply-To\" header does not exist", "score": 4, "status": RED_DOT_HTML_SNNIPET})
+    else:  # "Reply-To" does not exist
         pass
 
     if "X-Distribution".lower() in lower_case_headers:
@@ -171,11 +174,6 @@ def get_generic_siemplify_recommendations(headers):
                 "status": GREEN_DOT_HTML_SNNIPET,
             },
         )
-
-    # if "X-Mailer".lower() in lower_case_headers:
-    #     return_list.append({"message": "\"X-Mailer\" header exists and with value: {}".format(lower_case_headers['X-Mailer'.lower()]), "score": 1, "status": RED_DOT_HTML_SNNIPET})
-    # else:
-    #     return_list.append({"message": "\"X-Mailer\" header checked (does not exist)", "score": 0, "status": GREEN_DOT_HTML_SNNIPET})
 
     if "Bcc".lower() in lower_case_headers:
         return_list.append(
@@ -238,7 +236,7 @@ def process_user_authenticated_header(headers):
     return_dict = {}
     return_dict["siemplify_recommendations"] = []
     if "X-Authenticated-User" in headers:
-        raw = hedaers["X-Authenticated-User"]
+        raw = headers["X-Authenticated-User"]
         domain = raw[raw.index("@") + 1 :] if "@" in raw else None
         return_dict["domain"] = domain
 
@@ -290,7 +288,7 @@ def main():
             try:
                 key = f"{item[0]}"
                 val = item[1]
-            except:
+            except Exception:
                 raise Exception(item)
             if key not in duplicate_key_dict:
                 duplicate_key_dict[key] = 1

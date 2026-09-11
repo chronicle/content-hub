@@ -69,7 +69,7 @@ def ip_to_integer(ip_address):
             ip_integer = int(binascii.hexlify(ip_hex), 16)
 
             return (ip_integer, 4 if version == socket.AF_INET else 6)
-        except:
+        except Exception:
             pass
 
     raise ValueError("invalid IP address")
@@ -101,9 +101,9 @@ def subnetwork_to_ip_range(subnetwork):
                 ip_upper = ip_lower + suffix_mask
 
                 return (ip_lower, ip_upper, 4 if version == socket.AF_INET else 6)
-            except:
+            except Exception:
                 pass
-    except:
+    except Exception:
         pass
 
     raise ValueError("invalid subnetwork")
@@ -160,7 +160,7 @@ def return_domain(email):
     else:
         domain = re.search("@(.*)", email)
 
-    if domain == None:
+    if domain is None:
         return None
     return domain.group(1)
 
@@ -210,7 +210,7 @@ def parseHops(received):
                 denylist = {}
                 hop_info["from"] = f
                 try:
-                    test_ip = ipaddress.ip_address(f)
+                    ipaddress.ip_address(f)
                     ip_check = ip_checker.check(f)
                     # hop_info['from'] = f
                     try:
@@ -265,14 +265,14 @@ def parseHops(received):
                     logger(message)
 
                 if "blacklisted" in denylist:
-                    if denylist["blacklisted"] == True:
+                    if denylist["blacklisted"]:
                         hop_info["blacklisted"] = True
         else:
             hop_info["from"] = ""
         if "by" in parsed_route:
             hop_info["by"] = parsed_route["by"][0]
             try:
-                test_ip = ipaddress.ip_address(hop_info["by"])
+                ipaddress.ip_address(hop_info["by"])
 
                 obj = IPWhois(hop_info["by"])
 
@@ -347,7 +347,7 @@ def buildResult(header, siemplify):
         res = re.search(r"header.i=@(.*?)\s", dmarc_sig)
         if res:
             result["DmarcDomain"] = res.group(1)
-    except:
+    except Exception:
         pass
 
     try:
@@ -355,7 +355,7 @@ def buildResult(header, siemplify):
         res = re.search(r"domain of (?:.*?@)?(.*?)\s", received_spf)
         if res:
             result["SPFDomain"] = res.group(1)
-    except:
+    except Exception:
         pass
     domain_check = checkdmarc.check_domains(
         [result["FromDomain"]],
@@ -380,7 +380,7 @@ def buildResult(header, siemplify):
         arc_res["result"], arc_res["details"], arc_res["reason"] = arc.verify()
         arc_res["result"] = arc_res["result"].decode()
         result["ARCVerify"] = arc_res
-    except:
+    except Exception:
         result["ARCVerify"] = {}
         result["ARCVerify"]["result"] = "error"
     result["RelayInfo"] = []
@@ -393,7 +393,7 @@ def buildResult(header, siemplify):
                 fromserver = EmailParserRouting.parserouting(fromserver_str)
                 try:
                     if "by" in fromserver:
-                        test_ip = ipaddress.ip_address(fromserver["by"][0])
+                        ipaddress.ip_address(fromserver["by"][0])
                         result["SourceServerIP"] = fromserver["by"][0]
                         result["SourceServer"] = fromserver["by"][0]
                 except Exception:
@@ -405,7 +405,7 @@ def buildResult(header, siemplify):
                                     result["SourceServer"],
                                 )[0][2]
                             )
-                        except:
+                        except Exception:
                             pass
                 continue
     except Exception:
@@ -419,7 +419,7 @@ def buildResult(header, siemplify):
         result["StrongSPF"] = EmailUtilitiesManager.SpfRecord.from_domain(
             result["FromDomain"],
         ).is_record_strong()
-    except:
+    except Exception:
         result["StrongSPF"] = False
 
     return result

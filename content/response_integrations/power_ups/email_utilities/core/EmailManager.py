@@ -845,7 +845,11 @@ class EmailBody:
         body_json = {
             "content_type": content_type,
             "content": msg if msg is not None else "",
-            "hash": hashlib.sha256(str(msg).encode("utf-8")).hexdigest(),
+            "hash": (
+                hashlib.sha256(str(msg).encode("utf-8", errors="surrogatepass")).hexdigest()
+                if msg is not None
+                else ""
+            ),
         }
         body_json["parsed_entities"] = self.parse_body(msg) if msg is not None else []
         return body_json
