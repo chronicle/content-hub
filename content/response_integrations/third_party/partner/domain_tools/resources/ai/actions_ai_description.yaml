@@ -565,3 +565,422 @@ Ping:
     update_identity: false
     update_ticket: false
   parameters_description: There are no parameters for this action
+Enrich Domain Risk:
+  ai_description: >-
+    ### General Description
+
+    Enriches Domain, Hostname, and URL entities with DomainTools risk scores using
+    the iris_enrich API. Each domain is classified into a risk category (high_risk,
+    medium_risk, suspicious, young_domain, or low_risk) and optionally marked as
+    suspicious in Google SecOps based on a configurable threshold.
+
+
+    ### Flow Description
+
+    1. Filters target entities to URL, HOSTNAME, and DOMAIN types.
+
+    2. Extracts the root domain from each entity identifier.
+
+    3. Calls the DomainTools iris_enrich API in batches to retrieve risk scores.
+
+    4. Classifies each domain by risk category based on score and domain age.
+
+    5. Updates entity additional_properties with DT-prefixed enrichment data.
+
+    6. Marks entities as enriched; marks as suspicious if score >= threshold or domain is young.
+
+    7. Attaches a CSV data table and JSON results to the case output.
+
+
+    ### Additional Notes
+
+    - Requires the iris-enrich product license on the DomainTools account.
+
+    - Young domains (< 30 days old) are always marked suspicious regardless of score.
+  ai_short_description: >-
+    Enriches Domain, Hostname, and URL entities with DomainTools risk scores and
+    classifies them into risk categories using the iris_enrich API.
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Risk Threshold | String | No | Numeric score (0-100). Entities with an overall
+    risk score at or above this value are marked as suspicious. Defaults to 70. |
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional_properties with DT-prefixed risk data, sets is_enriched
+      and is_suspicious flags on entities.
+    reasoning: >-
+      Fetches risk data from DomainTools API. Mutates internal SecOps data by updating
+      entity properties and suspicious flags. Updates entities via update_entities.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: true
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      Iterates over target_entities filtered by entity_type in SUPPORTED_ENTITY_TYPES
+      (URL, HOSTNAME, DOMAIN).
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      Fetches risk scores and threat intelligence for domain indicators, matching
+      Enrich IOC. Does not modify external systems, alerts, or tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Bulk Enrich Domains:
+  ai_description: >-
+    ### General Description
+
+    Batch-enriches up to 100 domains with DomainTools risk scores using the iris_enrich
+    API. Returns aggregate statistics by risk category plus per-domain enrichment
+    details. Domains can be supplied via action parameter or taken from in-scope case
+    entities.
+
+
+    ### Flow Description
+
+    1. Reads the Domains parameter (comma-separated list) or falls back to in-scope
+    URL, HOSTNAME, and DOMAIN entities.
+
+    2. Truncates to BULK_ENRICH_MAX_DOMAINS (100) if exceeded.
+
+    3. Calls DomainTools iris_enrich API in batches of 20.
+
+    4. Counts results by risk category (high_risk, medium_risk, suspicious, young_domain,
+    low_risk).
+
+    5. Optionally filters out young_domain entries from the output based on the Include
+    Young Domains parameter.
+
+    6. Attaches a JSON result with summary and per-domain details, plus a CSV data table.
+
+
+    ### Additional Notes
+
+    - Requires the iris-enrich product license.
+
+    - Does not enrich case entities — operates as a standalone lookup.
+  ai_short_description: >-
+    Batch-enriches up to 100 domains with DomainTools risk scores and returns aggregate
+    statistics by risk category.
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Domains | String | No | Comma-separated list of domains to enrich. If empty,
+    uses in-scope case entities. |
+
+    | Include Young Domains | Boolean | No | Whether to include young domains (< 30
+    days old) in the output. Defaults to true. |
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      Fetches bulk risk data from DomainTools API. Does not update entities or mutate
+      any internal/external data — result is attached as JSON output only.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: true
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      When no Domains param is given, iterates target_entities filtered by entity_type
+      in SUPPORTED_ENTITY_TYPES (URL, HOSTNAME, DOMAIN).
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      Returns risk scores and threat intelligence for a batch of domain indicators,
+      matching Enrich IOC.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+Get Domain Profile:
+  ai_description: >-
+    ### General Description
+
+    Builds a comprehensive dossier for each in-scope domain by combining data from
+    three DomainTools sources: Iris Investigate (risk scores, identity, registration,
+    hosting), Parsed Domain RDAP (registration contacts and statuses), and WHOIS History
+    (historical ownership records).
+
+
+    ### Flow Description
+
+    1. Filters target entities to URL, HOSTNAME, and DOMAIN types.
+
+    2. For each entity, calls iris_investigate, parsed_domain_rdap, and whois_history
+    APIs.
+
+    3. Calculates domain age from the create_date and classifies risk category.
+
+    4. Assembles a profile dict with risk, identity, registration, hosting, history,
+    and metadata sections.
+
+    5. Marks entities as enriched and updates them in the platform.
+
+    6. Attaches a JSON result and CSV summary table to the case output.
+
+
+    ### Additional Notes
+
+    - Requires iris-investigate and parsed-domain-rdap product licenses.
+
+    - If RDAP data is not found (has_found=false), that section is omitted from the
+    profile but the action still succeeds.
+  ai_short_description: >-
+    Builds a comprehensive domain profile by combining DomainTools Iris Investigate,
+    RDAP, and WHOIS history data for each in-scope domain entity.
+  parameters_description: There are no parameters for this action
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Sets is_enriched on entities and updates them via update_entities.
+    reasoning: >-
+      Makes three API calls per entity to DomainTools (fetches_data=true). Sets
+      is_enriched and calls update_entities (can_mutate_internal_data, can_update_entities).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: true
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      Iterates over target_entities filtered by entity_type in SUPPORTED_ENTITY_TYPES
+      (URL, HOSTNAME, DOMAIN).
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      Returns a comprehensive threat intelligence profile for domain indicators,
+      matching Enrich IOC.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
