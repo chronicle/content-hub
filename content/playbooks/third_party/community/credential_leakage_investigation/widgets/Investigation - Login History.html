@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Events</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:            #0d1117;
+    --surface:       #161b26;
+    --surface-hover: #1f2640;
+    --border:        rgba(255,255,255,0.07);
+    --border-strong: rgba(255,255,255,0.15);
+    --accent:        #4f8ef7;
+    --accent-dim:    rgba(79,142,247,0.13);
+    --text-primary:  #d8dce8;
+    --text-secondary:#7c849e;
+    --text-muted:    #444c63;
+    --text-header:   #9aa0b8;
+    --mono: 'JetBrains Mono','Cascadia Code','Fira Mono',monospace;
+    --sans: 'Inter',system-ui,sans-serif;
+    --sidebar-w: 210px;
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    font-size: 13px;
+    display: flex;
+    height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: var(--sidebar-w);
+    height: 100vh;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  .sidebar-header { padding: 18px 16px 14px; border-bottom: 1px solid var(--border); }
+  .sidebar-eyebrow { font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+  .sidebar-count { font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: -.02em; }
+  .sidebar-count span { font-size: 12px; font-weight: 400; color: var(--text-secondary); margin-left: 4px; }
+  .user-list { padding: 6px 0; }
+  .user-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+    cursor: pointer; border-left: 2px solid transparent;
+    transition: background .1s; color: var(--text-secondary);
+  }
+  .user-item:hover  { background: rgba(255,255,255,.03); color: var(--text-primary); }
+  .user-item.active { background: var(--accent-dim); border-left-color: var(--accent); color: var(--text-primary); }
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: rgba(79,142,247,.15); color: var(--accent);
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .user-item.active .user-avatar { background: rgba(79,142,247,.25); }
+  .user-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .row-badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,.06); color: var(--text-muted); flex-shrink: 0; }
+  .user-item.active .row-badge { background: rgba(79,142,247,.2); color: var(--accent); }
+
+  /* ── Main / Panel ── */
+  #main { flex: 1; height: 100vh; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .panel { display: none; flex-direction: column; height: 100%; min-height: 0; }
+  .panel.active { display: flex; }
+
+  /* ── Panel header ── */
+  .panel-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .panel-avatar {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: var(--accent-dim); border: 1px solid rgba(79,142,247,.22);
+    color: var(--accent); font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .panel-info { flex-shrink: 0; }
+  .panel-username { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .panel-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+  /* ── Panel controls (filter toolbar) ── */
+  .panel-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: flex-end;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  /* Column-picker dropdown */
+  .col-drop-wrap { position: relative; flex-shrink: 0; }
+  .col-drop-btn {
+    width: 26px; height: 26px; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary); transition: background .1s, color .1s;
+  }
+  .col-drop-btn:hover { background: rgba(255,255,255,.07); color: var(--text-primary); }
+  .col-drop-menu {
+    position: absolute; top: calc(100% + 4px); left: 0;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    min-width: 252px; max-width: 280px;
+    padding: 10px 12px;
+    z-index: 99;
+    box-shadow: 0 8px 24px rgba(0,0,0,.55);
+    display: none;
+  }
+  .col-drop-menu.open { display: block; }
+  .col-drop-head {
+    display: flex; align-items: center; gap: 8px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  .col-drop-search {
+    flex: 1; background: rgba(255,255,255,.06); border: 1px solid var(--border-strong);
+    border-radius: 4px; padding: 4px 8px; font-size: 11px;
+    color: var(--text-primary); font-family: inherit;
+  }
+  .col-drop-search::placeholder { color: var(--text-muted); }
+  .select-all-lbl {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--text-secondary); cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  }
+  .col-drop-list { max-height: 260px; overflow-y: auto; margin-top: 4px; padding-right: 4px; }
+  .col-drop-item {
+    display: flex; align-items: center; gap: 6px; padding: 4px 0;
+    cursor: pointer; font-size: 11px; color: var(--text-secondary);
+  }
+  .col-drop-item:hover { color: var(--text-primary); }
+  .col-drop-item input[type="checkbox"] { flex-shrink: 0; cursor: pointer; }
+  .col-drop-item-text { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Important UDM toggle */
+  .udm-lbl {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text-secondary); cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  }
+  .udm-lbl:hover { color: var(--text-primary); }
+  .udm-lbl input[type="checkbox"] { cursor: pointer; }
+
+  /* Row regex search */
+  .row-search {
+    background: rgba(255,255,255,.06); border: 1px solid var(--border-strong);
+    border-radius: 4px; padding: 4px 10px;
+    font-size: 11px; color: var(--text-primary); font-family: inherit;
+    width: 160px;
+  }
+  .row-search::placeholder { color: var(--text-muted); }
+
+  /* Events badge */
+  .events-badge {
+    font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--text-secondary); flex-shrink: 0;
+  }
+  .events-badge strong { color: var(--text-primary); font-size: 14px; letter-spacing: -.01em; margin-right: 3px; }
+
+  /* ── Table ── */
+  .table-wrap { flex: 1; overflow: auto; min-height: 0; }
+  table { border-collapse: collapse; table-layout: fixed; }
+  thead { position: sticky; top: 0; z-index: 2; }
+  thead tr { background: var(--surface); border-bottom: 1px solid var(--border-strong); }
+  th {
+    width: 200px; padding: 0; position: relative;
+    font-size: 10px; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--text-header);
+    text-align: left; white-space: nowrap;
+    border-right: 1px solid var(--border);
+    user-select: none;
+  }
+  th:last-child { border-right: none; }
+  .th-inner { padding: 9px 14px; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .resize-handle {
+    position: absolute; top: 2px; right: 4px; bottom: 2px;
+    width: 2px; background: var(--border-strong);
+    cursor: col-resize; z-index: 3;
+  }
+  .resize-handle::before, .resize-handle::after { content: ''; position: absolute; top: 0; bottom: 0; width: 6px; }
+  .resize-handle::before { left: -6px; }
+  .resize-handle::after  { right: -6px; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .08s; }
+  tbody tr:nth-child(even) { background: rgba(255,255,255,.015); }
+  tbody tr:hover { background: var(--surface-hover); }
+  td {
+    padding: 8px 14px; font-family: var(--mono); font-size: 11.5px;
+    color: var(--text-primary); white-space: nowrap;
+    border-right: 1px solid var(--border);
+    overflow: hidden; text-overflow: ellipsis; max-width: 360px;
+  }
+  td:last-child { border-right: none; }
+  td.is-hash  { color: #6ec99a; }
+  td.is-date  { color: #f4c06a; }
+  td.is-ip    { color: #79b8f7; }
+  td.is-event { color: #c792ea; font-size: 11px; letter-spacing: .03em; }
+  td.is-empty { color: var(--text-muted); font-style: italic; }
+  mark { background: rgba(244,192,106,.25); color: #f4c06a; border-radius: 2px; padding: 0 1px; pointer-events: none; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.18); }
+
+  /* ── States ── */
+  .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; }
+  .debug-box { flex: 1; padding: 32px; max-width: 720px; margin: auto; display: flex; flex-direction: column; gap: 12px; color: var(--text-secondary); font-size: 13px; }
+  .debug-box code { word-break: break-all; font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- SOAR substitutes [Alert.login_history_result] into this HTML element at render time.
+     Reading via textContent is safe from JS syntax errors regardless of the value. -->
+<div id="soar-data" style="display:none">[Alert.login_history_result]</div>
+
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-eyebrow">Alert · Users</div>
+    <div class="sidebar-count" id="user-count">—<span>users</span></div>
+  </div>
+  <div class="user-list" id="user-list"></div>
+</nav>
+
+<main id="main"></main>
+
+<script>
+// ── Data loading ──────────────────────────────────────────────────────────────
+var data = {};
+var _parseError = null;
+var _rawReceived = '';
+try {
+  _rawReceived = document.getElementById('soar-data').textContent.trim();
+  var _parsed = JSON.parse(_rawReceived);
+  data = (typeof _parsed === 'string') ? JSON.parse(_parsed) : _parsed;
+} catch(e) { _parseError = e.message; }
+
+// ── Placeholder detection ─────────────────────────────────────────────────────
+// If SOAR did not substitute the variable, the raw bracket token will still be
+// present. Catch this before it surfaces as a confusing JSON parse error.
+if (!_parseError && /^\[Alert\./i.test(_rawReceived)) {
+  _parseError = 'SOAR variable was not substituted. The field may be null, ' +
+                'empty, or the enrichment action ran after the widget rendered.';
+}
+
+var events = (data && data.Events) ? data.Events : {};
+var users  = Object.keys(events);
+
+// ── Important UDM field list (same as reference widget) ───────────────────────
+var SPEC_KEYS = [
+  "entity.asset.asset_id","entity.asset.hostname","entity.asset.ip","entity.asset.mac",
+  "entity.asset.product_object_id","entity.file","entity.group.email_address",
+  "entity.group.product_object_id","entity.group.windows_sid","entity.hostname",
+  "entity.resource.name","entity.resource.product_object_id","entity.url",
+  "entity.user.email_address","entity.user.employee_id","entity.user.product_object_id",
+  "entity.user.userid","entity.user.windows_sid","metadata.collected_timestamp",
+  "metadata.threat","metadata.description","metadata.event_timestamp","metadata.event_type",
+  "metadata.ingestion_labels.key","metadata.ingestion_labels.value",
+  "metadata.product_deployment_id","metadata.product_event_type","metadata.product_log_id",
+  "metadata.product_name","metadata.vendor_name","network.application_protocol",
+  "network.dns_domain","network.dns.answers.data","network.dns.answers.name",
+  "network.dns.answers.type","network.dns.questions.name","network.dns.questions.type",
+  "network.email.bcc","network.email.email.cc","network.email.from","network.email.reply_to",
+  "network.email.subject","network.email.to","network.ftp.command","network.http.method",
+  "network.http.referral_url","network.http.response_code","network.http.user_agent",
+  "network.ip_protocol","principal.asset_id","principal.asset.asset_id",
+  "principal.asset.hostname","principal.asset.ip","principal.asset.mac",
+  "principal.cloud.environment","principal.file.full_path","principal.file.md5",
+  "principal.file.sha1","principal.file.sha256","principal.hostname","principal.ip",
+  "principal.mac","principal.process.command_line","principal.process.file.full_path",
+  "principal.process.parent_process","principal.process.parent_process.command_line",
+  "principal.process.parent_process.file.full_path","principal.process.pid",
+  "principal.process.product_specific_process_id","principal.registry.registry_key",
+  "principal.registry.registry_value_name",
+  "principal.resource.attribute.cloud.project.name",
+  "principal.resource.attribute.cloud.project.resource_subtype","principal.resource.name",
+  "principal.url","principal.user.attribute.permissions.name",
+  "principal.user.attribute.permissions.type","principal.user.attribute.roles.description",
+  "principal.user.attribute.roles.name","principal.user.email_address",
+  "principal.user.product_object_id","principal.user.userid","principal.user.windows_sid",
+  "security_result.action","security_result.category","security_result.description",
+  "security_result.detection_fields.key","security_result.detection_fields.value",
+  "security_result.summary","security_result.threat_id","security_result.threat_id_namespace",
+  "security_result.threat_name","source.asset_id","source.asset.asset_id",
+  "source.asset.hostname","source.asset.ip","source.asset.mac","source.file.md5",
+  "source.file.sha1","source.file.sha256","source.hostname","source.ip","source.mac",
+  "source.process.parent_process","source.process.product_specific_process_id",
+  "source.user.email_address","source.user.product_object_id","source.user.userid",
+  "source.user.windows_sid","target.application","target.asset_id","target.asset.asset_id",
+  "target.asset.hostname","target.asset.ip","target.asset.mac","target.cloud.environment",
+  "target.cloud.project.name","target.file.full_path","target.file.md5","target.file.sha1",
+  "target.file.sha256","target.hostname","target.ip","target.mac","target.port",
+  "target.process.command_line","target.process.file.full_path","target.process.parent_process",
+  "target.process.parent_process.command_line","target.process.parent_process.file.full_path",
+  "target.process.pid","target.process.product_specific_process_id",
+  "target.registry.registry_key","target.registry.registry_value_name",
+  "target.resource.name","target.resource.resource_type","target.user.email_address",
+  "target.user.product_object_id","target.user.userid","target.user.windows_sid"
+].map(function(k) { return k.replace(/[\W_]/g, '').toLowerCase(); });
+
+// Strip leading "udm." from our flattened keys before normalising for comparison.
+function isImportantUdm(col) {
+  var n = col.replace(/^udm\./, '').replace(/[\W_]/g, '').toLowerCase();
+  return SPEC_KEYS.indexOf(n) >= 0;
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function initials(name) {
+  var parts = name.replace(/[^a-zA-Z0-9\s]/g,'').trim().split(/\s+/).slice(0,2);
+  var out = '';
+  for (var i = 0; i < parts.length; i++) if (parts[i].length) out += parts[i][0].toUpperCase();
+  return out || name.slice(0,2).toUpperCase();
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function flattenObject(obj, prefix) {
+  prefix = prefix || '';
+  var result = {};
+  var keys = Object.keys(obj);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i], val = obj[key], fk = prefix ? prefix + '.' + key : key;
+    if (val === null || val === undefined) {
+      result[fk] = '';
+    } else if (Array.isArray(val)) {
+      if (!val.length) { result[fk] = ''; continue; }
+      var allPrim = true;
+      for (var j = 0; j < val.length; j++) if (val[j] !== null && typeof val[j] === 'object') { allPrim = false; break; }
+      result[fk] = allPrim ? val.join(' | ') : JSON.stringify(val);
+    } else if (typeof val === 'object') {
+      var nested = flattenObject(val, fk);
+      var nk = Object.keys(nested);
+      for (var k = 0; k < nk.length; k++) result[nk[k]] = nested[nk[k]];
+    } else {
+      result[fk] = String(val);
+    }
+  }
+  return result;
+}
+
+function colClass(key, val) {
+  var v = String(val), k = key.toLowerCase();
+  if (/^[0-9a-f]{32,}$/i.test(v))                          return 'is-hash';
+  if (/ip|address|src|dst/.test(k) && /^\d+\.\d+/.test(v)) return 'is-ip';
+  if (/date|time|timestamp/.test(k) || /^\d{4}-\d{2}-\d{2}/.test(v)) return 'is-date';
+  if (/type|action|event/.test(k))                          return 'is-event';
+  return '';
+}
+
+function getColumns(rows) {
+  var seen = {}, cols = [];
+  for (var i = 0; i < rows.length; i++) {
+    var rk = Object.keys(rows[i]);
+    for (var j = 0; j < rk.length; j++) if (!seen[rk[j]]) { seen[rk[j]] = true; cols.push(rk[j]); }
+  }
+  return cols;
+}
+
+function debounce(fn, ms) {
+  var t;
+  return function() { clearTimeout(t); t = setTimeout(fn, ms); };
+}
+
+// Safe regex search highlight: escapes each segment, wraps matches in <mark>.
+function highlightMatch(rawVal, re) {
+  if (!re) return esc(rawVal);
+  var s = String(rawVal), out = '', last = 0, m;
+  re.lastIndex = 0;
+  while ((m = re.exec(s)) !== null) {
+    out += esc(s.slice(last, m.index)) + '<mark>' + esc(m[0]) + '</mark>';
+    last = m.index + m[0].length;
+    if (!m[0].length) { last++; if (last > s.length) break; }
+  }
+  return out + esc(s.slice(last));
+}
+
+// ── Per-panel state ───────────────────────────────────────────────────────────
+// states[i] = { user, rows, allCols[], checkedCols{}, udmMode, search }
+var states = [];
+
+function getVisibleCols(st) {
+  var cols = [];
+  for (var i = 0; i < st.allCols.length; i++) {
+    var c = st.allCols[i];
+    if (st.udmMode ? isImportantUdm(c) : !!st.checkedCols[c]) cols.push(c);
+  }
+  return cols;
+}
+
+function getFilteredRows(st, visCols) {
+  if (!st.search) return st.rows;
+  var re = null;
+  try { re = new RegExp(st.search, 'i'); } catch(e) { return st.rows; }
+  return st.rows.filter(function(row) {
+    for (var i = 0; i < visCols.length; i++) {
+      var v = row[visCols[i]];
+      if (v !== undefined && v !== null && v !== '' && re.test(String(v))) return true;
+    }
+    return false;
+  });
+}
+
+// ── Render table for panel idx ────────────────────────────────────────────────
+function renderTable(idx) {
+  var st    = states[idx];
+  var panel = document.getElementById('panel-' + idx);
+  var wrap  = panel.querySelector('.table-wrap');
+  var badge = panel.querySelector('.events-badge');
+  var meta  = panel.querySelector('.panel-meta');
+
+  var visCols = getVisibleCols(st);
+  var rows    = getFilteredRows(st, visCols);
+
+  if (meta) meta.textContent = visCols.length + ' column' + (visCols.length !== 1 ? 's' : '');
+  badge.innerHTML = '<strong>' + rows.length + '</strong> event' + (rows.length !== 1 ? 's' : '') + ' found';
+
+  if (!visCols.length) {
+    wrap.innerHTML = '<div class="empty-state" style="height:100%">No columns selected.</div>';
+    return;
+  }
+
+  var hlRe = null;
+  if (st.search) { try { hlRe = new RegExp(st.search, 'gi'); } catch(e) {} }
+
+  // Build table using DOM (no innerHTML with user data)
+  var table = document.createElement('table');
+
+  var thead = document.createElement('thead');
+  var hrow  = document.createElement('tr');
+  for (var ci = 0; ci < visCols.length; ci++) {
+    var th    = document.createElement('th');
+    var inner = document.createElement('div');
+    inner.className = 'th-inner';
+    inner.textContent = visCols[ci];
+    inner.title = visCols[ci];
+    th.appendChild(inner);
+    var rh = document.createElement('div');
+    rh.className = 'resize-handle';
+    th.appendChild(rh);
+    hrow.appendChild(th);
+  }
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  var tbody = document.createElement('tbody');
+  for (var ri = 0; ri < rows.length; ri++) {
+    var tr = document.createElement('tr');
+    for (var ci2 = 0; ci2 < visCols.length; ci2++) {
+      var td  = document.createElement('td');
+      var val = rows[ri][visCols[ci2]];
+      if (val === undefined || val === null || val === '') {
+        td.className = 'is-empty';
+        td.textContent = 'N/A';
+      } else {
+        td.className = colClass(visCols[ci2], val);
+        td.title = String(val);
+        td.innerHTML = highlightMatch(val, hlRe);
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+
+  wrap.innerHTML = '';
+  wrap.appendChild(table);
+  resizableGrid(table);
+}
+
+// ── Render dropdown column list ───────────────────────────────────────────────
+function renderDropdownList(idx) {
+  var st    = states[idx];
+  var panel = document.getElementById('panel-' + idx);
+  var list  = panel.querySelector('.col-drop-list');
+  var dsVal = panel.querySelector('.col-drop-search').value.trim();
+  var dsRe  = null;
+  if (dsVal) { try { dsRe = new RegExp(dsVal, 'i'); } catch(e) {} }
+
+  var keysToShow = st.udmMode
+    ? st.allCols.filter(isImportantUdm)
+    : st.allCols;
+
+  list.innerHTML = '';
+  for (var i = 0; i < keysToShow.length; i++) {
+    var col = keysToShow[i];
+    if (dsRe && !dsRe.test(col)) continue;
+
+    var lbl = document.createElement('label');
+    lbl.className = 'col-drop-item';
+
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked   = st.udmMode ? true : !!st.checkedCols[col];
+    cb.disabled  = !!st.udmMode;
+
+    (function(c, checkbox) {
+      checkbox.addEventListener('change', function() {
+        st.checkedCols[c] = checkbox.checked;
+        updateSelectAll(idx);
+        renderTable(idx);
+      });
+    })(col, cb);
+
+    var span = document.createElement('span');
+    span.className = 'col-drop-item-text';
+    span.textContent = col;
+    span.title = col;
+
+    lbl.appendChild(cb);
+    lbl.appendChild(span);
+    list.appendChild(lbl);
+  }
+  updateSelectAll(idx);
+}
+
+function updateSelectAll(idx) {
+  var st    = states[idx];
+  var panel = document.getElementById('panel-' + idx);
+  var saEl  = panel.querySelector('.select-all-cb');
+  if (!saEl) return;
+  if (st.udmMode) { saEl.checked = true; saEl.disabled = true; return; }
+  saEl.disabled = false;
+  for (var i = 0; i < st.allCols.length; i++) {
+    if (!st.checkedCols[st.allCols[i]]) { saEl.checked = false; return; }
+  }
+  saEl.checked = true;
+}
+
+// ── Build one panel ───────────────────────────────────────────────────────────
+function buildPanel(user, idx) {
+  var rawRows = events[user] || [];
+  var rows    = [];
+  for (var r = 0; r < rawRows.length; r++) rows.push(flattenObject(rawRows[r]));
+  var allCols = getColumns(rows);
+
+  var st = { user: user, rows: rows, allCols: allCols, checkedCols: {}, udmMode: false, search: '' };
+  for (var i = 0; i < allCols.length; i++) st.checkedCols[allCols[i]] = true;
+  states[idx] = st;
+
+  // Panel shell
+  var panel = document.createElement('div');
+  panel.className = 'panel' + (idx === 0 ? ' active' : '');
+  panel.id = 'panel-' + idx;
+
+  // ── Header ──────────────────────────────────────────────────────────────
+  var header = document.createElement('div');
+  header.className = 'panel-header';
+
+  var av = document.createElement('div');
+  av.className = 'panel-avatar';
+  av.textContent = initials(user);
+
+  var info = document.createElement('div');
+  info.className = 'panel-info';
+  var uname = document.createElement('div'); uname.className = 'panel-username'; uname.textContent = user;
+  var meta  = document.createElement('div'); meta.className  = 'panel-meta';     meta.textContent  = allCols.length + ' columns';
+  info.appendChild(uname); info.appendChild(meta);
+
+  // Controls container
+  var controls = document.createElement('div');
+  controls.className = 'panel-controls';
+
+  // ── Column picker ──
+  var dropWrap = document.createElement('div');
+  dropWrap.className = 'col-drop-wrap';
+
+  var dropBtn = document.createElement('div');
+  dropBtn.className = 'col-drop-btn';
+  dropBtn.title = 'Select columns';
+  dropBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6v12.444h16V6H4zm4.738 10.667h-2.96v-8.89h2.96v8.89zm4.746 0h-2.96v-8.89h2.96v8.89zm4.738 0h-2.96v-8.89h2.96v8.89z"/></svg>';
+
+  var dropMenu = document.createElement('div');
+  dropMenu.className = 'col-drop-menu';
+
+  var dropHead = document.createElement('div');
+  dropHead.className = 'col-drop-head';
+
+  var dsInput = document.createElement('input');
+  dsInput.className = 'col-drop-search'; dsInput.type = 'text'; dsInput.placeholder = 'Search columns (regex)';
+
+  var saLbl = document.createElement('label'); saLbl.className = 'select-all-lbl';
+  var saCb  = document.createElement('input'); saCb.type = 'checkbox'; saCb.className = 'select-all-cb'; saCb.checked = true;
+  var saTxt = document.createElement('span');  saTxt.textContent = 'All';
+  saLbl.appendChild(saCb); saLbl.appendChild(saTxt);
+
+  dropHead.appendChild(dsInput); dropHead.appendChild(saLbl);
+
+  var dropList = document.createElement('div');
+  dropList.className = 'col-drop-list';
+
+  dropMenu.appendChild(dropHead); dropMenu.appendChild(dropList);
+  dropWrap.appendChild(dropBtn);  dropWrap.appendChild(dropMenu);
+
+  // ── Important UDM ──
+  var udmLbl = document.createElement('label'); udmLbl.className = 'udm-lbl';
+  var udmCb  = document.createElement('input'); udmCb.type = 'checkbox'; udmCb.checked = false;
+  var udmTxt = document.createElement('span');  udmTxt.textContent = 'Important UDM';
+  udmLbl.appendChild(udmCb); udmLbl.appendChild(udmTxt);
+
+  // ── Row regex search ──
+  var searchInp = document.createElement('input');
+  searchInp.className = 'row-search'; searchInp.type = 'text';
+  searchInp.placeholder = 'Search rows (regex)'; searchInp.autocomplete = 'off';
+
+  controls.appendChild(dropWrap);
+  controls.appendChild(udmLbl);
+  controls.appendChild(searchInp);
+
+  // Events badge
+  var badge = document.createElement('div');
+  badge.className = 'events-badge';
+  badge.innerHTML = '<strong>' + rows.length + '</strong> event' + (rows.length !== 1 ? 's' : '') + ' found';
+
+  header.appendChild(av);
+  header.appendChild(info);
+  header.appendChild(controls);
+  header.appendChild(badge);
+  panel.appendChild(header);
+
+  // ── Table area ──
+  if (!rows.length) {
+    var empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'No events for this user.';
+    panel.appendChild(empty);
+  } else {
+    var wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    panel.appendChild(wrap);
+  }
+
+  document.getElementById('main').appendChild(panel);
+
+  // ── Wire up events ──────────────────────────────────────────────────────
+
+  // Dropdown open / close
+  dropBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var wasOpen = dropMenu.classList.contains('open');
+    // close every open dropdown first
+    var allMenus = document.querySelectorAll('.col-drop-menu');
+    for (var mi = 0; mi < allMenus.length; mi++) allMenus[mi].classList.remove('open');
+    if (!wasOpen) { dropMenu.classList.add('open'); renderDropdownList(idx); }
+  });
+  dropMenu.addEventListener('click', function(e) { e.stopPropagation(); });
+  document.addEventListener('click', function() { dropMenu.classList.remove('open'); });
+
+  // Column dropdown search
+  dsInput.addEventListener('input', debounce(function() { renderDropdownList(idx); }, 300));
+
+  // Select All toggle
+  saCb.addEventListener('change', function() {
+    for (var ai = 0; ai < st.allCols.length; ai++) st.checkedCols[st.allCols[ai]] = saCb.checked;
+    renderDropdownList(idx);
+    renderTable(idx);
+  });
+
+  // Important UDM toggle
+  udmCb.addEventListener('change', function() {
+    st.udmMode = udmCb.checked;
+    renderDropdownList(idx);
+    renderTable(idx);
+  });
+
+  // Row search
+  searchInp.addEventListener('input', debounce(function() {
+    st.search = searchInp.value.trim();
+    renderTable(idx);
+  }, 400));
+
+  // Initial render
+  if (rows.length) renderTable(idx);
+}
+
+// ── Column resizing ───────────────────────────────────────────────────────────
+function resizableGrid(table) {
+  var row = table.querySelector('tr');
+  if (!row) return;
+  var cols = row.children;
+  for (var i = 0; i < cols.length; i++) {
+    var rh = cols[i].querySelector('.resize-handle');
+    if (rh) attachResize(rh, cols[i]);
+  }
+  function attachResize(handle, th) {
+    var startX = 0, startW = 0;
+    handle.addEventListener('mousedown', function(e) {
+      startX = e.pageX; startW = th.offsetWidth; e.preventDefault(); e.stopPropagation();
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    function onMove(e) { th.style.width = Math.max(60, startW + (e.pageX - startX)) + 'px'; }
+    function onUp()    { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
+  }
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function buildSidebar() {
+  var userList = document.getElementById('user-list');
+  document.getElementById('user-count').innerHTML =
+    users.length + '<span> user' + (users.length !== 1 ? 's' : '') + '</span>';
+  for (var i = 0; i < users.length; i++) {
+    var user    = users[i];
+    var rawRows = events[user] || [];
+    var item    = document.createElement('div');
+    item.className = 'user-item' + (i === 0 ? ' active' : '');
+    item.setAttribute('data-idx', i);
+    item.innerHTML =
+      '<div class="user-avatar">' + initials(user) + '</div>' +
+      '<span class="user-name">' + esc(user) + '</span>' +
+      '<span class="row-badge">' + rawRows.length + '</span>';
+    item.addEventListener('click', (function(idx) { return function() { activate(idx); }; })(i));
+    userList.appendChild(item);
+  }
+}
+
+function activate(idx) {
+  var items  = document.querySelectorAll('.user-item');
+  var panels = document.querySelectorAll('.panel');
+  for (var i = 0; i < items.length; i++) {
+    var on = (parseInt(items[i].getAttribute('data-idx'), 10) === idx);
+    items[i].className = 'user-item' + (on ? ' active' : '');
+  }
+  for (var j = 0; j < panels.length; j++) {
+    var act = (panels[j].id === 'panel-' + idx);
+    panels[j].className = 'panel' + (act ? ' active' : '');
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+if (_parseError) {
+  document.getElementById('user-count').innerHTML = '0<span> users</span>';
+  var _isUnsubstituted = /^\[Alert\./i.test(_rawReceived);
+  var _preview = _rawReceived ? _rawReceived.slice(0, 300) : '(nothing received)';
+  var _errorBody = _isUnsubstituted
+    // Friendly message for the common "variable not substituted" case.
+    ? '<strong>SOAR variable not substituted.</strong>' +
+      '<br><br>The placeholder <code>' + esc(_rawReceived) + '</code> was not replaced with data.' +
+      '<br><br>Possible causes:' +
+      '<br>&nbsp;&nbsp;· The field <code>login_history_result</code> is null or empty on this alert.' +
+      '<br>&nbsp;&nbsp;· The enrichment action ran after the widget rendered.' +
+      '<br>&nbsp;&nbsp;· The variable name or syntax is incorrect for this SOAR platform.'
+    // Raw debug dump for genuine parse errors.
+    : '<strong>Parse error:</strong> ' + esc(_parseError) +
+      '<br><br><strong>Raw received (' + _rawReceived.length + ' chars):</strong>' +
+      '<br><code>' + esc(_preview) + (_rawReceived.length > 300 ? '&hellip;' : '') + '</code>';
+  document.getElementById('main').innerHTML = '<div class="debug-box">' + _errorBody + '</div>';
+} else if (!users.length) {
+  // Valid JSON received but Events object is empty — expected result, not an error.
+  document.getElementById('user-count').innerHTML = '0<span> users</span>';
+  document.getElementById('main').innerHTML =
+    '<div class="empty-state">No login events found.</div>';
+} else {
+  buildSidebar();
+  for (var _i = 0; _i < users.length; _i++) buildPanel(users[_i], _i);
+}
+</script>
+</body>
+</html>
