@@ -20,7 +20,13 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param
 
 from ..core.AzureSecurityCenterManager import AzureSecurityCenterManager
-from ..core.consts import PING_SCRIPT_NAME, INTEGRATION_NAME
+from ..core.consts import (
+    PING_SCRIPT_NAME,
+    INTEGRATION_NAME,
+    DEFAULT_LOGIN_API_ROOT,
+    DEFAULT_API_ROOT,
+    DEFAULT_GRAPH_API_ROOT,
+)
 
 
 @output_handler
@@ -73,6 +79,30 @@ def main():
         param_name="Refresh Token",
         is_mandatory=False,
     )
+    login_api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Login API Root",
+        default_value=DEFAULT_LOGIN_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
+    api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="API Root",
+        default_value=DEFAULT_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
+    graph_api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Graph API Root",
+        default_value=DEFAULT_GRAPH_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
     verify_ssl = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
@@ -93,6 +123,9 @@ def main():
             tenant_id=tenant_id,
             refresh_token=refresh_token,
             verify_ssl=verify_ssl,
+            login_api_root=login_api_root,
+            api_root=api_root,
+            graph_api_root=graph_api_root,
         )
         manager.test_connectivity()
         status = EXECUTION_STATE_COMPLETED

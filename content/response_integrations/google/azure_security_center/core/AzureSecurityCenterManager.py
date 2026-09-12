@@ -45,6 +45,9 @@ class AzureSecurityCenterManager:
         verify_ssl: Optional[bool] = False,
         siemplify=None,
         refresh_token=None,
+        login_api_root: Optional[str] = None,
+        api_root: Optional[str] = None,
+        graph_api_root: Optional[str] = None,
     ):
         """
         The method is used to init an object of Manager class
@@ -56,6 +59,9 @@ class AzureSecurityCenterManager:
         :param subscription_id: {str} Subscription ID of the Microsoft Azure application
         :param siemplify: {ConnectorExecutor} connector executor instance
         :param refresh_token: {str} Refresh token for the OAuth authorization.
+        :param login_api_root: {str} The API root of the Microsoft identity platform login service.
+        :param api_root: {str} The API root of the Azure Management service.
+        :param graph_api_root: {str} The API root of the Microsoft Graph service.
         """
         self.client_id = client_id
         self.client_secret = client_secret
@@ -64,6 +70,9 @@ class AzureSecurityCenterManager:
         self.tenant_id = tenant_id
         self.subscription_id = subscription_id
         self.siemplify = siemplify
+        self.login_api_root = (login_api_root or consts.DEFAULT_LOGIN_API_ROOT).rstrip("/")
+        self.api_root = (api_root or consts.DEFAULT_API_ROOT).rstrip("/")
+        self.graph_api_root = (graph_api_root or consts.DEFAULT_GRAPH_API_ROOT).rstrip("/")
 
         self.parser = AzureSecurtyCenterParser()
         self.session = requests.session()
@@ -95,7 +104,7 @@ class AzureSecurityCenterManager:
             "refresh_token": refresh_token,
         }
         response = self.session.post(
-            consts.OAUTH_URL.format(tenant_id=self.tenant_id), data=data
+            consts.OAUTH_URL.format(login_api_root=self.login_api_root, tenant_id=self.tenant_id), data=data
         )
         self.validate_access_token_response(response, "Unable to obtain access token")
         self.new_refresh_token = response.json()["refresh_token"]
@@ -103,7 +112,7 @@ class AzureSecurityCenterManager:
 
     @staticmethod
     def obtain_refresh_token(
-        client_id, client_secret, redirect_uri, code, tenant_id, verify_ssl
+        client_id, client_secret, redirect_uri, code, tenant_id, verify_ssl, login_api_root=consts.DEFAULT_LOGIN_API_ROOT
     ):
         """
         Obtain a refresh token
@@ -113,8 +122,10 @@ class AzureSecurityCenterManager:
         :param code: {str] The generated code from the authorizing step
         :param tenant_id: {str} Tenant ID of the Microsoft Azure application.
         :param verify_ssl: If enabled, verify the SSL certificate for the connection to the server is valid.
+        :param login_api_root: {str} The API root of the Microsoft identity platform login service.
         :return: {str} The new refresh token
         """
+        login_api_root = (login_api_root or consts.DEFAULT_LOGIN_API_ROOT).rstrip("/")
         data = {
             "code": code,
             "client_id": client_id,
@@ -123,7 +134,7 @@ class AzureSecurityCenterManager:
             "grant_type": "authorization_code",
         }
         response = requests.post(
-            consts.OAUTH_URL.format(tenant_id=tenant_id), data=data, verify=verify_ssl
+            consts.OAUTH_URL.format(login_api_root=login_api_root, tenant_id=tenant_id), data=data, verify=verify_ssl
         )
         AzureSecurityCenterManager.validate_access_token_response(
             response, error_msg="Unable to obtain refresh token"
@@ -195,20 +206,28 @@ class AzureSecurityCenterManager:
         :param kwargs: {dict} Variables passed for string formatting
         :return: {str} The full url
         """
-        return consts.ENDPOINTS[url_key].format(**kwargs)
+        return consts.ENDPOINTS[url_key].format(
+            login_api_root=self.login_api_root,
+            api_root=self.api_root,
+            graph_api_root=self.graph_api_root,
+            **kwargs,
+        )
 
-    def _get_auth_token(self, scope=consts.MICROSOFT_SECURITY_CENTER_SCOPE):
+    def _get_auth_token(self, scope=None):
         """
         Retrieves Bearer auth token for the manager. By default an auth token for Azure Security Center is returned
         :param scope: {str} Authentication scope. For example https://management.azure.com/.default or https://graph.microsoft.com/.default
         :return: {str} authentication token
         """
+        if scope is None:
+            scope = f"{self.api_root}/.default"
+
         request_url = self._get_full_url(
             url_key="get-auth-token", tenant_id=self.tenant_id
         )
         grant_type = (
             "password"
-            if scope == consts.MICROSOFT_SECURITY_CENTER_SCOPE
+            if scope == f"{self.api_root}/.default"
             else "client_credentials"
         )
         payload = {
@@ -218,7 +237,7 @@ class AzureSecurityCenterManager:
             "scope": scope,
         }
 
-        if scope == consts.MICROSOFT_SECURITY_CENTER_SCOPE:
+        if scope == f"{self.api_root}/.default":
             payload["userName"] = self.username
             payload["password"] = self.password
 
@@ -391,7 +410,7 @@ class AzureSecurityCenterManager:
         }
 
         # Authenticate with Graph
-        graph_token = self._get_auth_token(scope=consts.MICROSOFT_GRAPH_SCOPE)
+        graph_token = self._get_auth_token(scope=f"{self.graph_api_root}/.default")
         self.session.headers.update({"Authorization": f"Bearer {graph_token}"})
 
         response = self.session.get(url=request_url, params=params)
