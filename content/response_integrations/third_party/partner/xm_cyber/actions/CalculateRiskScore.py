@@ -132,7 +132,7 @@ def calculate_risk_score(event_type, event_properties, configured_params):
             base_risk_score += 35
     choke_point_score_value = SCORE_MAPPINGS[CHOKE_POINT_SCORE_FIELD_NAME][
         configured_params.get("choke_point_score")
-    ] * convert_string(
+    ] * convert_to_numeric(
         event_properties.get(
             PREFIX_PARAMETER_FOR_LABELS.format(event_type, "Choke Point Score"),
             "0",
@@ -140,7 +140,7 @@ def calculate_risk_score(event_type, event_properties, configured_params):
     )
     compromise_risk_score_value = SCORE_MAPPINGS[COMPROMISE_RISK_SCORE_FIELD_NAME][
         configured_params.get("compromise_risk_score")
-    ] * convert_string(
+    ] * convert_to_numeric(
         event_properties.get(
             PREFIX_PARAMETER_FOR_LABELS.format(event_type, "Compromise Risk Score"),
             "0",
@@ -228,12 +228,12 @@ def calculate_risk_score(event_type, event_properties, configured_params):
                 "",
             )
         ),
-        "compromised_choke_point_score": convert_string(
+        "compromised_choke_point_score": convert_to_numeric(
             event_properties.get(
                 PREFIX_PARAMETER_FOR_LABELS.format(event_type, "Choke Point Score"), "0"
             )
         ),
-        "compromised_risk_score": convert_string(
+        "compromised_risk_score": convert_to_numeric(
             event_properties.get(
                 PREFIX_PARAMETER_FOR_LABELS.format(event_type, "Compromise Risk Score"),
                 "0",
@@ -256,7 +256,7 @@ def calculate_risk_score_for_entity(entity_properties, configured_params):
     base_risk_score = 45
     choke_point_score_value = SCORE_MAPPINGS[CHOKE_POINT_SCORE_FIELD_NAME][
         configured_params.get("choke_point_score")
-    ] * convert_string(
+    ] * convert_to_numeric(
         entity_properties.get(
             PREFIX_PARAMETER_FOR_ENTITY_ID.format("Choke Point Score"),
             "0",
@@ -264,7 +264,7 @@ def calculate_risk_score_for_entity(entity_properties, configured_params):
     )
     compromise_risk_score_value = SCORE_MAPPINGS[COMPROMISE_RISK_SCORE_FIELD_NAME][
         configured_params.get("compromise_risk_score")
-    ] * convert_string(
+    ] * convert_to_numeric(
         entity_properties.get(
             PREFIX_PARAMETER_FOR_ENTITY_ID.format("Compromise Risk Score"),
             "0",
@@ -343,10 +343,10 @@ def calculate_risk_score_for_entity(entity_properties, configured_params):
                 "",
             )
         ),
-        "compromised_choke_point_score": convert_string(
+        "compromised_choke_point_score": convert_to_numeric(
             entity_properties.get(PREFIX_PARAMETER_FOR_ENTITY_ID.format("Choke Point Score"), "0")
         ),
-        "compromised_risk_score": convert_string(
+        "compromised_risk_score": convert_to_numeric(
             entity_properties.get(
                 PREFIX_PARAMETER_FOR_ENTITY_ID.format("Compromise Risk Score"),
                 "0",
@@ -547,9 +547,11 @@ def main():
             )
         if not entity_json:
             output_message = "No XM Cyber entity details found in the alert events/entities."
+            siemplify.result.add_result_json({"has_xmcyber_data": False})
         else:
             # Create JSON object final
             final_alert_json = generate_alert_json(entity_json)
+            final_alert_json["has_xmcyber_data"] = True
             output_message = (
                 f"Successfully created Alert JSON object from the following entities: "
                 f"{list(entity_json.keys())}"

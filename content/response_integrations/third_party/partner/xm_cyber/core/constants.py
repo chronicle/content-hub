@@ -5,6 +5,9 @@ from __future__ import annotations
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
 INTEGRATION_NAME = "XM Cyber"
+INTEGRATION_IDENTIFIER = "XMCyber"
+INTEGRATION_VERSION = "7.0"  # keep in sync with pyproject.toml + release_notes.yaml
+CONNECTOR_NAME_VERSION_HEADER = "X-XMCYBER-CONNECTOR-NAME-VERSION"
 SUPPORTED_ENTITY_TYPES = [EntityTypes.USER, EntityTypes.HOSTNAME]
 # Action Names
 PING_SCRIPT_NAME = f"{INTEGRATION_NAME} - Ping"
@@ -89,6 +92,15 @@ ENRICHED_PARAMETERS = {
     "Is External",
     "Tenant ID",
     "Tenant Name",
+    "OS Type",
+    "OS Name",
+    "Product Type",
+    "IPv6",
+    "Public IP",
+    "Private IP",
+    "Domain",
+    "FQDN",
+    "Organizational Unit",
 }
 POSSIBLE_PARAMETERS = {*EXTRA_PARAMETERS, *ENRICHED_PARAMETERS}
 STRINGIFIED_LIST_PARAMETERS = {"Attacked By Techniques", "Labels"}
