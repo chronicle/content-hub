@@ -280,8 +280,6 @@ def main():
         siemplify.LOGGER.exception(e)
         raise
 
-    siemplify.end_script()
-
 
 if __name__ == "__main__":
     main()
