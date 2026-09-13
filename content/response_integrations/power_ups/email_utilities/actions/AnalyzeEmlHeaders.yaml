@@ -1,9 +1,11 @@
 creator: Rob
 default_result_value: ''
-description: This actions gets a base64 EML or list of headers and extracts/analyses
-    its headers
+description: This action accepts a base64-encoded EML or a list of headers, extracts
+    and analyses the headers for spoofing indicators, and reports the SPF, DKIM, DMARC,
+    and ARC authentication results recorded for the message in its Authentication-Results
+    headers.
 dynamic_results_metadata:
--   result_example_path: null
+-   result_example_path: resources/AnalyzeEmlHeaders_JsonResult_example.json
     result_name: JsonResult
     show_result: true
 integration_identifier: EmailUtilities
@@ -19,4 +21,33 @@ parameters:
     is_mandatory: false
     name: Header List
     type: string
+-   default_value: 'false'
+    description: Base the reported authentication results on the Authentication-Results-Original
+        header instead of Authentication-Results when the message carries one (falling
+        back to Authentication-Results when it does not). Enable this if and only
+        if the receiving organization routes mail through a Secure Email Gateway
+        that preserves the internet-boundary results in that header (e.g. Proofpoint,
+        Cisco Secure Email). Do not enable it for API-based email security products
+        (e.g. Abnormal Security) or when no such gateway is in use. The header is
+        trivial to forge, so it should only be trusted when your own gateway is known
+        to write it.
+    is_mandatory: false
+    name: Use Authentication-Results-Original Header
+    type: boolean
+-   default_value: 'false'
+    description: Some mail services (e.g. Proton Mail, and other Postfix or Sendmail
+        systems running separate OpenDKIM, OpenDMARC, and SPF filters) record each
+        authentication method in its own Authentication-Results header rather than
+        one combined header (RFC 8601 section 4). Enable this if and only if the
+        receiving mail service splits results across separate headers and always
+        includes a DMARC result. When disabled (default), the authentication_summary
+        field and the pass/fail recommendation rows are based only on the topmost
+        Authentication-Results header (the one stamped by the receiving server),
+        so extra headers, including any forged by a sender, are ignored; authentication_results
+        and authentication_by_server still list every header for reference. If summaries
+        look unexpectedly sparse for a provider that splits headers, this option
+        is why.
+    is_mandatory: false
+    name: Allow Multiple Authentication-Results Headers
+    type: boolean
 script_result_name: ScriptResult
