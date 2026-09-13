@@ -11,20 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-name: Case Federation Sync Job
-parameters:
--   name: Target Platform
-    type: string
-    description: URL of the primary platform to which case metadata will be synchronized.
-    is_mandatory: true
--   name: API Key
-    type: password
-    description: API key to use when authenticating to the target platform.
-    is_mandatory: true
-description: This job will sync case metadata to an external platform for central
-    management.
-documentation_link: null
-integration: CaseFederation
-creator: Admin
-run_interval_in_seconds: 60
