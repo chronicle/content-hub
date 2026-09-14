@@ -61,7 +61,7 @@ class UnifiedAlertsConnector(Connector):
     with processed alert IDs and timestamps cached to prevent duplicate ingestion.
     """
 
-    def __init__(self, is_test_connector_run: bool) -> None:  # noqa: FBT001
+    def __init__(self, is_test_connector_run: bool) -> None:
         super().__init__(CONNECTOR_SCRIPT_NAME, is_test_connector_run)
         self.manager: SentinelOneSingularityOperationsCenterApiClient | None = None
 

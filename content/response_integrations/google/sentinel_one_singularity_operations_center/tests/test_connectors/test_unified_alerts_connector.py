@@ -111,9 +111,13 @@ def test_successful_connector_run(
     # Verify event types and observable transformations
     assert len(alert.events) == 4
     event_types = [event.get("event_type") for event in alert.events]
-    assert event_types == ["Alert", "Observable", "Indicator", "Asset"]
+    assert event_types == ["Alert", "Indicator", "Observable", "Asset"]
 
-    observable_event = alert.events[1]
+    indicator_event = alert.events[1]
+    assert indicator_event.get("uid") == "117"
+    assert indicator_event.get("severity") == "CRITICAL"
+
+    observable_event = alert.events[2]
     assert observable_event.get("process.name") == "avm.exe"
     assert observable_event.get("lastSeenAt") == "2026-03-21T16:51:18.468Z"
 
@@ -504,3 +508,104 @@ def test_build_unified_alerts_or_filter_omits_severity_for_info() -> None:
         "stringIn": {"values": ["MEDIUM", "HIGH", "CRITICAL"]},
     }
     assert expected_severity_filter in filter_medium["or"][0]["and"]
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters=DEFAULT_PARAMETERS,
+)
+def test_connector_creates_alert_info_with_parent_process_and_linked_observables(
+    sentinelone: SentinelOne,
+    script_session: SentinelOneSession,
+    connector_output: MockConnectorOutput,
+) -> None:
+    """Verify connector creates AlertInfo with parent process telemetry and linked observables."""
+    set_is_test_run_to_true()
+    is_test = is_test_run(sys.argv)
+
+    alert_id = "019d114e-e4f4-7ad6-82c3-9829b6d0a801"
+    details = copy.deepcopy(sentinelone.details[alert_id])
+    details["process"]["parentName"] = "explorer.exe"
+    details["process"]["pid"] = 4321
+    details["indicators"] = [
+        {
+            "uid": "IND-42",
+            "type": "Defense Evasion via Encoded PowerShell",
+            "message": "PowerShell spawned with ExecutionPolicy Bypass",
+            "eventTime": "2026-03-21T16:51:06.684Z",
+            "severity": "CRITICAL",
+            "observables": [
+                {
+                    "name": "c2_ip",
+                    "type": "IP",
+                    "typeName": "IPv4",
+                    "value": "198.51.100.23",
+                },
+                {
+                    "name": "malicious_hash",
+                    "type": "SHA256",
+                    "typeName": "FileHash",
+                    "value": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                },
+            ],
+        }
+    ]
+    details["observables"] = [
+        {
+            "name": "c2_ip",
+            "type": "IP",
+            "typeName": "IPv4",
+            "value": "198.51.100.23",
+        },
+        {
+            "name": "dest_domain",
+            "type": "DOMAIN",
+            "typeName": "DNS",
+            "value": "evil.example.com",
+        },
+    ]
+    sentinelone.details[alert_id] = details
+
+    connector = UnifiedAlertsConnector(is_test)
+    connector.start()
+
+    alerts = connector_output.results.json_output.alerts
+    assert len(alerts) == 1
+    alert = alerts[0]
+
+    # Check alert details event
+    alert_event = alert.events[0]
+    assert alert_event.get("process_parentName") == "explorer.exe"
+    assert alert_event.get("process_pid") == "4321"
+
+    # Check indicator event
+    indicator_event = alert.events[1]
+    assert indicator_event.get("uid") == "IND-42"
+    assert indicator_event.get("type") == "Defense Evasion via Encoded PowerShell"
+    assert "observables" not in indicator_event
+
+    # Check linked observable events
+    obs_events = [e for e in alert.events if e.get("event_type") == "Observable"]
+    assert len(obs_events) == 3
+
+    c2_event = next(e for e in obs_events if e.get("value") == "198.51.100.23")
+    assert c2_event.get("ip") == "198.51.100.23"
+    assert c2_event.get("indicator_uid") == "IND-42"
+    assert c2_event.get("indicator_type") == "Defense Evasion via Encoded PowerShell"
+    assert c2_event.get("indicator_severity") == "CRITICAL"
+    assert (
+        c2_event.get("indicator_message")
+        == "PowerShell spawned with ExecutionPolicy Bypass"
+    )
+
+    hash_event = next(e for e in obs_events if e.get("name") == "malicious_hash")
+    assert (
+        hash_event.get("file_hash")
+        == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    )
+    assert hash_event.get("indicator_uid") == "IND-42"
+
+    domain_event = next(e for e in obs_events if e.get("name") == "dest_domain")
+    assert domain_event.get("domain") == "evil.example.com"
+    assert domain_event.get("dns") == "evil.example.com"
+    assert "indicator_uid" not in domain_event
