@@ -91,13 +91,13 @@ def main():
         siemplify.LOGGER.info(f"Fetching alerts with filters: {filters}")
         alerts = manager.get_alerts(filters=filters)
 
-        if alerts:
-            siemplify.result.add_result_json(
-                alerts,
-            )  # Store alerts in the action result JSON
-            siemplify.LOGGER.info(f"Total alerts retrieved: {len(alerts)}")
-        else:
-            raise Exception("No alerts found or empty response received.")
+        siemplify.result.add_result_json(
+            alerts,
+        )  # Store alerts in the action result JSON
+        siemplify.LOGGER.info(f"Total alerts retrieved: {len(alerts)}")
+
+        if not alerts:
+            output_message = "No alerts matched the provided filters."
     except Exception as e:
         output_message = f"Failed to retrieve alerts: {e!s}"
         status = EXECUTION_STATE_FAILED
