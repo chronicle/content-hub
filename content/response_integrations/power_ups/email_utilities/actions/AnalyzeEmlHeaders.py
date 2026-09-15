@@ -153,8 +153,6 @@ def get_generic_siemplify_recommendations(headers):
                     "status": GREEN_DOT_HTML_SNNIPET,
                 },
             )
-    else:  # "Reply-To" does not exist
-        pass
 
     if "X-Distribution".lower() in lower_case_headers:
         return_list.append(
@@ -288,8 +286,8 @@ def main():
             try:
                 key = f"{item[0]}"
                 val = item[1]
-            except Exception:
-                raise Exception(item)
+            except (IndexError, TypeError) as e:
+                raise ValueError(f"Invalid header item format: {item}") from e
             if key not in duplicate_key_dict:
                 duplicate_key_dict[key] = 1
                 headers_dict[key] = val

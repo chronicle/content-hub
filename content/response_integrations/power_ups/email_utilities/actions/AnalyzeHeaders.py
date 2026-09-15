@@ -69,7 +69,7 @@ def ip_to_integer(ip_address):
             ip_integer = int(binascii.hexlify(ip_hex), 16)
 
             return (ip_integer, 4 if version == socket.AF_INET else 6)
-        except Exception:
+        except OSError:
             pass
 
     raise ValueError("invalid IP address")
@@ -101,7 +101,7 @@ def subnetwork_to_ip_range(subnetwork):
                 ip_upper = ip_lower + suffix_mask
 
                 return (ip_lower, ip_upper, 4 if version == socket.AF_INET else 6)
-            except Exception:
+            except (ValueError, OSError):
                 pass
     except Exception:
         pass

@@ -19,7 +19,10 @@ from unittest.mock import MagicMock
 from ..actions.ParseBase64Email import body as parse_base64_body
 from ..core.EmailManager import EmailBody, EmailManager, EmailUtils
 from ..core.EmailParser import EmlParser
-from ..core.EmailUtilitiesManager import fix_malformed_eml_content
+from ..core.EmailUtilitiesManager import (
+    fix_malformed_eml_content,
+    fix_malformed_msg_content,
+)
 
 EDGE_CASE_EMAIL = b"""From: sender@example.com
 To: recipient@example.com
@@ -160,6 +163,23 @@ def test_mime_part_surrogate_encoding() -> None:
 
     assert isinstance(encoded, str)
     assert len(encoded) > 0
+
+
+def test_fix_malformed_msg_content() -> None:
+    """Test fix_malformed_msg_content fixes codepage 1200 to 1252 for ANSI strings."""
+    import struct
+
+    # Construct synthetic msg bytes containing PR_MESSAGE_CODEPAGE tag with 1200
+    tag = struct.pack("<HH", 0x0003, 0x3FFD)
+    # tag followed by 4 bytes flags/padding, then codepage 1200
+    synthetic_msg = b"prefix" + tag + b"\x00\x00\x00\x00" + struct.pack("<I", 1200) + b"suffix"
+    fixed = fix_malformed_msg_content(synthetic_msg)
+
+    assert isinstance(fixed, bytes)
+    # Check that 1200 was replaced with 1252
+    expected = b"prefix" + tag + b"\x00\x00\x00\x00" + struct.pack("<I", 1252) + b"suffix"
+    assert fixed == expected
+
 
 
 

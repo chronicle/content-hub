@@ -19,6 +19,7 @@ import binascii
 import hashlib
 import logging
 import re
+import struct
 import sys
 import time
 
@@ -2247,6 +2248,35 @@ def fix_malformed_eml_content(content_bytes: bytes) -> bytes:
         content_bytes = content_bytes.replace(text_content_type, next_content_type, 1)
 
     return content_bytes
+
+
+def fix_malformed_msg_content(content_bytes: bytes) -> bytes:
+    """Fix malformed MSG files where PR_MESSAGE_CODEPAGE is set to 1200 (UTF-16LE)
+    for 8-bit ANSI (PT_STRING8) streams.
+
+    Args:
+        content_bytes: MSG file content.
+
+    Returns:
+        Fixed MSG content.
+    """
+    if not isinstance(content_bytes, (bytes, bytearray)):
+        return content_bytes
+
+    data = bytearray(content_bytes)
+    tag = struct.pack("<HH", 0x0003, 0x3FFD)
+    idx = 0
+    while True:
+        idx = data.find(tag, idx)
+        if idx == -1:
+            break
+        if idx + 12 <= len(data):
+            codepage = struct.unpack("<I", data[idx + 8 : idx + 12])[0]
+            if codepage == 1200:
+                data[idx + 8 : idx + 12] = struct.pack("<I", 1252)
+        idx += 4
+
+    return bytes(data)
 
 
 def extract_valid_ips_from_body(body: str) -> list[str]:

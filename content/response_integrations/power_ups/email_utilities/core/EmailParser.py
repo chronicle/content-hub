@@ -591,7 +591,7 @@ class EmlParser:
                 bodie["content_type"] = header_val.split(";", 1)[0].strip()
 
             # Hash the body
-            bodie["hash"] = hashlib.sha256(body.encode("utf-8", errors="surrogatepass")).hexdigest()
+            bodie["hash"] = self.wrap_hash_sha256(body)
 
             uid = str(uuid.uuid1())
             bodys[uid] = bodie
@@ -900,10 +900,10 @@ class EmlParser:
         """Generate a SHA256 hash for a given string.
 
         Args:
-            string (str): String to calculate the hash on.
+            string: String to calculate the hash on.
 
         Returns:
-            str: Returns the calculated hash as a string.
+            Returns the calculated hash as a string.
 
         """
         _string = string.encode("utf-8", errors="surrogatepass")

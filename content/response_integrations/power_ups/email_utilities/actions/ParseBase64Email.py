@@ -23,6 +23,7 @@ import os.path
 import re
 import typing
 from collections import Counter
+from typing import Any
 
 import extract_msg
 import olefile
@@ -33,6 +34,7 @@ from tld import get_fld
 from urlextract import URLExtract
 
 from ..core import EmailParser, EmailParserRegex, EmailParserRouting
+from ..core.EmailUtilitiesManager import fix_malformed_msg_content
 
 
 def json_serial(obj):
@@ -291,7 +293,16 @@ def attachment(filename, content):
     return attachment_json
 
 
-def body(msg, content_type):
+def body(msg: Any, content_type: str) -> dict[str, Any]:
+    """Generates a structured dictionary representation of the message body with sha256 hash.
+
+    Args:
+        msg: Message content to process.
+        content_type: MIME content type of the message body.
+
+    Returns:
+        Structured body dictionary including content, content type, hash, and parsed entities.
+    """
     body_json = {
         "content_type": content_type,
         "content": msg if msg is not None else "",
@@ -354,6 +365,7 @@ def fill_json(x_msg, o_msg, denylist, is_allowlist, stop_transport):
 
 
 def parse_msg(msg, denylist, is_allowlist, stop_transport):
+    msg = fix_malformed_msg_content(msg)
     x_msg = extract_msg.Message(msg)
     msg_obj = MsOxMessage(msg)
     msox_msg = msg_obj._message.as_dict()
@@ -367,9 +379,9 @@ def parse_msg(msg, denylist, is_allowlist, stop_transport):
     for _attachment in x_msg.attachments:
         # _attachment.save()
         msox_obj = None
-        for msox_attachments in msox_msg["attachments"]:
+        for msox_attachments in msox_msg.get("attachments", {}):
             if (
-                msox_msg["attachments"][msox_attachments]["AttachFilename"]
+                msox_msg["attachments"][msox_attachments].get("AttachFilename")
                 == _attachment.shortFilename
             ):
                 msox_obj = msox_msg["attachments"][msox_attachments]
@@ -377,7 +389,7 @@ def parse_msg(msg, denylist, is_allowlist, stop_transport):
         if _attachment.type in "msg":
             _attached_json = fill_json(
                 _attachment.data,
-                msox_obj["EmbeddedMessage"]["properties"],
+                msox_obj.get("EmbeddedMessage", {}).get("properties", {}) if msox_obj else {},
                 denylist,
                 is_allowlist,
                 stop_transport,
@@ -403,9 +415,16 @@ def parse_msg(msg, denylist, is_allowlist, stop_transport):
         elif _attachment.type in "data":
             # if attachment in parent msg has binary content
             _att_counter += 1
+            filename = (
+                (msox_obj.get("AttachLongFilename") if msox_obj else None)
+                or getattr(_attachment, "longFilename", None)
+                or getattr(_attachment, "shortFilename", None)
+                or getattr(_attachment, "filename", None)
+                or "attachment"
+            )
             _cur_json["attachment"].append(
                 attachment(
-                    filename=msox_obj["AttachLongFilename"],
+                    filename=filename,
                     content=_attachment.data,
                 ),
             )
