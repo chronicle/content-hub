@@ -408,6 +408,42 @@ def map_rdap_to_whois(rdap_data: dict[str, Any]) -> dict[str, Any]:
     return whois_data.to_dict()
 
 
+def has_whois_data(whois_data: dict[str, Any] | None) -> bool:
+    """Check whether a WHOIS/RDAP data dictionary contains any meaningful enrichment data.
+
+    Args:
+        whois_data: Dictionary of parsed WHOIS or RDAP fields.
+
+    Returns:
+        True if at least one meaningful field (excluding 'raw') contains data, False otherwise.
+    """
+    if not whois_data or not isinstance(whois_data, dict):
+        return False
+
+    for key, value in whois_data.items():
+        if key == "raw":
+            continue
+        if key == "contacts":
+            if isinstance(value, dict):
+                for contact in value.values():
+                    if contact is None:
+                        continue
+                    if isinstance(contact, dict):
+                        if any(bool(v) for v in contact.values()):
+                            return True
+                    elif hasattr(contact, "to_dict"):
+                        if bool(contact.to_dict()):
+                            return True
+                    elif bool(contact):
+                        return True
+            elif bool(value):
+                return True
+        elif bool(value):
+            return True
+
+    return False
+
+
 def get_domain_whois(domain: str, logger: Any = None) -> dict[str, Any]:
     """Retrieve domain WHOIS information via RDAP with fallback to classic WHOIS.
 
@@ -429,9 +465,15 @@ def get_domain_whois(domain: str, logger: Any = None) -> dict[str, Any]:
         }
         res = requests.get(url, headers=headers, verify=False, timeout=10)
         if res.status_code == 200:
+            rdap_data = map_rdap_to_whois(res.json())
+            if has_whois_data(rdap_data):
+                if logger:
+                    logger.info(f"Successfully fetched RDAP data for domain: {domain}")
+                return rdap_data
             if logger:
-                logger.info(f"Successfully fetched RDAP data for domain: {domain}")
-            return map_rdap_to_whois(res.json())
+                logger.warn(
+                    f"RDAP lookup for {domain} returned empty data. Falling back to WHOIS."
+                )
         else:
             if logger:
                 logger.warn(
@@ -443,4 +485,18 @@ def get_domain_whois(domain: str, logger: Any = None) -> dict[str, Any]:
 
     if logger:
         logger.info(f"Falling back to classic WHOIS query for domain: {domain}")
-    return whois_alt.get_whois(domain)
+    try:
+        whois_data = whois_alt.get_whois(domain)
+    except Exception as e:
+        if logger:
+            logger.error(f"Classic WHOIS query for domain {domain} failed: {e}")
+        return {}
+
+    if not has_whois_data(whois_data):
+        if logger:
+            logger.warn(
+                f"Classic WHOIS query for domain {domain} returned empty response."
+            )
+        return {}
+
+    return whois_data
