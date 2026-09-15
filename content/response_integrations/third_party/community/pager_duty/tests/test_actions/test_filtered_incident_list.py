@@ -11,9 +11,6 @@ from pager_duty.tests.common import CONFIG_PATH, MOCK_INCIDENTS_FILE
 from pager_duty.tests.core.product import PagerDuty
 from pager_duty.tests.core.session import PagerDutySession
 
-EXPECTED_SUCCESS_OUTPUT_MSG = "Successfully retrieved Incidents\n"
-EXPECTED_NOT_FOUND_OUTPUT_MSG = "Incidents not found\n"
-
 DEFAULT_PARAMETERS: dict[str, str] = {
     "Incidents_Statuses": '["triggered", "acknowledged"]',
 }
@@ -28,14 +25,15 @@ def test_filtered_incident_list_success(
     action_output: MockActionOutput,
     pagerduty: PagerDuty,
 ) -> None:
-    """Tests the FilteredIncidentList action for a successful API call."""
+    
     mock_incidents = json.loads(MOCK_INCIDENTS_FILE.read_text())
     pagerduty.set_incidents(mock_incidents)
+    success_output_msg = "Successfully retrieved Incidents\n"
 
     FilteredIncidentList.main()
 
     assert len(script_session.request_history) == 1
-    assert action_output.results.output_message == EXPECTED_SUCCESS_OUTPUT_MSG
+    assert action_output.results.output_message == success_output_msg
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
     assert action_output.results.result_value is True
 
@@ -49,12 +47,16 @@ def test_filtered_incident_list_no_incidents_found(
     action_output: MockActionOutput,
     pagerduty: PagerDuty,
 ) -> None:
-    """Tests the FilteredIncidentList action when no incidents are found."""
+    """
+    Tests the FilteredIncidentList action for the successful API call
+    that returns no incidents.
+    """
     pagerduty.set_incidents({})
+    expected_output_msg = "Incidents not found\n"
 
     FilteredIncidentList.main()
 
     assert len(script_session.request_history) == 1
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
     assert action_output.results.result_value is True
-    assert action_output.results.output_message == EXPECTED_NOT_FOUND_OUTPUT_MSG
+    assert action_output.results.output_message == expected_output_msg

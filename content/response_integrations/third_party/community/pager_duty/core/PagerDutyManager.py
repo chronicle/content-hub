@@ -263,7 +263,7 @@ class PagerDutyManager:
             return response.json()
         return {"message": "No Incident Found"}
 
-    def get_incident_id(self, incident_id: str, email_from: str) -> SingleJson:
+    def get_incident_ID(self, incident_id: str, email_from: str) -> SingleJson:
         """Gets incident by ID.
 
         Args:
@@ -318,7 +318,7 @@ class PagerDutyManager:
                 return user
         raise PagerDutyNotFoundError(f"User with email '{email}' was not found.")
 
-    def get_user_by_id(self, user_id: str) -> SingleJson:
+    def get_user_by_ID(self, user_id: str) -> SingleJson:
         """Gets user by ID.
 
         Args:

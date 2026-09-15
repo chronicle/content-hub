@@ -26,7 +26,7 @@ def main():
             "Starting on getting the specific Incident with the Id given",
         )
 
-        incident = pager_duty.get_incident_id(incident_key, email_from)
+        incident = pager_duty.get_incident_ID(incident_key, email_from)
         output_message = "No Incident Found\n"
         siemplify.result.add_result_json(incident)
         result_value = True

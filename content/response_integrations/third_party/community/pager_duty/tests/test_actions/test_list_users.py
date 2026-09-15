@@ -12,9 +12,6 @@ from pager_duty.tests.common import CONFIG_PATH, INTEGRATION_PATH
 from pager_duty.tests.core.product import PagerDuty
 from pager_duty.tests.core.session import PagerDutySession
 
-EXPECTED_SUCCESS_OUTPUT_MSG = "Successfully retrieved users\n"
-EXPECTED_NOT_FOUND_OUTPUT_MSG = "no users found\n"
-
 MOCK_USERS_FILE: pathlib.Path = INTEGRATION_PATH / "tests" / "mocks" / "users.json"
 
 
@@ -28,8 +25,10 @@ def test_list_users_success(
     pagerduty: PagerDuty,
 ) -> None:
     """Tests the ListUsers action for a successful API call."""
+    # Arrange
     mock_users = json.loads(MOCK_USERS_FILE.read_text())
     pagerduty.set_users(mock_users)
+    success_output_msg = "Successfully retrieved users\n"
 
     ListUsers.main()
 
@@ -38,7 +37,7 @@ def test_list_users_success(
     assert request.url.path.endswith("/users")
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
     assert action_output.results.result_value is True
-    assert action_output.results.output_message == EXPECTED_SUCCESS_OUTPUT_MSG
+    assert action_output.results.output_message == success_output_msg
 
 
 @set_metadata(
@@ -51,7 +50,9 @@ def test_list_users_no_users_found(
     pagerduty: PagerDuty,
 ) -> None:
     """Tests the ListUsers action for a successful API call that returns no users."""
+
     pagerduty.set_users({})
+    expected_output_msg = "no users found\n"
 
     ListUsers.main()
 
@@ -60,4 +61,4 @@ def test_list_users_no_users_found(
     assert request.url.path.endswith("/users")
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
     assert action_output.results.result_value is True
-    assert action_output.results.output_message == EXPECTED_NOT_FOUND_OUTPUT_MSG
+    assert action_output.results.output_message == expected_output_msg
