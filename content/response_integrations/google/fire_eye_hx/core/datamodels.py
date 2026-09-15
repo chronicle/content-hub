@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-from TIPCommon import dict_to_flat, add_prefix_to_dict
-from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
+try:
+    from TIPCommon import add_prefix_to_dict, dict_to_flat
+except ImportError:
+    from TIPCommon.transformation import add_prefix_to_dict, dict_to_flat
 import uuid
+
+from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 
 ENRICHMENT_PREFIX = "FireEyeHX"
 
@@ -46,7 +49,7 @@ class Indicator:
         platforms=None,
         stats=None,
         **kwargs,
-    ):
+    ) -> None:
         self.raw_data = raw_data
         self._id = _id
         self.uri_name = uri_name
@@ -71,19 +74,13 @@ class Indicator:
             "Display Name": self.display_name,
             "Description": self.description,
             "Category": self.category.get("name") if self.category else None,
-            "Category URI Name": (
-                self.category.get("uri_name") if self.category else None
-            ),
+            "Category URI Name": (self.category.get("uri_name") if self.category else None),
             "Created By": self.created_by,
             "OS": ", ".join(self.platforms) if self.platforms else None,
             "Signature": self.signature,
             "Active Since": self.active_since,
-            "Active Conditions": (
-                self.stats.get("active_conditions") if self.stats else None
-            ),
-            "Hosts with Alerts": (
-                self.stats.get("alerted_agents") if self.stats else None
-            ),
+            "Active Conditions": (self.stats.get("active_conditions") if self.stats else None),
+            "Hosts with Alerts": (self.stats.get("alerted_agents") if self.stats else None),
             "Source Alerts": self.stats.get("source_alerts") if self.stats else None,
         }
 
@@ -112,7 +109,7 @@ class Host:
         os=None,
         primary_mac=None,
         **kwargs,
-    ):
+    ) -> None:
         self.raw_data = raw_data
         self._id = _id
         self.agent_version = agent_version
@@ -149,18 +146,10 @@ class Host:
             "MAC Address": self.primary_mac,
             "IP Address": self.primary_ip_address,
             "Containment State": self.containment_state,
-            "Malware Alerts Count": (
-                self.stats.get("malware_alerts") if self.stats else None
-            ),
-            "Generic Alerts Count": (
-                self.stats.get("generic_alerts") if self.stats else None
-            ),
-            "Exploit Alerts Count": (
-                self.stats.get("exploit_alerts") if self.stats else None
-            ),
-            "Exploit Blocks Count": (
-                self.stats.get("exploit_blocks") if self.stats else None
-            ),
+            "Malware Alerts Count": (self.stats.get("malware_alerts") if self.stats else None),
+            "Generic Alerts Count": (self.stats.get("generic_alerts") if self.stats else None),
+            "Exploit Alerts Count": (self.stats.get("exploit_alerts") if self.stats else None),
+            "Exploit Blocks Count": (self.stats.get("exploit_blocks") if self.stats else None),
             "Total Alerts Count": self.stats.get("alerts") if self.stats else None,
             "Last Alert Timestamp": self.last_alert_timestamp,
         }
@@ -192,7 +181,7 @@ class Alert:
         md5values=None,
         group_id=None,
         **kwargs,
-    ):
+    ) -> None:
         self.raw_data = raw_data
         self.raw_data["event_type"] = source
         self.agent = agent
@@ -234,7 +223,7 @@ class Alert:
         except Exception:
             self.reported_at_ms = 1
 
-    def attach_host_info(self, host_info):
+    def attach_host_info(self, host_info) -> None:
         self.raw_data["agent"] = host_info
 
     def as_json(self):
@@ -246,15 +235,9 @@ class Alert:
             "Agent ID": self.agent.get("_id") if self.agent else None,
             "Condition ID": self.condition.get("_id") if self.condition else None,
             "Indicator Name": self.indicator.get("name") if self.indicator else None,
-            "Indicator URI Name": (
-                self.indicator.get("uri_name") if self.indicator else None
-            ),
-            "Indicator Signature": (
-                self.indicator.get("signature") if self.indicator else None
-            ),
-            "Indicator Category": (
-                self.indicator.get("category") if self.indicator else None
-            ),
+            "Indicator URI Name": (self.indicator.get("uri_name") if self.indicator else None),
+            "Indicator Signature": (self.indicator.get("signature") if self.indicator else None),
+            "Indicator Category": (self.indicator.get("category") if self.indicator else None),
             "Hashes": ", ".join(self.md5values) if self.md5values else None,
             "Event ID": self.event_id,
             "Event Type": self.event_type,
@@ -268,7 +251,7 @@ class Alert:
 
     def get_alert_info(self, alert_info, environment_common):
         alert_info.environment = environment_common.get_environment(self.raw_data)
-        alert_info.ticket_id = f"{self._id}_{str(uuid.uuid4())}"
+        alert_info.ticket_id = f"{self._id}_{uuid.uuid4()!s}"
         alert_info.display_id = alert_info.ticket_id
         alert_info.name = f"FireEye HX Alert: {self.type}"
         alert_info.description = f"FireEye HX Alert {self._id} "
@@ -307,7 +290,7 @@ class FileAcquisition:
         alert=None,
         condition=None,
         **kwargs,
-    ):
+    ) -> None:
         self.raw_data = raw_data
         self.error_message = error_message
         self._id = _id
@@ -339,9 +322,7 @@ class FileAcquisition:
             "MD5": self.md5,
             "Request Time": self.request_time,
             "Finish Time": self.finish_time,
-            "Requested By": (
-                self.request_actor.get("username") if self.request_actor else None
-            ),
+            "Requested By": (self.request_actor.get("username") if self.request_actor else None),
             "File Name": self.req_filename,
             "File Path": self.req_path,
             "Acquired Using": "API",
@@ -360,7 +341,7 @@ class GroupAlerts:
         reported_at=None,
         source=None,
         event_type=None,
-    ):
+    ) -> None:
         self.raw_data = raw_data
         self.id = id
         self.indicator_display_name = indicator_display_name
@@ -387,7 +368,7 @@ class GroupAlerts:
 
 
 class Ack:
-    def __init__(self, raw_data, total=None, entiries_ids=None):
+    def __init__(self, raw_data, total=None, entiries_ids=None) -> None:
         self.raw_data = raw_data
         self.total = total
         self.entiries_ids = entiries_ids
@@ -405,7 +386,7 @@ class Group:
         last_event_id=None,
         events_count=None,
         detected_by=None,
-    ):
+    ) -> None:
         self.raw_data = raw_data
         self.assessment = assessment
         self.alert_group_id = alert_group_id

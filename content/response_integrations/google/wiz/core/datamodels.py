@@ -29,6 +29,7 @@ class IntegrationParameters:
     client_secret: str
     verify_ssl: bool
     siemplify_logger: ScriptLogger
+    auth_url: str | None = None
 
 
 @dataclasses.dataclass(slots=True)
