@@ -343,10 +343,19 @@ def _normalize_unzipped_integration(dest: Path) -> None:
 
 
 def _normalize_script_param_type(
-    raw_type: Any,
+    raw_type: str | int | None,
     default: int = ScriptParamType.STRING.value,
 ) -> int:
-    """Normalize a raw script or connector parameter type to its integer enum value."""
+    """Normalize a raw script or connector parameter type to its integer enum value.
+
+    Args:
+        raw_type: Raw parameter type from definition or JSON.
+        default: Fallback integer value.
+
+    Returns:
+        The integer representation of the script parameter type.
+
+    """
     if isinstance(raw_type, str):
         try:
             return ScriptParamType.from_string(raw_type).value
@@ -355,17 +364,28 @@ def _normalize_script_param_type(
                 return int(raw_type)
             except ValueError:
                 return default
-    try:
-        return int(raw_type)
-    except (ValueError, TypeError):
-        return default
+    if raw_type is not None:
+        try:
+            return int(raw_type)
+        except (ValueError, TypeError):
+            pass
+    return default
 
 
 def _normalize_action_param_type(
-    raw_type: Any,
+    raw_type: str | int | None,
     default: int = ActionParamType.STRING.value,
 ) -> int:
-    """Normalize a raw action parameter type to its integer enum value."""
+    """Normalize a raw action parameter type to its integer enum value.
+
+    Args:
+        raw_type: Raw parameter type from definition or JSON.
+        default: Fallback integer value.
+
+    Returns:
+        The integer representation of the action parameter type.
+
+    """
     if isinstance(raw_type, str):
         try:
             return ActionParamType.from_string(raw_type).value
@@ -374,10 +394,12 @@ def _normalize_action_param_type(
                 return int(raw_type)
             except ValueError:
                 return default
-    try:
-        return int(raw_type)
-    except (ValueError, TypeError):
-        return default
+    if raw_type is not None:
+        try:
+            return int(raw_type)
+        except (ValueError, TypeError):
+            pass
+    return default
 
 
 def _normalize_integration_properties(def_data: SingleJson, identifier: str) -> None:

@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import SingleJson
+    from mp.dev_env.interfaces import DevEnvClient
 
 runner: CliRunner = CliRunner()
 
@@ -400,7 +401,7 @@ def test_get_backend_api_dispatches_to_chronicle(monkeypatch: pytest.MonkeyPatch
         "location": "us",
         "instance": "iid-456",
     }
-    client: utils.interfaces.DevEnvClient = utils.get_backend_api(cfg)
+    client: DevEnvClient = utils.get_backend_api(cfg)
     assert isinstance(client, chronicle_api.ChronicleClient)
     assert client.base_url == "https://us-chronicle.googleapis.com"
 
@@ -410,7 +411,7 @@ def test_get_backend_api_legacy_fallback(monkeypatch: pytest.MonkeyPatch) -> Non
     mock_login: mock.MagicMock = mock.MagicMock()
     monkeypatch.setattr("mp.dev_env.api.BackendAPI.login", mock_login)
 
-    client: utils.interfaces.DevEnvClient = utils.get_backend_api(cfg)
+    client: DevEnvClient = utils.get_backend_api(cfg)
     assert isinstance(client, utils.api.BackendAPI)
     mock_login.assert_called_once()
 
