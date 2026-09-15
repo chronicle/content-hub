@@ -31,6 +31,23 @@ def _safe_get(dct: Any, *keys: Any, default: Any = None) -> Any:
 COLLECTION_SOURCE_FIELD = "spycloud_collection_source"
 
 
+def _commit_progress(siemplify, manager, checkpoint_until, is_test_run: bool) -> None:
+    """
+    Advance the publish-date checkpoint and flush deferred drain/Compass progress.
+
+    Call only after a successful return_package (integration guide 9.2). Empty
+    cycles commit too: `checkpoint_until` is only set when a mature window was
+    actually queried, so leaving it unadvanced would pin `since` while `until`
+    keeps growing, adding a 2-hour chunk to every subsequent cycle until the
+    connector can no longer finish inside the SecOps timeout.
+    """
+    if not is_test_run and checkpoint_until:
+        checkpoint_ms = manager.checkpoint_manager.iso_to_epoch_ms(checkpoint_until)
+        manager.checkpoint_manager.save_checkpoint(checkpoint_ms)
+        siemplify.LOGGER.info(f"Saved checkpoint at {checkpoint_until}")
+    manager.commit_pending()
+
+
 def _normalize_collection_sources(value: Any) -> list[str]:
     if value in (None, "", [], {}):
         return ["unknown"]
@@ -162,219 +179,240 @@ def _log_udm_samples(
         logger.info(f"UDM safe sample #{index}: {preview}")
 
 
+def _collect_alerts(
+    siemplify: Any,
+    is_test_run: bool,
+) -> tuple[Any, list, Any]:
+    """
+    Run one collection cycle and return ``(manager, alerts, checkpoint_until)``.
+
+    Deliberately does no stdout writing: `main` owns the single `return_package`
+    call for the whole execution.
+    """
+    alerts = []
+
+    if is_test_run:
+        siemplify.LOGGER.info("***** IDE test run *****")
+
+    manager = SpyCloudManager(siemplify)
+
+    device_product_field = extract_connector_param(
+        siemplify,
+        param_name="DeviceProductField",
+        is_mandatory=False,
+        print_value=True,
+    )
+    environment_field_name = extract_connector_param(
+        siemplify,
+        param_name="Environment Field Name",
+        default_value="",
+        input_type=str,
+        print_value=True,
+    )
+    environment_regex_pattern = extract_connector_param(
+        siemplify,
+        param_name="Environment Regex Pattern",
+        input_type=str,
+        print_value=True,
+    )
+    environment_common = GetEnvironmentCommonFactory.create_environment_manager(
+        siemplify,
+        environment_field_name,
+        environment_regex_pattern,
+    )
+
+    # When enabled, plaintext passwords and other sensitive breach fields are
+    # persisted onto the case events instead of being stripped. This retains
+    # secrets permanently in SecOps case storage; it defaults to off and should
+    # only be turned on with explicit sign-off.
+    include_secrets = extract_connector_param(
+        siemplify,
+        param_name="Include Plaintext Secrets",
+        default_value=False,
+        input_type=bool,
+        print_value=True,
+    )
+    if include_secrets:
+        siemplify.LOGGER.warn(
+            "Include Plaintext Secrets is ENABLED: plaintext passwords and other "
+            "sensitive breach fields will be persisted onto case events."
+        )
+
+    if is_test_run:
+        manager.main(is_test_run=True)
+        return manager, [], None
+
+    raw_records, checkpoint_until = manager.main(is_test_run=False)
+    raw_records = raw_records or []
+
+    siemplify.LOGGER.info(f"Fetched {len(raw_records)} raw SpyCloud records")
+    siemplify.LOGGER.info(
+        "Raw SpyCloud record source counts: "
+        f"{_format_source_counts(_count_sources(raw_records, _get_raw_record_sources))}"
+    )
+
+    if not raw_records:
+        siemplify.LOGGER.info("No SpyCloud records returned for the requested time window")
+        # Nothing to deliver, but an empty mature window plus any drained-empty
+        # modification window / Compass daily gate is valid progress.
+        return manager, [], checkpoint_until
+
+    # Breach catalog enrichment (integration guide 9.1.2 Option A): a cached,
+    # source_id-scoped index. This does NOT download the full global catalog
+    # every cycle; it lazily caches only the sources we actually see.
+    breach_catalog_by_id = {}
+    try:
+        breach_catalog_by_id = manager.get_breach_catalog_index(raw_records) or {}
+    except Exception as e:
+        siemplify.LOGGER.error(f"Breach catalog enrichment failed. Continuing without enrichment. Error: {e}")
+        breach_catalog_by_id = {}
+
+    converter = SpyCloudUdmConverter(include_secrets=include_secrets)
+
+    udm_events = converter.convert_records(
+        records=raw_records,
+        breach_catalog_by_id=breach_catalog_by_id,
+        merge_endpoint_by_log_id=True,
+    )
+
+    siemplify.LOGGER.info(f"Converted {len(udm_events)} UDM events")
+    siemplify.LOGGER.info(
+        "UDM event source counts after conversion/merge: "
+        f"{_format_source_counts(_count_sources(udm_events, _get_udm_event_sources))}"
+    )
+    _log_udm_samples(siemplify.LOGGER, udm_events, is_test_run=is_test_run)
+
+    if not udm_events:
+        siemplify.LOGGER.info("No UDM events were produced from the fetched SpyCloud records")
+        return manager, [], checkpoint_until
+
+    for index, udm_event in enumerate(udm_events, start=1):
+        try:
+            security_result = udm_event.get("security_result", {})
+            metadata = udm_event.get("metadata", {})
+            additional = udm_event.get("additional", {})
+            extensions = udm_event.get("extensions", {})
+
+            soar_severity = security_result.get("severity")
+            risk_score = security_result.get("risk_score")
+            criticality = security_result.get("criticality")
+            product_severity = security_result.get("product_severity")
+            product_priority = security_result.get("product_priority")
+            severity_label = additional.get("spycloud_severity_label") or extensions.get("spycloud_severity_label")
+            source_severity = extensions.get("severity")
+            product_log_id = metadata.get("product_log_id")
+            event_type = metadata.get("event_type")
+            collection_source = _get_udm_event_sources(udm_event)
+            merged_record_count = extensions.get("_merged_record_count") or additional.get("_merged_record_count")
+
+            # Sample per-record logging. High-volume modification pulls can
+            # produce thousands of events per cycle; logging every one is a
+            # significant contributor to hitting the connector timeout.
+            if index <= 10 or index % 500 == 0:
+                siemplify.LOGGER.info(
+                "Building alert #{idx}: "
+                "event_type={event_type}, "
+                "product_log_id={product_log_id}, "
+                "collection_source={collection_source}, "
+                "merged_record_count={merged_record_count}, "
+                "source_severity={source_severity}, "
+                "severity_label={severity_label}, "
+                "soar_severity={soar_severity}, "
+                "risk_score={risk_score}, "
+                "criticality={criticality}, "
+                "product_severity={product_severity}, "
+                "product_priority={product_priority}".format(
+                    idx=index,
+                    event_type=event_type,
+                    product_log_id=product_log_id,
+                    collection_source=collection_source,
+                    merged_record_count=merged_record_count,
+                    source_severity=source_severity,
+                    severity_label=severity_label,
+                    soar_severity=soar_severity,
+                    risk_score=risk_score,
+                    criticality=criticality,
+                    product_severity=product_severity,
+                    product_priority=product_priority,
+                )
+            )
+
+            alert = build_alert_from_udm_event(
+                udm_event,
+                environment_common=environment_common,
+                device_product_field=device_product_field,
+            )
+
+            if not alert:
+                siemplify.LOGGER.error(
+                    f"Parser returned an empty alert object for product_log_id={product_log_id}"
+                )
+                continue
+
+            alerts.append(alert)
+
+        except Exception as e:
+            try:
+                preview = json.dumps(udm_event, default=str)[:2000]
+            except Exception:
+                preview = str(udm_event)[:2000]
+
+            siemplify.LOGGER.error(
+                f"Failed to process UDM event #{index} into alert: {e}. "
+                f"UDM preview: {preview}"
+            )
+
+    siemplify.LOGGER.info(f"Created {len(alerts)} alerts")
+    siemplify.LOGGER.info(
+        "Alert source counts after parser packaging: "
+        f"{_format_source_counts(_count_sources(alerts, _get_alert_sources))}"
+    )
+
+    return manager, alerts, checkpoint_until
+
+
 @output_handler
 def main(is_test_run: bool) -> None:
     siemplify = SiemplifyConnectorExecution()
     siemplify.script_name = CONNECTOR_NAME
+
+    manager = None
     alerts = []
+    checkpoint_until = None
+    collection_succeeded = False
 
     try:
-        if is_test_run:
-            siemplify.LOGGER.info("***** IDE test run *****")
-
-        manager = SpyCloudManager(siemplify)
-
-        device_product_field = extract_connector_param(
-            siemplify,
-            param_name="DeviceProductField",
-            is_mandatory=False,
-            print_value=True,
-        )
-        environment_field_name = extract_connector_param(
-            siemplify,
-            param_name="Environment Field Name",
-            default_value="",
-            input_type=str,
-            print_value=True,
-        )
-        environment_regex_pattern = extract_connector_param(
-            siemplify,
-            param_name="Environment Regex Pattern",
-            input_type=str,
-            print_value=True,
-        )
-        environment_common = GetEnvironmentCommonFactory.create_environment_manager(
-            siemplify,
-            environment_field_name,
-            environment_regex_pattern,
-        )
-
-        # When enabled, plaintext passwords and other sensitive breach fields are
-        # persisted onto the case events instead of being stripped. This retains
-        # secrets permanently in SecOps case storage; it defaults to off and should
-        # only be turned on with explicit sign-off.
-        include_secrets = extract_connector_param(
-            siemplify,
-            param_name="Include Plaintext Secrets",
-            default_value=False,
-            input_type=bool,
-            print_value=True,
-        )
-        if include_secrets:
-            siemplify.LOGGER.warn(
-                "Include Plaintext Secrets is ENABLED: plaintext passwords and other "
-                "sensitive breach fields will be persisted onto case events."
-            )
-
-        if is_test_run:
-            # TEMP DIAGNOSTIC (revert after the no-new-records issue is fixed):
-            # instead of the ping-only connectivity check, attempt a bounded real
-            # data pull and log why records may not be flowing. Still
-            # non-destructive: no alerts created, no checkpoints saved.
-            manager.diagnostic_pull()
-            siemplify.LOGGER.info(
-                "Diagnostic test run completed. Review the DIAG log lines above. "
-                "No alerts were created and no checkpoints were updated."
-            )
-            siemplify.return_package([])
-            return
-
-        raw_records, checkpoint_until = manager.main(is_test_run=False)
-        raw_records = raw_records or []
-
-        siemplify.LOGGER.info(f"Fetched {len(raw_records)} raw SpyCloud records")
-        siemplify.LOGGER.info(
-            "Raw SpyCloud record source counts: "
-            f"{_format_source_counts(_count_sources(raw_records, _get_raw_record_sources))}"
-        )
-
-        if not raw_records:
-            siemplify.LOGGER.info("No SpyCloud records returned for the requested time window")
-            siemplify.return_package([])
-            # Nothing to deliver, but any drained-empty modification window /
-            # Compass daily gate is valid progress and should be committed.
-            manager.commit_pending()
-            return
-
-        # Breach catalog enrichment (integration guide 9.1.2 Option A): a cached,
-        # source_id-scoped index. This does NOT download the full global catalog
-        # every cycle; it lazily caches only the sources we actually see.
-        breach_catalog_by_id = {}
-        try:
-            breach_catalog_by_id = manager.get_breach_catalog_index(raw_records) or {}
-        except Exception as e:
-            siemplify.LOGGER.error(f"Breach catalog enrichment failed. Continuing without enrichment. Error: {e}")
-            breach_catalog_by_id = {}
-
-        converter = SpyCloudUdmConverter(include_secrets=include_secrets)
-
-        udm_events = converter.convert_records(
-            records=raw_records,
-            breach_catalog_by_id=breach_catalog_by_id,
-            merge_endpoint_by_log_id=True,
-        )
-
-        siemplify.LOGGER.info(f"Converted {len(udm_events)} UDM events")
-        siemplify.LOGGER.info(
-            "UDM event source counts after conversion/merge: "
-            f"{_format_source_counts(_count_sources(udm_events, _get_udm_event_sources))}"
-        )
-        _log_udm_samples(siemplify.LOGGER, udm_events, is_test_run=is_test_run)
-
-        if not udm_events:
-            siemplify.LOGGER.info("No UDM events were produced from the fetched SpyCloud records")
-            siemplify.return_package([])
-            manager.commit_pending()
-            return
-
-        for index, udm_event in enumerate(udm_events, start=1):
-            try:
-                security_result = udm_event.get("security_result", {})
-                metadata = udm_event.get("metadata", {})
-                additional = udm_event.get("additional", {})
-                extensions = udm_event.get("extensions", {})
-
-                soar_severity = security_result.get("severity")
-                risk_score = security_result.get("risk_score")
-                criticality = security_result.get("criticality")
-                product_severity = security_result.get("product_severity")
-                product_priority = security_result.get("product_priority")
-                severity_label = additional.get("spycloud_severity_label") or extensions.get("spycloud_severity_label")
-                source_severity = extensions.get("severity")
-                product_log_id = metadata.get("product_log_id")
-                event_type = metadata.get("event_type")
-                collection_source = _get_udm_event_sources(udm_event)
-                merged_record_count = extensions.get("_merged_record_count") or additional.get("_merged_record_count")
-
-                # Sample per-record logging. High-volume modification pulls can
-                # produce thousands of events per cycle; logging every one is a
-                # significant contributor to hitting the connector timeout.
-                if index <= 10 or index % 500 == 0:
-                    siemplify.LOGGER.info(
-                    "Building alert #{idx}: "
-                    "event_type={event_type}, "
-                    "product_log_id={product_log_id}, "
-                    "collection_source={collection_source}, "
-                    "merged_record_count={merged_record_count}, "
-                    "source_severity={source_severity}, "
-                    "severity_label={severity_label}, "
-                    "soar_severity={soar_severity}, "
-                    "risk_score={risk_score}, "
-                    "criticality={criticality}, "
-                    "product_severity={product_severity}, "
-                    "product_priority={product_priority}".format(
-                        idx=index,
-                        event_type=event_type,
-                        product_log_id=product_log_id,
-                        collection_source=collection_source,
-                        merged_record_count=merged_record_count,
-                        source_severity=source_severity,
-                        severity_label=severity_label,
-                        soar_severity=soar_severity,
-                        risk_score=risk_score,
-                        criticality=criticality,
-                        product_severity=product_severity,
-                        product_priority=product_priority,
-                    )
-                )
-
-                alert = build_alert_from_udm_event(
-                    udm_event,
-                    environment_common=environment_common,
-                    device_product_field=device_product_field,
-                )
-
-                if not alert:
-                    siemplify.LOGGER.error(
-                        f"Parser returned an empty alert object for product_log_id={product_log_id}"
-                    )
-                    continue
-
-                alerts.append(alert)
-
-            except Exception as e:
-                try:
-                    preview = json.dumps(udm_event, default=str)[:2000]
-                except Exception:
-                    preview = str(udm_event)[:2000]
-
-                siemplify.LOGGER.error(
-                    f"Failed to process UDM event #{index} into alert: {e}. "
-                    f"UDM preview: {preview}"
-                )
-
-        siemplify.LOGGER.info(f"Created {len(alerts)} alerts")
-        siemplify.LOGGER.info(
-            "Alert source counts after parser packaging: "
-            f"{_format_source_counts(_count_sources(alerts, _get_alert_sources))}"
-        )
-
-        siemplify.return_package(alerts)
-
-        # Commit progress ONLY after successful delivery (integration guide 9.2):
-        # advance the publish-date checkpoint and flush deferred modification/
-        # Compass progress. If any step above raised, we hit the except branch,
-        # return an empty package, and commit nothing, so undelivered records are
-        # re-fetched next cycle rather than skipped.
-        if not is_test_run and checkpoint_until:
-            checkpoint_ms = manager.checkpoint_manager.iso_to_epoch_ms(checkpoint_until)
-            manager.checkpoint_manager.save_checkpoint(checkpoint_ms)
-            siemplify.LOGGER.info(f"Saved checkpoint at {checkpoint_until}")
-        manager.commit_pending()
-
+        manager, alerts, checkpoint_until = _collect_alerts(siemplify, is_test_run)
+        collection_succeeded = True
     except Exception as e:
         siemplify.LOGGER.error(f"Connector execution failed: {e}")
-        siemplify.return_package([])
+        alerts, checkpoint_until = [], None
+
+    # Exactly ONE return_package per execution. The platform parses the
+    # connector's entire stdout as a single JSON document, and return_package
+    # writes that document without a trailing separator; a second call would
+    # append a second document and make the whole payload unparseable, which the
+    # platform reports as "returned unexpected output" / "the result of running
+    # is empty or null" and drops every alert in the cycle.
+    siemplify.return_package(alerts)
+
+    if not collection_succeeded or is_test_run:
+        # Commit nothing, so undelivered records are re-fetched next cycle
+        # rather than skipped (integration guide 9.2). Test runs never commit.
+        return
+
+    # Progress commits happen only after successful delivery, which means they
+    # run *after* the package is already on stdout and they talk to the SOAR API
+    # (save_timestamp / set_connector_context_property). A failure here must not
+    # escape: the package was delivered, so the worst correct outcome is a
+    # non-advanced checkpoint and a replayed slice next cycle.
+    try:
+        _commit_progress(siemplify, manager, checkpoint_until, is_test_run)
+    except Exception as e:
+        siemplify.LOGGER.error(
+            "Alerts were delivered but committing progress failed; the checkpoint "
+            f"and drain cursors stay put and this slice replays next cycle. Error: {e}"
+        )
 
 
 if __name__ == "__main__":
