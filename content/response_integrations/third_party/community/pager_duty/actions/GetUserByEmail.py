@@ -14,11 +14,10 @@ def main():
 
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
     api_token = configurations["api_key"]
-    verify_ssl = str(configurations.get("Verify SSL", "true")).lower() == "true"
     user_email = siemplify.parameters["Email"]
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
-    pager_duty = PagerDutyManager(api_token, verify_ssl=verify_ssl)
+    pager_duty = PagerDutyManager(api_token)
 
     try:
         siemplify.LOGGER.info("Starting to get the user information")

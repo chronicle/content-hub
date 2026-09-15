@@ -15,11 +15,10 @@ def main():
 
     userID = siemplify.parameters["UserID"]
     api_token = configurations["api_key"]
-    verify_ssl = str(configurations.get("Verify SSL", "true")).lower() == "true"
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     error_meesage = "There is no user with this ID"
-    pager_duty = PagerDutyManager(api_token, verify_ssl=verify_ssl)
+    pager_duty = PagerDutyManager(api_token)
 
     try:
         siemplify.LOGGER.info("Starting to get the user information")

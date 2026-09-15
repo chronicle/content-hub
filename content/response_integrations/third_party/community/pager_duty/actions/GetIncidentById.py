@@ -15,12 +15,11 @@ def main():
 
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
     api_token = configurations["api_key"]
-    verify_ssl = str(configurations.get("Verify SSL", "true")).lower() == "true"
     incident_key = siemplify.extract_action_param("Incident Key").strip()
     email_from = siemplify.extract_action_param("Email").strip()
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
-    pager_duty = PagerDutyManager(api_token, verify_ssl=verify_ssl)
+    pager_duty = PagerDutyManager(api_token)
 
     try:
         siemplify.LOGGER.info(
@@ -32,7 +31,7 @@ def main():
         siemplify.result.add_result_json(incident)
         result_value = True
         status = EXECUTION_STATE_COMPLETED
-
+        
         if incident:
             output_message = "Successfully retrieved Incident\n"
 
