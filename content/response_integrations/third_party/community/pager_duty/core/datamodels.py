@@ -66,8 +66,8 @@ class PagerDutyIncident(BaseAlert):
 
         alert_info.display_id = incident["id"]
         alert_info.ticket_id = incident["id"]
-        alert_info.name = incident["id"]
-        first_log = incident.get("first_trigger_log_entry", {})
+        alert_info.name = f"PagerDuty Incident: {incident.get('title') or incident.get('id')}"
+        first_log = incident.get("first_trigger_log_entry") or {}
         alert_info.rule_generator = first_log.get("summary", "No Summary")
         alert_info.start_time = convert_string_to_unix_time(
             incident["created_at"]

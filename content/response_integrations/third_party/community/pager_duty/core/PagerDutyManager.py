@@ -182,16 +182,14 @@ class PagerDutyManager:
         Returns:
             list[SingleJson]: List of incidents.
         """
-        self.requests_session.headers.update(
-            {"Authorization": f"Token token={self.api_key}"},
-        )
+        headers = self._get_auth_headers()
         url: str = self.BASE_URL + "/incidents"
         response: requests.Response = self.requests_session.get(
-            url=url, timeout=DEFAULT_TIMEOUT
+            url=url, headers=headers, timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
         incident_data: SingleJson = response.json()
-        return incident_data.get("incidents")
+        return incident_data.get("incidents") or []
 
     def list_incidents(self) -> list[SingleJson]:
         """Lists incidents.
@@ -278,7 +276,7 @@ class PagerDutyManager:
         payload: dict[str, str] = {"user_ids[]": incident_id}
         url: str = self.BASE_URL + self.INCIDENTS_URI
         response: requests.Response = self.requests_session.get(
-            url=url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT
+            url=url, params=payload, headers=headers, timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
         incident_data: SingleJson = {}

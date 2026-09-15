@@ -276,9 +276,7 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
             job_case: The SecOps case to map data for.
         """
         case_id = str(job_case.case_detail.id_)
-        product_ids = self.processed_items.get(
-            case_id
-        ) or self._extract_product_ids_from_case(job_case)
+        product_ids = self._extract_product_ids_from_case(job_case)
         if product_ids:
             self.processed_items[case_id] = product_ids
         elif case_id in self.processed_items:
@@ -475,9 +473,8 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         self, case_id: int, comments: list[str]
     ) -> None:
         """Syncs product comments to the SecOps case with HTML escaping."""
-        for comment in comments:
-            alert_identifier = comment.split(":")[0]
-            comment = comment.replace(f"{alert_identifier}:", "", 1)
+        for raw_comment in comments:
+            alert_identifier, _, comment = raw_comment.partition(":")
             escaped_comment = escape_comment_for_secops(comment)
             try:
                 self.soar_job.add_comment(
