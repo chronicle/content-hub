@@ -17,15 +17,14 @@ from __future__ import annotations
 import re
 
 INTEGRATION_NAME: str = "Tools"
-DELAY_PLAYBOOK_SYNCHRONOUS_SCRIPT_NAME: str = (
-    f"{INTEGRATION_NAME} - Delay Playbook Synchronous"
-)
+DELAY_PLAYBOOK_SYNCHRONOUS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Delay Playbook Synchronous"
 
 MAX_SYNC_DELAY_TIME_IN_SECONDS: int = 30
 MIN_SYNC_DELAY_TIME_IN_SECONDS: int = 0
 LABEL_REGEX = re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$")
 
 CASE_TYPE_MAP: dict[int, str] = {
+    0: "SIMULATED",
     1: "EXTERNAL",
     2: "TEST",
     3: "REQUEST",
@@ -48,6 +47,24 @@ RAW_DATA_FIELDS_KEY: str = "_rawDataFields"
 DATA_FIELDS_KEY: str = "rawDataFields"
 UNDEFINED_VALUE: str = "undefined"
 
-CASE_TYPE_KEYS: list[str] = ["Type", "type"]
-DATA_TYPE_KEYS: list[str] = ["DataType", "Datatype", "dataType", "datatype"]
-SOURCE_TYPE_KEYS: list[str] = ["SourceType", "sourceType", "sourcetype"]
+CASE_TYPE_KEYS: list[str] = [
+    "CaseType",
+    "caseType",
+    "casetype",
+    "case_type",
+    "Type",
+    "type",
+]
+DATA_TYPE_KEYS: list[str] = [
+    "DataType",
+    "Datatype",
+    "dataType",
+    "datatype",
+    "data_type",
+]
+SOURCE_TYPE_KEYS: list[str] = [
+    "SourceType",
+    "sourceType",
+    "sourcetype",
+    "source_type",
+]
