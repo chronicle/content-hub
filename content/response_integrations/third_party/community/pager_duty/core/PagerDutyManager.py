@@ -17,7 +17,7 @@ class PagerDutyManager:
     def __init__(
         self,
         api_key: str,
-        verify_ssl: bool = True,
+        verify_ssl: bool = False,
         from_email: str | None = None,
         proxies: dict[str, str] | None = None,
     ) -> None:
