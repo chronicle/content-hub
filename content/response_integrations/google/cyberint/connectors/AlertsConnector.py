@@ -111,6 +111,7 @@ def main(is_test_run):
     disable_overflow = extract_connector_param(
         siemplify,
         param_name="Disable Overflow",
+        is_mandatory=True,
         default_value=False,
         input_type=bool,
         print_value=True,
