@@ -375,7 +375,7 @@ class ChronicleClient(DevEnvClient):
         self,
         url: str,
         zip_path: Path,
-        params: dict[str, Any] | None = None,
+        params: SingleJson | None = None,
     ) -> SingleJson:
         files: dict[str, tuple[str, bytes, str]] = {
             "file": (zip_path.name, zip_path.read_bytes(), "application/zip")

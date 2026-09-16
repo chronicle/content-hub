@@ -121,8 +121,7 @@ def _deconstruct_blocks(zip_path: Path, dst: Path, playbook: str) -> None:
         all_built_files: list[Path] = utils.unzip_playbooks(
             zip_path,
             temp_path,
-            "",
-            playbook,
+            exclude_playbook=playbook,
         )
         for built_file in all_built_files:
             utils.deconstruct_playbook(built_file, dst)

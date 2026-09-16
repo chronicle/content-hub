@@ -27,7 +27,7 @@ import typer
 import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.sub_commands.integration.build import (
-    build_integration as build_integration_,
+    build_integration as execute_build_integration,
 )
 from mp.build_project.sub_commands.repository.build import build_repository
 from mp.core.custom_types import RepositoryType
@@ -122,7 +122,7 @@ def build_integration(integration: str, src: Path | None = None, *, custom: bool
 
     """
     try:
-        build_integration_([integration], src=src, custom_integration=custom, quiet=True)
+        execute_build_integration([integration], src=src, custom_integration=custom, quiet=True)
         logger.info("Build successful for %s", integration)
 
     except typer.Exit as e:
@@ -219,7 +219,9 @@ def zip_integration_custom_repository() -> list[Path]:
 def _change_integration_to_custom(built_path: Path) -> None:
     for file in built_path.iterdir():
         if file.name == mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name):
-            _modify_def_file_to_custom(built_path / mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name))
+            _modify_def_file_to_custom(
+                built_path / mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name)
+            )
     if (built_path / mp.core.constants.OUT_ACTIONS_META_DIR).exists():
         _modify_def_files_to_custom(
             built_path / mp.core.constants.OUT_ACTIONS_META_DIR,
@@ -601,7 +603,7 @@ def deconstruct_integration(built_integration: Path, dst: Path) -> Path:
 
     """
     try:
-        build_integration_(
+        execute_build_integration(
             [built_integration.stem],
             src=built_integration.parent,
             dst=dst,
