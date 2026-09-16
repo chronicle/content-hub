@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import unittest
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from cyberint.connectors import AlertsConnector
@@ -47,31 +47,30 @@ class TestCyberintAlertsConnector(unittest.TestCase):
         self.mock_alert.get_alert_info.return_value = mock_alert_info
 
     def _create_param_side_effect(self, disable_overflow: bool = False) -> Callable[..., Any]:
+        """Creates a mock side effect function for siemplify.get_connector_context_property."""
+        param_map: dict[str, Any] = {
+            "Disable Overflow": disable_overflow,
+            "API Root": "https://test.cyberint.io",
+            "API Key": "test-key",
+            "Verify SSL": True,
+            "PythonProcessTimeout": 180,
+            "Max Hours Backwards": 1,
+            "Max Alerts To Fetch": 100,
+            "Use whitelist as a blacklist": False,
+            "DeviceProductField": "Product Name",
+        }
+
         def param_side_effect(
             siemplify: Any,
             param_name: str | None = None,
             **kwargs: Any,
         ) -> Any:
+            """Mock parameter retrieval lookup."""
             param = param_name or kwargs.get("param_name")
-            if param == "Disable Overflow":
-                return disable_overflow
-            if param == "API Root":
-                return "https://test.cyberint.io"
-            if param == "API Key":
-                return "test-key"
-            if param == "Verify SSL":
-                return True
-            if param == "PythonProcessTimeout":
-                return 180
-            if param == "Max Hours Backwards":
-                return 1
-            if param == "Max Alerts To Fetch":
-                return 100
-            if param == "Use whitelist as a blacklist":
-                return False
-            if param == "DeviceProductField":
-                return "Product Name"
+            if param in param_map:
+                return param_map[param]
             return kwargs.get("default_value")
+
         return param_side_effect
 
     @patch("cyberint.connectors.AlertsConnector.get_environment_common")
