@@ -5,16 +5,14 @@ import json
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon import extract_action_param, extract_configuration_param
 
 from ..core.constants import (
     ADD_NOTE_SCRIPT_NAME,
     COMMON_ACTION_ERROR_MESSAGE,
-    INTEGRATION_NAME,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
 )
-from ..core.UtilsManager import validate_integer
+from ..core.UtilsManager import get_integration_params, validate_integer
 from ..core.VectraRUXExceptions import VectraRUXException
 from ..core.VectraRUXManager import VectraRUXManager
 
@@ -26,43 +24,20 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameter
-    api_root = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Root",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_id = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client ID",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_secret = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client Secret",
-        print_value=False,
-        is_mandatory=True,
-    )
+    api_root, client_id, client_secret = get_integration_params(siemplify)
 
     # Action Parameters
-    note = extract_action_param(
-        siemplify,
+    note = siemplify.extract_action_param(
         param_name="Note",
         input_type=str,
         is_mandatory=True,
-    )
-    entity_id = extract_action_param(
-        siemplify,
+    ).strip()
+    entity_id = siemplify.extract_action_param(
         param_name="Entity ID",
         input_type=str,
         is_mandatory=True,
     )
-    entity_type = extract_action_param(
-        siemplify,
+    entity_type = siemplify.extract_action_param(
         param_name="Entity Type",
         input_type=str,
         is_mandatory=True,
