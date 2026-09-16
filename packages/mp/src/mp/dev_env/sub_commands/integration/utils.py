@@ -357,10 +357,9 @@ def _normalize_script_param_type(
                 return int(raw_type)
             except ValueError:
                 return default
-    try:
-        return int(raw_type)
-    except (ValueError, TypeError):
-        return default
+    if isinstance(raw_type, int):
+        return raw_type
+    return default
 
 
 def _normalize_action_param_type(
@@ -376,10 +375,9 @@ def _normalize_action_param_type(
                 return int(raw_type)
             except ValueError:
                 return default
-    try:
-        return int(raw_type)
-    except (ValueError, TypeError):
-        return default
+    if isinstance(raw_type, int):
+        return raw_type
+    return default
 
 
 def _normalize_integration_properties(def_data: SingleJson, identifier: str) -> None:
