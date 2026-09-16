@@ -97,8 +97,8 @@ def _pull_playbook_zip_from_soar(playbook: str, dst: Path) -> Path:
     config: SingleJson = load_dev_env_config()
     backend_api: DevEnvClient = get_backend_api(config)
     installed_playbook: list[SingleJson] = backend_api.list_playbooks()
-    playbook_identifier: str = str(
-        utils.find_playbook_identifier(playbook, installed_playbook)
+    playbook_identifier: str = utils.find_playbook_identifier(
+        playbook, installed_playbook
     )
     data_json: SingleJson = backend_api.download_playbook(playbook_identifier)
     return utils.save_playbook_as_zip(playbook, data_json, dst)
