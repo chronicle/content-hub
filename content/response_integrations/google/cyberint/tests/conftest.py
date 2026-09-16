@@ -11,13 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Pytest configuration and test bootstrap for Cyberint integration tests."""
 
 from __future__ import annotations
 
-"""Pytest configuration and test bootstrap for Cyberint integration tests."""
-
 import importlib
-import os
 import pkgutil
 import sys
 from pathlib import Path
