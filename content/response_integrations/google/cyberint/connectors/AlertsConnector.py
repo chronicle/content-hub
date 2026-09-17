@@ -256,7 +256,7 @@ def main(is_test_run):
         if is_test_run:
             raise
 
-    siemplify.LOGGER.info(f"Created total of {len(processed_alerts)} cases")
+    siemplify.LOGGER.info(f"Processed {len(processed_alerts)} alerts")
     siemplify.LOGGER.info("------------------- Main - Finished -------------------")
     siemplify.return_package(processed_alerts)
 

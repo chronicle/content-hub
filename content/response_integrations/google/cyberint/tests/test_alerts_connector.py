@@ -15,9 +15,11 @@
 from __future__ import annotations
 
 import unittest
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from cyberint.connectors import AlertsConnector
 
@@ -46,9 +48,9 @@ class TestCyberintAlertsConnector(unittest.TestCase):
         mock_alert_info.device_product = "CyberInt"
         self.mock_alert.get_alert_info.return_value = mock_alert_info
 
-    def _create_param_side_effect(self, disable_overflow: bool = False) -> Callable[..., Any]:
+    def _create_param_side_effect(self, disable_overflow: bool = False) -> Callable[..., object]:
         """Creates a mock side effect function for siemplify.get_connector_context_property."""
-        param_map: dict[str, Any] = {
+        param_map: dict[str, object] = {
             "Disable Overflow": disable_overflow,
             "API Root": "https://test.cyberint.io",
             "API Key": "test-key",
@@ -61,10 +63,10 @@ class TestCyberintAlertsConnector(unittest.TestCase):
         }
 
         def param_side_effect(
-            siemplify: Any,
+            siemplify: MagicMock,
             param_name: str | None = None,
-            **kwargs: Any,
-        ) -> Any:
+            **kwargs: object,
+        ) -> object:
             """Mock parameter retrieval lookup."""
             param = param_name or kwargs.get("param_name")
             if param in param_map:
@@ -82,7 +84,7 @@ class TestCyberintAlertsConnector(unittest.TestCase):
     @patch("cyberint.connectors.AlertsConnector.is_overflowed", return_value=True)
     @patch("cyberint.connectors.AlertsConnector.extract_connector_param")
     @patch("cyberint.connectors.AlertsConnector.SiemplifyConnectorExecution")
-    def test_overflow_alert_skipped_when_disable_overflow_is_false(
+    def test_overflow_alert_skipped_when_disable_overflow_is_false(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
         self,
         mock_siemplify_cls: MagicMock,
         mock_extract_param: MagicMock,
@@ -129,7 +131,7 @@ class TestCyberintAlertsConnector(unittest.TestCase):
     @patch("cyberint.connectors.AlertsConnector.is_overflowed", return_value=True)
     @patch("cyberint.connectors.AlertsConnector.extract_connector_param")
     @patch("cyberint.connectors.AlertsConnector.SiemplifyConnectorExecution")
-    def test_overflow_alert_processed_when_disable_overflow_is_true(
+    def test_overflow_alert_processed_when_disable_overflow_is_true(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
         self,
         mock_siemplify_cls: MagicMock,
         mock_extract_param: MagicMock,
