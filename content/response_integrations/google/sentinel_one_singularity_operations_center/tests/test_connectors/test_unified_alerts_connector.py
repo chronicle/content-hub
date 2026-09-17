@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 
 import arrow
 import pytest
+import yaml
 from integration_testing import common
 from integration_testing.common import set_is_test_run_to_true
 from integration_testing.set_meta import set_metadata
@@ -34,10 +35,13 @@ from sentinel_one_singularity_operations_center.connectors.unified_alerts_connec
 from sentinel_one_singularity_operations_center.core.api.api_client import (
     SentinelOneSingularityOperationsCenterApiClient,
 )
+from sentinel_one_singularity_operations_center.core.constants import EventType
 from sentinel_one_singularity_operations_center.tests.common import (
     DUPLICATE_INDICATOR_OBSERVABLE,
+    HOSTNAME_SCOPE_OBSERVABLES,
     INTEGRATION_PATH,
     MULTI_INDICATOR_OBSERVABLES,
+    ONTOLOGY_PATH,
     PARENT_PROCESS_AND_LINKED_OBSERVABLES,
 )
 
@@ -678,3 +682,106 @@ def test_duplicate_observable_keeps_indicator_context(
     assert len(obs_events) == 1
     assert obs_events[0].get("indicator_uid") == "IND-A"
     assert obs_events[0].get("ip") == "198.51.100.23"
+
+
+def _get_ontology_rule(security_event_file_name: str) -> dict:
+    """Return the shipped ontology rule for the given SOAR field.
+
+    Args:
+        security_event_file_name (str): The SOAR ontology field name.
+
+    Returns:
+        dict: The matching ontology mapping rule.
+    """
+    rules = yaml.safe_load(ONTOLOGY_PATH.read_text(encoding="utf-8"))
+    return next(
+        rule
+        for rule in rules
+        if rule["security_event_file_name"] == security_event_file_name
+    )
+
+
+def test_destination_hostname_rule_is_scoped_to_asset_events() -> None:
+    """Verify the DestinationHostName rule declares an Asset event scope.
+
+    Regression test for b/558240313. The rule matches on ``name``, a key that
+    every event inherits from its raw vendor payload, so it is only safe when
+    restricted to the one event type whose ``name`` is a real hostname.
+    """
+    rule = _get_ontology_rule("DestinationHostName")
+
+    assert rule["raw_data_primary_field_match_term"] == "name"
+    assert rule["event_name"] == EventType.ASSET.value
+
+
+def test_ontology_rules_matching_generic_name_declare_an_event_scope() -> None:
+    """Verify no ontology rule matches the generic name key without a scope.
+
+    Guards against reintroducing b/558240313 through a new mapping rule. A rule
+    keyed on ``name`` applies to alert, indicator, observable and asset events
+    alike unless it names the event type it belongs to.
+    """
+    rules = yaml.safe_load(ONTOLOGY_PATH.read_text(encoding="utf-8"))
+
+    unscoped = [
+        rule["security_event_file_name"]
+        for rule in rules
+        if rule.get("raw_data_primary_field_match_term") == "name"
+        and not rule.get("event_name")
+    ]
+
+    assert unscoped == []
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters=DEFAULT_PARAMETERS,
+)
+def test_destination_hostname_matches_only_the_asset_event(
+    sentinelone: SentinelOne,
+    script_session: SentinelOneSession,
+    connector_output: MockConnectorOutput,
+) -> None:
+    """Verify only the Asset event satisfies the DestinationHostName rule.
+
+    Regression test for b/558240313. Observables carry a schema field label such
+    as ``process.name`` in their ``name`` key, and the alert details event carries
+    the alert title. Before the fix every one of those became a hostname entity.
+    """
+    set_is_test_run_to_true()
+    is_test = is_test_run(sys.argv)
+
+    mock_payload = copy.deepcopy(HOSTNAME_SCOPE_OBSERVABLES)
+
+    alert_id = "019d114e-e4f4-7ad6-82c3-9829b6d0a801"
+    details = copy.deepcopy(sentinelone.details[alert_id])
+    details["indicators"] = []
+    details["observables"] = mock_payload["observables"]
+    sentinelone.details[alert_id] = details
+
+    connector = UnifiedAlertsConnector(is_test)
+    connector.start()
+
+    alerts = connector_output.results.json_output.alerts
+    assert len(alerts) == 1
+    alert = alerts[0]
+
+    rule = _get_ontology_rule("DestinationHostName")
+    match_term = rule["raw_data_primary_field_match_term"]
+    event_class_field = DEFAULT_PARAMETERS["EventClassId"]
+
+    named_events = [event for event in alert.events if match_term in event]
+    scoped_hostnames = [
+        event[match_term]
+        for event in named_events
+        if event.get(event_class_field) == rule["event_name"]
+    ]
+
+    assert len(named_events) == 5
+    assert scoped_hostnames == ["w19sns-10c5fa27"]
+
+    unscoped_hostnames = [event[match_term] for event in named_events]
+    assert "avm.exe detected as Malware" in unscoped_hostnames
+    assert "process.name" in unscoped_hostnames
+    assert "c2.ip" in unscoped_hostnames
+    assert "file.sha256" in unscoped_hostnames
