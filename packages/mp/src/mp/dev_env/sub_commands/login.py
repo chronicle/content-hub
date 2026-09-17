@@ -224,8 +224,12 @@ def _gather_gcp_params(
                     creds_path.read_text(encoding="utf-8")
                 )
                 project = creds_data.get("project_id")
-        except (OSError, json.JSONDecodeError):
-            pass
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.debug(
+                "Could not extract project_id from credentials file %s: %s",
+                credentials_file,
+                exc,
+            )
 
     if project is None:
         project = typer.prompt("GCP project ID")

@@ -22,30 +22,29 @@ from typing import TYPE_CHECKING
 import requests
 import typer
 
-from mp.dev_env import utils
+from mp.dev_env import api, utils
 
 if TYPE_CHECKING:
     from mp.core.custom_types import SingleJson
-    from mp.dev_env.interfaces import DevEnvClient
 
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def get_backend_api_clean(config: SingleJson) -> DevEnvClient:
+def get_backend_api_clean(config: SingleJson) -> api.BackendAPI:
     """Initialize and authenticate the backend API client.
 
     Args:
         config: Environment configuration containing api_root and credentials.
 
     Returns:
-        The authenticated DevEnvClient client.
+        The authenticated BackendAPI client.
 
     Raises:
-        typer.Exit: If authentication fails.
+        typer.Exit: If authentication fails or auth_mode is not legacy SOAR.
 
     """
     try:
-        return utils.get_backend_api(config)
+        client = utils.get_backend_api(config)
     except requests.exceptions.HTTPError as e:
         if e.response is not None and e.response.status_code in {401, 403}:
             target: str = str(config.get("api_root") or config.get("instance"))
@@ -66,6 +65,14 @@ def get_backend_api_clean(config: SingleJson) -> DevEnvClient:
         raise typer.Exit(1) from None
     except typer.Exit:
         raise
-    except Exception as e:  # ruff:ignore[blind-except]
+    except Exception as e:
         logger.error("Authentication failed: %s", e)  # ruff:ignore[error-instead-of-exception]
-        raise typer.Exit(1) from None
+        raise typer.Exit(1) from e
+
+    if not isinstance(client, api.BackendAPI):
+        logger.error(
+            "This command is only supported on legacy SOAR environments (API key auth)."
+        )
+        raise typer.Exit(1)
+
+    return client
