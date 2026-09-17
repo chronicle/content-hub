@@ -1,0 +1,312 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    and operational status of the Nmap integration. Its primary purpose is to ensure
+    that the Nmap binary is correctly installed, accessible via the system path, and
+    that the integration is properly configured to run on a Remote Agent.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Nmap Manager and performs a
+    mandatory check to ensure the execution environment is a Remote Agent.
+
+    2. **Command Execution**: It executes the system command `nmap --version` using
+    a subprocess call to verify the binary is accessible.
+
+    3. **Response Validation**: The action captures the return code and standard error
+    from the command execution.
+
+    4. **Outcome**: If the return code is 0 (success), the action completes with a
+    success message. If the return code is non-zero, it raises an exception containing
+    the error details from Nmap.
+
+
+    ### Additional Notes
+
+    - **Remote Agent Requirement**: This action is strictly designed to run on a Google
+    SecOps Remote Agent. It will explicitly fail with an error if executed in a cloud-only
+    environment because it relies on local system execution of the Nmap binary.
+
+    - **Connectivity Test**: The 'connectivity' in this context refers to the SOAR's
+    ability to invoke the Nmap process on the host machine, rather than network connectivity
+    to a remote server.
+  ai_short_description: >-
+    A diagnostic utility designed to verify the connectivity and operational status
+    of the Nmap integration by ensuring the Nmap binary is correctly installed and
+    accessible on a Remote Agent.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a local system command (`nmap --version`) to verify installation.
+      It does not fetch contextual data for alerts, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It simply runs a static
+      command (`nmap --version`) to test local tool availability.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is purely a diagnostic ping to check if the Nmap binary is installed
+      and accessible on the remote agent. It does not enrich IOCs, mutate external
+      systems, manage tickets, or perform any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
+Scan Entities:
+  ai_description: >-
+    ### General Description
+
+    The **Scan Entities** action utilizes the Nmap security scanner to perform network
+    discovery and security auditing on specific entities within a Google SecOps environment.
+    It is designed to identify active hosts, open ports, running services, and operating
+    system details, and then enriches the target entities with this contextual data.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction & Validation:** Extracts the provided IP addresses,
+    hostnames, and Nmap options. Validates the IP addresses and ensures no restricted
+    root-level Nmap flags (e.g., `-sS`, `-O`) are used in the options.
+
+    2. **Target Gathering:** Identifies relevant entities from the current case (IP
+    Addresses, Hostnames, and Domains) and merges them with any manually provided
+    IP addresses or hostnames from the input parameters.
+
+    3. **Execution:** For each target, the action executes the Nmap command via the
+    system shell on the remote agent, capturing the output in XML format.
+
+    4. **Parsing:** Processes the XML output using a custom parser to extract structured
+    data such as port states, service versions, OS matches, and hardware vendors.
+
+    5. **Enrichment:** Updates the `additional_properties` of the original SecOps
+    entities with the discovered network metadata and marks them as enriched.
+
+    6. **Result Reporting:** Generates a JSON result containing the full scan details
+    for each target and provides a summary message to the action output.
+
+
+    ### Additional Notes
+
+    * **Remote Agent Required:** This action must be executed on a Google SecOps Remote
+    Agent where the Nmap binary is installed and accessible.
+
+    * **Root Restriction:** The action includes a validation step that prevents the
+    use of Nmap flags requiring root/sudo privileges to ensure stable execution within
+    the agent environment.
+  ai_short_description: >-
+    Scans IP Address, Hostname, and Domain entities using Nmap to discover active
+    hosts, open ports, running services, and operating system details, enriching the
+    entities with the scan results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a local Nmap scan to fetch network data about targets (fetches_data=true).
+      It does not mutate external data. It updates internal entities with the scan
+      results (can_update_entities=true) but does not create insights or case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: true
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `self.soar_action.target_entities` and filters them using
+      `entity.entity_type in self.supported_entity_types`, where the supported types
+      are defined as HOSTNAME, ADDRESS, and DOMAIN. Thus, it filters strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs an Nmap scan to discover open ports, services, MAC addresses,
+      and OS versions for the target entities. This directly aligns with the 'Enrich
+      Asset' expected outcome, which involves returning contextual metadata like OS
+      version and MAC address for a resource.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | IP Address | String | No | IP Addresses that need to be scanned. Note: these
+    IP addresses are going to be processed alongside entities. |
+
+    | Hostname | String | No | Hostnames that need to be scanned. Note: these hostnames
+    are going to be processed alongside entities. |
+
+    | Options | String | Yes | Options for the execution (e.g., `-sT -sV -p- -T4 -v`).
+    |
