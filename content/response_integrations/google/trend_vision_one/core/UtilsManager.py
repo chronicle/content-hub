@@ -20,6 +20,7 @@ import os
 
 import json
 import re
+import time
 
 from .TrendVisionOneManager import TrendVisionOneManager
 from .TrendVisionOneExceptions import (
@@ -48,6 +49,7 @@ from .constants import (
     PARAM_URLS,
     PAYLOAD_CHUNK_SIZE,
     REJECTED_STATUS,
+    RUNNING_STATUS,
     SUCCESS_STATUS,
 )
 from . import datamodels
@@ -385,6 +387,11 @@ def query_blocklist_operation_status(
 
         task_url = task_ref if str(task_ref).startswith("http") else manager._get_full_url("get_task", task_id=task_ref)
         task_details = manager.get_task(task_url=task_url)
+        for _ in range(2):
+            if task_details.status != RUNNING_STATUS:
+                break
+            time.sleep(2)
+            task_details = manager.get_task(task_url=task_url)
 
         result_data["json_results"][entity_identifier] = {
             "task_id": task_details.id,

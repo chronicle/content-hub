@@ -158,6 +158,7 @@ class TestBlocklistActions(unittest.TestCase):
             ),
             patch("trend_vision_one.core.UtilsManager.is_async_action_global_timeout_approaching", return_value=False),
             patch("trend_vision_one.core.UtilsManager.is_approaching_timeout", return_value=False),
+            patch("trend_vision_one.core.UtilsManager.time.sleep"),
         ):
             _msg, _res, status = start_operation(siemplify, manager, 1000, siemplify.target_entities, result_data)
 
