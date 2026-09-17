@@ -267,7 +267,7 @@ def save_integration_as_zip(integration_name: str, data: bytes, dst: Path) -> Pa
         dst: The directory where the ZIP file should be saved.
 
     Returns:
-        Path: The path to the saved ZIP file.
+        The path to the saved ZIP file.
 
     """
     zip_path = dst / f"{integration_name}.zip"
@@ -344,14 +344,25 @@ def _normalize_unzipped_integration(dest: Path) -> None:
         _normalize_subfolder(dest, cfg, identifier)
 
 
-def _normalize_script_param_type(
-    raw_type: Any,
-    default: int = ScriptParamType.STRING.value,
+def _normalize_param_type(
+    raw_type: str | int | None,
+    enum_cls: type[ScriptParamType | ActionParamType],
+    default: int,
 ) -> int:
-    """Normalize a raw script or connector parameter type to its integer enum value."""
+    """Normalize a raw parameter type to its integer enum value.
+
+    Args:
+        raw_type: Raw parameter type from definition or JSON.
+        enum_cls: The enum class to resolve strings against.
+        default: Fallback integer value.
+
+    Returns:
+        The integer representation of the parameter type.
+
+    """
     if isinstance(raw_type, str):
         try:
-            return ScriptParamType.from_string(raw_type).value
+            return enum_cls.from_string(raw_type).value
         except KeyError:
             try:
                 return int(raw_type)
@@ -360,24 +371,40 @@ def _normalize_script_param_type(
     if isinstance(raw_type, int):
         return raw_type
     return default
+
+
+def _normalize_script_param_type(
+    raw_type: str | int | None,
+    default: int = ScriptParamType.STRING.value,
+) -> int:
+    """Normalize a raw script or connector parameter type to its integer enum value.
+
+    Args:
+        raw_type: Raw parameter type from definition or JSON.
+        default: Fallback integer value.
+
+    Returns:
+        The integer representation of the script parameter type.
+
+    """
+    return _normalize_param_type(raw_type, ScriptParamType, default)
 
 
 def _normalize_action_param_type(
-    raw_type: Any,
+    raw_type: str | int | None,
     default: int = ActionParamType.STRING.value,
 ) -> int:
-    """Normalize a raw action parameter type to its integer enum value."""
-    if isinstance(raw_type, str):
-        try:
-            return ActionParamType.from_string(raw_type).value
-        except KeyError:
-            try:
-                return int(raw_type)
-            except ValueError:
-                return default
-    if isinstance(raw_type, int):
-        return raw_type
-    return default
+    """Normalize a raw action parameter type to its integer enum value.
+
+    Args:
+        raw_type: Raw parameter type from definition or JSON.
+        default: Fallback integer value.
+
+    Returns:
+        The integer representation of the action parameter type.
+
+    """
+    return _normalize_param_type(raw_type, ActionParamType, default)
 
 
 def _normalize_integration_properties(def_data: SingleJson, identifier: str) -> None:
@@ -454,18 +481,22 @@ def _normalize_integration_def(json_def: Path) -> str:
     return identifier
 
 
-def _normalize_action_def(item_def: SingleJson, identifier: str) -> None:
+def _normalize_common_metadata(item_def: SingleJson) -> None:
     item_def.setdefault("Creator", item_def.get("Author") or "admin")
-    item_def.setdefault("IntegrationIdentifier", item_def.get("Integration") or identifier)
-    item_def.setdefault("IsAsync", item_def.get("Async", False))
-    item_def.setdefault("IsEnabled", item_def.get("Enabled", True))
     item_def.setdefault("IsCustom", item_def.get("Custom", True))
-    item_def.setdefault("DynamicResultsMetadata", item_def.get("DynamicResults") or [])
-    item_def.setdefault("SimulationDataJson", '{"Entities": []}')
+    item_def.setdefault("IsEnabled", item_def.get("Enabled", True))
     try:
         item_def["Version"] = float(item_def.get("Version") or 1.0)
     except (ValueError, TypeError):
         item_def["Version"] = 1.0
+
+
+def _normalize_action_def(item_def: SingleJson, identifier: str) -> None:
+    _normalize_common_metadata(item_def)
+    item_def.setdefault("IntegrationIdentifier", item_def.get("Integration") or identifier)
+    item_def.setdefault("IsAsync", item_def.get("Async", False))
+    item_def.setdefault("DynamicResultsMetadata", item_def.get("DynamicResults") or [])
+    item_def.setdefault("SimulationDataJson", '{"Entities": []}')
     item_def.setdefault("AiCategories", item_def.get("AICategories") or [])
     item_def.setdefault("AiDescription", item_def.get("AIDescription"))
     item_def.setdefault("AiShortDescription", item_def.get("AiShortDescription"))
@@ -475,7 +506,7 @@ def _normalize_action_def(item_def: SingleJson, identifier: str) -> None:
     for ap in item_def.get("Parameters", []):
         if isinstance(ap, dict):
             ap.setdefault("Name", ap.get("DisplayName") or ap.get("Name", ""))
-            ap.setdefault("Description", ap.get("Description", ""))
+            ap["Description"] = ap.get("Description") or ""
             ap.setdefault("IsMandatory", ap.get("Mandatory", False))
             ap.setdefault("OptionalValues", ap.get("OptionalValues") or [])
             ap["Type"] = _normalize_action_param_type(
@@ -486,20 +517,14 @@ def _normalize_action_def(item_def: SingleJson, identifier: str) -> None:
 
 
 def _normalize_connector_def(item_def: SingleJson, identifier: str) -> None:
-    item_def.setdefault("Creator", item_def.get("Author") or "admin")
+    _normalize_common_metadata(item_def)
     item_def.setdefault("Integration", item_def.get("Integration") or identifier)
-    item_def.setdefault("IsCustom", item_def.get("Custom", True))
-    item_def.setdefault("IsEnabled", item_def.get("Enabled", True))
     item_def.setdefault(
         "IsConnectorRulesSupported",
         item_def.get("ConnectorRulesSupported", False),
     )
     item_def.setdefault("Name", item_def.get("DisplayName") or item_def.get("Name", ""))
     item_def.setdefault("Rules", item_def.get("Rules") or [])
-    try:
-        item_def["Version"] = float(item_def.get("Version") or 1.0)
-    except (ValueError, TypeError):
-        item_def["Version"] = 1.0
     for cp in item_def.get("Parameters", []):
         if isinstance(cp, dict):
             cp.setdefault("Name", cp.get("DisplayName") or cp.get("Name", ""))
@@ -515,20 +540,14 @@ def _normalize_connector_def(item_def: SingleJson, identifier: str) -> None:
 
 
 def _normalize_job_def(item_def: SingleJson, identifier: str) -> None:
-    item_def.setdefault("Creator", item_def.get("Author") or "admin")
+    _normalize_common_metadata(item_def)
     item_def.setdefault("Integration", item_def.get("Integration") or identifier)
-    item_def.setdefault("IsCustom", item_def.get("Custom", True))
-    item_def.setdefault("IsEnabled", item_def.get("Enabled", True))
     item_def.setdefault("Name", item_def.get("DisplayName") or item_def.get("Name", ""))
     item_def.setdefault("RunIntervalInSeconds", item_def.get("RunIntervalInSeconds", 3600))
-    try:
-        item_def["Version"] = float(item_def.get("Version") or 1.0)
-    except (ValueError, TypeError):
-        item_def["Version"] = 1.0
     for jp in item_def.get("Parameters", []):
         if isinstance(jp, dict):
             jp.setdefault("Name", jp.get("DisplayName") or jp.get("Name", ""))
-            jp.setdefault("Description", jp.get("Description", ""))
+            jp["Description"] = jp.get("Description") or ""
             jp.setdefault("IsMandatory", jp.get("Mandatory", False))
             jp.setdefault("DefaultValue", jp.get("DefaultValue"))
             jp["Type"] = _normalize_script_param_type(
@@ -590,11 +609,11 @@ def deconstruct_integration(built_integration: Path, dst: Path) -> Path:
     """Deconstructs a built integration and restores the source to its original directory.
 
     Args:
-        built_integration (Path): Path to the built integration folder.
-        dst (Path): Destination folder.
+        built_integration: Path to the built integration folder.
+        dst: Destination folder.
 
     Returns:
-        Path: Path to the deconstructed integration.
+        Path to the deconstructed integration.
 
     Raises:
         typer.Exit: If the deconstruction subprocess fails.
