@@ -34,114 +34,98 @@ from ..core.ToolsCommon import (
 
 # The output_handler decorator manages output for Siemplify actions.
 @output_handler
-def main():
+def main() -> None:
     try:
         siemplify = SiemplifyAction(get_source_file=True)
-
     except TypeError:
         siemplify = SiemplifyAction()
 
     raw_scope = getattr(siemplify, "execution_scope", ExecutionScope.Alert.value)
-    execution_scope = get_execution_scope(raw_scope, logger=siemplify.LOGGER)
-
-    if execution_scope.value == ExecutionScope.Case.value:
+    if get_execution_scope(raw_scope, logger=siemplify.LOGGER).value == ExecutionScope.Case.value:
         output_message = "This action doesn't support case playbook feature."
         siemplify.LOGGER.error(output_message)
         siemplify.end(output_message, False, EXECUTION_STATE_FAILED)
         return
 
     pushToSimulated = siemplify.extract_action_param(
-        "Push to Simulated Cases",
-        input_type=bool,
-        default_value=False,
-        print_value=True,
+        "Push to Simulated Cases", input_type=bool, default_value=False, print_value=True
     )
     saveToCaseWall = siemplify.extract_action_param(
-        "Save JSON as Case Wall File",
-        input_type=bool,
-        default_value=False,
-        print_value=True,
+        "Save JSON as Case Wall File", input_type=bool, default_value=False, print_value=True
     )
+    overrideName = siemplify.extract_action_param("Override Alert Name", default_value="", print_value=True)
+    fullPathName = siemplify.extract_action_param("Full path name", default_value="", print_value=True)
 
-    overrideName = siemplify.extract_action_param(
-        "Override Alert Name",
-        default_value="",
-        print_value=True,
-    )
-    fullPathName = siemplify.extract_action_param(
-        "Full path name",
-        default_value="",
-        print_value=True,
-    )
-
-    output_message = "Action result: "
-
-    # Check if the 'SourceFileContent' property exists in the alert data before
-    # trying to load it.
-    if "SourceFileContent" in siemplify.current_alert.entities[0].additional_properties:
-        # Load the alert data from the 'SourceFileContent' property.
-        case_data = json.loads(
-            siemplify.current_alert.entities[0].additional_properties["SourceFileContent"],
-        )
-    else:
+    additional_props = siemplify.current_alert.entities[0].additional_properties
+    if "SourceFileContent" not in additional_props:
         siemplify.LOGGER.error("Alert data is missing 'SourceFileContent' property")
         return
 
-    # Modify the 'Event Name' fields in the alert data.
-    for i, event in enumerate(case_data["Events"]):
-        if "DeviceEventClassId" in case_data["Events"][i]["_fields"]:
-            case_data["Events"][i]["_rawDataFields"]["DeviceEventClassId"] = case_data["Events"][i]["_fields"][
-                "DeviceEventClassId"
-            ]
-            case_data["Events"][i]["_rawDataFields"]["Name"] = case_data["Events"][i]["_fields"]["DeviceEventClassId"]
-        if "deviceEventClassId" in case_data["Events"][i]["_fields"]:
-            case_data["Events"][i]["_rawDataFields"]["DeviceEventClassId"] = case_data["Events"][i]["_fields"][
-                "deviceEventClassId"
-            ]
-            case_data["Events"][i]["_rawDataFields"]["Name"] = case_data["Events"][i]["_fields"]["deviceEventClassId"]
+    case_data = json.loads(additional_props["SourceFileContent"])
+    _enrich_case_metadata(case_data, full_path_name=fullPathName, override_name=overrideName)
 
-    # Optionally modify the 'Name' field in the alert data.
-    if fullPathName:
-        case_data["Name"] = case_data["SourceSystemName"] + "_" + case_data["DeviceProduct"] + "_" + case_data["Name"]
-    if overrideName:
-        case_data["Name"] = overrideName
-
-    # Prepare the data to be pushed or saved.
     aligned_case_data = align_case_data(case_data)
     myJson = {"cases": [aligned_case_data]}
-
-    # Push the data to the simulator or save it as a JSON file, depending on
-    # the parameters.
+    output_message = "Action result: "
     if pushToSimulated:
         import_simulator_custom_case(siemplify, myJson)
         output_message += " Pushed to Simulated "
-
     if saveToCaseWall:
-        s = json.dumps(myJson)
-        t = base64.b64encode(s.encode("utf-8")).decode("ascii")
-        # Add the JSON data as an attachment to the case wall.
+        encoded = base64.b64encode(json.dumps(myJson).encode("utf-8")).decode("ascii")
         siemplify.result.add_attachment(
             title="<<file in here>>",
-            filename=sanitize_case_filename(case_data.get("Name", "")),
-            file_contents=t,
+            filename=sanitize_case_filename(case_data.get("Name") or aligned_case_data.get("name", "")),
+            file_contents=encoded,
         )
         output_message += " Saved to Casewall "
-    # The action is complete.
-    result_value = True
-    status = EXECUTION_STATE_COMPLETED
 
-    # Add the JSON data to the action result and end the action.
     siemplify.result.add_result_json(myJson)
-    siemplify.end(output_message, result_value, status)
+    siemplify.end(output_message, True, EXECUTION_STATE_COMPLETED)
+
+
+def _enrich_case_metadata(
+    case_data: SingleJson,
+    full_path_name: str,
+    override_name: str,
+) -> None:
+    """Enrich event class identifiers and update the top-level case name.
+
+    Args:
+        case_data: The raw case dictionary to update in place.
+        full_path_name: Truthy flag indicating whether to prefix system and product names.
+        override_name: Explicit alert name override if provided.
+    """
+    for event in case_data.get("Events", []):
+        if not isinstance(event, dict):
+            continue
+        fields = event.get("_fields")
+        if not isinstance(fields, dict):
+            continue
+        device_event_class_id = fields.get("DeviceEventClassId") or fields.get("deviceEventClassId")
+        if device_event_class_id is not None:
+            raw_data_fields = event.setdefault("_rawDataFields", {})
+            if isinstance(raw_data_fields, dict):
+                raw_data_fields["DeviceEventClassId"] = device_event_class_id
+                raw_data_fields["Name"] = device_event_class_id
+
+    if full_path_name:
+        source_system = case_data.get("SourceSystemName", "")
+        device_product = case_data.get("DeviceProduct", "")
+        current_name = case_data.get("Name", "")
+        case_data["Name"] = f"{source_system}_{device_product}_{current_name}"
+    if override_name:
+        case_data["Name"] = override_name
 
 
 def sanitize_case_filename(name: str) -> str:
     """Sanitize case name to construct a clean .case attachment filename.
+
     Args:
         name: The raw case or alert name.
 
     Returns:
         The sanitized filename ending with '.case'.
+
     """
     if not name:
         return "case.case"
@@ -152,6 +136,7 @@ def sanitize_case_filename(name: str) -> str:
 
 def align_case_data(case_data: SingleJson) -> SingleJson:
     """Align case data format with custom case import endpoints.
+
     Args:
         case_data: The dictionary containing the raw case data.
 
@@ -174,7 +159,7 @@ def align_case_data(case_data: SingleJson) -> SingleJson:
         else:
             new_case[camel_k] = v
 
-    if "caseType" in new_case and "type" not in new_case:
+    if "caseType" in new_case:
         new_case["type"] = new_case["caseType"]
 
     return new_case
@@ -182,6 +167,7 @@ def align_case_data(case_data: SingleJson) -> SingleJson:
 
 def align_case_enum_fields(case_data: SingleJson) -> None:
     """Align the enum integer fields of a case.
+
     Args:
         case_data: The dictionary containing the raw case data.
     """
@@ -204,30 +190,34 @@ def align_enum_field(
     value_map: dict[int, str],
 ) -> None:
     """Align a single enum field inside a data dictionary.
+
     Args:
         data: The dictionary containing the raw data.
         keys: The list of keys that represent the enum field.
         value_map: The mapping dictionary for the enum values.
     """
     for key in keys:
-        if key in data:
-            val: Any = data[key]
-            if isinstance(val, bool):
-                continue
-            if isinstance(val, int):
-                if val in value_map:
-                    data[key] = value_map[val]
-                else:
-                    data.pop(key, None)
-            elif isinstance(val, str):
-                if val.isdigit() and int(val) in value_map:
-                    data[key] = value_map[int(val)]
-                elif val.upper() in value_map.values():
-                    data[key] = val.upper()
+        if key not in data:
+            continue
+        val: Any = data[key]
+        mapped_val: str | None = None
+        if isinstance(val, int) and not isinstance(val, bool):
+            mapped_val = value_map.get(val)
+        elif isinstance(val, str):
+            stripped = val.strip()
+            if stripped.isdigit() and int(stripped) in value_map:
+                mapped_val = value_map[int(stripped)]
+            elif stripped.upper() in value_map.values():
+                mapped_val = stripped.upper()
+        if mapped_val is not None:
+            data[key] = mapped_val
+        else:
+            data.pop(key, None)
 
 
 def transform_events_list(events: list[Any]) -> list[Any]:
     """Transform a list of events.
+
     Args:
         events: The list of raw events.
 
@@ -245,6 +235,7 @@ def transform_events_list(events: list[Any]) -> list[Any]:
 
 def transform_event(event: SingleJson) -> SingleJson:
     """Transform an event dictionary to align its property names.
+
     Args:
         event: The raw event dictionary.
 
@@ -266,6 +257,7 @@ def transform_event(event: SingleJson) -> SingleJson:
 
 def to_camel_case(key_name: str) -> str:
     """Convert PascalCase or snake_case property names to camelCase.
+
     Args:
         key_name: The string to convert.
 
@@ -278,8 +270,15 @@ def to_camel_case(key_name: str) -> str:
         return constants.FIELDS_KEY
     if key_name == constants.RAW_DATA_FIELDS_KEY:
         return constants.DATA_FIELDS_KEY
+    canonical_compound_keys = {
+        "casetype": "caseType",
+        "datatype": "dataType",
+        "sourcetype": "sourceType",
+    }
+    if key_name.lower() in canonical_compound_keys:
+        return canonical_compound_keys[key_name.lower()]
     if "_" in key_name and not key_name.startswith("_"):
-        parts = key_name.split("_")
+        parts = [p for p in key_name.split("_") if p]
         return parts[0].lower() + "".join(p.capitalize() for p in parts[1:])
     return key_name[0].lower() + key_name[1:]
 

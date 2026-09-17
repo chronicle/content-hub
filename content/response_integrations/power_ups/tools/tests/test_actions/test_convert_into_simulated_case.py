@@ -48,7 +48,7 @@ IMPORT_CUSTOM_CASE: str = "importCustomCase"
         "Override Alert Name": "",
         "Full path name": "",
     },
-    input_context=CONVERT_INTO_SIMULATED_CASE_CONTEXT,
+    input_context=copy.deepcopy(CONVERT_INTO_SIMULATED_CASE_CONTEXT),
 )
 def test_convert_into_simulated_case_success(
     tools: Tools,
@@ -83,7 +83,7 @@ def test_convert_into_simulated_case_success(
         "Override Alert Name": "",
         "Full path name": "",
     },
-    input_context=CONVERT_INTO_SIMULATED_CASE_CONTEXT,
+    input_context=copy.deepcopy(CONVERT_INTO_SIMULATED_CASE_CONTEXT),
 )
 def test_convert_into_simulated_case_with_casetype(
     tools: Tools,
@@ -124,7 +124,7 @@ def test_convert_into_simulated_case_with_casetype(
         "Override Alert Name": "Exported_Alert.json",
         "Full path name": "",
     },
-    input_context=CONVERT_INTO_SIMULATED_CASE_CONTEXT,
+    input_context=copy.deepcopy(CONVERT_INTO_SIMULATED_CASE_CONTEXT),
 )
 def test_convert_into_simulated_case_save_to_casewall(
     tools: Tools,
@@ -138,6 +138,41 @@ def test_convert_into_simulated_case_save_to_casewall(
 
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
     assert "Saved to Casewall" in action_output.results.output_message
+    raw_output = json.loads(action_output.get_out_io().getvalue())
+    result_object = json.loads(raw_output["ResultObjectJson"])
+    assert "Exported_Alert.case" in result_object["<<file in here>>_None"]["Attachments"]
+
+
+@pytest.mark.execution_scope("Alert")
+@set_metadata(
+    parameters={
+        "Push to Simulated Cases": False,
+        "Save JSON as Case Wall File": True,
+        "Override Alert Name": "",
+        "Full path name": "",
+    },
+    input_context=copy.deepcopy(CONVERT_INTO_SIMULATED_CASE_CONTEXT),
+)
+def test_convert_into_simulated_case_save_to_casewall_camelcase_name(
+    tools: Tools,
+    load_mock_data: SingleJson,
+    action_output: MockActionOutput,
+) -> None:
+    """Test ConvertIntoSimulatedCase falls back to camelCase 'name' for attachment filename."""
+    alert_details = copy.deepcopy(load_mock_data[CONVERT_INTO_SIMULATED_CASE_ALERT_DETAILS_KEY])
+    alert_details[0]["domain_entities"][0]["additional_properties"]["SourceFileContent"] = json.dumps({
+        "name": "CamelCaseAlert.json",
+        "Events": [],
+    })
+    tools.set_alerts_full_details(alert_details)
+
+    ConvertIntoSimulatedCase.main()
+
+    assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
+    assert "Saved to Casewall" in action_output.results.output_message
+    raw_output = json.loads(action_output.get_out_io().getvalue())
+    result_object = json.loads(raw_output["ResultObjectJson"])
+    assert "CamelCaseAlert.case" in result_object["<<file in here>>_None"]["Attachments"]
 
 
 @pytest.mark.parametrize(
@@ -148,7 +183,9 @@ def test_convert_into_simulated_case_save_to_casewall(
         (2, "TEST"),
         (3, "REQUEST"),
         ("1", "EXTERNAL"),
+        (" 1 ", "EXTERNAL"),
         ("external", "EXTERNAL"),
+        (" external ", "EXTERNAL"),
     ],
 )
 def test_align_case_data_case_type_values(
@@ -156,7 +193,7 @@ def test_align_case_data_case_type_values(
     expected_type: str,
 ) -> None:
     """Test align_case_data correctly converts various CaseType values to string tokens."""
-    raw_case = {
+    raw_case: SingleJson = {
         "Name": "Test Case",
         "CaseType": input_case_type,
         "Events": [],
@@ -166,11 +203,17 @@ def test_align_case_data_case_type_values(
     assert aligned["type"] == expected_type
 
 
-def test_align_case_data_drops_invalid_integer() -> None:
-    """Test align_case_data drops unknown integers to avoid backend enum parse errors."""
-    raw_case = {
+@pytest.mark.parametrize(
+    "invalid_val",
+    [99, "99", "-1", "", "UNKNOWN", True, False, None],
+)
+def test_align_case_data_drops_invalid_values(
+    invalid_val: int | str | bool | None,
+) -> None:
+    """Test align_case_data drops unmapped ints, strings, bools, and None to avoid backend enum errors."""
+    raw_case: SingleJson = {
         "Name": "Test Case",
-        "CaseType": 99,
+        "CaseType": invalid_val,
         "Events": [],
     }
     aligned = ConvertIntoSimulatedCase.align_case_data(raw_case)
@@ -178,9 +221,22 @@ def test_align_case_data_drops_invalid_integer() -> None:
     assert "type" not in aligned
 
 
+def test_align_case_data_casetype_overrides_unmapped_type() -> None:
+    """Test align_case_data synchronizes 'type' with 'caseType' even when an unmapped 'Type' is present."""
+    raw_case: SingleJson = {
+        "Name": "Test Case",
+        "CaseType": 1,
+        "Type": "Alert",
+        "Events": [],
+    }
+    aligned = ConvertIntoSimulatedCase.align_case_data(raw_case)
+    assert aligned["caseType"] == "EXTERNAL"
+    assert aligned["type"] == "EXTERNAL"
+
+
 def test_align_case_data_snake_case_fields() -> None:
     """Test align_case_data handles snake_case keys correctly."""
-    raw_case = {
+    raw_case: SingleJson = {
         "Name": "Test Case",
         "case_type": 1,
         "data_type": 1,
@@ -192,6 +248,40 @@ def test_align_case_data_snake_case_fields() -> None:
     assert aligned["type"] == "EXTERNAL"
     assert aligned["dataType"] == "1"
     assert aligned["sourceType"] == "CONNECTOR"
+
+
+def test_align_case_data_compound_lowercase_fields() -> None:
+    """Test align_case_data handles lowercase compound keys (casetype, datatype, sourcetype)."""
+    raw_case: SingleJson = {
+        "Name": "Test Case",
+        "casetype": 1,
+        "Datatype": 1,
+        "sourcetype": 1,
+        "Events": [],
+    }
+    aligned = ConvertIntoSimulatedCase.align_case_data(raw_case)
+    assert aligned["caseType"] == "EXTERNAL"
+    assert aligned["type"] == "EXTERNAL"
+    assert aligned["dataType"] == "1"
+    assert aligned["sourceType"] == "CONNECTOR"
+
+
+@pytest.mark.parametrize(
+    ("raw_key", "expected_camel"),
+    [
+        ("casetype", "caseType"),
+        ("CaseType", "caseType"),
+        ("Datatype", "dataType"),
+        ("datatype", "dataType"),
+        ("sourcetype", "sourceType"),
+        ("case_type", "caseType"),
+        ("case__type", "caseType"),
+        ("", ""),
+    ],
+)
+def test_to_camel_case_variants(raw_key: str, expected_camel: str) -> None:
+    """Test to_camel_case normalizes compound lowercase and snake_case keys."""
+    assert ConvertIntoSimulatedCase.to_camel_case(raw_key) == expected_camel
 
 
 @pytest.mark.parametrize(
@@ -210,3 +300,36 @@ def test_sanitize_case_filename(raw_name: str, expected_filename: str) -> None:
     """Test sanitize_case_filename properly strips extensions and bad chars."""
     result = ConvertIntoSimulatedCase.sanitize_case_filename(raw_name)
     assert result == expected_filename
+
+
+def test_enrich_case_metadata_events_and_names() -> None:
+    """Test _enrich_case_metadata enriches event fields and resolves case names safely."""
+    case_data: SingleJson = {
+        "Name": "OrigAlert",
+        "SourceSystemName": "ArcSight",
+        "DeviceProduct": "ESM",
+        "Events": [
+            {"_fields": {"DeviceEventClassId": "class_1"}},
+            {"_fields": {"deviceEventClassId": "class_2"}, "_rawDataFields": {}},
+            {"_fields": {}},
+            "invalid_event_entry",
+        ],
+    }
+    ConvertIntoSimulatedCase._enrich_case_metadata(
+        case_data,
+        full_path_name="true",
+        override_name="",
+    )
+    assert case_data["Name"] == "ArcSight_ESM_OrigAlert"
+    assert case_data["Events"][0]["_rawDataFields"]["DeviceEventClassId"] == "class_1"
+    assert case_data["Events"][0]["_rawDataFields"]["Name"] == "class_1"
+    assert case_data["Events"][1]["_rawDataFields"]["DeviceEventClassId"] == "class_2"
+    assert case_data["Events"][1]["_rawDataFields"]["Name"] == "class_2"
+
+    # Test override name takes precedence
+    ConvertIntoSimulatedCase._enrich_case_metadata(
+        case_data,
+        full_path_name="true",
+        override_name="ExplicitOverride",
+    )
+    assert case_data["Name"] == "ExplicitOverride"
