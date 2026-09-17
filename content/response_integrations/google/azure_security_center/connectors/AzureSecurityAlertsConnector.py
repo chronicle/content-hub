@@ -37,6 +37,9 @@ from ..core.consts import (
     TIME_FORMAT,
     MAX_EVENTS_PER_ALERT,
     HOURS_LIMIT_IN_IDS_FILE,
+    DEFAULT_LOGIN_API_ROOT,
+    DEFAULT_API_ROOT,
+    DEFAULT_GRAPH_API_ROOT,
 )
 from ..core.exceptions import AzureSecurityCenterValidationException
 from ..core import utils
@@ -87,6 +90,27 @@ def main(is_test_run):
         )
         refresh_token = extract_connector_param(
             siemplify, param_name="Refresh Token", is_mandatory=False, print_value=False
+        )
+        login_api_root = extract_connector_param(
+            siemplify,
+            param_name="Login API Root",
+            default_value=DEFAULT_LOGIN_API_ROOT,
+            is_mandatory=False,
+            print_value=True,
+        )
+        api_root = extract_connector_param(
+            siemplify,
+            param_name="API Root",
+            default_value=DEFAULT_API_ROOT,
+            is_mandatory=False,
+            print_value=True,
+        )
+        graph_api_root = extract_connector_param(
+            siemplify,
+            param_name="Graph API Root",
+            default_value=DEFAULT_GRAPH_API_ROOT,
+            is_mandatory=False,
+            print_value=True,
         )
         max_alerts_to_fetch = extract_connector_param(
             siemplify,
@@ -175,6 +199,9 @@ def main(is_test_run):
             tenant_id=tenant_id,
             siemplify=siemplify,
             refresh_token=refresh_token,
+            login_api_root=login_api_root,
+            api_root=api_root,
+            graph_api_root=graph_api_root,
         )
 
         # Read already existing alerts ids
