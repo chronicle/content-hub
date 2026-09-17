@@ -234,7 +234,9 @@ class TrendVisionOneParser:
 
             if task_location_url:
                 task_id = task_location_url.split("tasks/")[-1].split("?")[0].rstrip("/")
-                return BlocklistResponse(raw_json, task_id=task_id, url=task_location_url)
+                return BlocklistResponse(raw_json, task_id=task_id, url=task_location_url, is_success=True)
+
+            return BlocklistResponse(raw_json, is_success=True)
 
         body = raw_json.get("body")
         error_message = None

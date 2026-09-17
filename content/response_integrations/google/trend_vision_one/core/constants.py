@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 INTEGRATION_NAME = "TrendVisionOne"
 INTEGRATION_DISPLAY_NAME = "Trend Vision One"
 INTEGRATION_PREFIX = "TREND_VISION_ONE"
@@ -76,6 +77,7 @@ SUCCESS_STATUS = "succeeded"
 FAILED_STATUS = "failed"
 REJECTED_STATUS = "rejected"
 RUNNING_STATUS = "running"
+IN_PROGRESS_STATUSES = {RUNNING_STATUS, "pending", "queued", "notStarted"}
 RATE_LIMIT_EXCEEDED = "Rate limit exceeded"
 GLOBAL_TIMEOUT_THRESHOLD_IN_MIN = 1
 DEFAULT_TIMEOUT = 300

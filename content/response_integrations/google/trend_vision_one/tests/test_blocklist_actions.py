@@ -289,6 +289,62 @@ class TestBlocklistActions(unittest.TestCase):
         ):
             start_operation(siemplify, manager, 1000, siemplify.target_entities, result_data)
 
+    def test_synchronous_success_and_non_running_terminal_and_exception_resilience(self) -> None:
+        parser = TrendVisionOneParser()
+        # Synchronous 204 success without Operation-Location
+        sync_raw = {"status": 204, "headers": [], "body": {}}
+        sync_res = parser.build_blocklist_response_object(sync_raw)
+        assert sync_res.is_success is True
+        assert sync_res.error_message is None
+
+        siemplify = MagicMock()
+        siemplify.execution_deadline_unix_time_ms = 1000000000000
+        siemplify.parameters = {
+            "File Hashes": "",
+            "URLs": "",
+            "Domains": "",
+            "Email Addresses": "",
+            "IPs": "10.0.0.10, 10.0.0.11, 10.0.0.12",
+        }
+        entity_sync = MockEntity("10.0.0.10", EntityTypes.ADDRESS)
+        entity_cancelled = MockEntity("10.0.0.11", EntityTypes.ADDRESS)
+        entity_exception = MockEntity("10.0.0.12", EntityTypes.ADDRESS)
+        siemplify.target_entities = [entity_sync, entity_cancelled, entity_exception]
+
+        manager = MagicMock()
+        manager.add_entities_to_blocklist.return_value = [
+            BlocklistResponse(raw_data={}, is_success=True),
+            BlocklistResponse(raw_data={}, task_id="task-cancel", url="https://api/tasks/task-cancel", is_success=True),
+            BlocklistResponse(raw_data={}, task_id="task-exc", url="https://api/tasks/task-exc", is_success=True),
+        ]
+
+        def get_task_side_effect(task_url: str) -> TaskDetail:
+            if "task-cancel" in task_url:
+                return TaskDetail(raw_data={}, task_id="task-cancel", action="block", status="cancelled")
+            raise RuntimeError
+
+        manager.get_task.side_effect = get_task_side_effect
+
+        result_data: dict[str, Any] = {}
+        with (
+            patch(
+                "trend_vision_one.core.UtilsManager.extract_action_param",
+                side_effect=lambda action, param_name, **kwargs: siemplify.parameters.get(param_name, ""),
+            ),
+            patch("trend_vision_one.core.UtilsManager.is_async_action_global_timeout_approaching", return_value=False),
+            patch("trend_vision_one.core.UtilsManager.is_approaching_timeout", return_value=False),
+            patch("trend_vision_one.core.UtilsManager.time.sleep"),
+        ):
+            _msg, res, status = start_operation(siemplify, manager, 1000, siemplify.target_entities, result_data)
+            assert status == EXECUTION_STATE_COMPLETED
+            assert res is False
+            assert "10.0.0.10" in result_data["completed"]
+            assert entity_sync.is_enriched is True
+            assert "10.0.0.11" in result_data["failed"]
+            assert "10.0.0.12" in result_data["failed"]
+            siemplify.update_entities.assert_called_once()
+            siemplify.result.add_result_json.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

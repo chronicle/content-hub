@@ -31,9 +31,9 @@ from .TrendVisionOneExceptions import (
 from .constants import (
     DEFAULT_TIMEOUT,
     ENRICHMENT_PREFIX,
-    FAILED_STATUS,
     GLOBAL_TIMEOUT_THRESHOLD_IN_MIN,
     IN_BLOCKLIST_KEY,
+    IN_PROGRESS_STATUSES,
     INTEGRATION_NAME,
     OBJECT_TYPE_DOMAIN,
     OBJECT_TYPE_FILE_SHA1,
@@ -48,8 +48,6 @@ from .constants import (
     PARAM_IPS,
     PARAM_URLS,
     PAYLOAD_CHUNK_SIZE,
-    REJECTED_STATUS,
-    RUNNING_STATUS,
     SUCCESS_STATUS,
 )
 from . import datamodels
@@ -341,6 +339,11 @@ def start_blocklist_operation(
             elif response.id:
                 result_data["result_urls"][item_val] = response.id
                 result_data["pending"].append(item_val)
+            elif getattr(response, "is_success", False):
+                action_verb = "added" if is_add else "removed"
+                siemplify.LOGGER.info(f"Successfully {action_verb} entity {item_val}")
+                if item_val not in result_data["completed"]:
+                    result_data["completed"].append(item_val)
             else:
                 siemplify.LOGGER.error(
                     f"Failed to submit {item_val} to blocklist. Error: {response.error_message}"
@@ -355,20 +358,13 @@ def start_blocklist_operation(
                 )
                 result_data["failed"].append(item_val)
 
-    if result_data["result_urls"]:
-        return query_blocklist_operation_status(
-            siemplify=siemplify,
-            manager=manager,
-            result_data=result_data,
-            action_start_time=action_start_time,
-            is_add=is_add,
-        )
-
-    # All failed directly on submit
-    output_message, result_value = generate_blocklist_output_message_and_result(result_data, is_add=is_add)
-    result_json_key = "added" if is_add else "removed"
-    siemplify.result.add_result_json({result_json_key: result_data["completed"], "failed": result_data["failed"]})
-    return output_message, result_value, EXECUTION_STATE_COMPLETED
+    return query_blocklist_operation_status(
+        siemplify=siemplify,
+        manager=manager,
+        result_data=result_data,
+        action_start_time=action_start_time,
+        is_add=is_add,
+    )
 
 
 def query_blocklist_operation_status(
@@ -397,12 +393,28 @@ def query_blocklist_operation_status(
             raise TrendVisionOneTimeoutException(msg)
 
         task_url = task_ref if str(task_ref).startswith("http") else manager._get_full_url("get_task", task_id=task_ref)
-        task_details = manager.get_task(task_url=task_url)
-        for _ in range(2):
-            if task_details.status != RUNNING_STATUS:
-                break
-            time.sleep(2)
-            task_details = manager.get_task(task_url=task_url)
+        task_details = None
+        for attempt in range(3):
+            try:
+                task_details = manager.get_task(task_url=task_url)
+                if task_details.status not in IN_PROGRESS_STATUSES:
+                    break
+            except Exception as e:
+                if attempt == 2:
+                    siemplify.LOGGER.error(
+                        f"Failed to query task status for entity {entity_identifier} at {task_url}: {e}"
+                    )
+                    result_data["result_urls"][entity_identifier] = None
+                    if entity_identifier not in result_data["failed"]:
+                        result_data["failed"].append(entity_identifier)
+                    if entity_identifier in result_data["pending"]:
+                        result_data["pending"].remove(entity_identifier)
+                    break
+            if attempt < 2:
+                time.sleep(2)
+
+        if task_details is None:
+            continue
 
         result_data["json_results"][entity_identifier] = {
             "task_id": task_details.id,
@@ -416,7 +428,11 @@ def query_blocklist_operation_status(
                 result_data["completed"].append(entity_identifier)
             if entity_identifier in result_data["pending"]:
                 result_data["pending"].remove(entity_identifier)
-        elif task_details.status in {FAILED_STATUS, REJECTED_STATUS}:
+        elif task_details.status not in IN_PROGRESS_STATUSES:
+            # Catch failed, rejected, cancelled, expired, etc.
+            siemplify.LOGGER.error(
+                f"Task {task_details.id} for entity {entity_identifier} ended with status: {task_details.status}"
+            )
             result_data["result_urls"][entity_identifier] = None
             if entity_identifier not in result_data["failed"]:
                 result_data["failed"].append(entity_identifier)
