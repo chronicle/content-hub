@@ -739,12 +739,12 @@ class DomainSigner:
         headers=None,
     ):
         if headers:
-            b_header = {}
-
-            for h in headers:
-                b_header[h.encode("utf-8", errors="surrogatepass")] = headers[h][0].encode(
+            b_header = {
+                h.encode("utf-8", errors="surrogatepass"): headers[h][0].encode(
                     "utf-8", errors="surrogatepass"
                 )
+                for h in headers
+            }
 
             self.headers = b_header
             self.body = b""

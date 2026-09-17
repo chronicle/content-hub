@@ -347,7 +347,7 @@ def buildResult(header, siemplify):
         res = re.search(r"header.i=@(.*?)\s", dmarc_sig)
         if res:
             result["DmarcDomain"] = res.group(1)
-    except Exception:
+    except (KeyError, IndexError, TypeError, AttributeError):
         pass
 
     try:

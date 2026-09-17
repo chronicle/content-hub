@@ -14,6 +14,9 @@
 
 from __future__ import annotations
 
+import base64
+import struct
+from email import message_from_bytes
 from unittest.mock import MagicMock
 
 from ..actions.ParseBase64Email import body as parse_base64_body
@@ -57,7 +60,7 @@ def test_msg_parsing_edge_case() -> None:
         siemplify=MagicMock(),
         logger=MagicMock(),
         custom_regex={},
-    ).parse_email('sample.eml', EDGE_CASE_EMAIL)
+    ).parse_email("sample.eml", EDGE_CASE_EMAIL)
 
     assert result is not None
     assert "result" in result
@@ -74,7 +77,7 @@ def test_msg_parsing_common_case() -> None:
         siemplify=MagicMock(),
         logger=MagicMock(),
         custom_regex={},
-    ).parse_email('sample.eml', COMMON_CASE_EMAIL)
+    ).parse_email("sample.eml", COMMON_CASE_EMAIL)
 
     assert result is not None
     assert "result" in result
@@ -91,7 +94,7 @@ def test_msg_parsing_surrogate_characters() -> None:
         siemplify=MagicMock(),
         logger=MagicMock(),
         custom_regex={},
-    ).parse_email('sample.eml', SURROGATE_EMAIL)
+    ).parse_email("sample.eml", SURROGATE_EMAIL)
 
     assert result is not None
     assert "result" in result
@@ -153,8 +156,6 @@ def test_fix_malformed_eml_content_with_surrogates() -> None:
 
 def test_mime_part_surrogate_encoding() -> None:
     """Test encoding MIME parts containing surrogate characters with surrogatepass."""
-    import base64
-    from email import message_from_bytes
 
     msg = message_from_bytes(SURROGATE_EMAIL)
     encoded = base64.b64encode(
@@ -167,19 +168,10 @@ def test_mime_part_surrogate_encoding() -> None:
 
 def test_fix_malformed_msg_content() -> None:
     """Test fix_malformed_msg_content fixes codepage 1200 to 1252 for ANSI strings."""
-    import struct
-
-    # Construct synthetic msg bytes containing PR_MESSAGE_CODEPAGE tag with 1200
     tag = struct.pack("<HH", 0x0003, 0x3FFD)
-    # tag followed by 4 bytes flags/padding, then codepage 1200
     synthetic_msg = b"prefix" + tag + b"\x00\x00\x00\x00" + struct.pack("<I", 1200) + b"suffix"
     fixed = fix_malformed_msg_content(synthetic_msg)
 
     assert isinstance(fixed, bytes)
-    # Check that 1200 was replaced with 1252
     expected = b"prefix" + tag + b"\x00\x00\x00\x00" + struct.pack("<I", 1252) + b"suffix"
     assert fixed == expected
-
-
-
-
