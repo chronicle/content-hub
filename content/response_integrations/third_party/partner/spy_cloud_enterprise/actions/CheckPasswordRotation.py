@@ -32,6 +32,7 @@ only timestamps, counts, and the decision.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -54,7 +55,7 @@ RESET_NEEDED = 1
 RESET_NOT_NEEDED = 0
 
 
-def _event_has_password(props: dict) -> bool:
+def _event_has_password(props: dict[str, Any]) -> bool:
     """Report whether an exposure event involves a password at all.
 
     Unlike Filter Passwords By Policy this does not require the plaintext value:
@@ -67,6 +68,90 @@ def _event_has_password(props: dict) -> bool:
         str(props.get(key, "")).strip().lower() in ("true", "yes", "1", "t")
         for key in ("spycloud_has_plaintext_password", "spycloud_has_password")
     )
+
+
+def _extract_latest_publish_date(
+    alerts: list[Any],
+    email_filter: str,
+    password_exposures_only: bool,
+) -> tuple[datetime | None, str, int, int]:
+    """Scan the case's alerts and extract the newest publish date among matching exposures.
+
+    Returns the newest parsed publish date, the raw string it was parsed from, how many
+    exposures matched the filters, and how many of those carried no usable date.
+    """
+    latest_publish: datetime | None = None
+    latest_publish_raw = ""
+    considered = 0
+    undated = 0
+
+    for alert in alerts:
+        for event in getattr(alert, "security_events", []) or []:
+            props = getattr(event, "additional_properties", {}) or {}
+            if not datamodels.is_spycloud_event(props):
+                continue
+            if password_exposures_only and not _event_has_password(props):
+                continue
+            if email_filter:
+                email = str(props.get("spycloud_email", "") or "").strip().lower()
+                if email != email_filter:
+                    continue
+            considered += 1
+            raw_date = datamodels.event_publish_date(props)
+            published = datamodels.parse_timestamp(raw_date)
+            if published is None:
+                undated += 1
+                continue
+            if latest_publish is None or published > latest_publish:
+                latest_publish = published
+                latest_publish_raw = raw_date
+
+    return latest_publish, latest_publish_raw, considered, undated
+
+
+def _evaluate_rotation_status(
+    last_reset: datetime | None,
+    latest_publish: datetime | None,
+) -> tuple[bool, str]:
+    """Decide whether the password was already rotated after the newest exposure.
+
+    Defaults to "not rotated" whenever the comparison cannot be made, so an exposure
+    we cannot prove is stale still gets remediated.
+    """
+    if last_reset is None:
+        return False, "no usable last password reset time was supplied, so the exposure is treated as live"
+    if latest_publish is None:
+        return False, (
+            "no SpyCloud exposure on this case carries a publish date to compare against, "
+            "so the exposure is treated as live"
+        )
+    if last_reset > latest_publish:
+        return True, (
+            "the password was changed after the most recent exposure was published, "
+            "so the exposed credential is already dead"
+        )
+    return False, (
+        "the most recent exposure was published at or after the last password change, "
+        "so the exposed credential may still be live"
+    )
+
+
+def _build_output_message(
+    rotated: bool,
+    reason: str,
+    last_reset: datetime | None,
+    latest_publish: datetime | None,
+    considered: int,
+) -> str:
+    """Render the human-readable summary shown on the playbook step."""
+    if rotated and last_reset is not None and latest_publish is not None:
+        return (
+            f"No reset required: {reason}. Last password change "
+            f"{last_reset.isoformat()} is newer than the latest exposure "
+            f"published {latest_publish.isoformat()} "
+            f"({considered} exposure(s) considered)."
+        )
+    return f"Reset required: {reason} ({considered} exposure(s) considered)."
 
 
 @output_handler
@@ -105,61 +190,17 @@ def main() -> None:
 
         # Walk the case's SpyCloud events and keep the newest publish date among
         # the exposures this decision is about.
-        latest_publish: datetime | None = None
-        latest_publish_raw = ""
-        considered = 0
-        undated = 0
-
         alerts = siemplify.case.alerts or []
         siemplify.LOGGER.info(f"Scanning {len(alerts)} alert(s) in the case")
 
-        for alert in alerts:
-            for event in getattr(alert, "security_events", []) or []:
-                props = getattr(event, "additional_properties", {}) or {}
-                if not datamodels.is_spycloud_event(props):
-                    continue
-                if password_exposures_only and not _event_has_password(props):
-                    continue
-                if email_filter:
-                    email = str(props.get("spycloud_email", "") or "").strip().lower()
-                    if email != email_filter:
-                        continue
-                considered += 1
-                raw_date = datamodels.event_publish_date(props)
-                published = datamodels.parse_timestamp(raw_date)
-                if published is None:
-                    undated += 1
-                    continue
-                if latest_publish is None or published > latest_publish:
-                    latest_publish = published
-                    latest_publish_raw = raw_date
+        (
+            latest_publish,
+            latest_publish_raw,
+            considered,
+            undated,
+        ) = _extract_latest_publish_date(alerts, email_filter, password_exposures_only)
 
-        # Decide, defaulting to "reset" whenever the comparison cannot be made.
-        if last_reset is None:
-            rotated = False
-            reason = (
-                "no usable last password reset time was supplied, so the exposure "
-                "is treated as live"
-            )
-        elif latest_publish is None:
-            rotated = False
-            reason = (
-                "no SpyCloud exposure on this case carries a publish date to "
-                "compare against, so the exposure is treated as live"
-            )
-        elif last_reset > latest_publish:
-            rotated = True
-            reason = (
-                "the password was changed after the most recent exposure was "
-                "published, so the exposed credential is already dead"
-            )
-        else:
-            rotated = False
-            reason = (
-                "the most recent exposure was published at or after the last "
-                "password change, so the exposed credential may still be live"
-            )
-
+        rotated, reason = _evaluate_rotation_status(last_reset, latest_publish)
         result_value = RESET_NOT_NEEDED if rotated else RESET_NEEDED
 
         siemplify.result.add_result_json(
@@ -182,17 +223,9 @@ def main() -> None:
             }
         )
 
-        if rotated:
-            output_message = (
-                f"No reset required: {reason}. Last password change "
-                f"{last_reset.isoformat()} is newer than the latest exposure "
-                f"published {latest_publish.isoformat()} "
-                f"({considered} exposure(s) considered)."
-            )
-        else:
-            output_message = (
-                f"Reset required: {reason} ({considered} exposure(s) considered)."
-            )
+        output_message = _build_output_message(
+            rotated, reason, last_reset, latest_publish, considered
+        )
 
     except Exception as error:
         siemplify.LOGGER.error(f'Error executing action "{SCRIPT_NAME}". Reason: {error}')

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from spy_cloud_enterprise.core import datamodels
 from spy_cloud_enterprise.core.datamodels import SpyCloudExposure
@@ -12,7 +13,7 @@ CATALOG = {
 }
 
 
-def _credential_record() -> dict:
+def _credential_record() -> dict[str, Any]:
     """A high-severity record carrying secrets that must never be surfaced."""
     return {
         "document_id": "doc-1",
@@ -30,7 +31,7 @@ def _credential_record() -> dict:
     }
 
 
-def _informational_record() -> dict:
+def _informational_record() -> dict[str, Any]:
     return {
         "document_id": "doc-2",
         "source_id": 999,
@@ -132,7 +133,7 @@ class TestAggregations:
         assert "hunter2" not in html
 
 
-def _event_props() -> dict:
+def _event_props() -> dict[str, Any]:
     """Flattened SpyCloud fields as the connector stores them on an event.
 
     SecOps returns ``additional_properties`` as strings, so booleans arrive as

@@ -40,8 +40,7 @@ class CheckpointManager:
         return int(dt.timestamp() * 1000)
 
     def get_next_since_until(self) -> tuple[str, str]:
-        """
-        Build the next publish-date window.
+        """Build the next publish-date window.
 
         `until` trails `now` by ``ingestion_lag_minutes`` so the connector only
         checkpoints past time ranges that SpyCloud has had a chance to fully

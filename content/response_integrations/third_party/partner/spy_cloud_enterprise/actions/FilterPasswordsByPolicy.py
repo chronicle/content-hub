@@ -27,6 +27,7 @@ the case ID and a UTC timestamp for audit.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -44,6 +45,78 @@ MIN_LENGTH_PARAM = "Minimum Password Length"
 REQUIRE_SYMBOL_PARAM = "Require Symbol"
 DEFAULT_MIN_LENGTH = 8
 DEFAULT_REQUIRE_SYMBOL = True
+
+
+def _filter_case_passwords(
+    alerts: list[Any],
+    minimum_length: int,
+    require_symbol: bool,
+) -> tuple[dict[str, Any], int, int]:
+    """Apply the password policy to every exposed password on the case.
+
+    Groups the decision per exposed identity so an analyst can see which user's
+    exposure drove the reset. Values are masked; only lengths and pass/fail are
+    recorded.
+
+    Returns the per-email buckets, how many passwords were examined in total, and
+    how many of those still match the policy.
+    """
+    per_email: dict[str, dict[str, Any]] = {}
+    total_passwords = 0
+    remaining = 0
+
+    for alert in alerts:
+        for event in getattr(alert, "security_events", []) or []:
+            props = getattr(event, "additional_properties", {}) or {}
+            if not datamodels.is_spycloud_event(props):
+                continue
+            passwords = datamodels.collect_plaintext_passwords(props)
+            if not passwords:
+                continue
+            email = str(props.get("spycloud_email", "") or "").strip().lower()
+            bucket = per_email.setdefault(email, {"email": email, "kept": [], "dropped": []})
+            for password in passwords:
+                total_passwords += 1
+                matches = datamodels.password_matches_policy(password, minimum_length, require_symbol)
+                entry = {
+                    "masked": datamodels.mask_password(password),
+                    "length": len(password),
+                    "has_symbol": datamodels.has_symbol(password),
+                }
+                if matches:
+                    remaining += 1
+                    bucket["kept"].append(entry)
+                else:
+                    bucket["dropped"].append(entry)
+
+    return per_email, total_passwords, remaining
+
+
+def _build_output_message(
+    total_passwords: int,
+    remaining: int,
+    dropped: int,
+    minimum_length: int,
+    require_symbol: bool,
+) -> str:
+    """Render the human-readable summary shown on the playbook step."""
+    if total_passwords == 0:
+        return (
+            "No plaintext passwords were present on the case events. "
+            "Ensure the connector's 'Include Plaintext Secrets' option is "
+            "enabled if a reset decision requires the raw values."
+        )
+    if remaining > 0:
+        return (
+            f"{remaining} of {total_passwords} exposed password(s) match the "
+            f"configured policy (minimum length {minimum_length}, "
+            f"require symbol {require_symbol}); {dropped} dropped."
+        )
+    return (
+        f"All {total_passwords} exposed password(s) were dropped by the "
+        f"configured policy (minimum length {minimum_length}, "
+        f"require symbol {require_symbol}); no reset required."
+    )
 
 
 @output_handler
@@ -79,43 +152,12 @@ def main() -> None:
             f"require symbol {require_symbol}"
         )
 
-        # Group the policy decision per exposed identity so an analyst can see
-        # which user's exposure drove the reset. Values are masked; only lengths
-        # and pass/fail are recorded.
-        per_email: dict[str, dict] = {}
-        total_passwords = 0
-        remaining = 0
-
         alerts = siemplify.case.alerts or []
         siemplify.LOGGER.info(f"Scanning {len(alerts)} alert(s) in the case")
 
-        for alert in alerts:
-            for event in getattr(alert, "security_events", []) or []:
-                props = getattr(event, "additional_properties", {}) or {}
-                if not datamodels.is_spycloud_event(props):
-                    continue
-                passwords = datamodels.collect_plaintext_passwords(props)
-                if not passwords:
-                    continue
-                email = str(props.get("spycloud_email", "") or "").strip().lower()
-                bucket = per_email.setdefault(
-                    email, {"email": email, "kept": [], "dropped": []}
-                )
-                for password in passwords:
-                    total_passwords += 1
-                    matches = datamodels.password_matches_policy(
-                        password, minimum_length, require_symbol
-                    )
-                    entry = {
-                        "masked": datamodels.mask_password(password),
-                        "length": len(password),
-                        "has_symbol": datamodels.has_symbol(password),
-                    }
-                    if matches:
-                        remaining += 1
-                        bucket["kept"].append(entry)
-                    else:
-                        bucket["dropped"].append(entry)
+        per_email, total_passwords, remaining = _filter_case_passwords(
+            alerts, minimum_length, require_symbol
+        )
 
         dropped = total_passwords - remaining
         result_value = remaining
@@ -140,24 +182,9 @@ def main() -> None:
             }
         )
 
-        if total_passwords == 0:
-            output_message = (
-                "No plaintext passwords were present on the case events. "
-                "Ensure the connector's 'Include Plaintext Secrets' option is "
-                "enabled if a reset decision requires the raw values."
-            )
-        elif remaining > 0:
-            output_message = (
-                f"{remaining} of {total_passwords} exposed password(s) match the "
-                f"configured policy (minimum length {minimum_length}, "
-                f"require symbol {require_symbol}); {dropped} dropped."
-            )
-        else:
-            output_message = (
-                f"All {total_passwords} exposed password(s) were dropped by the "
-                f"configured policy (minimum length {minimum_length}, "
-                f"require symbol {require_symbol}); no reset required."
-            )
+        output_message = _build_output_message(
+            total_passwords, remaining, dropped, minimum_length, require_symbol
+        )
 
     except Exception as error:
         siemplify.LOGGER.error(f'Error executing action "{SCRIPT_NAME}". Reason: {error}')

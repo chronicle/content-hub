@@ -19,6 +19,8 @@ This is reachable in production because progress commits (``save_timestamp`` /
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from spy_cloud_enterprise.connectors import SpyCloudConnector as connector_module
@@ -40,9 +42,9 @@ class _RecordingSiemplify:
     def __init__(self) -> None:
         self.LOGGER = _Logger()
         self.script_name = ""
-        self.packages: list[list] = []
+        self.packages: list[list[Any]] = []
 
-    def return_package(self, cases: list, *_: object, **__: object) -> None:
+    def return_package(self, cases: list[Any], *_: object, **__: object) -> None:
         self.packages.append(list(cases))
 
 
@@ -114,7 +116,7 @@ class TestSingleReturnPackage:
             lambda *_: (manager, ["alert-1"], "2026-08-19T18:00:00Z"),
         )
 
-        commits: list[tuple] = []
+        commits: list[tuple[Any, ...]] = []
         monkeypatch.setattr(
             connector_module,
             "_commit_progress",

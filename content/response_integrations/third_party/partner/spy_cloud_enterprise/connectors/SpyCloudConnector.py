@@ -31,9 +31,13 @@ def _safe_get(dct: Any, *keys: Any, default: Any = None) -> Any:
 COLLECTION_SOURCE_FIELD = "spycloud_collection_source"
 
 
-def _commit_progress(siemplify, manager, checkpoint_until, is_test_run: bool) -> None:
-    """
-    Advance the publish-date checkpoint and flush deferred drain/Compass progress.
+def _commit_progress(
+    siemplify: SiemplifyConnectorExecution,
+    manager: SpyCloudManager,
+    checkpoint_until: str | None,
+    is_test_run: bool,
+) -> None:
+    """Advance the publish-date checkpoint and flush deferred drain/Compass progress.
 
     Call only after a successful return_package (integration guide 9.2). Empty
     cycles commit too: `checkpoint_until` is only set when a mature window was
@@ -180,11 +184,10 @@ def _log_udm_samples(
 
 
 def _collect_alerts(
-    siemplify: Any,
+    siemplify: SiemplifyConnectorExecution,
     is_test_run: bool,
-) -> tuple[Any, list, Any]:
-    """
-    Run one collection cycle and return ``(manager, alerts, checkpoint_until)``.
+) -> tuple[SpyCloudManager, list[Any], str | None]:
+    """Run one collection cycle and return ``(manager, alerts, checkpoint_until)``.
 
     Deliberately does no stdout writing: `main` owns the single `return_package`
     call for the whole execution.

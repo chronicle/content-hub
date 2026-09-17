@@ -76,8 +76,8 @@ def get_udm_additional(udm_event: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_mapped_alert_severity(udm_event: dict[str, Any]) -> int | None:
-    """
-    Final SecOps/SOAR-facing severity from the converter.
+    """Read the final SecOps/SOAR-facing severity from the converter.
+
     Expected values: 40, 60, 80, 100
     """
     security_result = get_udm_security_result(udm_event)
@@ -90,8 +90,8 @@ def get_mapped_alert_severity(udm_event: dict[str, Any]) -> int | None:
 
 
 def get_source_spycloud_severity(udm_event: dict[str, Any]) -> int | None:
-    """
-    Original SpyCloud source severity preserved in extensions.
+    """Read the original SpyCloud source severity preserved in extensions.
+
     Expected values: 2, 5, 20, 25, 30
     """
     extensions = get_udm_extensions(udm_event)
@@ -201,9 +201,10 @@ def build_stable_alert_id_from_udm(udm_event: dict[str, Any]) -> str:
 
 
 def map_priority_from_mapped_severity(mapped_severity: Any) -> int:
-    """
-    The converter already normalizes severity into the SecOps-style scale.
-    Reuse it directly for alert priority.
+    """Derive the alert priority from the already-normalized severity.
+
+    The converter normalizes severity into the SecOps-style scale, so it is
+    reused directly for alert priority.
     """
     try:
         numeric = int(mapped_severity)

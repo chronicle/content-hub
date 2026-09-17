@@ -20,13 +20,13 @@ from spy_cloud_enterprise.actions import CheckPasswordRotation
 
 @dataclasses.dataclass
 class _Event:
-    additional_properties: dict = dataclasses.field(default_factory=dict)
+    additional_properties: dict[str, Any] = dataclasses.field(default_factory=dict)
 
 
 @dataclasses.dataclass
 class _Alert:
     name: str = ""
-    security_events: list = dataclasses.field(default_factory=list)
+    security_events: list[_Event] = dataclasses.field(default_factory=list)
 
 
 def _event(**extra: Any) -> _Event:

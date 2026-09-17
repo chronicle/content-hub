@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import time
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import pytest
 import requests
@@ -59,7 +60,7 @@ class _Logger:
 class _Siemplify:
     """Minimal stand-in for SiemplifyConnectorExecution's context-property API."""
 
-    def __init__(self, timestamp: int = 0, context: dict | None = None) -> None:
+    def __init__(self, timestamp: int = 0, context: dict[str, str] | None = None) -> None:
         self.LOGGER = _Logger()
         self.script_name = "test"
         self._timestamp = timestamp
@@ -71,7 +72,7 @@ class _Siemplify:
     def save_timestamp(self, new_timestamp: int = 0, **_: object) -> None:
         self._timestamp = new_timestamp
 
-    def get_connector_context_property(self, _identifier: str, key: str):
+    def get_connector_context_property(self, _identifier: str, key: str) -> str | None:
         return self._context.get(key)
 
     def set_connector_context_property(self, _identifier: str, key: str, value: str) -> None:
@@ -152,7 +153,7 @@ class TestInvalidCursorClassification:
     """A rejected cursor is recoverable and must be typed distinctly."""
 
     @staticmethod
-    def _response(status_code: int, body: dict) -> requests.Response:
+    def _response(status_code: int, body: dict[str, Any]) -> requests.Response:
         response = requests.Response()
         response.status_code = status_code
         response.reason = "Bad Request"
@@ -197,11 +198,11 @@ class TestInvalidCursorClassification:
 class _FakeBreachData:
     """Records the cursor each drain page was requested with."""
 
-    def __init__(self, outcomes: list) -> None:
+    def __init__(self, outcomes: list[Any]) -> None:
         self._outcomes = list(outcomes)
-        self.calls: list[dict] = []
+        self.calls: list[dict[str, Any]] = []
 
-    def watchlist_page(self, **kwargs):
+    def watchlist_page(self, **kwargs: Any) -> Any:
         self.calls.append(kwargs)
         outcome = self._outcomes.pop(0)
         if isinstance(outcome, Exception):
@@ -218,7 +219,7 @@ class TestExpiredCursorRecovery:
     """An expired persisted cursor must restart the chunk, not wedge the drain."""
 
     @staticmethod
-    def _in_progress_context(cursor: str = "dead-cursor") -> dict:
+    def _in_progress_context(cursor: str = "dead-cursor") -> dict[str, str]:
         now = datetime.now(timezone.utc)
         return {
             WATCHLIST_MODIFICATION_WINDOW_UNTIL_KEY: now.strftime(ISO),
@@ -287,7 +288,7 @@ class TestDrainFailureCircuitBreaker:
     """A drain window that fails every cycle must eventually be abandoned."""
 
     @staticmethod
-    def _context() -> dict:
+    def _context() -> dict[str, str]:
         now = datetime.now(timezone.utc)
         return {
             WATCHLIST_MODIFICATION_WINDOW_UNTIL_KEY: now.strftime(ISO),
@@ -354,10 +355,10 @@ class _CountingBreachData:
     """Serves a fixed record batch per publish-date chunk request."""
 
     def __init__(self, records_per_chunk: int = 1) -> None:
-        self.calls: list[dict] = []
+        self.calls: list[dict[str, Any]] = []
         self._records_per_chunk = records_per_chunk
 
-    def watchlist(self, **kwargs):
+    def watchlist(self, **kwargs: Any) -> list[dict[str, Any]]:
         self.calls.append(kwargs)
         return [
             {"document_id": f"{kwargs['since']}-{i}"}
