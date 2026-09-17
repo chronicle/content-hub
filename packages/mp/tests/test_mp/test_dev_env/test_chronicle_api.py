@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import SingleJson
+    from mp.dev_env.interfaces import DevEnvClient
 
 runner: CliRunner = CliRunner()
 
@@ -133,6 +134,7 @@ def test_login_makes_cheap_integrations_call(monkeypatch: pytest.MonkeyPatch) ->
     session.get.assert_called_once_with(
         expected_url,
         params={"pageSize": 1},
+        timeout=chronicle_api.DEFAULT_TIMEOUT,
     )
 
 
@@ -219,6 +221,7 @@ def test_download_integration_raw_zip(monkeypatch: pytest.MonkeyPatch) -> None:
     session.get.assert_called_with(
         expected_url,
         params={"alt": "media"},
+        timeout=chronicle_api.DEFAULT_TIMEOUT,
     )
 
 
@@ -358,6 +361,7 @@ def test_list_playbooks_extracts_name_and_id(monkeypatch: pytest.MonkeyPatch) ->
     session.post.assert_called_once_with(
         expected_url,
         json={"legacyPayload": ["REGULAR", "NESTED"]},
+        timeout=chronicle_api.DEFAULT_TIMEOUT,
     )
 
 
@@ -378,6 +382,7 @@ def test_download_playbook_encodes_blob(monkeypatch: pytest.MonkeyPatch) -> None
     session.get.assert_called_once_with(
         expected_url,
         params={"identifiers": "pb-id-123", "alt": "media"},
+        timeout=chronicle_api.DEFAULT_TIMEOUT,
     )
 
 
@@ -400,7 +405,7 @@ def test_get_backend_api_dispatches_to_chronicle(monkeypatch: pytest.MonkeyPatch
         "location": "us",
         "instance": "iid-456",
     }
-    client: utils.interfaces.DevEnvClient = utils.get_backend_api(cfg)
+    client: DevEnvClient = utils.get_backend_api(cfg)
     assert isinstance(client, chronicle_api.ChronicleClient)
     assert client.base_url == "https://us-chronicle.googleapis.com"
 
@@ -410,7 +415,7 @@ def test_get_backend_api_legacy_fallback(monkeypatch: pytest.MonkeyPatch) -> Non
     mock_login: mock.MagicMock = mock.MagicMock()
     monkeypatch.setattr("mp.dev_env.api.BackendAPI.login", mock_login)
 
-    client: utils.interfaces.DevEnvClient = utils.get_backend_api(cfg)
+    client: DevEnvClient = utils.get_backend_api(cfg)
     assert isinstance(client, utils.api.BackendAPI)
     mock_login.assert_called_once()
 
@@ -513,7 +518,7 @@ def test_upload_integration_recovers_on_503_if_installed(
     session.post.side_effect = http_err
 
     client: chronicle_api.ChronicleClient = _make_client(monkeypatch, session)
-    monkeypatch.setattr(client, "_wait_for_integration_installed", lambda _: True)
+    monkeypatch.setattr(client, "_wait_for_integration_installed", lambda *args, **kwargs: True)
 
     zip_file: Path = tmp_path / "pkg.zip"
     zip_file.write_bytes(b"PK")
@@ -532,7 +537,7 @@ def test_upload_integration_raises_on_503_if_not_installed(
     session.post.side_effect = http_err
 
     client: chronicle_api.ChronicleClient = _make_client(monkeypatch, session)
-    monkeypatch.setattr(client, "_wait_for_integration_installed", lambda _: False)
+    monkeypatch.setattr(client, "_wait_for_integration_installed", lambda *args, **kwargs: False)
 
     zip_file: Path = tmp_path / "pkg.zip"
     zip_file.write_bytes(b"PK")
@@ -554,3 +559,56 @@ def test_normalize_connector_def_null_description() -> None:
     integration_utils._normalize_connector_def(raw_def, "MyIntegration")  # ruff:ignore[private-member-access]
     assert raw_def["Parameters"][0]["Description"] == ""
     assert raw_def["Parameters"][0]["Name"] == "Param 1"
+
+
+def test_normalize_action_def_null_description() -> None:
+    raw_def = {
+        "DisplayName": "My Action",
+        "Parameters": [
+            {
+                "DisplayName": "Param 1",
+                "Description": None,
+                "Type": "String",
+            }
+        ],
+    }
+    integration_utils._normalize_action_def(raw_def, "MyIntegration")  # ruff:ignore[private-member-access]
+    assert raw_def["Parameters"][0]["Description"] == ""
+    assert raw_def["Parameters"][0]["Name"] == "Param 1"
+
+
+def test_normalize_job_def_null_description() -> None:
+    raw_def = {
+        "DisplayName": "My Job",
+        "Parameters": [
+            {
+                "DisplayName": "Param 1",
+                "Description": None,
+                "Type": "String",
+            }
+        ],
+    }
+    integration_utils._normalize_job_def(raw_def, "MyIntegration")  # ruff:ignore[private-member-access]
+    assert raw_def["Parameters"][0]["Description"] == ""
+    assert raw_def["Parameters"][0]["Name"] == "Param 1"
+
+
+def test_matches_integration_staging_filtering() -> None:
+    prod_item = chronicle_api.Integration(
+        name="projects/p/locations/l/instances/i/integrations/Websense",
+        identifier="Websense",
+        display_name="Websense",
+        staging=False,
+    )
+    staging_item = chronicle_api.Integration(
+        name="projects/p/locations/l/instances/i/integrations/Websense__uuid",
+        identifier="Websense__uuid",
+        production_identifier="Websense",
+        display_name="Websense",
+        staging=True,
+    )
+
+    assert not chronicle_api._matches_integration(prod_item, "websense", is_staging=True)  # ruff:ignore[private-member-access]
+    assert chronicle_api._matches_integration(staging_item, "websense", is_staging=True)  # ruff:ignore[private-member-access]
+    assert not chronicle_api._matches_integration(staging_item, "websense", is_staging=False)  # ruff:ignore[private-member-access]
+    assert chronicle_api._matches_integration(prod_item, "websense", is_staging=False)  # ruff:ignore[private-member-access]

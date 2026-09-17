@@ -38,6 +38,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     from mp.core.custom_types import SingleJson
@@ -45,6 +46,8 @@ if TYPE_CHECKING:
 
 CLOUD_PLATFORM_SCOPE: str = "https://www.googleapis.com/auth/cloud-platform"
 SERVICE_UNAVAILABLE_STATUS: int = 503
+DEFAULT_TIMEOUT: int = 60
+UPLOAD_TIMEOUT: int = 120
 
 
 class ChronicleClient(DevEnvClient):
@@ -106,7 +109,9 @@ class ChronicleClient(DevEnvClient):
     def login(self) -> None:
         """Verify connectivity and credentials with an authenticated request."""
         url: str = self._endpoint("integrations")
-        resp: requests.Response = self.session.get(url, params={"pageSize": 1})
+        resp: requests.Response = self.session.get(
+            url, params={"pageSize": 1}, timeout=DEFAULT_TIMEOUT
+        )
         resp.raise_for_status()
 
     def list_integrations(self, *, max_pages: int = 100) -> list[Integration]:
@@ -124,7 +129,9 @@ class ChronicleClient(DevEnvClient):
         results: list[Integration] = []
 
         for _ in range(max_pages):
-            resp: requests.Response = self.session.get(url, params=params)
+            resp: requests.Response = self.session.get(
+                url, params=params, timeout=DEFAULT_TIMEOUT
+            )
             resp.raise_for_status()
             page: ListIntegrationsResponse = ListIntegrationsResponse.model_validate(
                 resp.json()
@@ -143,11 +150,7 @@ class ChronicleClient(DevEnvClient):
     def _resolve_integration_name(self, integration: str) -> str:
         target: str = integration.strip().lower()
         for item in self.list_integrations():
-            if item.name and target in {
-                (item.display_name or "").lower(),
-                (item.identifier or "").lower(),
-                item.name.rsplit("/", 1)[-1].lower(),
-            }:
+            if item.name and _matches_integration(item, target):
                 return item.name
 
         logger.error(
@@ -169,7 +172,9 @@ class ChronicleClient(DevEnvClient):
         """
         name: str = self._resolve_integration_name(integration_name)
         url: str = f"{self.base_url}/v1/{name}:export"
-        resp: requests.Response = self.session.get(url, params={"alt": "media"})
+        resp: requests.Response = self.session.get(
+            url, params={"alt": "media"}, timeout=DEFAULT_TIMEOUT
+        )
         resp.raise_for_status()
         return _extract_zip_bytes(resp)
 
@@ -245,7 +250,9 @@ class ChronicleClient(DevEnvClient):
                     "Upload gateway timed out (503). Verifying if %s is installed on Chronicle...",
                     integration_id,
                 )
-                if self._wait_for_integration_installed(integration_id):
+                if self._wait_for_integration_installed(
+                    integration_id, is_staging=is_staging
+                ):
                     logger.info("Verified %s is successfully installed.", integration_id)
                     return {"integration": integration_id, "status": "installed"}
             raise
@@ -286,23 +293,23 @@ class ChronicleClient(DevEnvClient):
         self,
         integration_id: str,
         *,
+        is_staging: bool = False,
         max_attempts: int = 5,
         delay_seconds: float = 2.0,
     ) -> bool:
         target: str = integration_id.strip().lower()
-        for attempt in range(max_attempts):
-            time.sleep(delay_seconds)
-            try:
-                for item in self.list_integrations():
-                    if item.name and target in {
-                        (item.display_name or "").lower(),
-                        (item.identifier or "").lower(),
-                        item.name.rsplit("/", 1)[-1].lower(),
-                    }:
-                        return True
-            except requests.RequestException:
-                logger.debug("Checking integration status attempt %d failed", attempt)
-        return False
+
+        def _check() -> bool:
+            return any(
+                _matches_integration(item, target, is_staging=is_staging)
+                for item in self.list_integrations()
+            )
+
+        return _poll_until(
+            _check,
+            max_attempts=max_attempts,
+            delay_seconds=delay_seconds,
+        )
 
     def _wait_for_playbook_installed(
         self,
@@ -312,18 +319,21 @@ class ChronicleClient(DevEnvClient):
         delay_seconds: float = 2.0,
     ) -> bool:
         target: str = playbook_name.strip().lower()
-        for attempt in range(max_attempts):
-            time.sleep(delay_seconds)
-            try:
-                for card in self.list_playbooks():
-                    if target in {
-                        (card.get("name") or "").lower(),
-                        (card.get("identifier") or "").lower(),
-                    }:
-                        return True
-            except requests.RequestException:
-                logger.debug("Checking playbook status attempt %d failed", attempt)
-        return False
+
+        def _check() -> bool:
+            return any(
+                target in {
+                    (card.get("name") or "").lower(),
+                    (card.get("identifier") or "").lower(),
+                }
+                for card in self.list_playbooks()
+            )
+
+        return _poll_until(
+            _check,
+            max_attempts=max_attempts,
+            delay_seconds=delay_seconds,
+        )
 
     def list_playbooks(self) -> list[SingleJson]:
         """List installed playbook and workflow menu cards.
@@ -337,7 +347,9 @@ class ChronicleClient(DevEnvClient):
             version="v1alpha",
         )
         payload: dict[str, list[str]] = {"legacyPayload": ["REGULAR", "NESTED"]}
-        resp: requests.Response = self.session.post(url, json=payload)
+        resp: requests.Response = self.session.post(
+            url, json=payload, timeout=DEFAULT_TIMEOUT
+        )
         resp.raise_for_status()
         cards: WorkflowMenuCardsResponse = (
             WorkflowMenuCardsResponse.model_validate(resp.json())
@@ -366,7 +378,9 @@ class ChronicleClient(DevEnvClient):
             "identifiers": playbook_identifier,
             "alt": "media",
         }
-        resp: requests.Response = self.session.get(url, params=params)
+        resp: requests.Response = self.session.get(
+            url, params=params, timeout=DEFAULT_TIMEOUT
+        )
         resp.raise_for_status()
         encoded_blob: str = base64.b64encode(_extract_zip_bytes(resp)).decode()
         return {"blob": encoded_blob}
@@ -388,10 +402,68 @@ class ChronicleClient(DevEnvClient):
             url,
             params=query or None,
             files=files,
+            timeout=UPLOAD_TIMEOUT,
         )
         resp.raise_for_status()
         data: SingleJson = resp.json()
         return data
+
+
+def _matches_integration(
+    item: Integration,
+    target: str,
+    *,
+    is_staging: bool | None = None,
+) -> bool:
+    """Check if an integration matches the target name, identifier, or production identifier.
+
+    Args:
+        item: The Integration model to inspect.
+        target: The target name or identifier in lowercase.
+        is_staging: If specified, filter by whether the integration is staged.
+
+    Returns:
+        True if the integration matches the target, False otherwise.
+
+    """
+    if not item.name:
+        return False
+    if is_staging is not None and bool(item.staging) != is_staging:
+        return False
+    candidates: set[str] = {
+        (item.display_name or "").lower(),
+        (item.identifier or "").lower(),
+        (item.production_identifier or "").lower(),
+        item.name.rsplit("/", 1)[-1].lower(),
+    }
+    return target in candidates
+
+
+def _poll_until(
+    predicate: Callable[[], bool],
+    *,
+    max_attempts: int = 5,
+    delay_seconds: float = 2.0,
+) -> bool:
+    """Poll a predicate function at intervals until it returns True or attempts are exhausted.
+
+    Args:
+        predicate: Zero-argument function returning True on success.
+        max_attempts: Maximum number of polling attempts before giving up.
+        delay_seconds: Interval in seconds between attempts.
+
+    Returns:
+        True if predicate returned True within max_attempts, False otherwise.
+
+    """
+    for attempt in range(max_attempts):
+        time.sleep(delay_seconds)
+        try:
+            if predicate():
+                return True
+        except requests.RequestException:
+            logger.debug("Polling attempt %d failed with request exception", attempt)
+    return False
 
 
 def _extract_zip_bytes(resp: requests.Response) -> bytes:
