@@ -15,18 +15,17 @@
 from __future__ import annotations
 
 import unittest
+from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_INPROGRESS,
 )
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
-from trend_vision_one.actions import (
-    AddEntityToBlocklist,
-    RemoveEntityFromBlocklist,
-)
+from trend_vision_one.actions import RemoveEntityFromBlocklist
 from trend_vision_one.actions.AddEntityToBlocklist import (
     query_operation_status,
     start_operation,
@@ -38,7 +37,7 @@ from trend_vision_one.core.UtilsManager import build_blocklist_payloads as _buil
 
 
 class MockEntity:
-    def __init__(self, identifier: str, entity_type: Any) -> None:
+    def __init__(self, identifier: str, entity_type: str) -> None:
         self.identifier = identifier
         self.entity_type = entity_type
         self.additional_properties: dict[str, Any] = {}
@@ -116,16 +115,34 @@ class TestBlocklistActions(unittest.TestCase):
         assert res_err.error_message == "The IP address format is invalid."
 
     def test_manager_single_dict_and_list_response(self) -> None:
-        parser = TrendVisionOneParser()
+        siemplify = MagicMock()
+        siemplify.execution_deadline_unix_time_ms = 1000000000000
+        siemplify.parameters = {
+            "File Hashes": "",
+            "URLs": "",
+            "Domains": "",
+            "Email Addresses": "",
+            "IPs": "10.0.0.1, 10.0.0.2, 10.0.0.3",
+            "Description": "Batch block",
+        }
+        siemplify.target_entities = []
 
-        # Single dict response (e.g. error from gateway)
-        single_dict = {"status": 400, "body": {"error": {"message": "Bad request"}}}
-        raw_response = single_dict
-        if isinstance(raw_response, dict):
-            raw_response = [raw_response]
-        parsed = [parser.build_blocklist_response_object(item) for item in raw_response]
-        assert len(parsed) == 1
-        assert parsed[0].error_message == "Bad request"
+        manager = MagicMock()
+        # Single dict error returned for a 3-item batch
+        manager.add_entities_to_blocklist.return_value = [
+            BlocklistResponse(raw_data={}, error_message="Bad request")
+        ]
+
+        result_data: dict[str, Any] = {}
+        with patch(
+            "trend_vision_one.core.UtilsManager.extract_action_param",
+            side_effect=lambda action, param_name, **kwargs: siemplify.parameters.get(param_name, ""),
+        ):
+            _msg, res_val, status = start_operation(siemplify, manager, 1000, siemplify.target_entities, result_data)
+            assert status == EXECUTION_STATE_COMPLETED
+            assert res_val is False
+            assert len(result_data["failed"]) == 3
+            assert set(result_data["failed"]) == {"10.0.0.1", "10.0.0.2", "10.0.0.3"}
 
     def test_start_operation_and_async_polling_with_uppercase_hash(self) -> None:
         siemplify = MagicMock()
@@ -268,7 +285,7 @@ class TestBlocklistActions(unittest.TestCase):
                 side_effect=lambda action, param_name, **kwargs: siemplify.parameters.get(param_name, ""),
             ),
             patch("trend_vision_one.core.UtilsManager.is_async_action_global_timeout_approaching", return_value=True),
-            self.assertRaises(TrendVisionOneTimeoutException),
+            pytest.raises(TrendVisionOneTimeoutException),
         ):
             start_operation(siemplify, manager, 1000, siemplify.target_entities, result_data)
 

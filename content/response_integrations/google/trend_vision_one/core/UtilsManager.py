@@ -330,6 +330,9 @@ def start_blocklist_operation(
                         result_data["failed"].append(v)
             continue
 
+        if len(responses) == 1 and len(chunk) > 1:
+            responses = responses * len(chunk)
+
         for item, response in zip(chunk, responses):
             item_val = next(v for k, v in item.items() if k != "description")
             if response.url:
@@ -341,6 +344,14 @@ def start_blocklist_operation(
             else:
                 siemplify.LOGGER.error(
                     f"Failed to submit {item_val} to blocklist. Error: {response.error_message}"
+                )
+                result_data["failed"].append(item_val)
+
+        if len(responses) < len(chunk):
+            for item in chunk[len(responses):]:
+                item_val = next(v for k, v in item.items() if k != "description")
+                siemplify.LOGGER.error(
+                    f"Missing response for {item_val} when submitting to blocklist."
                 )
                 result_data["failed"].append(item_val)
 

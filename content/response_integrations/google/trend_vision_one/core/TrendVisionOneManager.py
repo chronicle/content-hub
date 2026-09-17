@@ -474,7 +474,7 @@ class TrendVisionOneManager:
         validate_response(response)
         raw_response = response.json()
         if isinstance(raw_response, dict):
-            raw_response = [raw_response]
+            raw_response = [raw_response] * max(1, len(objects))
         return [
             self.parser.build_blocklist_response_object(item)
             for item in raw_response

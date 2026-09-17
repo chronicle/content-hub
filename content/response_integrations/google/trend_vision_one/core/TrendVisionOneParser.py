@@ -224,7 +224,8 @@ class TrendVisionOneParser:
         if raw_json.get("status") in SUCCESSFUL_STATUS_CODES:
             headers = raw_json.get("headers") or []
             if isinstance(headers, dict):
-                task_location_url = headers.get("Operation-Location") or headers.get(OPERATION_LOCATION_HEADER)
+                lower_headers = {k.lower(): v for k, v in headers.items()}
+                task_location_url = lower_headers.get(OPERATION_LOCATION_HEADER)
             elif isinstance(headers, list):
                 for header in headers:
                     if isinstance(header, dict) and header.get("name", "").lower() == OPERATION_LOCATION_HEADER:
