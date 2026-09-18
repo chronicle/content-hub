@@ -180,7 +180,7 @@ class TestBlocklistActions(unittest.TestCase):
             _msg, _res, status = start_operation(siemplify, manager, 1000, siemplify.target_entities, result_data)
 
             assert status == EXECUTION_STATE_INPROGRESS
-            assert "task-1" in result_data["result_urls"]["10.0.0.1"]
+            assert result_data["result_urls"]["10.0.0.1"] == "https://api/tasks/task-1"
 
             # Second poll: tasks succeeded
             manager.get_task.return_value = TaskDetail(
@@ -190,7 +190,7 @@ class TestBlocklistActions(unittest.TestCase):
 
             assert status2 == EXECUTION_STATE_COMPLETED
             assert res2
-            assert "10.0.0.1" in result_data["completed"]
+            assert result_data["completed"] == ["10.0.0.1", "da39a3ee5e6b4b0d3255bfef95601890afd80709"]
             assert siemplify.target_entities[0].additional_properties.get("TrendVisionOne_in_blocklist") is True
             # Verify uppercase hash was successfully enriched
             assert upper_hash_entity.is_enriched is True
@@ -232,7 +232,7 @@ class TestBlocklistActions(unittest.TestCase):
 
             assert status == EXECUTION_STATE_COMPLETED
             assert res is True
-            assert "example.com" in result_data["completed"]
+            assert result_data["completed"] == ["example.com"]
             assert domain_entity.is_enriched is True
             assert domain_entity.additional_properties.get("TrendVisionOne_in_blocklist") is False
 
@@ -264,7 +264,7 @@ class TestBlocklistActions(unittest.TestCase):
 
             assert status == EXECUTION_STATE_COMPLETED
             assert res is False
-            assert "10.0.0.2" in result_data["failed"]
+            assert result_data["failed"] == ["10.0.0.2"]
             assert ip_entity.is_enriched is False
 
     def test_timeout_handling(self) -> None:
@@ -319,7 +319,7 @@ class TestBlocklistActions(unittest.TestCase):
         ]
 
         def get_task_side_effect(task_url: str) -> TaskDetail:
-            if "task-cancel" in task_url:
+            if task_url == "https://api/tasks/task-cancel":
                 return TaskDetail(raw_data={}, task_id="task-cancel", action="block", status="cancelled")
             raise RuntimeError
 
@@ -338,10 +338,9 @@ class TestBlocklistActions(unittest.TestCase):
             _msg, res, status = start_operation(siemplify, manager, 1000, siemplify.target_entities, result_data)
             assert status == EXECUTION_STATE_COMPLETED
             assert res is False
-            assert "10.0.0.10" in result_data["completed"]
+            assert result_data["completed"] == ["10.0.0.10"]
             assert entity_sync.is_enriched is True
-            assert "10.0.0.11" in result_data["failed"]
-            assert "10.0.0.12" in result_data["failed"]
+            assert result_data["failed"] == ["10.0.0.11", "10.0.0.12"]
             siemplify.update_entities.assert_called_once()
             siemplify.result.add_result_json.assert_called_once()
 
