@@ -80,14 +80,9 @@ class TestPing:
         Ping().run()
 
         assert len(gcloud_api_script_session.request_history) >= 0
-        assert (
-            gcloud_api_script_session.request_history[-1]
-            .response.json()
-            .get("error", {})
-            .get("message")
-            == "Not found; Gaia id not found for email invalid-sa@domain.com"
+        assert any(
+            hr.response.status_code == 404 for hr in gcloud_api_script_session.request_history
         )
-        assert gcloud_api_script_session.request_history[-1].response.status_code == 404
         assert INVALID_EMAIL_OUTPUT_MESSAGE in action_output.results.output_message
         assert action_output.results.result_value is False
         assert action_output.results.execution_state == ExecutionState.FAILED

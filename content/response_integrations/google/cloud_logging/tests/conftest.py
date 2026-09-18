@@ -75,6 +75,7 @@ def gcloud_api_script_session(
     session: GoogleCloudApiSession = GoogleCloudApiSession()
     if not use_live_api():
         monkeypatch.setattr(requests, "Session", lambda: session)
+        monkeypatch.setattr(requests, "get", session.get)
         monkeypatch.setattr(
             google.auth.transport.requests.AuthorizedSession,
             "__new__",
