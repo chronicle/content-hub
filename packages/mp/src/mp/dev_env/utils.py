@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import typer
 
@@ -111,7 +111,7 @@ def _infer_auth_mode(config: SingleJson) -> str:
 
 def find_entity_identifier(
     entity_name_or_id: str | int,
-    installed_entities: list[dict[str, Any]] | None,
+    installed_entities: list[SingleJson] | None,
     entity_type_name: str,
     id_keys: tuple[str, ...] = ("Identifier", "identifier", "Id", "id"),
     name_keys: tuple[str, ...] = ("Name", "name", "DisplayName", "displayName"),

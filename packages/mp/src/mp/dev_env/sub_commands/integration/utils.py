@@ -419,7 +419,9 @@ def _normalize_integration_properties(def_data: SingleJson, identifier: str) -> 
                 prop.get("DisplayName") or prop.get("PropertyDisplayName") or prop.get("PropertyName", ""),
             )
             prop.setdefault("Value", prop.get("DefaultValue"))
-            prop.setdefault("PropertyDescription", prop.get("Description", ""))
+            prop["PropertyDescription"] = (
+                prop.get("PropertyDescription") or prop.get("Description") or ""
+            )
             prop.setdefault("IsMandatory", prop.get("Mandatory", False))
             prop.setdefault("IntegrationIdentifier", identifier)
             prop["PropertyType"] = _normalize_script_param_type(
@@ -561,7 +563,7 @@ def _normalize_widget_def(item_def: SingleJson, _identifier: str) -> None:
     item_def.setdefault("Type", item_def.get("Type", 0))
     item_def.setdefault("Scope", item_def.get("Scope", 0))
     item_def.setdefault("ActionIdentifier", item_def.get("ActionIdentifier", ""))
-    item_def.setdefault("Description", item_def.get("Description", ""))
+    item_def["Description"] = item_def.get("Description") or ""
     item_def.setdefault("DataDefinition", item_def.get("DataDefinition", {}))
     item_def.setdefault("ConditionsGroup", item_def.get("ConditionsGroup", {}))
     item_def.setdefault("DefaultSize", item_def.get("DefaultSize", 0))

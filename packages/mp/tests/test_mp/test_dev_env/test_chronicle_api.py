@@ -593,6 +593,29 @@ def test_normalize_job_def_null_description() -> None:
     assert raw_def["Parameters"][0]["Name"] == "Param 1"
 
 
+def test_normalize_integration_properties_null_description() -> None:
+    raw_def = {
+        "IntegrationProperties": [
+            {
+                "PropertyName": "Prop 1",
+                "PropertyDescription": None,
+                "Description": None,
+            }
+        ],
+    }
+    integration_utils._normalize_integration_properties(raw_def, "MyIntegration")  # ruff:ignore[private-member-access]
+    assert raw_def["IntegrationProperties"][0]["PropertyDescription"] == ""
+
+
+def test_normalize_widget_def_null_description() -> None:
+    raw_def = {
+        "Title": "My Widget",
+        "Description": None,
+    }
+    integration_utils._normalize_widget_def(raw_def, "MyIntegration")  # ruff:ignore[private-member-access]
+    assert raw_def["Description"] == ""
+
+
 def test_matches_integration_staging_filtering() -> None:
     prod_item = chronicle_api.Integration(
         name="projects/p/locations/l/instances/i/integrations/Websense",
@@ -608,7 +631,23 @@ def test_matches_integration_staging_filtering() -> None:
         staging=True,
     )
 
-    assert not chronicle_api._matches_integration(prod_item, "websense", is_staging=True)  # ruff:ignore[private-member-access]
-    assert chronicle_api._matches_integration(staging_item, "websense", is_staging=True)  # ruff:ignore[private-member-access]
-    assert not chronicle_api._matches_integration(staging_item, "websense", is_staging=False)  # ruff:ignore[private-member-access]
-    assert chronicle_api._matches_integration(prod_item, "websense", is_staging=False)  # ruff:ignore[private-member-access]
+    assert not chronicle_api._matches_integration(  # ruff:ignore[private-member-access]
+        prod_item,
+        "websense",
+        is_staging=True,
+    )
+    assert chronicle_api._matches_integration(  # ruff:ignore[private-member-access]
+        staging_item,
+        "websense",
+        is_staging=True,
+    )
+    assert not chronicle_api._matches_integration(  # ruff:ignore[private-member-access]
+        staging_item,
+        "websense",
+        is_staging=False,
+    )
+    assert chronicle_api._matches_integration(  # ruff:ignore[private-member-access]
+        prod_item,
+        "websense",
+        is_staging=False,
+    )
