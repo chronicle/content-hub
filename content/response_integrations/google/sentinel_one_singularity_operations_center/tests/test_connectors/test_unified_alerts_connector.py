@@ -524,7 +524,10 @@ def test_connector_creates_alert_info_with_parent_process_and_linked_observables
     script_session: SentinelOneSession,
     connector_output: MockConnectorOutput,
 ) -> None:
-    """Verify connector creates AlertInfo with parent process telemetry and linked observables."""
+    """Verify connector creates AlertInfo with parent process telemetry.
+
+    Also tests linked observables attached to indicators.
+    """
     set_is_test_run_to_true()
     is_test = is_test_run(sys.argv)
 
