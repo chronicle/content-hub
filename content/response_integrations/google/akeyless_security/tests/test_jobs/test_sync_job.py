@@ -24,7 +24,9 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 import pytest
 
 from akeyless_security.core.constants import DEFAULT_SECRET_VERSION
+from akeyless_security.core.datamodels import AkeylessClientConfig
 from akeyless_security.core.exceptions import (
+    ConnectivityError,
     IntegrationCredentialSyncError,
     InvalidConfigurationError,
 )
@@ -43,9 +45,11 @@ def _make_job() -> SyncIntegrationCredentialsJob:
     job.environment_name = "Default Environment"
     job.instance_name_to_identifier = {}
     job.connector_name_to_identifier = {}
+    job.job_name_to_identifier = {}
     job.name_id = "SyncIntegrationCredentialsJob"
+    job.state_context = {}
     job._secret_cache = {}
-    job.execution_errors = []
+    job._sync_errors = []
     job.job_start_time = int(time.time() * 1000)
     type(job).logger = PropertyMock(return_value=MagicMock())
 
@@ -53,8 +57,14 @@ def _make_job() -> SyncIntegrationCredentialsJob:
     mock_params: MagicMock = MagicMock()
     mock_params.environment_name = "Default Environment"
     mock_params.credential_mapping = "{}"
+    mock_params.access_id = "test-id"
+    mock_params.access_key = "test-key"
+    mock_params.api_gateway_url = "https://api.akeyless.io"
+    mock_params.verify_ssl = True
+    mock_soar_job: MagicMock = MagicMock()
+    mock_soar_job.get_job_context_property.return_value = ""
     type(job).params = PropertyMock(return_value=mock_params)
-    type(job).soar_job = PropertyMock(return_value=MagicMock())
+    type(job).soar_job = PropertyMock(return_value=mock_soar_job)
 
     return job
 
@@ -65,39 +75,79 @@ class TestValidateParams:
     def test_valid_json(self) -> None:
         """Parses valid JSON credential mapping."""
         job = _make_job()
-        job.params.credential_mapping = '{"integration_instances": {"inst1": {}}}'
+        job.params.credential_mapping = (
+            '{"integration_instances": {"inst1": {"p1": "my-secret"}}}'
+        )
 
         job._validate_params()
 
         assert "integration_instances" in job.credential_mapping
         assert job.credential_mapping["integration_instances"] == {
-            "inst1": {},
+            "inst1": {"p1": "my-secret"},
         }
 
-    def test_empty_mapping(self) -> None:
-        """Empty string results in empty dict."""
+    def test_valid_yaml(self) -> None:
+        """Parses valid YAML credential mapping."""
         job = _make_job()
-        job.params.credential_mapping = ""
+        job.params.credential_mapping = (
+            "integration_instances:\n  inst1:\n    p1: my-secret:3\n"
+        )
 
         job._validate_params()
 
-        assert job.credential_mapping == {}
+        assert "integration_instances" in job.credential_mapping
+        assert job.credential_mapping["integration_instances"] == {
+            "inst1": {"p1": "my-secret:3"},
+        }
+
+    def test_empty_mapping_raises(self) -> None:
+        """Empty string raises InvalidConfigurationError."""
+        job = _make_job()
+        job.params.credential_mapping = ""
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Credential Mapping cannot be empty",
+        ):
+            job._validate_params()
+
+    def test_empty_dict_mapping_raises(self) -> None:
+        """Empty dict mapping raises InvalidConfigurationError."""
+        job = _make_job()
+        job.params.credential_mapping = "{}"
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Credential Mapping must be a non-empty dictionary",
+        ):
+            job._validate_params()
+
+    def test_empty_categories_mapping_raises(self) -> None:
+        """Mapping with no parameters mapped raises InvalidConfigurationError."""
+        job = _make_job()
+        job.params.credential_mapping = '{"integration_instances": {}}'
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Credential Mapping must contain at least one mapped parameter",
+        ):
+            job._validate_params()
 
     def test_invalid_json_raises(self) -> None:
-        """Raises InvalidConfigurationError on bad JSON."""
+        """Raises InvalidConfigurationError on bad YAML/JSON."""
         job = _make_job()
         job.params.credential_mapping = "{invalid json: ["
 
         with pytest.raises(
             InvalidConfigurationError,
-            match="Invalid Credential Mapping JSON syntax",
+            match="Invalid Credential Mapping syntax",
         ):
             job._validate_params()
 
     def test_invalid_root_key_raises(self) -> None:
         """Raises InvalidConfigurationError on invalid root keys."""
         job = _make_job()
-        job.params.credential_mapping = '{"invalid_key": {}}'
+        job.params.credential_mapping = '{"invalid_key": {"inst1": {"p1": "sec"}}}'
 
         with pytest.raises(
             InvalidConfigurationError,
@@ -491,12 +541,12 @@ class TestErrorAggregation:
 
     @pytest.mark.anyio
     async def test_async_main_raises_on_errors(self) -> None:
-        """Raises IntegrationCredentialSyncError if self.execution_errors is not empty."""
+        """Raises IntegrationCredentialSyncError if self._sync_errors is not empty."""
         job = _make_job()
         job.execution_errors = ["Some error occurred"]
 
         with (
-            patch.object(job, "_init_akeyless_client"),
+            patch.object(job, "_init_akeyless_client", new=AsyncMock()),
             patch(
                 "akeyless_security.jobs.sync_integration_credentials_job.AsyncChronicleSOAR"
             ) as mock_soar_cls,
@@ -517,6 +567,80 @@ class TestErrorAggregation:
 
             with pytest.raises(
                 IntegrationCredentialSyncError,
-                match="Sync completed with errors",
+                match="Credential synchronization completed with one or more errors",
             ):
                 await job._async_main()
+
+
+class TestParameterExtractionAndContext:
+    """Tests for parameter extraction and state context tracking."""
+
+    def test_extracts_from_job_params_when_present(self) -> None:
+        """Extracts AkeylessClientConfig from self.params when access_id and access_key are set."""
+        job = _make_job()
+        job.params.access_id = "job-id"
+        job.params.access_key = "job-key"
+        job.params.api_gateway_url = ""
+        job.params.verify_ssl = False
+
+        config = job._get_integration_parameters()
+
+        assert isinstance(config, AkeylessClientConfig)
+        assert config.access_id == "job-id"
+        assert config.access_key == "job-key"
+        assert config.api_gateway_url == "https://api.akeyless.io"
+        assert config.verify_ssl is False
+
+    def test_falls_back_to_global_config_when_job_params_empty(self) -> None:
+        """Falls back to extract_integration_parameters when job params are missing."""
+        job = _make_job()
+        job.params.access_id = ""
+        job.params.access_key = ""
+
+        fallback_config = AkeylessClientConfig(
+            access_id="global-id",
+            access_key="global-key",
+        )
+        with patch(
+            "akeyless_security.jobs.sync_integration_credentials_job.extract_integration_parameters",
+            return_value=fallback_config,
+        ) as mock_extract:
+            config = job._get_integration_parameters()
+
+            mock_extract.assert_called_once_with(job.soar_job)
+            assert config == fallback_config
+
+    @pytest.mark.anyio
+    async def test_init_akeyless_client_raises_connectivity_error_on_failure(self) -> None:
+        """Raises ConnectivityError if test_connectivity fails during client init."""
+        job = _make_job()
+        with patch(
+            "akeyless_security.jobs.sync_integration_credentials_job.AkeylessClient"
+        ) as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.test_connectivity.side_effect = RuntimeError("Auth failed")
+            mock_client_cls.return_value = mock_client
+
+            with pytest.raises(
+                ConnectivityError,
+                match="Failed to connect or authenticate to Akeyless Security",
+            ):
+                await job._init_akeyless_client()
+
+    @pytest.mark.anyio
+    async def test_skips_unchanged_pinned_secret_version_in_state_context(self) -> None:
+        """Skips API call when state_context already has the exact pinned secret version."""
+        job = _make_job()
+        job.credential_mapping = {"integration_instances": {"inst1": {"p1": "sec1:5"}}}
+        job.state_context = {"instance:inst1-id:p1": "sec1:5::5"}
+
+        mock_api = AsyncMock()
+        mock_api.get_installed_integrations_of_environment.return_value = [
+            {"displayName": "inst1", "identifier": "inst1-id"}
+        ]
+        semaphore = asyncio.Semaphore(5)
+
+        await job._sync_integration_instances(mock_api, semaphore)
+
+        mock_api.set_configuration_property.assert_not_called()
+        assert len(job.execution_errors) == 0

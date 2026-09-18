@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TypeAlias
 
 # Integration identifier
@@ -26,6 +27,9 @@ INTEGRATION_NAME: str = "Akeyless Security"
 PING_SCRIPT_NAME: str = "Ping"
 SYNC_CREDENTIALS_JOB_SCRIPT_NAME: str = "Sync Integration Credentials Job"
 SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = SYNC_CREDENTIALS_JOB_SCRIPT_NAME
+RESOURCE_NAME_PATTERN: re.Pattern = re.compile(
+    r"^(?P<secret>[^:\s][^:]*)(?::(?P<version>[^\s]+))?$"
+)
 
 # Integration configuration parameter names
 ACCESS_ID_PARAM: str = "Access ID"

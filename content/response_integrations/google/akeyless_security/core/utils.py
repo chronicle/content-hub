@@ -20,8 +20,16 @@ import json
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
+from .authentication import extract_integration_parameters
 from .constants import MIN_MASK_LENGTH
 from .exceptions import AkeylessError
+
+__all__ = [
+    "build_lookup_with_warnings",
+    "extract_integration_parameters",
+    "mask_id",
+    "validate_response",
+]
 
 if TYPE_CHECKING:
     from collections.abc import Callable

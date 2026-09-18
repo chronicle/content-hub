@@ -63,13 +63,18 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> AkeylessClientConfig:
         SiemplifyJob.__name__,
     }:
         input_dictionary = dict(soar_sdk_object.parameters or {})
-        if (
-            not input_dictionary.get(ACCESS_ID_PARAM)
-            and hasattr(soar_sdk_object, "get_configuration_by_provider")
-        ):
-            fallback_config = soar_sdk_object.get_configuration_by_provider(
-                INTEGRATION_IDENTIFIER,
-            )
+        if not input_dictionary.get(ACCESS_ID_PARAM):
+            fallback_config = None
+            if hasattr(soar_sdk_object, "get_configuration_by_provider"):
+                fallback_config = soar_sdk_object.get_configuration_by_provider(
+                    INTEGRATION_IDENTIFIER,
+                )
+            if not isinstance(fallback_config, dict) and hasattr(
+                soar_sdk_object, "get_configuration"
+            ):
+                fallback_config = soar_sdk_object.get_configuration(
+                    INTEGRATION_IDENTIFIER,
+                )
             if isinstance(fallback_config, dict):
                 input_dictionary = {**fallback_config, **input_dictionary}
     else:
@@ -91,6 +96,7 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> AkeylessClientConfig:
         param_name=ACCESS_KEY_PARAM,
         is_mandatory=True,
         print_value=False,
+        remove_whitespaces=False,
     )
     api_gateway_url: str = extract_script_param(
         soar_sdk_object,
@@ -116,3 +122,6 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> AkeylessClientConfig:
         api_gateway_url=api_gateway_url,
         verify_ssl=verify_ssl,
     )
+
+
+extract_integration_parameters = build_auth_params

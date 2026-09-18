@@ -16,19 +16,18 @@ from __future__ import annotations
 
 import asyncio
 import json
-import operator
-import re
 import time
 from itertools import starmap
-from typing import TYPE_CHECKING, Any
+from operator import itemgetter
+from typing import TYPE_CHECKING
 
+import yaml
 from TIPCommon.base.job import Job
 from TIPCommon.rest.async_soar_platform_clients.secops_soar import AsyncChronicleSOAR
 from TIPCommon.rest.async_soar_platform_clients.soar_api_client import (
     AsyncMarketplaceApi,
 )
 
-from ..core.authentication import build_auth_params
 from ..core.constants import (
     ANY_INTEGRATION_FILTER_VALUE,
     ASYNC_SEMAPHORE_LIMIT,
@@ -37,6 +36,7 @@ from ..core.constants import (
     DEFAULT_SECRET_VERSION,
     INTEGRATION_INSTANCES_KEY,
     JOBS_KEY,
+    RESOURCE_NAME_PATTERN,
     SYNC_CREDENTIALS_JOB_SCRIPT_NAME,
     TIMEOUT_THRESHOLD_MS,
     NameIdentifierMap,
@@ -44,27 +44,30 @@ from ..core.constants import (
 )
 from ..core.datamodels import AkeylessClientConfig
 from ..core.exceptions import (
+    ConnectivityError,
     IntegrationCredentialSyncError,
     InvalidConfigurationError,
+    JobFetchError,
     JobSaveError,
+    ParameterUpdateError,
     SecretAccessError,
 )
 from ..core.manager import AkeylessClient
-from ..core.utils import build_lookup_with_warnings, mask_id
+from ..core.utils import (
+    build_lookup_with_warnings,
+    extract_integration_parameters,
+    mask_id,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from TIPCommon.types import SingleJson
-
-RESOURCE_NAME_PATTERN: re.Pattern = re.compile(r"^(?P<secret>[^:]+)(?::(?P<version>.+))?$")
 
 
 class SyncIntegrationCredentialsJob(Job):
-    """Syncs credentials from Akeyless to SOAR.
+    """Syncs credentials from Akeyless Security to SOAR.
 
-    Reads a credential mapping JSON from job parameters, fetches
-    the corresponding secrets from Akeyless, and
+    Reads a credential mapping JSON/YAML from job parameters, fetches
+    the corresponding secrets from Akeyless Security, and
     uses the SOAR SDK to set configuration properties on
     integration instances, connectors, and jobs.
     """
@@ -76,91 +79,194 @@ class SyncIntegrationCredentialsJob(Job):
         self.environment_name: str = ""
         self.instance_name_to_identifier: NameIdentifierMap = {}
         self.connector_name_to_identifier: NameIdentifierMap = {}
+        self.job_name_to_identifier: NameIdentifierMap = {}
         self.job_start_time: int = int(time.time() * 1000)
+        self.state_context: dict[str, str] = {}
         self._secret_cache: dict[SecretCacheKey, str] = {}
-        self.execution_errors: list[str] = []
+        self._sync_errors: list[str] = []
+
+    @property
+    def execution_errors(self) -> list[str]:
+        """Alias for ``_sync_errors`` for backward compatibility."""
+        return self._sync_errors
+
+    @execution_errors.setter
+    def execution_errors(self, value: list[str]) -> None:
+        self._sync_errors = value
 
     def _init_api_clients(self) -> None:
         """No-op. Async API clients are initialized inside the async event loop."""
 
-    def _init_akeyless_client(self) -> None:
-        """Initialize the Akeyless client."""
-        access_id = getattr(self.params, "access_id", None)
-        access_key = getattr(self.params, "access_key", None)
-        if isinstance(access_id, str) and access_id and isinstance(access_key, str) and access_key:
-            api_gateway_url = getattr(self.params, "api_gateway_url", None)
-            verify_ssl = getattr(self.params, "verify_ssl", True)
-            config = AkeylessClientConfig(
-                access_id=access_id,
-                access_key=access_key,
-                api_gateway_url=(
-                    api_gateway_url
-                    if isinstance(api_gateway_url, str) and api_gateway_url
-                    else DEFAULT_API_GATEWAY_URL
-                ),
-                verify_ssl=verify_ssl if isinstance(verify_ssl, bool) else True,
-            )
-        else:
-            config = build_auth_params(self.soar_job)
+    def _has_job_level_parameters(self) -> bool:
+        """Check if the job instance has connection parameters in UI configuration.
 
-        self.akeyless_client = AkeylessClient(
+        Returns:
+            bool: True if job level parameters are set, False otherwise.
+
+        """
+        return bool(
+            getattr(self.params, "access_id", None)
+            and getattr(self.params, "access_key", None)
+        )
+
+    def _extract_from_job_params(self) -> AkeylessClientConfig:
+        """Extract connection parameters directly from the Job UI configuration container.
+
+        Returns:
+            AkeylessClientConfig: Extracted parameters.
+
+        """
+        api_gateway_url = getattr(self.params, "api_gateway_url", None)
+        verify_ssl = getattr(self.params, "verify_ssl", None)
+        return AkeylessClientConfig(
+            access_id=self.params.access_id,
+            access_key=self.params.access_key,
+            api_gateway_url=(
+                api_gateway_url
+                if isinstance(api_gateway_url, str) and api_gateway_url.strip()
+                else DEFAULT_API_GATEWAY_URL
+            ),
+            verify_ssl=verify_ssl if verify_ssl is not None else True,
+        )
+
+    def _extract_from_fallback_configuration(self) -> AkeylessClientConfig:
+        """Extract parameters from global integration configuration.
+
+        Returns:
+            AkeylessClientConfig: Extracted fallback parameters.
+
+        """
+        return extract_integration_parameters(self.soar_job)
+
+    def _get_integration_parameters(self) -> AkeylessClientConfig:
+        """Extract Akeyless parameters from Job UI or fall back to global configuration.
+
+        Returns:
+            AkeylessClientConfig: Connection parameters.
+
+        """
+        if self._has_job_level_parameters():
+            self.logger.info(
+                "Extracting Akeyless Security connection parameters directly from the Job's UI configuration settings."
+            )
+            return self._extract_from_job_params()
+
+        self.logger.info(
+            "Job UI configuration parameters are empty or incomplete. "
+            "Falling back to the global Integration Instance configuration..."
+        )
+        return self._extract_from_fallback_configuration()
+
+    async def _init_akeyless_client(self) -> None:
+        """Initialize the Akeyless client and verify connectivity.
+
+        Raises:
+            ConnectivityError: If connection or authentication to Akeyless fails.
+
+        """
+        config = self._get_integration_parameters()
+
+        self.akeyless_client = await asyncio.to_thread(
+            AkeylessClient,
             config,
             logger=self.logger,
         )
+        self.logger.info("Testing connectivity to Akeyless Security...")
+        try:
+            await asyncio.to_thread(self.akeyless_client.test_connectivity)
+        except Exception as e:
+            msg = f"Failed to connect or authenticate to Akeyless Security: {e}"
+            self.logger.exception(msg)
+            raise ConnectivityError(msg) from e
+        self.logger.info("Successfully connected and authenticated to Akeyless Security.")
 
     def _validate_params(self) -> None:
         """Validate job parameters before execution.
 
-        Parses and validates the Credential Mapping JSON
+        Parses and validates the Credential Mapping YAML/JSON
         string provided via the job configuration UI.
 
         Raises:
-            InvalidConfigurationError: If the JSON string
-                is invalid or if the mapped values are in an invalid format.
+            InvalidConfigurationError: If the YAML/JSON string
+                is invalid, empty, or if the mapped values are in an invalid format.
 
         """
+        raw_mapping = getattr(self.params, "credential_mapping", None)
+        if not raw_mapping or not str(raw_mapping).strip():
+            msg = "Credential Mapping cannot be empty."
+            raise InvalidConfigurationError(msg)
+
         try:
-            self.credential_mapping = (
-                json.loads(self.params.credential_mapping)
-                if self.params.credential_mapping
-                else {}
-            )
-        except json.JSONDecodeError as e:
-            msg = f"Invalid Credential Mapping JSON syntax: {e}"
+            self.credential_mapping = yaml.safe_load(raw_mapping)
+        except yaml.YAMLError as e:
+            msg = f"Invalid Credential Mapping syntax: {e}"
             raise InvalidConfigurationError(msg) from e
 
-        if not isinstance(self.credential_mapping, dict):
-            msg = "Credential Mapping must be a dictionary."
+        if not isinstance(self.credential_mapping, dict) or not self.credential_mapping:
+            msg = "Credential Mapping must be a non-empty dictionary."
             raise InvalidConfigurationError(msg)
 
         valid_keys = {INTEGRATION_INSTANCES_KEY, CONNECTORS_KEY, JOBS_KEY}
         invalid_keys = set(self.credential_mapping.keys()) - valid_keys
         if invalid_keys:
             msg = (
-                f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. Allowed keys are: {list(valid_keys)}."
+                f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. "
+                f"Allowed keys are: {list(valid_keys)}."
             )
             raise InvalidConfigurationError(msg)
 
-        for category in valid_keys:
-            category_mapping = self.credential_mapping.get(category, {})
-            if not isinstance(category_mapping, dict):
-                msg = f"Category '{category}' must be a dictionary."
+        total_mappings: int = sum(
+            self._validate_param_mappings(category, self.credential_mapping.get(category, {}))
+            for category in valid_keys
+        )
+
+        if total_mappings == 0:
+            msg = (
+                "Credential Mapping must contain at least one mapped parameter under "
+                f"'{INTEGRATION_INSTANCES_KEY}', '{CONNECTORS_KEY}', or '{JOBS_KEY}'."
+            )
+            raise InvalidConfigurationError(msg)
+
+    @staticmethod
+    def _validate_param_mappings(
+        category: str,
+        category_mapping: SingleJson,
+    ) -> int:
+        """Validate component parameter mappings within a category.
+
+        Args:
+            category (str): Category name (instances, connectors, or jobs).
+            category_mapping (SingleJson): Dictionary of component to param mappings.
+
+        Returns:
+            int: Number of valid mapped parameters found.
+
+        Raises:
+            InvalidConfigurationError: If any component or parameter format is invalid.
+
+        """
+        if not isinstance(category_mapping, dict):
+            msg = f"Category '{category}' must be a dictionary."
+            raise InvalidConfigurationError(msg)
+
+        mappings_count: int = 0
+        for component_name, param_mapping in category_mapping.items():
+            if not isinstance(param_mapping, dict):
+                msg = f"Parameters for '{component_name}' in category '{category}' must be a dictionary."
                 raise InvalidConfigurationError(msg)
 
-            for component_name, param_mapping in category_mapping.items():
-                if not isinstance(param_mapping, dict):
-                    msg = f"Parameters for '{component_name}' in category '{category}' must be a dictionary."
+            for param_name, mapped_value in param_mapping.items():
+                mappings_count += 1
+                val = str(mapped_value).strip()
+                if not RESOURCE_NAME_PATTERN.match(val):
+                    msg = (
+                        f"Invalid format for parameter '{param_name}' of '{component_name}' "
+                        f"in category '{category}': '{val}'. "
+                        f"Expected format: 'secret_name' or 'secret_name:version'."
+                    )
                     raise InvalidConfigurationError(msg)
 
-                for param_name, mapped_value in param_mapping.items():
-                    val = str(mapped_value).strip()
-                    if not RESOURCE_NAME_PATTERN.match(val):
-                        msg = (
-                            f"Invalid format for parameter '{param_name}' of '{component_name}' "
-                            f"in category '{category}': '{val}'. "
-                            f"Expected format: 'secret_name' or 'secret_name:version'."
-                        )
-                        raise InvalidConfigurationError(msg)
+        return mappings_count
 
     def _perform_job(self) -> None:
         """Fetch secrets and sync to SOAR platform."""
@@ -169,46 +275,102 @@ class SyncIntegrationCredentialsJob(Job):
         self.logger.info("'Sync Integration Credentials Job' completed.")
 
     async def _async_main(self) -> None:
-        """Execute the job asynchronously.
-
-        Raises:
-            IntegrationCredentialSyncError: If any errors occur during credential sync.
-
-        """
-        self._init_akeyless_client()
-        self.environment_name = self.params.environment_name
-        self.logger.info(
-            f"Starting credential sync for environment: {self.environment_name}"
+        """Execute the main asynchronous flow."""
+        await self._init_akeyless_client()
+        self.environment_name = getattr(self.params, "environment_name", None) or getattr(
+            self, "environment_name", "Default Environment"
         )
+        self._load_context()
         async_soar = AsyncChronicleSOAR(self.soar_job)
         try:
             api = AsyncMarketplaceApi(async_soar)
             semaphore = asyncio.Semaphore(ASYNC_SEMAPHORE_LIMIT)
-
-            await self._prefetch_all_secrets(semaphore)
-
-            if self._is_approaching_timeout():
-                return
-
-            await self._sync_integration_instances(api, semaphore)
-
-            if self._is_approaching_timeout():
-                return
-
-            await self._sync_connectors(api, semaphore)
-
-            if self._is_approaching_timeout():
-                return
-
-            await self._sync_jobs(api, semaphore)
+            await self._run_sync_pipeline(api, semaphore)
         finally:
+            self._save_context()
             self.logger.info("Closing async client session.")
             await async_soar.close()
 
-        if self.execution_errors:
-            summary = "\n".join(f"- {err}" for err in self.execution_errors)
-            msg = f"Sync completed with errors:\n{summary}"
+    async def _run_sync_pipeline(
+        self,
+        api: AsyncMarketplaceApi,
+        semaphore: asyncio.Semaphore,
+    ) -> None:
+        """Run synchronization tasks across instances, connectors, and jobs."""
+        await self._prefetch_all_secrets(semaphore)
+        if self._is_approaching_timeout():
+            self._check_sync_errors_and_raise()
+            return
+
+        await self._sync_integration_instances(api, semaphore)
+        if self._is_approaching_timeout():
+            self._check_sync_errors_and_raise()
+            return
+
+        await self._sync_connectors(api, semaphore)
+        if self._is_approaching_timeout():
+            self._check_sync_errors_and_raise()
+            return
+
+        await self._sync_jobs(api, semaphore)
+        self._check_sync_errors_and_raise()
+
+    def _check_sync_errors_and_raise(self) -> None:
+        """Raise IntegrationCredentialSyncError if any errors occurred.
+
+        Raises:
+            IntegrationCredentialSyncError: If one or more errors occur
+                during credential synchronization.
+
+        """
+        if self._sync_errors:
+            summary: str = "\n".join(f"- {err}" for err in self._sync_errors)
+            msg: str = f"Credential synchronization completed with one or more errors:\n{summary}"
             raise IntegrationCredentialSyncError(msg)
+
+    def _load_context(self) -> None:
+        """Load job context property from SOAR platform."""
+        self.logger.info("Loading job context state...")
+        if not hasattr(self, "soar_job") or self.soar_job is None:
+            self.state_context = {}
+            return
+
+        context_str: str = self.soar_job.get_job_context_property(
+            self.name_id,
+            "sync_credentials_state",
+        )
+        if not context_str or not isinstance(context_str, str):
+            self.logger.info("No existing sync state found. Starting fresh.")
+            self.state_context = {}
+            return
+
+        try:
+            loaded = yaml.safe_load(context_str)
+        except yaml.YAMLError as e:
+            self.logger.warn(f"Failed to parse job context: {e}. Starting fresh.")
+            self.state_context = {}
+            return
+
+        if isinstance(loaded, dict):
+            self.state_context = loaded
+        else:
+            self.logger.warn("Parsed job context is not a dictionary. Starting fresh.")
+            self.state_context = {}
+
+    def _save_context(self) -> None:
+        """Save job context property back to SOAR platform."""
+        self.logger.info("Saving job context state...")
+        if not hasattr(self, "soar_job") or self.soar_job is None:
+            return
+
+        try:
+            self.soar_job.set_job_context_property(
+                identifier=self.name_id,
+                property_key="sync_credentials_state",
+                property_value=json.dumps(self.state_context),
+            )
+        except Exception:
+            self.logger.exception("Failed to save job context state.")
 
     async def _prefetch_all_secrets(
         self,
@@ -230,7 +392,8 @@ class SyncIntegrationCredentialsJob(Job):
                         locations.update(str(v).strip() for v in param_mapping.values())
 
         uncached_locations = [
-            loc for loc in locations
+            loc
+            for loc in locations
             if self._resolve_secret_and_version(loc) not in self._secret_cache
         ]
 
@@ -263,8 +426,13 @@ class SyncIntegrationCredentialsJob(Job):
     ) -> str:
         """Fetch the secret value for a pre-resolved secret and version.
 
+        Args:
+            secret_id (str): The ID/path of the secret in Akeyless.
+            version_id (str): The version of the secret to retrieve.
+            context_label (str): Context label for logging/errors.
+
         Returns:
-            str: The raw secret value payload.
+            str: The retrieved secret value.
 
         Raises:
             SecretAccessError: If fetching the secret from Akeyless fails.
@@ -272,6 +440,9 @@ class SyncIntegrationCredentialsJob(Job):
         """
         cache_key = (secret_id, version_id)
         if cache_key in self._secret_cache:
+            self.logger.info(
+                f"Using cached payload for secret '{mask_id(secret_id)}' (version '{version_id}')."
+            )
             return self._secret_cache[cache_key]
 
         if self.akeyless_client is None:
@@ -287,7 +458,10 @@ class SyncIntegrationCredentialsJob(Job):
         except SecretAccessError:
             raise
         except Exception as e:
-            msg = f"Failed to fetch secret '{mask_id(secret_id)}' for {context_label}: {e}"
+            msg = (
+                f"Failed to fetch secret '{mask_id(secret_id)}' "
+                f"(version '{version_id}') for {context_label}: {e}"
+            )
             raise SecretAccessError(msg) from e
 
         self._secret_cache[cache_key] = secret_value
@@ -309,63 +483,38 @@ class SyncIntegrationCredentialsJob(Job):
 
         return False
 
-    @staticmethod
-    def _resolve_secret_and_version(mapped_value: str) -> tuple[str, str]:
+    def _resolve_secret_and_version(self, mapped_value: str) -> tuple[str, str]:
         """Parse the mapped string, defaulting to DEFAULT_SECRET_VERSION if not explicitly provided.
 
         Args:
-            mapped_value (str): The value from the JSON mapping (e.g., 'secret-id:version').
+            mapped_value (str): The value from the JSON/YAML mapping (e.g., 'secret-id:version').
 
         Returns:
             tuple[str, str]: The (secret_id, resolved_version).
 
+        Raises:
+            InvalidConfigurationError: If the mapped value is in an invalid format.
+
         """
         mapped_value = str(mapped_value).strip()
-        if ":" in mapped_value:
-            secret_id, explicit_version = mapped_value.split(":", 1)
-            return secret_id, explicit_version
+        match = RESOURCE_NAME_PATTERN.match(mapped_value)
+        if not match:
+            msg = (
+                f"Invalid credential mapping format for value '{mapped_value}'. "
+                f"Expected format: 'secret_name' or 'secret_name:version'."
+            )
+            raise InvalidConfigurationError(msg)
 
-        return mapped_value, DEFAULT_SECRET_VERSION
+        gd = match.groupdict()
+        secret_id = gd["secret"]
+        version_id = gd["version"] or DEFAULT_SECRET_VERSION
 
-    async def _update_parameter(  # ruff:ignore[too-many-arguments]
-        self,
-        *,
-        target_type: str,
-        target_name: str,
-        target_id: str,
-        param_name: str,
-        mapped_value: str,
-        update_callback: Callable[[str], Any],
-    ) -> None:
-        """Fetch a secret from Akeyless and execute the update callback.
-
-        Args:
-            target_type: "instance", "connector", or "job".
-            target_name: Display name of the target.
-            target_id: Resolved identifier of the target.
-            param_name: Name of the parameter to update.
-            mapped_value: Akeyless secret location string ('secret_name' or 'secret_name:version').
-            update_callback: Callback function to perform the actual update.
-
-        """
-        context: str = f"param '{param_name}' on {target_type} '{target_name}' (id: {target_id})"
-        secret_id, version_id = self._resolve_secret_and_version(mapped_value)
-
-        secret_value = await self._fetch_secret_value_pre_resolved(
-            secret_id,
-            version_id,
-            context_label=context,
-        )
-
-        if asyncio.iscoroutinefunction(update_callback):
-            await update_callback(secret_value)
-        else:
-            update_callback(secret_value)
-
-        self.logger.info(
-            f"Updated '{param_name}' on {target_type} '{target_name}' (id: {target_id}) "
-            f"from secret '{mask_id(secret_id)}' (version '{version_id}')."
-        )
+        if hasattr(self, "logger") and self.logger is not None:
+            self.logger.info(
+                f"Resolved mapped value '{mapped_value}' to secret '{mask_id(secret_id)}' "
+                f"(version '{version_id}')."
+            )
+        return secret_id, version_id
 
     async def _sync_integration_instances(
         self,
@@ -384,12 +533,10 @@ class SyncIntegrationCredentialsJob(Job):
 
         self.logger.info(f"Processing {len(instances)} integration instance(s)...")
 
-        self.logger.info(
-            f"Fetching integration instances for environment: {self.environment_name}"
-        )
+        env_name = self.environment_name or getattr(self.params, "environment_name", "")
         response = await api.get_installed_integrations_of_environment(
             integration_identifier=ANY_INTEGRATION_FILTER_VALUE,
-            environment=self.environment_name,
+            environment=env_name,
         )
         instances_list = (
             response
@@ -401,11 +548,11 @@ class SyncIntegrationCredentialsJob(Job):
         )
         if not instances_list:
             msg = (
-                f"Either the environment name '{self.environment_name}' is invalid "
+                f"Either the environment name '{env_name}' is invalid "
                 f"or no integration instances are configured in that environment."
             )
             self.logger.error(msg)
-            self.execution_errors.append(msg)
+            self._sync_errors.append(msg)
             return
 
         self.instance_name_to_identifier = self._build_instance_name_lookup_from_json(
@@ -414,7 +561,7 @@ class SyncIntegrationCredentialsJob(Job):
 
         self.logger.info(
             f"Found {len(self.instance_name_to_identifier)} integration instance(s) "
-            f"in environment '{self.environment_name}'."
+            f"in environment '{env_name}'."
         )
 
         async def update_task(name: str, param_mapping: SingleJson) -> None:
@@ -428,9 +575,8 @@ class SyncIntegrationCredentialsJob(Job):
                         param_mapping,
                     )
                 except Exception as e:  # ruff:ignore[blind-except]
-                    msg = f"Failed to update instance '{name}': {e}"
-                    self.logger.error(msg)  # ruff:ignore[error-instead-of-exception]
-                    self.execution_errors.append(msg)
+                    self.logger.warn(f"Failed to update instance '{name}': {e}")
+                    self._sync_errors.append(f"Failed to update instance '{name}'")
 
         tasks = list(starmap(update_task, instances.items()))
         await asyncio.gather(*tasks)
@@ -441,8 +587,12 @@ class SyncIntegrationCredentialsJob(Job):
     ) -> NameIdentifierMap:
         """Build a name -> identifier mapping from raw JSON instances.
 
+        Args:
+            instances (list[SingleJson]): The list of raw JSON instance data.
+
         Returns:
-            NameIdentifierMap: Mapping from display name to identifier.
+            NameIdentifierMap: A dictionary mapping instance display names
+                to their identifiers.
 
         """
         return build_lookup_with_warnings(
@@ -471,7 +621,7 @@ class SyncIntegrationCredentialsJob(Job):
 
         identifier: str | None = self._resolve_instance_identifier(name)
         if identifier is None:
-            self.logger.error(f"Skipping instance '{name}' — could not resolve identifier.")
+            self.logger.warn(f"Skipping instance '{name}' — could not resolve identifier.")
             return
 
         await self._set_integration_params(api, name, identifier, param_mapping)
@@ -492,14 +642,14 @@ class SyncIntegrationCredentialsJob(Job):
         identifier: str | None = self.instance_name_to_identifier.get(instance_name)
 
         if identifier is None:
-            env: str = self.environment_name
+            env: str = self.environment_name or getattr(self.params, "environment_name", "")
             available: list[str] = list(self.instance_name_to_identifier.keys())
             msg = (
                 f"Integration instance '{instance_name}' not found in environment "
                 f"'{env}'. Available instances: {available}."
             )
-            self.logger.error(msg)
-            self.execution_errors.append(msg)
+            self.logger.warn(msg)
+            self._sync_errors.append(msg)
 
         return identifier
 
@@ -518,34 +668,43 @@ class SyncIntegrationCredentialsJob(Job):
             identifier (str): Resolved instance identifier.
             param_mapping (SingleJson): Param names to secret IDs.
 
+        Raises:
+            ParameterUpdateError: If updating a parameter fails.
+
         """
-        async def update_single_param(param_name: str, mapped_value: str) -> None:
+        for param_name, mapped_value in param_mapping.items():
+            context: str = f"param '{param_name}' on instance '{name}' (id: {identifier})"
+            secret_id, version_id = self._resolve_secret_and_version(mapped_value)
+
+            state_key: str = f"instance:{identifier}:{param_name}"
+            state_val: str = f"{mapped_value}::{version_id}"
+            if version_id != DEFAULT_SECRET_VERSION and self.state_context.get(state_key) == state_val:
+                self.logger.info(
+                    f"Skipping '{param_name}' on instance '{name}' — "
+                    f"already up-to-date with secret '{mask_id(secret_id)}' (version '{version_id}')."
+                )
+                continue
+
+            secret_value: str = await self._fetch_secret_value_pre_resolved(
+                secret_id,
+                version_id,
+                context_label=context,
+            )
             try:
-                async def update_property(value: str) -> None:
-                    await api.set_configuration_property(
-                        integration_instance_identifier=identifier,
-                        property_name=param_name,
-                        property_value=value,
-                    )
-
-                await self._update_parameter(
-                    target_type="instance",
-                    target_name=name,
-                    target_id=identifier,
-                    param_name=param_name,
-                    mapped_value=mapped_value,
-                    update_callback=update_property,
+                await api.set_configuration_property(
+                    integration_instance_identifier=identifier,
+                    property_name=param_name,
+                    property_value=secret_value,
                 )
-            except Exception as e:  # ruff:ignore[blind-except]
-                msg = (
-                    f"Failed to update '{param_name}' on instance '{name}' "
-                    f"(id: {identifier}): {e}"
-                )
-                self.logger.error(msg)  # ruff:ignore[error-instead-of-exception]
-                self.execution_errors.append(msg)
+            except Exception as e:
+                msg = f"Failed to set {context}: {e}"
+                raise ParameterUpdateError(msg) from e
 
-        tasks = list(starmap(update_single_param, param_mapping.items()))
-        await asyncio.gather(*tasks)
+            self.state_context[state_key] = state_val
+            self.logger.info(
+                f"Updated '{param_name}' on instance '{name}' "
+                f"from secret '{mask_id(secret_id)}' (version '{version_id}')."
+            )
 
     async def _sync_connectors(
         self,
@@ -572,9 +731,6 @@ class SyncIntegrationCredentialsJob(Job):
                 or response.get("items", [])
             )
         )
-        if not cards:
-            self.logger.warn("No connectors found in the platform.")
-            return
 
         self.connector_name_to_identifier = self._build_connector_name_lookup_from_json(
             cards,
@@ -593,9 +749,8 @@ class SyncIntegrationCredentialsJob(Job):
                         param_mapping,
                     )
                 except Exception as e:  # ruff:ignore[blind-except]
-                    msg = f"Failed to update connector '{name}': {e}"
-                    self.logger.error(msg)  # ruff:ignore[error-instead-of-exception]
-                    self.execution_errors.append(msg)
+                    self.logger.warn(f"Failed to update connector '{name}': {e}")
+                    self._sync_errors.append(f"Failed to update connector '{name}'")
 
         tasks = list(starmap(update_task, connectors.items()))
         await asyncio.gather(*tasks)
@@ -606,8 +761,12 @@ class SyncIntegrationCredentialsJob(Job):
     ) -> NameIdentifierMap:
         """Build a display_name -> identifier mapping from raw JSON.
 
+        Args:
+            connector_cards (list[SingleJson]): Raw connector card data.
+
         Returns:
-            NameIdentifierMap: Mapping from connector display name to identifier.
+            NameIdentifierMap: A dictionary mapping connector names
+                to their identifiers.
 
         """
         return build_lookup_with_warnings(
@@ -636,7 +795,7 @@ class SyncIntegrationCredentialsJob(Job):
 
         identifier: str | None = self._resolve_connector_identifier(name)
         if identifier is None:
-            self.logger.error(f"Skipping connector '{name}' — could not resolve identifier.")
+            self.logger.warn(f"Skipping connector '{name}' — could not resolve identifier.")
             return
 
         await self._set_connector_params(api, name, identifier, param_mapping)
@@ -658,8 +817,8 @@ class SyncIntegrationCredentialsJob(Job):
         if identifier is None:
             available: list[str] = list(self.connector_name_to_identifier.keys())
             msg = f"Connector '{connector_name}' not found. Available connectors: {available}."
-            self.logger.error(msg)
-            self.execution_errors.append(msg)
+            self.logger.warn(msg)
+            self._sync_errors.append(msg)
 
         return identifier
 
@@ -678,41 +837,54 @@ class SyncIntegrationCredentialsJob(Job):
             identifier (str): Resolved connector identifier.
             param_mapping (SingleJson): Param names to secret IDs.
 
+        Raises:
+            ParameterUpdateError: If updating a parameter fails.
+
         """
-        async def update_single_param(param_name: str, mapped_value: str) -> None:
+        for param_name, mapped_value in param_mapping.items():
+            context: str = f"param '{param_name}' on connector '{name}' (id: {identifier})"
+            secret_id, version_id = self._resolve_secret_and_version(mapped_value)
+
+            state_key: str = f"connector:{identifier}:{param_name}"
+            state_val: str = f"{mapped_value}::{version_id}"
+            if version_id != DEFAULT_SECRET_VERSION and self.state_context.get(state_key) == state_val:
+                self.logger.info(
+                    f"Skipping '{param_name}' on connector '{name}' — "
+                    f"already up-to-date with secret '{mask_id(secret_id)}' (version '{version_id}')."
+                )
+                continue
+
+            secret_value: str = await self._fetch_secret_value_pre_resolved(
+                secret_id,
+                version_id,
+                context_label=context,
+            )
             try:
-                async def update_param(value: str) -> None:
-                    await api.set_connector_parameter(
-                        connector_instance_identifier=identifier,
-                        parameter_name=param_name,
-                        parameter_value=value,
-                    )
-
-                await self._update_parameter(
-                    target_type="connector",
-                    target_name=name,
-                    target_id=identifier,
-                    param_name=param_name,
-                    mapped_value=mapped_value,
-                    update_callback=update_param,
+                await api.set_connector_parameter(
+                    connector_instance_identifier=identifier,
+                    parameter_name=param_name,
+                    parameter_value=secret_value,
                 )
-            except Exception as e:  # ruff:ignore[blind-except]
-                msg = (
-                    f"Failed to update '{param_name}' on connector '{name}' "
-                    f"(id: {identifier}): {e}"
-                )
-                self.logger.error(msg)  # ruff:ignore[error-instead-of-exception]
-                self.execution_errors.append(msg)
+            except Exception as e:
+                msg = f"Failed to set {context}: {e}"
+                raise ParameterUpdateError(msg) from e
 
-        tasks = list(starmap(update_single_param, param_mapping.items()))
-        await asyncio.gather(*tasks)
+            self.state_context[state_key] = state_val
+            self.logger.info(
+                f"Updated '{param_name}' on connector '{name}' "
+                f"from secret '{mask_id(secret_id)}' (version '{version_id}')."
+            )
 
     async def _sync_jobs(
         self,
         api: AsyncMarketplaceApi,
         semaphore: asyncio.Semaphore,
     ) -> None:
-        """Sync credentials for jobs concurrently."""
+        """Sync credentials for jobs concurrently.
+
+        Performs a read-modify-write cycle for each job
+        listed in the credential mapping.
+        """
         jobs: SingleJson = self.credential_mapping.get(JOBS_KEY, {})
 
         if not jobs:
@@ -723,11 +895,10 @@ class SyncIntegrationCredentialsJob(Job):
 
         job_instances: list[SingleJson] | None = await self._fetch_job_instances(api)
         if job_instances is None:
+            self._sync_errors.append("Failed to fetch installed jobs from platform.")
             return
 
         name_to_job: SingleJson = self._build_job_name_lookup(job_instances)
-
-        self.logger.info(f"Found {len(name_to_job)} job(s).")
 
         async def update_task(job_name: str, param_mapping: SingleJson) -> None:
             if self._is_approaching_timeout():
@@ -742,9 +913,8 @@ class SyncIntegrationCredentialsJob(Job):
                         name_to_job,
                     )
                 except Exception as e:  # ruff:ignore[blind-except]
-                    msg = f"Failed to update job '{job_name}': {e}"
-                    self.logger.error(msg)  # ruff:ignore[error-instead-of-exception]
-                    self.execution_errors.append(msg)
+                    self.logger.warn(f"Failed to update job '{job_name}': {e}")
+                    self._sync_errors.append(f"Failed to update job '{job_name}'")
 
         tasks = list(starmap(update_task, jobs.items()))
         await asyncio.gather(*tasks)
@@ -753,7 +923,7 @@ class SyncIntegrationCredentialsJob(Job):
         self,
         api: AsyncMarketplaceApi,
     ) -> list[SingleJson] | None:
-        """Fetch and normalise the list of installed jobs.
+        """Fetch and normalize the list of installed jobs.
 
         Returns:
             A flat list of job instance dicts, or ``None`` if the fetch fails or the
@@ -774,7 +944,7 @@ class SyncIntegrationCredentialsJob(Job):
         elif isinstance(installed_jobs_response, list):
             job_instances = installed_jobs_response
         else:
-            self.logger.error(
+            self.logger.warn(
                 "Unexpected response format from get_installed_jobs: "
                 "expected list or dict with 'job_instances'/'jobInstances', got "
                 f"{type(installed_jobs_response).__name__}."
@@ -782,8 +952,8 @@ class SyncIntegrationCredentialsJob(Job):
             return None
 
         if not job_instances:
-            self.logger.warn("No installed jobs found.")
-            return None
+            self.logger.warn("No jobs returned from platform.")
+            return []
 
         return job_instances
 
@@ -824,7 +994,7 @@ class SyncIntegrationCredentialsJob(Job):
             name_to_job (SingleJson): Lookup of display name -> job dict.
 
         """
-        resolved: tuple[SingleJson, list[SingleJson]] | None = await self._resolve_job_data(
+        resolved = await self._resolve_job_data(
             api,
             job_name,
             name_to_job,
@@ -838,19 +1008,22 @@ class SyncIntegrationCredentialsJob(Job):
 
         param_index: dict[str, int] = self._build_param_index(parameters)
 
+        pending_state_updates: dict[str, str] = {}
         updated_count: int = await self._apply_secrets_to_params(
             job_name,
             param_mapping,
             parameters,
             param_index,
+            pending_state_updates,
         )
 
         if updated_count == 0:
-            self.logger.warn(f"No parameters updated for job '{job_name}' — skipping save.")
+            self.logger.info(f"No parameters updated for job '{job_name}' — skipping save.")
             return
 
         job_data["parameters"] = parameters
         await self._persist_job(api, job_name, job_data, updated_count)
+        self.state_context.update(pending_state_updates)
 
     async def _resolve_job_data(
         self,
@@ -859,8 +1032,6 @@ class SyncIntegrationCredentialsJob(Job):
         name_to_job: SingleJson,
     ) -> tuple[SingleJson, list[SingleJson]] | None:
         """Look up a job by name and ensure its parameters are available for update.
-
-        If the list response omitted parameters, fetches the full job details.
 
         Args:
             api: The async API client.
@@ -876,8 +1047,8 @@ class SyncIntegrationCredentialsJob(Job):
         if job_data is None:
             available: list[str] = list(name_to_job.keys())
             msg = f"Job '{job_name}' not found. Available jobs: {available}."
-            self.logger.error(msg)
-            self.execution_errors.append(msg)
+            self.logger.warn(msg)
+            self._sync_errors.append(msg)
             return None
 
         job_data = dict(job_data)
@@ -893,9 +1064,10 @@ class SyncIntegrationCredentialsJob(Job):
                 return None
 
         if not isinstance(parameters, list):
-            self.logger.error(
-                f"Unexpected parameters format for job '{job_name}': "
-                f"expected list, got {type(parameters).__name__}."
+            self.logger.warn(
+                f"Unexpected parameter format for Job '{job_name}'. "
+                f"Expected 'parameters' field to be a list, "
+                f"got {type(parameters).__name__}."
             )
             return None
 
@@ -921,10 +1093,13 @@ class SyncIntegrationCredentialsJob(Job):
         Returns:
             tuple[SingleJson, list[SingleJson]] | None: A (job_data, parameters) tuple, or None on failure.
 
+        Raises:
+            JobFetchError: If fetching the job details fails.
+
         """
         job_instance_id: str | None = job_data.get("id")
         if job_instance_id is None:
-            self.logger.error(f"Job '{job_name}' has no id and no parameters — cannot update.")
+            self.logger.warn(f"Job '{job_name}' has no id and no parameters — cannot update.")
             return None
 
         self.logger.info(f"Fetching full details for job '{job_name}' (id: {job_instance_id}).")
@@ -932,14 +1107,14 @@ class SyncIntegrationCredentialsJob(Job):
             full_job: SingleJson = await api.get_installed_jobs(
                 job_instance_id=job_instance_id,
             )
-        except Exception as e:  # ruff:ignore[blind-except]
-            self.logger.error(  # ruff:ignore[error-instead-of-exception]
-                f"Failed to fetch full details for job '{job_name}' (id: {job_instance_id}): {e}"
-            )
-            return None
+        except JobFetchError:
+            raise
+        except Exception as e:
+            msg = f"Failed to fetch details for job '{job_name}' (id: {job_instance_id}): {e}"
+            raise JobFetchError(msg) from e
 
         if not isinstance(full_job, dict):
-            self.logger.error(
+            self.logger.warn(
                 f"Unexpected response format when fetching job details for "
                 f"'{job_name}': expected dict, got "
                 f"{type(full_job).__name__}."
@@ -963,7 +1138,7 @@ class SyncIntegrationCredentialsJob(Job):
         return build_lookup_with_warnings(
             items=indexed_params,
             get_key=lambda item: item[1].get("displayName") or item[1].get("name", ""),
-            get_value=operator.itemgetter(0),
+            get_value=itemgetter(0),
             entity_type="job parameter",
             logger=self.logger,
         )
@@ -974,6 +1149,7 @@ class SyncIntegrationCredentialsJob(Job):
         param_mapping: SingleJson,
         parameters: list[SingleJson],
         param_index: dict[str, int],
+        pending_state_updates: dict[str, str] | None = None,
     ) -> int:
         """Fetch secrets and swap values into the parameters list.
 
@@ -982,50 +1158,55 @@ class SyncIntegrationCredentialsJob(Job):
             param_mapping (SingleJson): Map of param name -> secret ID.
             parameters (list[SingleJson]): The mutable parameter list.
             param_index (dict[str, int]): Name -> index lookup.
+            pending_state_updates (dict[str, str] | None): State updates to apply after save.
 
         Returns:
             int: The number of parameters successfully updated.
 
         """
-        async def update_single_param(param_name: str, mapped_value: str) -> bool:
+        if pending_state_updates is None:
+            pending_state_updates = {}
+
+        updated_count: int = 0
+        for param_name, mapped_value in param_mapping.items():
             if param_name not in param_index:
                 msg = (
                     f"Parameter '{param_name}' not found on "
                     f"job '{job_name}'. Available parameters: "
                     f"{list(param_index.keys())}."
                 )
-                self.logger.error(msg)
-                self.execution_errors.append(msg)
-                return False
+                self.logger.warn(msg)
+                self._sync_errors.append(msg)
+                continue
 
-            try:
-                idx: int = param_index[param_name]
+            context: str = f"param '{param_name}' on job '{job_name}'"
+            secret_id, version_id = self._resolve_secret_and_version(mapped_value)
 
-                def update_job_param(value: str) -> None:
-                    parameters[idx]["value"] = value
-
-                await self._update_parameter(
-                    target_type="job",
-                    target_name=job_name,
-                    target_id=job_name,
-                    param_name=param_name,
-                    mapped_value=mapped_value,
-                    update_callback=update_job_param,
+            state_key: str = f"job:{job_name}:{param_name}"
+            state_val: str = f"{mapped_value}::{version_id}"
+            if version_id != DEFAULT_SECRET_VERSION and self.state_context.get(state_key) == state_val:
+                self.logger.info(
+                    f"Skipping '{param_name}' on job '{job_name}' — "
+                    f"already up-to-date with secret '{mask_id(secret_id)}' "
+                    f"(version '{version_id}')."
                 )
-            except Exception as e:  # ruff:ignore[blind-except]
-                msg = (
-                    f"Failed to fetch secret '{mapped_value}' for param "
-                    f"'{param_name}' on job '{job_name}': {e}"
-                )
-                self.logger.error(msg)  # ruff:ignore[error-instead-of-exception]
-                self.execution_errors.append(msg)
-                return False
-            else:
-                return True
+                continue
 
-        tasks = list(starmap(update_single_param, param_mapping.items()))
-        results = await asyncio.gather(*tasks)
-        return sum(1 for success in results if success)
+            secret_value: str = await self._fetch_secret_value_pre_resolved(
+                secret_id,
+                version_id,
+                context_label=context,
+            )
+            idx: int = param_index[param_name]
+            parameters[idx]["value"] = secret_value
+            updated_count += 1
+            pending_state_updates[state_key] = state_val
+            self.logger.info(
+                f"Set '{param_name}' on job '{job_name}' "
+                f"from secret '{mask_id(secret_id)}' (version '{version_id}')."
+            )
+
+        return updated_count
 
     async def _persist_job(
         self,
@@ -1043,7 +1224,7 @@ class SyncIntegrationCredentialsJob(Job):
             updated_count (int): Number of params changed (for logging).
 
         Raises:
-            JobSaveError: If the API call fails.
+            JobSaveError: If saving the job data back to the platform fails.
 
         """
         try:
