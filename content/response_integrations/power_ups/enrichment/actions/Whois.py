@@ -126,6 +126,13 @@ def main():
                     domain = get_domain_from_string(entity.identifier)
                     if domain:
                         whois_data = get_domain_whois(domain, logger=siemplify.LOGGER)
+                        if not whois_data:
+                            siemplify.LOGGER.warn(
+                                f"No WHOIS data found for entity {entity.identifier}"
+                            )
+                            failed_entities.append(entity.identifier)
+                            continue
+
                         if whois_data.get("creation_date"):
                             creation_date = whois_data["creation_date"]
                             creation_date = (
@@ -160,6 +167,9 @@ def main():
                                 json.dumps(whois_data, default=json_serial),
                             )
                     else:
+                        siemplify.LOGGER.warn(
+                            f"Could not extract domain from entity {entity.identifier}"
+                        )
                         failed_entities.append(entity.identifier)
                 except Exception as e:
                     siemplify.LOGGER.error(
