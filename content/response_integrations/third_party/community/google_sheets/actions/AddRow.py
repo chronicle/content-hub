@@ -28,6 +28,16 @@ def main():
     for elem in elements:
         values.append(elem)
     try:
+        row_index = None
+        if row_index_str:
+            try:
+                row_index = int(row_index_str)
+            except (TypeError, ValueError):
+                raise ValueError("Row Index must be a positive integer.") from None
+
+            if row_index < 1:
+                raise ValueError("Row Index must be a positive integer.")
+
         sheet = GoogleSheetFactory(credentials_json).create_spreadsheet(sheet_id)
 
         if worksheet_name:
@@ -35,20 +45,21 @@ def main():
         else:
             worksheet = sheet.sheet1
 
-        if row_index_str:
-            row_index = int(row_index_str)
+        if row_index is not None:
             worksheet.insert_row(values, row_index)
         else:
-            worksheet.insert_row(values)
+            worksheet.append_row(values)
 
         print(worksheet.row_count)
     except Exception as err:
         siemplify.LOGGER.error(err)
         status = EXECUTION_STATE_FAILED
+        message = f"Failed to add row to the sheet. Error: {err}"
     else:
         status = EXECUTION_STATE_COMPLETED
+        message = "Row added to the sheet successfully"
 
-    siemplify.end("Row added to the sheet successfully", True, status)
+    siemplify.end(message, status is EXECUTION_STATE_COMPLETED, status)
 
 
 if __name__ == "__main__":

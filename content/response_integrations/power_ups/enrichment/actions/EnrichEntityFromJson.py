@@ -110,7 +110,9 @@ def get_unicode(val):
 
 def find_key_path_in_json(key_path, json_data):
     """Finds the relevant key_path in a json object.
-    If list encountered, if its of len 1, its value is used. Otherwise, it exits with default value (MULTIPLE VALUES FOUND)
+
+    If list encountered, if its of len 1, its value is used. Otherwise, it
+    exits with default value (MULTIPLE VALUES FOUND)
     """
     return find_key_path_recursive(key_path, json_data)
 

@@ -27,10 +27,10 @@ def main():
 
     except Exception as err:
         status = EXECUTION_STATE_FAILED
-        message = str(err)
+        message = f"Failed to connect to the Google Sheets API. Error: {err}"
     else:
         status = EXECUTION_STATE_COMPLETED
-        message = "Connected successfully"
+        message = "Successfully connected to the Google Sheets API."
     siemplify.end(message, status is EXECUTION_STATE_COMPLETED, status)
 
 

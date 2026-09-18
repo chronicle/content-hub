@@ -1,50 +1,59 @@
 from __future__ import annotations
+
 import time
-import requests
 import urllib.parse
 
-from .datamodels import DNSSecurityEvent, SOCInsight
-from .InfobloxExceptions import RateLimitException
-from .utils import HandleExceptions, string_to_list, clean_params
+import requests
+
 from .constants import (
-    ENDPOINTS,
-    DEFAULT_RESULTS_LIMIT,
-    DEFAULT_PAGE_SIZE,
-    RETRY_COUNT,
-    DEFAULT_REQUEST_TIMEOUT,
-    WAIT_TIME_FOR_RETRY,
-    RATE_LIMIT_EXCEEDED_STATUS_CODE,
-    PING_ACTION_IDENTIFIER,
-    TIDE_RLIMIT,
-    INDICATOR_THREAT_LOOKUP_WITH_TIDE_ACTION_IDENTIFIER,
-    GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER,
-    DEFAULT_OFFSET,
-    DEFAULT_LIMIT,
-    IP_LOOKUP_ACTION_IDENTIFIER,
-    INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_ACTION_IDENTIFIER,
-    UPDATE_CUSTOM_LIST_ITEMS_ACTION_IDENTIFIER,
-    GET_CUSTOM_LIST_BY_ID_ACTION_IDENTIFIER,
-    GET_CUSTOM_LIST_ACTION_IDENTIFIER,
     CREATE_CUSTOM_LIST_ACTION_IDENTIFIER,
     CREATE_NETWORK_LIST_ACTION_IDENTIFIER,
-    UPDATE_NETWORK_LIST_ACTION_IDENTIFIER,
     CREATE_SECURITY_POLICY_ACTION_IDENTIFIER,
-    UPDATE_SECURITY_POLICY_ACTION_IDENTIFIER,
-    REMOVE_SECURITY_POLICY_ACTION_IDENTIFIER,
-    GET_SECURITY_POLICIES_ACTION_IDENTIFIER,
-    REMOVE_NETWORK_LIST_ACTION_IDENTIFIER,
-    REMOVE_CUSTOM_LIST_ACTION_IDENTIFIER,
-    GET_SOC_INSIGHTS_COMMENTS_ACTION_IDENTIFIER,
-    GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER,
-    GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER,
-    DNS_RECORD_LOOKUP_ACTION_IDENTIFIER,
-    GET_NETWORK_LIST_ACTION_IDENTIFIER,
+    DEFAULT_LIMIT,
+    DEFAULT_OFFSET,
+    DEFAULT_PAGE_SIZE,
+    DEFAULT_REQUEST_TIMEOUT,
+    DEFAULT_RESULTS_LIMIT,
     DHCP_LEASE_LOOKUP_ACTION_IDENTIFIER,
-    GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER,
-    HOST_LOOKUP_ACTION_IDENTIFIER,
-    GET_SOC_INSIGHTS_ACTION_IDENTIFIER,
+    DNS_RECORD_LOOKUP_ACTION_IDENTIFIER,
+    ENDPOINTS,
+    EXECUTE_RECOMMENDATION_ACTIONS_ACTION_IDENTIFIER,
+    GET_ACCOUNT_ACTION_IDENTIFIER,
+    GET_CUSTOM_LIST_ACTION_IDENTIFIER,
+    GET_CUSTOM_LIST_BY_ID_ACTION_IDENTIFIER,
     GET_DNS_SECURITY_EVENTS_ACTION_IDENTIFIER,
+    GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER,
+    GET_INSIGHT_DETAILS_ACTION_IDENTIFIER,
+    GET_NETWORK_LIST_ACTION_IDENTIFIER,
+    GET_SECURITY_POLICIES_ACTION_IDENTIFIER,
+    GET_SOC_INSIGHTS_ACTION_IDENTIFIER,
+    GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER,
+    GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER,
+    GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER,
+    HOST_LOOKUP_ACTION_IDENTIFIER,
+    INDICATOR_THREAT_LOOKUP_WITH_TIDE_ACTION_IDENTIFIER,
+    INITIATE_INDICATOR_INTEL_LOOKUP_WITH_DOSSIER_ACTION_IDENTIFIER,
+    IP_LOOKUP_ACTION_IDENTIFIER,
+    PING_ACTION_IDENTIFIER,
+    RATE_LIMIT_EXCEEDED_STATUS_CODE,
+    REMOVE_CUSTOM_LIST_ACTION_IDENTIFIER,
+    REMOVE_NETWORK_LIST_ACTION_IDENTIFIER,
+    REMOVE_SECURITY_POLICY_ACTION_IDENTIFIER,
+    RETRY_COUNT,
+    TIDE_RLIMIT,
+    UNDO_RECOMMENDATION_ACTION_ACTION_IDENTIFIER,
+    UPDATE_CUSTOM_LIST_ITEMS_ACTION_IDENTIFIER,
+    UPDATE_NETWORK_LIST_ACTION_IDENTIFIER,
+    UPDATE_SECURITY_POLICY_ACTION_IDENTIFIER,
+    UPDATE_STATUS_OF_INSIGHT_ACTION_IDENTIFIER,
+    WAIT_TIME_FOR_RETRY,
+    X_INFOBLOX_CLIENT_HEADER,
+    X_INFOBLOX_CLIENT_VALUE,
+    X_INFOBLOX_CUSTOMER_HEADER,
 )
+from .datamodels import DNSSecurityEvent, InfobloxIQForThreatDefense
+from .InfobloxExceptions import RateLimitException
+from .utils import HandleExceptions, clean_params, string_to_list
 
 
 class APIManager:
@@ -65,11 +74,37 @@ class APIManager:
         self.siemplify = siemplify
         self.session = requests.session()
         self.session.verify = verify_ssl
-        self.session.headers.update(
-            {
-                "Authorization": f"Token {self.api_key}",
-            }
-        )
+        self.session.headers.update({
+            "Authorization": f"Token {self.api_key}",
+            X_INFOBLOX_CLIENT_HEADER: X_INFOBLOX_CLIENT_VALUE,
+        })
+
+        customer_id = self._fetch_customer_id()
+        if customer_id:
+            self.session.headers.update({X_INFOBLOX_CUSTOMER_HEADER: customer_id})
+
+    def _fetch_customer_id(self):
+        """
+        Fetch the customer ID for the x-Infoblox-customer header.
+
+        Retries on rate limiting are handled inside `_make_rest_call`. Any
+        failure here must not block action/connector execution, so all
+        errors are caught and logged instead of raised.
+
+        Returns:
+            str or None: The customer ID, or None if it could not be fetched.
+        """
+        try:
+            url = self._get_full_url(GET_ACCOUNT_ACTION_IDENTIFIER)
+            response = self._make_rest_call(GET_ACCOUNT_ACTION_IDENTIFIER, "GET", url)
+            return response.get("results", {}).get("customer_id")
+        except Exception as e:
+            if self.siemplify:
+                self.siemplify.LOGGER.error(
+                    f"Failed to fetch customer ID for {X_INFOBLOX_CUSTOMER_HEADER} header. "
+                    f"Continuing without it. Reason: {e}"
+                )
+            return None
 
     def _get_full_url(self, url_id, **kwargs):
         """
@@ -121,21 +156,15 @@ class APIManager:
                 break
             remaining = limit - len(results)
             params["_offset"] += params["_limit"]
-            params["_limit"] = (
-                DEFAULT_PAGE_SIZE if remaining >= DEFAULT_PAGE_SIZE else remaining
-            )
+            params["_limit"] = DEFAULT_PAGE_SIZE if remaining >= DEFAULT_PAGE_SIZE else remaining
             if is_connector_request:
                 try:
-                    response = self._make_rest_call(
-                        api_name, method, url, params=params, body=body
-                    )
+                    response = self._make_rest_call(api_name, method, url, params=params, body=body)
                 except Exception as e:
                     self.siemplify.LOGGER.exception(e)
                     return results
             else:
-                response = self._make_rest_call(
-                    api_name, method, url, params=params, body=body
-                )
+                response = self._make_rest_call(api_name, method, url, params=params, body=body)
             results.extend(response.get(result_key, []))
 
         return results
@@ -180,9 +209,7 @@ class APIManager:
             if retry_count > 0:
                 time.sleep(WAIT_TIME_FOR_RETRY)
                 retry_count -= 1
-                return self._make_rest_call(
-                    api_identifier, method, url, params, body, retry_count
-                )
+                return self._make_rest_call(api_identifier, method, url, params, body, retry_count)
             else:
                 raise RateLimitException("API rate limit exceeded.")
 
@@ -190,8 +217,7 @@ class APIManager:
             return response.json()
         except Exception:
             self.siemplify.LOGGER.error(
-                "Exception occurred while returning response JSON for API identifier"
-                f"{api_identifier} and URL {url}"
+                f"Exception occurred while returning response JSON for API identifier{api_identifier} and URL {url}"
             )
             return {}
 
@@ -287,12 +313,8 @@ class APIManager:
         Returns:
             dict: API response
         """
-        url = self._get_full_url(
-            GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER, job_id=job_id
-        )
-        return self._make_rest_call(
-            GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER, "GET", url
-        )
+        url = self._get_full_url(GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER, job_id=job_id)
+        return self._make_rest_call(GET_INDICATOR_INTEL_LOOKUP_RESULT_ACTION_IDENTIFIER, "GET", url)
 
     def ip_lookup(
         self,
@@ -328,9 +350,7 @@ class APIManager:
         params = clean_params(params)
 
         url = self._get_full_url(IP_LOOKUP_ACTION_IDENTIFIER)
-        return self._make_rest_call(
-            IP_LOOKUP_ACTION_IDENTIFIER, "GET", url, params=params
-        )
+        return self._make_rest_call(IP_LOOKUP_ACTION_IDENTIFIER, "GET", url, params=params)
 
     def initiate_indicator_intel_lookup_with_dossier(
         self,
@@ -383,13 +403,9 @@ class APIManager:
         )
         body = {"deleted_items_described": [], "inserted_items_described": []}
         if action == "Add":
-            body["inserted_items_described"] = [
-                {"item": item, "description": ""} for item in items
-            ]
+            body["inserted_items_described"] = [{"item": item, "description": ""} for item in items]
         else:
-            body["deleted_items_described"] = [
-                {"item": item, "description": ""} for item in items
-            ]
+            body["deleted_items_described"] = [{"item": item, "description": ""} for item in items]
         return self._make_rest_call(
             UPDATE_CUSTOM_LIST_ITEMS_ACTION_IDENTIFIER,
             "PATCH",
@@ -429,14 +445,10 @@ class APIManager:
                 GET_CUSTOM_LIST_BY_ID_ACTION_IDENTIFIER,
                 custom_list_id=custom_list_id,
             )
-            return self._make_rest_call(
-                GET_CUSTOM_LIST_BY_ID_ACTION_IDENTIFIER, "GET", url, params=None
-            )
+            return self._make_rest_call(GET_CUSTOM_LIST_BY_ID_ACTION_IDENTIFIER, "GET", url, params=None)
         # If both Name and Type are provided, use /custom_lists/0 with query params
         elif name and type_:
-            url = self._get_full_url(
-                GET_CUSTOM_LIST_BY_ID_ACTION_IDENTIFIER, custom_list_id=0
-            )
+            url = self._get_full_url(GET_CUSTOM_LIST_BY_ID_ACTION_IDENTIFIER, custom_list_id=0)
             params.update({"name": name, "type": type_})
             return self._make_rest_call(
                 GET_CUSTOM_LIST_BY_ID_ACTION_IDENTIFIER,
@@ -451,9 +463,7 @@ class APIManager:
                 params["_tfilter"] = tag_filter
             if tag_sort_filter:
                 params["_torder_by"] = tag_sort_filter
-            return self._make_rest_call(
-                GET_CUSTOM_LIST_ACTION_IDENTIFIER, "GET", url, params=params
-            )
+            return self._make_rest_call(GET_CUSTOM_LIST_ACTION_IDENTIFIER, "GET", url, params=params)
 
     def create_custom_list(self, payload):
         """
@@ -498,11 +508,9 @@ class APIManager:
         )
         return response
 
-    def update_network_list(
-        self, network_list_id, name=None, items=None, description=None
-    ):
+    def update_network_list(self, network_list_id, name=None, items=None, description=None):
         """
-        Update an existing network list in Infoblox. Fields left empty are 
+        Update an existing network list in Infoblox. Fields left empty are
             fetched from current data.
         Args:
             network_list_id (str): ID of the network list to update
@@ -523,11 +531,7 @@ class APIManager:
         for key, value in fields.items():
             if not value:
                 body[key] = current_data.get(key)
-            elif (
-                isinstance(value, str)
-                and value.strip().lower() == "empty"
-                and key == "description"
-            ):
+            elif isinstance(value, str) and value.strip().lower() == "empty" and key == "description":
                 body[key] = ""
             else:
                 body[key] = value
@@ -554,9 +558,7 @@ class APIManager:
             dict: API response.
         """
         url = self._get_full_url(CREATE_SECURITY_POLICY_ACTION_IDENTIFIER)
-        response = self._make_rest_call(
-            CREATE_SECURITY_POLICY_ACTION_IDENTIFIER, "POST", url, body=payload
-        )
+        response = self._make_rest_call(CREATE_SECURITY_POLICY_ACTION_IDENTIFIER, "POST", url, body=payload)
         return response
 
     def update_security_policy(self, security_policy_id, payload):
@@ -573,9 +575,7 @@ class APIManager:
             UPDATE_SECURITY_POLICY_ACTION_IDENTIFIER,
             security_policy_id=security_policy_id,
         )
-        response = self._make_rest_call(
-            UPDATE_SECURITY_POLICY_ACTION_IDENTIFIER, "PUT", url, body=payload
-        )
+        response = self._make_rest_call(UPDATE_SECURITY_POLICY_ACTION_IDENTIFIER, "PUT", url, body=payload)
         return response
 
     def remove_security_policy(self, security_policy_id):
@@ -592,9 +592,7 @@ class APIManager:
             REMOVE_SECURITY_POLICY_ACTION_IDENTIFIER,
             security_policy_id=security_policy_id,
         )
-        response = self._make_rest_call(
-            REMOVE_SECURITY_POLICY_ACTION_IDENTIFIER, "DELETE", url
-        )
+        response = self._make_rest_call(REMOVE_SECURITY_POLICY_ACTION_IDENTIFIER, "DELETE", url)
         return response
 
     def get_security_policies(
@@ -625,9 +623,7 @@ class APIManager:
         }
         params = clean_params(params)
         url = self._get_full_url(GET_SECURITY_POLICIES_ACTION_IDENTIFIER)
-        return self._make_rest_call(
-            GET_SECURITY_POLICIES_ACTION_IDENTIFIER, "GET", url, params=params
-        )
+        return self._make_rest_call(GET_SECURITY_POLICIES_ACTION_IDENTIFIER, "GET", url, params=params)
 
     def remove_network_list(self, network_list_id):
         """
@@ -642,9 +638,7 @@ class APIManager:
             REMOVE_NETWORK_LIST_ACTION_IDENTIFIER,
             network_list_id=network_list_id,
         )
-        response = self._make_rest_call(
-            REMOVE_NETWORK_LIST_ACTION_IDENTIFIER, "DELETE", url
-        )
+        response = self._make_rest_call(REMOVE_NETWORK_LIST_ACTION_IDENTIFIER, "DELETE", url)
         return response
 
     def remove_custom_list(self, custom_list_id):
@@ -655,9 +649,7 @@ class APIManager:
         Returns:
             dict: API response (usually empty on success).
         """
-        url = self._get_full_url(
-            REMOVE_CUSTOM_LIST_ACTION_IDENTIFIER, custom_list_id=custom_list_id
-        )
+        url = self._get_full_url(REMOVE_CUSTOM_LIST_ACTION_IDENTIFIER, custom_list_id=custom_list_id)
         return self._make_rest_call(REMOVE_CUSTOM_LIST_ACTION_IDENTIFIER, "DELETE", url)
 
     def update_custom_list(self, custom_list_id, payload):
@@ -683,64 +675,35 @@ class APIManager:
             body=payload,
         )
 
-    def get_soc_insights_comments(self, insight_id, from_time=None, to_time=None):
-        """
-        Retrieve comments for a given SOC Insight.
-        Args:
-            insight_id (str): ID of the insight (required)
-            from_time (str|None): Filter comments changed after this time (optional)
-            to_time (str|None): Filter comments changed before this time (optional)
-        Returns:
-            dict: API response
-        """
-        url = self._get_full_url(
-            GET_SOC_INSIGHTS_COMMENTS_ACTION_IDENTIFIER, insight_id=insight_id
-        )
-        params = {}
-        if from_time:
-            params["from"] = from_time
-        if to_time:
-            params["to"] = to_time
-        return self._make_rest_call(
-            GET_SOC_INSIGHTS_COMMENTS_ACTION_IDENTIFIER,
-            "GET",
-            url,
-            params=params,
-        )
-
-    def get_soc_insights_indicators(
+    def get_infoblox_iq_for_threat_defense_indicators(
         self,
         insight_id,
-        confidence=None,
-        indicator=None,
-        actor=None,
-        from_time=None,
-        to_time=None,
-        action=None,
+        threat_level=None,
+        indicators=None,
+        status=None,
+        users=None,
+        detected_at=None,
         limit=DEFAULT_LIMIT,
     ):
         """
-        Retrieve indicators for a given SOC Insight.
+        Retrieve indicators for a given Infoblox IQ for Threat Defense insight.
         Args:
             insight_id (str): ID of the insight (required)
-            confidence (str|None): Filter by confidence score (optional)
-            indicator (str|None): Filter by specific indicator value (optional)
-            actor (str|None): Filter by threat actor (optional)
-            from_time (str|None): Filter indicators seen after this time (optional)
-            to_time (str|None): Filter indicators seen before this time (optional)
+            threat_level (str|None): Filter by threat level (optional)
+            indicators (str|None): Filter by specific indicators value (optional)
+            status (str|None): Filter by blocking status, comma-separated (optional)
+            users (str|None): Filter by user(s), comma-separated (optional)
+            detected_at (str|None): Filter indicators detected on or after this time (optional)
         Returns:
             dict: API response
         """
-        url = self._get_full_url(
-            GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER, insight_id=insight_id
-        )
+        url = self._get_full_url(GET_SOC_INSIGHTS_INDICATORS_ACTION_IDENTIFIER, insight_id=insight_id)
         params = {
-            "confidence": confidence,
-            "indicator": indicator,
-            "actor": actor,
-            "action": action,
-            "from": from_time,
-            "to": to_time,
+            "threat_level": threat_level,
+            "indicators": indicators,
+            "status": status,
+            "users": users,
+            "detected_at": detected_at,
             "limit": limit,
         }
         params = clean_params(params)
@@ -751,63 +714,61 @@ class APIManager:
             params=params,
         )
 
-    def get_soc_insights_events(
+    def get_infoblox_iq_for_threat_defense_events(
         self,
         insight_id,
         device_ip=None,
         query=None,
-        query_type=None,
         source=None,
         indicator=None,
         threat_level=None,
-        confidence_level=None,
+        threat_confidence=None,
         limit=None,
-        from_time=None,
-        to_time=None,
+        tclass=None,
+        detected_from=None,
+        detected_to=None,
+        device_name=None,
+        user=None,
     ):
         """
-        Retrieve SOC Insight events for a given insight ID with optional filters.
+        Retrieve Infoblox IQ for Threat Defense events for a given insight ID with optional filters.
         Args:
             insight_id (str): ID of the insight (required)
-            device_ip (str|None): Filter by Device IP
+            device_ip (str|None): Filter by Device IP(s), comma-separated
             query (str|None): Filter by query string
-            query_type (str|None): Filter by DNS query type
             source (str|None): Filter by threat intelligence source/feed
             indicator (str|None): Filter by threat indicator
             threat_level (str|None): Filter by threat level
-            confidence_level (str|None): Filter by confidence level
+            threat_confidence (str|None): Filter by confidence level
             limit (int|None): Max results to return
-            from_time (str|None): Filter by events detected after this time
-            to_time (str|None): Filter by events detected before this time
+            tclass (str|None): Filter by threat class category
+            detected_from (str|None): Filter by events detected after this time
+            detected_to (str|None): Filter by events detected before this time
+            device_name (str|None): Filter by device name
+            user (str|None): Filter by user(s), comma-separated
         Returns:
             dict: API response
         """
-        url = self._get_full_url(
-            GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER, insight_id=insight_id
-        )
+        url = self._get_full_url(GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER, insight_id=insight_id)
         params = {
             "device_ip": device_ip,
             "query": query,
-            "query_type": query_type,
             "source": source,
             "indicator": indicator,
-            "threat_level": (
-                threat_level if threat_level and threat_level.lower() != "all" else None
-            ),
-            "confidence_level": (
-                confidence_level
-                if confidence_level and confidence_level.lower() != "all"
-                else None
+            "threat_level": (threat_level if threat_level and threat_level.lower() != "all" else None),
+            "threat_confidence": (
+                threat_confidence if threat_confidence and threat_confidence.lower() != "all" else None
             ),
             "limit": limit,
-            "from": from_time,
-            "to": to_time,
+            "tclass": tclass,
+            "detected_from": detected_from,
+            "detected_to": detected_to,
+            "device_name": device_name,
+            "user": user,
         }
         # Remove any keys where value is None
         params = clean_params(params)
-        return self._make_rest_call(
-            GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER, "GET", url, params=params
-        )
+        return self._make_rest_call(GET_SOC_INSIGHTS_EVENTS_ACTION_IDENTIFIER, "GET", url, params=params)
 
     def dns_record_lookup(
         self,
@@ -839,9 +800,7 @@ class APIManager:
             "_order_by": order_by,
         }
         params = clean_params(params)
-        response = self._make_rest_call(
-            DNS_RECORD_LOOKUP_ACTION_IDENTIFIER, "GET", url, params=params
-        )
+        response = self._make_rest_call(DNS_RECORD_LOOKUP_ACTION_IDENTIFIER, "GET", url, params=params)
         return response
 
     def get_network_list(
@@ -873,9 +832,7 @@ class APIManager:
             url = url + f"/{network_list_id}"
             params = {}
 
-        response = self._make_rest_call(
-            GET_NETWORK_LIST_ACTION_IDENTIFIER, "GET", url, params=params
-        )
+        response = self._make_rest_call(GET_NETWORK_LIST_ACTION_IDENTIFIER, "GET", url, params=params)
         return response
 
     def get_dhcp_lease_lookup(
@@ -906,58 +863,107 @@ class APIManager:
             "_order_by": order_by,
         }
         params = clean_params(params)
-        return self._make_rest_call(
-            DHCP_LEASE_LOOKUP_ACTION_IDENTIFIER, "GET", url, params=params
-        )
+        return self._make_rest_call(DHCP_LEASE_LOOKUP_ACTION_IDENTIFIER, "GET", url, params=params)
 
-    def get_soc_insights_assets(
+    def get_infoblox_iq_for_threat_defense_assets(
         self,
         insight_id,
-        asset_ip=None,
-        mac_address=None,
-        os_version=None,
-        user=None,
+        ip_address=None,
+        users=None,
         limit=DEFAULT_LIMIT,
-        from_time=None,
-        to_time=None,
+        is_verified=None,
     ):
         """
         Retrieve the list of associated assets for a given Insight ID.
 
         Args:
             insight_id (str): The ID of the insight to retrieve assets from (required)
-            asset_ip (str, optional): Filter assets by IP address
-            mac_address (str, optional): Filter assets by MAC address
-            os_version (str, optional): Filter assets by operating system version
+            ip_address (str, optional): Filter assets by IP address(es), comma-separated
             user (str, optional): Filter assets by associated user
             limit (int, optional): Maximum number of results to return (default: 100)
-            from_time (str, optional): Filter by assets changed after this time
-                (YYYY-MM-DDTHH:mm:ss.SSS)
-            to_time (str, optional): Filter by assets changed before this time
-                (YYYY-MM-DDTHH:mm:ss.SSS)
+            is_verified (bool, optional): Filter by asset verification state
 
         Returns:
             dict: API response
         Raises:
             ItemNotFoundException: If the insight_id does not exist (404)
         """
-        url = self._get_full_url(
-            GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER, insight_id=insight_id
-        )
+        url = self._get_full_url(GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER, insight_id=insight_id)
         params = {
-            "qip": asset_ip,
-            "cmac": mac_address,
-            "os_version": os_version,
-            "user": user,
+            "ip_address": ip_address,
+            "users": users,
             "limit": limit,
-            "from": from_time,
-            "to": to_time,
+            "is_verified": is_verified,
         }
         # Remove any keys where value is None
         params = clean_params(params)
-        return self._make_rest_call(
-            GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER, "GET", url, params=params
-        )
+        return self._make_rest_call(GET_SOC_INSIGHTS_ASSETS_ACTION_IDENTIFIER, "GET", url, params=params)
+
+    def update_infoblox_iq_for_threat_defense_status(self, insight_id, status, comment=None):
+        """
+        Update the workflow status of a specific Infoblox IQ for Threat Defense insight,
+        optionally recording an analyst comment.
+
+        Args:
+            insight_id (str): ID of the insight to update (required)
+            status (str): New workflow status (e.g., "In Progress", "Resolved")
+            comment (str|None): Optional comment appended to the insight's audit trail
+        Returns:
+            dict: API response (empty on success)
+        Raises:
+            InfobloxException: If the insight_id does not exist (404)
+        """
+        url = self._get_full_url(UPDATE_STATUS_OF_INSIGHT_ACTION_IDENTIFIER)
+        body = clean_params({"insight_id": insight_id, "status": status, "comment": comment})
+        return self._make_rest_call(UPDATE_STATUS_OF_INSIGHT_ACTION_IDENTIFIER, "PUT", url, body=body)
+
+    def get_infoblox_iq_for_threat_defense_details(self, insight_id):
+        """
+        Retrieve the full detail view for a single Infoblox IQ for Threat Defense insight.
+
+        Args:
+            insight_id (str): ID of the insight to retrieve details for (required)
+        Returns:
+            dict: API response
+        Raises:
+            InfobloxException: If the insight_id does not exist (404)
+        """
+        url = self._get_full_url(GET_INSIGHT_DETAILS_ACTION_IDENTIFIER, insight_id=insight_id)
+        return self._make_rest_call(GET_INSIGHT_DETAILS_ACTION_IDENTIFIER, "GET", url)
+
+    def execute_recommendation_actions(self, insight_id, items):
+        """
+        Execute (accept or dismiss) one or more recommendations for an Infoblox IQ
+        for Threat Defense insight.
+
+        Args:
+            insight_id (str): ID of the insight the recommendations belong to (required)
+            items (list): List of dicts, each with "recommendation_id" and "action"
+                ("Yes" to apply, "No" to dismiss)
+        Returns:
+            dict: API response containing per-recommendation results
+        Raises:
+            InfobloxException: If the insight_id does not exist (404)
+        """
+        url = self._get_full_url(EXECUTE_RECOMMENDATION_ACTIONS_ACTION_IDENTIFIER, insight_id=insight_id)
+        # body = {"items": items}
+        return self._make_rest_call(EXECUTE_RECOMMENDATION_ACTIONS_ACTION_IDENTIFIER, "POST", url, body=items)
+
+    def undo_recommendation_action(self, audit_entry_id):
+        """
+        Undo a previously executed recommendation action using its audit log entry ID.
+
+        Args:
+            audit_entry_id (str): ID of the audit log entry to undo (required). All other
+                fields (recommendation_type, target_id, action, metadata) are resolved
+                server-side from this id.
+        Returns:
+            dict: API response containing the undo result
+        Raises:
+            InfobloxException: If the audit entry does not exist or the action cannot be undone
+        """
+        url = self._get_full_url(UNDO_RECOMMENDATION_ACTION_ACTION_IDENTIFIER, audit_entry_id=audit_entry_id)
+        return self._make_rest_call(UNDO_RECOMMENDATION_ACTION_ACTION_IDENTIFIER, "POST", url)
 
     def get_host_lookup(
         self,
@@ -973,7 +979,7 @@ class APIManager:
         Args:
             host_filter (str, optional): Filter IPAM hosts by specific criteria
                 (e.g., name=="webserver01" or ip_address=="192.168.1.100").
-            tag_filter (str, optional): Filter IP addresses by specific tags 
+            tag_filter (str, optional): Filter IP addresses by specific tags
                 (e.g. 'Tenable_scan'=='true').
             offset (int, optional): Pagination offset (default: 0).
             limit (int, optional): Maximum number of results to return (default: 100).
@@ -991,49 +997,46 @@ class APIManager:
             "_order_by": order_by,
         }
         params = clean_params(params)
-        return self._make_rest_call(
-            HOST_LOOKUP_ACTION_IDENTIFIER, "GET", url, params=params
-        )
+        return self._make_rest_call(HOST_LOOKUP_ACTION_IDENTIFIER, "GET", url, params=params)
 
-    def get_soc_insights(
-        self, existing_ids=None, status=None, threat_type=None, priority=None
+    def get_infoblox_iq_for_threat_defense(
+        self, existing_ids=None, status=None, threat_properties=None, severity=None, date_created=None
     ):
         """
-        Retrieve SOC Insights from Infoblox.
+        Retrieve Infoblox IQ for Threat Defense insights from Infoblox.
 
         Args:
             existing_ids (list, optional): List of already processed insights IDs to filter out
-            status (str, optional): Filter insights by status (e.g., "Active", "Closed")
-            threat_type (str, optional): Filter insights by threat type
-            priority (str, optional): Filter insights by priority level 
-                (LOW, INFO, MEDIUM, HIGH, CRITICAL)
+            status (str, optional): Filter insights by status (e.g., "Needs Review", "Resolved")
+            threat_properties (str, optional): Comma-separated threat properties to filter by
+            severity (str, optional): Filter insights by severity level
+                (Critical, High, Medium, Low)
+            date_created (str, optional): RFC 3339 timestamp; only insights created on or
+                after this date are returned
 
         Returns:
-            list: List of SOC Insight objects
+            list: List of Infoblox IQ for Threat Defense insight objects
         """
-
         params = {
             "status": status,
-            "threat_type": threat_type,
-            "priority": priority,
+            "threat_properties": threat_properties,
+            "severity": severity,
+            "date_created": date_created,
         }
 
         params = clean_params(params)
 
         url = self._get_full_url(GET_SOC_INSIGHTS_ACTION_IDENTIFIER)
-        response = self._make_rest_call(
-            GET_SOC_INSIGHTS_ACTION_IDENTIFIER, "GET", url, params=params
-        )
+        response = self._make_rest_call(GET_SOC_INSIGHTS_ACTION_IDENTIFIER, "GET", url, params=params)
 
         # Extract insights from response
         insights = []
-        if response and "insightList" in response:
+        if response and "insight_list" in response:
             insights = [
                 insight
-                for item in response["insightList"]
-                if (insight := SOCInsight(item)).event_id not in existing_ids
+                for item in response["insight_list"]
+                if (insight := InfobloxIQForThreatDefense(item)).event_id not in existing_ids
             ]
-
         return insights
 
     def get_dns_security_events(self, existing_ids=None, **kwargs):
@@ -1076,9 +1079,7 @@ class APIManager:
         )
 
         dns_events = [
-            event_obj
-            for event in results
-            if (event_obj := DNSSecurityEvent(event)).event_id not in existing_ids
+            event_obj for event in results if (event_obj := DNSSecurityEvent(event)).event_id not in existing_ids
         ]
 
         return dns_events

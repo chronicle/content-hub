@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import (
@@ -6,22 +7,22 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_FAILED,
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
-from TIPCommon import extract_action_param
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from TIPCommon.extraction import extract_action_param
 
-from ..core.datamodels import CustomList
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
+    COMMON_ACTION_ERROR_MESSAGE,
+    DEFAULT_LIMIT,
+    DEFAULT_OFFSET,
     GET_CUSTOM_LIST_SCRIPT_NAME,
+    MAX_TABLE_RECORDS,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
-    COMMON_ACTION_ERROR_MESSAGE,
-    DEFAULT_OFFSET,
-    DEFAULT_LIMIT,
-    MAX_TABLE_RECORDS,
 )
-from ..core.utils import validate_integer_param, get_integration_params
+from ..core.datamodels import CustomList
+from ..core.InfobloxExceptions import InfobloxException
+from ..core.utils import get_integration_params, validate_integer_param
 
 
 @output_handler
@@ -113,12 +114,9 @@ def main():
         siemplify.result.add_result_json(json.dumps(response, indent=4))
         # Table view (using datamodel)
         if table_results:
-            siemplify.result.add_data_table(
-                title="Custom List Details", data_table=construct_csv(table_results)
-            )
+            siemplify.result.add_data_table(title="Custom List Details", data_table=construct_csv(table_results))
             output_message = (
-                f"Successfully retrieved {len(results)} custom list(s). "
-                f"Showing up to {MAX_TABLE_RECORDS} in table."
+                f"Successfully retrieved {len(results)} custom list(s). Showing up to {MAX_TABLE_RECORDS} in table."
             )
         else:
             siemplify.LOGGER.info("No custom lists found to display in table view.")

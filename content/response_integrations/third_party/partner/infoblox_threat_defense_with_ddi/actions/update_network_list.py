@@ -1,19 +1,21 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
-from TIPCommon import extract_action_param
-from ..core.datamodels import NetworkList
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from TIPCommon.extraction import extract_action_param
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    UPDATE_NETWORK_LIST_SCRIPT_NAME,
-    RESULT_VALUE_TRUE,
-    RESULT_VALUE_FALSE,
     COMMON_ACTION_ERROR_MESSAGE,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
+    UPDATE_NETWORK_LIST_SCRIPT_NAME,
 )
+from ..core.datamodels import NetworkList
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import get_integration_params, string_to_list, validate_integer_param
 
 
@@ -27,13 +29,9 @@ def main():
     api_root, api_key, verify_ssl = get_integration_params(siemplify)
 
     # Action Parameters
-    network_list_id = extract_action_param(
-        siemplify, param_name="Network List ID", input_type=str, is_mandatory=True
-    )
+    network_list_id = extract_action_param(siemplify, param_name="Network List ID", input_type=str, is_mandatory=True)
     name = extract_action_param(siemplify, param_name="Name", input_type=str, is_mandatory=False)
-    items_str = extract_action_param(
-        siemplify, param_name="Items", input_type=str, is_mandatory=False
-    )
+    items_str = extract_action_param(siemplify, param_name="Items", input_type=str, is_mandatory=False)
     description = extract_action_param(
         siemplify,
         param_name="Description",
@@ -63,9 +61,7 @@ def main():
         )
         network_list = NetworkList(response.get("results"))
         siemplify.result.add_result_json(json.dumps(response.get("results"), indent=4))
-        siemplify.result.add_data_table(
-            "Network List Details", construct_csv([network_list.to_csv()])
-        )
+        siemplify.result.add_data_table("Network List Details", construct_csv([network_list.to_csv()]))
         output_message = f"Successfully updated network list with ID '{network_list_id}'."
 
     except (InfobloxException, ValueError) as e:

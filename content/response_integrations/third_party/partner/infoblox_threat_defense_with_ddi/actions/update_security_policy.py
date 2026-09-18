@@ -1,28 +1,30 @@
 from __future__ import annotations
+
 import json
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, construct_csv
-from TIPCommon import extract_action_param
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from TIPCommon.extraction import extract_action_param
+
 from ..core.APIManager import APIManager
-from ..core.InfobloxExceptions import InfobloxException
 from ..core.constants import (
-    UPDATE_SECURITY_POLICY_SCRIPT_NAME,
-    RESULT_VALUE_TRUE,
-    RESULT_VALUE_FALSE,
     COMMON_ACTION_ERROR_MESSAGE,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
+    UPDATE_SECURITY_POLICY_SCRIPT_NAME,
 )
 from ..core.datamodels import SecurityPolicy
+from ..core.InfobloxExceptions import InfobloxException
 from ..core.utils import (
+    add_additional_params_to_payload,
     get_integration_params,
-    parse_tags,
-    parse_and_validate_int_list,
-    validate_integer_param,
     get_nullable_field,
     is_empty_string,
-    add_additional_params_to_payload,
+    parse_and_validate_int_list,
     parse_rules_param,
+    parse_tags,
+    validate_integer_param,
 )
 
 
@@ -48,9 +50,7 @@ def create_payload_security_policy(
             if not block_dns_rebinding
             else block_dns_rebinding.lower() == "true"
         ),
-        "safe_search": (
-            existing_data.get("safe_search") if not safe_search else safe_search.lower() == "true"
-        ),
+        "safe_search": (existing_data.get("safe_search") if not safe_search else safe_search.lower() == "true"),
         "network_lists": get_nullable_field(
             network_lists,
             existing_data.get("network_lists"),
@@ -93,9 +93,7 @@ def main():
     security_policy_id = extract_action_param(
         siemplify, param_name="Security Policy ID", input_type=str, is_mandatory=True
     )
-    policy_name = extract_action_param(
-        siemplify, param_name="Policy Name", input_type=str, is_mandatory=False
-    )
+    policy_name = extract_action_param(siemplify, param_name="Policy Name", input_type=str, is_mandatory=False)
     description = extract_action_param(
         siemplify,
         param_name="Description",
@@ -156,9 +154,7 @@ def main():
 
         api_manager = APIManager(api_root, api_key, verify_ssl=verify_ssl, siemplify=siemplify)
         # Fetch existing policy for populating fields if needed
-        existing_policy = api_manager.get_security_policies(
-            security_policy_filter=f"id=={security_policy_id}"
-        )
+        existing_policy = api_manager.get_security_policies(security_policy_filter=f"id=={security_policy_id}")
         existing_data = None
         if isinstance(existing_policy, dict):
             results = existing_policy.get("results", existing_policy)
@@ -183,9 +179,7 @@ def main():
             existing_data,
         )
 
-        siemplify.LOGGER.info(
-            f"Payload for update_security_policy: {json.dumps(payload, indent=2)}"
-        )
+        siemplify.LOGGER.info(f"Payload for update_security_policy: {json.dumps(payload, indent=2)}")
         response = api_manager.update_security_policy(security_policy_id, payload)
         result = response.get("results", response)
         output_message = f"Successfully updated security policy with ID '{security_policy_id}'."
@@ -203,9 +197,7 @@ def main():
         siemplify.LOGGER.exception(e)
     except Exception as e:
         status = EXECUTION_STATE_FAILED
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            UPDATE_SECURITY_POLICY_SCRIPT_NAME, str(e)
-        )
+        output_message = COMMON_ACTION_ERROR_MESSAGE.format(UPDATE_SECURITY_POLICY_SCRIPT_NAME, str(e))
         result_value = RESULT_VALUE_FALSE
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)

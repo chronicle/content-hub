@@ -64,7 +64,10 @@ def main():
         siemplify.update_entities(entities_to_update)
         siemplify.result.add_result_json(convert_dict_to_json_result_dict(json_results))
 
-        output_message += f"The following entities were enriched: {','.join([entity.identifier for entity in siemplify.target_entities])}"
+        enriched_entities_str = ",".join(
+            entity.identifier for entity in siemplify.target_entities
+        )
+        output_message += f"The following entities were enriched: {enriched_entities_str}"
 
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}",

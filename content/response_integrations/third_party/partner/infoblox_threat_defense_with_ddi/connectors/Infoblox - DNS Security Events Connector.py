@@ -1,26 +1,24 @@
 from __future__ import annotations
+
 import sys
 from datetime import datetime
 
-from ..core.APIManager import APIManager
 from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
-from TIPCommon import (
-    extract_connector_param,
-    save_timestamp,
-    get_last_success_time,
-    is_overflowed,
-    is_approaching_timeout,
-    read_ids,
-    write_ids,
-)
+from TIPCommon.extraction import extract_connector_param
+from TIPCommon.smp_io import read_ids, write_ids
+from TIPCommon.smp_time import get_last_success_time, is_approaching_timeout, save_timestamp
+from TIPCommon.utils import is_overflowed
+
+from ..core.APIManager import APIManager
 from ..core.constants import (
     ALLOWED_THREAT_LEVEL_VALUES,
     DEFAULT_DNS_EVENTS_LIMIT,
-    UNIX_FORMAT,
     DEFAULT_MAX_HOURS_BACKWARD,
+    DNS_SECURITY_EVENTS_CONNECTOR_NAME,
+    UNIX_FORMAT,
 )
 from ..core.utils import validate_enum, validate_integer_param
 
@@ -55,9 +53,7 @@ def validate_input_params(threat_level, limit, max_hours_backwards):
     # Validate threat_level using validate_enum with case-insensitive matching
     if threat_level:
         threat_level_upper = threat_level.upper()
-        threat_level = validate_enum(
-            threat_level_upper, ALLOWED_THREAT_LEVEL_VALUES, "Threat Level"
-        )
+        threat_level = validate_enum(threat_level_upper, ALLOWED_THREAT_LEVEL_VALUES, "Threat Level")
 
     # Validate limit if provided
     if limit:
@@ -75,6 +71,7 @@ def validate_input_params(threat_level, limit, max_hours_backwards):
 @output_handler
 def main(is_test_run):
     siemplify = SiemplifyConnectorExecution()
+    siemplify.script_name = DNS_SECURITY_EVENTS_CONNECTOR_NAME
 
     # Configuration Parameters
     api_root = extract_connector_param(
@@ -171,10 +168,7 @@ def main(is_test_run):
     alerts = []
 
     try:
-
-        threat_level, limit, max_hours_backwards = validate_input_params(
-            threat_level, limit, max_hours_backwards
-        )
+        threat_level, limit, max_hours_backwards = validate_input_params(threat_level, limit, max_hours_backwards)
 
         # Read existing event IDs for deduplication
         siemplify.LOGGER.info("Reading existing event IDs...")
@@ -199,9 +193,7 @@ def main(is_test_run):
             )
         )
 
-        siemplify.LOGGER.info(
-            f"Time range: start_time={start_time}, end_time={end_time} (Unix timestamps)"
-        )
+        siemplify.LOGGER.info(f"Time range: start_time={start_time}, end_time={end_time} (Unix timestamps)")
 
         # Instantiate API manager
         manager = APIManager(api_root, api_key, verify_ssl=verify_ssl, siemplify=siemplify)
@@ -233,9 +225,7 @@ def main(is_test_run):
 
         # Process each pre-filtered event
         for dns_event in dns_events:
-            siemplify.LOGGER.info(
-                f"Started processing DNS Security Event with composite ID: {dns_event.event_id}"
-            )
+            siemplify.LOGGER.info(f"Started processing DNS Security Event with composite ID: {dns_event.event_id}")
             try:
                 # Check for timeout
                 if is_approaching_timeout(connector_starting_time, python_process_timeout):
@@ -248,9 +238,7 @@ def main(is_test_run):
                 )
 
                 # Convert event to AlertInfo using the datamodel method
-                alert_info = dns_event.get_alert_info(
-                    AlertInfo(), environment_common, device_product_field
-                )
+                alert_info = dns_event.get_alert_info(AlertInfo(), environment_common, device_product_field)
 
                 # Update existing alerts
                 existing_ids.append(alert_info.ticket_id)
