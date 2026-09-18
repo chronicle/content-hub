@@ -34,4 +34,6 @@ PARENT_PROCESS_AND_LINKED_OBSERVABLES: SingleJson = MOCK_DATA[
     "parent_process_and_linked_observables"
 ]
 MULTI_INDICATOR_OBSERVABLES: SingleJson = MOCK_DATA["multi_indicator_observables"]
-DUPLICATE_INDICATOR_OBSERVABLE: SingleJson = MOCK_DATA["duplicate_indicator_observable"]
+DUPLICATE_INDICATOR_OBSERVABLE: SingleJson = MOCK_DATA[
+    "duplicate_indicator_observable"
+]

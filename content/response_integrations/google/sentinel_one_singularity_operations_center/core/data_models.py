@@ -34,6 +34,8 @@ from .exceptions import AlertUpdateError
 if TYPE_CHECKING:
     from datetime import datetime
 
+    from TIPCommon.types import SingleJson
+
 
 class IntegrationParameters(NamedTuple):
     api_root: str
@@ -198,14 +200,15 @@ class SentinelOneAlert(BaseAlert):
             events.append(ind.as_event(self.last_seen_at))
             for obs in ind.observables:
                 events.append(obs.as_event(self.last_seen_at))
-                obs_key = (obs.type, obs.value, obs.name)
+                obs_key = (obs.type.upper() if obs.type else None, obs.value, obs.name)
                 seen_observable_keys.add(obs_key)
 
         for obs in self.observables:
-            obs_key = (obs.type, obs.value, obs.name)
+            obs_key = (obs.type.upper() if obs.type else None, obs.value, obs.name)
             if obs_key in seen_observable_keys:
                 continue
             events.append(obs.as_event(self.last_seen_at))
+            seen_observable_keys.add(obs_key)
 
         events.extend(asset.as_event(self.last_seen_at) for asset in self.assets)
 
@@ -324,7 +327,7 @@ class AlertObservable:
 
     def __init__(
         self,
-        raw_data: dict,
+        raw_data: SingleJson,
         parent_indicator: AlertIndicator | None = None,
     ) -> None:
         self.raw_data = raw_data
@@ -355,21 +358,21 @@ class AlertObservable:
         """The observable type name."""
         return self.raw_data.get("typeName")
 
-    def as_event(self, alert_timestamp: str | None) -> dict:
+    def as_event(self, alert_timestamp: str | None) -> SingleJson:
         """Serialize observable to a flat Siemplify event dictionary.
 
         Args:
             alert_timestamp (str, optional): The timestamp of the alert.
 
         Returns:
-            dict: The flattened event dictionary.
+            SingleJson: The flattened event dictionary.
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.OBSERVABLE.value
         data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt")
         if self.name:
             data[self.name] = self.value
-        if self.type:
+        if self.type and self.value:
             type_lower = self.type.lower()
             data[type_lower] = self.value
             if type_lower in ("ip", "ipv4", "ipv6"):
@@ -396,7 +399,7 @@ class AlertObservable:
 class AlertIndicator:
     """Data model representing a SentinelOne Alert Indicator."""
 
-    def __init__(self, raw_data: dict) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         self.raw_data = raw_data
 
     @property
@@ -440,14 +443,14 @@ class AlertIndicator:
         raw_obs = self.raw_data.get("observables") or []
         return [AlertObservable(obs, parent_indicator=self) for obs in raw_obs]
 
-    def as_event(self, alert_timestamp: str | None) -> dict:
+    def as_event(self, alert_timestamp: str | None) -> SingleJson:
         """Serialize indicator to a flat Siemplify event dictionary.
 
         Args:
             alert_timestamp (str, optional): The timestamp of the alert.
 
         Returns:
-            dict: The flattened event dictionary.
+            SingleJson: The flattened event dictionary.
         """
         data = self.raw_data.copy()
         data.pop("observables", None)
