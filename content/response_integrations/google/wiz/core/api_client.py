@@ -119,6 +119,40 @@ class WizApiClient(Apiable):
 
         return data_parser.build_issue_comment_object(response.json())
 
+    def associate_service_ticket(
+        self,
+        issue_id: str,
+        ticket_id: str,
+        ticket_url: str,
+    ) -> requests.Response:
+        """Associate a service ticket with an issue.
+
+        Args:
+            issue_id (str): The ID of the issue/threat in Wiz.
+            ticket_id (str): The Case ID in Google SecOps.
+            ticket_url (str): The full URL of the SecOps case.
+
+        Returns:
+            requests.Response: Response object.
+
+        """
+        mutation_query = query_builder.AssociateServiceTicketMutationBuilder(
+            issue_id=issue_id,
+            ticket_id=ticket_id,
+            ticket_url=ticket_url,
+        )
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=mutation_query.build_mutation(),
+        )
+        api_utils.validate_response(response=response)
+
+        return response
+
     def reopen_issue(self, issue_id: str) -> datamodels.Issue:
         """Reopen an issue.
 
@@ -319,3 +353,42 @@ class WizApiClient(Apiable):
             )
 
         return data_parser.build_threat_ai_analysis_object(response_json)
+
+    def get_updated_threats(self, updated_after: str) -> list[datamodels.Issue]:
+        """Get threats updated after a specific timestamp.
+
+        Args:
+            updated_after (str): The ISO 8601 timestamp to filter by.
+
+        Returns:
+            list[datamodels.Issue]: A list of Issue objects.
+
+        """
+        issues_query_builder = query_builder.IssuesQueryBuilder()
+
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        payload1 = issues_query_builder.build_query(
+            statuses=["OPEN", "IN_PROGRESS"]
+        )
+        response1 = self.session.post(url=url, json=payload1)
+        api_utils.validate_response(response=response1)
+        active_threats = data_parser.build_issues_list(response1.json())
+
+        payload2 = issues_query_builder.build_query(
+            statuses=["RESOLVED", "REJECTED"],
+            status_changed_after=updated_after,
+        )
+        response2 = self.session.post(url=url, json=payload2)
+        api_utils.validate_response(response=response2)
+        resolved_threats = data_parser.build_issues_list(response2.json())
+
+        combined: dict[str, datamodels.Issue] = {}
+        for t in active_threats:
+            combined[t.issue_id] = t
+        for t in resolved_threats:
+            combined[t.issue_id] = t
+
+        return list(combined.values())
