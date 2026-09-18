@@ -49,7 +49,7 @@ INVALID_TIME_FRAME_OUTPUT_MESSAGE = (
 )
 
 INVALID_EMAIL_OUTPUT_MESSAGE = (
-    "\nReason: Impersonation is not allowed for the "
+    "Impersonation is not allowed for the "
     "provided service account invalid-sa@domain.com. Please add the "
     '"Service Account Token Creator" role to the service account:'
 )
