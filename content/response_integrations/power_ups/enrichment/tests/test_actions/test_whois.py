@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,6 +22,12 @@ from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from ...actions import Whois
+from ...core.data_model import (
+    ContactInfo,
+    get_domain_whois,
+    has_whois_data,
+    map_rdap_to_whois,
+)
 from ..core.product import EnrichmentProduct
 from ..core.session import EnrichmentMockSession
 
@@ -96,7 +103,8 @@ def setup_whois_action_mocks(
         lambda: mock_siemplify,
     )
 
-    def mock_extract(target, *args, **kwargs):
+    def mock_extract(target: Any, *args: Any, **kwargs: Any) -> MagicMock:
+        """Mock tldextract.extract to simulate domain resolution for test targets."""
         mock_res = MagicMock()
         identifier = str(target).lower().strip().split("/")[-1]
         if identifier == "univ-lyon1.fr":
@@ -428,8 +436,6 @@ def test_whois_action_fallback_no_raw_key(
 
 
 def test_map_rdap_to_whois_deterministic_emails() -> None:
-    from ...core.data_model import map_rdap_to_whois
-
     rdap_with_emails = {
         "handle": "TEST-DOMAIN",
         "ldhName": "test.com",
@@ -479,10 +485,10 @@ def test_map_rdap_to_whois_deterministic_emails() -> None:
 )
 def test_whois_action_fallback_empty_response(
     product: EnrichmentProduct,
-    script_session: EnrichmentMockSession,
     action_output: MockActionOutput,
     mock_siemplify: MagicMock,
 ) -> None:
+    """Test Whois action fallback handling when classic WHOIS query returns an empty response."""
     product.set_case_metadata({"title": "Simulated Whois Case", "case_id": "case_whois"})
     product.set_alerts_full_details({
         "alerts": [
@@ -528,8 +534,7 @@ def test_whois_action_fallback_empty_response(
 
 
 def test_has_whois_data_validation() -> None:
-    from ...core.data_model import ContactInfo, has_whois_data
-
+    """Validate has_whois_data heuristics against varied payloads, empty models, and edge cases."""
     assert not has_whois_data(None)
     assert not has_whois_data({})
     assert not has_whois_data({"raw": ["some raw string"]})
@@ -581,6 +586,16 @@ def test_has_whois_data_validation() -> None:
             "registrant": ContactInfo(),
         }
     })
+    assert not has_whois_data({
+        "contacts": {
+            "registrant": ContactInfo(name=""),
+        }
+    })
+    assert not has_whois_data({
+        "contacts": {
+            "registrant": {"name": ""},
+        }
+    })
 
     assert has_whois_data({"id": ["example.com"]})
     assert has_whois_data({"registrar": ["MarkMonitor Inc."]})
@@ -589,8 +604,7 @@ def test_has_whois_data_validation() -> None:
 
 
 def test_get_domain_whois_empty_fallback_logs_warning() -> None:
-    from ...core.data_model import get_domain_whois
-
+    """Test that get_domain_whois emits a warning and returns an empty dictionary on empty fallback."""
     mock_logger = MagicMock()
     with patch("requests.get") as mock_get:
         mock_get.return_value.status_code = 404

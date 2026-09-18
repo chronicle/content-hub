@@ -408,6 +408,30 @@ def map_rdap_to_whois(rdap_data: dict[str, Any]) -> dict[str, Any]:
     return whois_data.to_dict()
 
 
+def _has_contact_data(contact: Any) -> bool:
+    """Check whether a contact object or dictionary contains non-empty attributes."""
+    if not contact:
+        return False
+    if hasattr(contact, "to_dict"):
+        contact = contact.to_dict()
+    if isinstance(contact, dict):
+        return any(bool(val) for val in contact.values())
+    return True
+
+
+def _has_meaningful_field(key: str, value: Any) -> bool:
+    """Check whether a specific WHOIS field contains non-empty, actionable data."""
+    if key == "raw" or not value:
+        return False
+    if key == "contacts":
+        if isinstance(value, dict):
+            return any(_has_contact_data(c) for c in value.values())
+        return bool(value)
+    if isinstance(value, (list, tuple, set)):
+        return any(bool(item) for item in value)
+    return True
+
+
 def has_whois_data(whois_data: dict[str, Any] | None) -> bool:
     """Check whether a WHOIS/RDAP data dictionary contains any meaningful enrichment data.
 
@@ -420,28 +444,7 @@ def has_whois_data(whois_data: dict[str, Any] | None) -> bool:
     if not whois_data or not isinstance(whois_data, dict):
         return False
 
-    for key, value in whois_data.items():
-        if key == "raw":
-            continue
-        if key == "contacts":
-            if isinstance(value, dict):
-                for contact in value.values():
-                    if contact is None:
-                        continue
-                    if isinstance(contact, dict):
-                        if any(bool(v) for v in contact.values()):
-                            return True
-                    elif hasattr(contact, "to_dict"):
-                        if bool(contact.to_dict()):
-                            return True
-                    elif bool(contact):
-                        return True
-            elif bool(value):
-                return True
-        elif bool(value):
-            return True
-
-    return False
+    return any(_has_meaningful_field(key, val) for key, val in whois_data.items())
 
 
 def get_domain_whois(domain: str, logger: Any = None) -> dict[str, Any]:

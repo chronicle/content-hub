@@ -32,7 +32,7 @@ from TIPCommon.data_models import CreateEntity
 from TIPCommon.rest.soar_api import create_entity
 from tldextract import extract
 
-from ..core.data_model import get_domain_whois, has_whois_data
+from ..core.data_model import get_domain_whois
 from ..core.IpLocation import DbIpCity
 
 SUPPORTED_ENTITY_TYPES = [
@@ -126,7 +126,7 @@ def main():
                     domain = get_domain_from_string(entity.identifier)
                     if domain:
                         whois_data = get_domain_whois(domain, logger=siemplify.LOGGER)
-                        if not has_whois_data(whois_data):
+                        if not whois_data:
                             siemplify.LOGGER.warn(
                                 f"No WHOIS data found for entity {entity.identifier}"
                             )
