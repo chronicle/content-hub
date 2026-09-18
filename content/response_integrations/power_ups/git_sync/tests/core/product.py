@@ -24,18 +24,18 @@ class GitSyncProduct:
         self.local_playbook: dict[str, Any] | None = None
         self.saved_playbook: dict[str, Any] | None = None
 
-    def get_playbooks(self) -> list[dict[str, Any]]:
+    def get_playbooks(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
         return [self.local_playbook] if self.local_playbook else []
 
-    def get_playbook(self, _: str) -> dict[str, Any] | None:
+    def get_playbook(self, *args: Any, **kwargs: Any) -> dict[str, Any] | None:
         return self.local_playbook
 
-    def get_soc_roles(self) -> list[dict[str, Any]]:
+    def get_soc_roles(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
         return []
 
-    def get_playbook_categories(self) -> list[dict[str, Any]]:
+    def get_playbook_categories(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
         return [{"id": 10, "name": "Default"}]
 
-    def save_playbook(self, playbook: dict[str, Any]) -> dict[str, Any]:
+    def save_playbook(self, playbook: dict[str, Any], *args: Any, **kwargs: Any) -> dict[str, Any]:
         self.saved_playbook = playbook
         return {"status": "success"}

@@ -91,6 +91,11 @@ def sdk_session(
 
     if not use_live_api():
         monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
+        try:
+            import SiemplifyBase as top_level_SiemplifyBase
+            monkeypatch.setattr(top_level_SiemplifyBase.SiemplifyBase, "create_session", lambda *_: session)
+        except ImportError:
+            pass
 
         # Delegate BaseUrlSession.request to our mock session
         monkeypatch.setattr(

@@ -46,7 +46,11 @@ def main():
                 mappings = gitsync.content.get_mapping(connector.integration)
                 if mappings:
                     installed_visual_families = [
-                        x.get("family") for x in gitsync.api.get_custom_families(True)
+                        x.get("family")
+                        for x in gitsync.api.get_custom_families(
+                            chronicle_soar=siemplify,
+                            include_default_vfs=True,
+                        )
                     ]
                     visual_families = set(
                         [
