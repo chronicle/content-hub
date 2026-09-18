@@ -34,7 +34,12 @@ from sentinel_one_singularity_operations_center.connectors.unified_alerts_connec
 from sentinel_one_singularity_operations_center.core.api.api_client import (
     SentinelOneSingularityOperationsCenterApiClient,
 )
-from sentinel_one_singularity_operations_center.tests.common import INTEGRATION_PATH
+from sentinel_one_singularity_operations_center.tests.common import (
+    DUPLICATE_INDICATOR_OBSERVABLE,
+    INTEGRATION_PATH,
+    MULTI_INDICATOR_OBSERVABLES,
+    PARENT_PROCESS_AND_LINKED_OBSERVABLES,
+)
 
 if TYPE_CHECKING:
     from integration_testing.platform.external_context import MockExternalContext
@@ -111,9 +116,13 @@ def test_successful_connector_run(
     # Verify event types and observable transformations
     assert len(alert.events) == 4
     event_types = [event.get("event_type") for event in alert.events]
-    assert event_types == ["Alert", "Observable", "Indicator", "Asset"]
+    assert event_types == ["Alert", "Indicator", "Observable", "Asset"]
 
-    observable_event = alert.events[1]
+    indicator_event = alert.events[1]
+    assert indicator_event.get("uid") == "117"
+    assert indicator_event.get("severity") == "CRITICAL"
+
+    observable_event = alert.events[2]
     assert observable_event.get("process.name") == "avm.exe"
     assert observable_event.get("lastSeenAt") == "2026-03-21T16:51:18.468Z"
 
@@ -504,3 +513,171 @@ def test_build_unified_alerts_or_filter_omits_severity_for_info() -> None:
         "stringIn": {"values": ["MEDIUM", "HIGH", "CRITICAL"]},
     }
     assert expected_severity_filter in filter_medium["or"][0]["and"]
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters=DEFAULT_PARAMETERS,
+)
+def test_connector_creates_alert_info_with_parent_process_and_linked_observables(
+    sentinelone: SentinelOne,
+    script_session: SentinelOneSession,
+    connector_output: MockConnectorOutput,
+) -> None:
+    """Verify connector creates AlertInfo with parent process telemetry.
+
+    Also tests linked observables attached to indicators.
+    """
+    set_is_test_run_to_true()
+    is_test = is_test_run(sys.argv)
+
+    mock_payload = copy.deepcopy(PARENT_PROCESS_AND_LINKED_OBSERVABLES)
+
+    alert_id = "019d114e-e4f4-7ad6-82c3-9829b6d0a801"
+    details = copy.deepcopy(sentinelone.details[alert_id])
+    details["process"].update(mock_payload["process"])
+    details["indicators"] = mock_payload["indicators"]
+    details["observables"] = mock_payload["observables"]
+    sentinelone.details[alert_id] = details
+
+    connector = UnifiedAlertsConnector(is_test)
+    connector.start()
+
+    alerts = connector_output.results.json_output.alerts
+    assert len(alerts) == 1
+    alert = alerts[0]
+
+    alert_event = alert.events[0]
+    assert alert_event.get("process_parentName") == "explorer.exe"
+    assert alert_event.get("process_pid") == "4321"
+
+    indicator_event = alert.events[1]
+    assert indicator_event.get("uid") == "IND-42"
+    assert indicator_event.get("type") == "Defense Evasion via Encoded PowerShell"
+    assert "observables" not in indicator_event
+
+    obs_events = [e for e in alert.events if e.get("event_type") == "Observable"]
+    assert len(obs_events) == 3
+
+    c2_event = next(e for e in obs_events if e.get("value") == "198.51.100.23")
+    assert c2_event.get("ip") == "198.51.100.23"
+    assert c2_event.get("indicator_uid") == "IND-42"
+    assert c2_event.get("indicator_type") == "Defense Evasion via Encoded PowerShell"
+    assert c2_event.get("indicator_severity") == "CRITICAL"
+    assert (
+        c2_event.get("indicator_message")
+        == "PowerShell spawned with ExecutionPolicy Bypass"
+    )
+
+    hash_event = next(e for e in obs_events if e.get("name") == "malicious_hash")
+    assert (
+        hash_event.get("file_hash")
+        == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    )
+    assert hash_event.get("indicator_uid") == "IND-42"
+
+    domain_event = next(e for e in obs_events if e.get("name") == "dest_domain")
+    assert domain_event.get("domain") == "evil.example.com"
+    assert domain_event.get("dns") == "evil.example.com"
+    assert "indicator_uid" not in domain_event
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters=DEFAULT_PARAMETERS,
+)
+def test_observables_inherit_only_their_own_indicator_context(
+    sentinelone: SentinelOne,
+    script_session: SentinelOneSession,
+    connector_output: MockConnectorOutput,
+) -> None:
+    """Verify each observable carries the context of its own parent indicator only.
+
+    An alert may carry several indicators, each with its own observables. The
+    ``indicator_*`` context fields must not bleed between sibling indicators, and
+    observables attached at the alert level must stay context free.
+    """
+    set_is_test_run_to_true()
+    is_test = is_test_run(sys.argv)
+
+    mock_payload = copy.deepcopy(MULTI_INDICATOR_OBSERVABLES)
+
+    alert_id = "019d114e-e4f4-7ad6-82c3-9829b6d0a801"
+    details = copy.deepcopy(sentinelone.details[alert_id])
+    details["indicators"] = mock_payload["indicators"]
+    details["observables"] = mock_payload["observables"]
+    sentinelone.details[alert_id] = details
+
+    connector = UnifiedAlertsConnector(is_test)
+    connector.start()
+
+    alerts = connector_output.results.json_output.alerts
+    assert len(alerts) == 1
+    alert = alerts[0]
+
+    obs_events = [e for e in alert.events if e.get("event_type") == "Observable"]
+    assert len(obs_events) == 3
+
+    c2_event = next(e for e in obs_events if e.get("name") == "c2_ip")
+    assert c2_event.get("indicator_uid") == "IND-A"
+    assert c2_event.get("indicator_type") == "Command and Control"
+    assert c2_event.get("indicator_message") == "Beaconing to a known C2 endpoint"
+    assert c2_event.get("indicator_severity") == "CRITICAL"
+
+    url_event = next(e for e in obs_events if e.get("name") == "payload_url")
+    assert url_event.get("indicator_uid") == "IND-B"
+    assert url_event.get("indicator_type") == "Defense Evasion"
+    assert "indicator_message" not in url_event
+    assert "indicator_severity" not in url_event
+    assert url_event.get("url") == "http://evil.example.com/payload.bin"
+
+    standalone_event = next(
+        e for e in obs_events if e.get("name") == "standalone_domain"
+    )
+    assert "indicator_uid" not in standalone_event
+    assert "indicator_type" not in standalone_event
+    assert "indicator_message" not in standalone_event
+    assert "indicator_severity" not in standalone_event
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters=DEFAULT_PARAMETERS,
+)
+def test_duplicate_observable_keeps_indicator_context(
+    sentinelone: SentinelOne,
+    script_session: SentinelOneSession,
+    connector_output: MockConnectorOutput,
+) -> None:
+    """Verify an observable repeated at the alert level is deduplicated.
+
+    SentinelOne repeats indicator observables in the alert level ``observables``
+    list. The indicator linked copy is emitted first, so the alert level duplicate
+    must be dropped instead of emitting a second, context free event.
+    """
+    set_is_test_run_to_true()
+    is_test = is_test_run(sys.argv)
+
+    mock_payload = copy.deepcopy(DUPLICATE_INDICATOR_OBSERVABLE)
+    duplicated_observable = mock_payload["observable"]
+    indicator = mock_payload["indicator"]
+
+    indicator["observables"] = [copy.deepcopy(duplicated_observable)]
+
+    alert_id = "019d114e-e4f4-7ad6-82c3-9829b6d0a801"
+    details = copy.deepcopy(sentinelone.details[alert_id])
+    details["indicators"] = [indicator]
+    details["observables"] = [copy.deepcopy(duplicated_observable)]
+    sentinelone.details[alert_id] = details
+
+    connector = UnifiedAlertsConnector(is_test)
+    connector.start()
+
+    alerts = connector_output.results.json_output.alerts
+    assert len(alerts) == 1
+    alert = alerts[0]
+
+    obs_events = [e for e in alert.events if e.get("event_type") == "Observable"]
+    assert len(obs_events) == 1
+    assert obs_events[0].get("indicator_uid") == "IND-A"
+    assert obs_events[0].get("ip") == "198.51.100.23"
