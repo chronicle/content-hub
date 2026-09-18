@@ -12,10 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Ping
-description: Tests connectivity to the Akeyless instance.
-documentation_link: https://cloud.google.com/chronicle/docs/soar/marketplace-integrations/akeyless#ping
-integration_identifier: Akeyless
-parameters: []
-dynamic_results_metadata: []
-creator: admin
+"""Data models for the Akeyless integration."""
+
+from __future__ import annotations
+
+import dataclasses
+
+from .constants import DEFAULT_API_GATEWAY_URL
+
+
+@dataclasses.dataclass(frozen=True)
+class AkeylessClientConfig:
+    """Configuration parameters for the Akeyless API client."""
+
+    access_id: str
+    access_key: str
+    api_gateway_url: str = DEFAULT_API_GATEWAY_URL
+    verify_ssl: bool = True

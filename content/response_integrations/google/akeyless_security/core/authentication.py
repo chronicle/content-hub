@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
@@ -25,35 +25,30 @@ from .constants import (
     ACCESS_ID_PARAM,
     ACCESS_KEY_PARAM,
     API_GATEWAY_URL_PARAM,
+    DEFAULT_API_GATEWAY_URL,
     INTEGRATION_IDENTIFIER,
     VERIFY_SSL_PARAM,
 )
+from .datamodels import AkeylessClientConfig
 from .exceptions import AkeylessError
 
 if TYPE_CHECKING:
     from TIPCommon.types import ChronicleSOAR
 
 
-class IntegrationParameters(NamedTuple):
-    access_id: str
-    access_key: str
-    api_gateway_url: str
-    verify_ssl: bool
-
-
-def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
+def build_auth_params(soar_sdk_object: ChronicleSOAR) -> AkeylessClientConfig:
     """Extract authentication parameters from the SOAR SDK object.
 
     Detects the SDK class type to determine where to read the
     integration configuration from, then returns a typed
-    ``IntegrationParameters`` tuple.
+    ``AkeylessClientConfig`` instance.
 
     Args:
         soar_sdk_object: A ChronicleSOAR SDK object (action, connector,
             or job).
 
     Returns:
-        IntegrationParameters: The extracted integration parameters.
+        AkeylessClientConfig: The extracted integration configuration.
 
     Raises:
         AkeylessError: If the provided SDK object type is not
@@ -67,7 +62,16 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
         SiemplifyConnectorExecution.__name__,
         SiemplifyJob.__name__,
     }:
-        input_dictionary = soar_sdk_object.parameters
+        input_dictionary = dict(soar_sdk_object.parameters or {})
+        if (
+            not input_dictionary.get(ACCESS_ID_PARAM)
+            and hasattr(soar_sdk_object, "get_configuration_by_provider")
+        ):
+            fallback_config = soar_sdk_object.get_configuration_by_provider(
+                INTEGRATION_IDENTIFIER,
+            )
+            if isinstance(fallback_config, dict):
+                input_dictionary = {**fallback_config, **input_dictionary}
     else:
         msg = f"Provided SOAR instance is not supported! type: {sdk_class}."
         raise AkeylessError(
@@ -93,7 +97,7 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
         input_dictionary=input_dictionary,
         param_name=API_GATEWAY_URL_PARAM,
         is_mandatory=False,
-        default_value="https://api.akeyless.io",
+        default_value=DEFAULT_API_GATEWAY_URL,
         print_value=True,
     )
     verify_ssl: bool = extract_script_param(
@@ -106,7 +110,7 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
         print_value=True,
     )
 
-    return IntegrationParameters(
+    return AkeylessClientConfig(
         access_id=access_id,
         access_key=access_key,
         api_gateway_url=api_gateway_url,

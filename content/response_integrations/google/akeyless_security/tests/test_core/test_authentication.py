@@ -20,18 +20,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from akeyless.core.authentication import (
-    IntegrationParameters,
-    build_auth_params,
-)
-from akeyless.core.constants import (
+from akeyless_security.core.authentication import build_auth_params
+from akeyless_security.core.constants import (
     ACCESS_ID_PARAM,
     ACCESS_KEY_PARAM,
     API_GATEWAY_URL_PARAM,
     INTEGRATION_IDENTIFIER,
     VERIFY_SSL_PARAM,
 )
-from akeyless.core.exceptions import (
+from akeyless_security.core.datamodels import AkeylessClientConfig
+from akeyless_security.core.exceptions import (
     AkeylessError,
 )
 
@@ -50,8 +48,9 @@ class TestBuildAuthParams:
             VERIFY_SSL_PARAM: "False",
         }
 
-        result: IntegrationParameters = build_auth_params(mock_action)
+        result: AkeylessClientConfig = build_auth_params(mock_action)
 
+        assert isinstance(result, AkeylessClientConfig)
         mock_action.get_configuration.assert_called_once_with(
             INTEGRATION_IDENTIFIER,
         )
@@ -71,7 +70,7 @@ class TestBuildAuthParams:
             VERIFY_SSL_PARAM: "True",
         }
 
-        result: IntegrationParameters = build_auth_params(mock_job)
+        result: AkeylessClientConfig = build_auth_params(mock_job)
 
         assert result.access_id == "test-access-id"
         assert result.access_key == "test-access-key"
@@ -88,8 +87,28 @@ class TestBuildAuthParams:
             API_GATEWAY_URL_PARAM: "https://api.akeyless.io",
         }
 
-        result: IntegrationParameters = build_auth_params(mock_job)
+        result: AkeylessClientConfig = build_auth_params(mock_job)
 
+        assert result.verify_ssl is True
+
+    def test_job_falls_back_to_configuration_by_provider(self) -> None:
+        """Falls back to get_configuration_by_provider when job parameters lack Access ID."""
+        mock_job: MagicMock = MagicMock()
+        mock_job.__class__.__name__ = "SiemplifyJob"
+        mock_job.parameters = {}
+        mock_job.get_configuration_by_provider.return_value = {
+            ACCESS_ID_PARAM: "fallback-id",
+            ACCESS_KEY_PARAM: "fallback-key",
+        }
+
+        result: AkeylessClientConfig = build_auth_params(mock_job)
+
+        mock_job.get_configuration_by_provider.assert_called_once_with(
+            INTEGRATION_IDENTIFIER,
+        )
+        assert result.access_id == "fallback-id"
+        assert result.access_key == "fallback-key"
+        assert result.api_gateway_url == "https://api.akeyless.io"
         assert result.verify_ssl is True
 
     def test_unsupported_type_raises(self) -> None:

@@ -20,13 +20,17 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+from akeyless.exceptions import ApiException
 
-from akeyless.core.exceptions import (
+from akeyless_security.core.datamodels import AkeylessClientConfig
+from akeyless_security.core.exceptions import (
+    AkeylessError,
     ConnectivityError,
     InvalidConfigurationError,
     SecretAccessError,
 )
-from akeyless.core.manager import AkeylessClient, AkeylessClientConfig
+from akeyless_security.core.manager import AkeylessClient
+from akeyless_security.core.utils import validate_response
 
 
 class TestAkeylessClient:
@@ -55,13 +59,19 @@ class TestAkeylessClient:
     def test_init_missing_access_id_raises(self, mock_akeyless_api: MagicMock) -> None:
         """Raises InvalidConfigurationError when access_id is missing."""
         config = AkeylessClientConfig(access_id="", access_key="test-access-key")
-        with pytest.raises(InvalidConfigurationError, match="Access ID must be provided"):
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Both Access ID and Access Key must be provided",
+        ):
             AkeylessClient(config)
 
     def test_init_missing_access_key_raises(self, mock_akeyless_api: MagicMock) -> None:
         """Raises InvalidConfigurationError when access_key is missing."""
         config = AkeylessClientConfig(access_id="test-access-id", access_key="")
-        with pytest.raises(InvalidConfigurationError, match="Access Key must be provided"):
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Both Access ID and Access Key must be provided",
+        ):
             AkeylessClient(config)
 
     def test_get_token_success(self, mock_akeyless_api: MagicMock) -> None:
@@ -82,6 +92,17 @@ class TestAkeylessClient:
         assert token2 == "test-token"
         mock_akeyless_api.auth.assert_called_once()
 
+    def test_get_token_empty_token_raises(self, mock_akeyless_api: MagicMock) -> None:
+        """get_token raises ConnectivityError when auth returns an empty token."""
+        mock_auth_res = MagicMock()
+        mock_auth_res.token = ""
+        mock_akeyless_api.auth.return_value = mock_auth_res
+
+        config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key")
+        client = AkeylessClient(config)
+        with pytest.raises(ConnectivityError, match="no token was returned"):
+            client.get_token()
+
     def test_test_connectivity_success(self, mock_akeyless_api: MagicMock) -> None:
         """test_connectivity returns True on successful auth."""
         mock_auth_res = MagicMock()
@@ -99,8 +120,61 @@ class TestAkeylessClient:
 
         config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key")
         client = AkeylessClient(config)
-        with pytest.raises(ConnectivityError, match="Failed to connect to Akeyless"):
+        with pytest.raises(ConnectivityError, match="Invalid credentials"):
             client.test_connectivity()
+
+    def test_test_connectivity_invalid_access_id_strips_headers(
+        self, mock_akeyless_api: MagicMock
+    ) -> None:
+        """test_connectivity parses 401 JSON error body and omits HTTP headers."""
+        mock_resp = MagicMock()
+        mock_resp.status = 401
+        mock_resp.reason = "Unauthorized"
+        mock_resp.data = (
+            '{"error":"failed to get credentials: Desc: Failed to authenticate API key access."}'
+        )
+        mock_resp.getheaders.return_value = {
+            "Content-Security-Policy": "very-long-header-value",
+            "Content-Type": "application/json",
+        }
+        mock_akeyless_api.auth.side_effect = ApiException(http_resp=mock_resp)
+
+        config = AkeylessClientConfig(access_id="p-invalid", access_key="test-access-key")
+        client = AkeylessClient(config)
+        with pytest.raises(ConnectivityError) as exc_info:
+            client.test_connectivity()
+
+        err_msg = str(exc_info.value)
+        assert "(401) Unauthorized" in err_msg
+        assert "failed to get credentials: Desc: Failed to authenticate API key access." in err_msg
+        assert "HTTP response headers" not in err_msg
+        assert "Content-Security-Policy" not in err_msg
+
+    def test_test_connectivity_invalid_access_key_strips_headers(
+        self, mock_akeyless_api: MagicMock
+    ) -> None:
+        """test_connectivity parses 400 JSON error body and omits HTTP headers."""
+        mock_resp = MagicMock()
+        mock_resp.status = 400
+        mock_resp.reason = "Bad Request"
+        mock_resp.data = (
+            '{"error":"Error: failed to decode api key. error: illegal base64 data at input byte 0"}'
+        )
+        mock_resp.getheaders.return_value = {
+            "Content-Security-Policy": "very-long-header-value",
+        }
+        mock_akeyless_api.auth.side_effect = ApiException(http_resp=mock_resp)
+
+        config = AkeylessClientConfig(access_id="p-valid", access_key="invalid-key")
+        client = AkeylessClient(config)
+        with pytest.raises(ConnectivityError) as exc_info:
+            client.test_connectivity()
+
+        err_msg = str(exc_info.value)
+        assert "(400) Bad Request" in err_msg
+        assert "Error: failed to decode api key. error: illegal base64 data at input byte 0" in err_msg
+        assert "HTTP response headers" not in err_msg
+        assert "Content-Security-Policy" not in err_msg
 
     def test_get_secret_value_success(self, mock_akeyless_api: MagicMock) -> None:
         """get_secret_value returns secret string successfully."""
@@ -127,3 +201,26 @@ class TestAkeylessClient:
         client = AkeylessClient(config)
         with pytest.raises(SecretAccessError, match="not found in Akeyless response"):
             client.get_secret_value("my-secret")
+
+
+class TestValidateResponse:
+    """Tests for validate_response utility."""
+
+    def test_validate_response_200_ok(self) -> None:
+        """validate_response does not raise for 2xx HTTP status."""
+        mock_resp = MagicMock(status=200, reason="OK", data=b'{"token":"abc"}')
+        validate_response(mock_resp)
+
+    def test_validate_response_http_response_error_json(self) -> None:
+        """validate_response extracts error from non-2xx HTTP response JSON body."""
+        mock_resp = MagicMock(
+            status=400,
+            reason="Bad Request",
+            data=b'{"error":"Error: failed to decode api key."}',
+        )
+        with pytest.raises(AkeylessError) as exc_info:
+            validate_response(mock_resp, error_msg="Auth failed")
+
+        assert str(exc_info.value) == (
+            "Auth failed: (400) Bad Request - Error: failed to decode api key."
+        )

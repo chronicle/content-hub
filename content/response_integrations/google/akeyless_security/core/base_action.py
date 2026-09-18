@@ -18,8 +18,8 @@ from abc import ABC
 
 from TIPCommon.base.action import Action
 
-from .authentication import IntegrationParameters, build_auth_params
-from .manager import AkeylessClient, AkeylessClientConfig
+from .authentication import build_auth_params
+from .manager import AkeylessClient
 
 
 class AkeylessAction(Action, ABC):
@@ -37,18 +37,9 @@ class AkeylessAction(Action, ABC):
             AkeylessClient: The initialized client.
 
         """
-        auth_params: IntegrationParameters = build_auth_params(self.soar_action)
-
-        config = AkeylessClientConfig(
-            access_id=auth_params.access_id,
-            access_key=auth_params.access_key,
-            api_gateway_url=auth_params.api_gateway_url,
-            verify_ssl=auth_params.verify_ssl,
-        )
-
+        config = build_auth_params(self.soar_action)
         self.akeyless_client = AkeylessClient(
             config,
             logger=self.logger,
         )
-
         return self.akeyless_client

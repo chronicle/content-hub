@@ -19,8 +19,8 @@ from __future__ import annotations
 from typing import TypeAlias
 
 # Integration identifier
-INTEGRATION_IDENTIFIER: str = "Akeyless"
-INTEGRATION_NAME: str = "Akeyless"
+INTEGRATION_IDENTIFIER: str = "AkeylessSecurity"
+INTEGRATION_NAME: str = "Akeyless Security"
 
 # Script names
 PING_SCRIPT_NAME: str = "Ping"
@@ -34,8 +34,8 @@ API_GATEWAY_URL_PARAM: str = "API Gateway URL"
 VERIFY_SSL_PARAM: str = "Verify SSL"
 
 # Akeyless API defaults
+DEFAULT_API_GATEWAY_URL: str = "https://api.akeyless.io"
 DEFAULT_SECRET_VERSION: str = "latest"  # ruff:ignore[hardcoded-password-string]
-TOKEN_TTL_SECONDS: int = 50 * 60  # 50 minutes (conservative buffer under 60-min default)
 
 # Authentication mechanisms
 ACCESS_KEY_TYPE: str = "access_key"

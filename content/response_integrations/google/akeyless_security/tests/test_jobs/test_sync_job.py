@@ -23,12 +23,12 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
-from akeyless.core.constants import DEFAULT_SECRET_VERSION
-from akeyless.core.exceptions import (
+from akeyless_security.core.constants import DEFAULT_SECRET_VERSION
+from akeyless_security.core.exceptions import (
     IntegrationCredentialSyncError,
     InvalidConfigurationError,
 )
-from akeyless.jobs.sync_integration_credentials_job import (
+from akeyless_security.jobs.sync_integration_credentials_job import (
     SyncIntegrationCredentialsJob,
 )
 
@@ -164,27 +164,9 @@ class TestResolveSecretAndVersion:
         assert secret_id == "a"
         assert version_id == "b:c"
 
-    def test_auto_version_with_client(self) -> None:
-        """Calls resolve_latest_enabled_version when no colon."""
+    def test_default_version_when_no_colon(self) -> None:
+        """Defaults to DEFAULT_SECRET_VERSION when no version colon is present."""
         job = _make_job()
-        mock_client: MagicMock = MagicMock()
-        mock_client.resolve_latest_enabled_version.return_value = "7"
-        job.akeyless_client = mock_client
-
-        secret_id, version_id = job._resolve_secret_and_version(
-            "my-secret",
-        )
-
-        assert secret_id == "my-secret"
-        assert version_id == "7"
-        mock_client.resolve_latest_enabled_version.assert_called_once_with(
-            "my-secret",
-        )
-
-    def test_auto_version_no_client_fallback(self) -> None:
-        """Falls back to DEFAULT_SECRET_VERSION when client is None."""
-        job = _make_job()
-        job.akeyless_client = None
 
         secret_id, version_id = job._resolve_secret_and_version(
             "my-secret",
@@ -278,6 +260,29 @@ class TestSyncIntegrationInstances:
         )
         assert len(job.execution_errors) == 0
 
+    @pytest.mark.anyio
+    async def test_syncs_instances_when_api_returns_list(self) -> None:
+        """Handles list response from get_installed_integrations_of_environment (TIPCommon 2.4.3)."""
+        job = _make_job()
+        job.credential_mapping = {"integration_instances": {"inst1": {"p1": "sec1:1"}}}
+        job.environment_name = "Default Environment"
+        job._secret_cache["sec1", "1"] = "secret-val-1"
+
+        mock_api = AsyncMock()
+        mock_api.get_installed_integrations_of_environment.return_value = [
+            {"displayName": "inst1", "identifier": "inst1-id"}
+        ]
+        semaphore = asyncio.Semaphore(5)
+
+        await job._sync_integration_instances(mock_api, semaphore)
+
+        mock_api.set_configuration_property.assert_called_once_with(
+            integration_instance_identifier="inst1-id",
+            property_name="p1",
+            property_value="secret-val-1",
+        )
+        assert len(job.execution_errors) == 0
+
 
 class TestSyncConnectors:
     """Tests for _sync_connectors."""
@@ -344,6 +349,30 @@ class TestSyncJobs:
         mock_api = AsyncMock()
         mock_api.get_installed_jobs.return_value = {
             "job_instances": [
+                {
+                    "displayName": "Job A",
+                    "id": "1",
+                    "parameters": [{"displayName": "API Key", "value": "old-val"}],
+                }
+            ]
+        }
+        semaphore = asyncio.Semaphore(5)
+
+        await job._sync_jobs(mock_api, semaphore)
+
+        mock_api.save_or_update_job.assert_called_once()
+        assert len(job.execution_errors) == 0
+
+    @pytest.mark.anyio
+    async def test_syncs_jobs_camel_case_response(self) -> None:
+        """Handles 1P camelCase 'jobInstances' key from get_installed_jobs."""
+        job = _make_job()
+        job.credential_mapping = {"jobs": {"Job A": {"API Key": "sec1:1"}}}
+        job._secret_cache["sec1", "1"] = "secret-val-1"
+
+        mock_api = AsyncMock()
+        mock_api.get_installed_jobs.return_value = {
+            "jobInstances": [
                 {
                     "displayName": "Job A",
                     "id": "1",
@@ -468,8 +497,12 @@ class TestErrorAggregation:
 
         with (
             patch.object(job, "_init_akeyless_client"),
-            patch("akeyless.jobs.sync_integration_credentials_job.AsyncChronicleSOAR") as mock_soar_cls,
-            patch("akeyless.jobs.sync_integration_credentials_job.AsyncMarketplaceApi") as mock_market_cls,
+            patch(
+                "akeyless_security.jobs.sync_integration_credentials_job.AsyncChronicleSOAR"
+            ) as mock_soar_cls,
+            patch(
+                "akeyless_security.jobs.sync_integration_credentials_job.AsyncMarketplaceApi"
+            ) as mock_market_cls,
         ):
             mock_soar = AsyncMock()
             mock_soar_cls.return_value = mock_soar

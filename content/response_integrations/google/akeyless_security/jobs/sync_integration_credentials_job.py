@@ -28,11 +28,12 @@ from TIPCommon.rest.async_soar_platform_clients.soar_api_client import (
     AsyncMarketplaceApi,
 )
 
-from ..core.authentication import IntegrationParameters, build_auth_params
+from ..core.authentication import build_auth_params
 from ..core.constants import (
     ANY_INTEGRATION_FILTER_VALUE,
     ASYNC_SEMAPHORE_LIMIT,
     CONNECTORS_KEY,
+    DEFAULT_API_GATEWAY_URL,
     DEFAULT_SECRET_VERSION,
     INTEGRATION_INSTANCES_KEY,
     JOBS_KEY,
@@ -41,13 +42,14 @@ from ..core.constants import (
     NameIdentifierMap,
     SecretCacheKey,
 )
+from ..core.datamodels import AkeylessClientConfig
 from ..core.exceptions import (
     IntegrationCredentialSyncError,
     InvalidConfigurationError,
     JobSaveError,
     SecretAccessError,
 )
-from ..core.manager import AkeylessClient, AkeylessClientConfig
+from ..core.manager import AkeylessClient
 from ..core.utils import build_lookup_with_warnings, mask_id
 
 if TYPE_CHECKING:
@@ -83,14 +85,23 @@ class SyncIntegrationCredentialsJob(Job):
 
     def _init_akeyless_client(self) -> None:
         """Initialize the Akeyless client."""
-        auth_params: IntegrationParameters = build_auth_params(self.soar_job)
-
-        config = AkeylessClientConfig(
-            access_id=auth_params.access_id,
-            access_key=auth_params.access_key,
-            api_gateway_url=auth_params.api_gateway_url,
-            verify_ssl=auth_params.verify_ssl,
-        )
+        access_id = getattr(self.params, "access_id", None)
+        access_key = getattr(self.params, "access_key", None)
+        if isinstance(access_id, str) and access_id and isinstance(access_key, str) and access_key:
+            api_gateway_url = getattr(self.params, "api_gateway_url", None)
+            verify_ssl = getattr(self.params, "verify_ssl", True)
+            config = AkeylessClientConfig(
+                access_id=access_id,
+                access_key=access_key,
+                api_gateway_url=(
+                    api_gateway_url
+                    if isinstance(api_gateway_url, str) and api_gateway_url
+                    else DEFAULT_API_GATEWAY_URL
+                ),
+                verify_ssl=verify_ssl if isinstance(verify_ssl, bool) else True,
+            )
+        else:
+            config = build_auth_params(self.soar_job)
 
         self.akeyless_client = AkeylessClient(
             config,
@@ -238,7 +249,7 @@ class SyncIntegrationCredentialsJob(Job):
                         context_label=f"pre-fetch '{secret_loc}'",
                     )
                 except Exception as e:  # ruff:ignore[blind-except]
-                    self.logger.debug("Failed pre-fetching secret '%s': %s", secret_loc, e)
+                    self.logger.debug(f"Failed pre-fetching secret '{secret_loc}': {e}")
 
         tasks = [fetch_one(loc) for loc in uncached_locations]
         await asyncio.gather(*tasks)
@@ -298,8 +309,9 @@ class SyncIntegrationCredentialsJob(Job):
 
         return False
 
-    def _resolve_secret_and_version(self, mapped_value: str) -> tuple[str, str]:
-        """Parse the mapped string, resolving the version if not explicitly provided.
+    @staticmethod
+    def _resolve_secret_and_version(mapped_value: str) -> tuple[str, str]:
+        """Parse the mapped string, defaulting to DEFAULT_SECRET_VERSION if not explicitly provided.
 
         Args:
             mapped_value (str): The value from the JSON mapping (e.g., 'secret-id:version').
@@ -313,15 +325,7 @@ class SyncIntegrationCredentialsJob(Job):
             secret_id, explicit_version = mapped_value.split(":", 1)
             return secret_id, explicit_version
 
-        secret_id = mapped_value
-        if self.akeyless_client:
-            resolved_version = self.akeyless_client.resolve_latest_enabled_version(
-                secret_id,
-            )
-        else:
-            resolved_version = DEFAULT_SECRET_VERSION
-
-        return secret_id, resolved_version
+        return mapped_value, DEFAULT_SECRET_VERSION
 
     async def _update_parameter(  # ruff:ignore[too-many-arguments]
         self,
@@ -387,9 +391,13 @@ class SyncIntegrationCredentialsJob(Job):
             integration_identifier=ANY_INTEGRATION_FILTER_VALUE,
             environment=self.environment_name,
         )
-        instances_list = response.get("instances", []) or response.get(
-            "integrationInstances",
-            [],
+        instances_list = (
+            response
+            if isinstance(response, list)
+            else (
+                response.get("instances", [])
+                or response.get("integrationInstances", [])
+            )
         )
         if not instances_list:
             msg = (
@@ -459,11 +467,11 @@ class SyncIntegrationCredentialsJob(Job):
             param_mapping (SingleJson): Param names to secret IDs.
 
         """
-        self.logger.info("Processing integration instance: %s", name)
+        self.logger.info(f"Processing integration instance: {name}")
 
         identifier: str | None = self._resolve_instance_identifier(name)
         if identifier is None:
-            self.logger.error("Skipping instance '%s' — could not resolve identifier.", name)
+            self.logger.error(f"Skipping instance '{name}' — could not resolve identifier.")
             return
 
         await self._set_integration_params(api, name, identifier, param_mapping)
@@ -556,7 +564,14 @@ class SyncIntegrationCredentialsJob(Job):
         response = await api.get_connector_cards(
             integration_name=ANY_INTEGRATION_FILTER_VALUE,
         )
-        cards = response.get("connectorInstances", []) or response.get("items", [])
+        cards = (
+            response
+            if isinstance(response, list)
+            else (
+                response.get("connectorInstances", [])
+                or response.get("items", [])
+            )
+        )
         if not cards:
             self.logger.warn("No connectors found in the platform.")
             return
@@ -617,11 +632,11 @@ class SyncIntegrationCredentialsJob(Job):
             param_mapping (SingleJson): Param names to secret IDs.
 
         """
-        self.logger.info("Processing connector: %s", name)
+        self.logger.info(f"Processing connector: {name}")
 
         identifier: str | None = self._resolve_connector_identifier(name)
         if identifier is None:
-            self.logger.error("Skipping connector '%s' — could not resolve identifier.", name)
+            self.logger.error(f"Skipping connector '{name}' — could not resolve identifier.")
             return
 
         await self._set_connector_params(api, name, identifier, param_mapping)
@@ -719,7 +734,7 @@ class SyncIntegrationCredentialsJob(Job):
                 return
             async with semaphore:
                 try:
-                    self.logger.info("Processing job: %s", job_name)
+                    self.logger.info(f"Processing job: {job_name}")
                     await self._update_single_job(
                         api,
                         job_name,
@@ -747,14 +762,21 @@ class SyncIntegrationCredentialsJob(Job):
         """
         installed_jobs_response: SingleJson = await api.get_installed_jobs()
 
-        if isinstance(installed_jobs_response, dict) and "job_instances" in installed_jobs_response:
-            job_instances: list[SingleJson] = installed_jobs_response["job_instances"]
+        if isinstance(installed_jobs_response, dict) and (
+            "job_instances" in installed_jobs_response
+            or "jobInstances" in installed_jobs_response
+        ):
+            job_instances: list[SingleJson] = (
+                installed_jobs_response.get("job_instances")
+                or installed_jobs_response.get("jobInstances")
+                or []
+            )
         elif isinstance(installed_jobs_response, list):
             job_instances = installed_jobs_response
         else:
             self.logger.error(
                 "Unexpected response format from get_installed_jobs: "
-                "expected list or dict with 'job_instances', got "
+                "expected list or dict with 'job_instances'/'jobInstances', got "
                 f"{type(installed_jobs_response).__name__}."
             )
             return None
@@ -902,10 +924,10 @@ class SyncIntegrationCredentialsJob(Job):
         """
         job_instance_id: str | None = job_data.get("id")
         if job_instance_id is None:
-            self.logger.error("Job '%s' has no id and no parameters — cannot update.", job_name)
+            self.logger.error(f"Job '{job_name}' has no id and no parameters — cannot update.")
             return None
 
-        self.logger.info("Fetching full details for job '%s' (id: %s).", job_name, job_instance_id)
+        self.logger.info(f"Fetching full details for job '{job_name}' (id: {job_instance_id}).")
         try:
             full_job: SingleJson = await api.get_installed_jobs(
                 job_instance_id=job_instance_id,
@@ -1026,7 +1048,7 @@ class SyncIntegrationCredentialsJob(Job):
         """
         try:
             await api.save_or_update_job(job_data=job_data)
-            self.logger.info("Saved job '%s' with %s updated parameter(s).", job_name, updated_count)
+            self.logger.info(f"Saved job '{job_name}' with {updated_count} updated parameter(s).")
         except JobSaveError:
             raise
         except Exception as e:

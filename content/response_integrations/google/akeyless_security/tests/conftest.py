@@ -32,6 +32,12 @@ pytest_plugins = ("integration_testing.conftest",)
 
 
 @pytest.fixture
+def anyio_backend() -> str:
+    """Use asyncio backend for anyio tests."""
+    return "asyncio"
+
+
+@pytest.fixture
 def mock_akeyless_api() -> MagicMock:
     """Patch akeyless V2Api class.
 
