@@ -34,7 +34,6 @@ PARENT_PROCESS_AND_LINKED_OBSERVABLES: SingleJson = MOCK_DATA[
     "parent_process_and_linked_observables"
 ]
 MULTI_INDICATOR_OBSERVABLES: SingleJson = MOCK_DATA["multi_indicator_observables"]
-DUPLICATE_INDICATOR_OBSERVABLE: SingleJson = MOCK_DATA["duplicate_indicator_observable"]
-HOSTNAME_SCOPE_OBSERVABLES: SingleJson = MOCK_DATA["hostname_scope_observables"]
-
-ONTOLOGY_PATH = pathlib.Path.joinpath(INTEGRATION_PATH, "ontology_mapping.yaml")
+DUPLICATE_INDICATOR_OBSERVABLE: SingleJson = MOCK_DATA[
+    "duplicate_indicator_observable"
+]
