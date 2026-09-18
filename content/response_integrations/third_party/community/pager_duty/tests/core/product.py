@@ -7,15 +7,17 @@ from TIPCommon.types import SingleJson
 
 @dataclasses.dataclass(slots=True)
 class PagerDuty:
+    """Mock data container for PagerDuty integration tests."""
+
     incidents: SingleJson = dataclasses.field(default_factory=dict)
     users: SingleJson = dataclasses.field(default_factory=dict)
     snoozed_incidents: dict[str, SingleJson] = dataclasses.field(default_factory=dict)
+    incident_notes: dict[str, list[SingleJson]] = dataclasses.field(
+        default_factory=dict
+    )
 
     def get_incidents(self, params: SingleJson) -> SingleJson:
-        """
-        Returns incidents, filtering them based on provided parameters to
-        simulate the real API behavior.
-        """
+        """Get incidents, optionally filtered by incident_key."""
         if not self.incidents.get("incidents"):
             return {"incidents": []}
 
@@ -30,19 +32,63 @@ class PagerDuty:
         return self.incidents
 
     def snooze_incident(self, incident_id: str) -> SingleJson:
+        """Simulate snoozing an incident."""
         self.snoozed_incidents[incident_id] = {
-            "status": "snoozed", "snooze_until": "2025-10-06T14:05:03Z"
-            }
+            "status": "snoozed",
+            "snooze_until": "2025-10-06T14:05:03Z",
+        }
         until = "2025-10-06T14:05:03Z"
         return {
             "incident": {"id": incident_id, "status": "snoozed", "snooze_until": until}
-            }
+        }
+
+    def get_incident(self, incident_id: str) -> SingleJson:
+        """Get a specific incident by ID."""
+        if not self.incidents.get("incidents"):
+            return {}
+        for inc in self.incidents["incidents"]:
+            if inc.get("id") == incident_id:
+                return inc
+        return {}
+
+    def update_incident(self, incident_id: str, status: str = "resolved") -> SingleJson:
+        """Update a specific incident's status by ID."""
+        if not self.incidents.get("incidents"):
+            return {}
+        for inc in self.incidents["incidents"]:
+            if inc.get("id") == incident_id:
+                inc["status"] = status
+                return {"incident": inc}
+        return {}
+
+    def resolve_incident(self, incident_id: str) -> SingleJson:
+        """Resolve a specific incident by ID."""
+        return self.update_incident(incident_id, status="resolved")
+
+    def add_incident_note(self, incident_id: str, content: str) -> SingleJson:
+        """Simulate adding a note to an incident."""
+        note = {"content": content}
+        if incident_id not in self.incident_notes:
+            self.incident_notes[incident_id] = []
+        self.incident_notes[incident_id].append(note)
+        return {"note": note}
+
+    def get_incident_notes(self, incident_id: str) -> list[SingleJson]:
+        """Get notes for a specific incident."""
+        return self.incident_notes.get(incident_id, [])
+
+    def set_incident_notes(self, incident_id: str, notes: list[SingleJson]) -> None:
+        """Set notes for a specific incident."""
+        self.incident_notes[incident_id] = notes
 
     def set_incidents(self, mock_incidents: SingleJson) -> None:
+        """Set the mock incidents data."""
         self.incidents = mock_incidents
 
     def get_users(self) -> SingleJson:
+        """Get all mock users."""
         return self.users
 
     def set_users(self, mock_users: SingleJson) -> None:
+        """Set the mock users data."""
         self.users = mock_users

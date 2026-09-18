@@ -25,8 +25,6 @@ from TIPCommon.data_models import Container
 from TIPCommon.utils import get_sdk_api_uri
 
 if TYPE_CHECKING:
-    import requests
-
     from TIPCommon.rest.custom_types import HttpMethod
     from TIPCommon.types import ChronicleSOAR, SingleJson
 

@@ -1159,3 +1159,21 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=self.params.visual_family
         )
+
+    def attach_case_playbook_to_case(self) -> requests.Response:
+        """Attach case playbook to the case.
+
+        Raises:
+            NotSupportedPlatformVersion: Case-level playbooks are not supported on legacy platform versions.
+
+        """
+        raise NotSupportedPlatformVersion(ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG)
+
+    def get_enabled_workflow_cards(self) -> requests.Response:
+        """Get enabled workflow cards.
+
+        Raises:
+            NotSupportedPlatformVersion: Workflow cards retrieval is not supported on legacy platform versions.
+
+        """
+        raise NotSupportedPlatformVersion(ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG)

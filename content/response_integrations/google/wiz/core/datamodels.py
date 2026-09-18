@@ -29,6 +29,7 @@ class IntegrationParameters:
     client_secret: str
     verify_ssl: bool
     siemplify_logger: ScriptLogger
+    auth_url: str | None = None
 
 
 @dataclasses.dataclass(slots=True)
@@ -45,9 +46,53 @@ class BaseModel:
         return self.raw_data
 
 
+class WizIncidentComment:
+    def __init__(self, raw_comment: SingleJson) -> None:
+        self.raw_comment = raw_comment
+
+    @property
+    def message(self) -> str:
+        """The text comment message.
+
+        Returns:
+            str: The comment text.
+
+        """
+        return self.raw_comment.get("text", "")
+
+
+@dataclasses.dataclass(slots=True)
+class WizServiceTicket(BaseModel):
+    id_: str
+    external_id: str | None = None
+    name: str | None = None
+    url: str | None = None
+
+    @classmethod
+    def from_json(cls, json_data: SingleJson) -> WizServiceTicket:
+        """Create a WizServiceTicket instance from JSON data.
+
+        Returns:
+            WizServiceTicket: The parsed WizServiceTicket object.
+
+        """
+        return cls(
+            raw_data=json_data,
+            id_=json_data["id"],
+            external_id=json_data.get("externalId"),
+            name=json_data.get("name"),
+            url=json_data.get("url"),
+        )
+
+
 @dataclasses.dataclass(slots=True)
 class Issue(BaseModel):
     issue_id: str
+    status: str | None = None
+    severity: str | None = None
+    updated_at: str | None = None
+    comments: list[WizIncidentComment] = dataclasses.field(default_factory=list)
+    service_tickets: list[WizServiceTicket] = dataclasses.field(default_factory=list)
 
     @classmethod
     def from_json(cls, json_data: SingleJson) -> Issue:
@@ -57,7 +102,19 @@ class Issue(BaseModel):
             An Issue instance.
 
         """
-        return cls(raw_data=json_data, issue_id=json_data["id"])
+        notes = json_data.get("notes") or []
+        comments = [WizIncidentComment(note) for note in notes]
+        tickets_json = json_data.get("serviceTickets") or []
+        service_tickets = [WizServiceTicket.from_json(ticket) for ticket in tickets_json]
+        return cls(
+            raw_data=json_data,
+            issue_id=json_data["id"],
+            status=json_data.get("status"),
+            severity=json_data.get("severity"),
+            updated_at=json_data.get("updatedAt"),
+            comments=comments,
+            service_tickets=service_tickets,
+        )
 
 
 @dataclasses.dataclass(slots=True)

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.parse
 from typing import TYPE_CHECKING
 
 from requests_toolbelt.multipart.encoder import MultipartEncoder
@@ -108,7 +109,8 @@ class OnePlatformSoarApi(BaseSoarApi):
     def get_installed_integrations_of_environment(self) -> list[SingleJson]:
         """Get installed integrations of environment using legacy API."""
         name = "*" if self.params.environment == "Shared Instances" else self.params.environment
-        query_string = f"$filter=environment eq '{escape_odata_literal(name)}'&pageSize={_PAGE_SIZE}"
+        filter_str = f"environment eq '{escape_odata_literal(name)}'"
+        query_string = f"$filter={urllib.parse.quote(filter_str)}&pageSize={_PAGE_SIZE}"
         endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances?{query_string}"
 
         return self._paginate_results(endpoint, "integrationInstances")
@@ -400,7 +402,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         base_endpoint = "/system/settings/customLists"
 
         if filter_string:
-            initial_endpoint = f"{base_endpoint}?$filter={filter_string}&pageSize={_PAGE_SIZE}"
+            initial_endpoint = f"{base_endpoint}?$filter={urllib.parse.quote(filter_string)}&pageSize={_PAGE_SIZE}"
         else:
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
 
@@ -421,7 +423,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         base_endpoint = "/system/settings/customLists"
 
         if filter_string:
-            initial_endpoint = f"{base_endpoint}?$filter={filter_string}&pageSize={_PAGE_SIZE}"
+            initial_endpoint = f"{base_endpoint}?$filter={urllib.parse.quote(filter_string)}&pageSize={_PAGE_SIZE}"
         else:
             initial_endpoint = f"{base_endpoint}?pageSize={_PAGE_SIZE}"
 
@@ -870,7 +872,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         base_endpoint = "/cases"
         initial_endpoint = (
-            f"{base_endpoint}?$filter={filter_string}"
+            f"{base_endpoint}?$filter={urllib.parse.quote(filter_string)}"
             "&$select=id, updateTime"
             "&$expand=tags"
             f"&pageSize={_PAGE_SIZE}"
@@ -1808,3 +1810,46 @@ class OnePlatformSoarApi(BaseSoarApi):
                 HttpMethod.PATCH, endpoint, json_payload=family_data
             )
         raise Exception("Existing visual family has no resource name and cannot be constructed")
+
+    def attach_case_playbook_to_case(self) -> requests.Response:
+        """Attach case playbook to the case.
+
+        Returns:
+            requests.Response: The HTTP response from the OnePlatform endpoint.
+
+        """
+        endpoint: str = "/legacyPlaybooks:legacyAttachWorkflowToCase"
+        payload = {
+            "cyberCaseId": self.params.case_id,
+            "shouldRunAutomatic": self.params.should_run_automatic,
+            "wfName": self.params.playbook_name,
+        }
+        if getattr(self.params, "original_workflow_definition_identifier", None) is not None:
+            payload["originalWorkflowDefinitionIdentifier"] = (
+                self.params.original_workflow_definition_identifier
+            )
+        return self._make_request(
+            HttpMethod.POST,
+            endpoint,
+            json_payload=payload,
+            params={"format": "camel"},
+        )
+
+    def get_enabled_workflow_cards(self) -> requests.Response:
+        """Get enabled workflow cards.
+
+        Returns:
+            requests.Response: The HTTP response from the OnePlatform endpoint.
+
+        """
+        endpoint: str = "/legacyPlaybooks:legacyGetEnabledWFCards"
+        payload = {
+            "caseEnvironment": self.params.environment,
+            "executionScope": "CASE",
+        }
+        return self._make_request(
+            HttpMethod.POST,
+            endpoint,
+            json_payload=payload,
+            params={"format": "camel"},
+        )
