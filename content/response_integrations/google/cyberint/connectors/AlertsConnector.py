@@ -249,6 +249,7 @@ def main(is_test_run):
                 siemplify=siemplify, alerts=fetched_alerts, timestamp_key="created_date"
             )
 
+        siemplify.LOGGER.info(f"Processed {len(fetched_alerts)} alerts")
     except Exception as e:
         siemplify.LOGGER.error(f"Got exception on main handler. Error: {e}")
         siemplify.LOGGER.exception(e)
@@ -256,7 +257,6 @@ def main(is_test_run):
         if is_test_run:
             raise
 
-    siemplify.LOGGER.info(f"Processed {len(processed_alerts)} alerts")
     siemplify.LOGGER.info("------------------- Main - Finished -------------------")
     siemplify.return_package(processed_alerts)
 
