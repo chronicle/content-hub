@@ -125,7 +125,7 @@ class ChronicleClient(DevEnvClient):
 
         """
         url: str = self._endpoint("integrations")
-        params: dict[str, Any] = {"pageSize": 1000}
+        params: SingleJson = {"pageSize": 1000}
         results: list[Integration] = []
 
         for _ in range(max_pages):
@@ -294,8 +294,6 @@ class ChronicleClient(DevEnvClient):
         integration_id: str,
         *,
         is_staging: bool = False,
-        max_attempts: int = 5,
-        delay_seconds: float = 2.0,
     ) -> bool:
         target: str = integration_id.strip().lower()
 
@@ -305,18 +303,11 @@ class ChronicleClient(DevEnvClient):
                 for item in self.list_integrations()
             )
 
-        return _poll_until(
-            _check,
-            max_attempts=max_attempts,
-            delay_seconds=delay_seconds,
-        )
+        return _poll_until(_check)
 
     def _wait_for_playbook_installed(
         self,
         playbook_name: str,
-        *,
-        max_attempts: int = 5,
-        delay_seconds: float = 2.0,
     ) -> bool:
         target: str = playbook_name.strip().lower()
 
@@ -329,11 +320,7 @@ class ChronicleClient(DevEnvClient):
                 for card in self.list_playbooks()
             )
 
-        return _poll_until(
-            _check,
-            max_attempts=max_attempts,
-            delay_seconds=delay_seconds,
-        )
+        return _poll_until(_check)
 
     def list_playbooks(self) -> list[SingleJson]:
         """List installed playbook and workflow menu cards.
