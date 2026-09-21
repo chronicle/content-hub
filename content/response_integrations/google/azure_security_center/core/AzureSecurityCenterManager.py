@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import json
 import requests
@@ -41,14 +41,14 @@ class AzureSecurityCenterManager:
         username: str,
         password: str,
         tenant_id: str,
-        subscription_id: str = None,
-        verify_ssl: Optional[bool] = False,
-        siemplify=None,
-        refresh_token=None,
-        login_api_root: Optional[str] = None,
-        api_root: Optional[str] = None,
-        graph_api_root: Optional[str] = None,
-    ):
+        subscription_id: str | None = None,
+        verify_ssl: bool = True,
+        siemplify: Any = None,
+        refresh_token: str | None = None,
+        login_api_root: str | None = None,
+        api_root: str | None = None,
+        graph_api_root: str | None = None,
+    ) -> None:
         """
         The method is used to init an object of Manager class
         :param client_id: {str} Client ID of the Microsoft Azure application.
@@ -59,9 +59,9 @@ class AzureSecurityCenterManager:
         :param subscription_id: {str} Subscription ID of the Microsoft Azure application
         :param siemplify: {ConnectorExecutor} connector executor instance
         :param refresh_token: {str} Refresh token for the OAuth authorization.
-        :param login_api_root: {str} The API root of the Microsoft identity platform login service.
-        :param api_root: {str} The API root of the Azure Management service.
-        :param graph_api_root: {str} The API root of the Microsoft Graph service.
+        :param login_api_root: The API root of the Microsoft identity platform login service.
+        :param api_root: The API root of the Azure Management service.
+        :param graph_api_root: The API root of the Microsoft Graph service.
         """
         self.client_id = client_id
         self.client_secret = client_secret
@@ -112,18 +112,24 @@ class AzureSecurityCenterManager:
 
     @staticmethod
     def obtain_refresh_token(
-        client_id, client_secret, redirect_uri, code, tenant_id, verify_ssl, login_api_root=consts.DEFAULT_LOGIN_API_ROOT
-    ):
+        client_id: str,
+        client_secret: str,
+        redirect_uri: str,
+        code: str,
+        tenant_id: str,
+        verify_ssl: bool = True,
+        login_api_root: str | None = consts.DEFAULT_LOGIN_API_ROOT,
+    ) -> dict[str, Any]:
         """
         Obtain a refresh token
-        :param client_id: {str} The client id to authenticate with
-        :param client_secret: {str} The secret of the given client id
-        :param redirect_uri: {str} The redirect uri that matched the given client
-        :param code: {str] The generated code from the authorizing step
-        :param tenant_id: {str} Tenant ID of the Microsoft Azure application.
+        :param client_id: The client id to authenticate with
+        :param client_secret: The secret of the given client id
+        :param redirect_uri: The redirect uri that matched the given client
+        :param code: The generated code from the authorizing step
+        :param tenant_id: Tenant ID of the Microsoft Azure application.
         :param verify_ssl: If enabled, verify the SSL certificate for the connection to the server is valid.
-        :param login_api_root: {str} The API root of the Microsoft identity platform login service.
-        :return: {str} The new refresh token
+        :param login_api_root: The API root of the Microsoft identity platform login service.
+        :return: The token response dictionary containing the new refresh token
         """
         login_api_root = (login_api_root or consts.DEFAULT_LOGIN_API_ROOT).rstrip("/")
         data = {
@@ -213,21 +219,23 @@ class AzureSecurityCenterManager:
             **kwargs,
         )
 
-    def _get_auth_token(self, scope=None):
+    def _get_auth_token(self, scope: str | None = None) -> str:
         """
-        Retrieves Bearer auth token for the manager. By default an auth token for Azure Security Center is returned
-        :param scope: {str} Authentication scope. For example https://management.azure.com/.default or https://graph.microsoft.com/.default
-        :return: {str} authentication token
+        Retrieves Bearer auth token for the manager. By default an auth token for Azure Security Center is returned.
+        :param scope: Authentication scope (e.g., https://management.azure.com/.default or
+            https://graph.microsoft.com/.default).
+        :return: Authentication token.
         """
+        default_scope = f"{self.api_root}/.default"
         if scope is None:
-            scope = f"{self.api_root}/.default"
+            scope = default_scope
 
         request_url = self._get_full_url(
             url_key="get-auth-token", tenant_id=self.tenant_id
         )
         grant_type = (
             "password"
-            if scope == f"{self.api_root}/.default"
+            if scope == default_scope
             else "client_credentials"
         )
         payload = {
@@ -237,7 +245,7 @@ class AzureSecurityCenterManager:
             "scope": scope,
         }
 
-        if scope == f"{self.api_root}/.default":
+        if scope == default_scope:
             payload["userName"] = self.username
             payload["password"] = self.password
 

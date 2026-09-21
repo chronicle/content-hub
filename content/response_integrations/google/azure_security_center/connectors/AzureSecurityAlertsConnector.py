@@ -150,7 +150,7 @@ def main(is_test_run):
         verify_ssl = extract_connector_param(
             siemplify,
             param_name="Verify SSL",
-            default_value=False,
+            default_value=True,
             input_type=bool,
             is_mandatory=True,
         )

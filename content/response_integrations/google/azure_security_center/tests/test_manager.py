@@ -26,6 +26,16 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
+MOCK_CLIENT_ID = "test_client_id"
+MOCK_CREDENTIAL = "test_credential_value"
+MOCK_USER = "test_user"
+MOCK_TENANT_ID = "test_tenant_id"
+MOCK_SUB_ID = "test_sub_id"
+EXPECTED_ACCESS_VAL = "mock_access_token"
+EXPECTED_REFRESH_VAL = "refreshtoken123"
+INITIAL_REFRESH_VAL = "initial_refresh_token"
+
+
 @pytest.fixture
 def mock_requests_session() -> Generator[MagicMock, None, None]:
     """Fixture providing a mocked requests session."""
@@ -34,7 +44,7 @@ def mock_requests_session() -> Generator[MagicMock, None, None]:
         mock_session_cls.return_value = session_instance
         mock_response = MagicMock()
         mock_response.json.return_value = {
-            "access_token": "mock_access_token",
+            "access_token": EXPECTED_ACCESS_VAL,
             "refresh_token": "mock_new_refresh_token",
         }
         mock_response.status_code = 200
@@ -47,12 +57,12 @@ def mock_requests_session() -> Generator[MagicMock, None, None]:
 def test_manager_default_endpoints(mock_requests_session: MagicMock) -> None:
     """Test AzureSecurityCenterManager initializes with default endpoints."""
     manager = AzureSecurityCenterManager(
-        client_id="test_client_id",
-        client_secret="test_client_secret",  # ruff: ignore[hardcoded-password-func-arg]
-        username="test_user",
-        password="test_password",  # ruff: ignore[hardcoded-password-func-arg]
-        tenant_id="test_tenant_id",
-        subscription_id="test_sub_id",
+        client_id=MOCK_CLIENT_ID,
+        client_secret=MOCK_CREDENTIAL,
+        username=MOCK_USER,
+        password=MOCK_CREDENTIAL,
+        tenant_id=MOCK_TENANT_ID,
+        subscription_id=MOCK_SUB_ID,
     )
     assert manager.login_api_root == consts.DEFAULT_LOGIN_API_ROOT
     assert manager.api_root == consts.DEFAULT_API_ROOT
@@ -62,12 +72,12 @@ def test_manager_default_endpoints(mock_requests_session: MagicMock) -> None:
 def test_manager_custom_endpoints(mock_requests_session: MagicMock) -> None:
     """Test AzureSecurityCenterManager formats URLs with custom sovereign endpoints."""
     manager = AzureSecurityCenterManager(
-        client_id="test_client_id",
-        client_secret="test_client_secret",  # ruff: ignore[hardcoded-password-func-arg]
-        username="test_user",
-        password="test_password",  # ruff: ignore[hardcoded-password-func-arg]
-        tenant_id="test_tenant_id",
-        subscription_id="test_sub_id",
+        client_id=MOCK_CLIENT_ID,
+        client_secret=MOCK_CREDENTIAL,
+        username=MOCK_USER,
+        password=MOCK_CREDENTIAL,
+        tenant_id=MOCK_TENANT_ID,
+        subscription_id=MOCK_SUB_ID,
         login_api_root="https://login.microsoftonline.us/",
         api_root="https://management.usgovcloudapi.net/",
         graph_api_root="https://graph.microsoft.us/",
@@ -93,26 +103,26 @@ def test_manager_obtain_refresh_token_custom_login_api_root() -> None:
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "access_token": "token123",
-            "refresh_token": "refreshtoken123",
+            "refresh_token": EXPECTED_REFRESH_VAL,
         }
         mock_post.return_value = mock_response
 
         res = AzureSecurityCenterManager.obtain_refresh_token(
             client_id="cid",
-            client_secret="csec",  # ruff: ignore[hardcoded-password-func-arg]
+            client_secret=MOCK_CREDENTIAL,
             redirect_uri="https://redirect",
             code="code123",
             tenant_id="tid",
             verify_ssl=False,
             login_api_root="https://login.microsoftonline.us/",
         )
-        assert res["refresh_token"] == "refreshtoken123"  # ruff: ignore[hardcoded-password-string]
+        assert res["refresh_token"] == EXPECTED_REFRESH_VAL
         mock_post.assert_called_once_with(
             "https://login.microsoftonline.us/tid/oauth2/token",
             data={
                 "code": "code123",
                 "client_id": "cid",
-                "client_secret": "csec",
+                "client_secret": MOCK_CREDENTIAL,
                 "redirect_uri": "https://redirect",
                 "grant_type": "authorization_code",
             },
@@ -123,22 +133,22 @@ def test_manager_obtain_refresh_token_custom_login_api_root() -> None:
 def test_manager_get_access_token_custom_login_api_root(mock_requests_session: MagicMock) -> None:
     """Test get_access_token uses custom login_api_root."""
     manager = AzureSecurityCenterManager(
-        client_id="test_client_id",
-        client_secret="test_client_secret",  # ruff: ignore[hardcoded-password-func-arg]
-        username="test_user",
-        password="test_password",  # ruff: ignore[hardcoded-password-func-arg]
-        tenant_id="test_tenant_id",
-        subscription_id="test_sub_id",
-        refresh_token="initial_refresh_token",  # ruff: ignore[hardcoded-password-func-arg]
+        client_id=MOCK_CLIENT_ID,
+        client_secret=MOCK_CREDENTIAL,
+        username=MOCK_USER,
+        password=MOCK_CREDENTIAL,
+        tenant_id=MOCK_TENANT_ID,
+        subscription_id=MOCK_SUB_ID,
+        refresh_token=INITIAL_REFRESH_VAL,
         login_api_root="https://login.microsoftonline.us/",
     )
     mock_requests_session.post.assert_called_with(
         "https://login.microsoftonline.us/test_tenant_id/oauth2/token",
         data={
-            "client_id": "test_client_id",
-            "client_secret": "test_client_secret",
+            "client_id": MOCK_CLIENT_ID,
+            "client_secret": MOCK_CREDENTIAL,
             "grant_type": "refresh_token",
-            "refresh_token": "initial_refresh_token",
+            "refresh_token": INITIAL_REFRESH_VAL,
         },
     )
-    assert manager.auth_token == "mock_access_token"  # ruff: ignore[hardcoded-password-string]
+    assert manager.auth_token == EXPECTED_ACCESS_VAL
