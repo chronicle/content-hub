@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import copy
 from .constants import (
@@ -27,6 +27,9 @@ from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from EnvironmentCommon import EnvironmentHandle
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from TIPCommon import dict_to_flat, add_prefix_to_dict, convert_list_to_comma_string
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 class AgentResult(NamedTuple):
@@ -234,9 +237,18 @@ class TaskDetail(BaseModel):
 
 
 class BlocklistResponse(BaseModel):
+    """Represents the parsed response for a single blocklist operation item."""
 
-    def __init__(self, raw_data, task_id=None, url=None, error_message=None, is_success: bool = False):
-        super(BlocklistResponse, self).__init__(raw_data)
+    def __init__(
+        self,
+        raw_data: SingleJson,
+        task_id: str | None = None,
+        url: str | None = None,
+        error_message: str | None = None,
+        *,
+        is_success: bool = False,
+    ) -> None:
+        super().__init__(raw_data)
         self.id = task_id
         self.url = url
         self.error_message = error_message

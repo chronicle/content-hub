@@ -14,15 +14,27 @@
 
 from __future__ import annotations
 
-from typing import List
-from .datamodels import *
-from typing import Any, List, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from .constants import (
     OPERATION_LOCATION_HEADER,
     SUCCESSFUL_STATUS_CODES,
     TOO_MANY_REQUESTS,
 )
+from .datamodels import (
+    Alert,
+    BlocklistResponse,
+    Endpoint,
+    ExecuteEmail,
+    Script,
+    SubmitFile,
+    SubmitURL,
+    Task,
+    TaskDetail,
+)
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 class TrendVisionOneParser:
@@ -210,17 +222,18 @@ class TrendVisionOneParser:
         )
 
     @staticmethod
-    def build_blocklist_response_object(raw_json: dict[str, Any]) -> BlocklistResponse:
-        """
-        Build BlocklistResponse object from raw data
+    def build_blocklist_response_object(raw_json: SingleJson) -> BlocklistResponse:
+        """Build a BlocklistResponse object from raw response data.
+
         Args:
-            raw_json (dict): raw data
+            raw_json: Raw dictionary returned for a single blocklist item.
 
         Returns:
-            (BlocklistResponse): BlocklistResponse object
+            A parsed BlocklistResponse instance.
+
         """
-        task_id: Optional[str] = None
-        task_location_url: Optional[str] = None
+        task_id: str | None = None
+        task_location_url: str | None = None
         if raw_json.get("status") in SUCCESSFUL_STATUS_CODES:
             headers = raw_json.get("headers") or []
             if isinstance(headers, dict):

@@ -1,4 +1,5 @@
 # Copyright 2026 Google LLC
+# ruff: file-ignore[invalid-module-name, error-instead-of-exception, verbose-log-message]
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,92 +15,84 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import os
-
-import json
 import re
-import time
+from pathlib import Path
+from typing import TYPE_CHECKING
 
-from .TrendVisionOneManager import TrendVisionOneManager
-from .TrendVisionOneExceptions import (
-    TrendVisionOneException,
-    TrendVisionOneTimeoutException,
-)
+from soar_sdk.SiemplifyDataModel import DomainEntityInfo, EntityTypes
+from TIPCommon import extract_action_param, string_to_multi_value
 
+from . import datamodels
 from .constants import (
-    DEFAULT_TIMEOUT,
-    ENRICHMENT_PREFIX,
     GLOBAL_TIMEOUT_THRESHOLD_IN_MIN,
-    IN_BLOCKLIST_KEY,
-    IN_PROGRESS_STATUSES,
-    INTEGRATION_NAME,
     OBJECT_TYPE_DOMAIN,
     OBJECT_TYPE_FILE_SHA1,
     OBJECT_TYPE_FILE_SHA256,
     OBJECT_TYPE_IP,
     OBJECT_TYPE_SENDER_MAIL_ADDRESS,
     OBJECT_TYPE_URL,
-    PARAM_DESCRIPTION,
     PARAM_DOMAINS,
     PARAM_EMAIL_ADDRESSES,
     PARAM_FILE_HASHES,
     PARAM_IPS,
     PARAM_URLS,
-    PAYLOAD_CHUNK_SIZE,
-    SUCCESS_STATUS,
+    SHA1_HEX_REGEX,
+    SHA256_HEX_REGEX,
 )
-from . import datamodels
-from soar_sdk.ScriptResult import (
-    EXECUTION_STATE_COMPLETED,
-    EXECUTION_STATE_FAILED,
-    EXECUTION_STATE_INPROGRESS,
-)
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyUtils import unix_now
-from TIPCommon import (
-    extract_action_param,
-    extract_configuration_param,
-    is_approaching_timeout,
-    string_to_multi_value,
-)
+from .TrendVisionOneExceptions import TrendVisionOneException
+
+if TYPE_CHECKING:
+    from soar_sdk.SiemplifyAction import SiemplifyAction
+    from soar_sdk.SiemplifyLogger import SiemplifyLogger
+    from TIPCommon.types import SingleJson
+
+    from .TrendVisionOneManager import TrendVisionOneManager
 
 
+def get_entity_original_identifier(entity: DomainEntityInfo) -> str:
+    """Get the original identifier from a Chronicle entity.
 
-
-def get_entity_original_identifier(entity: Any) -> str:
-    """
-    Helper function for getting entity original identifier
     Args:
-        entity: entity from which function will get original identifier
+        entity: Chronicle entity instance.
 
     Returns:
-        original identifier
+        Original identifier string.
+
     """
     return entity.additional_properties.get("OriginalIdentifier", entity.identifier)
 
 
-def check_submit_files_in_system(files: list) -> list:
+def check_submit_files_in_system(files: list[str]) -> list[str]:
     """Return not accessible or not found files in filesystem.
 
     Args:
-        files (list): list of files.
+        files: List of file paths to check.
 
     Returns:
-        list: list of not found files.
+        List of file paths that do not exist or are not readable.
+
     """
-    not_found_files = [
+    return [
         file
         for file in files
-        if not (os.path.exists(file) and os.access(file, os.R_OK))
+        if not (Path(file).exists() and os.access(file, os.R_OK))
     ]
 
-    return not_found_files
 
+def is_async_action_global_timeout_approaching(
+    siemplify: SiemplifyAction, start_time: int
+) -> bool:
+    """Check whether the SOAR global execution deadline is approaching.
 
-def is_async_action_global_timeout_approaching(siemplify, start_time):
+    Args:
+        siemplify: SiemplifyAction execution instance.
+        start_time: Unix timestamp (in ms) when the current iteration started.
+
+    Returns:
+        True if the remaining time is below the threshold, False otherwise.
+
+    """
     return (
         siemplify.execution_deadline_unix_time_ms - start_time
         < GLOBAL_TIMEOUT_THRESHOLD_IN_MIN * 60 * 1000
@@ -110,18 +103,15 @@ def process_agents(
     manager: TrendVisionOneManager,
     agent_uids: list[str],
 ) -> datamodels.AgentResult:
-    """Process a list of agent UUIDs, searching for each agent and categorizing them as
-    successful or failed.
+    """Search for each agent UUID and categorize them as successful or failed.
 
     Args:
-        manager (TrendVisionOneManager): An instance of the TrendVisionOneManager for
-        interacting with the API.
-        agent_uids (list[str]): A list of agent UUIDs to process.
+        manager: TrendVisionOneManager instance for interacting with the API.
+        agent_uids: List of agent UUIDs to process.
 
     Returns:
-        AgentResult: An object containing two lists: `successful_agents`
-        (list of Endpoint objects) and `failed_agents` (list of agent UUIDs
-        that could not be processed).
+        AgentResult containing `successful_agents` and `failed_agents`.
+
     """
     agent_result: datamodels.AgentResult = datamodels.AgentResult([], [])
     for agent_id in agent_uids:
@@ -143,6 +133,7 @@ def process_agents(
 SUPPORTED_BLOCKLIST_ENTITY_TYPES = [
     EntityTypes.ADDRESS,
     EntityTypes.HOSTNAME,
+    EntityTypes.DOMAIN,
     EntityTypes.URL,
     EntityTypes.USER,
     EntityTypes.FILEHASH,
@@ -151,52 +142,92 @@ SUPPORTED_BLOCKLIST_ENTITY_TYPES = [
 EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
 
 
-def _extract_entity_object(entity: Any, siemplify: SiemplifyAction) -> tuple[str, str, str] | None:
-    """Extracts suspicious object type and normalized value from a Chronicle entity.
+def _validate_and_normalize_ioc(
+    obj_type: str, raw_value: str, logger: SiemplifyLogger
+) -> tuple[str, str] | None:
+    """Validate and normalize a single indicator of compromise.
+
+    Args:
+        obj_type: Target object type or 'hash' for file hashes.
+        raw_value: Raw indicator string.
+        logger: SiemplifyLogger instance for logging skipped indicators.
 
     Returns:
-        tuple of (object_type, normalized_value, original_identifier) or None if skipped.
+        Tuple of (resolved_object_type, normalized_value) or None if invalid.
+
+    """
+    if obj_type == "hash":
+        if re.match(SHA1_HEX_REGEX, raw_value):
+            return (OBJECT_TYPE_FILE_SHA1, raw_value.lower())
+        if re.match(SHA256_HEX_REGEX, raw_value):
+            return (OBJECT_TYPE_FILE_SHA256, raw_value.lower())
+        logger.info(
+            f"Skipping hash '{raw_value}' because only valid hexadecimal SHA1 (40 chars) "
+            "and SHA256 (64 chars) are supported."
+        )
+        return None
+
+    if obj_type == OBJECT_TYPE_SENDER_MAIL_ADDRESS:
+        if EMAIL_REGEX.match(raw_value):
+            return (OBJECT_TYPE_SENDER_MAIL_ADDRESS, raw_value)
+        logger.info(
+            f"Skipping email '{raw_value}' because it does not match a valid email address pattern."
+        )
+        return None
+
+    return (obj_type, raw_value)
+
+
+def _extract_entity_object(
+    entity: DomainEntityInfo, siemplify: SiemplifyAction
+) -> tuple[str, str, str] | None:
+    """Extract suspicious object type and normalized value from a Chronicle entity.
+
+    Args:
+        entity: Chronicle DomainEntityInfo object.
+        siemplify: SiemplifyAction instance for logging.
+
+    Returns:
+        Tuple of (object_type, normalized_value, original_identifier) or None if skipped.
+
     """
     original_identifier = get_entity_original_identifier(entity).strip()
     if not original_identifier:
         return None
 
-    if entity.entity_type == EntityTypes.ADDRESS:
-        return (OBJECT_TYPE_IP, original_identifier, original_identifier)
-
-    if entity.entity_type == EntityTypes.HOSTNAME:
-        return (OBJECT_TYPE_DOMAIN, original_identifier, original_identifier)
-
-    if entity.entity_type == EntityTypes.URL:
-        return (OBJECT_TYPE_URL, original_identifier, original_identifier)
-
-    if entity.entity_type == EntityTypes.USER:
-        if EMAIL_REGEX.match(original_identifier):
-            return (OBJECT_TYPE_SENDER_MAIL_ADDRESS, original_identifier, original_identifier)
-        siemplify.LOGGER.info(
-            f"Skipping USER entity '{original_identifier}' because it does not match email pattern."
-        )
+    entity_type_to_obj_type = {
+        EntityTypes.ADDRESS: OBJECT_TYPE_IP,
+        EntityTypes.HOSTNAME: OBJECT_TYPE_DOMAIN,
+        EntityTypes.DOMAIN: OBJECT_TYPE_DOMAIN,
+        EntityTypes.URL: OBJECT_TYPE_URL,
+        EntityTypes.USER: OBJECT_TYPE_SENDER_MAIL_ADDRESS,
+        EntityTypes.FILEHASH: "hash",
+    }
+    raw_obj_type = entity_type_to_obj_type.get(entity.entity_type)
+    if not raw_obj_type:
         return None
 
-    if entity.entity_type == EntityTypes.FILEHASH:
-        hash_len = len(original_identifier)
-        if hash_len == 40:
-            return (OBJECT_TYPE_FILE_SHA1, original_identifier.lower(), original_identifier)
-        if hash_len == 64:
-            return (OBJECT_TYPE_FILE_SHA256, original_identifier.lower(), original_identifier)
-        siemplify.LOGGER.info(
-            f"Skipping FILEHASH entity '{original_identifier}' because only SHA1 (40 hex) and SHA256 (64 hex) are supported."
-        )
+    validated = _validate_and_normalize_ioc(
+        raw_obj_type, original_identifier, siemplify.LOGGER
+    )
+    if not validated:
         return None
 
-    return None
+    resolved_type, normalized_val = validated
+    return (resolved_type, normalized_val, original_identifier)
 
 
-def _extract_manual_parameter_objects(siemplify: SiemplifyAction) -> list[tuple[str, str, str]]:
-    """Extracts and normalizes suspicious objects from manual action parameters.
+def _extract_manual_parameter_objects(
+    siemplify: SiemplifyAction,
+) -> list[tuple[str, str, str]]:
+    """Extract and normalize suspicious objects from manual action parameters.
+
+    Args:
+        siemplify: SiemplifyAction instance to extract parameters from.
 
     Returns:
-        list of tuples (object_type, normalized_value, raw_value).
+        List of tuples (object_type, normalized_value, raw_value).
+
     """
     param_configs = [
         (PARAM_IPS, OBJECT_TYPE_IP),
@@ -208,46 +239,45 @@ def _extract_manual_parameter_objects(siemplify: SiemplifyAction) -> list[tuple[
     extracted_objects: list[tuple[str, str, str]] = []
 
     for param_name, obj_type in param_configs:
-        raw_val = extract_action_param(siemplify, param_name=param_name, is_mandatory=False)
+        raw_val = extract_action_param(
+            siemplify, param_name=param_name, is_mandatory=False
+        )
         if not raw_val:
             continue
-        items = string_to_multi_value(raw_val)
-        for item in items:
+        for item in string_to_multi_value(raw_val):
             item_clean = item.strip()
             if not item_clean:
                 continue
-
-            if obj_type == "hash":
-                hash_len = len(item_clean)
-                if hash_len == 40:
-                    extracted_objects.append((OBJECT_TYPE_FILE_SHA1, item_clean.lower(), item_clean))
-                elif hash_len == 64:
-                    extracted_objects.append((OBJECT_TYPE_FILE_SHA256, item_clean.lower(), item_clean))
-                else:
-                    siemplify.LOGGER.info(
-                        f"Skipping manual hash '{item_clean}' because only SHA1 and SHA256 are supported."
-                    )
-            elif obj_type == OBJECT_TYPE_SENDER_MAIL_ADDRESS:
-                if EMAIL_REGEX.match(item_clean):
-                    extracted_objects.append((OBJECT_TYPE_SENDER_MAIL_ADDRESS, item_clean, item_clean))
-                else:
-                    siemplify.LOGGER.info(
-                        f"Skipping manual email '{item_clean}' because it does not match email pattern."
-                    )
-            else:
-                extracted_objects.append((obj_type, item_clean, item_clean))
+            validated = _validate_and_normalize_ioc(
+                obj_type, item_clean, siemplify.LOGGER
+            )
+            if validated:
+                resolved_type, normalized_val = validated
+                extracted_objects.append((resolved_type, normalized_val, item_clean))
 
     return extracted_objects
 
 
 def build_blocklist_payloads(
     siemplify: SiemplifyAction,
-    suitable_entities: list[Any],
+    suitable_entities: list[DomainEntityInfo],
     description: str | None = None,
-    is_add: bool = True,
-) -> tuple[list[dict], dict[str, str]]:
-    """Builds suspicious object payloads and identifier-to-type mapping from entities and free text params."""
-    payloads: list[dict] = []
+    *,
+    include_description: bool = True,
+) -> tuple[list[SingleJson], dict[str, str]]:
+    """Build deduplicated suspicious object payloads and a normalized-to-original identifier map.
+
+    Args:
+        siemplify: SiemplifyAction instance.
+        suitable_entities: Supported Chronicle entities in scope.
+        description: Optional description to attach when adding suspicious objects.
+        include_description: Whether to include the description field in payloads.
+
+    Returns:
+        Tuple of (list of suspicious object dictionaries, dict mapping normalized_value -> original_identifier).
+
+    """
+    payloads: list[SingleJson] = []
     entity_map: dict[str, str] = {}
     seen_keys: set[tuple[str, str]] = set()
 
@@ -256,11 +286,11 @@ def build_blocklist_payloads(
         if key in seen_keys:
             return
         seen_keys.add(key)
-        item: dict[str, Any] = {obj_type: val}
-        if is_add and description:
+        item: SingleJson = {obj_type: val}
+        if include_description and description:
             item["description"] = description
         payloads.append(item)
-        entity_map[entity_ident] = obj_type
+        entity_map[val] = entity_ident
 
     # 1. Process entities in scope
     for entity in suitable_entities:
@@ -274,317 +304,3 @@ def build_blocklist_payloads(
         _add_payload(obj_type, val, raw_ident)
 
     return payloads, entity_map
-
-
-def start_blocklist_operation(
-    siemplify: SiemplifyAction,
-    manager: TrendVisionOneManager,
-    action_start_time: int,
-    suitable_entities: list[Any],
-    result_data: dict[str, Any],
-    is_add: bool = True,
-) -> tuple[str, bool, int]:
-    """Starts the blocklist operation during the first execution run."""
-    description = extract_action_param(
-        siemplify,
-        param_name=PARAM_DESCRIPTION,
-        is_mandatory=False,
-    ) if is_add else None
-
-    payloads, entity_map = build_blocklist_payloads(
-        siemplify=siemplify,
-        suitable_entities=suitable_entities,
-        description=description,
-        is_add=is_add,
-    )
-
-    if not payloads:
-        action_verb = "added" if is_add else "removed"
-        output_message = f"No supported entities or parameters were provided to be {action_verb}."
-        siemplify.result.add_result_json({"added" if is_add else "removed": [], "failed": []})
-        return output_message, False, EXECUTION_STATE_COMPLETED
-
-    result_data.update({
-        "result_urls": {},
-        "json_results": {},
-        "completed": [],
-        "failed": [],
-        "pending": [],
-    })
-
-    # Submit in chunks of PAYLOAD_CHUNK_SIZE
-    for i in range(0, len(payloads), PAYLOAD_CHUNK_SIZE):
-        chunk = payloads[i:i + PAYLOAD_CHUNK_SIZE]
-        try:
-            if is_add:
-                responses = manager.add_entities_to_blocklist(chunk)
-            else:
-                responses = manager.remove_entities_from_blocklist(chunk)
-        except Exception as e:
-            siemplify.LOGGER.error(f"Error submitting blocklist batch: {e}")
-            for item in chunk:
-                for k, v in item.items():
-                    if k != "description":
-                        result_data["failed"].append(v)
-            continue
-
-        if len(responses) == 1 and len(chunk) > 1:
-            responses = responses * len(chunk)
-
-        for item, response in zip(chunk, responses):
-            item_val = next(v for k, v in item.items() if k != "description")
-            if response.url:
-                result_data["result_urls"][item_val] = response.url
-                result_data["pending"].append(item_val)
-            elif response.id:
-                result_data["result_urls"][item_val] = response.id
-                result_data["pending"].append(item_val)
-            elif getattr(response, "is_success", False):
-                action_verb = "added" if is_add else "removed"
-                siemplify.LOGGER.info(f"Successfully {action_verb} entity {item_val}")
-                if item_val not in result_data["completed"]:
-                    result_data["completed"].append(item_val)
-            else:
-                siemplify.LOGGER.error(
-                    f"Failed to submit {item_val} to blocklist. Error: {response.error_message}"
-                )
-                result_data["failed"].append(item_val)
-
-        if len(responses) < len(chunk):
-            for item in chunk[len(responses):]:
-                item_val = next(v for k, v in item.items() if k != "description")
-                siemplify.LOGGER.error(
-                    f"Missing response for {item_val} when submitting to blocklist."
-                )
-                result_data["failed"].append(item_val)
-
-    return query_blocklist_operation_status(
-        siemplify=siemplify,
-        manager=manager,
-        result_data=result_data,
-        action_start_time=action_start_time,
-        is_add=is_add,
-    )
-
-
-def query_blocklist_operation_status(
-    siemplify: SiemplifyAction,
-    manager: TrendVisionOneManager,
-    result_data: dict[str, Any],
-    action_start_time: int,
-    is_add: bool = True,
-) -> tuple[str, bool, int]:
-    """Queries asynchronous task status for pending blocklist operations."""
-    results_urls = result_data.get("result_urls", {})
-    action_verb = "added" if is_add else "removed"
-
-    for entity_identifier, task_ref in list(results_urls.items()):
-        if not task_ref:
-            continue
-
-        if is_async_action_global_timeout_approaching(siemplify, action_start_time) or is_approaching_timeout(
-            action_start_time, DEFAULT_TIMEOUT
-        ):
-            pending_ids = [t_ref for t_ref in result_data["result_urls"].values() if t_ref]
-            msg = (
-                f"action ran into a timeout during execution. Pending tasks: {pending_ids}. "
-                "Please increase the timeout in IDE."
-            )
-            raise TrendVisionOneTimeoutException(msg)
-
-        task_url = task_ref if str(task_ref).startswith("http") else manager._get_full_url("get_task", task_id=task_ref)
-        task_details = None
-        for attempt in range(3):
-            try:
-                task_details = manager.get_task(task_url=task_url)
-                if task_details.status not in IN_PROGRESS_STATUSES:
-                    break
-            except Exception as e:
-                if attempt == 2:
-                    siemplify.LOGGER.error(
-                        f"Failed to query task status for entity {entity_identifier} at {task_url}: {e}"
-                    )
-                    result_data["result_urls"][entity_identifier] = None
-                    if entity_identifier not in result_data["failed"]:
-                        result_data["failed"].append(entity_identifier)
-                    if entity_identifier in result_data["pending"]:
-                        result_data["pending"].remove(entity_identifier)
-                    break
-            if attempt < 2:
-                time.sleep(2)
-
-        if task_details is None:
-            continue
-
-        result_data["json_results"][entity_identifier] = {
-            "task_id": task_details.id,
-            "status": task_details.status,
-        }
-
-        if task_details.status == SUCCESS_STATUS:
-            siemplify.LOGGER.info(f"Successfully {action_verb} entity {entity_identifier}")
-            result_data["result_urls"][entity_identifier] = None
-            if entity_identifier not in result_data["completed"]:
-                result_data["completed"].append(entity_identifier)
-            if entity_identifier in result_data["pending"]:
-                result_data["pending"].remove(entity_identifier)
-        elif task_details.status not in IN_PROGRESS_STATUSES:
-            # Catch failed, rejected, cancelled, expired, etc.
-            siemplify.LOGGER.error(
-                f"Task {task_details.id} for entity {entity_identifier} ended with status: {task_details.status}"
-            )
-            result_data["result_urls"][entity_identifier] = None
-            if entity_identifier not in result_data["failed"]:
-                result_data["failed"].append(entity_identifier)
-            if entity_identifier in result_data["pending"]:
-                result_data["pending"].remove(entity_identifier)
-
-    result_data["result_urls"] = {k: v for k, v in result_data["result_urls"].items() if v}
-
-    if any(result_data["result_urls"].values()):
-        pending_tasks = [v for v in result_data["result_urls"].values() if v]
-        output_message = f"Pending tasks to finish: {', '.join(pending_tasks)}"
-        result_value = json.dumps(result_data)
-        return output_message, result_value, EXECUTION_STATE_INPROGRESS
-
-    status = EXECUTION_STATE_COMPLETED
-
-    result_json_key = "added" if is_add else "removed"
-    if result_data["json_results"] or result_data["completed"] or result_data["failed"]:
-        siemplify.result.add_result_json({result_json_key: result_data["completed"], "failed": result_data["failed"]})
-
-    # Enrich entities
-    completed_lower = {str(x).strip().lower() for x in result_data["completed"]}
-    for entity in siemplify.target_entities:
-        entity_identifier = get_entity_original_identifier(entity).strip()
-        if entity_identifier in result_data["completed"] or entity_identifier.lower() in completed_lower:
-            enrichment_key = f"{ENRICHMENT_PREFIX}_{IN_BLOCKLIST_KEY}"
-            entity.additional_properties.update({enrichment_key: is_add})
-            entity.is_enriched = True
-    siemplify.update_entities(siemplify.target_entities)
-
-    output_message, result_value = generate_blocklist_output_message_and_result(result_data, is_add=is_add)
-
-    return output_message, result_value, status
-
-
-def generate_blocklist_output_message_and_result(result_data: dict, is_add: bool = True) -> tuple[str, bool]:
-    """Generates user-facing output message and boolean result."""
-    action_verb = "added" if is_add else "removed"
-    action_inf = "add" if is_add else "remove"
-    result_value = True
-
-    if result_data["completed"]:
-        completed_str = ", ".join(result_data["completed"])
-        output_message = (
-            f"Successfully {action_verb} the following entities "
-            f"{'to the' if is_add else 'from the'} blocklist in Trend Vision One: {completed_str}."
-        )
-        if result_data["failed"]:
-            result_value = False
-            failed_str = ", ".join(result_data["failed"])
-            output_message += (
-                f"\nAction wasn't able to {action_inf} the following entities in Trend Vision One: {failed_str}."
-            )
-    else:
-        output_message = f"None of the provided entities were {action_verb} {'to' if is_add else 'from'} the blocklist in Trend Vision One."
-        result_value = False
-
-    return output_message, result_value
-
-
-def execute_blocklist_action(
-    is_first_run: bool,
-    is_add: bool,
-    script_name: str,
-    action_display_name: str,
-) -> None:
-    """Executes main action lifecycle for blocklist addition or removal."""
-    siemplify = SiemplifyAction()
-    action_start_time = unix_now()
-    siemplify.script_name = script_name
-
-    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
-
-    api_root = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Root",
-        is_mandatory=True,
-        print_value=True,
-    )
-    api_token = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Token",
-        is_mandatory=True,
-        remove_whitespaces=False,
-    )
-    verify_ssl = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Verify SSL",
-        is_mandatory=True,
-        input_type=bool,
-        print_value=True,
-    )
-
-    result_value = False
-    result_data: dict[str, Any] = {}
-    status = EXECUTION_STATE_COMPLETED
-    suitable_entities = [
-        entity for entity in siemplify.target_entities if entity.entity_type in SUPPORTED_BLOCKLIST_ENTITY_TYPES
-    ]
-
-    siemplify.LOGGER.info("----------------- Main - Started -----------------")
-    try:
-        manager = TrendVisionOneManager(
-            api_root=api_root,
-            api_token=api_token,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
-        manager.test_connectivity()
-
-        if is_first_run:
-            output_message, result_value, status = start_blocklist_operation(
-                siemplify=siemplify,
-                manager=manager,
-                action_start_time=action_start_time,
-                suitable_entities=suitable_entities,
-                result_data=result_data,
-                is_add=is_add,
-            )
-        else:
-            result_data = json.loads(extract_action_param(siemplify, param_name="additional_data", default_value="{}"))
-            output_message, result_value, status = query_blocklist_operation_status(
-                siemplify=siemplify,
-                manager=manager,
-                result_data=result_data,
-                action_start_time=action_start_time,
-                is_add=is_add,
-            )
-
-    except TrendVisionOneTimeoutException as e:
-        output_message = f"{e}"
-        status = EXECUTION_STATE_FAILED
-        result_json_key = "added" if is_add else "removed"
-        if result_data:
-            siemplify.result.add_result_json({
-                result_json_key: result_data.get("completed", []),
-                "failed": result_data.get("failed", []),
-            })
-        result_value = False
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    except Exception as e:
-        output_message = f'Error executing action "{action_display_name}". Reason: {e}'
-        status = EXECUTION_STATE_FAILED
-        result_value = False
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(f"\n  status: {status}\n  results: {result_value}\n  output_message: {output_message}")
-    siemplify.end(output_message, result_value, status)

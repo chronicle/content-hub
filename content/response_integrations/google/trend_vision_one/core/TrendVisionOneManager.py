@@ -20,10 +20,15 @@ import requests
 from urllib.parse import urljoin
 from datetime import datetime
 
+from typing import TYPE_CHECKING
+
 from .constants import ENDPOINTS, POSSIBLE_SEVERITIES, DATETIME_FORMAT, DEFAULT_MAX_LIMIT
 from . import datamodels
 from .TrendVisionOneParser import TrendVisionOneParser
 from .api_utils import validate_response
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 class TrendVisionOneManager:
@@ -466,9 +471,49 @@ class TrendVisionOneManager:
 
         return response.json()
 
+    def resolve_task_url(self, task_ref: str) -> str:
+        """Resolve a task ID, relative path, or full URL into a complete task polling URL.
+
+        Args:
+            task_ref: Full URL, relative path (e.g. '/v3.0/response/tasks/123'), or task ID.
+
+        Returns:
+            Complete URL string for querying the task.
+
+        """
+        ref_str = str(task_ref).strip()
+        if ref_str.startswith(("http://", "https://")):
+            return ref_str
+        if ref_str.startswith("/"):
+            return f"{self.api_root.rstrip('/')}{ref_str}"
+        return self._get_full_url("get_task", task_id=ref_str)
+
+    def get_task_by_id_or_url(self, task_ref: str) -> datamodels.Task:
+        """Fetch task details given a task ID, relative path, or full URL.
+
+        Args:
+            task_ref: Full URL, relative path, or task ID.
+
+        Returns:
+            Parsed Task datamodel object.
+
+        """
+        task_url = self.resolve_task_url(task_ref)
+        return self.get_task(task_url=task_url)
+
     def _submit_blocklist_objects(
-        self, endpoint_key: str, objects: list[dict]
+        self, endpoint_key: str, objects: list[SingleJson]
     ) -> list[datamodels.BlocklistResponse]:
+        """Submit a batch of suspicious objects to the specified blocklist endpoint.
+
+        Args:
+            endpoint_key: Key in ENDPOINTS for the target blocklist operation.
+            objects: List of suspicious object dictionaries to submit.
+
+        Returns:
+            List of parsed BlocklistResponse objects.
+
+        """
         uri = self._get_full_url(endpoint_key)
         response = self.session.post(uri, json=objects)
         validate_response(response)
@@ -481,29 +526,29 @@ class TrendVisionOneManager:
         ]
 
     def add_entities_to_blocklist(
-        self, objects: list[dict]
+        self, objects: list[SingleJson]
     ) -> list[datamodels.BlocklistResponse]:
-        """
-        Add entities to blocklist
+        """Add suspicious objects to the Trend Vision One blocklist.
 
         Args:
-            objects (list[dict]): list of objects to blocklist
+            objects: List of suspicious object dictionaries to add to the blocklist.
 
         Returns:
-            list[datamodels.BlocklistResponse]: list of parsed responses
+            List of parsed BlocklistResponse objects.
+
         """
         return self._submit_blocklist_objects("add_to_blocklist", objects)
 
     def remove_entities_from_blocklist(
-        self, objects: list[dict]
+        self, objects: list[SingleJson]
     ) -> list[datamodels.BlocklistResponse]:
-        """
-        Remove entities from blocklist
+        """Remove suspicious objects from the Trend Vision One blocklist.
 
         Args:
-            objects (list[dict]): list of objects to remove from blocklist
+            objects: List of suspicious object dictionaries to remove from the blocklist.
 
         Returns:
-            list[datamodels.BlocklistResponse]: list of parsed responses
+            List of parsed BlocklistResponse objects.
+
         """
         return self._submit_blocklist_objects("remove_from_blocklist", objects)

@@ -1,4 +1,5 @@
 # Copyright 2026 Google LLC
+# ruff: file-ignore[invalid-module-name]
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,67 +15,48 @@
 
 from __future__ import annotations
 
-import sys
+from typing import TYPE_CHECKING, NoReturn
 
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
-
+from ..core.base_action import BaseBlocklistAction
 from ..core.constants import ADD_ENTITY_TO_BLOCKLIST_SCRIPT_NAME
-from ..core.TrendVisionOneManager import TrendVisionOneManager
-from ..core.UtilsManager import (
-    SUPPORTED_BLOCKLIST_ENTITY_TYPES,
-    execute_blocklist_action,
-    query_blocklist_operation_status,
-    start_blocklist_operation,
-)
 
-SUPPORTED_ENTITY_TYPES = SUPPORTED_BLOCKLIST_ENTITY_TYPES
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+    from ..core import datamodels
 
 
-def start_operation(
-    siemplify: SiemplifyAction,
-    manager: TrendVisionOneManager,
-    action_start_time: int,
-    suitable_entities: list,
-    result_data: dict,
-) -> tuple[str, bool, int]:
-    """Start operation for adding entities to blocklist."""
-    return start_blocklist_operation(
-        siemplify=siemplify,
-        manager=manager,
-        action_start_time=action_start_time,
-        suitable_entities=suitable_entities,
-        result_data=result_data,
-        is_add=True,
-    )
+class AddEntityToBlocklist(BaseBlocklistAction):
+    """Action to add supported Chronicle entities and indicators to the Trend Vision One blocklist."""
+
+    SCRIPT_NAME = ADD_ENTITY_TO_BLOCKLIST_SCRIPT_NAME
+    ACTION_DISPLAY_NAME = "Add Entity To Blocklist"
+    ACTION_VERB = "added"
+    ACTION_INFINITIVE = "add"
+    ACTION_PREPOSITION = "to"
+    RESULT_JSON_KEY = "added"
+    ENRICHMENT_VALUE = True
+    INCLUDE_DESCRIPTION = True
+
+    def _submit_chunk(
+        self, chunk: list[SingleJson]
+    ) -> list[datamodels.BlocklistResponse]:
+        """Submit suspicious objects to be added to the Trend Vision One blocklist.
+
+        Args:
+            chunk: Batch of suspicious object payload dictionaries.
+
+        Returns:
+            List of parsed BlocklistResponse objects.
+
+        """
+        return self.api_client.add_entities_to_blocklist(chunk)
 
 
-def query_operation_status(
-    siemplify: SiemplifyAction,
-    manager: TrendVisionOneManager,
-    result_data: dict,
-    action_start_time: int,
-) -> tuple[str, bool, int]:
-    """Query operation status for adding entities to blocklist."""
-    return query_blocklist_operation_status(
-        siemplify=siemplify,
-        manager=manager,
-        result_data=result_data,
-        action_start_time=action_start_time,
-        is_add=True,
-    )
-
-
-@output_handler
-def main(is_first_run: bool) -> None:
-    execute_blocklist_action(
-        is_first_run=is_first_run,
-        is_add=True,
-        script_name=ADD_ENTITY_TO_BLOCKLIST_SCRIPT_NAME,
-        action_display_name="Add Entity To Blocklist",
-    )
+def main() -> NoReturn:
+    """Entry point for Add Entity To Blocklist action execution."""
+    AddEntityToBlocklist().run()
 
 
 if __name__ == "__main__":
-    is_first_run = len(sys.argv) < 3 or sys.argv[2] == "True"
-    main(is_first_run)
+    main()
