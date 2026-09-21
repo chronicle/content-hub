@@ -4,13 +4,16 @@ import json
 import sys
 import time
 import urllib.parse
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
 
 from .censys_exceptions import (
     CensysException,
+    FeatureNotEnabledException,
+    ForbiddenErrorException,
     InternalServerError,
+    ItemNotFoundException,
     PartialDataException,
     RateLimitException,
     UnauthorizedErrorException,
@@ -22,8 +25,11 @@ from .constants import (
     DEFAULT_REQUEST_TIMEOUT,
     ENDPOINTS,
     ENRICH_CERTIFICATES_ACTION_IDENTIFIER,
+    ENRICH_HOST_ACTION_IDENTIFIER,
     ENRICH_IPS_ACTION_IDENTIFIER,
     ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER,
+    FEATURE_NOT_ENABLED_STATUS_CODE,
+    FORBIDDEN_STATUS_CODE,
     GET_HOST_HISTORY_ACTION_IDENTIFIER,
     GET_RELATED_INFRA_JOB_STATUS_ACTION_IDENTIFIER,
     GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER,
@@ -36,6 +42,7 @@ from .constants import (
     MAX_PAGINATION_CALLS,
     MAX_PAYLOAD_SIZE_BYTES,
     MAX_RECORD_THRESHOLD,
+    NOT_FOUND_STATUS_CODE,
     PING_ACTION_IDENTIFIER,
     RATE_LIMIT_EXCEEDED_STATUS_CODE,
     RETRY_COUNT,
@@ -55,7 +62,7 @@ class APIManager:
         api_key: str,
         organization_id: str,
         verify_ssl: bool = False,
-        siemplify: Optional[Any] = None,
+        siemplify: Any | None = None,
     ) -> None:
         """Initialize the APIManager with API key authentication.
 
@@ -110,11 +117,11 @@ class APIManager:
         api_identifier: str,
         method: str,
         url: str,
-        params: Optional[Dict[str, Any]] = None,
-        body: Optional[Dict[str, Any]] = None,
-        data: Optional[str] = None,
+        params: dict[str, Any] | None = None,
+        body: dict[str, Any] | None = None,
+        data: str | None = None,
         retry_count: int = RETRY_COUNT,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Make a REST call to the Censys API with automatic retry logic.
 
         Args:
@@ -157,9 +164,7 @@ class APIManager:
                 return self._make_rest_call(
                     api_identifier, method, url, params, body, data, retry_count - 1
                 )
-            raise RateLimitException(
-                "Max retries exceeded. Please check your network connection and try again later."
-            )
+            raise
         except UnauthorizedErrorException:
             raise UnauthorizedErrorException(
                 "Unauthorized, please verify your API Key and Organization ID."
@@ -172,6 +177,51 @@ class APIManager:
                 f"Exception occurred while parsing response JSON for {api_identifier} and URL {url}"
             )
             return {}
+
+    def _raise_for_http_status(
+        self,
+        api_identifier: str,
+        response: requests.Response,
+        error: requests.HTTPError,
+        error_msg: str,
+    ) -> None:
+        """Map an HTTP error response to the matching Censys exception type.
+
+        Args:
+            api_identifier: API action identifier
+            response: HTTP response object
+            error: The HTTPError raised by response.raise_for_status()
+            error_msg: Custom error message passed through to HandleExceptions
+
+        Raises:
+            UnauthorizedErrorException: If authentication failed (401)
+            ForbiddenErrorException: If the account lacks permission for this
+                resource (403)
+            ItemNotFoundException: If the requested resource does not exist (404)
+            FeatureNotEnabledException: If the feature is not enabled for the
+                account's tier (409)
+            RateLimitException: If API rate limit exceeded (429)
+            ValidationException: If input validation fails (400, 422)
+            InternalServerError: If server error occurred
+        """
+        status_code = response.status_code
+
+        if status_code == UNAUTHORIZED_STATUS_CODE:
+            raise UnauthorizedErrorException()
+        if status_code == FORBIDDEN_STATUS_CODE:
+            raise ForbiddenErrorException(self._parse_validation_error(response))
+        if status_code == NOT_FOUND_STATUS_CODE:
+            raise ItemNotFoundException(self._parse_validation_error(response))
+        if status_code == FEATURE_NOT_ENABLED_STATUS_CODE:
+            raise FeatureNotEnabledException(self._parse_validation_error(response))
+        if status_code == RATE_LIMIT_EXCEEDED_STATUS_CODE:
+            raise RateLimitException("API rate limit exceeded")
+        if status_code in VALIDATION_ERROR_STATUS_CODES:
+            raise ValidationException(self._parse_validation_error(response))
+        if status_code in INTERNAL_SERVER_ERROR_STATUS_CODES:
+            raise InternalServerError(f"Internal server error: {status_code}")
+
+        HandleExceptions(api_identifier, error, response, error_msg).do_process()
 
     def validate_response(
         self,
@@ -191,29 +241,26 @@ class APIManager:
 
         Raises:
             ValidationException: If input validation fails (400, 422)
-            RateLimitException: If API rate limit exceeded
-            UnauthorizedErrorException: If authentication failed
+            UnauthorizedErrorException: If authentication failed (401)
+            ForbiddenErrorException: If the account lacks permission for this
+                resource (403)
+            ItemNotFoundException: If the requested resource does not exist (404)
+            FeatureNotEnabledException: If the feature is not enabled for the
+                account's tier (409)
+            RateLimitException: If API rate limit exceeded (429)
             InternalServerError: If server error occurred
             CensysException: For other errors
         """
         try:
             response.raise_for_status()
         except requests.HTTPError as error:
-            if response.status_code == UNAUTHORIZED_STATUS_CODE:
-                raise UnauthorizedErrorException()
-            if response.status_code == RATE_LIMIT_EXCEEDED_STATUS_CODE:
-                raise RateLimitException("API rate limit exceeded")
-            if response.status_code in VALIDATION_ERROR_STATUS_CODES:
-                error_detail = self._parse_validation_error(response)
-                raise ValidationException(error_detail)
-            if response.status_code in INTERNAL_SERVER_ERROR_STATUS_CODES:
-                raise InternalServerError(
-                    f"Internal server error: {response.status_code}"
-                )
-            HandleExceptions(api_identifier, error, response, error_msg).do_process()
+            self._raise_for_http_status(api_identifier, response, error, error_msg)
         except (
             ValidationException,
             UnauthorizedErrorException,
+            ForbiddenErrorException,
+            ItemNotFoundException,
+            FeatureNotEnabledException,
             RateLimitException,
             InternalServerError,
         ):
@@ -304,9 +351,9 @@ class APIManager:
         ioc_type: str,
         ioc_value: str,
         port: int,
-        protocol: Optional[str] = None,
-        transport_protocol: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        protocol: str | None = None,
+        transport_protocol: str | None = None,
+    ) -> dict[str, Any]:
         """Initiate a live rescan for a known host service.
 
         Args:
@@ -357,7 +404,7 @@ class APIManager:
 
         return response
 
-    def get_rescan_status(self, scan_id: str) -> Dict[str, Any]:
+    def get_rescan_status(self, scan_id: str) -> dict[str, Any]:
         """Get the current status of a scan by its ID.
 
         Args:
@@ -384,7 +431,7 @@ class APIManager:
         host_id: str,
         start_time: str,
         end_time: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get the event history for a host (IP address) with time-based pagination.
 
         The API uses reversed time semantics:
@@ -577,9 +624,33 @@ class APIManager:
             }
         }
 
+    def get_host_enrichment(self, host_ip: str) -> dict[str, Any]:
+        """
+        Retrieve enrichment data for a single host from the new enrichment endpoint.
+
+        Args:
+            host_ip: IP address of the host to enrich
+
+        Returns:
+            Dict containing host enrichment data with structure
+            {"result": {"resource": {...}}}
+
+        Raises:
+            CensysException: If there's an error in the API response
+        """
+        url = self._get_full_url(ENRICH_HOST_ACTION_IDENTIFIER, host_ip=host_ip)
+
+        response = self._make_rest_call(
+            ENRICH_HOST_ACTION_IDENTIFIER,
+            "GET",
+            url,
+        )
+
+        return response
+
     def enrich_hosts(
-        self, host_ids: List[str], at_time: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, host_ids: list[str], at_time: str | None = None
+    ) -> dict[str, Any]:
         """
         Enrich multiple hosts with detailed information.
 
@@ -606,8 +677,8 @@ class APIManager:
         return response
 
     def enrich_web_properties(
-        self, webproperty_ids: List[str], at_time: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, webproperty_ids: list[str], at_time: str | None = None
+    ) -> dict[str, Any]:
         """
         Enrich multiple web properties with detailed information.
 
@@ -633,7 +704,7 @@ class APIManager:
 
         return response
 
-    def enrich_certificates(self, certificate_ids: List[str]) -> Dict[str, Any]:
+    def enrich_certificates(self, certificate_ids: list[str]) -> dict[str, Any]:
         """
         Enrich certificates using Censys API.
 
@@ -660,7 +731,7 @@ class APIManager:
         self,
         target_type: str,
         target_value: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create a CensEye (Related Infrastructure) job.
 
@@ -698,7 +769,7 @@ class APIManager:
 
         return response
 
-    def get_censeye_job_status(self, job_id: str) -> Dict[str, Any]:
+    def get_censeye_job_status(self, job_id: str) -> dict[str, Any]:
         """
         Get the current status of a CensEye job.
 
@@ -726,7 +797,7 @@ class APIManager:
     def get_censeye_job_results(
         self,
         job_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get the results from a completed CensEye job.
 
