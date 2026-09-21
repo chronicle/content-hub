@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -102,11 +102,13 @@ class CensysAPIManager:
         """Set enrich hosts response."""
         self.enrich_hosts_response = response
 
-    def set_enrich_host_response(self, response: dict):
+    def set_enrich_host_response(self, response: dict[str, Any]) -> None:
         """Set enrich host (single host enrichment endpoint) response."""
         self.enrich_host_response = response
 
-    def set_enrich_host_response_for_ip(self, ip: str, response: dict):
+    def set_enrich_host_response_for_ip(
+        self, ip: str, response: dict[str, Any]
+    ) -> None:
         """Set enrich host response for a specific IP address (per-IP endpoint)."""
         self.enrich_host_responses_by_ip[ip] = response
 
@@ -155,12 +157,14 @@ class CensysAPIManager:
 
     def simulate_enrich_host_failure(
         self, should_fail: bool = True, exception_type: str = "generic"
-    ):
+    ) -> None:
         """Simulate enrich host (single host enrichment endpoint) failure."""
         self.should_fail_enrich_host = should_fail
         self.exception_type = exception_type
 
-    def simulate_enrich_host_failure_for_ip(self, ip: str, exception_type: str):
+    def simulate_enrich_host_failure_for_ip(
+        self, ip: str, exception_type: str
+    ) -> None:
         """Simulate a failure for one specific IP only, leaving other IPs unaffected.
 
         Useful for testing a mid-loop account-level abort: e.g. IP #1 succeeds,
@@ -203,7 +207,9 @@ class CensysAPIManager:
         self.should_fail_rescan_status = should_fail
         self.exception_type = exception_type
 
-    def _raise_exception(self, override_exception_type: Optional[str] = None):
+    def _raise_exception(
+        self, override_exception_type: str | None = None
+    ) -> None:
         """Raise appropriate exception based on exception_type.
 
         Args:
@@ -267,7 +273,7 @@ class CensysAPIManager:
             self._raise_exception()
         return self.enrich_hosts_response or {"result": []}
 
-    def get_host_enrichment(self, host_ip: str) -> dict:
+    def get_host_enrichment(self, host_ip: str) -> dict[str, Any]:
         """Mock get_host_enrichment method."""
         if self.should_fail_enrich_host:
             self._raise_exception()

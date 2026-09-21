@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timezone
+from typing import Any
 from urllib.parse import quote
 
 from .constants import (
@@ -28,7 +28,7 @@ class BaseModel(object):
     Provides common functionality for data transformation and output formatting.
     """
 
-    def __init__(self, raw_data: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, raw_data: dict[str, Any] | None = None) -> None:
         """
         Initialize the base model.
 
@@ -37,7 +37,7 @@ class BaseModel(object):
         """
         self.raw_data = raw_data or {}
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """
         Convert the model to JSON format.
 
@@ -46,7 +46,7 @@ class BaseModel(object):
         """
         return self.raw_data
 
-    def to_csv(self) -> List[Dict[str, Any]]:
+    def to_csv(self) -> list[dict[str, Any]]:
         """
         Convert the model to CSV format.
         Should be overridden by child classes.
@@ -73,7 +73,7 @@ class PingDatamodel(BaseModel):
         super().__init__()
         self.success = success
 
-    def to_csv(self) -> List[Dict[str, str]]:
+    def to_csv(self) -> list[dict[str, str]]:
         """
         Convert ping result to CSV format.
 
@@ -82,7 +82,7 @@ class PingDatamodel(BaseModel):
         """
         return [{"Status": "Connected" if self.success else "Failed"}]
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """
         Convert ping result to JSON format.
 
@@ -103,7 +103,7 @@ class HostHistoryEventModel(BaseModel):
 
     def __init__(
         self,
-        raw_data: Dict[str, Any],
+        raw_data: dict[str, Any],
         index: int,
         host_id: str = None,
         organization_id: str = None,
@@ -202,7 +202,7 @@ class HostHistoryEventModel(BaseModel):
         else:
             self.historical_view_link = DEFAULT_VALUE_NA
 
-    def to_csv(self) -> Dict[str, Any]:
+    def to_csv(self) -> dict[str, Any]:
         """Convert event to CSV-compatible dictionary."""
         return {
             "Sr. No.": self.index,
@@ -219,7 +219,7 @@ class HostDatamodel(BaseModel):
     Extracts and formats host information for entity enrichment.
     """
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: dict[str, Any]) -> None:
         """
         Initialize the Host data model.
 
@@ -227,7 +227,7 @@ class HostDatamodel(BaseModel):
             raw_data: Raw API response data from Censys host lookup
         """
         super().__init__(raw_data)
-        self.host_data = raw_data.get("result", {}).get("resource", {})
+        self.host_data = (raw_data.get("result") or {}).get("resource") or {}
 
     def is_found(self) -> bool:
         """
@@ -238,7 +238,7 @@ class HostDatamodel(BaseModel):
         """
         return bool(self.host_data)
 
-    def get_enrichment_data(self) -> Dict[str, Any]:
+    def get_enrichment_data(self) -> dict[str, Any]:
         """
         Extract enrichment data for entity properties.
 
@@ -327,7 +327,7 @@ class HostDatamodel(BaseModel):
 
         return {k: v for k, v in enrichment.items() if v is not None}
 
-    def _get_top_values(self, values: List[Any], max_count: int = 5) -> Optional[str]:
+    def _get_top_values(self, values: list[Any], max_count: int = 5) -> str | None:
         """
         Get top N unique values as comma-separated string.
 
@@ -363,7 +363,7 @@ class HostDatamodel(BaseModel):
 
         return ", ".join(unique_values) if unique_values else None
 
-    def _get_latest_scan_time(self, services: List[Dict]) -> Optional[str]:
+    def _get_latest_scan_time(self, services: list[dict]) -> str | None:
         """
         Get the most recent scan time from services.
 
@@ -383,36 +383,31 @@ class HostEnrichmentDatamodel(BaseModel):
     Handles responses from GET /v3/global/asset/enrichment/host/{host_ip}.
     """
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: dict[str, Any]) -> None:
         super().__init__(raw_data)
-        self.host_data = raw_data.get("result", {}).get("resource", {})
+        self.host_data = (raw_data.get("result") or {}).get("resource") or {}
 
     def is_found(self) -> bool:
         return bool(self.host_data)
 
-    def get_enrichment_data(self) -> Dict[str, Any]:
+    def get_enrichment_data(self) -> dict[str, Any]:
         if not self.is_found():
             return {}
 
-        services = self.host_data.get("services", [])
-        dns_data = self.host_data.get("dns", {})
-        location = self.host_data.get("location", {})
-        asn = self.host_data.get("autonomous_system", {})
-        whois = self.host_data.get("whois", {})
-        reputation = self.host_data.get("reputation", {})
-        greynoise = self.host_data.get("greynoise", {})
-        privacy = self.host_data.get("privacy", [])
-        network = self.host_data.get("network", [])
-        third_party = self.host_data.get("third_party", {})
-        mallory = third_party.get("mallory", [])
+        enrichment: dict[str, Any] = {}
+        enrichment.update(self._get_core_host_fields())
+        enrichment.update(self._get_location_and_network_fields())
+        enrichment.update(self._get_risk_and_privacy_fields())
+        enrichment.update(self._get_mallory_fields())
 
-        first_privacy = privacy[0] if privacy else {}
-        first_network = network[0] if network else {}
-        first_mallory = mallory[0] if mallory else {}
-        first_observable = first_mallory.get("observable", {})
-        first_opinion = first_mallory.get("opinions", [{}])[0] if first_mallory.get("opinions") else {}
+        return {k: v for k, v in enrichment.items() if v is not None}
 
-        enrichment = {
+    def _get_core_host_fields(self) -> dict[str, Any]:
+        """Extract service, DNS, and label fields from the host data."""
+        services = self.host_data.get("services") or []
+        dns_data = self.host_data.get("dns") or {}
+
+        return {
             f"{ENRICHMENT_PREFIX}service_count": self.host_data.get("service_count"),
             f"{ENRICHMENT_PREFIX}ports": self._get_top_values(
                 [str(s.get("port")) for s in services if s.get("port")]
@@ -423,7 +418,7 @@ class HostEnrichmentDatamodel(BaseModel):
             f"{ENRICHMENT_PREFIX}host_labels": self._get_top_values(
                 [
                     label.get("value")
-                    for label in self.host_data.get("labels", [])
+                    for label in self.host_data.get("labels") or []
                     if label.get("value")
                 ]
             ),
@@ -431,7 +426,7 @@ class HostEnrichmentDatamodel(BaseModel):
                 [
                     label.get("value")
                     for s in services
-                    for label in s.get("labels", [])
+                    for label in s.get("labels") or []
                     if label.get("value")
                 ]
             ),
@@ -439,19 +434,30 @@ class HostEnrichmentDatamodel(BaseModel):
                 [
                     threat.get("name")
                     for s in services
-                    for threat in s.get("threats", [])
+                    for threat in s.get("threats") or []
                     if threat.get("name")
                 ]
             ),
             f"{ENRICHMENT_PREFIX}dns_names": self._get_top_values(
-                dns_data.get("names", [])
+                dns_data.get("names") or []
             ),
             f"{ENRICHMENT_PREFIX}reverse_dns": self._get_top_values(
-                dns_data.get("reverse_dns", {}).get("names", [])
+                (dns_data.get("reverse_dns") or {}).get("names") or []
             ),
-            f"{ENRICHMENT_PREFIX}network_name": whois.get("network", {}).get("name"),
+        }
+
+    def _get_location_and_network_fields(self) -> dict[str, Any]:
+        """Extract ASN, WHOIS, and geolocation fields from the host data."""
+        location = self.host_data.get("location") or {}
+        asn = self.host_data.get("autonomous_system") or {}
+        whois = self.host_data.get("whois") or {}
+        network_info = whois.get("network") or {}
+        coordinates = location.get("coordinates") or {}
+
+        return {
+            f"{ENRICHMENT_PREFIX}network_name": network_info.get("name"),
             f"{ENRICHMENT_PREFIX}network_cidrs": self._get_top_values(
-                whois.get("network", {}).get("cidrs", [])
+                network_info.get("cidrs") or []
             ),
             f"{ENRICHMENT_PREFIX}asn_name": asn.get("name"),
             f"{ENRICHMENT_PREFIX}asn_id": asn.get("asn"),
@@ -461,21 +467,29 @@ class HostEnrichmentDatamodel(BaseModel):
             f"{ENRICHMENT_PREFIX}location_country": location.get("country"),
             f"{ENRICHMENT_PREFIX}country_code": location.get("country_code"),
             f"{ENRICHMENT_PREFIX}continent": location.get("continent"),
-            f"{ENRICHMENT_PREFIX}geo_lat": location.get("coordinates", {}).get(
-                "latitude"
-            ),
-            f"{ENRICHMENT_PREFIX}geo_long": location.get("coordinates", {}).get(
-                "longitude"
-            ),
+            f"{ENRICHMENT_PREFIX}geo_lat": coordinates.get("latitude"),
+            f"{ENRICHMENT_PREFIX}geo_long": coordinates.get("longitude"),
+        }
+
+    def _get_risk_and_privacy_fields(self) -> dict[str, Any]:
+        """Extract reputation, GreyNoise, privacy, and network-type fields."""
+        reputation = self.host_data.get("reputation") or {}
+        greynoise = self.host_data.get("greynoise") or {}
+        privacy = self.host_data.get("privacy") or []
+        network = self.host_data.get("network") or []
+        first_privacy = privacy[0] if privacy else {}
+        first_network = network[0] if network else {}
+
+        return {
             f"{ENRICHMENT_PREFIX}reputation_score": reputation.get("score"),
-            f"{ENRICHMENT_PREFIX}reputation_score_level": reputation.get(
-                "score_level"
-            ) or None,
+            f"{ENRICHMENT_PREFIX}reputation_score_level": (
+                reputation.get("score_level") or None
+            ),
             # GreyNoise Fields
             f"{ENRICHMENT_PREFIX}greynoise_actor": greynoise.get("actor") or None,
-            f"{ENRICHMENT_PREFIX}greynoise_classification": greynoise.get(
-                "classification"
-            ) or None,
+            f"{ENRICHMENT_PREFIX}greynoise_classification": (
+                greynoise.get("classification") or None
+            ),
             f"{ENRICHMENT_PREFIX}greynoise_last_observed": greynoise.get(
                 "last_observed_time"
             ),
@@ -488,7 +502,18 @@ class HostEnrichmentDatamodel(BaseModel):
             f"{ENRICHMENT_PREFIX}network_hosting": first_network.get("hosting"),
             f"{ENRICHMENT_PREFIX}network_mobile": first_network.get("mobile"),
             f"{ENRICHMENT_PREFIX}network_satellite": first_network.get("satellite"),
-            # Mallory / third-party fields
+        }
+
+    def _get_mallory_fields(self) -> dict[str, Any]:
+        """Extract Mallory/third-party observable and opinion fields."""
+        third_party = self.host_data.get("third_party") or {}
+        mallory = third_party.get("mallory") or []
+        first_mallory = mallory[0] if mallory else {}
+        first_observable = first_mallory.get("observable") or {}
+        opinions = first_mallory.get("opinions") or []
+        first_opinion = opinions[0] if opinions else {}
+
+        return {
             f"{ENRICHMENT_PREFIX}mallory_name": first_observable.get("name"),
             f"{ENRICHMENT_PREFIX}mallory_type": first_observable.get("type"),
             f"{ENRICHMENT_PREFIX}mallory_last_updated_at": self._get_latest_value(
@@ -499,19 +524,19 @@ class HostEnrichmentDatamodel(BaseModel):
                     first_opinion.get("updated_at"),
                 ]
             ),
-            f"{ENRICHMENT_PREFIX}mallory_description": first_observable.get(
-                "description"
-            )
-            or first_opinion.get("description"),
+            f"{ENRICHMENT_PREFIX}mallory_description": (
+                first_observable.get("description")
+                or first_opinion.get("description")
+            ),
             f"{ENRICHMENT_PREFIX}mallory_verdict": first_opinion.get("verdict"),
             f"{ENRICHMENT_PREFIX}mallory_confidence": first_opinion.get("confidence"),
-            f"{ENRICHMENT_PREFIX}mallory_source": first_opinion.get("source")
-            or first_opinion.get("reference_source_slug"),
+            f"{ENRICHMENT_PREFIX}mallory_source": (
+                first_opinion.get("source")
+                or first_opinion.get("reference_source_slug")
+            ),
         }
 
-        return {k: v for k, v in enrichment.items() if v is not None}
-
-    def _get_top_values(self, values: List[Any], max_count: int = 5) -> Optional[str]:
+    def _get_top_values(self, values: list[Any], max_count: int = 5) -> str | None:
         if not values:
             return None
 
@@ -529,7 +554,7 @@ class HostEnrichmentDatamodel(BaseModel):
 
         return ", ".join(unique_values) if unique_values else None
 
-    def _get_latest_value(self, values: List[Any]) -> Optional[str]:
+    def _get_latest_value(self, values: list[Any]) -> str | None:
         values = [value for value in values if value]
         return max(values) if values else None
 
@@ -540,7 +565,7 @@ class WebPropertyDatamodel(BaseModel):
     Extracts and formats web property information for entity enrichment.
     """
 
-    def __init__(self, raw_data: Dict[str, Any], port: int) -> None:
+    def __init__(self, raw_data: dict[str, Any], port: int) -> None:
         """
         Initialize the Web Property data model.
 
@@ -561,7 +586,7 @@ class WebPropertyDatamodel(BaseModel):
         """
         return bool(self.web_data)
 
-    def get_enrichment_data(self) -> Dict[str, Any]:
+    def get_enrichment_data(self) -> dict[str, Any]:
         """
         Extract enrichment data for entity properties with port prefix.
 
@@ -612,7 +637,7 @@ class WebPropertyDatamodel(BaseModel):
             f"{port_prefix}software_version": self._get_top_values(
                 [sw.get("version") for sw in software_list if sw.get("version")]
             ),
-            f"{port_prefix}last_enriched": (datetime.utcnow().isoformat() + "Z"),
+            f"{port_prefix}last_enriched": (datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")),
         }
 
         if cert:
@@ -636,7 +661,7 @@ class WebPropertyDatamodel(BaseModel):
 
         return {k: v for k, v in enrichment.items() if v is not None}
 
-    def _get_top_values(self, values: List[Any], max_count: int = 5) -> Optional[str]:
+    def _get_top_values(self, values: list[Any], max_count: int = 5) -> str | None:
         """
         Get top N unique values as comma-separated string.
 
@@ -669,7 +694,7 @@ class WebPropertyDatamodel(BaseModel):
 
         return ", ".join(unique_values) if unique_values else None
 
-    def _get_first_value(self, values: List[Any]) -> Optional[str]:
+    def _get_first_value(self, values: list[Any]) -> str | None:
         """
         Get first non-empty value from list.
 
@@ -693,7 +718,7 @@ class CertificateDatamodel(BaseModel):
     Handles certificate data from /v3/global/asset/certificate endpoint.
     """
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: dict[str, Any]) -> None:
         """
         Initialize the Certificate data model.
 
@@ -712,7 +737,7 @@ class CertificateDatamodel(BaseModel):
         """
         return bool(self.cert_data)
 
-    def get_enrichment_data(self) -> Dict[str, Any]:
+    def get_enrichment_data(self) -> dict[str, Any]:
         """
         Extract enrichment data for entity properties.
 
@@ -737,12 +762,12 @@ class CertificateDatamodel(BaseModel):
             f"{ENRICHMENT_PREFIX_CERT}not_before": validity.get("not_before"),
             f"{ENRICHMENT_PREFIX_CERT}not_after": validity.get("not_after"),
             f"{ENRICHMENT_PREFIX_CERT}is_self_signed": signature.get("self_signed"),
-            f"{ENRICHMENT_PREFIX}last_enriched": (datetime.utcnow().isoformat() + "Z"),
+            f"{ENRICHMENT_PREFIX}last_enriched": (datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")),
         }
 
         return enrichment
 
-    def _get_first_value(self, value_list: List[Any]) -> Optional[str]:
+    def _get_first_value(self, value_list: list[Any]) -> str | None:
         """
         Get first value from a list.
 
@@ -756,7 +781,7 @@ class CertificateDatamodel(BaseModel):
             return str(value_list[0])
         return None
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """
         Convert certificate data to JSON format for case wall.
 
@@ -777,7 +802,7 @@ class RelatedInfraResultModel(BaseModel):
 
     def __init__(
         self,
-        raw_data: Dict[str, Any],
+        raw_data: dict[str, Any],
         index: int,
     ) -> None:
         """
@@ -879,7 +904,7 @@ class RelatedInfraResultModel(BaseModel):
 
         return f"{CENSYS_SEARCH_BASE_URL}?q={encoded_query}"
 
-    def to_csv(self) -> Dict[str, Any]:
+    def to_csv(self) -> dict[str, Any]:
         """
         Convert to CSV-compatible dictionary for table output.
 
@@ -894,7 +919,7 @@ class RelatedInfraResultModel(BaseModel):
             "See results in Censys": self.search_url,
         }
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """
         Convert to JSON format for case wall.
 

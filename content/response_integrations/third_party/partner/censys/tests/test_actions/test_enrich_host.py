@@ -8,6 +8,63 @@ from censys.actions import enrich_host
 from censys.tests.common import CONFIG_PATH
 from censys.tests.conftest import CensysAPIManager
 
+SAMPLE_ENRICH_HOST_RESPONSE = {
+    "result": {
+        "resource": {
+            "ip": "8.8.8.8",
+            "location": {
+                "country": "United States",
+                "country_code": "US",
+                "city": "Mountain View",
+            },
+            "autonomous_system": {
+                "asn": 15169,
+                "name": "GOOGLE",
+            },
+            "services": [
+                {
+                    "port": 443,
+                    "protocol": "HTTPS",
+                }
+            ],
+            "reputation": {
+                "score": 12,
+                "score_level": "benign",
+            },
+            "privacy": [
+                {
+                    "tor": False,
+                    "vpn": False,
+                    "proxy": False,
+                    "anonymous": False,
+                    "relay": False,
+                }
+            ],
+            "third_party": {
+                "mallory": [
+                    {
+                        "last_seen_at": "2026-07-20T09:14:32Z",
+                        "observable": {
+                            "name": "dns.google",
+                            "type": "host",
+                            "description": "Google Public DNS",
+                        },
+                        "opinions": [
+                            {
+                                "confidence": "high",
+                                "description": "Observed as public DNS infrastructure",
+                                "source": "mallory",
+                                "verdict": "benign",
+                                "updated_at": "2026-07-20T09:14:32Z",
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+    }
+}
+
 
 class TestEnrichHost:
     """Test class for Enrich Host action."""
@@ -28,64 +85,7 @@ class TestEnrichHost:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test successful host enrichment with single entity."""
-        censys_manager.set_enrich_host_response(
-            {
-                "result": {
-                    "resource": {
-                        "ip": "8.8.8.8",
-                        "location": {
-                            "country": "United States",
-                            "country_code": "US",
-                            "city": "Mountain View",
-                        },
-                        "autonomous_system": {
-                            "asn": 15169,
-                            "name": "GOOGLE",
-                        },
-                        "services": [
-                            {
-                                "port": 443,
-                                "protocol": "HTTPS",
-                            }
-                        ],
-                        "reputation": {
-                            "score": 12,
-                            "score_level": "benign",
-                        },
-                        "privacy": [
-                            {
-                                "tor": False,
-                                "vpn": False,
-                                "proxy": False,
-                                "anonymous": False,
-                                "relay": False,
-                            }
-                        ],
-                        "third_party": {
-                            "mallory": [
-                                {
-                                    "last_seen_at": "2026-07-20T09:14:32Z",
-                                    "observable": {
-                                        "name": "dns.google",
-                                        "type": "host",
-                                        "description": "Google Public DNS",
-                                    },
-                                    "opinions": [
-                                        {
-                                            "confidence": "high",
-                                            "description": "Observed as public DNS infrastructure",
-                                            "source": "mallory",
-                                            "verdict": "benign",
-                                            "updated_at": "2026-07-20T09:14:32Z",
-                                        }
-                                    ],
-                                }
-                            ]
-                        },
-                    }
-                }
-            }
-        )
+        censys_manager.set_enrich_host_response(SAMPLE_ENRICH_HOST_RESPONSE)
 
         enrich_host.main()
 

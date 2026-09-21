@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+import dataclasses
+from datetime import datetime, timezone
+from typing import Sequence
 
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -37,54 +39,84 @@ from ..core.utils import (
     remove_ip_enrichment,
 )
 
+ACCOUNT_LEVEL_EXCEPTIONS = (
+    UnauthorizedErrorException,
+    ForbiddenErrorException,
+    FeatureNotEnabledException,
+    RateLimitException,
+)
 
-def _build_output_message(
-    successful: list[str],
-    not_found: list[str],
-    failed: list[str],
-    invalid: list[str],
-) -> str:
+
+@dataclasses.dataclass(slots=True)
+class EnrichmentSummary:
+    """Tracks entity identifiers by outcome across the per-IP enrichment loop."""
+
+    successful: list[str] = dataclasses.field(default_factory=list)
+    not_found: list[str] = dataclasses.field(default_factory=list)
+    failed: list[str] = dataclasses.field(default_factory=list)
+    invalid: list[str] = dataclasses.field(default_factory=list)
+    skipped: list[str] = dataclasses.field(default_factory=list)
+
+
+@dataclasses.dataclass(slots=True)
+class EnrichmentContext:
+    """Bundles the collaborators needed to enrich entities, to keep helper
+    function signatures within the repo's 3-argument guideline."""
+
+    censys_manager: APIManager
+    siemplify: SiemplifyAction
+    summary: EnrichmentSummary
+
+
+def _format_entity_preview(entities: Sequence[str], max_items: int = 5) -> str:
+    """Format entity identifiers as a comma-separated preview, truncated with a count.
+
+    Args:
+        entities: Entity identifiers to format
+        max_items: Maximum number of identifiers to include before truncating
+
+    Returns:
+        Comma-separated preview string, e.g. "a, b, c and 2 more"
+    """
+    preview = ", ".join(entities[:max_items])
+    if len(entities) > max_items:
+        preview += f" and {len(entities) - max_items} more"
+    return preview
+
+
+def _build_output_message(summary: EnrichmentSummary) -> str:
     """
     Build detailed output message with entity information.
 
     Args:
-        successful: List of successfully enriched entity identifiers
-        not_found: List of entity identifiers not found in Censys
-        failed: List of entity identifiers that failed to process
-        invalid: List of invalid IP addresses
+        summary: Entity identifiers grouped by outcome
 
     Returns:
         Formatted output message string
     """
     message_parts = []
 
-    if successful:
+    if summary.successful:
         message_parts.append(
-            f"Successfully enriched {len(successful)} host(s) from Censys."
+            f"Successfully enriched {len(summary.successful)} host(s) from Censys."
         )
 
-    if invalid:
-        entities_str = ", ".join(invalid[:5])
-        if len(invalid) > 5:
-            entities_str += f" and {len(invalid) - 5} more"
+    if summary.invalid:
         message_parts.append(
-            f"{len(invalid)} IP(s) skipped due to invalid format: {entities_str}"
+            f"{len(summary.invalid)} IP(s) skipped due to invalid format: "
+            f"{_format_entity_preview(summary.invalid)}"
         )
 
-    if not_found:
-        entities_str = ", ".join(not_found[:5])
-        if len(not_found) > 5:
-            entities_str += f" and {len(not_found) - 5} more"
+    if summary.not_found:
         message_parts.append(
-            f"{len(not_found)} host(s) not found in Censys: {entities_str}"
+            f"{len(summary.not_found)} host(s) not found in Censys: "
+            f"{_format_entity_preview(summary.not_found)}"
         )
 
-    if failed:
-        entities_str = ", ".join(failed[:5])
-        if len(failed) > 5:
-            entities_str += f" and {len(failed) - 5} more"
+    if summary.failed:
         message_parts.append(
-            f"{len(failed)} host(s) failed to process: {entities_str}"
+            f"{len(summary.failed)} host(s) failed to process: "
+            f"{_format_entity_preview(summary.failed)}"
         )
 
     if not message_parts:
@@ -95,8 +127,7 @@ def _build_output_message(
 
 def _build_account_level_error_message(
     error: Exception,
-    successful: list[str],
-    skipped: list[str],
+    summary: EnrichmentSummary,
 ) -> str:
     """
     Build the output message when an account-level Censys API error (no access,
@@ -108,8 +139,7 @@ def _build_account_level_error_message(
 
     Args:
         error: The account-level exception that stopped processing
-        successful: Entity identifiers already enriched before the error occurred
-        skipped: Entity identifiers never attempted because processing stopped
+        summary: Entity identifiers grouped by outcome
 
     Returns:
         Formatted output message string
@@ -118,24 +148,300 @@ def _build_account_level_error_message(
         COMMON_ACTION_ERROR_MESSAGE.format(ENRICH_HOST_SCRIPT_NAME, error)
     ]
 
-    if successful:
+    if summary.successful:
         message_parts.append(
-            f"{len(successful)} host(s) were already enriched before this occurred."
+            f"{len(summary.successful)} host(s) were already enriched before this "
+            "occurred."
         )
 
-    if skipped:
-        entities_str = ", ".join(skipped[:5])
-        if len(skipped) > 5:
-            entities_str += f" and {len(skipped) - 5} more"
+    if summary.skipped:
         message_parts.append(
-            f"{len(skipped)} host(s) were not attempted and were skipped: {entities_str}"
+            f"{len(summary.skipped)} host(s) were not attempted and were skipped: "
+            f"{_format_entity_preview(summary.skipped)}"
         )
 
     return "\n".join(message_parts)
 
 
+def _apply_enrichment(entity, host_model: HostEnrichmentDatamodel) -> dict | None:
+    """Apply enrichment data to an entity if the model produced any.
+
+    Args:
+        entity: The IP entity to enrich
+        host_model: Parsed enrichment response for this entity
+
+    Returns:
+        A JSON result entry if enrichment data was applied, otherwise None
+    """
+    enrichment_data = host_model.get_enrichment_data()
+    if not enrichment_data:
+        return None
+
+    remove_ip_enrichment(entity)
+
+    enrichment_data[f"{ENRICHMENT_PREFIX}last_enriched"] = (
+        datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    )
+    entity.additional_properties.update(enrichment_data)
+    entity.is_enriched = True
+
+    return {"Entity": entity.identifier, "EntityResult": host_model.to_json()}
+
+
+def _enrich_single_entity(
+    entity,
+    ctx: EnrichmentContext,
+    json_results: list[dict],
+) -> Exception | None:
+    """Enrich a single IP entity and record its outcome on the summary.
+
+    Args:
+        entity: The IP entity to enrich
+        ctx: Shared enrichment collaborators (API manager, logger, summary)
+        json_results: Accumulated per-entity JSON results, updated in place
+
+    Returns:
+        The account-level exception if one occurred, otherwise None
+    """
+    entity_identifier = entity.identifier
+    ctx.siemplify.LOGGER.info(f"Processing entity: {entity_identifier}")
+
+    try:
+        response = ctx.censys_manager.get_host_enrichment(entity_identifier)
+        host_model = HostEnrichmentDatamodel(response)
+
+        if not host_model.is_found():
+            ctx.siemplify.LOGGER.info(f"No data found for {entity_identifier}")
+            ctx.summary.not_found.append(entity_identifier)
+            return None
+
+        result = _apply_enrichment(entity, host_model)
+        if result is None:
+            ctx.siemplify.LOGGER.info(
+                f"No enrichment data available for {entity_identifier}"
+            )
+            ctx.summary.not_found.append(entity_identifier)
+            return None
+
+        ctx.summary.successful.append(entity_identifier)
+        json_results.append(result)
+        ctx.siemplify.LOGGER.info(f"Successfully enriched: {entity_identifier}")
+        return None
+
+    except ItemNotFoundException:
+        ctx.siemplify.LOGGER.info(f"No data found for {entity_identifier}")
+        ctx.summary.not_found.append(entity_identifier)
+        return None
+
+    except ACCOUNT_LEVEL_EXCEPTIONS as e:
+        # Account-level error: every remaining IP would fail the exact
+        # same way, so stop attempting the rest instead of hammering the
+        # API with calls that can't succeed. This fails the action -
+        # matching every other action in this integration - since it
+        # signals a real access/credentials/quota problem. The
+        # playbook step is configured with AutoSkipOnFailure, and
+        # result_value stays false on this path, so the fallback
+        # condition to Enrich Host - Get Host API still fires.
+        ctx.siemplify.LOGGER.error(
+            f"Account-level Censys API error on {entity_identifier}: {e}"
+        )
+        return e
+
+    except Exception as e:
+        ctx.siemplify.LOGGER.error(f"Failed to process {entity_identifier}: {e}")
+        ctx.siemplify.LOGGER.exception(e)
+        ctx.summary.failed.append(entity_identifier)
+        return None
+
+
+def _record_skipped_entities(ip_entities: list, ctx: EnrichmentContext) -> None:
+    """Record entities never attempted after an account-level error stopped the loop.
+
+    Args:
+        ip_entities: All IP entities in scope
+        ctx: Shared enrichment collaborators (API manager, logger, summary)
+    """
+    handled_entities = (
+        set(ctx.summary.successful)
+        | set(ctx.summary.not_found)
+        | set(ctx.summary.failed)
+        | set(ctx.summary.invalid)
+    )
+    ctx.summary.skipped.extend(
+        entity.identifier
+        for entity in ip_entities
+        if entity.identifier not in handled_entities
+    )
+
+
+def _process_ip_entities(
+    ip_entities: list,
+    ctx: EnrichmentContext,
+) -> tuple[list[dict], Exception | None]:
+    """Process each IP entity individually against the per-IP enrichment endpoint.
+
+    Args:
+        ip_entities: All IP entities in scope (including already-tracked invalid ones)
+        ctx: Shared enrichment collaborators (API manager, logger, summary)
+
+    Returns:
+        Tuple of (accumulated JSON results, account-level exception or None)
+    """
+    json_results: list[dict] = []
+    invalid_set = set(ctx.summary.invalid)
+    account_level_error: Exception | None = None
+
+    for entity in ip_entities:
+        if entity.identifier in invalid_set:
+            continue
+
+        account_level_error = _enrich_single_entity(entity, ctx, json_results)
+        if account_level_error is not None:
+            break
+
+    if account_level_error is not None:
+        _record_skipped_entities(ip_entities, ctx)
+
+    return json_results, account_level_error
+
+
+def _finalize_action(
+    ctx: EnrichmentContext,
+    ip_entities: list,
+    account_level_error: Exception | None,
+) -> tuple[str, bool, str]:
+    """Build the final output message, result value, and execution state.
+
+    Args:
+        ctx: Shared enrichment collaborators (API manager, logger, summary)
+        ip_entities: All IP entities in scope, used to push updates back to SOAR
+        account_level_error: The account-level exception that stopped processing,
+            if any
+
+    Returns:
+        Tuple of (output_message, result_value, status)
+    """
+    summary = ctx.summary
+    if account_level_error is not None:
+        output_message = _build_account_level_error_message(
+            account_level_error, summary
+        )
+        status = EXECUTION_STATE_FAILED
+        result_value = RESULT_VALUE_FALSE
+    else:
+        output_message = _build_output_message(summary)
+        status = EXECUTION_STATE_COMPLETED
+        result_value = (
+            RESULT_VALUE_TRUE if summary.successful else RESULT_VALUE_FALSE
+        )
+
+    # Update entities in Siemplify - any entity enriched before an
+    # account-level error occurred should still have its data persisted,
+    # even though the action itself ends FAILED.
+    if summary.successful:
+        ctx.siemplify.update_entities(ip_entities)
+
+    return output_message, result_value, status
+
+
+def _init_siemplify_action() -> tuple[SiemplifyAction, bool]:
+    """Create the SiemplifyAction instance and resolve the rollout toggle.
+
+    Returns:
+        Tuple of (siemplify action instance, whether the new API is enabled)
+    """
+    siemplify = SiemplifyAction()
+    siemplify.script_name = ENRICH_HOST_SCRIPT_NAME
+    siemplify.LOGGER.info("================= Main - Param Init =================")
+
+    # Per-instance rollout toggle for the new host enrichment API. Resolved from
+    # whichever Censys instance the platform picked (dynamic/named/fallback), so
+    # each instance can independently opt in/out without playbook changes.
+    enable_new_api = siemplify.extract_configuration_param(
+        INTEGRATION_NAME,
+        ENABLE_NEW_HOST_ENRICHMENT_PARAM,
+        input_type=bool,
+        is_mandatory=False,
+        default_value=False,
+        print_value=True,
+    )
+    siemplify.LOGGER.info("================= Main - Started =================")
+    return siemplify, enable_new_api
+
+
+def _validate_and_filter_ips(
+    ip_entities: list, summary: EnrichmentSummary, siemplify: SiemplifyAction
+) -> list[str]:
+    """Split IP entities into valid/invalid and record invalid ones on the summary.
+
+    Args:
+        ip_entities: All IP entities in scope
+        summary: Entity identifiers grouped by outcome, updated in place
+        siemplify: Siemplify action instance for logging
+
+    Returns:
+        The list of valid IP addresses
+    """
+    ip_addresses = [entity.identifier for entity in ip_entities]
+    valid_ips, invalid_ips = filter_valid_ips(ip_addresses)
+
+    if invalid_ips:
+        summary.invalid.extend(invalid_ips)
+        siemplify.LOGGER.info(
+            f"Found {len(invalid_ips)} invalid IP(s): "
+            f"{_format_entity_preview(invalid_ips)}"
+        )
+
+    return valid_ips
+
+
+def _run_enrichment(
+    siemplify: SiemplifyAction, censys_manager: APIManager
+) -> tuple[str, bool, str, list[dict]]:
+    """Validate IP entities and run the per-IP enrichment loop.
+
+    Args:
+        siemplify: Siemplify action instance for logging and entity access
+        censys_manager: Initialized Censys API manager
+
+    Returns:
+        Tuple of (output_message, result_value, status, json_results).
+    """
+    ip_entities = get_ip_entities(siemplify)
+    if not ip_entities:
+        return (
+            NO_ADDRESS_ENTITIES_ERROR,
+            RESULT_VALUE_TRUE,
+            EXECUTION_STATE_COMPLETED,
+            [],
+        )
+
+    siemplify.LOGGER.info(f"Found {len(ip_entities)} IP entities to process")
+
+    summary = EnrichmentSummary()
+    valid_ips = _validate_and_filter_ips(ip_entities, summary, siemplify)
+
+    if not valid_ips:
+        output_message = (
+            f"No valid IP addresses to process. All {len(summary.invalid)} "
+            "IP(s) are invalid."
+        )
+        siemplify.LOGGER.error(output_message)
+        return output_message, RESULT_VALUE_FALSE, EXECUTION_STATE_FAILED, []
+
+    siemplify.LOGGER.info(f"Processing {len(valid_ips)} valid IP(s)")
+
+    ctx = EnrichmentContext(censys_manager, siemplify, summary)
+    json_results, account_level_error = _process_ip_entities(ip_entities, ctx)
+
+    output_message, result_value, status = _finalize_action(
+        ctx, ip_entities, account_level_error
+    )
+    return output_message, result_value, status, json_results
+
+
 @output_handler
-def main():
+def main() -> None:
     """
     Enrich IP entities using the Censys get host enrichment endpoint.
 
@@ -161,33 +467,8 @@ def main():
     always set to false on the FAILED path (see below), so the condition's
     existing "result equals false" check still correctly routes to the
     Enrich Host - Get Host API fallback.
-
-    Returns:
-        None. Results are returned via siemplify.end() with:
-            - output_message: Status message with enrichment summary
-            - result_value: True if any entities enriched, False otherwise
-            - status: Execution state (COMPLETED or FAILED)
     """
-    siemplify = SiemplifyAction()
-    siemplify.script_name = ENRICH_HOST_SCRIPT_NAME
-    siemplify.LOGGER.info("================= Main - Param Init =================")
-
-    # Configuration Parameters
-    api_key, organization_id, verify_ssl = get_integration_params(siemplify)
-
-    # Per-instance rollout toggle for the new host enrichment API. Resolved from
-    # whichever Censys instance the platform picked (dynamic/named/fallback), so
-    # each instance can independently opt in/out without playbook changes.
-    enable_new_api = siemplify.extract_configuration_param(
-        INTEGRATION_NAME,
-        ENABLE_NEW_HOST_ENRICHMENT_PARAM,
-        input_type=bool,
-        is_mandatory=False,
-        default_value=False,
-        print_value=True,
-    )
-
-    siemplify.LOGGER.info("================= Main - Started =================")
+    siemplify, enable_new_api = _init_siemplify_action()
 
     if not enable_new_api:
         siemplify.LOGGER.info(NEW_HOST_ENRICHMENT_DISABLED_MESSAGE)
@@ -199,209 +480,36 @@ def main():
         )
         return
 
-    status = EXECUTION_STATE_COMPLETED
-    result_value = RESULT_VALUE_FALSE
-    output_message = ""
-    top_level_error_occurred = False
-
-    # Entity tracking
-    successful_entities = []
-    failed_entities = []
-    not_found_entities = []
-    invalid_entities = []
-    skipped_entities = []
-    json_results = []
-    ip_entities = []
-    account_level_error = None
+    api_key, organization_id, verify_ssl = get_integration_params(siemplify)
+    json_results: list[dict] = []
 
     try:
-        # Initialize API Manager
         censys_manager = APIManager(
             api_key=api_key,
             organization_id=organization_id,
             verify_ssl=verify_ssl,
             siemplify=siemplify,
         )
-
-        # Get IP entities
-        ip_entities = get_ip_entities(siemplify)
-
-        if not ip_entities:
-            output_message = NO_ADDRESS_ENTITIES_ERROR
-            siemplify.LOGGER.info(output_message)
-            siemplify.result.add_result_json([])
-            siemplify.end(output_message, RESULT_VALUE_TRUE, EXECUTION_STATE_COMPLETED)
-            return
-
-        siemplify.LOGGER.info(f"Found {len(ip_entities)} IP entities to process")
-
-        # Extract and validate IP addresses
-        ip_addresses = [entity.identifier for entity in ip_entities]
-        valid_ips, invalid_ips = filter_valid_ips(ip_addresses)
-
-        # Track invalid IPs
-        if invalid_ips:
-            invalid_entities.extend(invalid_ips)
-
-            more_text = (
-                f" and {len(invalid_ips) - 5} more" if len(invalid_ips) > 5 else ""
-            )
-            siemplify.LOGGER.info(
-                f"Found {len(invalid_ips)} invalid IP(s): {', '.join(invalid_ips[:5])}{more_text}"
-            )
-
-        # Skip processing if no valid IPs
-        if not valid_ips:
-            output_message = "No valid IP addresses to process." \
-                 f" All {len(invalid_ips)} IP(s) are invalid."
-            siemplify.LOGGER.error(output_message)
-            siemplify.result.add_result_json([])
-            siemplify.end(output_message, RESULT_VALUE_FALSE, EXECUTION_STATE_FAILED)
-            return
-
-        siemplify.LOGGER.info(f"Processing {len(valid_ips)} valid IP(s)")
-
-        # Create set for O(1) lookup performance
-        invalid_set = set(invalid_entities)
-
-        # Process each entity individually - the enrichment endpoint is per-IP only
-        for entity in ip_entities:
-            entity_identifier = entity.identifier
-
-            # Skip invalid IPs (already tracked)
-            if entity_identifier in invalid_set:
-                continue
-
-            siemplify.LOGGER.info(f"Processing entity: {entity_identifier}")
-
-            try:
-                response = censys_manager.get_host_enrichment(entity_identifier)
-                host_model = HostEnrichmentDatamodel(response)
-
-                if not host_model.is_found():
-                    siemplify.LOGGER.info(f"No data found for {entity_identifier}")
-                    not_found_entities.append(entity_identifier)
-                    continue
-
-                enrichment_data = host_model.get_enrichment_data()
-
-                if not enrichment_data:
-                    siemplify.LOGGER.info(
-                        f"No enrichment data available for {entity_identifier}"
-                    )
-                    not_found_entities.append(entity_identifier)
-                    continue
-
-                # Remove old Censys IP enrichment data
-                remove_ip_enrichment(entity)
-                siemplify.LOGGER.info(
-                    f"Removed old IP enrichment data for {entity_identifier}"
-                )
-
-                # Add timestamp and enrich entity
-                enrichment_data[f"{ENRICHMENT_PREFIX}last_enriched"] = (
-                    datetime.utcnow().isoformat() + "Z"
-                )
-
-                entity.additional_properties.update(enrichment_data)
-                entity.is_enriched = True
-
-                # Store results
-                successful_entities.append(entity_identifier)
-                json_results.append(
-                    {
-                        "Entity": entity_identifier,
-                        "EntityResult": host_model.to_json(),
-                    }
-                )
-
-                siemplify.LOGGER.info(f"Successfully enriched: {entity_identifier}")
-
-            except ItemNotFoundException:
-                siemplify.LOGGER.info(f"No data found for {entity_identifier}")
-                not_found_entities.append(entity_identifier)
-
-            except (
-                UnauthorizedErrorException,
-                ForbiddenErrorException,
-                FeatureNotEnabledException,
-                RateLimitException,
-            ) as e:
-                # Account-level error: every remaining IP would fail the exact
-                # same way, so stop attempting the rest instead of hammering the
-                # API with calls that can't succeed. This fails the action -
-                # matching every other action in this integration - since it
-                # signals a real access/credentials/quota problem. The
-                # playbook step is configured with AutoSkipOnFailure, and
-                # result_value stays false on this path, so the fallback
-                # condition to Enrich Host - Get Host API still fires.
-                siemplify.LOGGER.error(
-                    f"Account-level Censys API error on {entity_identifier}: {e}"
-                )
-                account_level_error = e
-                break
-
-            except Exception as e:
-                error_message = f"Failed to process {entity_identifier}: {e}"
-                siemplify.LOGGER.error(error_message)
-                siemplify.LOGGER.exception(e)
-                failed_entities.append(entity_identifier)
-
-        if account_level_error is not None:
-            handled_entities = (
-                set(successful_entities)
-                | set(not_found_entities)
-                | set(failed_entities)
-                | invalid_set
-            )
-            skipped_entities.extend(
-                entity.identifier
-                for entity in ip_entities
-                if entity.identifier not in handled_entities
-            )
+        output_message, result_value, status, json_results = _run_enrichment(
+            siemplify, censys_manager
+        )
 
     except ValueError as e:
-        output_message = f"Invalid parameter value: {str(e)}\nPlease verify your input " \
-            "parameters and try again."
+        output_message = (
+            f"Invalid parameter value: {e}\n"
+            "Please verify your input parameters and try again."
+        )
         siemplify.LOGGER.error(output_message)
-        status = EXECUTION_STATE_FAILED
         result_value = RESULT_VALUE_FALSE
+        status = EXECUTION_STATE_FAILED
 
     except (CensysException, Exception) as e:
         output_message = COMMON_ACTION_ERROR_MESSAGE.format(ENRICH_HOST_SCRIPT_NAME, e)
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
-        status = EXECUTION_STATE_FAILED
         result_value = RESULT_VALUE_FALSE
-        top_level_error_occurred = True
+        status = EXECUTION_STATE_FAILED
 
-    # Build output message if execution completed successfully (not via the
-    # error path above, which already set its own output_message/result_value)
-    if status == EXECUTION_STATE_COMPLETED and not top_level_error_occurred:
-        if account_level_error is not None:
-            output_message = _build_account_level_error_message(
-                account_level_error,
-                successful_entities,
-                skipped_entities,
-            )
-            status = EXECUTION_STATE_FAILED
-            result_value = RESULT_VALUE_FALSE
-        else:
-            output_message = _build_output_message(
-                successful_entities,
-                not_found_entities,
-                failed_entities,
-                invalid_entities,
-            )
-            result_value = RESULT_VALUE_TRUE if successful_entities else RESULT_VALUE_FALSE
-
-        # Update entities in Siemplify - any entity enriched before an
-        # account-level error occurred should still have its data persisted,
-        # even though the action itself ends FAILED.
-        if successful_entities:
-            siemplify.update_entities(ip_entities)
-
-    # Add JSON results
     siemplify.result.add_result_json(json_results)
 
     siemplify.LOGGER.info("================= Main - Finished =================")
