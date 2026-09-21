@@ -17,6 +17,8 @@ from __future__ import annotations
 import json
 import re
 from datetime import date, datetime
+from enum import Enum
+from typing import Any
 
 from ipwhois import IPWhois
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
@@ -44,10 +46,21 @@ SUPPORTED_ENTITY_TYPES = [
 ]
 
 
-def create_entity_with_relation(siemplify, new_entity, linked_entity):
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
+
+def create_entity_with_relation(
+    siemplify: SiemplifyAction,
+    new_entity: str,
+    linked_entity: str,
+    alert_identifier: str | None = None,
+) -> None:
     entity_to_create = CreateEntity(
         case_id=siemplify.case_id,
-        alert_identifier=siemplify.alert_id,
+        alert_identifier=alert_identifier or siemplify.alert_id,
         entity_type="DOMAIN",
         entity_identifier=new_entity.upper(),
         entity_to_connect_regex=f"{re.escape(linked_entity.upper())}$",
@@ -56,8 +69,52 @@ def create_entity_with_relation(siemplify, new_entity, linked_entity):
     create_entity(siemplify, entity_to_create)
 
 
-def get_alert_entities(siemplify):
-    return [entity for alert in siemplify.case.alerts for entity in alert.entities]
+def get_alert_entities(siemplify: SiemplifyAction) -> list[Any]:
+    alerts = getattr(siemplify.case, "open_alerts", None) or getattr(
+        siemplify.case, "alerts", []
+    )
+    return [entity for alert in alerts for entity in getattr(alert, "entities", [])]
+
+
+def get_target_alert_identifiers(
+    siemplify: SiemplifyAction,
+    entity: Any,
+    execution_scope: Any,
+) -> list[str | None]:
+    scope_val = getattr(execution_scope, "value", execution_scope)
+    if scope_val == ExecutionScope.Alert.value:
+        alert_id = getattr(siemplify, "alert_id", None) or getattr(
+            getattr(siemplify, "current_alert", None), "identifier", None
+        )
+        return [alert_id] if alert_id else []
+
+    if getattr(entity, "alert_identifier", None) and isinstance(
+        entity.alert_identifier, str
+    ):
+        return [entity.alert_identifier]
+
+    open_alerts = getattr(siemplify.case, "open_alerts", None) or getattr(
+        siemplify.case, "alerts", []
+    )
+    matched_alert_ids = []
+    for alert in open_alerts:
+        for alert_entity in getattr(alert, "entities", []):
+            if (
+                alert_entity.identifier.strip().lower()
+                == entity.identifier.strip().lower()
+            ):
+                matched_alert_ids.append(alert.identifier)
+                break
+
+    if matched_alert_ids:
+        return matched_alert_ids
+
+    return [
+        alert.identifier
+        for alert in open_alerts
+        if getattr(alert, "identifier", None)
+        and isinstance(alert.identifier, str)
+    ]
 
 
 def get_domain_from_string(identifier):
@@ -80,6 +137,14 @@ def main():
     output_message = ""
     result_value = None
     siemplify.script_name = "Whois"
+    execution_scope = getattr(
+        siemplify,
+        "execution_scope",
+        ExecutionScope.Alert,
+    )
+    siemplify.LOGGER.info(
+        f"Running in {getattr(execution_scope, 'name', 'Alert').lower()} scope"
+    )
     create_entities = (
         siemplify.extract_action_param("Create Entities", print_value=True).lower()
         == "true"
@@ -154,18 +219,36 @@ def main():
                             json.dumps(whois_data, default=json_serial),
                         )
                         successful_entities.append(entity.identifier)
-                        if create_entities and domain.upper() != entity.identifier:
-                            create_entity_with_relation(
-                                siemplify,
-                                domain,
-                                entity.identifier,
+                        if (
+                            create_entities
+                            and domain.upper() != entity.identifier.upper()
+                        ):
+                            target_alert_ids = get_target_alert_identifiers(
+                                siemplify, entity, execution_scope
                             )
-                            enriched_entities[domain] = json.loads(
-                                json.dumps(whois_data, default=json_serial),
-                            )
-                            json_result[domain] = json.loads(
-                                json.dumps(whois_data, default=json_serial),
-                            )
+                            if not target_alert_ids:
+                                target_alert_ids = [
+                                    getattr(siemplify, "alert_id", None)
+                                ]
+
+                            for alert_id in target_alert_ids:
+                                try:
+                                    create_entity_with_relation(
+                                        siemplify,
+                                        domain,
+                                        entity.identifier,
+                                        alert_identifier=alert_id,
+                                    )
+                                    enriched_entities[domain] = json.loads(
+                                        json.dumps(whois_data, default=json_serial),
+                                    )
+                                    json_result[domain] = json.loads(
+                                        json.dumps(whois_data, default=json_serial),
+                                    )
+                                except Exception as e:
+                                    siemplify.LOGGER.error(
+                                        f"Failed to create entity for {domain}: {e}"
+                                    )
                     else:
                         siemplify.LOGGER.warn(
                             f"Could not extract domain from entity {entity.identifier}"
@@ -219,8 +302,9 @@ def main():
         if failed_entities:
             output_message += f"\nFailed to enrich the following entities: {', '.join(failed_entities)}"
 
-    return_json = json.dumps(json_result, default=json_serial)
-    siemplify.result.add_result_json(convert_dict_to_json_result_dict(return_json))
+    if json_result:
+        return_json = json.dumps(json_result, default=json_serial)
+        siemplify.result.add_result_json(convert_dict_to_json_result_dict(return_json))
 
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}",

@@ -97,6 +97,14 @@ def setup_whois_action_mocks(
     monkeypatch: pytest.MonkeyPatch,
     mock_siemplify: MagicMock,
 ) -> None:
+    def mock_extract_action_param(
+        param_name: str, default_value: Any = None, *args: Any, **kwargs: Any
+    ) -> Any:
+        params = {"Create Entities": "true", "Domain Age Threshold": 0}
+        return params.get(param_name, default_value if default_value is not None else "")
+
+    mock_siemplify.extract_action_param.side_effect = mock_extract_action_param
+
     monkeypatch.setattr(
         Whois,
         "SiemplifyAction",
@@ -528,8 +536,7 @@ def test_whois_action_fallback_empty_response(
     assert result_val == "false"
     assert "No entities were enriched." in end_msg
     assert "Failed to enrich the following entities: positivacaoseguros.com.br" in end_msg
-    res_list = mock_siemplify.result.add_result_json.call_args[0][0]
-    assert res_list == []
+    mock_siemplify.result.add_result_json.assert_not_called()
     mock_siemplify.update_entities.assert_not_called()
 
 
@@ -625,3 +632,98 @@ def test_get_domain_whois_empty_fallback_logs_warning() -> None:
     mock_logger.warn.assert_any_call(
         "Classic WHOIS query for domain positivacaoseguros.com.br returned empty response."
     )
+
+
+@pytest.mark.execution_scope("Alert")
+@set_metadata(
+    parameters={"Create Entities": "true", "Domain Age Threshold": "0"},
+    input_context={"environment": "Default", "alert_id": "alert_1"},
+)
+def test_whois_action_entity_creation_failure_does_not_fail_enrichment(
+    product: EnrichmentProduct,
+    script_session: EnrichmentMockSession,
+    action_output: MockActionOutput,
+    mock_siemplify: MagicMock,
+) -> None:
+    """Test that if creating a related entity fails, the main entity enrichment still succeeds."""
+    product.set_case_metadata({"title": "Simulated Whois Case", "case_id": "case_whois"})
+    product.set_alerts_full_details({
+        "alerts": [
+            {
+                "identifier": "alert_1",
+                "entities": [
+                    {
+                        "identifier": "https://sub.google.com/path",
+                        "entity_type": "DestinationURL",
+                        "additional_properties": {},
+                    }
+                ],
+            }
+        ]
+    })
+
+    with patch("requests.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = MOCK_GOOGLE_RDAP
+        mock_get.return_value = mock_response
+
+        with patch.object(
+            Whois,
+            "create_entity_with_relation",
+            side_effect=Exception("404 Client Error: Not Found"),
+        ):
+            Whois.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    end_msg, result_val, _ = mock_siemplify.end.call_args[0]
+    assert result_val == "true"
+    assert "Successfully enriched the following entities: https://sub.google.com/path" in end_msg
+    assert "Failed to enrich" not in end_msg
+
+
+@pytest.mark.execution_scope("Case")
+@set_metadata(
+    parameters={"Create Entities": "true", "Domain Age Threshold": "0"},
+    input_context={"environment": "Default", "alert_id": "alert_1"},
+)
+def test_whois_action_case_scope_create_entities_success(
+    product: EnrichmentProduct,
+    script_session: EnrichmentMockSession,
+    action_output: MockActionOutput,
+    mock_siemplify: MagicMock,
+) -> None:
+    """Test that in Case Scope, CreateEntity resolves and uses the alert identifier from the case alert."""
+    product.set_case_metadata({"title": "Simulated Whois Case", "case_id": "case_whois"})
+    product.set_alerts_full_details({
+        "alerts": [
+            {
+                "identifier": "case_alert_42",
+                "entities": [
+                    {
+                        "identifier": "https://sub.google.com/path",
+                        "entity_type": "DestinationURL",
+                        "additional_properties": {},
+                    }
+                ],
+            }
+        ]
+    })
+
+    with patch("requests.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = MOCK_GOOGLE_RDAP
+        mock_get.return_value = mock_response
+
+        with patch.object(Whois, "create_entity") as mock_create_entity:
+            Whois.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert mock_create_entity.called
+    created_entity_arg = mock_create_entity.call_args[0][1]
+    assert created_entity_arg.alert_identifier == "case_alert_42"
+    assert created_entity_arg.entity_identifier == "GOOGLE.COM"
+    end_msg, result_val, _ = mock_siemplify.end.call_args[0]
+    assert result_val == "true"
+    assert "Successfully enriched the following entities: https://sub.google.com/path" in end_msg
