@@ -11,3 +11,23 @@ SCRIPT_NAME_LISTINCIDENTS = "_ListIncidents"
 SCRIPT_NAME_RUN_RESPONSE = "_Run_Response_Play"
 SCRIPT_NAME_PING = "_Ping"
 SCRIPT_NAME_SNOOZE = "_SnoozeIncident"
+
+REASON_MAINTENANCE: str = "Maintenance"
+ROOT_CAUSE_OTHER: str = "Other"
+
+
+HIGH_PRIORITY: int = 80
+LOW_PRIORITY: int = 40
+DEFAULT_TIMEOUT: int = 10
+
+# PagerDuty Specific Severity/Priority Mapping
+PAGERDUTY_SEVERITY_MAPPING: dict[str, int] = {
+    "high": HIGH_PRIORITY,
+    "low": LOW_PRIORITY,
+}
+
+PAGERDUTY_COMMENT_PREFIX: str = "PagerDuty:"
+SIEM_COMMENT_PREFIX: str = "Google SecOps "
+CONTEXT_KEY: str = "TICKET_ID"
+ENTITY_TYPE_ALERT: int = 2
+MS_IN_SECOND: int = 1000
