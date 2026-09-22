@@ -21,7 +21,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from soar_sdk.SiemplifyDataModel import DomainEntityInfo, EntityTypes
-from TIPCommon import extract_action_param, string_to_multi_value
+
+try:
+    from TIPCommon.extraction import extract_action_param
+    from TIPCommon.transformation import string_to_multi_value
+except ImportError:
+    from TIPCommon import extract_action_param, string_to_multi_value
 
 from . import datamodels
 from .constants import (

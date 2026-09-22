@@ -18,7 +18,6 @@ from __future__ import annotations
 import abc
 import json
 import sys
-import time
 from typing import TYPE_CHECKING, NoReturn
 
 from soar_sdk.ScriptResult import (
@@ -28,14 +27,21 @@ from soar_sdk.ScriptResult import (
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
-from TIPCommon import (
-    extract_action_param,
-    extract_configuration_param,
-    is_approaching_timeout,
-)
+
+try:
+    from TIPCommon.extraction import (
+        extract_action_param,
+        extract_configuration_param,
+    )
+    from TIPCommon.utils import is_approaching_timeout
+except ImportError:
+    from TIPCommon import (
+        extract_action_param,
+        extract_configuration_param,
+        is_approaching_timeout,
+    )
 
 from .constants import (
-    DEFAULT_SLEEP_TIME,
     DEFAULT_TIMEOUT,
     ENRICHMENT_PREFIX,
     IN_BLOCKLIST_KEY,
@@ -62,67 +68,64 @@ if TYPE_CHECKING:
 
 MIN_ARGV_FOR_ITERATION = 3
 
-try:
-    from TIPCommon.base.action import Action
-except ImportError:
 
-    class Action(abc.ABC):
-        """Base SOAR Action class providing standard lifecycle hooks."""
+class Action(abc.ABC):
+    """Base SOAR Action class providing standard lifecycle hooks."""
 
-        def __init__(self, name: str) -> None:
-            self.name = name
-            self.soar_action = SiemplifyAction()
-            self.soar_action.script_name = name
-            self.logger = self.soar_action.LOGGER
-            self.api_client: TrendVisionOneManager | None = None
-            self.params: SingleJson = {}
-            self.execution_state: int = EXECUTION_STATE_COMPLETED
-            self.output_message: str = ""
-            self.result_value: bool | str = False
-            self.action_start_time: int = unix_now()
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.soar_action = SiemplifyAction()
+        self.soar_action.script_name = name
+        self.logger = self.soar_action.LOGGER
+        self.api_client: TrendVisionOneManager | None = None
+        self.params: SingleJson = {}
+        self.execution_state: int = EXECUTION_STATE_COMPLETED
+        self.output_message: str = ""
+        self.result_value: bool | str = False
+        self.action_start_time: int = unix_now()
 
-        @abc.abstractmethod
-        def _init_api_clients(self) -> TrendVisionOneManager:
-            """Initialize and return the API client instance."""
+    @abc.abstractmethod
+    def _init_api_clients(self) -> TrendVisionOneManager:
+        """Initialize and return the API client instance."""
 
-        @abc.abstractmethod
-        def _extract_action_parameters(self) -> None:
-            """Extract action parameters into self.params."""
+    @abc.abstractmethod
+    def _extract_action_parameters(self) -> None:
+        """Extract action parameters into self.params."""
 
-        @abc.abstractmethod
-        def _perform_action(self, current_iteration: int = 0) -> None:
-            """Execute the core action logic."""
+    @abc.abstractmethod
+    def _perform_action(self, current_iteration: int = 0) -> None:
+        """Execute the core action logic."""
 
-        @output_handler
-        def run(self) -> NoReturn:
-            """Run the action lifecycle and terminate via soar_action.end."""
-            is_first_run = (
-                len(sys.argv) < MIN_ARGV_FOR_ITERATION or sys.argv[2] == "True"
-            )
-            self.logger.info("----------------- Main - Param Init -----------------")
-            self._extract_action_parameters()
-            self.logger.info("----------------- Main - Started -----------------")
-            try:
-                self.api_client = self._init_api_clients()
-                self._perform_action(0 if is_first_run else 1)
-            except Exception as error:
-                self.execution_state = EXECUTION_STATE_FAILED
-                self.result_value = False
-                if not self.output_message:
-                    self.output_message = (
-                        f'Error executing action "{self.name}". Reason: {error}'
-                    )
-                self.logger.exception(error)
+    @output_handler
+    def run(self) -> NoReturn:
+        """Run the action lifecycle and terminate via soar_action.end."""
+        is_first_run = (
+            len(sys.argv) < MIN_ARGV_FOR_ITERATION or sys.argv[2] == "True"
+        )
+        self.logger.info("----------------- Main - Param Init -----------------")
+        self._extract_action_parameters()
+        self.logger.info("----------------- Main - Started -----------------")
+        try:
+            self.api_client = self._init_api_clients()
+            self._perform_action(0 if is_first_run else 1)
+        except Exception as error:
+            self.execution_state = EXECUTION_STATE_FAILED
+            self.result_value = False
+            if not self.output_message:
+                self.output_message = (
+                    f'Error executing action "{self.name}". Reason: {error}'
+                )
+            self.logger.exception(error)
 
-            self.logger.info("----------------- Main - Finished -----------------")
-            self.logger.info(
-                f"\n  status: {self.execution_state}"
-                f"\n  results: {self.result_value}"
-                f"\n  output_message: {self.output_message}"
-            )
-            self.soar_action.end(
-                self.output_message, self.result_value, self.execution_state
-            )
+        self.logger.info("----------------- Main - Finished -----------------")
+        self.logger.info(
+            f"\n  status: {self.execution_state}"
+            f"\n  results: {self.result_value}"
+            f"\n  output_message: {self.output_message}"
+        )
+        self.soar_action.end(
+            self.output_message, self.result_value, self.execution_state
+        )
 
 
 class BaseBlocklistAction(Action, abc.ABC):
@@ -219,13 +222,18 @@ class BaseBlocklistAction(Action, abc.ABC):
                 )
                 self._poll_and_finalize(suitable_entities)
         except TrendVisionOneTimeoutException as error:
-            self.output_message = f"{error}"
+            self.output_message = (
+                f'Error executing action "{self.ACTION_DISPLAY_NAME}". Reason: {error}'
+            )
             self.execution_state = EXECUTION_STATE_FAILED
             self.result_value = False
             if self.result_data:
+                completed = self.result_data.get("completed", [])
+                if completed:
+                    self._enrich_completed_entities(completed, suitable_entities)
                 self.soar_action.result.add_result_json(
                     {
-                        self.RESULT_JSON_KEY: self.result_data.get("completed", []),
+                        self.RESULT_JSON_KEY: completed,
                         "failed": self.result_data.get("failed", []),
                     }
                 )
@@ -262,7 +270,6 @@ class BaseBlocklistAction(Action, abc.ABC):
 
         self.result_data = {
             "result_urls": {},
-            "json_results": {},
             "completed": [],
             "failed": [],
             "pending": [],
@@ -271,9 +278,6 @@ class BaseBlocklistAction(Action, abc.ABC):
         for idx in range(0, len(payloads), PAYLOAD_CHUNK_SIZE):
             chunk = payloads[idx : idx + PAYLOAD_CHUNK_SIZE]
             self._process_single_chunk(chunk)
-
-        if self.result_data.get("result_urls"):
-            time.sleep(DEFAULT_SLEEP_TIME)
 
         self._poll_and_finalize(suitable_entities)
 
@@ -341,10 +345,6 @@ class BaseBlocklistAction(Action, abc.ABC):
                 self._mark_task_terminal(result_data, entity_id, is_success=False)
                 continue
 
-            result_data["json_results"][entity_id] = {
-                "task_id": task_details.id,
-                "status": task_details.status,
-            }
             if task_details.status == SUCCESS_STATUS:
                 self.logger.info(f"Successfully {self.ACTION_VERB} entity {entity_id}")
                 self._mark_task_terminal(result_data, entity_id, is_success=True)
@@ -406,11 +406,7 @@ class BaseBlocklistAction(Action, abc.ABC):
             return
 
         self.execution_state = EXECUTION_STATE_COMPLETED
-        if (
-            result_data["json_results"]
-            or result_data["completed"]
-            or result_data["failed"]
-        ):
+        if result_data["completed"] or result_data["failed"]:
             self.soar_action.result.add_result_json(
                 {
                     self.RESULT_JSON_KEY: result_data["completed"],

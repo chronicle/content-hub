@@ -14,19 +14,20 @@
 
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING, NamedTuple
 
-import copy
+from EnvironmentCommon import EnvironmentHandle
+from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
+from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
+from TIPCommon import add_prefix_to_dict, convert_list_to_comma_string, dict_to_flat
+
 from .constants import (
-    INTEGRATION_PREFIX,
-    DEVICE_VENDOR,
     DEVICE_PRODUCT,
+    DEVICE_VENDOR,
+    INTEGRATION_PREFIX,
     SEVERITY_MAPPING,
 )
-from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
-from EnvironmentCommon import EnvironmentHandle
-from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
-from TIPCommon import dict_to_flat, add_prefix_to_dict, convert_list_to_comma_string
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
@@ -228,9 +229,16 @@ class ExecuteEmail(BaseModel):
 
 
 class TaskDetail(BaseModel):
+    """Represents a parsed response task detail object."""
 
-    def __init__(self, raw_data, task_id=None, action=None, status=None):
-        super(TaskDetail, self).__init__(raw_data)
+    def __init__(
+        self,
+        raw_data: SingleJson,
+        task_id: str | None = None,
+        action: str | None = None,
+        status: str | None = None,
+    ) -> None:
+        super().__init__(raw_data)
         self.id = task_id
         self.action = action
         self.status = status

@@ -14,18 +14,23 @@
 
 from __future__ import annotations
 
-from base64 import b64encode
 import os
-import requests
-from urllib.parse import urljoin
+from base64 import b64encode
 from datetime import datetime
-
 from typing import TYPE_CHECKING
+from urllib.parse import urljoin
 
-from .constants import ENDPOINTS, POSSIBLE_SEVERITIES, DATETIME_FORMAT, DEFAULT_MAX_LIMIT
+import requests
+
 from . import datamodels
-from .TrendVisionOneParser import TrendVisionOneParser
 from .api_utils import validate_response
+from .constants import (
+    DATETIME_FORMAT,
+    DEFAULT_MAX_LIMIT,
+    ENDPOINTS,
+    POSSIBLE_SEVERITIES,
+)
+from .TrendVisionOneParser import TrendVisionOneParser
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson

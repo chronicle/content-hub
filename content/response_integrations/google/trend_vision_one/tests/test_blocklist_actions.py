@@ -288,7 +288,6 @@ class TestBlocklistActions(unittest.TestCase):
                 "trend_vision_one.core.base_action.is_approaching_timeout",
                 return_value=False,
             ),
-            patch("trend_vision_one.core.base_action.time.sleep"),
         ):
             action._perform_action(0)
 
@@ -444,7 +443,7 @@ class TestBlocklistActions(unittest.TestCase):
             siemplify.update_entities.assert_not_called()
 
     def test_timeout_handling(self) -> None:
-        """Verify approaching global timeout sets EXECUTION_STATE_FAILED and records JSON results."""
+        """Verify timeout sets EXECUTION_STATE_FAILED, enriches completed entities, and records JSON."""
         siemplify = MagicMock()
         siemplify.execution_deadline_unix_time_ms = 1000000000000
         siemplify.parameters = {
@@ -452,17 +451,20 @@ class TestBlocklistActions(unittest.TestCase):
             "URLs": "",
             "Domains": "",
             "Email Addresses": "",
-            "IPs": "10.0.0.3",
+            "IPs": "10.0.0.3, 10.0.0.4",
         }
-        siemplify.target_entities = [MockEntity("10.0.0.3", EntityTypes.ADDRESS)]
+        entity_completed = MockEntity("10.0.0.3", EntityTypes.ADDRESS)
+        entity_pending = MockEntity("10.0.0.4", EntityTypes.ADDRESS)
+        siemplify.target_entities = [entity_completed, entity_pending]
 
         manager = MagicMock()
         manager.add_entities_to_blocklist.return_value = [
+            BlocklistResponse(raw_data={}, is_success=True),
             BlocklistResponse(
                 raw_data={},
                 task_id="task-timeout",
                 url="https://api/tasks/task-timeout",
-            )
+            ),
         ]
 
         action = _create_action_instance(AddEntityToBlocklist, siemplify, manager)
@@ -481,7 +483,13 @@ class TestBlocklistActions(unittest.TestCase):
             action._perform_action(0)
             assert action.execution_state == EXECUTION_STATE_FAILED
             assert action.result_value is False
+            assert action.output_message.startswith(
+                'Error executing action "Add Entity To Blocklist". Reason:'
+            )
             assert "Pending tasks" in action.output_message
+            assert entity_completed.is_enriched is True
+            assert entity_pending.is_enriched is False
+            siemplify.update_entities.assert_called_once_with([entity_completed])
 
     def test_synchronous_success_and_non_running_terminal_and_exception_resilience(
         self,
