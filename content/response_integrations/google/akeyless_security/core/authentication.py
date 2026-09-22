@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Authentication parameter extraction helpers for Akeyless Security."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -33,56 +35,56 @@ from .datamodels import AkeylessClientConfig
 from .exceptions import AkeylessError
 
 if TYPE_CHECKING:
-    from TIPCommon.types import ChronicleSOAR
+    from TIPCommon.types import ChronicleSOAR, SingleJson
+
+
+def _resolve_raw_configuration(soar_sdk_object: ChronicleSOAR) -> SingleJson:
+    """Resolve the raw configuration dictionary from a SOAR SDK object.
+
+    Args:
+        soar_sdk_object: A ChronicleSOAR SDK object (action, connector, or job).
+
+    Returns:
+        The resolved configuration dictionary.
+
+    Raises:
+        AkeylessError: If the provided SDK object type is not supported.
+
+    """
+    sdk_class: str = type(soar_sdk_object).__name__
+    if sdk_class == SiemplifyAction.__name__:
+        return soar_sdk_object.get_configuration(INTEGRATION_IDENTIFIER)
+
+    if sdk_class not in {SiemplifyConnectorExecution.__name__, SiemplifyJob.__name__}:
+        msg = f"Provided SOAR instance is not supported! type: {sdk_class}."
+        raise AkeylessError(msg)
+
+    input_dictionary: SingleJson = dict(soar_sdk_object.parameters or {})
+    if input_dictionary.get(ACCESS_ID_PARAM):
+        return input_dictionary
+
+    fallback_config = None
+    if hasattr(soar_sdk_object, "get_configuration_by_provider"):
+        fallback_config = soar_sdk_object.get_configuration_by_provider(INTEGRATION_IDENTIFIER)
+    if not isinstance(fallback_config, dict) and hasattr(soar_sdk_object, "get_configuration"):
+        fallback_config = soar_sdk_object.get_configuration(INTEGRATION_IDENTIFIER)
+    if isinstance(fallback_config, dict):
+        return {**fallback_config, **input_dictionary}
+
+    return input_dictionary
 
 
 def build_auth_params(soar_sdk_object: ChronicleSOAR) -> AkeylessClientConfig:
     """Extract authentication parameters from the SOAR SDK object.
 
-    Detects the SDK class type to determine where to read the
-    integration configuration from, then returns a typed
-    ``AkeylessClientConfig`` instance.
-
     Args:
-        soar_sdk_object: A ChronicleSOAR SDK object (action, connector,
-            or job).
+        soar_sdk_object: A ChronicleSOAR SDK object (action, connector, or job).
 
     Returns:
-        AkeylessClientConfig: The extracted integration configuration.
-
-    Raises:
-        AkeylessError: If the provided SDK object type is not
-            supported.
+        The extracted integration configuration.
 
     """
-    sdk_class: str = type(soar_sdk_object).__name__
-    if sdk_class == SiemplifyAction.__name__:
-        input_dictionary: dict = soar_sdk_object.get_configuration(INTEGRATION_IDENTIFIER)
-    elif sdk_class in {
-        SiemplifyConnectorExecution.__name__,
-        SiemplifyJob.__name__,
-    }:
-        input_dictionary = dict(soar_sdk_object.parameters or {})
-        if not input_dictionary.get(ACCESS_ID_PARAM):
-            fallback_config = None
-            if hasattr(soar_sdk_object, "get_configuration_by_provider"):
-                fallback_config = soar_sdk_object.get_configuration_by_provider(
-                    INTEGRATION_IDENTIFIER,
-                )
-            if not isinstance(fallback_config, dict) and hasattr(
-                soar_sdk_object, "get_configuration"
-            ):
-                fallback_config = soar_sdk_object.get_configuration(
-                    INTEGRATION_IDENTIFIER,
-                )
-            if isinstance(fallback_config, dict):
-                input_dictionary = {**fallback_config, **input_dictionary}
-    else:
-        msg = f"Provided SOAR instance is not supported! type: {sdk_class}."
-        raise AkeylessError(
-            msg,
-        )
-
+    input_dictionary: SingleJson = _resolve_raw_configuration(soar_sdk_object)
     access_id: str = extract_script_param(
         soar_sdk_object,
         input_dictionary=input_dictionary,

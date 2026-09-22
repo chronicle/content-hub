@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Base action class for Akeyless Security actions."""
+
 from __future__ import annotations
 
 from abc import ABC
@@ -26,20 +28,19 @@ class AkeylessAction(Action, ABC):
     """Base action class for Akeyless actions."""
 
     def __init__(self, script_name: str) -> None:
+        """Initialize the base action."""
         super().__init__(script_name)
         self.akeyless_client: AkeylessClient | None = None
         self.error_output_message: str = ""
 
     def _init_api_clients(self) -> AkeylessClient:
-        """Extract config and initialize the API client.
+        """Extract configuration and initialize the Akeyless API client.
 
         Returns:
-            AkeylessClient: The initialized client.
+            The initialized Akeyless API client.
 
         """
         config = build_auth_params(self.soar_action)
-        self.akeyless_client = AkeylessClient(
-            config,
-            logger=self.logger,
-        )
+        self.akeyless_client = AkeylessClient(config, logger=self.logger)
+
         return self.akeyless_client

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Default import smoke tests for the Akeyless Security integration."""
+
 from __future__ import annotations
 
 from integration_testing.default_tests.import_test import import_all_integration_modules
@@ -20,4 +22,5 @@ from .. import common
 
 
 def test_imports() -> None:
+    """Verify that all integration modules import cleanly."""
     import_all_integration_modules(common.INTEGRATION_PATH)

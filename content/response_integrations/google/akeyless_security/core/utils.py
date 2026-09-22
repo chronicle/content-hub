@@ -21,13 +21,19 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from .authentication import extract_integration_parameters
-from .constants import MIN_MASK_LENGTH
-from .exceptions import AkeylessError
+from .constants import (
+    DEFAULT_SECRET_VERSION,
+    MIN_MASK_LENGTH,
+    RESOURCE_NAME_PATTERN,
+)
+from .exceptions import AkeylessError, InvalidConfigurationError
 
 __all__ = [
     "build_lookup_with_warnings",
     "extract_integration_parameters",
     "mask_id",
+    "resolve_secret_and_version",
+    "validate_param_mappings",
     "validate_response",
 ]
 
@@ -38,14 +44,14 @@ if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
 
-def _extract_error_from_dict(data: dict[str, object]) -> str | None:
+def _extract_error_from_dict(data: SingleJson) -> str | None:
     """Extract a human-readable error message from a parsed JSON dictionary.
 
     Args:
         data: Parsed JSON dictionary from an API error response.
 
     Returns:
-        str | None: The extracted error message, or None if not found.
+        The extracted error message, or None if not found.
 
     """
     error_val = data.get("error")
@@ -75,7 +81,7 @@ def _extract_error_from_body(raw_body: str | bytes | None) -> str | None:
         raw_body: The raw HTTP response body as string, bytes, or None.
 
     Returns:
-        str | None: The extracted error message, or None if empty.
+        The extracted error message, or None if empty.
 
     """
     if raw_body is None:
@@ -104,7 +110,6 @@ def _format_status_detail(
     status: int | str | None,
     reason: str | None,
     raw_body: str | bytes | None,
-    fallback: str = "",
 ) -> str:
     """Format HTTP status code, reason, and extracted body error into a single string.
 
@@ -112,10 +117,9 @@ def _format_status_detail(
         status: HTTP status code.
         reason: HTTP status reason phrase.
         raw_body: Raw HTTP response body.
-        fallback: Fallback message when status, reason, and body are empty.
 
     Returns:
-        str: The formatted status and error detail string.
+        The formatted status and error detail string.
 
     """
     body_error = _extract_error_from_body(raw_body)
@@ -130,7 +134,8 @@ def _format_status_detail(
 
     if status_part and body_error:
         return f"{status_part} - {body_error}"
-    return body_error or status_part or fallback
+
+    return body_error or status_part
 
 
 def validate_response(
@@ -140,13 +145,10 @@ def validate_response(
 ) -> None:
     """Validate an Akeyless API response or exception and raise a concise error.
 
-    Parses the HTTP response body (e.g. ``{"error": "..."}`` JSON payloads) and
-    status code/reason while omitting verbose HTTP response headers.
-
     Args:
         response: An HTTP response object, SDK response, or raised exception.
         error_msg: Optional prefix message describing the failed operation.
-        exception_cls: Exception class to raise on error. Defaults to ``AkeylessError``.
+        exception_cls: Exception class to raise on error.
 
     """
     if isinstance(response, Exception):
@@ -160,7 +162,7 @@ def validate_response(
         reason = getattr(target_err, "reason", None)
         body = getattr(target_err, "body", None)
         detail = (
-            _format_status_detail(status, reason, body, fallback=str(target_err))
+            _format_status_detail(status, reason, body) or str(target_err)
             if (status is not None or reason is not None or body is not None)
             else str(target_err)
         )
@@ -169,11 +171,9 @@ def validate_response(
             if error_msg and not detail.startswith(error_msg)
             else detail
         )
-        raise exception_cls(msg) from response
+        raise exception_cls(msg) from None
 
-    status = getattr(response, "status", None) or getattr(
-        response, "status_code", None
-    )
+    status = getattr(response, "status", None) or getattr(response, "status_code", None)
     if isinstance(status, int) and not (
         HTTPStatus.OK <= status < HTTPStatus.MULTIPLE_CHOICES
     ):
@@ -191,8 +191,11 @@ def validate_response(
 def mask_id(value: str) -> str:
     """Mask a secret ID for safe logging.
 
+    Args:
+        value: The raw secret ID string.
+
     Returns:
-        str: The masked secret ID.
+        The masked secret ID.
 
     """
     if len(value) <= MIN_MASK_LENGTH:
@@ -201,20 +204,86 @@ def mask_id(value: str) -> str:
     return f"{value[:3]}***{value[-3:]}"
 
 
+def resolve_secret_and_version(mapped_value: str) -> tuple[str, str]:
+    """Parse the mapped string, defaulting to DEFAULT_SECRET_VERSION if not explicitly provided.
+
+    Args:
+        mapped_value: The value from the JSON/YAML mapping (e.g., 'secret-id:version').
+
+    Returns:
+        The (secret_id, resolved_version) tuple.
+
+    Raises:
+        InvalidConfigurationError: If the mapped value is in an invalid format.
+
+    """
+    mapped_value = str(mapped_value).strip()
+    match = RESOURCE_NAME_PATTERN.match(mapped_value)
+    if not match:
+        msg = (
+            f"Invalid credential mapping format for value '{mapped_value}'. "
+            f"Expected format: 'secret_name' or 'secret_name:version'."
+        )
+        raise InvalidConfigurationError(msg)
+
+    gd = match.groupdict()
+    secret_id = gd["secret"]
+    version_id = gd["version"] or DEFAULT_SECRET_VERSION
+
+    return secret_id, version_id
+
+
+def validate_param_mappings(
+    category: str,
+    category_mapping: SingleJson,
+) -> int:
+    """Validate component parameter mappings within a category.
+
+    Args:
+        category: Category name (instances, connectors, or jobs).
+        category_mapping: Dictionary of component to parameter mappings.
+
+    Returns:
+        Number of valid mapped parameters found.
+
+    Raises:
+        InvalidConfigurationError: If any component or parameter format is invalid.
+
+    """
+    if not isinstance(category_mapping, dict):
+        msg = f"Category '{category}' must be a dictionary."
+        raise InvalidConfigurationError(msg)
+
+    mappings_count: int = 0
+    for component_name, param_mapping in category_mapping.items():
+        if not isinstance(param_mapping, dict):
+            msg = f"Parameters for '{component_name}' in category '{category}' must be a dictionary."
+            raise InvalidConfigurationError(msg)
+
+        for param_name, mapped_value in param_mapping.items():
+            mappings_count += 1
+            val = str(mapped_value).strip()
+            if not RESOURCE_NAME_PATTERN.match(val):
+                msg = (
+                    f"Invalid format for parameter '{param_name}' of '{component_name}' "
+                    f"in category '{category}': '{val}'. "
+                    f"Expected format: 'secret_name' or 'secret_name:version'."
+                )
+                raise InvalidConfigurationError(msg)
+
+    return mappings_count
+
+
 def build_lookup_with_warnings(
     items: list[Any],
-    get_key: Callable[[Any], str],
-    get_value: Callable[[Any], Any],
-    entity_type: str,
+    extract_pair: Callable[[Any], tuple[str, Any]],
     logger: ScriptLogger,
 ) -> SingleJson:
-    """Build a lookup dict and warn on duplicates.
+    """Build a lookup dictionary and log a warning on duplicate keys.
 
     Args:
         items: The list of items to process.
-        get_key: Function to extract the key from an item.
-        get_value: Function to extract the value from an item.
-        entity_type: Label for logging (e.g., 'job name').
+        extract_pair: Function returning (key, value) for each item.
         logger: The logger instance to use for warnings.
 
     Returns:
@@ -223,11 +292,11 @@ def build_lookup_with_warnings(
     """
     lookup: SingleJson = {}
     for item in items:
-        key = get_key(item)
+        key, value = extract_pair(item)
         if not key:
             continue
         if key in lookup:
-            logger.warn(f"Duplicate {entity_type} '{key}' detected. Later entry will overwrite.")
-        lookup[key] = get_value(item)
+            logger.warn(f"Duplicate entry '{key}' detected. Later entry will overwrite.")
+        lookup[key] = value
 
     return lookup

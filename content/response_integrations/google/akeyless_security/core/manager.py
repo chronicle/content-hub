@@ -34,6 +34,7 @@ from .utils import mask_id, validate_response
 
 if TYPE_CHECKING:
     from TIPCommon.base.interfaces import ScriptLogger
+    from TIPCommon.types import SingleJson
 
     from .datamodels import AkeylessClientConfig
 
@@ -78,7 +79,7 @@ class AkeylessClient:
         Otherwise, authenticates and caches a new token using Access ID and Access Key.
 
         Returns:
-            str: The active authentication token.
+            The active authentication token.
 
         Raises:
             ConnectivityError: If authentication fails or no token is returned.
@@ -114,21 +115,22 @@ class AkeylessClient:
         """Test connectivity to Akeyless by authenticating.
 
         Returns:
-            bool: True if connection is successful.
+            True if connection is successful.
 
         """
         self.get_token()
+
         return True
 
     def get_secret_value(self, secret_id: str, version_id: str = DEFAULT_SECRET_VERSION) -> str:
         """Access a secret version.
 
         Args:
-            secret_id (str): The ID of the secret.
-            version_id (str): The version of the secret. Defaults to "latest".
+            secret_id: The ID of the secret.
+            version_id: The version of the secret. Defaults to "latest".
 
         Returns:
-            str: The secret payload data.
+            The secret payload data.
 
         Raises:
             SecretAccessError: If access to the secret fails.
@@ -136,7 +138,7 @@ class AkeylessClient:
         """
         token = self.get_token()
 
-        kwargs: dict[str, object] = {
+        kwargs: SingleJson = {
             "names": [secret_id],
             "token": token,
         }
@@ -157,7 +159,11 @@ class AkeylessClient:
             validate_response(e, exception_cls=SecretAccessError)
             raise SecretAccessError(str(e)) from e
 
-        secret_val = response.get(secret_id) if isinstance(response, dict) else getattr(response, secret_id, None)
+        secret_val = (
+            response.get(secret_id)
+            if isinstance(response, dict)
+            else getattr(response, secret_id, None)
+        )
 
         if secret_val is None:
             msg = f"Secret '{mask_id(secret_id)}' not found in Akeyless response."

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Ping action for testing connectivity to Akeyless Security."""
+
 from __future__ import annotations
 
 from ..core.base_action import AkeylessAction
@@ -22,6 +24,7 @@ class PingAction(AkeylessAction):
     """Action to test connectivity to Akeyless."""
 
     def __init__(self) -> None:
+        """Initialize the Ping action."""
         super().__init__(PING_SCRIPT_NAME)
         self.error_output_message: str = "Failed to connect to the Akeyless server!"
 

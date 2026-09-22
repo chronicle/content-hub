@@ -21,7 +21,7 @@ import dataclasses
 from .constants import DEFAULT_API_GATEWAY_URL
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class AkeylessClientConfig:
     """Configuration parameters for the Akeyless API client."""
 
@@ -29,3 +29,11 @@ class AkeylessClientConfig:
     access_key: str
     api_gateway_url: str = DEFAULT_API_GATEWAY_URL
     verify_ssl: bool = True
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class ComponentTarget:
+    """Resolved SOAR component display name and identifier."""
+
+    name: str
+    identifier: str

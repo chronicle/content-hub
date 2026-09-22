@@ -25,6 +25,7 @@ INTEGRATION_NAME: str = "Akeyless Security"
 
 # Script names
 PING_SCRIPT_NAME: str = "Ping"
+GET_SECRET_VALUE_SCRIPT_NAME: str = "Get Secret Value"  # ruff:ignore[hardcoded-password-string]
 SYNC_CREDENTIALS_JOB_SCRIPT_NAME: str = "Sync Integration Credentials Job"
 SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = SYNC_CREDENTIALS_JOB_SCRIPT_NAME
 RESOURCE_NAME_PATTERN: re.Pattern = re.compile(
@@ -36,6 +37,9 @@ ACCESS_ID_PARAM: str = "Access ID"
 ACCESS_KEY_PARAM: str = "Access Key"
 API_GATEWAY_URL_PARAM: str = "API Gateway URL"
 VERIFY_SSL_PARAM: str = "Verify SSL"
+
+# Action parameter names
+SECRET_NAME_PARAM: str = "Secret Name"  # ruff:ignore[hardcoded-password-string]
 
 # Akeyless API defaults
 DEFAULT_API_GATEWAY_URL: str = "https://api.akeyless.io"
