@@ -15,6 +15,7 @@
 import pytest
 
 from TIPCommon.data_models import CaseDetails, CasePriority
+from TIPCommon.types import SingleJson
 
 
 class TestCasePriority:
@@ -31,7 +32,12 @@ class TestCasePriority:
             (100, CasePriority.CRITICAL),
         ],
     )
-    def test_case_priority_integer_lookup(self, value, expected_member):
+    def test_case_priority_integer_lookup(
+        self,
+        value: int,
+        expected_member: CasePriority,
+    ) -> None:
+        """Test CasePriority enum lookup with valid integer values."""
         assert CasePriority(value) == expected_member
 
     @pytest.mark.parametrize(
@@ -45,7 +51,12 @@ class TestCasePriority:
             ("PriorityUnspecified", CasePriority.UNCHANGED),
         ],
     )
-    def test_case_priority_legacy_string_lookup(self, value, expected_member):
+    def test_case_priority_legacy_string_lookup(
+        self,
+        value: str,
+        expected_member: CasePriority,
+    ) -> None:
+        """Test CasePriority lookup with legacy PascalCase strings."""
         assert CasePriority(value) == expected_member
 
     @pytest.mark.parametrize(
@@ -60,7 +71,12 @@ class TestCasePriority:
             ("PRIORITY_UNSPECIFIED", CasePriority.UNCHANGED),
         ],
     )
-    def test_case_priority_protobuf_string_lookup(self, value, expected_member):
+    def test_case_priority_protobuf_string_lookup(
+        self,
+        value: str,
+        expected_member: CasePriority,
+    ) -> None:
+        """Test CasePriority lookup with proto3 enum string formats."""
         assert CasePriority(value) == expected_member
 
     @pytest.mark.parametrize(
@@ -76,7 +92,12 @@ class TestCasePriority:
             ("medium", CasePriority.MEDIUM),
         ],
     )
-    def test_case_priority_exact_names(self, value, expected_member):
+    def test_case_priority_exact_names(
+        self,
+        value: str,
+        expected_member: CasePriority,
+    ) -> None:
+        """Test CasePriority lookup with exact enum member names."""
         assert CasePriority(value) == expected_member
 
     @pytest.mark.parametrize(
@@ -90,12 +111,22 @@ class TestCasePriority:
             ("100", CasePriority.CRITICAL),
         ],
     )
-    def test_case_priority_numeric_strings(self, value, expected_member):
+    def test_case_priority_numeric_strings(
+        self,
+        value: str,
+        expected_member: CasePriority,
+    ) -> None:
+        """Test CasePriority lookup with numeric string representations."""
         assert CasePriority(value) == expected_member
 
-    def test_case_priority_invalid_raises_value_error(self):
+    @pytest.mark.parametrize("invalid_value", ["INVALID_PRIORITY", "999", 999])
+    def test_case_priority_invalid_raises_value_error(
+        self,
+        invalid_value: str | int,
+    ) -> None:
+        """Test CasePriority raises ValueError for unsupported strings and integers."""
         with pytest.raises(ValueError, match="is not a valid CasePriority"):
-            CasePriority("INVALID_PRIORITY")
+            CasePriority(invalid_value)
 
     @pytest.mark.parametrize(
         ("priority_val", "expected_member"),
@@ -106,8 +137,13 @@ class TestCasePriority:
             ("PriorityLow", CasePriority.LOW),
         ],
     )
-    def test_case_details_from_json_with_priority(self, priority_val, expected_member):
-        raw_json = {
+    def test_case_details_from_json_with_priority(
+        self,
+        priority_val: str | int,
+        expected_member: CasePriority,
+    ) -> None:
+        """Test CaseDetails.from_json parses priority across integer, legacy, and protobuf formats."""
+        raw_json: SingleJson = {
             "id": 101,
             "displayName": "Test Case",
             "priority": priority_val,
