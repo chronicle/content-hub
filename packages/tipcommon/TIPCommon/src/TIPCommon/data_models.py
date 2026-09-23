@@ -303,16 +303,26 @@ class CasePriority(Enum):
     CRITICAL = 100
 
     @classmethod
-    def _missing_(cls, value):
-        """Custom method to handle missing values when trying to create
-        an enum member. This supports direct integer values,
-        'Priority' prefixed strings, and exact enum names as strings.
-        """
-        if isinstance(value, str):
-            candidate_name = value[len("Priority") :].replace("Info", "Informative").upper()
-            candidate_name = candidate_name.replace("UNSPECIFIED", "UNCHANGED")
-            if candidate_name in cls.__members__:
-                return cls.__members__[candidate_name]
+    def _missing_(cls, value: object) -> Self:
+        """Resolve stringified integers, 'Priority'/'PRIORITY_' prefixes, and enum names."""
+        if not isinstance(value, str):
+            msg = f"'{value}' is not a valid {cls.__name__}"
+            raise ValueError(msg)
+
+        clean_str = value.strip()
+        if clean_str.isdigit() or (clean_str.startswith("-") and clean_str[1:].isdigit()):
+            try:
+                return cls(int(clean_str))
+            except ValueError:
+                pass
+
+        candidate_name = clean_str.upper().removeprefix("PRIORITY_").removeprefix("PRIORITY")
+        candidate_name = {"INFO": "INFORMATIVE", "UNSPECIFIED": "UNCHANGED"}.get(
+            candidate_name,
+            candidate_name,
+        )
+        if candidate_name in cls.__members__:
+            return cls.__members__[candidate_name]
 
         msg = f"'{value}' is not a valid {cls.__name__}"
         raise ValueError(msg)
@@ -1958,21 +1968,23 @@ class CaseCloseComment:
         if "objectsList" in json_data:
             case_activities = json_data.get("objectsList", [])
             close_activity = next(filter(lambda x: x.get("activityKind") == 9, case_activities), {})
-            description = close_activity.get("description", "")
-            _, _, close_comment = description.partition("Comment:")
-            return cls(comment=close_comment.strip())
+            description = close_activity.get("description") or ""
+            _, _, raw_comment = description.partition("Comment:")
+        else:
+            records = json_data.get("caseWallRecords", [])
+            if not records:
+                return cls(comment="")
 
-        records = json_data.get("caseWallRecords", [])
-        if not records:
-            return cls(comment="")
+            activity_data_json_str = records[0].get("activityDataJson", "{}")
+            try:
+                activity_data = json.loads(activity_data_json_str)
+            except (json.JSONDecodeError, TypeError):
+                activity_data = {}
 
-        activity_data_json_str = records[0].get("activityDataJson", "{}")
-        try:
-            activity_data = json.loads(activity_data_json_str)
-        except (json.JSONDecodeError, TypeError):
-            activity_data = {}
+            raw_comment = activity_data.get("comment") or ""
 
-        full_comment = activity_data.get("comment", "")
-        case_comment = full_comment.strip() if full_comment else ""
-
-        return cls(comment=case_comment)
+        raw_comment, _, _ = raw_comment.partition(
+            "All attached playbooks and playbook blocks have been terminated"
+        )
+        raw_comment, _, _ = raw_comment.partition("Case closed by Siemplify API.")
+        return cls(comment=raw_comment.strip())
