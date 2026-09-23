@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import pathlib
 import stat
 import zipfile
@@ -115,18 +116,23 @@ class GitContentManager:
                         definition = json.loads(file.content)
                     zip_file.writestr(file.path, file.content)
             zip_buffer.seek(0)
-            if definition is None:
-                raise KeyError(f"Definition file for integration {integration_name} not found.")
-            return Integration(
-                {
-                    "identifier": integration_name,
-                    "isCustomIntegration": definition.get("IsCustom") or definition.get("Custom", False),
-                    "Staging": definition.get("Staging", "False"),
-                },
-                zip_buffer,
-            )
         except KeyError:
             return None
+
+        if definition is None:
+            logging.warning(
+                f"Definition file for integration {integration_name} not found."
+            )
+            return None
+
+        return Integration(
+            {
+                "identifier": integration_name,
+                "isCustomIntegration": definition.get("IsCustom") or definition.get("Custom", False),
+                "Staging": definition.get("Staging", "False"),
+            },
+            zip_buffer,
+        )
 
     def get_integrations(self) -> list[Integration]:
         try:

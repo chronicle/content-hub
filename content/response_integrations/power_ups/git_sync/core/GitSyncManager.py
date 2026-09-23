@@ -238,7 +238,7 @@ class GitSyncManager:
             self.logger.info(
                 f"{integration.identifier} is a commercial integration - Checking installation",
             )
-            if self.get_installed_integration_version(integration.identifier) == "0.0":
+            if not self._is_integration_installed(integration.identifier):
                 self.logger.info(
                     f"{integration.identifier} is not installed - installing from the marketplace",
                 )
@@ -300,9 +300,9 @@ class GitSyncManager:
 
         """
         installed_version = self.get_installed_integration_version(
-            connector.integration,
+            connector.integration
         )
-        if not installed_version or installed_version == "0.0":
+        if not (installed_version and installed_version != "0.0"):
             self.logger.info(
                 f"Connector {connector.name} integration ({connector.integration}) not installed",
             )
@@ -325,6 +325,9 @@ class GitSyncManager:
                 self.logger.info(
                     "Connector integration successfully installed from the marketplace",
                 )
+            installed_version = self.get_installed_integration_version(
+                connector.integration
+            )
         if connector.integration_version != installed_version:
             self.logger.warn(
                 "Installed integration version doesn't match the connector integration version. "
@@ -473,10 +476,7 @@ class GitSyncManager:
             job: A Job object instance to install
 
         """
-        if (
-            not self.get_installed_integration_version(job.integration)
-            or self.get_installed_integration_version(job.integration) == "0.0"
-        ):
+        if not self._is_integration_installed(job.integration):
             self.logger.warn(
                 f"Error installing job {job.name} - Job integration ({job.integration}) "
                 "is not installed",
@@ -741,6 +741,10 @@ class GitSyncManager:
             "0.0",
         )
         return str(version) if version else "0.0"
+
+    def _is_integration_installed(self, integration_name: str) -> bool:
+        version = self.get_installed_integration_version(integration_name)
+        return bool(version and version != "0.0")
 
 
 class WorkflowInstaller:

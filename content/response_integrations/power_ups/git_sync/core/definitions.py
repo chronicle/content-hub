@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import re
 from typing import TYPE_CHECKING, Any
 import uuid
@@ -39,8 +40,40 @@ from .constants import (
     VISUAL_FAMILY_README,
     ScriptType,
     WorkflowTypes,
-    STEP_TYPE
+    STEP_TYPE,
 )
+
+DEFAULT_README_ADDONS: dict[str, dict[str, Any]] = {
+    "Integration": {},
+    "Mappings": {},
+    "Visual Family": {},
+    "Playbook": {},
+    "Connector": {},
+    "Job": {},
+    "Block": {},
+}
+
+
+def get_fields(rule: Any) -> list[Any]:
+    """Extract iterable fields from either response format."""
+    if isinstance(rule, list):
+        return rule
+    if isinstance(rule, dict):
+        if "familyFields" in rule or "systemFields" in rule:
+            return rule.get("familyFields", []) + rule.get("systemFields", [])
+        if "mapping_rules" in rule:
+            return rule.get("mapping_rules", [])
+        if "mappingRules" in rule:
+            return rule.get("mappingRules", [])
+    return []
+
+
+def get_mapping_rule(r: Any) -> Any:
+    """Get the mappingRule dict from either format."""
+    if isinstance(r, dict) and "mappingRule" in r:
+        return r["mappingRule"]
+    return r
+
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -88,29 +121,11 @@ class Metadata:
         self.readme_addons = _get_arg_with_multiple_names(
             kwargs,
             ["readme_addons", "readmeAddons"],
-            {
-                "Integration": {},
-                "Mappings": {},
-                "Visual Family": {},
-                "Playbook": {},
-                "Connector": {},
-                "Job": {},
-                "Block": {},
-            },
+            dict(DEFAULT_README_ADDONS),
         )
         # Ensure all expected keys exist
-        defaults = {
-            "Integration": {},
-            "Mappings": {},
-            "Visual Family": {},
-            "Playbook": {},
-            "Connector": {},
-            "Job": {},
-            "Block": {},
-        }
-        for k, v in defaults.items():
-            if k not in self.readme_addons:
-                self.readme_addons[k] = v
+        for k, v in DEFAULT_README_ADDONS.items():
+            self.readme_addons.setdefault(k, v)
 
         self.settings = kwargs.get("settings", {"update_root_readme": True})
 
@@ -206,9 +221,15 @@ class Mapping(Content):
             rec["id"] = 0
             rec["familyId"] = 0
         for rule in self.rules:
-            if isinstance(rule, dict) and ("familyFields" in rule or "systemFields" in rule):
-                for fam_fields in rule.get("familyFields", []) + rule.get("systemFields", []):
-                    if isinstance(fam_fields, dict) and isinstance(fam_fields.get("mappingRule"), dict):
+            if isinstance(rule, dict) and (
+                "familyFields" in rule or "systemFields" in rule
+            ):
+                for fam_fields in rule.get("familyFields", []) + rule.get(
+                    "systemFields", []
+                ):
+                    if isinstance(fam_fields, dict) and isinstance(
+                        fam_fields.get("mappingRule"), dict
+                    ):
                         fam_fields["mappingRule"]["id"] = 0
                         fam_fields["mappingRule"]["creationTimeUnixTimeInMs"] = 0
                         fam_fields["mappingRule"]["modificationTimeUnixTimeInMs"] = 0
@@ -295,7 +316,7 @@ class Integration(Content):
                 elif file.startswith("Resources/" + self.identifier + ".svg"):
                     self.has_resources = True
             except json.JSONDecodeError:
-                pass
+                logging.warning("Skipping %s - not valid JSON.", file)
 
     def get_all_items(self):
         return self.actions + self.jobs + self.connectors + self.managers
@@ -315,7 +336,7 @@ class Integration(Content):
 
     def get_zip_as_base64(self):
         return base64.b64encode(self.zip_buffer.getvalue()).decode("utf-8")
-    
+
     def get_zip_binary(self):
         return self.zip_buffer.getvalue()
 
@@ -362,7 +383,7 @@ class Integration(Content):
         """
         yield File("README.md", self.readme)
         if not self.isCustom:
-            self.definition["Custom"] = False #note
+            self.definition["Custom"] = False
             yield File(
                 f"Integration-{self.identifier}.def",
                 json.dumps(self.definition, indent=4),
@@ -442,7 +463,9 @@ class Workflow(Content):
             self.raw_data["trigger"]["id"] = 0
         self.name = self.raw_data.get("name")
         self.description = self.raw_data.get("description")
-        self.type = WorkflowTypes(self.raw_data.get("playbookType", WorkflowTypes.PLAYBOOK.value))
+        self.type = WorkflowTypes(
+            self.raw_data.get("playbookType", WorkflowTypes.PLAYBOOK.value)
+        )
         self.priority = self.raw_data.get("priority")
         self.isDebugMode = self.raw_data.get("isDebugMode", None)
         self.version = self.raw_data.get("version")
@@ -548,7 +571,7 @@ class Workflow(Content):
                         param["FallbackInstanceDisplayName"] = display_name
             except HTTPError as e:
                 # ignoring 404 errors as they expected in migrations between instances.
-                if e.response is not None and hasattr(e.response, 'status_code'):
+                if e.response is not None and hasattr(e.response, "status_code"):
                     status_code = e.response.status_code
                     if status_code != 404:
                         raise e
@@ -556,7 +579,7 @@ class Workflow(Content):
                     # TIPCommon is re-raising HTTPError without response object
                     # Try to extract status code from the error message itself
                     error_msg = str(e)
-                    status_code_match = re.search(r'(\d{3})\s+Client Error', error_msg)
+                    status_code_match = re.search(r"(\d{3})\s+Client Error", error_msg)
                     if status_code_match:
                         status_code = int(status_code_match.group(1))
                         if status_code != 404:
@@ -589,7 +612,9 @@ class Job(Content):
         self.integration = self.raw_data.get("integration")
         self.description = self.raw_data.get("description")
         self.parameters = self.raw_data.get("parameters")
-        self.runIntervalInSeconds = self.raw_data.get("runIntervalInSeconds") or self.raw_data.get("intervalSeconds")
+        self.runIntervalInSeconds = self.raw_data.get(
+            "runIntervalInSeconds"
+        ) or self.raw_data.get("intervalSeconds")
 
     def generate_readme(self, additional_info: str = None) -> None:
         env = JinjaEnvironment()
@@ -607,28 +632,34 @@ class Job(Content):
 
 
 class IntegrationInstance(Content):
-    def __init__(self, raw_data: dict):
+    """Represents an integration instance configuration."""
+
+    def __init__(self, raw_data: dict[str, Any]):
         super().__init__()
         self.raw_data = raw_data
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict[str, Any]) -> IntegrationInstance:
+        """Creates an IntegrationInstance from a dictionary."""
         return cls(data)
 
-    def to_1p(self, identifier: str) -> dict:
+    def to_1p(self, identifier: str) -> dict[str, Any]:
+        """Converts instance configuration to 1P payload shape."""
         settings_payload = self.raw_data.get("settings", {})
         params = []
-        for s in settings_payload.get("settings", []):
-            params.append({
-                "description": s.get("propertyDescription") or None,
-                "mandatory": s.get("isMandatory") or False,
-                "type": s.get("propertyType"),
-                "id": s.get("id"),
-                "displayName": s.get("propertyDisplayName"),
-                "propertyName": s.get("propertyName"),
-                "value": s.get("value")
-            })
-        
+        for setting in settings_payload.get("settings", []):
+            params.append(
+                {
+                    "description": setting.get("propertyDescription") or None,
+                    "mandatory": setting.get("isMandatory") or False,
+                    "type": setting.get("propertyType"),
+                    "id": setting.get("id"),
+                    "displayName": setting.get("propertyDisplayName"),
+                    "propertyName": setting.get("propertyName"),
+                    "value": setting.get("value"),
+                }
+            )
+
         return {
             "name": f"projects/project/locations/location/instances/instance/integrations/{self.raw_data.get('integrationIdentifier')}/integrationInstances/{identifier}",
             "environment": self.raw_data.get("environment"),
@@ -638,5 +669,5 @@ class IntegrationInstance(Content):
             "parameters": params,
             "integrationIdentifier": self.raw_data.get("integrationIdentifier"),
             "description": settings_payload.get("instanceDescription") or None,
-            "displayName": settings_payload.get("instanceName")
+            "displayName": settings_payload.get("instanceName"),
         }

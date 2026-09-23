@@ -584,7 +584,6 @@ def main():
                 siemplify.LOGGER.info("Installing Logo")
 
                 if "items" in logo_data:
-
                     for item in logo_data.get("items", []):
                         val = item.get("value")
                         if val is None or (isinstance(val, str) and not val.strip()):
@@ -596,11 +595,10 @@ def main():
 
                         payload = item
                         gitsync.api.update_logo(payload)
-
-                    siemplify.LOGGER.info("Finished Successfully")
                 else:
                     gitsync.api.update_logo(gitsync.content.get_logo())
-                siemplify.LOGGER.info("Finished Successfully")
+
+        siemplify.LOGGER.info("Finished Successfully")
 
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing Job {SCRIPT_NAME}")

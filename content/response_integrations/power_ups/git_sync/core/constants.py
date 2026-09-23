@@ -223,7 +223,7 @@ Python Version - {{ integration.definition.PythonVersion }}
 |Name|Description|IsMandatory|Type|DefaultValue|
 |----|-----------|-----------|----|------------|
 {% for param in integration.definition.Parameters or integration.definition.IntegrationProperties -%}
-|{{ param.PropertyDisplayName or param.PropertyName }}|{{ param.PropertyDescription|replace('\n', '') or param.Description|replace('\n', '') }}|{{ param.IsMandatory or param.Mandatory or 'False' }}|{{ (param.Type|base_param_type) or param.Type or (param.PropertyType|base_param_type) }}|{% if param.Type != 'Password' and param.Type != 3 and param.PropertyType != 3 %}{{ param.Value or param.DefaultValue }}{% else %}*****{% endif %}|
+|{{ param.PropertyDisplayName or param.PropertyName }}|{{ param.PropertyDescription|replace('\n', '') or param.Description|replace('\n', '') }}|{{ param.IsMandatory or param.Mandatory or 'False' }}|{{ (param.Type|base_param_type) or param.Type or (param.PropertyType|base_param_type) }}|{% if param.Type != 'Password' and param.Type != 3 and param.PropertyType != 3 and param.PropertyType != 'Password' %}{{ param.Value or param.DefaultValue }}{% else %}*****{% endif %}|
 {% endfor -%}
 {% endif %}
 {% if integration.dependencies %}

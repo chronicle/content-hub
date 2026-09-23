@@ -36,6 +36,8 @@ from ..core.definitions import (
     VisualFamily,
     Workflow,
     WorkflowTypes,
+    get_fields,
+    get_mapping_rule,
 )
 
 from TIPCommon.data_models import Environment
@@ -192,7 +194,7 @@ def main():
                             "modificationTimeUnixTimeInMs": 0,
                             "propertyType": s.property_type,
                             "isMandatory": s.is_mandatory,
-                            "id": s._id,
+                            "id": getattr(s, "id", getattr(s, "_id", None)),
                             "propertyDisplayName": s.display_name,
                             "propertyDescription": s.property_description,
                             "integrationIdentifier": (instance.integration_identifier),
@@ -247,27 +249,6 @@ def main():
                             product=record["product"],
                             event_name=record["eventName"],
                         )
-
-                        def get_fields(rule):
-                            """Extract iterable fields from either response format."""
-                            if isinstance(rule, list):
-                                return rule
-                            if isinstance(rule, dict):
-                                if "familyFields" in rule or "systemFields" in rule:
-                                    return rule.get("familyFields", []) + rule.get(
-                                        "systemFields", []
-                                    )
-                                elif "mapping_rules" in rule:
-                                    return rule.get("mapping_rules", [])
-                                elif "mappingRules" in rule:
-                                    return rule.get("mappingRules", [])
-                            return []
-
-                        def get_mapping_rule(r, rule):
-                            """Get the mappingRule dict from either format."""
-                            if "mappingRule" in r:
-                                return r["mappingRule"]
-                            return r
 
                         for r in get_fields(rule):
                             mapping_rule = get_mapping_rule(r, rule)

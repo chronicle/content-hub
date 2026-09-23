@@ -106,6 +106,10 @@ if TYPE_CHECKING:
 VERSION_6117 = version.parse("6.1.17")
 VERSION_6138 = version.parse("6.1.38.77")
 
+WORKFLOW_TYPE_PLAYBOOK = 0
+WORKFLOW_TYPE_BLOCK = 1
+MAX_PAGE_SIZE = 10000
+
 
 class BaseUrlSession(requests.Session):
     # https://github.com/requests/toolbelt/blob/master/requests_toolbelt/sessions.py
@@ -309,7 +313,7 @@ class SiemplifyApiClient:
         identifier: str | None = None,
         include_staging: bool = False,
     ) -> list[SingleJson]:
-        return get_ide_cards(self.siemplify_soar, identifier, include_staging) #Qa fixes
+        return get_ide_cards(self.siemplify_soar, identifier, include_staging)
 
     def get_ide_item(self, item_id, item_type):
         return get_ide_item(self.siemplify_soar, item_id, item_type)
@@ -352,7 +356,7 @@ class SiemplifyApiClient:
             family_id=family_id,
         )
 
-    def add_custom_family(self, visual_family, mr_id=None): #vf
+    def add_custom_family(self, visual_family, mr_id=None):
         return add_custom_family(self.siemplify_soar, visual_family, mr_id)
 
     def get_ontology_records(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
@@ -376,10 +380,10 @@ class SiemplifyApiClient:
             event_name
         )
 
-    def add_mapping_rules(self, mapping_rule, mr_id=None): #mp
+    def add_mapping_rules(self, mapping_rule, mr_id=None):
         return add_mapping_rules(self.siemplify_soar, mapping_rule, mr_id)
 
-    def set_mappings_visual_family(self, source, product, event_name, visual_family, record_id=None):
+    def set_mappings_visual_family(self, source, product, event_name, visual_family):
         return set_mappings_visual_family(
             self.siemplify_soar,
             source,
@@ -402,8 +406,14 @@ class SiemplifyApiClient:
             if self.system_version >= VERSION_6138
             else get_playbooks_workflow_menu_cards
         )
-        playbooks = get_playbooks_func(chronicle_soar=chronicle_soar, api_payload=[0, 10000])
-        blocks = get_playbooks_func(chronicle_soar=chronicle_soar, api_payload=[1, 10000])
+        playbooks = get_playbooks_func(
+            chronicle_soar=chronicle_soar,
+            api_payload=[WORKFLOW_TYPE_PLAYBOOK, MAX_PAGE_SIZE],
+        )
+        blocks = get_playbooks_func(
+            chronicle_soar=chronicle_soar,
+            api_payload=[WORKFLOW_TYPE_BLOCK, MAX_PAGE_SIZE],
+        )
         return playbooks + blocks
 
     def get_playbook(
@@ -504,7 +514,6 @@ class SiemplifyApiClient:
 
     def get_logo(self):
         return get_company_logo(self.siemplify_soar)
-        
 
     def update_logo(self, logo):
         return add_or_update_company_logo(self.siemplify_soar, logo)
@@ -521,8 +530,6 @@ class SiemplifyApiClient:
             type_=type_,
             settings=settings
         )
-            
-
 
     def get_case_stages(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         """Gets case stages.
@@ -561,9 +568,6 @@ class SiemplifyApiClient:
         Returns:
             list[SingleJson]: List of denylists.
         """
-        # if self.system_version > VERSION_6117:
-        #     return self.get_blocklists(chronicle_soar=chronicle_soar)
-
         return get_denylists(chronicle_soar)
 
     def update_denylist(self, siemplify, denylist):
@@ -587,10 +591,7 @@ class SiemplifyApiClient:
         Returns:
             list[SingleJson]: List of sla records.
         """
-        try:
-            return get_sla_records(chronicle_soar=chronicle_soar)
-        except Exception:
-            return []
+        return get_sla_records(chronicle_soar=chronicle_soar)
 
     def update_sla_record(self, siemplify, definition):
         res = update_sla_record(siemplify, definition)
@@ -605,10 +606,10 @@ class SiemplifyApiClient:
     def get_jobs(self, chronicle_soar: ChronicleSoar, enrich: bool = True) -> list[SingleJson]:
         res = get_installed_jobs(chronicle_soar=chronicle_soar)
         jobs = res if isinstance(res, list) else res.get("job_instances", [])
-        
+
         if not platform_supports_1p_api() or not enrich:
             return jobs
-            
+
         enriched_jobs = []
         for job in jobs:
             job_id = job.get("id")
@@ -621,11 +622,12 @@ class SiemplifyApiClient:
                     if isinstance(full_details, dict):
                         job.update(full_details)
                 except Exception as e:
-                    chronicle_soar.LOGGER.warn(f"Failed to fetch details for job {job_id}: {e}")
+                    chronicle_soar.LOGGER.warn(
+                        f"Failed to fetch details for job {job_id}: {e}"
+                    )
             enriched_jobs.append(job)
-            
-        return enriched_jobs
 
+        return enriched_jobs
 
     def add_job(self, job, job_definition_id=None):
         return add_job(self.siemplify_soar, job, job_definition_id)
