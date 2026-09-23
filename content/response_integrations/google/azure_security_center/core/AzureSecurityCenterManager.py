@@ -13,19 +13,18 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Any, List, Optional
 
 import json
+
 import requests
-
 from TIPCommon.filters import filter_old_alerts
+from TIPCommon.types import ChronicleSOAR, SingleJson
 
+from . import consts, datamodels
 from .AzureSecurityCenterParser import AzureSecurtyCenterParser
-from . import consts
-from . import datamodels
 from .exceptions import (
-    AzureSecurityCenterManagerError,
     AzureSecurityCenterAlertUpdateException,
+    AzureSecurityCenterManagerError,
 )
 
 
@@ -43,25 +42,31 @@ class AzureSecurityCenterManager:
         tenant_id: str,
         subscription_id: str | None = None,
         verify_ssl: bool = True,
-        siemplify: Any = None,
+        siemplify: ChronicleSOAR | None = None,
         refresh_token: str | None = None,
         login_api_root: str | None = None,
         api_root: str | None = None,
         graph_api_root: str | None = None,
     ) -> None:
-        """
-        The method is used to init an object of Manager class
-        :param client_id: {str} Client ID of the Microsoft Azure application.
-        :param client_secret: {str} Client Secret of the Microsoft Azure application.
-        :param username: {str} Username of the Microsoft Azure account.
-        :param password: {str} Password of the Microsoft Azure account.
-        :param tenant_id: {str} Tenant ID of the Microsoft Azure application.
-        :param subscription_id: {str} Subscription ID of the Microsoft Azure application
-        :param siemplify: {ConnectorExecutor} connector executor instance
-        :param refresh_token: {str} Refresh token for the OAuth authorization.
-        :param login_api_root: The API root of the Microsoft identity platform login service.
-        :param api_root: The API root of the Azure Management service.
-        :param graph_api_root: The API root of the Microsoft Graph service.
+        """Initialize an object of the Manager class.
+
+        Args:
+            client_id: Client ID of the Microsoft Azure application.
+            client_secret: Client Secret of the Microsoft Azure application.
+            username: Username of the Microsoft Azure account.
+            password: Password of the Microsoft Azure account.
+            tenant_id: Tenant ID of the Microsoft Azure application.
+            subscription_id: Subscription ID of the Microsoft Azure application.
+            verify_ssl: If enabled, verify the SSL certificate for the connection to the server is valid.
+            siemplify: Connector or action executor instance.
+            refresh_token: Refresh token for the OAuth authorization.
+            login_api_root: The API root of the Microsoft identity platform login service.
+            api_root: The API root of the Azure Management service.
+            graph_api_root: The API root of the Microsoft Graph service.
+
+        Raises:
+            AzureSecurityCenterManagerError: If neither Basic nor OAuth authentication parameters are provided.
+
         """
         self.client_id = client_id
         self.client_secret = client_secret
@@ -119,17 +124,21 @@ class AzureSecurityCenterManager:
         tenant_id: str,
         verify_ssl: bool = True,
         login_api_root: str | None = consts.DEFAULT_LOGIN_API_ROOT,
-    ) -> dict[str, Any]:
-        """
-        Obtain a refresh token
-        :param client_id: The client id to authenticate with
-        :param client_secret: The secret of the given client id
-        :param redirect_uri: The redirect uri that matched the given client
-        :param code: The generated code from the authorizing step
-        :param tenant_id: Tenant ID of the Microsoft Azure application.
-        :param verify_ssl: If enabled, verify the SSL certificate for the connection to the server is valid.
-        :param login_api_root: The API root of the Microsoft identity platform login service.
-        :return: The token response dictionary containing the new refresh token
+    ) -> SingleJson:
+        """Obtain a refresh token.
+
+        Args:
+            client_id: The client ID to authenticate with.
+            client_secret: The secret of the given client ID.
+            redirect_uri: The redirect URI that matched the given client.
+            code: The generated code from the authorizing step.
+            tenant_id: Tenant ID of the Microsoft Azure application.
+            verify_ssl: If enabled, verify the SSL certificate for the connection to the server is valid.
+            login_api_root: The API root of the Microsoft identity platform login service.
+
+        Returns:
+            SingleJson: The token response dictionary containing the new refresh token.
+
         """
         login_api_root = (login_api_root or consts.DEFAULT_LOGIN_API_ROOT).rstrip("/")
         data = {
@@ -220,11 +229,15 @@ class AzureSecurityCenterManager:
         )
 
     def _get_auth_token(self, scope: str | None = None) -> str:
-        """
-        Retrieves Bearer auth token for the manager. By default an auth token for Azure Security Center is returned.
-        :param scope: Authentication scope (e.g., https://management.azure.com/.default or
-            https://graph.microsoft.com/.default).
-        :return: Authentication token.
+        """Retrieve Bearer auth token for the manager.
+
+        Args:
+            scope: Authentication scope (e.g., https://management.azure.com/.default or
+                https://graph.microsoft.com/.default).
+
+        Returns:
+            str: Authentication token.
+
         """
         default_scope = f"{self.api_root}/.default"
         if scope is None:
@@ -269,7 +282,7 @@ class AzureSecurityCenterManager:
         )
 
     def get_regulatory_standards(
-        self, state_filters=None, limit: Optional[int] = None
+        self, state_filters=None, limit: int | None = None
     ) -> [datamodels.RegulatoryStandard]:
         """
         Returns list of available regulatory standards in Microsoft Azure Security Center. If state filters
@@ -301,7 +314,7 @@ class AzureSecurityCenterManager:
         return filtered_standards[:limit] if limit is not None else filtered_standards
 
     def get_regulatory_standard_controls(
-        self, state_filters=None, standard_name=None, limit: Optional[int] = None
+        self, state_filters=None, standard_name=None, limit: int | None = None
     ) -> [datamodels.RegulatoryStandard]:
         """
         Returns list of standards in Microsoft Azure Security Center.
@@ -373,10 +386,10 @@ class AzureSecurityCenterManager:
 
     def get_alert_ids(
         self,
-        severities: List[str],
+        severities: list[str],
         start_time: str,
-        existing_ids: List[str],
-        categories: List[str],
+        existing_ids: list[str],
+        categories: list[str],
         whitelist_as_blacklist: bool,
         limit: int,
     ):

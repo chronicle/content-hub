@@ -13,17 +13,17 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.consts import (
-    INTEGRATION_NAME,
-    GET_AUTHORIZATION_SCRIPT_NAME,
-    DEFAULT_LOGIN_API_ROOT,
     DEFAULT_API_ROOT,
+    DEFAULT_LOGIN_API_ROOT,
+    GET_AUTHORIZATION_SCRIPT_NAME,
+    INTEGRATION_NAME,
 )
 
 AUTHORIZATION_URL = (

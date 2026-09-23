@@ -13,22 +13,22 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from TIPCommon.transformation import construct_csv
 
 from ..core.AzureSecurityCenterManager import AzureSecurityCenterManager
 from ..core.consts import (
+    DEFAULT_API_ROOT,
+    DEFAULT_GRAPH_API_ROOT,
+    DEFAULT_LOGIN_API_ROOT,
+    DEFAULT_NUM_STANDARDS_TO_RETURN,
     INTEGRATION_NAME,
     LIST_REGULATORY_STANDARDS_SCRIPT_NAME,
     REGULATORY_STANDARD_STATES,
-    DEFAULT_NUM_STANDARDS_TO_RETURN,
-    DEFAULT_LOGIN_API_ROOT,
-    DEFAULT_API_ROOT,
-    DEFAULT_GRAPH_API_ROOT,
 )
 from ..core.exceptions import AzureSecurityCenterValidationException
 from ..core.utils import load_csv_to_list

@@ -13,22 +13,22 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.AzureSecurityCenterManager import AzureSecurityCenterManager
 from ..core.consts import (
-    INTEGRATION_NAME,
-    UPDATE_ALERT_STATUS_SCRIPT_NAME,
     DEFAULT_ALERT_STATUS,
-    MAPPED_ALERT_STATUS,
-    PLURAL_ALERT_STATUS,
-    DEFAULT_LOGIN_API_ROOT,
     DEFAULT_API_ROOT,
     DEFAULT_GRAPH_API_ROOT,
+    DEFAULT_LOGIN_API_ROOT,
+    INTEGRATION_NAME,
+    MAPPED_ALERT_STATUS,
+    PLURAL_ALERT_STATUS,
+    UPDATE_ALERT_STATUS_SCRIPT_NAME,
 )
 from ..core.utils import get_mapped_value
 
