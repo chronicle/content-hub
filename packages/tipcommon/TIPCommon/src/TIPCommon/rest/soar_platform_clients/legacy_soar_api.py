@@ -811,7 +811,7 @@ class LegacySoarApi(BaseSoarApi):
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_all_model_block_records(self) -> requests.Response:
         """Get all model block records."""
-        endpoint: str = "settings/GetAllModelBlockRecords"
+        endpoint: str = "/settings/GetAllModelBlockRecords"
         return self.get_page_results(endpoint)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)

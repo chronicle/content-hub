@@ -912,23 +912,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def add_tags_to_case_in_bulks(self) -> requests.Response:
-        """Add tags to case in bulk"""
-        endpoint = "/cases:executeBulkAddTag"
-        payload = {
-            "propertiesStatus": {
-                "additionalProp1": 0,
-                "additionalProp2": 0,
-                "additionalProp3": 0,
-            },
-            "displayName": self.params.name,
-            "parameterType": self.params.type,
-            "defaultValue": self.params.default_value,
-            "optionalValuesJson": str(self.params.optional_json),
-        }
-        return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
-
-    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def install_integration(self) -> requests.Response:
         """Install integration"""
         endpoint = f"/marketplaceIntegrations/{self.params.integration_identifier}:install"
@@ -1031,6 +1014,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             return self._make_request(
                 HttpMethod.PATCH, endpoint, json_payload=case_tag
             )
+        raise ValueError("Existing case tag has no resource name")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def add_case_stage(self) -> requests.Response:
@@ -1141,7 +1125,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                 response_json.get("connector_instances")
                 or response_json.get("connectorInstances", [])
         )
-        connector_names = [item['name'] for item in instances]
+        connector_names = [item["name"] for item in instances if item.get("name")]
 
         detailed_data_list = []
         for name in connector_names:
@@ -1149,7 +1133,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             detail_response = self._make_request(HttpMethod.GET, f"/{clean_path}")
             if detail_response.status_code == 200:
                 data = detail_response.json()
-                data["params"] = data["parameters"]
+                data["params"] = data.get("parameters", [])
                 detailed_data_list.append(data)
             else:
                 self.chronicle_soar.LOGGER.error(f"Failed to fetch details for {name}")

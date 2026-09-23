@@ -2317,7 +2317,7 @@ class Domain:
     def to_1p(self) -> SingleJson:
         return {
             "displayName": self.domain,
-            "environmentsJson": self.environments,
+            "environmentsJson": json.dumps(self.environments or []),
         }
 
 

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
 from requests import HTTPError, Response
@@ -305,7 +305,7 @@ def list_custom_fields(
     if filter_ is not None:
         params["$filter"] = filter_
 
-        custom_fields = []
+    custom_fields = []
     has_more_pages = True
 
     while has_more_pages:
@@ -2318,8 +2318,8 @@ def import_simulated_case(
     try:
         validate_response(response, validate_json=False)
         return True
-    except (HTTPError, InternalJSONDecoderError) as e:
-        raise Exception(f"{response.text}") from e
+    except (HTTPError, InternalJSONDecoderError):
+        return False
 
 
 def add_case_tag(
@@ -2496,8 +2496,8 @@ def update_blocklist(
     api_client.params.blocklist_data = blocklist_data
     response = api_client.update_blocklist()
     try:
-        response = validate_response(response, validate_json=False)
-        return response
+        validate_response(response, validate_json=False)
+        return safe_json_for_204(response, default_for_204={})
     except (HTTPError, InternalJSONDecoderError):
         return {}
 
@@ -2869,7 +2869,7 @@ def save_case_title_settings(
     display_name: str,
     value: str,
     type_: int,
-    settings: any,
+    settings: Any,
 ) -> SingleJson:
     """Save case title settings."""
     api_client = get_soar_client(chronicle_soar)
