@@ -14,13 +14,19 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
+import pathlib
+import tarfile
+import zipfile
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 from integration_testing.common import use_live_api
+from integration_testing.platform.input_context import get_mock_input_context
 from SiemplifyBase import SiemplifyBase
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon.base.utils import CreateSession
@@ -151,3 +157,135 @@ def mock_siemplify(
         )
     )
     return siemplify
+
+
+@pytest.fixture
+def tar_archive_factory() -> Callable[[pathlib.Path, dict[str, bytes]], pathlib.Path]:
+    """Factory fixture to create test TAR archives with custom members."""
+
+    def _create_tar(
+        archive_path: pathlib.Path,
+        members: dict[str, bytes],
+    ) -> pathlib.Path:
+        with tarfile.open(archive_path, "w") as tar:
+            for name, content in members.items():
+                info = tarfile.TarInfo(name=name)
+                info.size = len(content)
+                tar.addfile(info, io.BytesIO(content))
+        return archive_path
+
+    return _create_tar
+
+
+@pytest.fixture
+def zip_archive_factory() -> Callable[[pathlib.Path, dict[str, bytes]], pathlib.Path]:
+    """Factory fixture to create test ZIP archives with custom members."""
+
+    def _create_zip(
+        archive_path: pathlib.Path,
+        members: dict[str, bytes],
+    ) -> pathlib.Path:
+        with zipfile.ZipFile(archive_path, "w") as zf:
+            for name, content in members.items():
+                zf.writestr(name, content)
+        return archive_path
+
+    return _create_zip
+
+
+@pytest.fixture
+def valid_tar_path(
+    tmp_path: pathlib.Path,
+    tar_archive_factory: Callable[[pathlib.Path, dict[str, bytes]], pathlib.Path],
+) -> pathlib.Path:
+    """Fixture providing path to a valid test TAR archive."""
+    archive_path = tmp_path / "valid_sample.tar"
+    return tar_archive_factory(
+        archive_path,
+        {
+            "hello.txt": b"Hello World!",
+            "nested/inner.txt": b"Inside subfolder",
+        },
+    )
+
+
+@pytest.fixture
+def traversal_tar_path(
+    tmp_path: pathlib.Path,
+    tar_archive_factory: Callable[[pathlib.Path, dict[str, bytes]], pathlib.Path],
+) -> pathlib.Path:
+    """Fixture providing path to a malicious TAR archive containing traversal."""
+    archive_path = tmp_path / "traversal_sample.tar"
+    return tar_archive_factory(
+        archive_path,
+        {
+            "safe.txt": b"safe",
+            "../../escaped.txt": b"malicious content",
+        },
+    )
+
+
+@pytest.fixture
+def valid_zip_path(
+    tmp_path: pathlib.Path,
+    zip_archive_factory: Callable[[pathlib.Path, dict[str, bytes]], pathlib.Path],
+) -> pathlib.Path:
+    """Fixture providing path to a valid test ZIP archive."""
+    archive_path = tmp_path / "valid_sample.zip"
+    return zip_archive_factory(
+        archive_path,
+        {
+            "doc.txt": b"Zip file documentation",
+            "folder/nested.txt": b"Nested zip entry",
+        },
+    )
+
+
+@pytest.fixture
+def traversal_zip_path(
+    tmp_path: pathlib.Path,
+    zip_archive_factory: Callable[[pathlib.Path, dict[str, bytes]], pathlib.Path],
+) -> pathlib.Path:
+    """Fixture providing path to a malicious ZIP archive containing traversal."""
+    archive_path = tmp_path / "traversal_sample.zip"
+    return zip_archive_factory(
+        archive_path,
+        {
+            "../pwned.txt": b"outside zip",
+        },
+    )
+
+
+@pytest.fixture
+def mock_extract_archive_context(
+    product: FileUtilitiesProduct,
+    mock_session: FileUtilitiesMockSession,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> Callable[[str], pathlib.Path]:
+    """Configure action context and extraction destination directory."""
+    dest_base = tmp_path / "dest_base"
+    monkeypatch.setattr(
+        "file_utilities.actions.ExtractArchive.DEST_DIR",
+        str(dest_base),
+    )
+
+    def _configure(archive_path: str) -> pathlib.Path:
+        path_obj = pathlib.Path(archive_path)
+        if path_obj.is_file():
+            product.set_blob(path_obj.name, path_obj.read_bytes())
+        context_dict: dict[str, Any] = {
+            "parameters": {"Archive": archive_path},
+        }
+        ctx_bytes = get_mock_input_context(context_dict)
+        monkeypatch.setattr(
+            "soar_sdk.SiemplifyBase.SiemplifyBase.get_script_context",
+            lambda *_: ctx_bytes,
+        )
+        monkeypatch.setattr(
+            "SiemplifyBase.SiemplifyBase.get_script_context",
+            lambda *_: ctx_bytes,
+        )
+        return dest_base
+
+    return _configure
