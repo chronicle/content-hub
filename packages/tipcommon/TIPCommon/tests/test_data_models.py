@@ -14,9 +14,9 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
-import json
 import pytest
 
 from TIPCommon.data_models import CaseCloseComment, CaseDetails, CasePriority
@@ -157,6 +157,7 @@ class TestCasePriority:
         }
         case_details = CaseDetails.from_json(raw_json)
         assert case_details.priority == expected_member
+
 
 class TestCaseCloseComment:
     """Unit tests for CaseCloseComment parsing across Legacy and 1P responses."""
