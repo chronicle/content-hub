@@ -303,16 +303,26 @@ class CasePriority(Enum):
     CRITICAL = 100
 
     @classmethod
-    def _missing_(cls, value):
-        """Custom method to handle missing values when trying to create
-        an enum member. This supports direct integer values,
-        'Priority' prefixed strings, and exact enum names as strings.
-        """
-        if isinstance(value, str):
-            candidate_name = value[len("Priority") :].replace("Info", "Informative").upper()
-            candidate_name = candidate_name.replace("UNSPECIFIED", "UNCHANGED")
-            if candidate_name in cls.__members__:
-                return cls.__members__[candidate_name]
+    def _missing_(cls, value: object) -> Self:
+        """Resolve stringified integers, 'Priority'/'PRIORITY_' prefixes, and enum names."""
+        if not isinstance(value, str):
+            msg = f"'{value}' is not a valid {cls.__name__}"
+            raise ValueError(msg)
+
+        clean_str = value.strip()
+        if clean_str.isdigit() or (clean_str.startswith("-") and clean_str[1:].isdigit()):
+            try:
+                return cls(int(clean_str))
+            except ValueError:
+                pass
+
+        candidate_name = clean_str.upper().removeprefix("PRIORITY_").removeprefix("PRIORITY")
+        candidate_name = {"INFO": "INFORMATIVE", "UNSPECIFIED": "UNCHANGED"}.get(
+            candidate_name,
+            candidate_name,
+        )
+        if candidate_name in cls.__members__:
+            return cls.__members__[candidate_name]
 
         msg = f"'{value}' is not a valid {cls.__name__}"
         raise ValueError(msg)
