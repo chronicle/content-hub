@@ -1959,8 +1959,8 @@ class CaseCloseComment:
             case_activities = json_data.get("objectsList", [])
             close_activity = next(filter(lambda x: x.get("activityKind") == 9, case_activities), {})
             description = close_activity.get("description", "")
-            close_comment = next(filter(lambda x: x.startswith("Comment:"), description.split("\n")), "")
-            return cls(comment=close_comment.removeprefix("Comment:").strip())
+            _, _, close_comment = description.partition("Comment:")
+            return cls(comment=close_comment.strip())
 
         records = json_data.get("caseWallRecords", [])
         if not records:
@@ -1973,6 +1973,6 @@ class CaseCloseComment:
             activity_data = {}
 
         full_comment = activity_data.get("comment", "")
-        case_comment = full_comment.split("\n")[0].strip() if full_comment else ""
+        case_comment = full_comment.strip() if full_comment else ""
 
         return cls(comment=case_comment)
