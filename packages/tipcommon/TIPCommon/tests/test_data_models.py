@@ -12,10 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 
 from TIPCommon.data_models import CaseDetails, CasePriority
-from TIPCommon.types import SingleJson
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 class TestCasePriority:

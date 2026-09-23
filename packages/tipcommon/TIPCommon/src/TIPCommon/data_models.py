@@ -303,34 +303,26 @@ class CasePriority(Enum):
     CRITICAL = 100
 
     @classmethod
-    def _missing_(cls, value):
-        """Custom method to handle missing values when trying to create
-        an enum member. This supports direct integer values,
-        'Priority' prefixed strings, and exact enum names as strings.
-        """
-        if isinstance(value, str):
-            clean_str = value.strip()
-            if clean_str.isdigit() or (clean_str.startswith("-") and clean_str[1:].isdigit()):
-                try:
-                    return cls(int(clean_str))
-                except ValueError:
-                    pass
+    def _missing_(cls, value: object) -> Self:
+        """Resolve stringified integers, 'Priority'/'PRIORITY_' prefixes, and enum names."""
+        if not isinstance(value, str):
+            msg = f"'{value}' is not a valid {cls.__name__}"
+            raise ValueError(msg)
 
-            upper_val = clean_str.upper()
-            if upper_val.startswith("PRIORITY_"):
-                candidate_name = upper_val[len("PRIORITY_") :]
-            elif upper_val.startswith("PRIORITY"):
-                candidate_name = upper_val[len("PRIORITY") :]
-            else:
-                candidate_name = upper_val
+        clean_str = value.strip()
+        if clean_str.isdigit() or (clean_str.startswith("-") and clean_str[1:].isdigit()):
+            try:
+                return cls(int(clean_str))
+            except ValueError:
+                pass
 
-            if candidate_name == "INFO":
-                candidate_name = "INFORMATIVE"
-            elif candidate_name == "UNSPECIFIED":
-                candidate_name = "UNCHANGED"
-
-            if candidate_name in cls.__members__:
-                return cls.__members__[candidate_name]
+        candidate_name = clean_str.upper().removeprefix("PRIORITY_").removeprefix("PRIORITY")
+        candidate_name = {"INFO": "INFORMATIVE", "UNSPECIFIED": "UNCHANGED"}.get(
+            candidate_name,
+            candidate_name,
+        )
+        if candidate_name in cls.__members__:
+            return cls.__members__[candidate_name]
 
         msg = f"'{value}' is not a valid {cls.__name__}"
         raise ValueError(msg)
