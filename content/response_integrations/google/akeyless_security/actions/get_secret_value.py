@@ -63,7 +63,7 @@ class GetSecretValueAction(AkeylessAction):
 
     def _perform_action(self, _: object = None) -> None:
         """Fetch the requested secret version from Akeyless and populate SOAR results."""
-        masked_name = mask_id(self.secret_name)
+        masked_name: str = mask_id(self.secret_name)
         self.logger.info(
             f"Fetching secret '{masked_name}' (version: '{self.secret_version}') "
             f"from {INTEGRATION_NAME}."

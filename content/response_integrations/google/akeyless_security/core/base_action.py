@@ -17,11 +17,15 @@
 from __future__ import annotations
 
 from abc import ABC
+from typing import TYPE_CHECKING
 
 from TIPCommon.base.action import Action
 
 from .authentication import build_auth_params
 from .manager import AkeylessClient
+
+if TYPE_CHECKING:
+    from .datamodels import AkeylessClientConfig
 
 
 class AkeylessAction(Action, ABC):
@@ -40,7 +44,7 @@ class AkeylessAction(Action, ABC):
             The initialized Akeyless API client.
 
         """
-        config = build_auth_params(self.soar_action)
+        config: AkeylessClientConfig = build_auth_params(self.soar_action)
         self.akeyless_client = AkeylessClient(config, logger=self.logger)
 
         return self.akeyless_client

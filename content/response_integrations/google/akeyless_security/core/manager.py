@@ -63,17 +63,17 @@ class AkeylessClient:
             msg = "Both Access ID and Access Key must be provided."
             raise InvalidConfigurationError(msg)
 
-        self.config = config
-        self.logger = logger
+        self.config: AkeylessClientConfig = config
+        self.logger: ScriptLogger | None = logger
 
-        self.configuration = akeyless.Configuration()
+        self.configuration: akeyless.Configuration = akeyless.Configuration()
         self.configuration.host = self.config.api_gateway_url
         self.configuration.verify_ssl = self.config.verify_ssl
         if not self.config.verify_ssl:
             self.configuration.assert_hostname = False
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-        proxy_url = (
+        proxy_url: str | None = (
             os.environ.get("https_proxy")
             or os.environ.get("HTTPS_PROXY")
             or os.environ.get("http_proxy")
@@ -82,10 +82,10 @@ class AkeylessClient:
         if proxy_url:
             self.configuration.proxy = proxy_url
 
-        self.api_client = akeyless.ApiClient(self.configuration)
-        self.api = akeyless.V2Api(self.api_client)
+        self.api_client: akeyless.ApiClient = akeyless.ApiClient(self.configuration)
+        self.api: akeyless.V2Api = akeyless.V2Api(self.api_client)
         self._token: str | None = None
-        self._token_lock = threading.Lock()
+        self._token_lock: threading.Lock = threading.Lock()
 
     def get_token(self) -> str:
         """Authenticate and return the active token.
@@ -108,17 +108,17 @@ class AkeylessClient:
                 return self._token
 
             try:
-                auth_body = akeyless.Auth(
+                auth_body: akeyless.Auth = akeyless.Auth(
                     access_id=self.config.access_id,
                     access_key=self.config.access_key,
                     access_type=ACCESS_KEY_TYPE,
                 )
-                auth_res = self.api.auth(auth_body)
+                auth_res: object = self.api.auth(auth_body)
             except Exception as e:
                 validate_response(e, exception_cls=ConnectivityError)
                 raise ConnectivityError(str(e)) from e
 
-            token = getattr(auth_res, "token", None)
+            token: str | None = getattr(auth_res, "token", None)
             if not token:
                 msg = "Authentication succeeded but no token was returned by Akeyless."
                 raise ConnectivityError(msg)
@@ -152,7 +152,7 @@ class AkeylessClient:
             SecretAccessError: If access to the secret fails.
 
         """
-        token = self.get_token()
+        token: str = self.get_token()
 
         kwargs: SingleJson = {
             "names": [secret_id],
@@ -160,7 +160,7 @@ class AkeylessClient:
         }
         if version_id and version_id != DEFAULT_SECRET_VERSION:
             try:
-                version_num = int(version_id)
+                version_num: int = int(version_id)
             except ValueError as e:
                 msg = (
                     f"Invalid version '{version_id}' for secret '{mask_id(secret_id)}'. "
@@ -177,14 +177,14 @@ class AkeylessClient:
 
             kwargs["version"] = version_num
 
-        secret_body = akeyless.GetSecretValue(**kwargs)
+        secret_body: akeyless.GetSecretValue = akeyless.GetSecretValue(**kwargs)
         try:
-            response = self.api.get_secret_value(secret_body)
+            response: object = self.api.get_secret_value(secret_body)
         except Exception as e:
             validate_response(e, exception_cls=SecretAccessError)
             raise SecretAccessError(str(e)) from e
 
-        secret_val = (
+        secret_val: object = (
             response.get(secret_id)
             if isinstance(response, dict)
             else getattr(response, secret_id, None)

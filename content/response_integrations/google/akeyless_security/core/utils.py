@@ -54,11 +54,11 @@ def _extract_error_from_dict(data: SingleJson) -> str | None:
         The extracted error message, or None if not found.
 
     """
-    error_val = data.get("error")
+    error_val: object = data.get("error")
     if isinstance(error_val, str) and error_val.strip():
         return error_val.strip()
     if isinstance(error_val, dict):
-        nested = (
+        nested: object = (
             error_val.get("message")
             or error_val.get("description")
             or error_val.get("error")
@@ -67,7 +67,7 @@ def _extract_error_from_dict(data: SingleJson) -> str | None:
             return nested.strip()
 
     for key in ("message", "detail", "error_description"):
-        val = data.get(key)
+        val: object = data.get(key)
         if isinstance(val, str) and val.strip():
             return val.strip()
 
@@ -87,7 +87,7 @@ def _extract_error_from_body(raw_body: str | bytes | None) -> str | None:
     if raw_body is None:
         return None
 
-    text = (
+    text: str = (
         raw_body.decode("utf-8", errors="replace").strip()
         if isinstance(raw_body, bytes)
         else str(raw_body).strip()
@@ -96,7 +96,7 @@ def _extract_error_from_body(raw_body: str | bytes | None) -> str | None:
         return None
 
     try:
-        data = json.loads(text)
+        data: object = json.loads(text)
     except (ValueError, TypeError):
         return text
 
@@ -122,7 +122,8 @@ def _format_status_detail(
         The formatted status and error detail string.
 
     """
-    body_error = _extract_error_from_body(raw_body)
+    body_error: str | None = _extract_error_from_body(raw_body)
+    status_part: str
     if status and reason:
         status_part = f"({status}) {reason}"
     elif status:
@@ -158,15 +159,15 @@ def validate_response(
         ):
             target_err = response.__context__
 
-        status = getattr(target_err, "status", None)
-        reason = getattr(target_err, "reason", None)
-        body = getattr(target_err, "body", None)
-        detail = (
+        status: int | str | None = getattr(target_err, "status", None)
+        reason: str | None = getattr(target_err, "reason", None)
+        body: str | bytes | None = getattr(target_err, "body", None)
+        detail: str = (
             _format_status_detail(status, reason, body) or str(target_err)
             if (status is not None or reason is not None or body is not None)
             else str(target_err)
         )
-        msg = (
+        msg: str = (
             f"{error_msg}: {detail}"
             if error_msg and not detail.startswith(error_msg)
             else detail
@@ -178,7 +179,7 @@ def validate_response(
         HTTPStatus.OK <= status < HTTPStatus.MULTIPLE_CHOICES
     ):
         reason = getattr(response, "reason", None)
-        raw_body = (
+        raw_body: str | bytes | None = (
             getattr(response, "data", None)
             or getattr(response, "text", None)
             or getattr(response, "body", None)
@@ -227,9 +228,9 @@ def resolve_secret_and_version(mapped_value: str) -> tuple[str, str]:
         )
         raise InvalidConfigurationError(msg)
 
-    gd = match.groupdict()
-    secret_id = gd["secret"]
-    version_id = gd["version"] or DEFAULT_SECRET_VERSION
+    gd: dict[str, str | None] = match.groupdict()
+    secret_id: str = gd["secret"] or ""
+    version_id: str = gd["version"] or DEFAULT_SECRET_VERSION
 
     return secret_id, version_id
 
