@@ -26,8 +26,8 @@ from ...actions import ExtractIocs
     parameters={
         "Input String": (
             "Your account has been locked due to suspicious activity from 1.2.3.4. "
-            "Immediately send a confirmation email to security.alert@micr0soft.com "
-            "or click on the link: https://micr0soft.com/me/keep-data before "
+            "Immediately send a confirmation email to security.alert@test-domain.com "
+            "or click on the link: https://test-domain.com/me/keep-data before "
             "your data is lost forever."
         ),
     },
@@ -36,9 +36,31 @@ def test_extract_iocs_json_result(action_output: MockActionOutput) -> None:
     ExtractIocs.main()
 
     assert action_output.results.json_output.json_result == {
-        "domains": ["micr0soft.com"],
-        "emails": ["security.alert@micr0soft.com"],
+        "domains": ["test-domain.com"],
+        "emails": ["security.alert@test-domain.com"],
         "ips": ["1.2.3.4"],
-        "urls": ["https://micr0soft.com/me/keep-data"]
+        "urls": ["https://test-domain.com/me/keep-data"],
+    }
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+
+
+@set_metadata(
+    integration_config={},
+    parameters={
+        "Input String": (
+            "We found this offline/unregistered domain url: "
+            "https://this-domain-does-not-exist.com/path"
+        ),
+        "Check DNS": "false",
+    },
+)
+def test_extract_iocs_no_dns_check(action_output: MockActionOutput) -> None:
+    ExtractIocs.main()
+
+    assert action_output.results.json_output.json_result == {
+        "domains": ["this-domain-does-not-exist.com"],
+        "emails": [],
+        "ips": [],
+        "urls": ["https://this-domain-does-not-exist.com/path"],
     }
     assert action_output.results.execution_state == ExecutionState.COMPLETED
