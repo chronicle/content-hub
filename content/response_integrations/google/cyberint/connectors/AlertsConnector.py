@@ -19,7 +19,6 @@ import sys
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
-
 from TIPCommon import extract_connector_param
 
 from ..core.constants import CONNECTOR_NAME, DEFAULT_LIMIT, DEFAULT_TIME_FRAME, SEVERITIES

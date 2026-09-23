@@ -28,7 +28,7 @@ class TestCyberintAlertsConnector(unittest.TestCase):
     """Unit tests for Cyberint Alerts Connector."""
 
     def setUp(self) -> None:
-        """Sets up mock alert objects for connector execution testing."""
+        """Sets up connector patches and mock alert objects for each test."""
         self.mock_alert = MagicMock()
         self.mock_alert.id = "alert-123"
         self.mock_alert.title = "Test Alert"
@@ -47,6 +47,54 @@ class TestCyberintAlertsConnector(unittest.TestCase):
         mock_alert_info.environment = "Default"
         mock_alert_info.device_product = "CyberInt"
         self.mock_alert.get_alert_info.return_value = mock_alert_info
+
+        self.mock_siemplify_cls = self.enterContext(
+            patch("cyberint.connectors.AlertsConnector.SiemplifyConnectorExecution")
+        )
+        self.mock_extract_param = self.enterContext(
+            patch("cyberint.connectors.AlertsConnector.extract_connector_param")
+        )
+        self.mock_is_overflowed = self.enterContext(
+            patch("cyberint.connectors.AlertsConnector.is_overflowed", return_value=True)
+        )
+        self.mock_manager_cls = self.enterContext(
+            patch("cyberint.connectors.AlertsConnector.CyberintManager")
+        )
+        self.mock_get_environment_common = self.enterContext(
+            patch("cyberint.connectors.AlertsConnector.get_environment_common")
+        )
+        self.enterContext(
+            patch(
+                "cyberint.connectors.AlertsConnector.get_last_success_time",
+                return_value="2026-08-14T06:00:00Z",
+            )
+        )
+        self.enterContext(
+            patch("cyberint.connectors.AlertsConnector.read_ids", return_value=[])
+        )
+        self.enterContext(patch("cyberint.connectors.AlertsConnector.save_timestamp"))
+        self.enterContext(patch("cyberint.connectors.AlertsConnector.write_ids"))
+        self.enterContext(
+            patch(
+                "cyberint.connectors.AlertsConnector.is_approaching_timeout",
+                return_value=False,
+            )
+        )
+        self.enterContext(
+            patch("cyberint.connectors.AlertsConnector.pass_filters", return_value=True)
+        )
+
+        self.mock_siemplify = MagicMock()
+        self.mock_siemplify.whitelist = []
+        self.mock_siemplify_cls.return_value = self.mock_siemplify
+
+        mock_env = MagicMock()
+        mock_env.get_environment.return_value = "Default"
+        self.mock_get_environment_common.return_value = mock_env
+
+        mock_manager = MagicMock()
+        mock_manager.get_alerts.return_value = [self.mock_alert]
+        self.mock_manager_cls.return_value = mock_manager
 
     def _create_param_side_effect(self, disable_overflow: bool = False) -> Callable[..., object]:
         """Creates a mock side effect function for siemplify.get_connector_context_property."""
@@ -75,97 +123,29 @@ class TestCyberintAlertsConnector(unittest.TestCase):
 
         return param_side_effect
 
-    @patch("cyberint.connectors.AlertsConnector.get_environment_common")
-    @patch("cyberint.connectors.AlertsConnector.write_ids")
-    @patch("cyberint.connectors.AlertsConnector.save_timestamp")
-    @patch("cyberint.connectors.AlertsConnector.read_ids", return_value=[])
-    @patch("cyberint.connectors.AlertsConnector.get_last_success_time", return_value="2026-08-14T06:00:00Z")
-    @patch("cyberint.connectors.AlertsConnector.CyberintManager")
-    @patch("cyberint.connectors.AlertsConnector.is_overflowed", return_value=True)
-    @patch("cyberint.connectors.AlertsConnector.extract_connector_param")
-    @patch("cyberint.connectors.AlertsConnector.SiemplifyConnectorExecution")
-    def test_overflow_alert_skipped_when_disable_overflow_is_false(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
-        self,
-        mock_siemplify_cls: MagicMock,
-        mock_extract_param: MagicMock,
-        mock_is_overflowed: MagicMock,
-        mock_manager_cls: MagicMock,
-        mock_last_success_time: MagicMock,
-        mock_read_ids: MagicMock,
-        mock_save_timestamp: MagicMock,
-        mock_write_ids: MagicMock,
-        mock_get_environment_common: MagicMock,
-    ) -> None:
+    def test_overflow_alert_skipped_when_disable_overflow_is_false(self) -> None:
         """Test that an alert found to be overflowed is skipped when Disable Overflow is False."""
-        mock_siemplify = MagicMock()
-        mock_siemplify.whitelist = []
-        mock_siemplify_cls.return_value = mock_siemplify
+        self.mock_extract_param.side_effect = self._create_param_side_effect(
+            disable_overflow=False
+        )
 
-        mock_env = MagicMock()
-        mock_env.get_environment.return_value = "Default"
-        mock_get_environment_common.return_value = mock_env
+        AlertsConnector.main(is_test_run=False)
 
-        mock_manager = MagicMock()
-        mock_manager.get_alerts.return_value = [self.mock_alert]
-        mock_manager_cls.return_value = mock_manager
-
-        mock_extract_param.side_effect = self._create_param_side_effect(disable_overflow=False)
-
-        with (
-            patch("cyberint.connectors.AlertsConnector.is_approaching_timeout", return_value=False),
-            patch("cyberint.connectors.AlertsConnector.pass_filters", return_value=True),
-        ):
-            AlertsConnector.main(is_test_run=False)
-
-        mock_is_overflowed.assert_called_once()
-        mock_siemplify.LOGGER.info.assert_any_call(
+        self.mock_is_overflowed.assert_called_once()
+        self.mock_siemplify.LOGGER.info.assert_any_call(
             "phishing-alert-123-Default-CyberInt found as overflow alert. Skipping..."
         )
 
-    @patch("cyberint.connectors.AlertsConnector.get_environment_common")
-    @patch("cyberint.connectors.AlertsConnector.write_ids")
-    @patch("cyberint.connectors.AlertsConnector.save_timestamp")
-    @patch("cyberint.connectors.AlertsConnector.read_ids", return_value=[])
-    @patch("cyberint.connectors.AlertsConnector.get_last_success_time", return_value="2026-08-14T06:00:00Z")
-    @patch("cyberint.connectors.AlertsConnector.CyberintManager")
-    @patch("cyberint.connectors.AlertsConnector.is_overflowed", return_value=True)
-    @patch("cyberint.connectors.AlertsConnector.extract_connector_param")
-    @patch("cyberint.connectors.AlertsConnector.SiemplifyConnectorExecution")
-    def test_overflow_alert_processed_when_disable_overflow_is_true(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
-        self,
-        mock_siemplify_cls: MagicMock,
-        mock_extract_param: MagicMock,
-        mock_is_overflowed: MagicMock,
-        mock_manager_cls: MagicMock,
-        mock_last_success_time: MagicMock,
-        mock_read_ids: MagicMock,
-        mock_save_timestamp: MagicMock,
-        mock_write_ids: MagicMock,
-        mock_get_environment_common: MagicMock,
-    ) -> None:
-        """Test that an alert is processed when Disable Overflow is True even if overflow condition is met."""
-        mock_siemplify = MagicMock()
-        mock_siemplify.whitelist = []
-        mock_siemplify_cls.return_value = mock_siemplify
+    def test_overflow_alert_processed_when_disable_overflow_is_true(self) -> None:
+        """Test that an alert is processed when Disable Overflow is True even if overflow is met."""
+        self.mock_extract_param.side_effect = self._create_param_side_effect(
+            disable_overflow=True
+        )
 
-        mock_env = MagicMock()
-        mock_env.get_environment.return_value = "Default"
-        mock_get_environment_common.return_value = mock_env
+        AlertsConnector.main(is_test_run=False)
 
-        mock_manager = MagicMock()
-        mock_manager.get_alerts.return_value = [self.mock_alert]
-        mock_manager_cls.return_value = mock_manager
-
-        mock_extract_param.side_effect = self._create_param_side_effect(disable_overflow=True)
-
-        with (
-            patch("cyberint.connectors.AlertsConnector.is_approaching_timeout", return_value=False),
-            patch("cyberint.connectors.AlertsConnector.pass_filters", return_value=True),
-        ):
-            AlertsConnector.main(is_test_run=False)
-
-        mock_is_overflowed.assert_not_called()
-        mock_siemplify.LOGGER.info.assert_any_call(
+        self.mock_is_overflowed.assert_not_called()
+        self.mock_siemplify.LOGGER.info.assert_any_call(
             "phishing-alert-123-Default-CyberInt is processing (overflow protection disabled)."
         )
-        mock_siemplify.LOGGER.info.assert_any_call("Alert alert-123 was created.")
+        self.mock_siemplify.LOGGER.info.assert_any_call("Alert alert-123 was created.")
