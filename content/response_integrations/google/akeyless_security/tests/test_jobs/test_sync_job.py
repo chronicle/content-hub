@@ -203,16 +203,12 @@ class TestResolveSecretAndVersion:
         assert secret_id == "my-secret"
         assert version_id == "5"
 
-    def test_explicit_version_with_colon_in_id(self) -> None:
-        """Splits on first colon only: 'a:b:c' -> ('a', 'b:c')."""
+    def test_invalid_version_with_extra_colons_raises(self) -> None:
+        """Raises InvalidConfigurationError when version is not a positive integer or 'latest'."""
         job = _make_job()
 
-        secret_id, version_id = job._resolve_secret_and_version(
-            "a:b:c",
-        )
-
-        assert secret_id == "a"
-        assert version_id == "b:c"
+        with pytest.raises(InvalidConfigurationError, match="Invalid credential mapping format"):
+            job._resolve_secret_and_version("a:b:c")
 
     def test_default_version_when_no_colon(self) -> None:
         """Defaults to DEFAULT_SECRET_VERSION when no version colon is present."""

@@ -55,6 +55,22 @@ class TestAkeylessClient:
         client = AkeylessClient(config)
         assert client.config.verify_ssl is False
         assert client.configuration.verify_ssl is False
+        assert client.configuration.assert_hostname is False
+
+    def test_init_reads_proxy_from_env(
+        self,
+        mock_akeyless_api: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Client configures configuration.proxy when https_proxy is set in os.environ."""
+        monkeypatch.setenv("https_proxy", "http://127.0.0.1:8080")
+        config = AkeylessClientConfig(
+            access_id="test-access-id",
+            access_key="test-access-key",
+            verify_ssl=False,
+        )
+        client = AkeylessClient(config)
+        assert client.configuration.proxy == "http://127.0.0.1:8080"
 
     def test_init_missing_access_id_raises(self, mock_akeyless_api: MagicMock) -> None:
         """Raises InvalidConfigurationError when access_id is missing."""
@@ -201,6 +217,17 @@ class TestAkeylessClient:
         client = AkeylessClient(config)
         with pytest.raises(SecretAccessError, match="not found in Akeyless response"):
             client.get_secret_value("my-secret")
+
+    def test_get_secret_value_invalid_version_raises(self, mock_akeyless_api: MagicMock) -> None:
+        """get_secret_value raises InvalidConfigurationError when version_id is not a positive integer."""
+        mock_auth_res = MagicMock()
+        mock_auth_res.token = "test-token"
+        mock_akeyless_api.auth.return_value = mock_auth_res
+
+        config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key")
+        client = AkeylessClient(config)
+        with pytest.raises(InvalidConfigurationError, match="Invalid version '::::2'"):
+            client.get_secret_value("my-secret", version_id="::::2")
 
 
 class TestValidateResponse:

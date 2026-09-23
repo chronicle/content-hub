@@ -106,6 +106,21 @@ class TestGetSecretValue:
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
+        parameters={"Secret Name": "/Test/chronicleAPI_Root:::::2"},
+    )
+    def test_get_secret_value_invalid_version_with_extra_colons_fails(
+        self,
+        action_output: MockActionOutput,
+    ) -> None:
+        """Fails when Secret Name contains an invalid version such as '::::2'."""
+        get_secret_value.main()
+
+        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.results.result_value is False
+        assert "Invalid credential mapping format" in action_output.results.output_message
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
         parameters={"Secret Name": "/prod/missing-secret"},
     )
     def test_get_secret_value_api_error_strips_headers(

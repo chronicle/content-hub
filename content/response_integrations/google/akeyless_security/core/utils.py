@@ -222,7 +222,8 @@ def resolve_secret_and_version(mapped_value: str) -> tuple[str, str]:
     if not match:
         msg = (
             f"Invalid credential mapping format for value '{mapped_value}'. "
-            f"Expected format: 'secret_name' or 'secret_name:version'."
+            f"Expected format: 'secret_name' or 'secret_name:version' "
+            f"(where version is a positive integer or '{DEFAULT_SECRET_VERSION}')."
         )
         raise InvalidConfigurationError(msg)
 

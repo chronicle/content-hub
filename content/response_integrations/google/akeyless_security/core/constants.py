@@ -29,7 +29,7 @@ GET_SECRET_VALUE_SCRIPT_NAME: str = "Get Secret Value"  # ruff:ignore[hardcoded-
 SYNC_CREDENTIALS_JOB_SCRIPT_NAME: str = "Sync Integration Credentials Job"
 SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = SYNC_CREDENTIALS_JOB_SCRIPT_NAME
 RESOURCE_NAME_PATTERN: re.Pattern = re.compile(
-    r"^(?P<secret>[^:\s][^:]*)(?::(?P<version>[^\s]+))?$"
+    r"^(?P<secret>[^:\s][^:]*)(?::(?P<version>latest|[1-9]\d*))?$"
 )
 
 # Integration configuration parameter names

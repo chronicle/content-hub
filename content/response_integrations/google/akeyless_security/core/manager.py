@@ -16,10 +16,12 @@
 
 from __future__ import annotations
 
+import os
 import threading
 from typing import TYPE_CHECKING
 
 import akeyless
+import urllib3
 
 from .constants import (
     ACCESS_KEY_TYPE,
@@ -67,6 +69,19 @@ class AkeylessClient:
         self.configuration = akeyless.Configuration()
         self.configuration.host = self.config.api_gateway_url
         self.configuration.verify_ssl = self.config.verify_ssl
+        if not self.config.verify_ssl:
+            self.configuration.assert_hostname = False
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+        proxy_url = (
+            os.environ.get("https_proxy")
+            or os.environ.get("HTTPS_PROXY")
+            or os.environ.get("http_proxy")
+            or os.environ.get("HTTP_PROXY")
+        )
+        if proxy_url:
+            self.configuration.proxy = proxy_url
+
         self.api_client = akeyless.ApiClient(self.configuration)
         self.api = akeyless.V2Api(self.api_client)
         self._token: str | None = None
@@ -133,6 +148,7 @@ class AkeylessClient:
             The secret payload data.
 
         Raises:
+            InvalidConfigurationError: If version_id is not a positive integer or 'latest'.
             SecretAccessError: If access to the secret fails.
 
         """
@@ -144,13 +160,22 @@ class AkeylessClient:
         }
         if version_id and version_id != DEFAULT_SECRET_VERSION:
             try:
-                kwargs["version"] = int(version_id)
-            except ValueError:
-                if self.logger:
-                    self.logger.warn(
-                        f"Invalid version '{version_id}' for secret '{mask_id(secret_id)}' "
-                        f"— not an integer. Falling back to latest."
-                    )
+                version_num = int(version_id)
+            except ValueError as e:
+                msg = (
+                    f"Invalid version '{version_id}' for secret '{mask_id(secret_id)}'. "
+                    f"Version must be a positive integer or '{DEFAULT_SECRET_VERSION}'."
+                )
+                raise InvalidConfigurationError(msg) from e
+
+            if version_num <= 0:
+                msg = (
+                    f"Invalid version '{version_id}' for secret '{mask_id(secret_id)}'. "
+                    f"Version must be a positive integer or '{DEFAULT_SECRET_VERSION}'."
+                )
+                raise InvalidConfigurationError(msg)
+
+            kwargs["version"] = version_num
 
         secret_body = akeyless.GetSecretValue(**kwargs)
         try:
