@@ -184,3 +184,14 @@ CENSYS_SEARCH_BASE_URL = f"{CENSYS_PLATFORM_BASE_URL}/search"
 ENRICHMENT_PREFIX = "Censys_"
 ENRICHMENT_PREFIX_CERT = f"{ENRICHMENT_PREFIX}cert_"
 ENRICHMENT_PREFIX_WEB = ENRICHMENT_PREFIX
+
+# Reputation - display scaling and limits
+# Censys returns score/probability/contribution as 0-1 fractions; the Censys UI
+# displays them multiplied by 100 (e.g. raw 0.666 -> displayed 66.6).
+REPUTATION_DISPLAY_SCALE_FACTOR = 100
+REPUTATION_MAX_EVIDENCE_RECORDS = 5
+
+# Reputation - Data Table Titles
+REPUTATION_SUMMARY_TABLE_NAME = "Reputation Summary"
+REPUTATION_CLASS_PROBABILITIES_TABLE_NAME = "Reputation - Class Probabilities"
+REPUTATION_EVIDENCE_TABLE_NAME = "Reputation - Evidence"

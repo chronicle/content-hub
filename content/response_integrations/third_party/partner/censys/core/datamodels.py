@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
@@ -11,6 +12,8 @@ from .constants import (
     DEFAULT_VALUE_NA,
     ENRICHMENT_PREFIX,
     ENRICHMENT_PREFIX_CERT,
+    REPUTATION_DISPLAY_SCALE_FACTOR,
+    REPUTATION_MAX_EVIDENCE_RECORDS,
     RESOURCE_TYPE_ENDPOINT_SCANNED,
     RESOURCE_TYPE_FORWARD_DNS_RESOLVED,
     RESOURCE_TYPE_JARM_SCANNED,
@@ -36,6 +39,19 @@ class BaseModel(object):
             raw_data: Raw API response data
         """
         self.raw_data = raw_data or {}
+        # Subclasses that extract a resource dict (e.g. self.host_data,
+        # self.web_data, self.cert_data) should also assign it here so the
+        # shared is_found() below works without each subclass redefining it.
+        self._resource_data: dict[str, Any] = {}
+
+    def is_found(self) -> bool:
+        """
+        Check if the extracted resource data was found.
+
+        Returns:
+            bool: True if resource data exists
+        """
+        return bool(self._resource_data)
 
     def to_json(self) -> dict[str, Any]:
         """
@@ -55,6 +71,41 @@ class BaseModel(object):
             List of dictionaries suitable for CSV output
         """
         return [self.raw_data] if self.raw_data else []
+
+    def _get_top_values(self, values: list[Any], max_count: int = 5) -> str | None:
+        """
+        Get top N unique values as comma-separated string.
+
+        Args:
+            values: List of values to process
+            max_count: Maximum number of values to return
+
+        Returns:
+            Comma-separated string of top values or None
+        """
+        if not values:
+            return None
+
+        unique_values = []
+        seen = set()
+        for val in values:
+            if not val:
+                continue
+
+            # Handle dict values (like vulnerability objects)
+            if isinstance(val, dict):
+                val_str = val.get("id") or str(val)
+            else:
+                val_str = str(val)
+
+            # Use string representation for deduplication
+            if val_str not in seen:
+                unique_values.append(val_str)
+                seen.add(val_str)
+                if len(unique_values) >= max_count:
+                    break
+
+        return ", ".join(unique_values) if unique_values else None
 
 
 class PingDatamodel(BaseModel):
@@ -228,15 +279,7 @@ class HostDatamodel(BaseModel):
         """
         super().__init__(raw_data)
         self.host_data = (raw_data.get("result") or {}).get("resource") or {}
-
-    def is_found(self) -> bool:
-        """
-        Check if host data was found.
-
-        Returns:
-            bool: True if host data exists
-        """
-        return bool(self.host_data)
+        self._resource_data = self.host_data
 
     def get_enrichment_data(self) -> dict[str, Any]:
         """
@@ -324,44 +367,14 @@ class HostDatamodel(BaseModel):
                 "longitude"
             ),
         }
+        reputation = self.host_data.get("reputation") or {}
+        enrichment[f"{ENRICHMENT_PREFIX}reputation_score"] = reputation.get("score")
+        enrichment[f"{ENRICHMENT_PREFIX}reputation_score_level"] = (
+            reputation.get("score_level") or None
+        )
+        enrichment.update(ReputationExtractor.get_entity_enrichment_fields(reputation))
 
         return {k: v for k, v in enrichment.items() if v is not None}
-
-    def _get_top_values(self, values: list[Any], max_count: int = 5) -> str | None:
-        """
-        Get top N unique values as comma-separated string.
-
-        Args:
-            values: List of values to process
-            max_count: Maximum number of values to return
-
-        Returns:
-            Comma-separated string of top values or None
-        """
-        if not values:
-            return None
-
-        unique_values = []
-        seen = set()
-        for val in values:
-            if not val:
-                continue
-
-            # Handle dict values (like vulnerability objects)
-            if isinstance(val, dict):
-                # Extract CVE ID or other identifier
-                val_str = val.get("id") or str(val)
-            else:
-                val_str = str(val)
-
-            # Use string representation for deduplication
-            if val_str not in seen:
-                unique_values.append(val_str)
-                seen.add(val_str)
-                if len(unique_values) >= max_count:
-                    break
-
-        return ", ".join(unique_values) if unique_values else None
 
     def _get_latest_scan_time(self, services: list[dict]) -> str | None:
         """
@@ -377,6 +390,215 @@ class HostDatamodel(BaseModel):
         return max(scan_times) if scan_times else None
 
 
+class ReputationExtractor:
+    """
+    Shared helper for extracting Censys reputation data.
+
+    Used by both HostDatamodel (Get Host API) and HostEnrichmentDatamodel
+    (Get Host Enrichment API) since both endpoints return an identical
+    `reputation` object shape at result.resource.reputation.
+
+    Censys returns score, class_probabilities[].probability, and
+    evidence[].feature.contribution as 0-1 fractions. The Censys UI displays
+    these multiplied by 100 (e.g. raw score 0.666 -> displayed 66.6), so all
+    three are scaled the same way here for display fields.
+    """
+
+    @staticmethod
+    def _scale(value: Any) -> float | None:
+        """
+        Scale a 0-1 fraction to a 0-100 display value.
+
+        Returns None (rather than raising) for non-numeric or missing input,
+        since Censys may omit a value (e.g. a class_probabilities entry with
+        no "probability" key when its probability is negligible).
+        """
+        if value is None:
+            return None
+        try:
+            return round(float(value) * REPUTATION_DISPLAY_SCALE_FACTOR, 2)
+        except (TypeError, ValueError):
+            return None
+
+    @classmethod
+    def get_entity_enrichment_fields(
+        cls, reputation: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        """
+        Build reputation entity properties.
+
+        Args:
+            reputation: The raw `reputation` object from result.resource.reputation.
+                May be None/{} when the host has no reputation data.
+
+        Returns:
+            Dict of Censys_reputation_* entity properties. Existing
+            Censys_reputation_score (raw) and Censys_reputation_score_level
+            are intentionally left for callers to set separately so their
+            values/semantics stay unchanged for backward compatibility.
+        """
+        reputation = reputation or {}
+        if not reputation:
+            return {}
+
+        class_probabilities = cls._scaled_class_probabilities(reputation)
+        evidence = cls._compact_evidence_for_entity(reputation)
+
+        fields = {
+            f"{ENRICHMENT_PREFIX}reputation_label": reputation.get("label"),
+            f"{ENRICHMENT_PREFIX}reputation_score_percent": cls._scale(
+                reputation.get("score")
+            ),
+            f"{ENRICHMENT_PREFIX}reputation_score_suppressed": reputation.get(
+                "score_suppressed"
+            ),
+            f"{ENRICHMENT_PREFIX}reputation_class_probabilities": (
+                json.dumps(class_probabilities) if class_probabilities else None
+            ),
+            f"{ENRICHMENT_PREFIX}reputation_evidence": (
+                json.dumps(evidence) if evidence else None
+            ),
+        }
+
+        return {k: v for k, v in fields.items() if v is not None}
+
+    @classmethod
+    def _compact_evidence_for_entity(
+        cls, reputation: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """
+        Compact evidence shape for the entity JSON property only.
+
+        SecOps entity property values have a limited display/storage width,
+        so this drops feature_id (redundant with feature_name - the
+        human-readable name a SOC analyst reads) to keep the property small.
+        feature_id remains available in full via add_result_json (the raw
+        JSON case wall result) and the Evidence data table for anyone who
+        needs it. Table rows use the fuller _scaled_evidence() shape instead.
+        """
+        return [
+            {
+                "feature": entry.get("feature_name") or entry.get("feature_id"),
+                "value": entry.get("value"),
+                "contribution": entry.get("contribution"),
+                "category": entry.get("category"),
+            }
+            for entry in cls._scaled_evidence(reputation)
+        ]
+
+    @classmethod
+    def _scaled_class_probabilities(
+        cls, reputation: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """Return class_probabilities with probability scaled 0-100."""
+        result = []
+        for entry in reputation.get("class_probabilities") or []:
+            if not isinstance(entry, dict):
+                continue
+            result.append(
+                {
+                    "label": entry.get("label"),
+                    "probability": cls._scale(entry.get("probability")),
+                }
+            )
+        return result
+
+    @classmethod
+    def _scaled_evidence(cls, reputation: dict[str, Any]) -> list[dict[str, Any]]:
+        """
+        Return top evidence entries (by contribution, descending) with
+        contribution scaled 0-100, limited to REPUTATION_MAX_EVIDENCE_RECORDS.
+        """
+        raw_evidence = [
+            entry for entry in (reputation.get("evidence") or []) if isinstance(entry, dict)
+        ]
+
+        def _contribution(entry: dict[str, Any]) -> float:
+            feature = entry.get("feature") or {}
+            try:
+                return float(feature.get("contribution") or 0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        top_evidence = sorted(raw_evidence, key=_contribution, reverse=True)[
+            :REPUTATION_MAX_EVIDENCE_RECORDS
+        ]
+
+        result = []
+        for entry in top_evidence:
+            feature = entry.get("feature") or {}
+            result.append(
+                {
+                    "feature_id": feature.get("id"),
+                    "feature_name": feature.get("name"),
+                    "value": feature.get("value"),
+                    "contribution": cls._scale(feature.get("contribution")),
+                    "category": feature.get("category"),
+                }
+            )
+        return result
+
+    @classmethod
+    def get_summary_row(cls, ip: str, reputation: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Build one row for the combined Reputation Summary table."""
+        reputation = reputation or {}
+        if not reputation:
+            return None
+
+        return {
+            "IP": ip,
+            "Label": reputation.get("label", DEFAULT_VALUE_NA),
+            "Score": cls._scale(reputation.get("score")),
+            "Score Suppressed": reputation.get("score_suppressed", DEFAULT_VALUE_NA),
+        }
+
+    @classmethod
+    def get_class_probability_rows(
+        cls, ip: str, reputation: dict[str, Any] | None
+    ) -> list[dict[str, Any]]:
+        """Build rows for the combined Class Probabilities table."""
+        rows = []
+        for entry in cls._scaled_class_probabilities(reputation or {}):
+            rows.append(
+                {
+                    "IP": ip,
+                    "Label": entry.get("label", DEFAULT_VALUE_NA),
+                    "Probability (%)": entry.get("probability"),
+                }
+            )
+        return rows
+
+    @classmethod
+    def get_evidence_rows(
+        cls, ip: str, reputation: dict[str, Any] | None
+    ) -> list[dict[str, Any]]:
+        """
+        Build rows for the combined Evidence table (top N by contribution).
+
+        Note: dict key order here does NOT control the rendered column
+        order - soar_sdk's construct_csv() derives table headers via
+        set.union, which has non-deterministic iteration order in CPython
+        (confirmed: the same input produces a different column order on
+        every process run). Column naming still matches the Censys web
+        UI's "Top Signals" panel ("Contribution (%)") since that part is
+        under our control; actual left-to-right position is not, until
+        that upstream soar_sdk bug is fixed. See
+        Censys-new-support/soar_sdk_construct_csv_nondeterministic_columns_bug.md.
+        """
+        rows = []
+        for entry in cls._scaled_evidence(reputation or {}):
+            rows.append(
+                {
+                    "IP": ip,
+                    "Feature": entry.get("feature_name") or entry.get("feature_id", DEFAULT_VALUE_NA),
+                    "Value": entry.get("value", DEFAULT_VALUE_NA),
+                    "Contribution (%)": entry.get("contribution"),
+                    "Category": entry.get("category", DEFAULT_VALUE_NA),
+                }
+            )
+        return rows
+
+
 class HostEnrichmentDatamodel(BaseModel):
     """
     Data model for the new Censys host enrichment endpoint.
@@ -386,9 +608,7 @@ class HostEnrichmentDatamodel(BaseModel):
     def __init__(self, raw_data: dict[str, Any]) -> None:
         super().__init__(raw_data)
         self.host_data = (raw_data.get("result") or {}).get("resource") or {}
-
-    def is_found(self) -> bool:
-        return bool(self.host_data)
+        self._resource_data = self.host_data
 
     def get_enrichment_data(self) -> dict[str, Any]:
         if not self.is_found():
@@ -480,7 +700,7 @@ class HostEnrichmentDatamodel(BaseModel):
         first_privacy = privacy[0] if privacy else {}
         first_network = network[0] if network else {}
 
-        return {
+        fields = {
             f"{ENRICHMENT_PREFIX}reputation_score": reputation.get("score"),
             f"{ENRICHMENT_PREFIX}reputation_score_level": (
                 reputation.get("score_level") or None
@@ -503,6 +723,8 @@ class HostEnrichmentDatamodel(BaseModel):
             f"{ENRICHMENT_PREFIX}network_mobile": first_network.get("mobile"),
             f"{ENRICHMENT_PREFIX}network_satellite": first_network.get("satellite"),
         }
+        fields.update(ReputationExtractor.get_entity_enrichment_fields(reputation))
+        return fields
 
     def _get_mallory_fields(self) -> dict[str, Any]:
         """Extract Mallory/third-party observable and opinion fields."""
@@ -536,24 +758,6 @@ class HostEnrichmentDatamodel(BaseModel):
             ),
         }
 
-    def _get_top_values(self, values: list[Any], max_count: int = 5) -> str | None:
-        if not values:
-            return None
-
-        unique_values = []
-        seen = set()
-        for val in values:
-            if not val:
-                continue
-            val_str = val.get("id") or str(val) if isinstance(val, dict) else str(val)
-            if val_str not in seen:
-                unique_values.append(val_str)
-                seen.add(val_str)
-                if len(unique_values) >= max_count:
-                    break
-
-        return ", ".join(unique_values) if unique_values else None
-
     def _get_latest_value(self, values: list[Any]) -> str | None:
         values = [value for value in values if value]
         return max(values) if values else None
@@ -576,15 +780,7 @@ class WebPropertyDatamodel(BaseModel):
         super().__init__(raw_data)
         self.port = port
         self.web_data = raw_data.get("resource", {})
-
-    def is_found(self) -> bool:
-        """
-        Check if web property data was found.
-
-        Returns:
-            bool: True if web property data exists
-        """
-        return bool(self.web_data)
+        self._resource_data = self.web_data
 
     def get_enrichment_data(self) -> dict[str, Any]:
         """
@@ -665,6 +861,10 @@ class WebPropertyDatamodel(BaseModel):
         """
         Get top N unique values as comma-separated string.
 
+        Overrides BaseModel._get_top_values: web property dict values (e.g.
+        software entries) are commonly identified by "name" rather than "id",
+        so this variant falls back to "name" before stringifying.
+
         Args:
             values: List of values to process
             max_count: Maximum number of values to return
@@ -727,15 +927,7 @@ class CertificateDatamodel(BaseModel):
         """
         super().__init__(raw_data)
         self.cert_data = raw_data.get("result", {}).get("resource", {})
-
-    def is_found(self) -> bool:
-        """
-        Check if certificate data was found.
-
-        Returns:
-            bool: True if certificate data exists
-        """
-        return bool(self.cert_data)
+        self._resource_data = self.cert_data
 
     def get_enrichment_data(self) -> dict[str, Any]:
         """

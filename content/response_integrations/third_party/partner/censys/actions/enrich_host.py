@@ -9,7 +9,7 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_FAILED,
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 
 from ..core.api_manager import APIManager
 from ..core.censys_exceptions import (
@@ -28,10 +28,13 @@ from ..core.constants import (
     INTEGRATION_NAME,
     NEW_HOST_ENRICHMENT_DISABLED_MESSAGE,
     NO_ADDRESS_ENTITIES_ERROR,
+    REPUTATION_CLASS_PROBABILITIES_TABLE_NAME,
+    REPUTATION_EVIDENCE_TABLE_NAME,
+    REPUTATION_SUMMARY_TABLE_NAME,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
 )
-from ..core.datamodels import HostEnrichmentDatamodel
+from ..core.datamodels import HostEnrichmentDatamodel, ReputationExtractor
 from ..core.utils import (
     filter_valid_ips,
     get_integration_params,
@@ -59,6 +62,27 @@ class EnrichmentSummary:
 
 
 @dataclasses.dataclass(slots=True)
+class ReputationTables:
+    """Accumulates combined reputation table rows across all processed IPs."""
+
+    summary_rows: list[dict] = dataclasses.field(default_factory=list)
+    class_probability_rows: list[dict] = dataclasses.field(default_factory=list)
+    evidence_rows: list[dict] = dataclasses.field(default_factory=list)
+
+    def add(self, ip: str, reputation: dict | None) -> None:
+        """Add this IP's reputation rows to each accumulator, if any exist."""
+        summary_row = ReputationExtractor.get_summary_row(ip, reputation)
+        if summary_row:
+            self.summary_rows.append(summary_row)
+        self.class_probability_rows.extend(
+            ReputationExtractor.get_class_probability_rows(ip, reputation)
+        )
+        self.evidence_rows.extend(
+            ReputationExtractor.get_evidence_rows(ip, reputation)
+        )
+
+
+@dataclasses.dataclass(slots=True)
 class EnrichmentContext:
     """Bundles the collaborators needed to enrich entities, to keep helper
     function signatures within the repo's 3-argument guideline."""
@@ -66,6 +90,7 @@ class EnrichmentContext:
     censys_manager: APIManager
     siemplify: SiemplifyAction
     summary: EnrichmentSummary
+    reputation_tables: ReputationTables
 
 
 def _format_entity_preview(entities: Sequence[str], max_items: int = 5) -> str:
@@ -225,6 +250,9 @@ def _enrich_single_entity(
 
         ctx.summary.successful.append(entity_identifier)
         json_results.append(result)
+        ctx.reputation_tables.add(
+            entity_identifier, host_model.host_data.get("reputation")
+        )
         ctx.siemplify.LOGGER.info(f"Successfully enriched: {entity_identifier}")
         return None
 
@@ -344,6 +372,36 @@ def _finalize_action(
     return output_message, result_value, status
 
 
+def _add_reputation_tables(
+    siemplify: SiemplifyAction, reputation_tables: ReputationTables
+) -> None:
+    """
+    Add combined reputation data tables to the case wall, one row per
+    processed IP. No-ops for any table whose row list is empty (e.g. when
+    no processed host had reputation data).
+    """
+    if reputation_tables.summary_rows:
+        siemplify.result.add_data_table(
+            REPUTATION_SUMMARY_TABLE_NAME,
+            construct_csv(reputation_tables.summary_rows),
+            "Censys",
+        )
+
+    if reputation_tables.class_probability_rows:
+        siemplify.result.add_data_table(
+            REPUTATION_CLASS_PROBABILITIES_TABLE_NAME,
+            construct_csv(reputation_tables.class_probability_rows),
+            "Censys",
+        )
+
+    if reputation_tables.evidence_rows:
+        siemplify.result.add_data_table(
+            REPUTATION_EVIDENCE_TABLE_NAME,
+            construct_csv(reputation_tables.evidence_rows),
+            "Censys",
+        )
+
+
 def _init_siemplify_action() -> tuple[SiemplifyAction, bool]:
     """Create the SiemplifyAction instance and resolve the rollout toggle.
 
@@ -397,7 +455,7 @@ def _validate_and_filter_ips(
 
 def _run_enrichment(
     siemplify: SiemplifyAction, censys_manager: APIManager
-) -> tuple[str, bool, str, list[dict]]:
+) -> tuple[str, bool, str, list[dict], ReputationTables]:
     """Validate IP entities and run the per-IP enrichment loop.
 
     Args:
@@ -405,8 +463,10 @@ def _run_enrichment(
         censys_manager: Initialized Censys API manager
 
     Returns:
-        Tuple of (output_message, result_value, status, json_results).
+        Tuple of (output_message, result_value, status, json_results,
+        reputation_tables).
     """
+    reputation_tables = ReputationTables()
     ip_entities = get_ip_entities(siemplify)
     if not ip_entities:
         return (
@@ -414,6 +474,7 @@ def _run_enrichment(
             RESULT_VALUE_TRUE,
             EXECUTION_STATE_COMPLETED,
             [],
+            reputation_tables,
         )
 
     siemplify.LOGGER.info(f"Found {len(ip_entities)} IP entities to process")
@@ -427,17 +488,23 @@ def _run_enrichment(
             "IP(s) are invalid."
         )
         siemplify.LOGGER.error(output_message)
-        return output_message, RESULT_VALUE_FALSE, EXECUTION_STATE_FAILED, []
+        return (
+            output_message,
+            RESULT_VALUE_FALSE,
+            EXECUTION_STATE_FAILED,
+            [],
+            reputation_tables,
+        )
 
     siemplify.LOGGER.info(f"Processing {len(valid_ips)} valid IP(s)")
 
-    ctx = EnrichmentContext(censys_manager, siemplify, summary)
+    ctx = EnrichmentContext(censys_manager, siemplify, summary, reputation_tables)
     json_results, account_level_error = _process_ip_entities(ip_entities, ctx)
 
     output_message, result_value, status = _finalize_action(
         ctx, ip_entities, account_level_error
     )
-    return output_message, result_value, status, json_results
+    return output_message, result_value, status, json_results, reputation_tables
 
 
 @output_handler
@@ -482,6 +549,7 @@ def main() -> None:
 
     api_key, organization_id, verify_ssl = get_integration_params(siemplify)
     json_results: list[dict] = []
+    reputation_tables = ReputationTables()
 
     try:
         censys_manager = APIManager(
@@ -490,9 +558,13 @@ def main() -> None:
             verify_ssl=verify_ssl,
             siemplify=siemplify,
         )
-        output_message, result_value, status, json_results = _run_enrichment(
-            siemplify, censys_manager
-        )
+        (
+            output_message,
+            result_value,
+            status,
+            json_results,
+            reputation_tables,
+        ) = _run_enrichment(siemplify, censys_manager)
 
     except ValueError as e:
         output_message = (
@@ -511,6 +583,7 @@ def main() -> None:
         status = EXECUTION_STATE_FAILED
 
     siemplify.result.add_result_json(json_results)
+    _add_reputation_tables(siemplify, reputation_tables)
 
     siemplify.LOGGER.info("================= Main - Finished =================")
     siemplify.LOGGER.info(f"Status: {status}")
