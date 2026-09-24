@@ -5,7 +5,7 @@ from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from censys.actions import enrich_ips
-from censys.tests.common import CONFIG_PATH
+from censys.tests.common import CONFIG_PATH, REPUTATION_MULTI_IP_BATCH
 from censys.tests.conftest import CensysAPIManager
 
 
@@ -111,6 +111,110 @@ class TestEnrichIPs:
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
         assert "Successfully enriched 2 IP(s)" in action_output.results.output_message
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        entities=[
+            {
+                "identifier": "1.1.4.3",
+                "entity_type": "ADDRESS",
+                "additional_properties": {},
+            }
+        ],
+    )
+    def test_enrich_ips_reputation_fields_in_json_output(
+        self,
+        action_output: MockActionOutput,
+        censys_manager: CensysAPIManager,
+    ) -> None:
+        """HostDatamodel (Get Host API) previously extracted no reputation
+        data at all. Reputation must now flow through into the JSON case
+        wall output, matching the Get Host Enrichment API behavior."""
+        censys_manager.set_enrich_hosts_response(
+            {
+                "result": [
+                    {
+                        "resource": {
+                            "ip": "1.1.4.3",
+                            "services": [],
+                            "reputation": {
+                                "label": "BENIGN",
+                                "score": 0.191,
+                                "score_suppressed": False,
+                                "class_probabilities": [
+                                    {"label": "BENIGN", "probability": 0.6899},
+                                ],
+                                "evidence": [
+                                    {
+                                        "feature": {
+                                            "id": "max_port",
+                                            "name": "Max Port",
+                                            "contribution": 0.047,
+                                            "category": "service_surface",
+                                        }
+                                    }
+                                ],
+                            },
+                        }
+                    }
+                ]
+            }
+        )
+
+        enrich_ips.main()
+
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is True
+
+        json_result = action_output.results.json_output.json_result
+        entity_result = json_result[0]["EntityResult"]
+        reputation = entity_result["result"]["resource"]["reputation"]
+        assert reputation["label"] == "BENIGN"
+        assert reputation["evidence"][0]["feature"]["id"] == "max_port"
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        entities=[
+            {
+                "identifier": "1.1.4.3",
+                "entity_type": "ADDRESS",
+                "additional_properties": {},
+            }
+        ],
+    )
+    def test_enrich_ips_null_reputation_does_not_crash(
+        self,
+        action_output: MockActionOutput,
+        censys_manager: CensysAPIManager,
+    ) -> None:
+        """Regression guard: Censys can return explicit JSON null for the
+        reputation sub-object. This must not raise and the action should
+        still complete successfully.
+
+        location.country is included so the host produces other enrichment
+        data - otherwise the entity would be classified "not found" for
+        having no enrichment data at all, which would mask whether the null
+        reputation itself was handled safely.
+        """
+        censys_manager.set_enrich_hosts_response(
+            {
+                "result": [
+                    {
+                        "resource": {
+                            "ip": "1.1.4.3",
+                            "location": {"country": "United States"},
+                            "services": [],
+                            "reputation": None,
+                        }
+                    }
+                ]
+            }
+        )
+
+        enrich_ips.main()
+
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is True
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, entities=[])
     def test_enrich_ips_no_entities(
@@ -381,3 +485,77 @@ class TestEnrichIPs:
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert "Validation error" in action_output.results.output_message
+
+
+class TestEnrichIpsMultiIpMixedReputationBatch:
+    """One case with 4 IPs in a single execution: full reputation, missing
+    optional fields, no reputation key, and explicit null reputation. Runs
+    through the real action main() end-to-end (not just the datamodel layer)
+    to prove the batch API-response-matching and entity update logic handles
+    a mixed reputation batch correctly."""
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        entities=[
+            {
+                "identifier": "198.51.100.1",
+                "entity_type": "ADDRESS",
+                "additional_properties": {},
+            },
+            {
+                "identifier": "198.51.100.2",
+                "entity_type": "ADDRESS",
+                "additional_properties": {},
+            },
+            {
+                "identifier": "198.51.100.3",
+                "entity_type": "ADDRESS",
+                "additional_properties": {},
+            },
+            {
+                "identifier": "198.51.100.4",
+                "entity_type": "ADDRESS",
+                "additional_properties": {},
+            },
+        ],
+    )
+    def test_all_four_ips_enrich_with_only_two_getting_reputation_data(
+        self,
+        action_output: MockActionOutput,
+        censys_manager: CensysAPIManager,
+    ) -> None:
+        resources = [
+            REPUTATION_MULTI_IP_BATCH["ip_a_full"]["result"]["resource"],
+            REPUTATION_MULTI_IP_BATCH["ip_b_missing_fields"]["result"]["resource"],
+            REPUTATION_MULTI_IP_BATCH["ip_c_no_reputation"]["result"]["resource"],
+            REPUTATION_MULTI_IP_BATCH["ip_d_null_reputation"]["result"]["resource"],
+        ]
+        censys_manager.set_enrich_hosts_response(
+            {"result": [{"resource": r} for r in resources]}
+        )
+
+        enrich_ips.main()
+
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is True
+        assert "Successfully enriched 4 IP(s)" in action_output.results.output_message
+
+        json_result = action_output.results.json_output.json_result
+        entities_by_ip = {
+            entry["Entity"]: entry["EntityResult"]["result"]["resource"]
+            for entry in json_result
+        }
+        assert set(entities_by_ip) == {
+            "198.51.100.1",
+            "198.51.100.2",
+            "198.51.100.3",
+            "198.51.100.4",
+        }
+
+        # Only the two IPs with reputation data carry a reputation object
+        # through to the JSON output; the other two still enriched (they
+        # have location/ASN), just with no reputation key/null.
+        assert entities_by_ip["198.51.100.1"]["reputation"]["label"] == "MALICIOUS"
+        assert "label" not in entities_by_ip["198.51.100.2"]["reputation"]
+        assert "reputation" not in entities_by_ip["198.51.100.3"]
+        assert entities_by_ip["198.51.100.4"]["reputation"] is None
