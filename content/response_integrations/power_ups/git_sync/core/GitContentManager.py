@@ -37,6 +37,8 @@ if TYPE_CHECKING:
     from .GitManager import Git
     from .SiemplifyApiClient import SiemplifyApiClient
 
+LOGGER = logging.getLogger(__name__)
+
 INTEGRATIONS_PATH = "Integrations"
 PLAYBOOKS_PATH = "Playbooks"
 BLOCKS_PATH = "Blocks"
@@ -120,7 +122,7 @@ class GitContentManager:
             return None
 
         if definition is None:
-            logging.warning(
+            LOGGER.warning(
                 f"Definition file for integration {integration_name} not found."
             )
             return None

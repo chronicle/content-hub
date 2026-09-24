@@ -74,7 +74,7 @@ def main():
                     )
 
                     for r in get_fields(rule):
-                        mapping_rule = get_mapping_rule(r, rule)
+                        mapping_rule = get_mapping_rule(r)
                         rule_source = mapping_rule.get("source")
                         if (
                             not rule_source

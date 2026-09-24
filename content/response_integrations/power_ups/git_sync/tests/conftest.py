@@ -91,11 +91,9 @@ def sdk_session(
 
     if not use_live_api():
         monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
-        try:
-            import SiemplifyBase as top_level_SiemplifyBase
-            monkeypatch.setattr(top_level_SiemplifyBase.SiemplifyBase, "create_session", lambda *_: session)
-        except ImportError:
-            pass
+        top_level_mod = sys.modules.get("SiemplifyBase")
+        if top_level_mod and hasattr(top_level_mod, "SiemplifyBase"):
+            monkeypatch.setattr(top_level_mod.SiemplifyBase, "create_session", lambda *_: session)
 
         # Delegate BaseUrlSession.request to our mock session
         monkeypatch.setattr(
@@ -110,7 +108,6 @@ def sdk_session(
         )
 
         # Monkeypatch SiemplifyBase.__init__ to set valid local run folder paths
-        import sys
 
         for mod_name in ("SiemplifyBase", "soar_sdk.SiemplifyBase"):
             mod = sys.modules.get(mod_name)

@@ -299,10 +299,7 @@ class GitSyncManager:
             connector: A Connector object instance to install
 
         """
-        installed_version = self.get_installed_integration_version(
-            connector.integration
-        )
-        if not (installed_version and installed_version != "0.0"):
+        if not self._is_integration_installed(connector.integration):
             self.logger.info(
                 f"Connector {connector.name} integration ({connector.integration}) not installed",
             )
@@ -325,9 +322,9 @@ class GitSyncManager:
                 self.logger.info(
                     "Connector integration successfully installed from the marketplace",
                 )
-            installed_version = self.get_installed_integration_version(
-                connector.integration
-            )
+        installed_version = self.get_installed_integration_version(
+            connector.integration
+        )
         if connector.integration_version != installed_version:
             self.logger.warn(
                 "Installed integration version doesn't match the connector integration version. "

@@ -75,11 +75,16 @@ def main():
 
         if features["Dynamic Parameters"]:
             siemplify.LOGGER.info("======== Environment Dynamic Parameters ========")
-
+            existing_dyn_params = gitsync.api.get_env_dynamic_parameters(
+                chronicle_soar=siemplify
+            )
             for dyn_param in gitsync.content.get_dynamic_parameters():
                 name = dyn_param.get("name")
                 siemplify.LOGGER.info(f"Adding dynamic parameter {name}")
-                gitsync.api.add_dynamic_env_param(dyn_param)
+                current_dyn_param = id_validator(
+                    dyn_param, "name", "id", existing_dyn_params
+                )
+                gitsync.api.add_dynamic_env_param(current_dyn_param)
 
         if features["Environments"]:
             siemplify.LOGGER.info("========== Environments ==========")
@@ -312,10 +317,21 @@ def main():
             siemplify.LOGGER.info("Installing visual families")
             current_vfs = gitsync.api.get_custom_families(chronicle_soar=siemplify)
             all_records = gitsync.api.get_ontology_records(chronicle_soar=siemplify)
-            valid_record_id = all_records[0].get("id") if all_records else None
             for family in gitsync.content.get_visual_families():
                 validated_family = id_validator(
                     family.raw_data, "family", "id", current_vfs
+                )
+                name_to_check = validated_family.get("family")
+                matching_records = [
+                    r
+                    for r in all_records
+                    if r.get("visualFamily") == name_to_check
+                    or r.get("family") == name_to_check
+                ]
+                valid_record_id = (
+                    matching_records[0].get("id")
+                    if matching_records
+                    else (all_records[0].get("id") if all_records else None)
                 )
 
                 if platform_supports_1p_api():
@@ -341,7 +357,9 @@ def main():
                         )
                         try:
                             if isinstance(response_content, bytes):
-                                created_vf = json.loads(response_content.decode("utf-8"))
+                                created_vf = json.loads(
+                                    response_content.decode("utf-8")
+                                )
                             elif isinstance(response_content, str):
                                 created_vf = json.loads(response_content)
                             else:

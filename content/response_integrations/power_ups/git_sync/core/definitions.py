@@ -43,6 +43,8 @@ from .constants import (
     STEP_TYPE,
 )
 
+LOGGER = logging.getLogger(__name__)
+
 DEFAULT_README_ADDONS: dict[str, dict[str, Any]] = {
     "Integration": {},
     "Mappings": {},
@@ -121,11 +123,11 @@ class Metadata:
         self.readme_addons = _get_arg_with_multiple_names(
             kwargs,
             ["readme_addons", "readmeAddons"],
-            dict(DEFAULT_README_ADDONS),
+            {k: {} for k in DEFAULT_README_ADDONS},
         )
         # Ensure all expected keys exist
-        for k, v in DEFAULT_README_ADDONS.items():
-            self.readme_addons.setdefault(k, v)
+        for k in DEFAULT_README_ADDONS:
+            self.readme_addons.setdefault(k, {})
 
         self.settings = kwargs.get("settings", {"update_root_readme": True})
 
@@ -274,6 +276,10 @@ class Integration(Content):
         is_custom = self.integration_card.get("isCustomIntegration")
         if is_custom is None:
             is_custom = self.integration_card.get("custom")
+        if is_custom is None:
+            is_custom = self.integration_card.get("Custom")
+        if is_custom is None:
+            is_custom = self.integration_card.get("IsCustom")
         self.isCustom = bool(is_custom)
         try:
             self.definition = json.loads(
@@ -316,7 +322,7 @@ class Integration(Content):
                 elif file.startswith("Resources/" + self.identifier + ".svg"):
                     self.has_resources = True
             except json.JSONDecodeError:
-                logging.warning("Skipping %s - not valid JSON.", file)
+                LOGGER.warning("Skipping %s - not valid JSON.", file)
 
     def get_all_items(self):
         return self.actions + self.jobs + self.connectors + self.managers
@@ -356,9 +362,30 @@ class Integration(Content):
             integration = {
                 "dependencies": self.dependencies,
                 "definition": self.definition,
-                "actions": self.actions,
-                "jobs": self.jobs,
-                "connectors": self.connectors,
+                "actions": [
+                    x
+                    for x in self.actions
+                    if x.get("Custom")
+                    or x.get("custom")
+                    or x.get("IsCustom")
+                    or x.get("isCustom")
+                ],
+                "jobs": [
+                    x
+                    for x in self.jobs
+                    if x.get("Custom")
+                    or x.get("custom")
+                    or x.get("IsCustom")
+                    or x.get("isCustom")
+                ],
+                "connectors": [
+                    x
+                    for x in self.connectors
+                    if x.get("Custom")
+                    or x.get("custom")
+                    or x.get("IsCustom")
+                    or x.get("isCustom")
+                ],
                 "has_resources": self.has_resources,
             }
             self.readme = readme.render(integration=integration)

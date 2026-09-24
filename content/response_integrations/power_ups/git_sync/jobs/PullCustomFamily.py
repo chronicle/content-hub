@@ -56,7 +56,17 @@ def main():
         if family:
             current_vfs = gitsync.api.get_custom_families(chronicle_soar=siemplify)
             all_records = gitsync.api.get_ontology_records(chronicle_soar=siemplify)
-            valid_record_id = all_records[0].get("id") if all_records else None
+            matching_records = [
+                r
+                for r in all_records
+                if r.get("visualFamily") == family_name
+                or r.get("family") == family_name
+            ]
+            valid_record_id = (
+                matching_records[0].get("id")
+                if matching_records
+                else (all_records[0].get("id") if all_records else None)
+            )
             validated_family = id_validator(
                 family.raw_data, "family", "id", current_vfs
             )

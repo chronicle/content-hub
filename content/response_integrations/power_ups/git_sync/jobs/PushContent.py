@@ -251,7 +251,7 @@ def main():
                         )
 
                         for r in get_fields(rule):
-                            mapping_rule = get_mapping_rule(r, rule)
+                            mapping_rule = get_mapping_rule(r)
                             source = mapping_rule.get("source")
                             if not source or source.lower() == integration.lower():
                                 if isinstance(rule, list):

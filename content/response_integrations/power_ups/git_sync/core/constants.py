@@ -354,7 +354,7 @@ Event Name Field: {{ connector.eventNameField or connector.eventFieldName }}
 
 """
 
-JOB_README = """## {{ job.displayName }}
+JOB_README = """## {{ job.displayName or job.name }}
 {{ job.description }}\n
 
 **Run Interval In Seconds:** {{ job.runIntervalInSeconds }}
@@ -412,7 +412,7 @@ ROOT_README = """# GitSync
 |Name|Description|
 |----|-----------|
 {% for job in jobs -%}
-|{{ job.displayName }}|{{ job.description }}|
+|{{ job.displayName or job.name }}|{{ job.description }}|
 {% endfor %}
 {% endif -%}
 

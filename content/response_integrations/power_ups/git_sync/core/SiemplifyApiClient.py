@@ -293,20 +293,30 @@ class SiemplifyApiClient:
         )
 
     def create_integrations_instance(self, siemplify, integration, env):
-        return create_integrations_instance(
-            chronicle_soar=siemplify,
-            integration_identifier=integration,
-            environment=env,
-        )
+        try:
+            return create_integrations_instance(
+                chronicle_soar=siemplify,
+                integration_identifier=integration,
+                environment=env,
+            )
+        except HTTPError as e:
+            if e.response is not None and "already exists" in e.response.text.lower():
+                return None
+            raise
 
     def save_integration_instance_settings(self, instance_identifier, env, settings, integration_identifier=None):
-        return save_integration_instance_settings(
-            chronicle_soar=self.siemplify_soar,
-            identifier=instance_identifier,
-            environment=env,
-            integration_data=settings,
-            integration_identifier=integration_identifier,
-        )
+        try:
+            return save_integration_instance_settings(
+                chronicle_soar=self.siemplify_soar,
+                identifier=instance_identifier,
+                environment=env,
+                integration_data=settings,
+                integration_identifier=integration_identifier,
+            )
+        except HTTPError as e:
+            if e.response is not None and "already exists" in e.response.text.lower():
+                return None
+            raise
 
     def get_ide_cards(
         self,
@@ -604,6 +614,15 @@ class SiemplifyApiClient:
         return get_integration_connectors(chronicle_soar=chronicle_soar, integration_name=integration_name)
 
     def get_jobs(self, chronicle_soar: ChronicleSoar, enrich: bool = True) -> list[SingleJson]:
+        """Gets installed jobs.
+
+        Args:
+            chronicle_soar (ChronicleSoar): ChronicleSoar SDK object.
+            enrich (bool): Whether to enrich the jobs with additional details.
+
+        Returns:
+            list[SingleJson]: List of installed jobs.
+        """
         res = get_installed_jobs(chronicle_soar=chronicle_soar)
         jobs = res if isinstance(res, list) else res.get("job_instances", [])
 
@@ -617,12 +636,12 @@ class SiemplifyApiClient:
                 try:
                     full_details = get_installed_jobs(
                         chronicle_soar=chronicle_soar,
-                        job_instance_id=job_id
+                        job_instance_id=job_id,
                     )
                     if isinstance(full_details, dict):
                         job.update(full_details)
-                except Exception as e:
-                    chronicle_soar.LOGGER.warn(
+                except (HTTPError, KeyError) as e:
+                    chronicle_soar.LOGGER.warning(
                         f"Failed to fetch details for job {job_id}: {e}"
                     )
             enriched_jobs.append(job)
