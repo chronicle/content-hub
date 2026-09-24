@@ -6,15 +6,16 @@ from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
+
+from TIPCommon.consts import UNIX_FORMAT
+from TIPCommon.extraction import extract_connector_param
+from TIPCommon.smp_io import read_ids, write_ids
+from TIPCommon.utils import is_overflowed
+
 from TIPCommon import (
-    UNIX_FORMAT,
-    extract_connector_param,
     get_last_success_time,
     is_approaching_timeout,
-    is_overflowed,
-    read_ids,
     save_timestamp,
-    write_ids,
 )
 
 from ..core.constants import (
