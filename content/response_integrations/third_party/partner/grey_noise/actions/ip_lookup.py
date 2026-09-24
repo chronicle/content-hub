@@ -101,7 +101,7 @@ def process_community_tier(
                     json_results,
                 )
             else:
-                failed_entities.append(entity)
+                not_found_entities.append(entity)
 
         except RequestFailure as e:
             failed_entities.append(entity)
@@ -159,7 +159,7 @@ def process_enterprise_tier(
                     json_results,
                 )
             else:
-                failed_entities.append(entity)
+                not_found_entities.append(entity)
                 siemplify.LOGGER.info(f"No response for IP: {ip_address}")
 
     except RequestFailure as e:
