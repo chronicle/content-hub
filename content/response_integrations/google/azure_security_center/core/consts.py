@@ -13,23 +13,39 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 INTEGRATION_NAME = "Azure Security Center"
 INTEGRATION_IDENTIFIER = "AzureSecurityCenter"
 
+DEFAULT_LOGIN_API_ROOT = "https://login.microsoftonline.com"
+DEFAULT_API_ROOT = "https://management.azure.com"
+DEFAULT_GRAPH_API_ROOT = "https://graph.microsoft.com"
+
 ENDPOINTS = {
-    "get-auth-token": "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
-    "ping": "https://management.azure.com/providers/Microsoft.Security/operations",
-    "list-regulatory-standards": "https://management.azure.com/subscriptions/{subscription_id}/providers/Microsoft.Security/regulatoryComplianceStandards/",
-    "list-regulatory-standard-controls": "https://management.azure.com/subscriptions/{subscription_id}/providers/Microsoft.Security/regulatoryComplianceStandards/{standard_name}/regulatoryComplianceControls",
-    "update-alert-status": "https://management.azure.com/subscriptions/{subscription_id}/providers/Microsoft.Security/locations/{location}/alerts/{alert_id}/{status}",
-    "get-alert-ids": "https://graph.microsoft.com/v1.0/security/alerts",
-    "get-alert-details": "https://management.azure.com/subscriptions/{subscription_id}/providers/Microsoft.Security/locations/{location}/alerts/{alert_id}",
-    "get-regulatory-compliance-standards": "https://management.azure.com/subscriptions/{subscription_id}/providers/Microsoft.Security/regulatoryComplianceStandards/",
+    "get-auth-token": "{login_api_root}/{tenant_id}/oauth2/v2.0/token",
+    "ping": "{api_root}/providers/Microsoft.Security/operations",
+    "list-regulatory-standards": (
+        "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/regulatoryComplianceStandards/"
+    ),
+    "list-regulatory-standard-controls": (
+        "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/"
+        "regulatoryComplianceStandards/{standard_name}/regulatoryComplianceControls"
+    ),
+    "update-alert-status": (
+        "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/"
+        "locations/{location}/alerts/{alert_id}/{status}"
+    ),
+    "get-alert-ids": "{graph_api_root}/v1.0/security/alerts",
+    "get-alert-details": (
+        "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/"
+        "locations/{location}/alerts/{alert_id}"
+    ),
+    "get-regulatory-compliance-standards": (
+        "{api_root}/subscriptions/{subscription_id}/providers/Microsoft.Security/regulatoryComplianceStandards/"
+    ),
 }
 
-MICROSOFT_SECURITY_CENTER_SCOPE = "https://management.azure.com/.default"
-MICROSOFT_GRAPH_SCOPE = "https://graph.microsoft.com/.default"
-OAUTH_URL = "https://login.microsoftonline.com/{tenant_id}/oauth2/token"
+OAUTH_URL = "{login_api_root}/{tenant_id}/oauth2/token"
 
 PING_SCRIPT_NAME = "Ping"
 LIST_REGULATORY_STANDARDS_SCRIPT_NAME = "List Regulatory Standards"

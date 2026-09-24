@@ -13,20 +13,23 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from TIPCommon.transformation import construct_csv
 
+from ..core.AzureSecurityCenterManager import AzureSecurityCenterManager
 from ..core.consts import (
+    DEFAULT_API_ROOT,
+    DEFAULT_GRAPH_API_ROOT,
+    DEFAULT_LOGIN_API_ROOT,
+    DEFAULT_NUM_STANDARDS_TO_RETURN,
     INTEGRATION_NAME,
     LIST_REGULATORY_STANDARD_CONTROLS_SCRIPT_NAME,
     REGULATORY_STANDARD_STATES,
-    DEFAULT_NUM_STANDARDS_TO_RETURN,
 )
-from ..core.AzureSecurityCenterManager import AzureSecurityCenterManager
 from ..core.exceptions import AzureSecurityCenterValidationException
 from ..core.utils import load_csv_to_list
 
@@ -89,11 +92,35 @@ def main():
         param_name="Refresh Token",
         is_mandatory=False,
     )
+    login_api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Login API Root",
+        default_value=DEFAULT_LOGIN_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
+    api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="API Root",
+        default_value=DEFAULT_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
+    graph_api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Graph API Root",
+        default_value=DEFAULT_GRAPH_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
     verify_ssl = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
         param_name="Verify SSL",
-        default_value=False,
+        default_value=True,
         input_type=bool,
         is_mandatory=True,
     )
@@ -171,6 +198,9 @@ def main():
             tenant_id=tenant_id,
             refresh_token=refresh_token,
             verify_ssl=verify_ssl,
+            login_api_root=login_api_root,
+            api_root=api_root,
+            graph_api_root=graph_api_root,
         )
 
         manager.get_regulatory_compliance_standards(subscription_id=subscription_id)

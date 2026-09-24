@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from TIPCommon.base.job import RefreshTokenRenewalJob, validate_param_csv_to_multi_value
+from TIPCommon.types import SingleJson
 
 from ..core.AzureSecurityCenterManager import AzureSecurityCenterManager
 from ..core.consts import INTEGRATION_IDENTIFIER, TOKEN_RENEWAL_SCRIPT_NAME
@@ -100,7 +101,7 @@ class RefreshTokenJob(RefreshTokenRenewalJob):
 
     def _build_manager_for_instance(
         self,
-        instance_settings: dict(str, str),
+        instance_settings: SingleJson,
     ) -> AzureSecurityCenterManager:
         """Build Manager object to get the refresh token for integration instances.
 
@@ -120,7 +121,10 @@ class RefreshTokenJob(RefreshTokenRenewalJob):
             subscription_id=instance_settings.get("Subscription ID"),
             tenant_id=instance_settings.get("Tenant ID"),
             refresh_token=instance_settings.get("Refresh Token"),
-            verify_ssl=instance_settings.get("Verify SSL").lower() == "true",
+            verify_ssl=str(instance_settings.get("Verify SSL") or "true").lower() == "true",
+            login_api_root=instance_settings.get("Login API Root"),
+            api_root=instance_settings.get("API Root"),
+            graph_api_root=instance_settings.get("Graph API Root"),
         )
 
 

@@ -13,18 +13,23 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from ..core.consts import INTEGRATION_NAME, GET_AUTHORIZATION_SCRIPT_NAME
+from ..core.consts import (
+    DEFAULT_API_ROOT,
+    DEFAULT_LOGIN_API_ROOT,
+    GET_AUTHORIZATION_SCRIPT_NAME,
+    INTEGRATION_NAME,
+)
 
 AUTHORIZATION_URL = (
-    "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize?"
+    "{login_api_root}/{tenant_id}/oauth2/v2.0/authorize?"
     "response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&response_mode=query&"
-    "scope=https://management.azure.com/.default&state=12345"
+    "scope={api_root}/.default&state=12345"
 )
 
 
@@ -49,6 +54,22 @@ def main():
         is_mandatory=True,
         print_value=True,
     )
+    login_api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Login API Root",
+        default_value=DEFAULT_LOGIN_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
+    api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="API Root",
+        default_value=DEFAULT_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
 
     # Action configuration
     redirect_url = extract_action_param(
@@ -58,7 +79,11 @@ def main():
 
     try:
         auth_link = AUTHORIZATION_URL.format(
-            tenant_id=tenant_id, client_id=client_id, redirect_uri=redirect_url
+            login_api_root=(login_api_root or DEFAULT_LOGIN_API_ROOT).rstrip("/"),
+            api_root=(api_root or DEFAULT_API_ROOT).rstrip("/"),
+            tenant_id=tenant_id,
+            client_id=client_id,
+            redirect_uri=redirect_url,
         )
         siemplify.result.add_link("Authorization Code Link", auth_link)
         output_message = (
