@@ -624,6 +624,21 @@ class TestParameterExtractionAndContext:
                 await job._init_akeyless_client()
 
     @pytest.mark.anyio
+    async def test_init_akeyless_client_initializes_proxy_settings(self) -> None:
+        """Initializes platform proxy settings on soar_job before creating AkeylessClient."""
+        job = _make_job()
+        with patch(
+            "akeyless_security.jobs.sync_integration_credentials_job.AkeylessClient"
+        ) as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.test_connectivity.return_value = True
+            mock_client_cls.return_value = mock_client
+
+            await job._init_akeyless_client()
+
+            job.soar_job.init_proxy_settings.assert_called_once()
+
+    @pytest.mark.anyio
     async def test_skips_unchanged_pinned_secret_version_in_state_context(self) -> None:
         """Skips API call when state_context already has the exact pinned secret version."""
         job = _make_job()

@@ -25,6 +25,7 @@ import urllib3
 
 from .constants import (
     ACCESS_KEY_TYPE,
+    DEFAULT_MAX_RETRIES,
     DEFAULT_SECRET_VERSION,
 )
 from .exceptions import (
@@ -69,6 +70,7 @@ class AkeylessClient:
         self.configuration: akeyless.Configuration = akeyless.Configuration()
         self.configuration.host = self.config.api_gateway_url
         self.configuration.verify_ssl = self.config.verify_ssl
+        self.configuration.retries = DEFAULT_MAX_RETRIES
         if not self.config.verify_ssl:
             self.configuration.assert_hostname = False
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

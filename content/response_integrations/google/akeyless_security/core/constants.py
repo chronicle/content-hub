@@ -44,6 +44,7 @@ SECRET_NAME_PARAM: str = "Secret Name"  # ruff:ignore[hardcoded-password-string]
 # Akeyless API defaults
 DEFAULT_API_GATEWAY_URL: str = "https://api.akeyless.io"
 DEFAULT_SECRET_VERSION: str = "latest"  # ruff:ignore[hardcoded-password-string]
+DEFAULT_MAX_RETRIES: int = 0
 
 # Authentication mechanisms
 ACCESS_KEY_TYPE: str = "access_key"

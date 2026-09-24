@@ -167,6 +167,12 @@ class SyncIntegrationCredentialsJob(Job):
             ConnectivityError: If connection or authentication to Akeyless fails.
 
         """
+        try:
+            if hasattr(self.soar_job, "init_proxy_settings"):
+                self.soar_job.init_proxy_settings()
+        except Exception as e:  # ruff:ignore[blind-except]
+            self.logger.debug(f"Unable to initialize proxy settings from platform: {e}")
+
         config = self._get_integration_parameters()
         self.akeyless_client = await asyncio.to_thread(
             AkeylessClient,
@@ -349,10 +355,10 @@ class SyncIntegrationCredentialsJob(Job):
                     await self._fetch_secret_value_pre_resolved(
                         secret_id,
                         version_id,
-                        context_label=f"pre-fetch '{secret_loc}'",
+                        context_label=f"pre-fetch '{mask_id(secret_id)}'",
                     )
                 except Exception as e:  # ruff:ignore[blind-except]
-                    self.logger.debug(f"Failed pre-fetching secret '{secret_loc}': {e}")
+                    self.logger.debug(f"Failed pre-fetching secret '{mask_id(secret_loc)}': {e}")
 
         await asyncio.gather(*(fetch_one(loc) for loc in uncached_locations))
 

@@ -22,6 +22,7 @@ from unittest.mock import MagicMock
 import pytest
 from akeyless.exceptions import ApiException
 
+from akeyless_security.core.constants import DEFAULT_MAX_RETRIES
 from akeyless_security.core.datamodels import AkeylessClientConfig
 from akeyless_security.core.exceptions import (
     AkeylessError,
@@ -44,6 +45,7 @@ class TestAkeylessClient:
         assert client.config.access_key == "test-access-key"
         assert client.config.verify_ssl is True
         assert client.configuration.verify_ssl is True
+        assert client.configuration.retries == DEFAULT_MAX_RETRIES
 
     def test_init_explicit_verify_ssl_false(self, mock_akeyless_api: MagicMock) -> None:
         """Client initializes successfully with verify_ssl set to False."""
