@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 
 import arrow
 import pytest
+import yaml
 from integration_testing import common
 from integration_testing.common import set_is_test_run_to_true
 from integration_testing.set_meta import set_metadata
@@ -34,7 +35,11 @@ from sentinel_one_singularity_operations_center.connectors.unified_alerts_connec
 from sentinel_one_singularity_operations_center.core.api.api_client import (
     SentinelOneSingularityOperationsCenterApiClient,
 )
-from sentinel_one_singularity_operations_center.tests.common import INTEGRATION_PATH
+from sentinel_one_singularity_operations_center.core.constants import EventType
+from sentinel_one_singularity_operations_center.tests.common import (
+    INTEGRATION_PATH,
+    ONTOLOGY_PATH,
+)
 
 if TYPE_CHECKING:
     from integration_testing.platform.external_context import MockExternalContext
@@ -504,3 +509,52 @@ def test_build_unified_alerts_or_filter_omits_severity_for_info() -> None:
         "stringIn": {"values": ["MEDIUM", "HIGH", "CRITICAL"]},
     }
     assert expected_severity_filter in filter_medium["or"][0]["and"]
+
+
+def _get_ontology_rule(security_event_file_name: str) -> dict:
+    """Return the shipped ontology rule for the given SOAR field.
+
+    Args:
+        security_event_file_name (str): The SOAR ontology field name.
+
+    Returns:
+        dict: The matching ontology mapping rule.
+    """
+    rules = yaml.safe_load(ONTOLOGY_PATH.read_text(encoding="utf-8"))
+    return next(
+        rule
+        for rule in rules
+        if rule["security_event_file_name"] == security_event_file_name
+    )
+
+
+def test_destination_hostname_rule_is_scoped_to_asset_events() -> None:
+    """Verify the DestinationHostName rule declares an Asset event scope.
+
+    Regression test for b/558240313. The rule matches on ``name``, a key that
+    every event inherits from its raw vendor payload, so it is only safe when
+    restricted to the one event type whose ``name`` is a real hostname.
+    """
+    rule = _get_ontology_rule("DestinationHostName")
+
+    assert rule["raw_data_primary_field_match_term"] == "name"
+    assert rule["event_name"] == EventType.ASSET.value
+
+
+def test_ontology_rules_matching_generic_name_declare_an_event_scope() -> None:
+    """Verify no ontology rule matches the generic name key without a scope.
+
+    Guards against reintroducing b/558240313 through a new mapping rule. A rule
+    keyed on ``name`` applies to alert, indicator, observable and asset events
+    alike unless it names the event type it belongs to.
+    """
+    rules = yaml.safe_load(ONTOLOGY_PATH.read_text(encoding="utf-8"))
+
+    unscoped = [
+        rule["security_event_file_name"]
+        for rule in rules
+        if rule.get("raw_data_primary_field_match_term") == "name"
+        and not rule.get("event_name")
+    ]
+
+    assert unscoped == []
