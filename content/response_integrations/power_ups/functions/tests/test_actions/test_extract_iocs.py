@@ -55,6 +55,7 @@ def test_extract_iocs_json_result(action_output: MockActionOutput) -> None:
     },
 )
 def test_extract_iocs_no_dns_check(action_output: MockActionOutput) -> None:
+    """Validates offline or unresolvable domains are extracted if Check DNS is false."""
     ExtractIocs.main()
 
     assert action_output.results.json_output.json_result == {
@@ -62,5 +63,28 @@ def test_extract_iocs_no_dns_check(action_output: MockActionOutput) -> None:
         "emails": [],
         "ips": [],
         "urls": ["https://this-domain-does-not-exist.com/path"],
+    }
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+
+
+@set_metadata(
+    integration_config={},
+    parameters={
+        "Input String": (
+            "We found this offline/unregistered domain url: "
+            "https://this-domain-does-not-exist.com/path"
+        ),
+        "Check DNS": "true",
+    },
+)
+def test_extract_iocs_with_dns_check(action_output: MockActionOutput) -> None:
+    """Validates unresolvable domains are filtered out if Check DNS is true."""
+    ExtractIocs.main()
+
+    assert action_output.results.json_output.json_result == {
+        "domains": [],
+        "emails": [],
+        "ips": [],
+        "urls": [],
     }
     assert action_output.results.execution_state == ExecutionState.COMPLETED

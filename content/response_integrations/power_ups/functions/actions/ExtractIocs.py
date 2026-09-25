@@ -97,7 +97,7 @@ def get_urls(body: str, check_dns: bool = True) -> list[str]:
 
     Args:
         body (str): Text input which should be searched for URLs.
-        check_dns (bool): If True, validates domains against DNS.
+        check_dns: If True, validates domains against DNS.
 
     Returns:
         list: Returns a list of URLs found in the input string.
@@ -153,6 +153,8 @@ def clean_found_url(url: str) -> str | None:
             scheme_url = f"noscheme://{url}"
 
         parsed = urllib.parse.urlparse(scheme_url)
+        if not parsed.hostname:
+            return None
         tld = parsed.hostname.rstrip(".").rsplit(".", 1)[-1].lower()
         if tld in (
             "aspx",
@@ -211,8 +213,9 @@ def extract_ips(body: str, include_internal: bool = True) -> list[str]:
     """Extracts IP addresses from a given string.
 
     Args:
-        body (str): The string from which IPs are to be extracted
-        include_internal (bool): Whether to include internal IPs in the result
+        body: The string from which IPs are to be extracted.
+        include_internal: Whether to include internal IPs in the result.
+
     Returns:
         list: List of IPs extracted from the string.
 
@@ -221,8 +224,9 @@ def extract_ips(body: str, include_internal: bool = True) -> list[str]:
     for ip_type in (IPV4_REGEX, IPV6_REGEX):
         for match in ip_type.findall(body):
             try:
-                ip_match: ipaddress.IPv4Address | ipaddress.IPv6Address
-                ip_match = ipaddress.ip_address(match)
+                ip_match: ipaddress.IPv4Address | ipaddress.IPv6Address = (
+                    ipaddress.ip_address(match)
+                )
 
             except ValueError:
                 continue
