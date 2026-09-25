@@ -17,7 +17,7 @@ from __future__ import annotations
 import copy
 import json
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import arrow
 import pytest
@@ -44,6 +44,7 @@ from sentinel_one_singularity_operations_center.tests.common import (
 if TYPE_CHECKING:
     from integration_testing.platform.external_context import MockExternalContext
     from integration_testing.platform.script_output import MockConnectorOutput
+    from TIPCommon.types import SingleJson
 
     from sentinel_one_singularity_operations_center.tests.core.product import (
         SentinelOne,
@@ -515,29 +516,27 @@ def test_build_unified_alerts_or_filter_omits_severity_for_info() -> None:
     assert expected_severity_filter in filter_medium["or"][0]["and"]
 
 
-@set_metadata(
-    connector_def_file_path=DEF_PATH,
-    parameters=DEFAULT_PARAMETERS,
-)
-def test_connector_creates_alert_info_with_parent_process_and_linked_observables(
+def _run_connector_with_alert_overrides(
     sentinelone: SentinelOne,
-    script_session: SentinelOneSession,
     connector_output: MockConnectorOutput,
-) -> None:
-    """Verify connector creates AlertInfo with parent process telemetry.
-
-    Also tests linked observables attached to indicators.
-    """
+    overrides: SingleJson,
+    alert_id: str = "019d114e-e4f4-7ad6-82c3-9829b6d0a801",
+) -> Any:
+    """Run connector after applying details overrides to sentinelone mock."""
     set_is_test_run_to_true()
     is_test = is_test_run(sys.argv)
 
-    mock_payload = copy.deepcopy(PARENT_PROCESS_AND_LINKED_OBSERVABLES)
-
-    alert_id = "019d114e-e4f4-7ad6-82c3-9829b6d0a801"
     details = copy.deepcopy(sentinelone.details[alert_id])
-    details["process"].update(mock_payload["process"])
-    details["indicators"] = mock_payload["indicators"]
-    details["observables"] = mock_payload["observables"]
+    overrides_copy = copy.deepcopy(overrides)
+    for key, value in overrides_copy.items():
+        if (
+            isinstance(value, dict)
+            and key in details
+            and isinstance(details[key], dict)
+        ):
+            details[key].update(value)
+        else:
+            details[key] = value
     sentinelone.details[alert_id] = details
 
     connector = UnifiedAlertsConnector(is_test)
@@ -545,7 +544,21 @@ def test_connector_creates_alert_info_with_parent_process_and_linked_observables
 
     alerts = connector_output.results.json_output.alerts
     assert len(alerts) == 1
-    alert = alerts[0]
+    return alerts[0]
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters=DEFAULT_PARAMETERS,
+)
+def test_connector_creates_alert_info_with_parent_process_and_linked_observables(
+    sentinelone: SentinelOne,
+    connector_output: MockConnectorOutput,
+) -> None:
+    """Verify connector creates AlertInfo with parent process telemetry."""
+    alert = _run_connector_with_alert_overrides(
+        sentinelone, connector_output, PARENT_PROCESS_AND_LINKED_OBSERVABLES
+    )
 
     alert_event = alert.events[0]
     assert alert_event.get("process_parentName") == "explorer.exe"
@@ -588,32 +601,12 @@ def test_connector_creates_alert_info_with_parent_process_and_linked_observables
 )
 def test_observables_inherit_only_their_own_indicator_context(
     sentinelone: SentinelOne,
-    script_session: SentinelOneSession,
     connector_output: MockConnectorOutput,
 ) -> None:
-    """Verify each observable carries the context of its own parent indicator only.
-
-    An alert may carry several indicators, each with its own observables. The
-    ``indicator_*`` context fields must not bleed between sibling indicators, and
-    observables attached at the alert level must stay context free.
-    """
-    set_is_test_run_to_true()
-    is_test = is_test_run(sys.argv)
-
-    mock_payload = copy.deepcopy(MULTI_INDICATOR_OBSERVABLES)
-
-    alert_id = "019d114e-e4f4-7ad6-82c3-9829b6d0a801"
-    details = copy.deepcopy(sentinelone.details[alert_id])
-    details["indicators"] = mock_payload["indicators"]
-    details["observables"] = mock_payload["observables"]
-    sentinelone.details[alert_id] = details
-
-    connector = UnifiedAlertsConnector(is_test)
-    connector.start()
-
-    alerts = connector_output.results.json_output.alerts
-    assert len(alerts) == 1
-    alert = alerts[0]
+    """Verify each observable carries the context of its own parent indicator only."""
+    alert = _run_connector_with_alert_overrides(
+        sentinelone, connector_output, MULTI_INDICATOR_OBSERVABLES
+    )
 
     obs_events = [e for e in alert.events if e.get("event_type") == "Observable"]
     assert len(obs_events) == 3
@@ -646,38 +639,37 @@ def test_observables_inherit_only_their_own_indicator_context(
 )
 def test_duplicate_observable_keeps_indicator_context(
     sentinelone: SentinelOne,
-    script_session: SentinelOneSession,
     connector_output: MockConnectorOutput,
 ) -> None:
-    """Verify an observable repeated at the alert level is deduplicated.
-
-    SentinelOne repeats indicator observables in the alert level ``observables``
-    list. The indicator linked copy is emitted first, so the alert level duplicate
-    must be dropped instead of emitting a second, context free event.
-    """
-    set_is_test_run_to_true()
-    is_test = is_test_run(sys.argv)
-
+    """Verify an observable repeated at the alert level is deduplicated."""
     mock_payload = copy.deepcopy(DUPLICATE_INDICATOR_OBSERVABLE)
     duplicated_observable = mock_payload["observable"]
     indicator = mock_payload["indicator"]
-
     indicator["observables"] = [copy.deepcopy(duplicated_observable)]
 
-    alert_id = "019d114e-e4f4-7ad6-82c3-9829b6d0a801"
-    details = copy.deepcopy(sentinelone.details[alert_id])
-    details["indicators"] = [indicator]
-    details["observables"] = [copy.deepcopy(duplicated_observable)]
-    sentinelone.details[alert_id] = details
-
-    connector = UnifiedAlertsConnector(is_test)
-    connector.start()
-
-    alerts = connector_output.results.json_output.alerts
-    assert len(alerts) == 1
-    alert = alerts[0]
+    alert = _run_connector_with_alert_overrides(
+        sentinelone,
+        connector_output,
+        {
+            "indicators": [indicator],
+            "observables": [copy.deepcopy(duplicated_observable)],
+        },
+    )
 
     obs_events = [e for e in alert.events if e.get("event_type") == "Observable"]
     assert len(obs_events) == 1
     assert obs_events[0].get("indicator_uid") == "IND-A"
     assert obs_events[0].get("ip") == "198.51.100.23"
+
+
+def test_alert_observable_dedup_key() -> None:
+    """Verify dedup_key property encapsulates type, value, and name."""
+    from sentinel_one_singularity_operations_center.core.data_models import (
+        AlertObservable,
+    )
+
+    obs = AlertObservable({"type": "ip", "value": "198.51.100.1", "name": "source_ip"})
+    assert obs.dedup_key == ("IP", "198.51.100.1", "source_ip")
+
+    obs_no_type = AlertObservable({"type": None, "value": "test", "name": None})
+    assert obs_no_type.dedup_key == (None, "test", None)
