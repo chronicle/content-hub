@@ -160,14 +160,25 @@ def mock_siemplify(
 
 
 @pytest.fixture
-def tar_archive_factory() -> Callable[[pathlib.Path, dict[str, bytes]], pathlib.Path]:
+def tar_archive_factory() -> Callable[..., pathlib.Path]:
     """Factory fixture to create test TAR archives with custom members."""
 
     def _create_tar(
         archive_path: pathlib.Path,
         members: dict[str, bytes],
+        mode: str | None = None,
     ) -> pathlib.Path:
-        with tarfile.open(archive_path, "w") as tar:
+        if mode is None:
+            if archive_path.name.endswith((".tar.gz", ".tgz")):
+                mode = "w:gz"
+            elif archive_path.name.endswith((".tar.bz2", ".tbz2")):
+                mode = "w:bz2"
+            elif archive_path.name.endswith((".tar.xz", ".txz")):
+                mode = "w:xz"
+            else:
+                mode = "w"
+
+        with tarfile.open(archive_path, mode) as tar:
             for name, content in members.items():
                 info = tarfile.TarInfo(name=name)
                 info.size = len(content)

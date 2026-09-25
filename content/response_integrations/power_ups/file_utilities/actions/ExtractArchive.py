@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import stat
 import tarfile
 import zipfile
 from typing import Any
@@ -80,9 +81,7 @@ def safe_extract_tar(
     with tarfile.open(archive_path, "r:*") as tar:
         for member in tar.getmembers():
             if member.issym() or member.islnk():
-                raise ValueError(
-                    f"Archive links are not allowed: '{member.name}'"
-                )
+                raise ValueError(f"Archive links are not allowed: '{member.name}'")
 
             if not member.isfile() and not member.isdir():
                 raise ValueError(
@@ -114,7 +113,7 @@ def safe_extract_zip(
 
     with zipfile.ZipFile(archive_path, "r") as zf:
         for member in zf.infolist():
-            if (member.external_attr >> 16) & 0o120000 == 0o120000:
+            if stat.S_ISLNK(member.external_attr >> 16):
                 raise ValueError(f"Archive links are not allowed: '{member.filename}'")
 
             validate_destination_path(member.filename, root)
@@ -177,11 +176,10 @@ def main() -> None:
     siemplify = SiemplifyAction()
     raw_archives = siemplify.parameters.get("Archive") or ""
     archives = [
-        archive.strip()
-        for archive in raw_archives.split(",")
-        if archive.strip()
+        archive.strip() for archive in raw_archives.split(",") if archive.strip()
     ]
 
+    dest_root = pathlib.Path(DEST_DIR).resolve()
     status = EXECUTION_STATE_COMPLETED
     output_message = "output message :"
     result_value: Any = None
@@ -194,22 +192,31 @@ def main() -> None:
         archive_name = archive_path.stem
         full_archive_name = archive_path.name
 
-        output_dir = os.path.join(DEST_DIR, archive_name)
-        if not os.path.exists(output_dir):
-            try:
-                pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
-            except OSError as err:
-                siemplify.LOGGER.error(
-                    f"Creation of the directory {output_dir} failed: {err}"
-                )
-                status = EXECUTION_STATE_FAILED
-                json_result["archives"].append(
-                    {"success": False, "archive": full_archive_name},
-                )
-                failed_files.append(archive)
-                raise
-
         try:
+            output_dir_path = validate_destination_path(archive_name, dest_root)
+            if output_dir_path == dest_root:
+                raise ValueError(
+                    f"Invalid archive destination directory name: '{archive_name}'"
+                )
+            output_dir = str(output_dir_path)
+
+            if not os.path.exists(output_dir):
+                try:
+                    pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+                except OSError as err:
+                    siemplify.LOGGER.error(
+                        f"Creation of the directory {output_dir} failed: {err}"
+                    )
+                    status = EXECUTION_STATE_FAILED
+                    result_value = "Failed"
+                    output_message += (
+                        f"\nCreation of the directory {output_dir} failed: {err}"
+                    )
+                    json_result["archives"].append(
+                        {"success": False, "archive": full_archive_name},
+                    )
+                    failed_files.append(archive)
+                    continue
             safe_unpack_archive(archive, output_dir)
             files = path_to_dict(output_dir)
             files_w_path = [
@@ -235,8 +242,7 @@ def main() -> None:
             output_message = f"\nSuccessfully extracted archive: {full_archive_name}"
             success_files.append(archive)
         except Exception as e:
-            siemplify.LOGGER.error("General error performing action:\r")
-            siemplify.LOGGER.exception(e)
+            siemplify.LOGGER.error(f"General error performing action: {e}")
             status = EXECUTION_STATE_FAILED
             result_value = "Failed"
             output_message += f"\n{e}"
@@ -244,7 +250,6 @@ def main() -> None:
                 {"success": False, "archive": full_archive_name},
             )
             failed_files.append(archive)
-            raise
 
     if not failed_files:
         result_value = True

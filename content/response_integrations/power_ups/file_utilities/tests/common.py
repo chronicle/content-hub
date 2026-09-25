@@ -82,9 +82,6 @@ ACTION_ALERT_SCOPE_CONTEXT: SingleJson = copy.deepcopy(ALERT_1_CONTEXT)
 ACTION_CASE_SCOPE_PARAMS: SingleJson = MOCK_DATA["action_case_scope_parameters"]
 ACTION_CASE_SCOPE_CONTEXT: SingleJson = copy.deepcopy(ALERT_1_CONTEXT)
 
-ACTION_EXTRACT_ARCHIVE_PARAMS: SingleJson = MOCK_DATA[
-    "action_extract_archive_parameters"
-]
 EXPECTED_EXTRACT_SUCCESS_MESSAGE: str = "Successfully extracted archive"
 
 ACTION_ALERT_SCOPE_ENTITIES: list[MockEntity] = [

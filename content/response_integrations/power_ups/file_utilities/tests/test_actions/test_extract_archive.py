@@ -209,6 +209,7 @@ def test_safe_unpack_archive_tar_and_zip(
         tmp_path / "sample.tar.gz",
         {"from_tar.txt": b"tar_ok"},
     )
+    assert tar_path.read_bytes()[:2] == b"\x1f\x8b"
     zip_path = zip_archive_factory(
         tmp_path / "sample.zip",
         {"from_zip.txt": b"zip_ok"},
@@ -276,8 +277,7 @@ def test_main_extract_archive_success(
     assert EXPECTED_EXTRACT_SUCCESS_MESSAGE in action_output.results.output_message
     assert (dest_base / "valid_sample" / "hello.txt").is_file()
     assert (
-        product.get_attachment_blob("valid_sample.tar")
-        == valid_tar_path.read_bytes()
+        product.get_attachment_blob("valid_sample.tar") == valid_tar_path.read_bytes()
     )
     assert script_session._product is product
 
@@ -290,11 +290,64 @@ def test_main_extract_archive_traversal_fails(
     traversal_tar_path: pathlib.Path,
     tmp_path: pathlib.Path,
 ) -> None:
-    """Test full main() execution aborts cleanly on traversal attempt."""
+    """Test full main() execution fails cleanly on traversal attempt."""
     mock_extract_archive_context(str(traversal_tar_path))
 
-    with pytest.raises(ValueError, match="traversal components"):
-        ExtractArchive.main()
+    ExtractArchive.main()
 
+    assert action_output.results.execution_state == ExecutionState.FAILED
+    assert action_output.results.result_value == "Failed"
+    assert "traversal components" in action_output.results.output_message
     assert not (tmp_path / "escaped.txt").exists()
+    assert script_session._product is product
+
+
+def test_main_extract_archive_dot_stem_escape_fails(
+    mock_extract_archive_context: Callable[[str], pathlib.Path],
+    tar_archive_factory: Callable[..., pathlib.Path],
+    product: FileUtilitiesProduct,
+    script_session: FileUtilitiesMockSession,
+    action_output: MockActionOutput,
+    tmp_path: pathlib.Path,
+) -> None:
+    """Ensure archive named '...tar' cannot escape DEST_DIR via stem '..'."""
+    dot_tar_path = tar_archive_factory(
+        tmp_path / "...tar",
+        {"escaped.txt": b"should never escape"},
+    )
+    dest_base = mock_extract_archive_context(str(dot_tar_path))
+
+    ExtractArchive.main()
+
+    assert action_output.results.execution_state == ExecutionState.FAILED
+    assert action_output.results.result_value == "Failed"
+    assert "traversal components" in action_output.results.output_message
+    assert not (dest_base.parent / "escaped.txt").exists()
+    assert not (dest_base / "escaped.txt").exists()
+    assert script_session._product is product
+
+
+def test_main_extract_archive_dot_stem_equals_root_fails(
+    mock_extract_archive_context: Callable[[str], pathlib.Path],
+    tar_archive_factory: Callable[..., pathlib.Path],
+    product: FileUtilitiesProduct,
+    script_session: FileUtilitiesMockSession,
+    action_output: MockActionOutput,
+    tmp_path: pathlib.Path,
+) -> None:
+    """Ensure archive named '..tar' (stem '.') cannot target dest_root."""
+    dot_tar_path = tar_archive_factory(
+        tmp_path / "..tar",
+        {"escaped.txt": b"should never extract directly to root"},
+    )
+    dest_base = mock_extract_archive_context(str(dot_tar_path))
+
+    ExtractArchive.main()
+
+    assert action_output.results.execution_state == ExecutionState.FAILED
+    assert action_output.results.result_value == "Failed"
+    assert "Invalid archive destination directory name" in (
+        action_output.results.output_message
+    )
+    assert not (dest_base / "escaped.txt").exists()
     assert script_session._product is product
