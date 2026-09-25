@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+# Resolved by the platform as the integration identifier (whitespace-insensitive),
+# so this must keep matching `identifier: SpyCloudEnterprise` in definition.yaml
+# rather than the Marketplace display name.
 INTEGRATION_NAME = "SpyCloud Enterprise"
-INTEGRATION_DISPLAY_NAME = "SpyCloud Enterprise"
+INTEGRATION_DISPLAY_NAME = "SpyCloud Enterprise Threat Protection"
 
 # Actions
 PING_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Ping"
 GET_WATCHLIST_EXPOSURES_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Get Watchlist Exposures"
+FILTER_PASSWORDS_BY_POLICY_SCRIPT_NAME = (
+    f"{INTEGRATION_DISPLAY_NAME} - Filter Passwords By Policy"
+)
+CHECK_PASSWORD_ROTATION_SCRIPT_NAME = (
+    f"{INTEGRATION_DISPLAY_NAME} - Check Password Rotation"
+)
 
 ENDPOINT_PING = "/enterprise-v2/breach/catalog/1"
 ENDPOINT_BREACH_CATALOG = "/enterprise-v2/breach/catalog"
