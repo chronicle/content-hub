@@ -29,7 +29,7 @@ PING_QUERY = "{}/api/v1/incidents?limit=1"
 ENRICH_ENTITIES_QUERY = "{}/api/v2/monitoring/hosts?host_names={}"
 FORENSIC_SCAN_QUERY = "{}/api/v1/event/create-external-event?hostNameOrIp={}"
 GET_INCIDENT_ID_QUERY = "{}/api/v1/incidents/id?event_id={}"
-GET_FORENSIC_DATA_QUERY = "{}/api/v1GET_INCIDENT_ID_QUERY/forensics?event_id={}&type={}"
+GET_FORENSIC_DATA_QUERY = "{}/api/v1/forensics?event_id={}&type={}"
 GET_DECEPTIVE_USERS_QUERY = "{}/api/v1/deceptive-entities/users?deceptive_user_type={}"
 GET_DECEPTIVE_SERVERS_QUERY = (
     "{}/api/v1/deceptive-entities/servers?deceptive_server_type={}"
