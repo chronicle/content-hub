@@ -15,10 +15,16 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+import sys
 from unittest.mock import MagicMock
 
 import pytest
 import requests
+
+# Add integration root to sys.path for local test execution
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from core.constants import FORENSIC_DATA_TYPES, GET_FORENSIC_DATA_QUERY
 from core.IllusiveNetworksManager import IllusiveNetworksManager
 
