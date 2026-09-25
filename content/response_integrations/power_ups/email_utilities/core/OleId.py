@@ -83,28 +83,11 @@ __version__ = "0.60.1.dev2"
 
 import argparse
 import io
-import os
 import re
 import struct
-import sys
 import zlib
 
 import olefile
-
-# IMPORTANT: it should be possible to run oletools directly as scripts
-# in any directory without installing them with pip or setup.py.
-# In that case, relative imports are NOT usable.
-# And to enable Python 2+3 compatibility, we need to use absolute imports,
-# so we add the oletools parent folder to sys.path (absolute+normalized path):
-_thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
-# print('_thismodule_dir = %r' % _thismodule_dir)
-_parent_dir = os.path.normpath(
-    os.path.join(_thismodule_dir, "../../../../../Downloads/EmailUtilities (10)"),
-)
-# print('_parent_dir = %r' % _thirdparty_dir)
-if _parent_dir not in sys.path:
-    sys.path.insert(0, _parent_dir)
-
 from oletools import crypto, ftguess, mraptor, oleobj, olevba, ooxml
 from oletools.common.codepages import get_codepage_name
 from oletools.common.log_helper import log_helper
@@ -215,7 +198,7 @@ class Indicator:
         self.value = value
         self.type = _type
         self.name = name
-        if name == None:
+        if name is None:
             self.name = _id
         self.description = description
         self.risk = risk
@@ -400,7 +383,9 @@ class OleID:
             # msoffcrypto-tool can trigger exceptions, such as "Unknown file format" for Excel 5.0/95
             encrypted.value = "Error"
             encrypted.risk = RISK.ERROR
-            encrypted.description = f"msoffcrypto-tool raised an error when checking if the file is encrypted: {exception}"
+            encrypted.description = (
+                f"msoffcrypto-tool raised an error when checking if the file is encrypted: {exception}"
+            )
         return encrypted
 
     def check_external_relationships(self):
@@ -497,7 +482,10 @@ class OleID:
             if vba_parser.detect_vba_macros():
                 vba_indicator.value = "Yes"
                 vba_indicator.risk = RISK.MEDIUM
-                vba_indicator.description = "This file contains VBA macros. No suspicious keyword was found. Use olevba and mraptor for more info."
+                vba_indicator.description = (
+                    "This file contains VBA macros. No suspicious keyword was found. "
+                    "Use olevba and mraptor for more info."
+                )
                 # check code with mraptor
                 vba_code = vba_parser.get_vba_code_all_modules()
                 m = mraptor.MacroRaptor(vba_code)
@@ -505,7 +493,10 @@ class OleID:
                 if m.suspicious:
                     vba_indicator.value = "Yes, suspicious"
                     vba_indicator.risk = RISK.HIGH
-                    vba_indicator.description = "This file contains VBA macros. Suspicious keywords were found. Use olevba and mraptor for more info."
+                    vba_indicator.description = (
+                        "This file contains VBA macros. Suspicious keywords were found. "
+                        "Use olevba and mraptor for more info."
+                    )
         except Exception as e:
             vba_indicator.risk = RISK.ERROR
             vba_indicator.value = "Error"
@@ -516,7 +507,8 @@ class OleID:
             vba_parser = None
         # Check XLM macros only for Excel file types:
         if self.ftg.is_excel():
-            # TODO: for now XLM detection only works for files on disk... So we need to reload VBA_Parser from the filename
+            # TODO: for now XLM detection only works for files on disk...
+            #       So we need to reload VBA_Parser from the filename
             #       To be improved once XLMMacroDeobfuscator can work on files in memory
             if self.file_on_disk:
                 try:
