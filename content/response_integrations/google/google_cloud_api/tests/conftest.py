@@ -73,6 +73,11 @@ def gcloud_api_script_session(
                 CONFIG["Project ID"],
             ),
         )
+        monkeypatch.setattr(
+            google_cloud_api.core.GoogleCloudApiAuthManager,
+            "get_workload_sa_email",
+            lambda *args, **kwargs: "default@domain.com",
+        )
 
     yield session
 
