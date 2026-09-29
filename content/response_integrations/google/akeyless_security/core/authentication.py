@@ -19,7 +19,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from TIPCommon.extraction import extract_script_param
 
@@ -31,8 +30,8 @@ from .constants import (
     INTEGRATION_IDENTIFIER,
     VERIFY_SSL_PARAM,
 )
-from .datamodels import AkeylessClientConfig
-from .exceptions import AkeylessError
+from .datamodels import AkeylessSecurityClientConfig
+from .exceptions import AkeylessSecurityError
 
 if TYPE_CHECKING:
     from TIPCommon.types import ChronicleSOAR, SingleJson
@@ -42,22 +41,22 @@ def _resolve_raw_configuration(soar_sdk_object: ChronicleSOAR) -> SingleJson:
     """Resolve the raw configuration dictionary from a SOAR SDK object.
 
     Args:
-        soar_sdk_object: A ChronicleSOAR SDK object (action, connector, or job).
+        soar_sdk_object: A ChronicleSOAR SDK object (action or job).
 
     Returns:
         The resolved configuration dictionary.
 
     Raises:
-        AkeylessError: If the provided SDK object type is not supported.
+        AkeylessSecurityError: If the provided SDK object type is not supported.
 
     """
     sdk_class: str = type(soar_sdk_object).__name__
     if sdk_class == SiemplifyAction.__name__:
         return soar_sdk_object.get_configuration(INTEGRATION_IDENTIFIER)
 
-    if sdk_class not in {SiemplifyConnectorExecution.__name__, SiemplifyJob.__name__}:
+    if sdk_class != SiemplifyJob.__name__:
         msg = f"Provided SOAR instance is not supported! type: {sdk_class}."
-        raise AkeylessError(msg)
+        raise AkeylessSecurityError(msg)
 
     input_dictionary: SingleJson = dict(soar_sdk_object.parameters or {})
     if input_dictionary.get(ACCESS_ID_PARAM):
@@ -74,7 +73,7 @@ def _resolve_raw_configuration(soar_sdk_object: ChronicleSOAR) -> SingleJson:
     return input_dictionary
 
 
-def build_auth_params(soar_sdk_object: ChronicleSOAR) -> AkeylessClientConfig:
+def build_auth_params(soar_sdk_object: ChronicleSOAR) -> AkeylessSecurityClientConfig:
     """Extract authentication parameters from the SOAR SDK object.
 
     Args:
@@ -118,12 +117,9 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> AkeylessClientConfig:
         print_value=True,
     )
 
-    return AkeylessClientConfig(
+    return AkeylessSecurityClientConfig(
         access_id=access_id,
         access_key=access_key,
         api_gateway_url=api_gateway_url,
         verify_ssl=verify_ssl,
     )
-
-
-extract_integration_parameters = build_auth_params

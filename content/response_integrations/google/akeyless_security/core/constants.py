@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Constants for the Akeyless integration."""
+"""Constants for the AkeylessSecurity integration."""
 
 from __future__ import annotations
 
@@ -27,10 +27,7 @@ INTEGRATION_NAME: str = "Akeyless Security"
 PING_SCRIPT_NAME: str = "Ping"
 GET_SECRET_VALUE_SCRIPT_NAME: str = "Get Secret Value"  # ruff:ignore[hardcoded-password-string]
 SYNC_CREDENTIALS_JOB_SCRIPT_NAME: str = "Sync Integration Credentials Job"
-SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = SYNC_CREDENTIALS_JOB_SCRIPT_NAME
-RESOURCE_NAME_PATTERN: re.Pattern = re.compile(
-    r"^(?P<secret>[^:\s][^:]*)(?::(?P<version>latest|[1-9]\d*))?$"
-)
+RESOURCE_NAME_PATTERN: re.Pattern = re.compile(r"^(?P<secret>[^:\s][^:]*)(?::(?P<version>latest|[1-9]\d*))?$")
 
 # Integration configuration parameter names
 ACCESS_ID_PARAM: str = "Access ID"
@@ -41,7 +38,7 @@ VERIFY_SSL_PARAM: str = "Verify SSL"
 # Action parameter names
 SECRET_NAME_PARAM: str = "Secret Name"  # ruff:ignore[hardcoded-password-string]
 
-# Akeyless API defaults
+# AkeylessSecurity API defaults
 DEFAULT_API_GATEWAY_URL: str = "https://api.akeyless.io"
 DEFAULT_SECRET_VERSION: str = "latest"  # ruff:ignore[hardcoded-password-string]
 DEFAULT_MAX_RETRIES: int = 0

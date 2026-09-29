@@ -12,38 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""User-defined exceptions for the Akeyless integration."""
+"""User-defined exceptions for the AkeylessSecurity integration."""
 
 from __future__ import annotations
 
 
-class AkeylessError(Exception):
-    """Top-level base exception for all Akeyless integration errors."""
+class AkeylessSecurityError(Exception):
+    """Top-level base exception for all AkeylessSecurity integration errors."""
 
 
-class InvalidConfigurationError(AkeylessError):
+class InvalidConfigurationError(AkeylessSecurityError):
     """Raised when integration configuration parameters are invalid or missing."""
 
 
-class ConnectivityError(AkeylessError):
-    """Raised when a connectivity check against the Akeyless API fails."""
+class ConnectivityError(AkeylessSecurityError):
+    """Raised when a connectivity check against the AkeylessSecurity API fails."""
 
 
-class SecretAccessError(AkeylessError):
-    """Raised when fetching a secret version from Akeyless fails."""
+class SecretAccessError(AkeylessSecurityError):
+    """Raised when fetching a secret version from AkeylessSecurity fails."""
 
 
-class ParameterUpdateError(AkeylessError):
+class ParameterUpdateError(AkeylessSecurityError):
     """Raised when updating a parameter on an integration instance or connector fails."""
 
 
-class JobFetchError(AkeylessError):
+class JobFetchError(AkeylessSecurityError):
     """Raised when fetching job details from the SOAR platform fails."""
 
 
-class JobSaveError(AkeylessError):
+class JobSaveError(AkeylessSecurityError):
     """Raised when persisting an updated job back to the SOAR platform fails."""
 
 
-class IntegrationCredentialSyncError(AkeylessError):
+class IntegrationCredentialSyncError(AkeylessSecurityError):
     """Raised when one or more errors occur during credential synchronization."""

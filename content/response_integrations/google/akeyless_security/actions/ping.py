@@ -16,11 +16,11 @@
 
 from __future__ import annotations
 
-from ..core.base_action import AkeylessAction
+from ..core.base_action import AkeylessSecurityAction
 from ..core.constants import PING_SCRIPT_NAME
 
 
-class PingAction(AkeylessAction):
+class PingAction(AkeylessSecurityAction):
     """Action to test connectivity to Akeyless."""
 
     def __init__(self) -> None:
@@ -30,7 +30,7 @@ class PingAction(AkeylessAction):
 
     def _perform_action(self, _: object = None) -> None:
         """Test connectivity to Akeyless."""
-        is_connected: bool = self.akeyless_client.test_connectivity()
+        is_connected: bool = self.akeyless_security_client.test_connectivity()
 
         self.output_message = "Successfully connected to the Akeyless server with the provided connection parameters!"
         self.result_value = is_connected

@@ -28,9 +28,9 @@ from akeyless_security.core.constants import (
     INTEGRATION_IDENTIFIER,
     VERIFY_SSL_PARAM,
 )
-from akeyless_security.core.datamodels import AkeylessClientConfig
+from akeyless_security.core.datamodels import AkeylessSecurityClientConfig
 from akeyless_security.core.exceptions import (
-    AkeylessError,
+    AkeylessSecurityError,
 )
 
 
@@ -48,9 +48,9 @@ class TestBuildAuthParams:
             VERIFY_SSL_PARAM: "False",
         }
 
-        result: AkeylessClientConfig = build_auth_params(mock_action)
+        result: AkeylessSecurityClientConfig = build_auth_params(mock_action)
 
-        assert isinstance(result, AkeylessClientConfig)
+        assert isinstance(result, AkeylessSecurityClientConfig)
         mock_action.get_configuration.assert_called_once_with(
             INTEGRATION_IDENTIFIER,
         )
@@ -70,7 +70,7 @@ class TestBuildAuthParams:
             VERIFY_SSL_PARAM: "True",
         }
 
-        result: AkeylessClientConfig = build_auth_params(mock_job)
+        result: AkeylessSecurityClientConfig = build_auth_params(mock_job)
 
         assert result.access_id == "test-access-id"
         assert result.access_key == "test-access-key"
@@ -87,7 +87,7 @@ class TestBuildAuthParams:
             API_GATEWAY_URL_PARAM: "https://api.akeyless.io",
         }
 
-        result: AkeylessClientConfig = build_auth_params(mock_job)
+        result: AkeylessSecurityClientConfig = build_auth_params(mock_job)
 
         assert result.verify_ssl is True
 
@@ -101,7 +101,7 @@ class TestBuildAuthParams:
             ACCESS_KEY_PARAM: "fallback-key",
         }
 
-        result: AkeylessClientConfig = build_auth_params(mock_job)
+        result: AkeylessSecurityClientConfig = build_auth_params(mock_job)
 
         mock_job.get_configuration_by_provider.assert_called_once_with(
             INTEGRATION_IDENTIFIER,
@@ -112,12 +112,12 @@ class TestBuildAuthParams:
         assert result.verify_ssl is True
 
     def test_unsupported_type_raises(self) -> None:
-        """Raises AkeylessError for unknown SDK types."""
+        """Raises AkeylessSecurityError for unknown SDK types."""
         mock_unknown: MagicMock = MagicMock()
         mock_unknown.__class__.__name__ = "UnknownSDKClass"
 
         with pytest.raises(
-            AkeylessError,
+            AkeylessSecurityError,
             match="not supported",
         ):
             build_auth_params(mock_unknown)

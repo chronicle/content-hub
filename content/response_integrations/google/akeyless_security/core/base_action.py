@@ -22,29 +22,29 @@ from typing import TYPE_CHECKING
 from TIPCommon.base.action import Action
 
 from .authentication import build_auth_params
-from .manager import AkeylessClient
+from .manager import AkeylessSecurityClient
 
 if TYPE_CHECKING:
-    from .datamodels import AkeylessClientConfig
+    from .datamodels import AkeylessSecurityClientConfig
 
 
-class AkeylessAction(Action, ABC):
-    """Base action class for Akeyless actions."""
+class AkeylessSecurityAction(Action, ABC):
+    """Base action class for Akeyless Security actions."""
 
     def __init__(self, script_name: str) -> None:
         """Initialize the base action."""
         super().__init__(script_name)
-        self.akeyless_client: AkeylessClient | None = None
+        self.akeyless_security_client: AkeylessSecurityClient | None = None
         self.error_output_message: str = ""
 
-    def _init_api_clients(self) -> AkeylessClient:
-        """Extract configuration and initialize the Akeyless API client.
+    def _init_api_clients(self) -> AkeylessSecurityClient:
+        """Extract configuration and initialize the AkeylessSecurity API client.
 
         Returns:
-            The initialized Akeyless API client.
+            The initialized AkeylessSecurity API client.
 
         """
-        config: AkeylessClientConfig = build_auth_params(self.soar_action)
-        self.akeyless_client = AkeylessClient(config, logger=self.logger)
+        config: AkeylessSecurityClientConfig = build_auth_params(self.soar_action)
+        self.akeyless_security_client = AkeylessSecurityClient(config)
 
-        return self.akeyless_client
+        return self.akeyless_security_client

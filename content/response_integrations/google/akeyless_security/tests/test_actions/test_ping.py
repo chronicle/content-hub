@@ -34,7 +34,7 @@ class TestPing:
     """Tests for PingAction."""
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
-    @patch("akeyless_security.core.manager.AkeylessClient.test_connectivity")
+    @patch("akeyless_security.core.manager.AkeylessSecurityClient.test_connectivity")
     def test_ping_success(
         self,
         mock_test_connectivity: MagicMock,
@@ -50,7 +50,7 @@ class TestPing:
         assert "Successfully connected" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
-    @patch("akeyless_security.core.manager.AkeylessClient.test_connectivity")
+    @patch("akeyless_security.core.manager.AkeylessSecurityClient.test_connectivity")
     def test_ping_failure(
         self,
         mock_test_connectivity: MagicMock,

@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Akeyless API client manager."""
+"""AkeylessSecurity API client manager."""
 
 from __future__ import annotations
 
 import os
 import threading
+import urllib.parse
+import urllib.request
 from typing import TYPE_CHECKING
 
 import akeyless
@@ -33,28 +35,25 @@ from .exceptions import (
     InvalidConfigurationError,
     SecretAccessError,
 )
-from .utils import mask_id, validate_response
+from .utils import mask_id, raise_api_error
 
 if TYPE_CHECKING:
-    from TIPCommon.base.interfaces import ScriptLogger
     from TIPCommon.types import SingleJson
 
-    from .datamodels import AkeylessClientConfig
+    from .datamodels import AkeylessSecurityClientConfig
 
 
-class AkeylessClient:
-    """Client for interacting with Akeyless."""
+class AkeylessSecurityClient:
+    """Client for interacting with AkeylessSecurity."""
 
     def __init__(
         self,
-        config: AkeylessClientConfig,
-        logger: ScriptLogger | None = None,
+        config: AkeylessSecurityClientConfig,
     ) -> None:
-        """Initialize the Akeyless Client.
+        """Initialize the AkeylessSecurity Client.
 
         Args:
             config: Client configuration containing credentials and gateway settings.
-            logger: Optional logger instance for diagnostic messages.
 
         Raises:
             InvalidConfigurationError: If Access ID or Access Key is not provided.
@@ -64,8 +63,7 @@ class AkeylessClient:
             msg = "Both Access ID and Access Key must be provided."
             raise InvalidConfigurationError(msg)
 
-        self.config: AkeylessClientConfig = config
-        self.logger: ScriptLogger | None = logger
+        self.config: AkeylessSecurityClientConfig = config
 
         self.configuration: akeyless.Configuration = akeyless.Configuration()
         self.configuration.host = self.config.api_gateway_url
@@ -81,8 +79,14 @@ class AkeylessClient:
             or os.environ.get("http_proxy")
             or os.environ.get("HTTP_PROXY")
         )
-        if proxy_url:
-            self.configuration.proxy = proxy_url
+        gateway_host: str = urllib.parse.urlparse(self.config.api_gateway_url).hostname or ""
+        if proxy_url and not urllib.request.proxy_bypass_environment(gateway_host):
+            parsed_proxy = urllib3.util.parse_url(proxy_url)
+            if parsed_proxy.auth:
+                self.configuration.proxy_headers = urllib3.make_headers(
+                    proxy_basic_auth=urllib.parse.unquote(parsed_proxy.auth),
+                )
+            self.configuration.proxy = parsed_proxy._replace(auth=None).url
 
         self.api_client: akeyless.ApiClient = akeyless.ApiClient(self.configuration)
         self.api: akeyless.V2Api = akeyless.V2Api(self.api_client)
@@ -116,20 +120,19 @@ class AkeylessClient:
                     access_type=ACCESS_KEY_TYPE,
                 )
                 auth_res: object = self.api.auth(auth_body)
-            except Exception as e:
-                validate_response(e, exception_cls=ConnectivityError)
-                raise ConnectivityError(str(e)) from e
+            except Exception as e:  # ruff:ignore[blind-except]
+                raise_api_error(e, exception_cls=ConnectivityError)
 
             token: str | None = getattr(auth_res, "token", None)
             if not token:
-                msg = "Authentication succeeded but no token was returned by Akeyless."
+                msg = "Authentication succeeded but no token was returned by AkeylessSecurity."
                 raise ConnectivityError(msg)
 
             self._token = str(token)
             return self._token
 
     def test_connectivity(self) -> bool:
-        """Test connectivity to Akeyless by authenticating.
+        """Test connectivity to AkeylessSecurity by authenticating.
 
         Returns:
             True if connection is successful.
@@ -182,18 +185,15 @@ class AkeylessClient:
         secret_body: akeyless.GetSecretValue = akeyless.GetSecretValue(**kwargs)
         try:
             response: object = self.api.get_secret_value(secret_body)
-        except Exception as e:
-            validate_response(e, exception_cls=SecretAccessError)
-            raise SecretAccessError(str(e)) from e
+        except Exception as e:  # ruff:ignore[blind-except]
+            raise_api_error(e, exception_cls=SecretAccessError)
 
         secret_val: object = (
-            response.get(secret_id)
-            if isinstance(response, dict)
-            else getattr(response, secret_id, None)
+            response.get(secret_id) if isinstance(response, dict) else getattr(response, secret_id, None)
         )
 
         if secret_val is None:
-            msg = f"Secret '{mask_id(secret_id)}' not found in Akeyless response."
+            msg = f"Secret '{mask_id(secret_id)}' not found in AkeylessSecurity response."
             raise SecretAccessError(msg)
 
         return str(secret_val)

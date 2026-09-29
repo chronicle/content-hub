@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Data models for the Akeyless integration."""
+"""Data models for the AkeylessSecurity integration."""
 
 from __future__ import annotations
 
@@ -22,8 +22,8 @@ from .constants import DEFAULT_API_GATEWAY_URL
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class AkeylessClientConfig:
-    """Configuration parameters for the Akeyless API client."""
+class AkeylessSecurityClientConfig:
+    """Configuration parameters for the AkeylessSecurity API client."""
 
     access_id: str
     access_key: str

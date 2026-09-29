@@ -38,7 +38,7 @@ class TestGetSecretValue:
         integration_config_file_path=CONFIG_PATH,
         parameters={"Secret Name": "/prod/db/password"},
     )
-    @patch("akeyless_security.core.manager.AkeylessClient.get_secret_value")
+    @patch("akeyless_security.core.manager.AkeylessSecurityClient.get_secret_value")
     def test_get_secret_value_default_version_success(
         self,
         mock_get_secret_value: MagicMock,
@@ -66,7 +66,7 @@ class TestGetSecretValue:
         integration_config_file_path=CONFIG_PATH,
         parameters={"Secret Name": "/prod/db/password:3"},
     )
-    @patch("akeyless_security.core.manager.AkeylessClient.get_secret_value")
+    @patch("akeyless_security.core.manager.AkeylessSecurityClient.get_secret_value")
     def test_get_secret_value_explicit_version_success(
         self,
         mock_get_secret_value: MagicMock,

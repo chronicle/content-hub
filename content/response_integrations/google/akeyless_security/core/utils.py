@@ -12,29 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Shared utility helpers for the Akeyless integration."""
+"""Shared utility helpers for the AkeylessSecurity integration."""
 
 from __future__ import annotations
 
 import json
-from http import HTTPStatus
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
-from .authentication import extract_integration_parameters
 from .constants import (
     DEFAULT_SECRET_VERSION,
     MIN_MASK_LENGTH,
     RESOURCE_NAME_PATTERN,
 )
-from .exceptions import AkeylessError, InvalidConfigurationError
+from .exceptions import AkeylessSecurityError, InvalidConfigurationError
 
 __all__ = [
     "build_lookup_with_warnings",
-    "extract_integration_parameters",
     "mask_id",
+    "raise_api_error",
     "resolve_secret_and_version",
     "validate_param_mappings",
-    "validate_response",
 ]
 
 if TYPE_CHECKING:
@@ -58,11 +55,7 @@ def _extract_error_from_dict(data: SingleJson) -> str | None:
     if isinstance(error_val, str) and error_val.strip():
         return error_val.strip()
     if isinstance(error_val, dict):
-        nested: object = (
-            error_val.get("message")
-            or error_val.get("description")
-            or error_val.get("error")
-        )
+        nested: object = error_val.get("message") or error_val.get("description") or error_val.get("error")
         if isinstance(nested, str) and nested.strip():
             return nested.strip()
 
@@ -88,9 +81,7 @@ def _extract_error_from_body(raw_body: str | bytes | None) -> str | None:
         return None
 
     text: str = (
-        raw_body.decode("utf-8", errors="replace").strip()
-        if isinstance(raw_body, bytes)
-        else str(raw_body).strip()
+        raw_body.decode("utf-8", errors="replace").strip() if isinstance(raw_body, bytes) else str(raw_body).strip()
     )
     if not text:
         return None
@@ -139,54 +130,30 @@ def _format_status_detail(
     return body_error or status_part
 
 
-def validate_response(
-    response: object,
-    error_msg: str | None = None,
-    exception_cls: type[AkeylessError] = AkeylessError,
-) -> None:
-    """Validate an Akeyless API response or exception and raise a concise error.
+def raise_api_error(
+    error: Exception,
+    exception_cls: type[AkeylessSecurityError] = AkeylessSecurityError,
+) -> NoReturn:
+    """Extract details from an AkeylessSecurity API exception and raise a concise error.
 
     Args:
-        response: An HTTP response object, SDK response, or raised exception.
-        error_msg: Optional prefix message describing the failed operation.
-        exception_cls: Exception class to raise on error.
+        error: The exception caught from the Akeyless SDK or HTTP request.
+        exception_cls: Exception class to raise.
 
     """
-    if isinstance(response, Exception):
-        target_err: object = response
-        if isinstance(response, AttributeError) and getattr(
-            getattr(response, "__context__", None), "reason", None
-        ):
-            target_err = response.__context__
+    target_err: object = error
+    if isinstance(error, AttributeError) and getattr(getattr(error, "__context__", None), "reason", None):
+        target_err = error.__context__
 
-        status: int | str | None = getattr(target_err, "status", None)
-        reason: str | None = getattr(target_err, "reason", None)
-        body: str | bytes | None = getattr(target_err, "body", None)
-        detail: str = (
-            _format_status_detail(status, reason, body) or str(target_err)
-            if (status is not None or reason is not None or body is not None)
-            else str(target_err)
-        )
-        msg: str = (
-            f"{error_msg}: {detail}"
-            if error_msg and not detail.startswith(error_msg)
-            else detail
-        )
-        raise exception_cls(msg) from None
-
-    status = getattr(response, "status", None) or getattr(response, "status_code", None)
-    if isinstance(status, int) and not (
-        HTTPStatus.OK <= status < HTTPStatus.MULTIPLE_CHOICES
-    ):
-        reason = getattr(response, "reason", None)
-        raw_body: str | bytes | None = (
-            getattr(response, "data", None)
-            or getattr(response, "text", None)
-            or getattr(response, "body", None)
-        )
-        detail = _format_status_detail(status, reason, raw_body)
-        msg = f"{error_msg}: {detail}" if error_msg else detail
-        raise exception_cls(msg)
+    status: int | str | None = getattr(target_err, "status", None)
+    reason: str | None = getattr(target_err, "reason", None)
+    body: str | bytes | None = getattr(target_err, "body", None)
+    detail: str = (
+        _format_status_detail(status, reason, body) or str(target_err)
+        if (status is not None or reason is not None or body is not None)
+        else str(target_err)
+    )
+    raise exception_cls(detail) from None
 
 
 def mask_id(value: str) -> str:

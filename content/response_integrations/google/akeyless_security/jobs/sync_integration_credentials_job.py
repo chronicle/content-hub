@@ -29,11 +29,11 @@ from TIPCommon.rest.async_soar_platform_clients.soar_api_client import (
     AsyncMarketplaceApi,
 )
 
+from ..core.authentication import build_auth_params
 from ..core.constants import (
     ANY_INTEGRATION_FILTER_VALUE,
     ASYNC_SEMAPHORE_LIMIT,
     CONNECTORS_KEY,
-    DEFAULT_API_GATEWAY_URL,
     DEFAULT_SECRET_VERSION,
     INTEGRATION_INSTANCES_KEY,
     JOBS_KEY,
@@ -42,7 +42,7 @@ from ..core.constants import (
     NameIdentifierMap,
     SecretCacheKey,
 )
-from ..core.datamodels import AkeylessClientConfig, ComponentTarget
+from ..core.datamodels import AkeylessSecurityClientConfig, ComponentTarget
 from ..core.exceptions import (
     ConnectivityError,
     IntegrationCredentialSyncError,
@@ -52,10 +52,9 @@ from ..core.exceptions import (
     ParameterUpdateError,
     SecretAccessError,
 )
-from ..core.manager import AkeylessClient
+from ..core.manager import AkeylessSecurityClient
 from ..core.utils import (
     build_lookup_with_warnings,
-    extract_integration_parameters,
     mask_id,
     resolve_secret_and_version,
     validate_param_mappings,
@@ -68,12 +67,10 @@ if TYPE_CHECKING:
 class SyncIntegrationCredentialsJob(Job):
     """Syncs credentials from Akeyless Security to the SOAR platform."""
 
-    _resolve_secret_and_version = staticmethod(resolve_secret_and_version)
-
     def __init__(self) -> None:
         """Initialize the credential synchronization job."""
         super().__init__(SYNC_CREDENTIALS_JOB_SCRIPT_NAME)
-        self.akeyless_client: AkeylessClient | None = None
+        self.akeyless_security_client: AkeylessSecurityClient | None = None
         self.credential_mapping: SingleJson = {}
         self.environment_name: str = ""
         self.instance_name_to_identifier: NameIdentifierMap = {}
@@ -85,103 +82,33 @@ class SyncIntegrationCredentialsJob(Job):
         self._secret_cache: dict[SecretCacheKey, str] = {}
         self._sync_errors: list[str] = []
 
-    @property
-    def execution_errors(self) -> list[str]:
-        """List of synchronization errors."""
-        return self._sync_errors
-
-    @execution_errors.setter
-    def execution_errors(self, value: list[str]) -> None:
-        """Set the list of synchronization errors."""
-        self._sync_errors = value
-
     def _init_api_clients(self) -> None:
         """Skip synchronous client initialization in favor of async setup."""
 
-    def _has_job_level_parameters(self) -> bool:
-        """Check whether the job instance has connection parameters in UI configuration.
+    def _get_integration_parameters(self) -> AkeylessSecurityClientConfig:
+        """Extract AkeylessSecurity configuration from the SOAR job context.
 
         Returns:
-            True if job-level connection parameters are configured, False otherwise.
+            Resolved AkeylessSecurity client configuration.
 
         """
-        return bool(
-            getattr(self.params, "access_id", None)
-            and getattr(self.params, "access_key", None)
-        )
+        return build_auth_params(self.soar_job)
 
-    def _extract_from_job_params(self) -> AkeylessClientConfig:
-        """Extract connection parameters directly from the Job UI configuration.
-
-        Returns:
-            Extracted Akeyless client configuration.
-
-        """
-        api_gateway_url = getattr(self.params, "api_gateway_url", None)
-        verify_ssl = getattr(self.params, "verify_ssl", None)
-
-        return AkeylessClientConfig(
-            access_id=self.params.access_id,
-            access_key=self.params.access_key,
-            api_gateway_url=(
-                api_gateway_url
-                if isinstance(api_gateway_url, str) and api_gateway_url.strip()
-                else DEFAULT_API_GATEWAY_URL
-            ),
-            verify_ssl=verify_ssl if verify_ssl is not None else True,
-        )
-
-    def _extract_from_fallback_configuration(self) -> AkeylessClientConfig:
-        """Extract parameters from the global integration configuration.
-
-        Returns:
-            Extracted fallback Akeyless client configuration.
-
-        """
-        return extract_integration_parameters(self.soar_job)
-
-    def _get_integration_parameters(self) -> AkeylessClientConfig:
-        """Extract Akeyless parameters from Job UI or fall back to global configuration.
-
-        Returns:
-            Resolved Akeyless client configuration.
-
-        """
-        if self._has_job_level_parameters():
-            self.logger.info(
-                "Extracting Akeyless Security connection parameters directly from the Job's UI configuration settings."
-            )
-            return self._extract_from_job_params()
-
-        self.logger.info(
-            "Job UI configuration parameters are empty or incomplete. "
-            "Falling back to the global Integration Instance configuration..."
-        )
-
-        return self._extract_from_fallback_configuration()
-
-    async def _init_akeyless_client(self) -> None:
-        """Initialize the Akeyless client and verify connectivity.
+    async def _init_akeyless_security_client(self) -> None:
+        """Initialize the AkeylessSecurity client and verify connectivity.
 
         Raises:
-            ConnectivityError: If connection or authentication to Akeyless fails.
+            ConnectivityError: If connection or authentication to AkeylessSecurity fails.
 
         """
-        try:
-            if hasattr(self.soar_job, "init_proxy_settings"):
-                self.soar_job.init_proxy_settings()
-        except Exception as e:  # ruff:ignore[blind-except]
-            self.logger.debug(f"Unable to initialize proxy settings from platform: {e}")
-
         config = self._get_integration_parameters()
-        self.akeyless_client = await asyncio.to_thread(
-            AkeylessClient,
+        self.akeyless_security_client = await asyncio.to_thread(
+            AkeylessSecurityClient,
             config,
-            logger=self.logger,
         )
         self.logger.info("Testing connectivity to Akeyless Security...")
         try:
-            await asyncio.to_thread(self.akeyless_client.test_connectivity)
+            await asyncio.to_thread(self.akeyless_security_client.test_connectivity)
         except Exception as e:
             msg = f"Failed to connect or authenticate to Akeyless Security: {e}"
             raise ConnectivityError(msg) from e
@@ -213,14 +140,12 @@ class SyncIntegrationCredentialsJob(Job):
         invalid_keys = set(self.credential_mapping.keys()) - valid_keys
         if invalid_keys:
             msg = (
-                f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. "
-                f"Allowed keys are: {list(valid_keys)}."
+                f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. Allowed keys are: {list(valid_keys)}."
             )
             raise InvalidConfigurationError(msg)
 
         total_mappings: int = sum(
-            validate_param_mappings(category, self.credential_mapping.get(category, {}))
-            for category in valid_keys
+            validate_param_mappings(category, self.credential_mapping.get(category, {})) for category in valid_keys
         )
         if total_mappings == 0:
             msg = (
@@ -237,10 +162,8 @@ class SyncIntegrationCredentialsJob(Job):
 
     async def _async_main(self) -> None:
         """Execute the main asynchronous synchronization workflow."""
-        await self._init_akeyless_client()
-        self.environment_name = getattr(self.params, "environment_name", None) or getattr(
-            self, "environment_name", "Default Environment"
-        )
+        await self._init_akeyless_security_client()
+        self.environment_name = self.params.environment_name
         self._load_context()
         async_soar = AsyncChronicleSOAR(self.soar_job)
         try:
@@ -255,21 +178,16 @@ class SyncIntegrationCredentialsJob(Job):
     async def _run_sync_pipeline(self, api: AsyncMarketplaceApi, semaphore: asyncio.Semaphore) -> None:
         """Run synchronization tasks across instances, connectors, and jobs."""
         await self._prefetch_all_secrets(semaphore)
-        if self._is_approaching_timeout():
-            self._check_sync_errors_and_raise()
-            return
+        for stage_name, sync_stage in (
+            ("integration instances", self._sync_integration_instances),
+            ("connectors", self._sync_connectors),
+            ("jobs", self._sync_jobs),
+        ):
+            if self._is_approaching_timeout():
+                self._sync_errors.append(f"Timeout reached before syncing {stage_name}. Sync is incomplete.")
+                break
+            await sync_stage(api, semaphore)
 
-        await self._sync_integration_instances(api, semaphore)
-        if self._is_approaching_timeout():
-            self._check_sync_errors_and_raise()
-            return
-
-        await self._sync_connectors(api, semaphore)
-        if self._is_approaching_timeout():
-            self._check_sync_errors_and_raise()
-            return
-
-        await self._sync_jobs(api, semaphore)
         self._check_sync_errors_and_raise()
 
     def _check_sync_errors_and_raise(self) -> None:
@@ -338,11 +256,7 @@ class SyncIntegrationCredentialsJob(Job):
                     if isinstance(param_mapping, dict):
                         locations.update(str(v).strip() for v in param_mapping.values())
 
-        uncached_locations = [
-            loc
-            for loc in locations
-            if resolve_secret_and_version(loc) not in self._secret_cache
-        ]
+        uncached_locations = [loc for loc in locations if resolve_secret_and_version(loc) not in self._secret_cache]
         if not uncached_locations:
             return
 
@@ -375,33 +289,28 @@ class SyncIntegrationCredentialsJob(Job):
             The retrieved secret value.
 
         Raises:
-            SecretAccessError: If fetching the secret from Akeyless fails.
+            SecretAccessError: If fetching the secret from AkeylessSecurity fails.
 
         """
         cache_key = (secret_id, version_id)
         if cache_key in self._secret_cache:
-            self.logger.info(
-                f"Using cached payload for secret '{mask_id(secret_id)}' (version '{version_id}')."
-            )
+            self.logger.info(f"Using cached payload for secret '{mask_id(secret_id)}' (version '{version_id}').")
             return self._secret_cache[cache_key]
 
-        if self.akeyless_client is None:
-            msg = "Akeyless client is not initialized."
+        if self.akeyless_security_client is None:
+            msg = "AkeylessSecurity client is not initialized."
             raise SecretAccessError(msg)
 
         try:
             secret_value: str = await asyncio.to_thread(
-                self.akeyless_client.get_secret_value,
+                self.akeyless_security_client.get_secret_value,
                 secret_id=secret_id,
                 version_id=version_id,
             )
         except SecretAccessError:
             raise
         except Exception as e:
-            msg = (
-                f"Failed to fetch secret '{mask_id(secret_id)}' "
-                f"(version '{version_id}') for {context_label}: {e}"
-            )
+            msg = f"Failed to fetch secret '{mask_id(secret_id)}' (version '{version_id}') for {context_label}: {e}"
             raise SecretAccessError(msg) from e
 
         self._secret_cache[cache_key] = secret_value
@@ -431,10 +340,9 @@ class SyncIntegrationCredentialsJob(Job):
             List of integration instance dictionaries for the configured environment.
 
         """
-        env_name = self.environment_name or getattr(self.params, "environment_name", "")
         response = await api.get_installed_integrations_of_environment(
             integration_identifier=ANY_INTEGRATION_FILTER_VALUE,
-            environment=env_name,
+            environment=self.environment_name,
         )
         if isinstance(response, list):
             return response
@@ -453,11 +361,10 @@ class SyncIntegrationCredentialsJob(Job):
             return
 
         self.logger.info(f"Processing {len(instances)} integration instance(s)...")
-        env_name = self.environment_name or getattr(self.params, "environment_name", "")
         instances_list = await self._fetch_environment_instances(api)
         if not instances_list:
             msg = (
-                f"Either the environment name '{env_name}' is invalid "
+                f"Either the environment name '{self.environment_name}' is invalid "
                 f"or no integration instances are configured in that environment."
             )
             self.logger.error(msg)
@@ -469,7 +376,7 @@ class SyncIntegrationCredentialsJob(Job):
         )
         self.logger.info(
             f"Found {len(self.instance_name_to_identifier)} integration instance(s) "
-            f"in environment '{env_name}'."
+            f"in environment '{self.environment_name}'."
         )
 
         async def update_task(name: str, param_mapping: SingleJson) -> None:
@@ -528,11 +435,10 @@ class SyncIntegrationCredentialsJob(Job):
         """
         identifier: str | None = self.instance_name_to_identifier.get(instance_name)
         if identifier is None:
-            env: str = self.environment_name or getattr(self.params, "environment_name", "")
             available: list[str] = list(self.instance_name_to_identifier.keys())
             msg = (
                 f"Integration instance '{instance_name}' not found in environment "
-                f"'{env}'. Available instances: {available}."
+                f"'{self.environment_name}'. Available instances: {available}."
             )
             self.logger.warn(msg)
             self._sync_errors.append(msg)
@@ -548,10 +454,7 @@ class SyncIntegrationCredentialsJob(Job):
         """
         state_val: str = f"{mapped_value}::{version_id}"
 
-        return (
-            version_id != DEFAULT_SECRET_VERSION
-            and self.state_context.get(state_key) == state_val
-        )
+        return version_id != DEFAULT_SECRET_VERSION and self.state_context.get(state_key) == state_val
 
     async def _set_integration_params(
         self,
@@ -576,9 +479,7 @@ class SyncIntegrationCredentialsJob(Job):
                 )
                 continue
 
-            secret_value = await self._fetch_secret_value_pre_resolved(
-                secret_id, version_id, context_label=context
-            )
+            secret_value = await self._fetch_secret_value_pre_resolved(secret_id, version_id, context_label=context)
             try:
                 await api.set_configuration_property(
                     integration_instance_identifier=target.identifier,
@@ -695,9 +596,7 @@ class SyncIntegrationCredentialsJob(Job):
                 )
                 continue
 
-            secret_value = await self._fetch_secret_value_pre_resolved(
-                secret_id, version_id, context_label=context
-            )
+            secret_value = await self._fetch_secret_value_pre_resolved(secret_id, version_id, context_label=context)
             try:
                 await api.set_connector_parameter(
                     connector_instance_identifier=target.identifier,
@@ -751,13 +650,10 @@ class SyncIntegrationCredentialsJob(Job):
         """
         installed_jobs_response: SingleJson = await api.get_installed_jobs()
         if isinstance(installed_jobs_response, dict) and (
-            "job_instances" in installed_jobs_response
-            or "jobInstances" in installed_jobs_response
+            "job_instances" in installed_jobs_response or "jobInstances" in installed_jobs_response
         ):
             job_instances: list[SingleJson] = (
-                installed_jobs_response.get("job_instances")
-                or installed_jobs_response.get("jobInstances")
-                or []
+                installed_jobs_response.get("job_instances") or installed_jobs_response.get("jobInstances") or []
             )
         elif isinstance(installed_jobs_response, list):
             job_instances = installed_jobs_response
@@ -800,9 +696,7 @@ class SyncIntegrationCredentialsJob(Job):
             return
 
         job_data, parameters = resolved
-        pending_state_updates = await self._apply_secrets_to_params(
-            job_name, param_mapping, parameters
-        )
+        pending_state_updates = await self._apply_secrets_to_params(job_name, param_mapping, parameters)
         if not pending_state_updates:
             self.logger.info(f"No parameters updated for job '{job_name}' — skipping save.")
             return
@@ -833,9 +727,7 @@ class SyncIntegrationCredentialsJob(Job):
         job_data = dict(job_data)
         parameters: list[SingleJson] | None = job_data.get("parameters")
         if parameters is None:
-            job_data, parameters = await self._fetch_full_job_details(
-                api, job_name, job_data
-            ) or (None, None)
+            job_data, parameters = await self._fetch_full_job_details(api, job_name, job_data) or (None, None)
             if job_data is None:
                 return None
 
@@ -946,8 +838,7 @@ class SyncIntegrationCredentialsJob(Job):
             parameters[param_index[param_name]]["value"] = secret_value
             pending_state_updates[state_key] = f"{mapped_value}::{version_id}"
             self.logger.info(
-                f"Set '{param_name}' on job '{job_name}' "
-                f"from secret '{mask_id(secret_id)}' (version '{version_id}')."
+                f"Set '{param_name}' on job '{job_name}' from secret '{mask_id(secret_id)}' (version '{version_id}')."
             )
 
         return pending_state_updates
@@ -972,9 +863,6 @@ class SyncIntegrationCredentialsJob(Job):
         except Exception as e:
             msg = f"Failed to save job '{job_name}': {e}"
             raise JobSaveError(msg) from e
-
-
-SyncIntegrationCredentialJob = SyncIntegrationCredentialsJob
 
 
 def main() -> None:
