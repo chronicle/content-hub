@@ -14,7 +14,6 @@
 
 """Tests for the ChangeAccountPassword action in CyberArk PAM integration."""
 
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -33,6 +32,7 @@ if TYPE_CHECKING:
 
 class TestChangeAccountPassword:
     """Test suite for the ChangeAccountPassword action."""
+
     @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_11"})
     def test_change_password_success(
         self,
@@ -87,17 +87,17 @@ class TestChangeAccountPassword:
         assert action_output.results.result_value is False
         assert (
             "None of the provided accounts were queued for a password change task. "
-            "Please check JSON Result for more information."
-            in action_output.results.output_message
+            "Please check JSON Result for more information." in action_output.results.output_message
         )
         assert action_output.results.json_output.json_result == {
             "successful_accounts": [],
-            "failed_accounts": [
-                {"account_id": "25_30", "error": "Bad Request"}
-            ],
+            "failed_accounts": [{"account_id": "25_30", "error": "Bad Request"}],
         }
 
-    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_11, 25_30"})
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={"Account ID": "28_11, 25_30"},
+    )
     def test_change_password_mixed(
         self,
         action_output: MockActionOutput,
@@ -144,14 +144,11 @@ class TestChangeAccountPassword:
         )
         assert (
             "Action wasn't able to queue an immediate password change task in CyberArk PAM for the following "
-            "accounts: 25_30. Please check JSON Result for more information."
-            in action_output.results.output_message
+            "accounts: 25_30. Please check JSON Result for more information." in action_output.results.output_message
         )
         assert action_output.results.json_output.json_result == {
             "successful_accounts": ["28_11"],
-            "failed_accounts": [
-                {"account_id": "25_30", "error": "Bad Request"}
-            ],
+            "failed_accounts": [{"account_id": "25_30", "error": "Bad Request"}],
         }
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "36_4"})
@@ -191,12 +188,9 @@ class TestChangeAccountPassword:
         assert action_output.results.result_value is False
         assert (
             "None of the provided accounts were queued for a password change task. "
-            "Please check JSON Result for more information."
-            in action_output.results.output_message
+            "Please check JSON Result for more information." in action_output.results.output_message
         )
         assert action_output.results.json_output.json_result == {
             "successful_accounts": [],
-            "failed_accounts": [
-                {"account_id": "36_4", "error": "The account is not managed by the CPM"}
-            ],
+            "failed_accounts": [{"account_id": "36_4", "error": "The account is not managed by the CPM"}],
         }
