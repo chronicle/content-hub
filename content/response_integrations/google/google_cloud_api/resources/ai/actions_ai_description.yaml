@@ -1,0 +1,340 @@
+Execute HTTP Request:
+  ai_description: >-
+    ### General Description
+
+    This action executes a customizable HTTP request against a specified URL using
+    the Google Cloud API integration's authenticated session. It is a versatile utility
+    designed to interact with any reachable REST API, supporting various HTTP methods,
+    custom headers, query parameters, and body payloads. It can handle asynchronous
+    polling for specific response values and can optionally download and attach response
+    data to the Google SecOps Case Wall.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Extracts and validates all input parameters, ensuring JSON
+    strings are properly formatted.
+
+    2. **Placeholder Application:** Replaces dynamic placeholders in the URL and payload
+    with configuration-specific values.
+
+    3. **Request Execution:** Sends the HTTP request using the integration's authorized
+    session (handling OAuth2 or Service Account authentication).
+
+    4. **Response Processing:** Parses the response based on the `Fields To Return`
+    parameter and optionally encodes the data to Base64.
+
+    5. **Condition Checking:** If `Expected Response Values` are defined, the action
+    checks the response. If the conditions aren't met, it remains 'In Progress' for
+    the next polling cycle.
+
+    6. **Attachment Handling:** If `Save To Case Wall` is enabled, the response content
+    is compressed into a zip file (optionally password-protected) and uploaded to
+    the case.
+
+
+    ### Additional Notes
+
+    - **Placeholders:** You can use `{{project_id}}` and `{{org_id}}` in the URL Path
+    and Body Payload; these will be automatically replaced with values from the integration
+    configuration.
+
+    - **Async Mode:** The action automatically switches to asynchronous execution
+    if the `Expected Response Values` parameter is populated.
+  ai_short_description: >-
+    Executes a customizable HTTP request against a specified URL using the Google
+    Cloud API integration's authenticated session, supporting various HTTP methods,
+    custom headers, query parameters, and body payloads.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action can execute HTTP methods such as POST, PUT, PATCH, and DELETE, which
+      can create, modify, or delete data on the target external API.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action can save the HTTP response content as a zip file attachment to the
+      case wall.
+    reasoning: >-
+      The action fetches data by executing HTTP requests (GET, POST, etc.). It can
+      mutate external data because it supports state-changing HTTP methods like POST,
+      PUT, PATCH, and DELETE. It mutates internal data by optionally saving the HTTP
+      response as a zip file attachment to the case wall. It does not update entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or perform any
+      entity-specific logic. It is a generic HTTP request utility that operates independently
+      of case entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a generic HTTP request utility. While it can interact with various
+      APIs to fetch data or trigger changes, it does not have a specific, predefined
+      security outcome like enriching an IOC, blocking an IP, or isolating a host.
+      Therefore, it does not strictly match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Method | String | Yes | Specify the method for the request (GET, POST, PUT,
+    PATCH, DELETE, HEAD, OPTIONS). |
+
+    | URL Path | String | Yes | Specify the URL that needs to be executed. |
+
+    | URL Params | String | No | Specify the parameters for the URL. Any value provided
+    in this parameter will be used alongside the values that are directly provided
+    in the URL path parameters. |
+
+    | Headers | String | No | Specify headers for the HTTP request. |
+
+    | Cookie | String | No | Specify the parameters that should be constructed into
+    the "Cookie" header. This parameter will overwrite the cookie provided in the
+    "Headers" parameter. |
+
+    | Body Payload | String | No | Specify body for the HTTP request. |
+
+    | Expected Response Values | String | No | Specify the expected response values.
+    If this parameter is not empty, then action will work in ASYNC mode and action
+    will execute until the expected values will be seen or until timeout. Example
+    input: {"key": "expected value"} |
+
+    | Follow Redirects | Boolean | No | If enabled, action will follow the redirects.
+    |
+
+    | Fail on 4xx/5xx | Boolean | No | If enabled, action will fail, if the status
+    code of the response is 4xx or 5xx. |
+
+    | Base64 Output | Boolean | No | If enabled, action will convert the response
+    to base64. This is useful when downloading files. Note: JSON result can't be bigger
+    than 15 mb. |
+
+    | Fields To Return | String | Yes | Specify what fields to return. Possible values:
+    response_data, redirects, response_code, response_cookies, response_headers, apparent_encoding.
+    |
+
+    | Request Timeout | String | Yes | How long to wait for the server to send data
+    before giving up. |
+
+    | Save To Case Wall | Boolean | No | If enabled, action will save the file and
+    attach it to the case wall. Note: the file will be archived with ".zip" extension.
+    This zip will not be password protected. |
+
+    | Password Protect Zip | Boolean | No | If enabled, action will add an "infected"
+    password to the zip created with "Save To Case Wall" parameter. Use this, when
+    you are dealing with suspicious files. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool used to verify the connectivity between
+    the Google SecOps environment and the Google Cloud API. It validates that the
+    integration's authentication configuration (Service Account or Workload Identity)
+    is correct and that the network path to the target Google Cloud service is open.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the 'Test URL' from the integration's
+    shared configuration.
+
+    2. **Placeholder Resolution**: It replaces any configuration-defined placeholders
+    (e.g., project ID) within the URL string with their actual values.
+
+    3. **Execution**: The action performs an authenticated HTTP GET request to the
+    resolved URL.
+
+    4. **Verification**: It checks the response status. If the request is successful
+    (e.g., HTTP 200), the action completes successfully; otherwise, it raises an error.
+
+
+    ### Additional Notes
+
+    - This action does not operate on entities and is intended for initial setup and
+    health checks.
+  ai_short_description: >-
+    A diagnostic tool used to verify the connectivity between the Google SecOps environment
+    and the Google Cloud API by performing an authenticated HTTP GET request to a
+    configured test URL.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs an HTTP GET request to test connectivity but does not fetch
+      contextual data for alerts or entities. It does not mutate external or internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It is a diagnostic tool for testing
+      connectivity and does not process or filter any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic ping to test connectivity. It does not enrich IOCs
+      or assets, update alerts, manage tickets, modify blocklists or allowlists, manage
+      identities, contain hosts, search events, execute commands, manage files, or
+      send emails/messages. Therefore, it does not match any of the expected outcome
+      categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
