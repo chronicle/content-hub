@@ -46,7 +46,7 @@ def _make_job() -> SyncIntegrationCredentialsJob:
     job.environment_name = "Default Environment"
     job.instance_name_to_identifier = {}
     job.connector_name_to_identifier = {}
-    job.job_name_to_identifier = {}
+    job.name_to_job = {}
     job.name_id = "SyncIntegrationCredentialsJob"
     job.state_context = {}
     job._secret_cache = {}
@@ -612,6 +612,7 @@ class TestParameterExtractionAndContext:
 
         assert len(job._sync_errors) == 1
         assert "Timeout reached before syncing integration instances" in job._sync_errors[0]
+        job.logger.error.assert_called_with("Timeout reached before syncing integration instances. Sync is incomplete.")
 
     @pytest.mark.anyio
     async def test_skips_unchanged_pinned_secret_version_in_state_context(self) -> None:
@@ -630,3 +631,53 @@ class TestParameterExtractionAndContext:
 
         mock_api.set_configuration_property.assert_not_called()
         assert len(job._sync_errors) == 0
+
+    @pytest.mark.anyio
+    async def test_sync_instances_timeout_logs_and_records_error(self) -> None:
+        """Logs and records error when timeout is reached during single instance sync task."""
+        job = _make_job()
+        job.credential_mapping = {"integration_instances": {"inst1": {"p1": "sec1"}}}
+        mock_api = AsyncMock()
+        mock_api.get_installed_integrations_of_environment.return_value = [
+            {"displayName": "inst1", "identifier": "inst1-id"}
+        ]
+        semaphore = asyncio.Semaphore(5)
+
+        with patch.object(job, "_is_approaching_timeout", return_value=True):
+            await job._sync_integration_instances(mock_api, semaphore)
+
+        assert len(job._sync_errors) == 1
+        assert "Timeout reached while syncing integration instance 'inst1'. Sync skipped." in job._sync_errors[0]
+        job.logger.error.assert_called_with("Timeout reached while syncing integration instance 'inst1'. Sync skipped.")
+
+    @pytest.mark.anyio
+    async def test_sync_connectors_timeout_logs_and_records_error(self) -> None:
+        """Logs and records error when timeout is reached during single connector sync task."""
+        job = _make_job()
+        job.credential_mapping = {"connectors": {"conn1": {"p1": "sec1"}}}
+        mock_api = AsyncMock()
+        mock_api.get_connector_cards.return_value = [{"displayName": "conn1", "identifier": "conn1-id"}]
+        semaphore = asyncio.Semaphore(5)
+
+        with patch.object(job, "_is_approaching_timeout", return_value=True):
+            await job._sync_connectors(mock_api, semaphore)
+
+        assert len(job._sync_errors) == 1
+        assert "Timeout reached while syncing connector 'conn1'. Sync skipped." in job._sync_errors[0]
+        job.logger.error.assert_called_with("Timeout reached while syncing connector 'conn1'. Sync skipped.")
+
+    @pytest.mark.anyio
+    async def test_sync_jobs_timeout_logs_and_records_error(self) -> None:
+        """Logs and records error when timeout is reached during single job sync task."""
+        job = _make_job()
+        job.credential_mapping = {"jobs": {"job1": {"p1": "sec1"}}}
+        mock_api = AsyncMock()
+        mock_api.get_installed_jobs.return_value = [{"displayName": "job1", "name": "job1", "id": 10}]
+        semaphore = asyncio.Semaphore(5)
+
+        with patch.object(job, "_is_approaching_timeout", return_value=True):
+            await job._sync_jobs(mock_api, semaphore)
+
+        assert len(job._sync_errors) == 1
+        assert "Timeout reached while syncing job 'job1'. Sync skipped." in job._sync_errors[0]
+        job.logger.error.assert_called_with("Timeout reached while syncing job 'job1'. Sync skipped.")

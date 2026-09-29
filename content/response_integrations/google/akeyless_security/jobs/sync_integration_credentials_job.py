@@ -75,7 +75,6 @@ class SyncIntegrationCredentialsJob(Job):
         self.environment_name: str = ""
         self.instance_name_to_identifier: NameIdentifierMap = {}
         self.connector_name_to_identifier: NameIdentifierMap = {}
-        self.job_name_to_identifier: NameIdentifierMap = {}
         self.name_to_job: SingleJson = {}
         self.job_start_time: int = int(time.time() * 1000)
         self.state_context: dict[str, str] = {}
@@ -184,7 +183,9 @@ class SyncIntegrationCredentialsJob(Job):
             ("jobs", self._sync_jobs),
         ):
             if self._is_approaching_timeout():
-                self._sync_errors.append(f"Timeout reached before syncing {stage_name}. Sync is incomplete.")
+                error_msg = f"Timeout reached before syncing {stage_name}. Sync is incomplete."
+                self.logger.error(error_msg)
+                self._sync_errors.append(error_msg)
                 break
             await sync_stage(api, semaphore)
 
@@ -381,6 +382,9 @@ class SyncIntegrationCredentialsJob(Job):
 
         async def update_task(name: str, param_mapping: SingleJson) -> None:
             if self._is_approaching_timeout():
+                error_msg = f"Timeout reached while syncing integration instance '{name}'. Sync skipped."
+                self.logger.error(error_msg)
+                self._sync_errors.append(error_msg)
                 return
             async with semaphore:
                 try:
@@ -515,6 +519,9 @@ class SyncIntegrationCredentialsJob(Job):
 
         async def update_task(name: str, param_mapping: SingleJson) -> None:
             if self._is_approaching_timeout():
+                error_msg = f"Timeout reached while syncing connector '{name}'. Sync skipped."
+                self.logger.error(error_msg)
+                self._sync_errors.append(error_msg)
                 return
             async with semaphore:
                 try:
@@ -630,6 +637,9 @@ class SyncIntegrationCredentialsJob(Job):
 
         async def update_task(job_name: str, param_mapping: SingleJson) -> None:
             if self._is_approaching_timeout():
+                error_msg = f"Timeout reached while syncing job '{job_name}'. Sync skipped."
+                self.logger.error(error_msg)
+                self._sync_errors.append(error_msg)
                 return
             async with semaphore:
                 try:
