@@ -17,10 +17,10 @@ from __future__ import annotations
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_configuration_param
 
-from google_cloud_api.core.GoogleCloudApiAuthManager import build_auth_manager
-from google_cloud_api.core.GoogleCloudApiManager import ApiManager
-from google_cloud_api.core.GoogleCloudApiConstants import INTEGRATION_IDENTIFIER
-from google_cloud_api.core.GoogleCloudApiDatamodels import IntegrationPlaceholders
+from .GoogleCloudApiAuthManager import build_auth_manager
+from .GoogleCloudApiManager import ApiManager
+from .GoogleCloudApiConstants import INTEGRATION_IDENTIFIER
+from .GoogleCloudApiDatamodels import IntegrationPlaceholders
 
 
 class BaseAction(Action):

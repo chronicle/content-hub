@@ -18,9 +18,9 @@ import requests
 from google.auth.transport.requests import AuthorizedSession
 
 from TIPCommon.base.utils import NewLineLogger
-from google_cloud_api.core import GoogleCloudApiConstants
-from google_cloud_api.core.GoogleCloudApiDatamodels import IntegrationPlaceholders
-from google_cloud_api.core import GoogleCloudApiUtils as Utils
+from . import GoogleCloudApiConstants
+from .GoogleCloudApiDatamodels import IntegrationPlaceholders
+from . import GoogleCloudApiUtils as Utils
 
 
 class ApiManager:

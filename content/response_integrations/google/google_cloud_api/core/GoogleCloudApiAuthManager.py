@@ -30,9 +30,9 @@ from TIPCommon.types import ChronicleSOAR
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
 
-from google_cloud_api.core.GoogleCloudApiConstants import INTEGRATION_IDENTIFIER, DEFAULT_OAUTH_SCOPES
-from google_cloud_api.core.GoogleCloudApiExceptions import GoogleCloudApiAuthException
-from google_cloud_api.core.GoogleCloudApiUtils import parse_string_to_dict
+from .GoogleCloudApiConstants import INTEGRATION_IDENTIFIER, DEFAULT_OAUTH_SCOPES
+from .GoogleCloudApiExceptions import GoogleCloudApiAuthException
+from .GoogleCloudApiUtils import parse_string_to_dict
 
 
 def build_auth_manager(

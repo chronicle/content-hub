@@ -19,13 +19,13 @@ from TIPCommon.base.action.data_models import ExecutionState
 from TIPCommon.validation import ParameterValidator
 from TIPCommon.utils import is_empty_string_or_none
 
-from google_cloud_api.core.GoogleCloudApiBaseAction import BaseAction
-from google_cloud_api.core.GoogleCloudApiConstants import (
+from ..core.GoogleCloudApiBaseAction import BaseAction
+from ..core.GoogleCloudApiConstants import (
     PING_SCRIPT_NAME,
     FIELDS_TO_RETURN_POSSIBLE_VALUES,
 )
-from google_cloud_api.core import GoogleCloudApiExceptions as Exceptions
-from google_cloud_api.core import GoogleCloudApiUtils as Utils
+from ..core import GoogleCloudApiExceptions as Exceptions
+from ..core import GoogleCloudApiUtils as Utils
 
 
 SUCCESS_MESSAGE = "Successfully executed API request."

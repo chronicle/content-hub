@@ -34,13 +34,13 @@ from TIPCommon.data_models import CaseWallAttachment
 from TIPCommon.rest.soar_api import save_attachment_to_case_wall
 from TIPCommon.types import SingleJson
 
-from google_cloud_api.core.GoogleCloudApiConstants import (
+from .GoogleCloudApiConstants import (
     FILE_NAME,
     ZIP_FILE_EXTENSION,
     ZIP_FILE_PASSWORD,
 )
-from google_cloud_api.core.GoogleCloudApiDatamodels import IntegrationPlaceholders
-from google_cloud_api.core.GoogleCloudApiExceptions import (
+from .GoogleCloudApiDatamodels import IntegrationPlaceholders
+from .GoogleCloudApiExceptions import (
     GoogleCloudApiInvalidJsonException,
     GoogleCloudApiFileException,
     GoogleCloudApiHTTPException,

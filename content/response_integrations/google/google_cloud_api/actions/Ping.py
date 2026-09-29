@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from TIPCommon.extraction import extract_configuration_param
 
-from google_cloud_api.core.GoogleCloudApiBaseAction import BaseAction
-from google_cloud_api.core.GoogleCloudApiConstants import (
+from ..core.GoogleCloudApiBaseAction import BaseAction
+from ..core.GoogleCloudApiConstants import (
     PING_SCRIPT_NAME,
     INTEGRATION_IDENTIFIER,
 )

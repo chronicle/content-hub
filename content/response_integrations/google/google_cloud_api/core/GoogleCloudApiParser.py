@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from TIPCommon.types import SingleJson
-from google_cloud_api.core import GoogleCloudApiDatamodels
+from . import GoogleCloudApiDatamodels
 
 
 def build_base_object(
