@@ -13,27 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
-import importlib
-import soar_sdk
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
 
 import pathlib
 
+import google.auth.compute_engine
 import google.auth.transport.requests
 import pytest
 import requests
@@ -56,6 +39,8 @@ from google_cloud_api.tests.core.session import (
 )
 from integration_testing.common import get_def_file_content, use_live_api
 from integration_testing.logger import Logger
+
+pytest_plugins = ("integration_testing.conftest",)
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
 CONFIG: SingleJson = get_def_file_content(CONFIG_PATH)
@@ -80,6 +65,13 @@ def gcloud_api_script_session(
             google_cloud_api.core.GoogleCloudApiAuthManager,
             "AuthorizedSession",
             lambda *args, **kwargs: session
+        )
+        monkeypatch.setattr(
+            "TIPCommon.rest.auth.get_adc",
+            lambda *args, **kwargs: (
+                google.auth.compute_engine.Credentials(),
+                CONFIG["Project ID"],
+            ),
         )
 
     yield session
