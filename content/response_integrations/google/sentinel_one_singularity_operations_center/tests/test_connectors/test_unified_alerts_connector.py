@@ -708,7 +708,7 @@ def test_ontology_rules_matching_generic_name_declare_an_event_scope() -> None:
     """Verify no ontology rule matches the generic name key without a scope."""
     rules = yaml.safe_load(ONTOLOGY_PATH.read_text(encoding="utf-8"))
 
-    unscoped = [
+    unscoped: list[str] = [
         rule["security_event_file_name"]
         for rule in rules
         if rule.get("raw_data_primary_field_match_term") == "name"
