@@ -17,8 +17,9 @@ from __future__ import annotations
 import json
 import re
 from datetime import date, datetime
+from enum import Enum
+from typing import Any
 
-import whois_alt
 from ipwhois import IPWhois
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -33,6 +34,7 @@ from TIPCommon.data_models import CreateEntity
 from TIPCommon.rest.soar_api import create_entity
 from tldextract import extract
 
+from ..core.data_model import get_domain_whois
 from ..core.IpLocation import DbIpCity
 
 SUPPORTED_ENTITY_TYPES = [
@@ -44,20 +46,75 @@ SUPPORTED_ENTITY_TYPES = [
 ]
 
 
-def create_entity_with_relation(siemplify, new_entity, linked_entity):
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
+
+def create_entity_with_relation(
+    siemplify: SiemplifyAction,
+    new_entity: str,
+    linked_entity: str,
+    alert_identifier: str | None = None,
+) -> None:
     entity_to_create = CreateEntity(
-            case_id=siemplify.case_id,
-            alert_identifier=siemplify.alert_id,
-            entity_type="DOMAIN",
-            entity_identifier=new_entity.upper(),
-            entity_to_connect_regex=f"{re.escape(linked_entity.upper())}$",
-            types_to_connect=[],
-        )
+        case_id=siemplify.case_id,
+        alert_identifier=alert_identifier or siemplify.alert_id,
+        entity_type="DOMAIN",
+        entity_identifier=new_entity.upper(),
+        entity_to_connect_regex=f"{re.escape(linked_entity.upper())}$",
+        types_to_connect=[],
+    )
     create_entity(siemplify, entity_to_create)
 
 
-def get_alert_entities(siemplify):
-    return [entity for alert in siemplify.case.alerts for entity in alert.entities]
+def get_alert_entities(siemplify: SiemplifyAction) -> list[Any]:
+    alerts = getattr(siemplify.case, "open_alerts", None) or getattr(
+        siemplify.case, "alerts", []
+    )
+    return [entity for alert in alerts for entity in getattr(alert, "entities", [])]
+
+
+def get_target_alert_identifiers(
+    siemplify: SiemplifyAction,
+    entity: Any,
+    execution_scope: Any,
+) -> list[str | None]:
+    scope_val = getattr(execution_scope, "value", execution_scope)
+    if scope_val == ExecutionScope.Alert.value:
+        alert_id = getattr(siemplify, "alert_id", None) or getattr(
+            getattr(siemplify, "current_alert", None), "identifier", None
+        )
+        return [alert_id] if alert_id else []
+
+    if getattr(entity, "alert_identifier", None) and isinstance(
+        entity.alert_identifier, str
+    ):
+        return [entity.alert_identifier]
+
+    open_alerts = getattr(siemplify.case, "open_alerts", None) or getattr(
+        siemplify.case, "alerts", []
+    )
+    matched_alert_ids = []
+    for alert in open_alerts:
+        for alert_entity in getattr(alert, "entities", []):
+            if (
+                alert_entity.identifier.strip().lower()
+                == entity.identifier.strip().lower()
+            ):
+                matched_alert_ids.append(alert.identifier)
+                break
+
+    if matched_alert_ids:
+        return matched_alert_ids
+
+    return [
+        alert.identifier
+        for alert in open_alerts
+        if getattr(alert, "identifier", None)
+        and isinstance(alert.identifier, str)
+    ]
 
 
 def get_domain_from_string(identifier):
@@ -78,10 +135,16 @@ def main():
 
     status = EXECUTION_STATE_COMPLETED
     output_message = ""
-    result_value = (
-        None
-    )
+    result_value = None
     siemplify.script_name = "Whois"
+    execution_scope = getattr(
+        siemplify,
+        "execution_scope",
+        ExecutionScope.Alert,
+    )
+    siemplify.LOGGER.info(
+        f"Running in {getattr(execution_scope, 'name', 'Alert').lower()} scope"
+    )
     create_entities = (
         siemplify.extract_action_param("Create Entities", print_value=True).lower()
         == "true"
@@ -95,6 +158,8 @@ def main():
     json_result = {}
     updated_entities = []
     enriched_entities = {}
+    successful_entities = []
+    failed_entities = []
     suitable_entities = [
         entity
         for entity in siemplify.target_entities
@@ -104,92 +169,142 @@ def main():
     if not suitable_entities:
         siemplify.LOGGER.info("No suitable entities were found to enrich.")
         output_message = "No suitable entities were found to enrich."
-    for entity in suitable_entities:
-        if entity.entity_type == EntityTypes.ADDRESS:
-            try:
-                obj = IPWhois(entity.identifier)
-                obj.lookup_rdap(depth=1)
-                ip_whois = obj.lookup_rdap(depth=1)
-                response = DbIpCity.get(entity.identifier, api_key="free")
-                ip_whois["geo_lookup"] = json.loads(response.to_json())
-                json_result[entity.identifier] = ip_whois
-                enriched_entities[entity.identifier] = ip_whois
-                result_value = "true"
-            except Exception as e:
-                siemplify.LOGGER.error(
-                    f"Failed RDAP lookup for entity {entity.identifier}: {e}"
-                )
-        else:
-            try:
-                domain = get_domain_from_string(entity.identifier)
-                if domain:
-                    whois_data = whois_alt.get_whois(domain)
-                    if "creation_date" in whois_data:
-                        whois_data["age_in_days"] = int(
-                            (
-                                datetime.now() - whois_data["creation_date"][0]
-                            ).total_seconds()
-                            / 86400,
-                        )
-                    json_result[entity.identifier] = json.loads(
-                        json.dumps(whois_data, default=json_serial),
+        result_value = "false"
+    else:
+        for entity in suitable_entities:
+            if entity.entity_type == EntityTypes.ADDRESS:
+                try:
+                    obj = IPWhois(entity.identifier)
+                    ip_whois = obj.lookup_rdap(depth=1)
+                    response = DbIpCity.get(entity.identifier, api_key="free")
+                    ip_whois["geo_lookup"] = json.loads(response.to_json())
+                    json_result[entity.identifier] = ip_whois
+                    enriched_entities[entity.identifier] = ip_whois
+                    successful_entities.append(entity.identifier)
+                except Exception as e:
+                    siemplify.LOGGER.error(
+                        f"Failed RDAP lookup for entity {entity.identifier}: {e}"
                     )
-                    del whois_data["raw"]
-                    enriched_entities[entity.identifier] = json.loads(
-                        json.dumps(whois_data, default=json_serial),
-                    )
-                    result_value = "true"
-                    if create_entities and domain.upper() != entity.identifier:
-                        create_entity_with_relation(
-                            siemplify,
-                            domain,
-                            entity.identifier,
-                        )
-                        enriched_entities[domain] = json.loads(
-                            json.dumps(whois_data, default=json_serial),
-                        )
-                        json_result[domain] = json.loads(
-                            json.dumps(whois_data, default=json_serial),
-                        )
-
-            except whois_alt.shared.WhoisException:
-                pass
-
-    if enriched_entities:
-        siemplify.load_case_data()
-        alert_entities = get_alert_entities(siemplify)
-        for new_entity in enriched_entities:
-            for entity in alert_entities:
-                if new_entity.strip() == entity.identifier.strip():
-                    entity.additional_properties.update(
-                        add_prefix_to_dict(
-                            dict_to_flat(enriched_entities[new_entity]),
-                            "WHOIS",
-                        ),
-                    )
-                    if (
-                        "age_in_days" in enriched_entities[new_entity]
-                        and enriched_entities[new_entity]["age_in_days"]
-                        < int(age_threshold)
-                        and int(age_threshold) != 0
-                    ):
-                        if create_entities and entity.entity_type == EntityTypes.DOMAIN:
-                            entity.is_suspicious = True
-
-                        elif not create_entities:
-                            entity.is_suspicious = True
-                            siemplify.LOGGER.info(
-                                f"Marking {entity.identifier} as suspicious",
+                    failed_entities.append(entity.identifier)
+            else:
+                try:
+                    domain = get_domain_from_string(entity.identifier)
+                    if domain:
+                        whois_data = get_domain_whois(domain, logger=siemplify.LOGGER)
+                        if not whois_data:
+                            siemplify.LOGGER.warn(
+                                f"No WHOIS data found for entity {entity.identifier}"
                             )
-                    entity.is_enriched = True
-                    updated_entities.append(entity)
-                    break
-        siemplify.LOGGER.info(f"updating entities: {updated_entities}")
-        siemplify.update_entities(updated_entities)
-        output_message += f"Enriched the following entities {updated_entities}"
+                            failed_entities.append(entity.identifier)
+                            continue
 
-    return_json = json.dumps(json_result, default=json_serial)
-    siemplify.result.add_result_json(convert_dict_to_json_result_dict(return_json))
+                        if whois_data.get("creation_date"):
+                            creation_date = whois_data["creation_date"]
+                            creation_date = (
+                                creation_date[0]
+                                if isinstance(creation_date, list)
+                                else creation_date
+                            )
+                            whois_data["age_in_days"] = int(
+                                (
+                                    datetime.now() - creation_date
+                                ).total_seconds()
+                                / 86400,
+                            )
+                        json_result[entity.identifier] = json.loads(
+                            json.dumps(whois_data, default=json_serial),
+                        )
+                        whois_data.pop("raw", None)
+                        enriched_entities[entity.identifier] = json.loads(
+                            json.dumps(whois_data, default=json_serial),
+                        )
+                        successful_entities.append(entity.identifier)
+                        if (
+                            create_entities
+                            and domain.upper() != entity.identifier.upper()
+                        ):
+                            target_alert_ids = get_target_alert_identifiers(
+                                siemplify, entity, execution_scope
+                            )
+                            if not target_alert_ids:
+                                target_alert_ids = [
+                                    getattr(siemplify, "alert_id", None)
+                                ]
+
+                            for alert_id in target_alert_ids:
+                                try:
+                                    create_entity_with_relation(
+                                        siemplify,
+                                        domain,
+                                        entity.identifier,
+                                        alert_identifier=alert_id,
+                                    )
+                                    enriched_entities[domain] = json.loads(
+                                        json.dumps(whois_data, default=json_serial),
+                                    )
+                                    json_result[domain] = json.loads(
+                                        json.dumps(whois_data, default=json_serial),
+                                    )
+                                except Exception as e:
+                                    siemplify.LOGGER.error(
+                                        f"Failed to create entity for {domain}: {e}"
+                                    )
+                    else:
+                        siemplify.LOGGER.warn(
+                            f"Could not extract domain from entity {entity.identifier}"
+                        )
+                        failed_entities.append(entity.identifier)
+                except Exception as e:
+                    siemplify.LOGGER.error(
+                        f"Failed WHOIS lookup for entity {entity.identifier}: {e}"
+                    )
+                    failed_entities.append(entity.identifier)
+
+        if enriched_entities:
+            siemplify.load_case_data()
+            alert_entities = get_alert_entities(siemplify)
+            for new_entity in enriched_entities:
+                for entity in alert_entities:
+                    if new_entity.strip() == entity.identifier.strip():
+                        entity.additional_properties.update(
+                            add_prefix_to_dict(
+                                dict_to_flat(enriched_entities[new_entity]),
+                                "WHOIS",
+                            ),
+                        )
+                        if (
+                            "age_in_days" in enriched_entities[new_entity]
+                            and enriched_entities[new_entity]["age_in_days"]
+                            < int(age_threshold)
+                            and int(age_threshold) != 0
+                        ):
+                            if create_entities and entity.entity_type == EntityTypes.DOMAIN:
+                                entity.is_suspicious = True
+
+                            elif not create_entities:
+                                entity.is_suspicious = True
+                                siemplify.LOGGER.info(
+                                    f"Marking {entity.identifier} as suspicious",
+                                )
+                        entity.is_enriched = True
+                        updated_entities.append(entity)
+                        break
+            siemplify.LOGGER.info(f"updating entities: {updated_entities}")
+            siemplify.update_entities(updated_entities)
+
+        if successful_entities:
+            output_message = f"Successfully enriched the following entities: {', '.join(successful_entities)}"
+            result_value = "true"
+        else:
+            output_message = "No entities were enriched."
+            result_value = "false"
+
+        if failed_entities:
+            output_message += f"\nFailed to enrich the following entities: {', '.join(failed_entities)}"
+
+    if json_result:
+        return_json = json.dumps(json_result, default=json_serial)
+        siemplify.result.add_result_json(convert_dict_to_json_result_dict(return_json))
 
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}",

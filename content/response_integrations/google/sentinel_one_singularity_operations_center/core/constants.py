@@ -104,3 +104,18 @@ VERDICT_MAP: Mapping[str, str] = {
     "False positive/User error": "FALSE_POSITIVE_USER_ERROR",
     "False positive/Undefined": "FALSE_POSITIVE_UNDEFINED",
 }
+
+OBSERVABLE_TYPE_CANONICAL_KEYS: dict[str, tuple[str, ...]] = {
+    "ip": ("ip",),
+    "ipv4": ("ip",),
+    "ipv6": ("ip",),
+    "dns": ("dns", "domain"),
+    "domain": ("dns", "domain"),
+    "url": ("url",),
+    "uri": ("url",),
+    "file_hash": ("file_hash",),
+    "hash": ("file_hash",),
+    "md5": ("file_hash",),
+    "sha1": ("file_hash",),
+    "sha256": ("file_hash",),
+}
