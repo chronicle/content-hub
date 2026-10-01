@@ -2490,14 +2490,14 @@ def update_custom_list(
 def update_blocklist(
     chronicle_soar: ChronicleSOAR,
     blocklist_data: SingleJson,
-) -> SingleJson:
+) -> requests.Response:
     """Update blocklist"""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.blocklist_data = blocklist_data
     response = api_client.update_blocklist()
     try:
         validate_response(response, validate_json=False)
-        return safe_json_for_204(response, default_for_204={})
+        return response
     except (HTTPError, InternalJSONDecoderError):
         return {}
 
