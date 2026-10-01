@@ -19,6 +19,7 @@ import binascii
 import hashlib
 import logging
 import re
+import struct
 import sys
 import time
 
@@ -36,8 +37,6 @@ try:
     import nacl.signing
 except ImportError:
     pass
-from netaddr import valid_ipv4, valid_ipv6
-
 import eml_parser
 from dkim.crypto import (
     DigestTooLargeError,
@@ -47,6 +46,7 @@ from dkim.crypto import (
     parse_pem_private_key,
     parse_public_key,
 )
+from netaddr import valid_ipv4, valid_ipv6
 
 __all__ = [
     "ARC",
@@ -739,10 +739,12 @@ class DomainSigner:
         headers=None,
     ):
         if headers:
-            b_header = {}
-
-            for h in headers:
-                b_header[h.encode("utf-8")] = headers[h][0].encode("utf-8")
+            b_header = {
+                h.encode("utf-8", errors="surrogatepass"): headers[h][0].encode(
+                    "utf-8", errors="surrogatepass"
+                )
+                for h in headers
+            }
 
             self.headers = b_header
             self.body = b""
@@ -2241,11 +2243,40 @@ def fix_malformed_eml_content(content_bytes: bytes) -> bytes:
         and str(main_content_type[0]) == "text/plain"
         and "multipart" in str(main_content_type[1])
     ):
-        text_content_type = str(main_content_type[0]).encode("utf-8")
-        next_content_type = str(main_content_type[1]).encode("utf-8")
+        text_content_type = str(main_content_type[0]).encode("utf-8", errors="surrogatepass")
+        next_content_type = str(main_content_type[1]).encode("utf-8", errors="surrogatepass")
         content_bytes = content_bytes.replace(text_content_type, next_content_type, 1)
 
     return content_bytes
+
+
+def fix_malformed_msg_content(content_bytes: bytes) -> bytes:
+    """Fix malformed MSG files where PR_MESSAGE_CODEPAGE is set to 1200 (UTF-16LE)
+    for 8-bit ANSI (PT_STRING8) streams.
+
+    Args:
+        content_bytes: MSG file content.
+
+    Returns:
+        Fixed MSG content.
+    """
+    if not isinstance(content_bytes, (bytes, bytearray)):
+        return content_bytes
+
+    data = bytearray(content_bytes)
+    tag = struct.pack("<HH", 0x0003, 0x3FFD)
+    idx = 0
+    while True:
+        idx = data.find(tag, idx)
+        if idx == -1:
+            break
+        if idx + 12 <= len(data):
+            codepage = struct.unpack("<I", data[idx + 8 : idx + 12])[0]
+            if codepage == 1200:
+                data[idx + 8 : idx + 12] = struct.pack("<I", 1252)
+        idx += 4
+
+    return bytes(data)
 
 
 def extract_valid_ips_from_body(body: str) -> list[str]:
