@@ -53,13 +53,14 @@ POSSIBLE_SEVERITIES = [
     "high",
     "medium",
     "low",
-    "unknown",
+    "informational",
 ]
 SEVERITY_MAPPING = {
     "critical": 100,
     "high": 80,
     "medium": 60,
-    "low": -1,
+    "low": 40,
+    "informational": -1,
     "unknown": -1,
 }
 

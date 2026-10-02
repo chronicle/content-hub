@@ -147,7 +147,7 @@ class AlertQueryBuilder(BaseQueryBuilder):
         return self
 
     def with_severity(self, lowest_severity: str) -> AlertQueryBuilder:
-        """Create a filter for Severity field.
+        """Create a filter for RiskLevel field.
 
         Args:
             lowest_severity (str): The lowest severity to filter by.
@@ -157,7 +157,7 @@ class AlertQueryBuilder(BaseQueryBuilder):
         """
         if lowest_severity:
             self._add_filter(
-                "Severity",
+                "RiskLevel",
                 POSSIBLE_SEVERITIES[: POSSIBLE_SEVERITIES.index(lowest_severity) + 1],
                 "str",
                 "in",

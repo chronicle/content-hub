@@ -19,7 +19,7 @@ def build_alert_row(
     alert_id: str,
     created_at_ms: int,
     last_sync_ms: int,
-    severity: str = "critical",
+    risk_level: str = "critical",
     orca_score: float = 9.0,
 ) -> dict[str, Any]:
     """A single alert as the serving layer query endpoint returns it.
@@ -28,13 +28,17 @@ def build_alert_row(
     timezone-aware ISO 8601 strings. This mirrors a response captured from the
     live API - the connector's cursor logic depends on both properties, so these
     fixtures pin them.
+
+    RiskLevel carries the standard severity wording, while Severity carries the
+    product's own wording; the two are not interchangeable, so both are pinned.
     """
     return {
         "data": {
             "AlertId": {"value": alert_id},
             "Title": {"value": f"Alert {alert_id}"},
             "Details": {"value": "Alert details"},
-            "Severity": {"value": severity},
+            "RiskLevel": {"value": risk_level},
+            "Severity": {"value": "hazardous"},
             "CreatedAt": {"value": to_iso(created_at_ms)},
             "last_sync": {"value": to_iso(last_sync_ms)},
             "OrcaScore": {"value": orca_score},
