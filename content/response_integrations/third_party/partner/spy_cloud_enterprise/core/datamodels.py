@@ -16,6 +16,9 @@ booleans such as "plaintext password exposed: Yes".
 from __future__ import annotations
 
 import html
+import re
+import string
+from datetime import datetime, timezone
 from typing import Any, Iterable
 
 from .spycloud_udm_converter import SpyCloudUdmConverter
@@ -39,6 +42,10 @@ SENSITIVE_KEY_FRAGMENTS = (
 )
 
 _CONVERTER = SpyCloudUdmConverter()
+
+# Fractional-seconds group in an ISO timestamp; used to trim producers that emit
+# more precision than ``datetime.fromisoformat`` accepts.
+_FRACTIONAL_SECONDS = re.compile(r"\.(\d+)")
 
 # Source severity -> malware/session-theft classification. Records at or above the
 # credential-exposure tier (20) are treated as high risk for entity flagging.
@@ -419,6 +426,88 @@ def _truthy(value: Any) -> bool:
     return str(value).strip().lower() in ("true", "yes", "1", "t")
 
 
+# Flattened event keys that can carry the date SpyCloud published the record, in
+# precedence order. ``spycloud_publish_date`` is the field SpyCloud stamps at
+# publish time; the record dates are the fallbacks that older ingested cases
+# carry, and the infected time is the last resort for malware records.
+EVENT_PUBLISH_DATE_FIELDS = (
+    "spycloud_publish_date",
+    "spycloud_record_addition_date",
+    "spycloud_record_modification_date",
+    "spycloud_infected_time",
+)
+
+
+def parse_timestamp(value: Any) -> datetime | None:
+    """Parse a timestamp from any of the shapes SpyCloud and the IdPs emit.
+
+    Handles ISO-8601 with or without fractional seconds, a trailing ``Z`` or a
+    numeric UTC offset, bare calendar dates, and epoch seconds/milliseconds. A
+    value with no timezone is read as UTC, which is what every producer here
+    means by a naive timestamp.
+
+    Args:
+        value: The raw timestamp, typically a string off a case event or an IdP
+            action's JSON result.
+
+    Returns:
+        A timezone-aware ``datetime`` in UTC, or ``None`` when the value is
+        empty or cannot be understood.
+    """
+    text = _clean_str(value)
+    if not text:
+        return None
+
+    # Epoch seconds or milliseconds, e.g. an IdP returning 1717200000000.
+    if text.isdigit():
+        number = int(text)
+        if number > 10**11:  # milliseconds
+            number //= 1000
+        try:
+            return datetime.fromtimestamp(number, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
+
+    # ``fromisoformat`` accepts "Z" only from 3.11 on, and chokes on more than 6
+    # fractional digits, so normalize both before handing it over.
+    normalized = text.replace("z", "+00:00") if text.endswith("z") else text
+    normalized = (
+        normalized[:-1] + "+00:00" if normalized.endswith("Z") else normalized
+    )
+    normalized = _FRACTIONAL_SECONDS.sub(
+        lambda match: "." + match.group(1)[:6], normalized
+    )
+    if " " in normalized and "T" not in normalized:
+        normalized = normalized.replace(" ", "T", 1)
+
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def event_publish_date(props: dict[str, Any] | None) -> str:
+    """Return the raw publish date carried by one flattened SpyCloud event.
+
+    Args:
+        props: A security event's flattened ``spycloud_`` properties.
+
+    Returns:
+        The first non-empty publish-date value in ``EVENT_PUBLISH_DATE_FIELDS``
+        order, or an empty string when the event carries no date at all.
+    """
+    if not isinstance(props, dict):
+        return ""
+    for key in EVENT_PUBLISH_DATE_FIELDS:
+        value = _clean_str(props.get(key))
+        if value:
+            return value
+    return ""
+
+
 def is_spycloud_event(props: dict[str, Any] | None) -> bool:
     """Report whether a security event's properties came from the SpyCloud parser.
 
@@ -447,11 +536,7 @@ def event_row(alert_name: str, props: dict[str, Any]) -> dict[str, Any]:
     """
     has_plaintext = _truthy(props.get("spycloud_has_plaintext_password"))
     has_password = _truthy(props.get("spycloud_has_password")) or has_plaintext
-    publish_date = (
-        _clean_str(props.get("spycloud_record_addition_date"))
-        or _clean_str(props.get("spycloud_record_modification_date"))
-        or _clean_str(props.get("spycloud_infected_time"))
-    )
+    publish_date = event_publish_date(props)
     row = {
         "Alert": _clean_str(alert_name),
         "SpyCloud Severity": _clean_str(props.get("spycloud_source_severity")),
@@ -667,3 +752,91 @@ def build_full_detail_html(rows: list[dict[str, Any]]) -> str:
         f"<thead><tr>{header}</tr></thead>"
         f"<tbody>{''.join(body_rows)}</tbody></table></div></details>"
     )
+
+
+# ---------------------------------------------------------------------------
+# Password policy filtering (Entra ID response playbook)
+#
+# The Entra ID password-response playbook resets a user's password only when the
+# case actually exposed a password that would still be valid under the org's
+# password policy. These helpers read the plaintext password values the connector
+# flattened onto the case events (present only when "Include Plaintext Secrets"
+# was enabled) and decide which survive a minimum-length / symbol policy.
+#
+# We never surface the plaintext values themselves; callers report only counts
+# and masked placeholders. See actions/FilterPasswordsByPolicy.py.
+# ---------------------------------------------------------------------------
+
+# Flattened event keys that carry an actual plaintext password value (a subset of
+# SECRET_DISPLAY_FIELDS restricted to password fields; cookies/tokens/PII are not
+# passwords and are excluded from policy filtering).
+PLAINTEXT_PASSWORD_FIELDS = (
+    "spycloud_password_plaintext",
+    "spycloud_password",
+    "spycloud_password_value",
+    "spycloud_password_raw",
+    "spycloud_new_password",
+    "spycloud_old_password",
+    "spycloud_account_password",
+)
+
+
+def has_symbol(password: str) -> bool:
+    """Report whether the password contains at least one punctuation symbol."""
+    return any(char in string.punctuation for char in password)
+
+
+def password_matches_policy(
+    password: str,
+    minimum_length: int,
+    require_symbol: bool,
+) -> bool:
+    """Report whether a password satisfies the configured password policy.
+
+    Args:
+        password: The plaintext password to evaluate.
+        minimum_length: The minimum acceptable password length.
+        require_symbol: Whether at least one punctuation symbol is required.
+
+    Returns:
+        ``True`` when the password meets the length (and, if required, symbol)
+        policy; ``False`` otherwise (including for empty passwords).
+    """
+    if not password:
+        return False
+    if len(password) < minimum_length:
+        return False
+    if require_symbol and not has_symbol(password):
+        return False
+    return True
+
+
+def collect_plaintext_passwords(props: dict[str, Any] | None) -> list[str]:
+    """Collect the non-empty plaintext password values from one SpyCloud event.
+
+    Args:
+        props: A security event's flattened ``spycloud_`` properties.
+
+    Returns:
+        The distinct plaintext password values present on the event, in the order
+        the password fields are defined. Empty when nothing was persisted (secret
+        retention off) or the event carries no password.
+    """
+    if not isinstance(props, dict):
+        return []
+    passwords: list[str] = []
+    for key in PLAINTEXT_PASSWORD_FIELDS:
+        value = _clean_str(props.get(key))
+        if value and value not in passwords:
+            passwords.append(value)
+    return passwords
+
+
+def mask_password(password: str) -> str:
+    """Render a length-preserving masked placeholder for a password.
+
+    The real value is never surfaced; only the length is conveyed so an analyst
+    can reason about the policy decision without seeing the secret.
+    """
+    length = len(password or "")
+    return f"******** (length {length})"

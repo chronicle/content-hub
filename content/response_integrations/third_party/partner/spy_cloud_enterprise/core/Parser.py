@@ -76,8 +76,8 @@ def get_udm_additional(udm_event: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_mapped_alert_severity(udm_event: dict[str, Any]) -> int | None:
-    """
-    Final SecOps/SOAR-facing severity from the converter.
+    """Read the final SecOps/SOAR-facing severity from the converter.
+
     Expected values: 40, 60, 80, 100
     """
     security_result = get_udm_security_result(udm_event)
@@ -90,8 +90,8 @@ def get_mapped_alert_severity(udm_event: dict[str, Any]) -> int | None:
 
 
 def get_source_spycloud_severity(udm_event: dict[str, Any]) -> int | None:
-    """
-    Original SpyCloud source severity preserved in extensions.
+    """Read the original SpyCloud source severity preserved in extensions.
+
     Expected values: 2, 5, 20, 25, 30
     """
     extensions = get_udm_extensions(udm_event)
@@ -201,9 +201,10 @@ def build_stable_alert_id_from_udm(udm_event: dict[str, Any]) -> str:
 
 
 def map_priority_from_mapped_severity(mapped_severity: Any) -> int:
-    """
-    The converter already normalizes severity into the SecOps-style scale.
-    Reuse it directly for alert priority.
+    """Derive the alert priority from the already-normalized severity.
+
+    The converter normalizes severity into the SecOps-style scale, so it is
+    reused directly for alert priority.
     """
     try:
         numeric = int(mapped_severity)
@@ -413,6 +414,10 @@ def flatten_udm_event_for_alert(udm_event: dict[str, Any]) -> dict[str, Any]:
         "spycloud_log_id": extensions.get("log_id"),
         "spycloud_infected_machine_id": extensions.get("infected_machine_id"),
         "spycloud_infected_time": extensions.get("infected_time"),
+        # SpyCloud stamps the publish date under its own name in the UDM
+        # extensions; carry it onto the event so in-case actions can compare an
+        # exposure's age against an IdP's last-password-change time.
+        "spycloud_publish_date": extensions.get("spycloud_publish_date"),
         "spycloud_record_modification_date": extensions.get("record_modification_date"),
         "spycloud_record_cracked_date": extensions.get("record_cracked_date"),
         "spycloud_record_addition_date": extensions.get("record_addition_date"),
