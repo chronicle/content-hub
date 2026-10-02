@@ -23,6 +23,12 @@ already attached to the case, exactly like Get Watchlist Exposures.
 Sensitive data: plaintext passwords are never surfaced. The JSON result reports
 only counts, the configured policy, and length-only masked placeholders, alongside
 the case ID and a UTC timestamp for audit.
+
+The JSON result also carries ``all_exposed_emails``: every exposed identity on the
+case regardless of whether it came with a password. ``emails_with_remaining_passwords``
+is empty on a case whose only exposure is a severity 30 session cookie theft, so the
+playbook's session-clearing step binds to ``all_exposed_emails`` instead to stay
+independent of the password outcome.
 """
 from __future__ import annotations
 
@@ -51,29 +57,36 @@ def _filter_case_passwords(
     alerts: list[Any],
     minimum_length: int,
     require_symbol: bool,
-) -> tuple[dict[str, Any], int, int]:
+) -> tuple[dict[str, Any], int, int, list[str]]:
     """Apply the password policy to every exposed password on the case.
 
     Groups the decision per exposed identity so an analyst can see which user's
     exposure drove the reset. Values are masked; only lengths and pass/fail are
     recorded.
 
-    Returns the per-email buckets, how many passwords were examined in total, and
-    how many of those still match the policy.
+    Returns the per-email buckets, how many passwords were examined in total, how
+    many of those still match the policy, and every exposed identity on the case.
+
+    The last list is deliberately independent of the password filtering: a case can
+    carry exposures with no password at all (a severity 30 session cookie theft, for
+    instance), and the session-clearing path still needs an identity to act on.
     """
     per_email: dict[str, dict[str, Any]] = {}
     total_passwords = 0
     remaining = 0
+    all_emails: set[str] = set()
 
     for alert in alerts:
         for event in getattr(alert, "security_events", []) or []:
             props = getattr(event, "additional_properties", {}) or {}
             if not datamodels.is_spycloud_event(props):
                 continue
+            email = str(props.get("spycloud_email", "") or "").strip().lower()
+            if email:
+                all_emails.add(email)
             passwords = datamodels.collect_plaintext_passwords(props)
             if not passwords:
                 continue
-            email = str(props.get("spycloud_email", "") or "").strip().lower()
             bucket = per_email.setdefault(email, {"email": email, "kept": [], "dropped": []})
             for password in passwords:
                 total_passwords += 1
@@ -89,7 +102,7 @@ def _filter_case_passwords(
                 else:
                     bucket["dropped"].append(entry)
 
-    return per_email, total_passwords, remaining
+    return per_email, total_passwords, remaining, sorted(all_emails)
 
 
 def _build_output_message(
@@ -155,7 +168,7 @@ def main() -> None:
         alerts = siemplify.case.alerts or []
         siemplify.LOGGER.info(f"Scanning {len(alerts)} alert(s) in the case")
 
-        per_email, total_passwords, remaining = _filter_case_passwords(
+        per_email, total_passwords, remaining, all_exposed_emails = _filter_case_passwords(
             alerts, minimum_length, require_symbol
         )
 
@@ -178,6 +191,10 @@ def main() -> None:
                 "remaining": remaining,
                 "dropped": dropped,
                 "emails_with_remaining_passwords": emails_with_remaining,
+                # Every exposed identity on the case, whether or not it came with a
+                # password. The session-clearing path binds to this so it still has
+                # an identity on a password-free session cookie theft case.
+                "all_exposed_emails": all_exposed_emails,
                 "results_by_email": list(per_email.values()),
             }
         )

@@ -171,3 +171,41 @@ class TestFilterPasswordsByPolicy:
 
         payload = _json(siemplify)
         assert payload["emails_with_remaining_passwords"] == ["victim@example.com"]
+
+    def test_lists_exposed_emails_without_passwords(self) -> None:
+        """A session cookie theft case carries no password but still needs an identity.
+
+        The playbook's session-clearing step is reached on a severity 30 case even
+        when nothing was reset, so it binds to all_exposed_emails rather than
+        emails_with_remaining_passwords, which is empty here.
+        """
+        alerts = [_Alert("SpyCloud", [_event(spycloud_source_severity=30)])]
+        siemplify, end_calls = _make_siemplify(alerts)
+
+        _run(siemplify)
+
+        payload = _json(siemplify)
+        assert payload["emails_with_remaining_passwords"] == []
+        assert payload["all_exposed_emails"] == ["victim@example.com"]
+        assert end_calls[0]["result_value"] == 0
+
+    def test_exposed_emails_are_deduplicated_and_sorted(self) -> None:
+        alerts = [
+            _Alert(
+                "SpyCloud",
+                [
+                    _event(spycloud_email="zed@example.com"),
+                    _event(spycloud_email="abe@example.com"),
+                    _event(spycloud_email="zed@example.com"),
+                    _event(spycloud_email=""),
+                ],
+            )
+        ]
+        siemplify, _ = _make_siemplify(alerts)
+
+        _run(siemplify)
+
+        assert _json(siemplify)["all_exposed_emails"] == [
+            "abe@example.com",
+            "zed@example.com",
+        ]
