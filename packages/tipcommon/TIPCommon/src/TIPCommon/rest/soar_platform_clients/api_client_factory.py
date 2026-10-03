@@ -221,6 +221,12 @@ class SoarApiClient(Protocol):
 
         """
 
+    def attach_case_playbook_to_case(self) -> requests.Response:
+        """Attach case playbook to the case."""
+
+    def get_enabled_workflow_cards(self) -> requests.Response:
+        """Get enabled workflow cards."""
+
 
 def get_soar_client(chronicle_soar: ChronicleSOAR) -> SoarApiClient:
     """Get the appropriate SOAR API client based on platform support.
