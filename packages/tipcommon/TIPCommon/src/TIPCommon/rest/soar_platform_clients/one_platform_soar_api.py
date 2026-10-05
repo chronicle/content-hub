@@ -928,7 +928,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             f"/download/integrations/{self.params.integration_identifier}:"
             "export?alt=media"
         )
-        return self._make_request(HttpMethod.GET, endpoint).content
+        return self._make_request(HttpMethod.GET, endpoint)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_integration_instance_settings(self) -> requests.Response:
@@ -1280,8 +1280,8 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def attache_workflow_to_case(self) -> requests.Response:
-        """Attache workflow to case."""
+    def attach_workflow_to_case(self) -> requests.Response:
+        """Attach workflow to case."""
         endpoint: str = "/legacyPlaybooks:legacyAttachWorkflowToCase"
         payload = {
             "cyberCaseId": self.params.case_id,
@@ -1398,14 +1398,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         )
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def update_ide_item(self) -> requests.Response:
-        """Update ide item."""
-        endpoint = "/ide/AddOrUpdateItem"
-        return self._make_request(
-            HttpMethod.POST, endpoint, json_payload=self.params.input_json
-        )
-
-    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_ide_cards(self) -> requests.Response:
         """Get ide cards (1P compatible)."""
 
@@ -1478,16 +1470,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         }
 
         return _DictResponse(payload)
-
-    @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_ide_item(self) -> requests.Response:
-        """Get ide item."""
-        endpoint = "/ide/GetIdeItem"
-        query = {
-            "itemId": self.params.item_id,
-            "ideItemType": self.params.item_type,
-        }
-        return self._make_request(HttpMethod.POST, endpoint, json_payload=query)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def set_mappings_visual_family(self) -> requests.Response:

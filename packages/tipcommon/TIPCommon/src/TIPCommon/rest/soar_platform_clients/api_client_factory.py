@@ -347,8 +347,8 @@ class SoarApiClient(Protocol):
     def add_or_update_company_logo(self) -> requests.Response:
         """Add or update company logo"""
 
-    def attache_workflow_to_case(self) -> requests.Response:
-        """AttacheWorkflowToCase"""
+    def attach_workflow_to_case(self) -> requests.Response:
+        """AttachWorkflowToCase"""
 
     def import_custom_case(self) -> requests.Response:
         """Import custom case"""
@@ -358,9 +358,6 @@ class SoarApiClient(Protocol):
 
     def export_simulated_case(self) -> requests.Response:
         """Export simulated cases"""
-
-    def get_case_insights_comment_evidence(self) -> requests.Response:
-        """Get case insights using 1P API."""
 
     def get_bearer_token(self) -> requests.Response:
         """Get bearer token."""
