@@ -33,8 +33,6 @@ from urllib.parse import urlencode
 # =====================================
 API_ROOT = "https://phishing-initiative.eu"
 
-API_KEY = "bda5fa1cc9b5d9d9bb8e12d7f2ce2dbc19d4949c287973c4fed0aaaafd0afff5"
-
 NOT_SUBMIT_STATUS = "not submitted"
 PHISHING_STATUS = "phishing"
 
