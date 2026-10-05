@@ -59,6 +59,7 @@ from . import EmailParserRouting, OleId
 from .EmailUtilitiesManager import (
     extract_valid_ips_from_body,
     fix_malformed_eml_content,
+    fix_malformed_msg_content,
 )
 
 
@@ -841,11 +842,24 @@ class EmailBody:
         self.logger = logger
         self.email_utils = email_utils
 
-    def body(self, msg, content_type):
+    def body(self, msg: Any, content_type: str) -> dict[str, Any]:
+        """Generates a structured dictionary representation of the email body.
+
+        Args:
+            msg: Message body content.
+            content_type: MIME content type of the body.
+
+        Returns:
+            Dictionary containing body content, content type, hash, and parsed entities.
+        """
         body_json = {
             "content_type": content_type,
             "content": msg if msg is not None else "",
-            "hash": hashlib.sha256(str(msg).encode("utf-8")).hexdigest(),
+            "hash": (
+                hashlib.sha256(str(msg).encode("utf-8", errors="surrogatepass")).hexdigest()
+                if msg is not None
+                else ""
+            ),
         }
         body_json["parsed_entities"] = self.parse_body(msg) if msg is not None else []
         return body_json
@@ -1036,30 +1050,49 @@ class MSGParser:
         for _attachment in self.msg_extractor.attachments:
             msox_obj = None
 
-            for msox_attachments in self.msg_parser["attachments"]:
+            for msox_attachments in self.msg_parser.get("attachments", {}):
                 if (
-                    self.msg_parser["attachments"][msox_attachments]["AttachFilename"]
+                    self.msg_parser["attachments"][msox_attachments].get("AttachFilename")
                     == _attachment.shortFilename
                 ):
                     msox_obj = self.msg_parser["attachments"][msox_attachments]
             if _attachment.type == "msg":
                 parser = MSGParser(
                     _attachment.data,
-                    msox_obj,
+                    msox_obj or {},
                     email_utils=self.email_utils,
                 )
                 parsed_nested_msg = parser.parse()
-                parsed_nested_msg["source_file"] = f"{msox_obj['AttachFilename']}.msg"
+                filename = (
+                    msox_obj.get("AttachFilename", "nested")
+                    if msox_obj
+                    else getattr(_attachment, "shortFilename", None)
+                    or "nested"
+                )
+                parsed_nested_msg["source_file"] = f"{filename}.msg"
                 if "attached_emails" in parsed_msg:
                     parsed_msg["attached_emails"].append(parsed_nested_msg)
                 else:
                     parsed_msg["attached_emails"] = []
                     parsed_msg["attached_emails"].append(parsed_nested_msg)
 
-            elif "AttachLongFilename" in msox_obj:
+            elif msox_obj and "AttachLongFilename" in msox_obj:
                 parsed_msg["attachments"].append(
                     EmailUtils.attachment(
                         filename=msox_obj["AttachLongFilename"],
+                        content=_attachment.data,
+                    ),
+                )
+            else:
+                filename = (
+                    getattr(_attachment, "longFilename", None)
+                    or getattr(_attachment, "shortFilename", None)
+                    or getattr(_attachment, "filename", None)
+                    or "attachment"
+                )
+                parsed_msg["attachments"].append(
+                    EmailUtils.attachment(
+                        filename=filename,
                         content=_attachment.data,
                     ),
                 )
@@ -1105,21 +1138,24 @@ class EMLParser:
                 self.header_email_list("reply-to")[0],
             )[1]
         except Exception as e:
-            self.logger.warn(f"Error parsing field reply-to due to {e}")
+            if self.logger:
+                self.logger.warn(f"Error parsing field reply-to due to {e}")
 
         try:
             headers.in_reply_to = email.utils.parseaddr(
                 self.header_email_list("in-reply-to")[0],
             )[1]
         except Exception as e:
-            self.logger.warn(f"Error parsing field in-reply-to due to {e}")
+            if self.logger:
+                self.logger.warn(f"Error parsing field in-reply-to due to {e}")
 
         try:
             headers.return_path = email.utils.parseaddr(
                 self.header_email_list("return-path")[0],
             )[1]
         except Exception as e:
-            self.logger.warn(f"Error parsing field return-path due to {e}")
+            if self.logger:
+                self.logger.warn(f"Error parsing field return-path due to {e}")
 
         # parse and decode delivered-to
         headers.delivered_to = self.header_email_list("delivered-to")
@@ -1609,6 +1645,7 @@ class EmailManager:
         return _email
 
     def parse_msg(self, message):
+        message = fix_malformed_msg_content(message)
         msg_extractor = extract_msg.openMsg(message)
 
         # MsOxMessage handles the filenames better.
