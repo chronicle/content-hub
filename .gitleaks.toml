@@ -1,0 +1,231 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+title = "chronicle/content-hub secret and sensitive-data scanning rules"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for lockfiles, static images, and RFC 2606 placeholders"
+paths = [
+    '''(^|/)uv\.lock$''',
+    '''(^|/)poetry\.lock$''',
+    '''(^|/)package-lock\.json$''',
+    '''(^|/)packages\.lock\.json$''',
+    '''(^|/)\.security_baseline\.json$''',
+    '''(^|/)security_baseline\.json$''',
+    '''(^|/)tools/security/test_scan_secrets\.py$''',
+    '''\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|pdf)$''',
+]
+regexTarget = "secret"
+regexes = [
+    '''^(?:00000000-0000-0000-0000-000000000000|11111111-1111-1111-1111-111111111111|12345678-1234-1234-1234-123456789012|aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa|xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)$''',
+    '''^(?:\*+|\.+|x+|X+|<[^>]+>|\$\{[^}]+\}|\$[A-Za-z_][A-Za-z0-9_]*|\{\{[^}]+\}\})$''',
+    '''(?i)^(?:your[_-]?(?:api[_-]?)?key|your[_-]?password|your[_-]?token|your[_-]?secret|placeholder|changeme|dummy[_-]?(?:key|token|password)?|fake[_-]?(?:key|token|password)?|test[_-]?(?:key|token|password)?|example[_-]?(?:key|token|password)?|sample[_-]?(?:key|token|password)?|replace[_-]?me|insert[_-]?key[_-]?here|none|null|true|false)$''',
+]
+
+# ---------------------------------------------------------------------------
+# Google SecOps SOAR / Chronicle Specific Credential & Tenant Rules
+# ---------------------------------------------------------------------------
+
+[[rules]]
+id = "soar-app-key"
+description = "Google SecOps SOAR System AppKey (44-character base64 SHA-256 digest)"
+regex = '''(?i)(?:x-?siemplify-?app-?key|x-?app-?key|siemplify[_-]?app[_-]?key|eval[_-]?sdk[_-]?app[_-]?key|soar[_-]?api[_-]?key|app[_-]?key|api[_-]?key)["']?\s*[:=]\s*["']?([A-Za-z0-9+/]{43}=)'''
+secretGroup = 1
+entropy = 4.0
+keywords = ["appkey", "app_key", "app-key", "api_key", "api-key", "siemplify"]
+tags = ["severity:CRITICAL", "category:credential"]
+
+[[rules]]
+id = "soar-app-key-context"
+description = "44-character base64 SOAR AppKey in a file referencing SOAR APIs"
+regex = '''(?:^|[^A-Za-z0-9+/=:-])([A-Za-z0-9+/]{43}=)(?:[^A-Za-z0-9+/=]|$)'''
+secretGroup = 1
+entropy = 4.3
+keywords = ["siemplify-soar.com", "/api/external/v1", "getconnectorsdata", "siemplify_api", "x-siemplify-app-key"]
+tags = ["severity:CRITICAL", "category:credential"]
+
+[[rules]]
+id = "soar-app-key-uuid"
+description = "Google SecOps SOAR User/Custom AppKey (UUIDv4 assigned to SOAR key identifier or CLI flag)"
+regex = '''(?i)(?:x-?siemplify-?app-?key|x-?app-?key|siemplify[_-]?app[_-]?key|eval[_-]?sdk[_-]?app[_-]?key|soar[_-]?api[_-]?key|--api-key|app[_-]?key|["']AppKey["'])["']?\s*(?:[:=]|,\s*|\s+)\s*["']?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})["']?'''
+secretGroup = 1
+keywords = ["appkey", "app_key", "app-key", "api-key", "soar_api_key"]
+tags = ["severity:CRITICAL", "category:credential"]
+
+[[rules]]
+id = "soar-cli-credentials"
+description = "Plaintext credential passed to mp login --api-key or --password flag"
+regex = '''(?i)mp\s+login[^\n]*?(?:--api-key|--password)\s+["']?([^\s"'$<>]{8,})["']?'''
+secretGroup = 1
+keywords = ["mp login"]
+tags = ["severity:CRITICAL", "category:credential"]
+
+[[rules]]
+id = "akeyless-access-credentials"
+description = "Akeyless Access ID (p-...) or Access Key"
+regex = '''(?i)(?:access[_-]?id["']?\s*[:=]\s*["'](p-[a-z0-9]{12,20})["']|access[_-]?key["']?\s*[:=]\s*["']([A-Za-z0-9+/=_-]{24,64})["'])'''
+keywords = ["access_id", "access-id", "access_key", "access-key", "akeyless"]
+tags = ["severity:CRITICAL", "category:credential"]
+
+[[rules]]
+id = "gcp-service-account-private-key"
+description = "GCP service account JSON private_key material"
+regex = '''"private_key"\s*:\s*"(-----BEGIN (?:RSA |EC )?PRIVATE KEY-----[^"]{160,}-----END (?:RSA |EC )?PRIVATE KEY-----(?:\\n)?)"'''
+secretGroup = 1
+keywords = ["private_key"]
+tags = ["severity:CRITICAL", "category:credential"]
+
+[[rules]]
+id = "private-key-pem"
+description = "PEM-encoded private key block"
+regex = '''(-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----[\s\S]{160,}?-----END (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----)'''
+secretGroup = 1
+keywords = ["BEGIN", "PRIVATE KEY"]
+tags = ["severity:CRITICAL", "category:credential"]
+
+[[rules]]
+id = "hardcoded-hex-api-key"
+description = "Hardcoded 32-to-64 hex character API key or secret constant"
+regex = '''(?i)\b(?:api[_-]?key|secret[_-]?key|auth[_-]?token|access[_-]?token)\s*[:=]\s*["']([0-9a-f]{32,64})["']'''
+secretGroup = 1
+entropy = 3.2
+keywords = ["api_key", "api-key", "secret_key", "auth_token", "access_token"]
+tags = ["severity:HIGH", "category:credential"]
+
+[[rules]]
+id = "jwt-token"
+description = "JSON Web Token (JWT)"
+regex = '''\b(eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})\b'''
+secretGroup = 1
+entropy = 3.8
+keywords = ["eyJ"]
+tags = ["severity:HIGH", "category:credential"]
+
+[[rules]]
+id = "playbook-encrypted-password"
+description = "Encrypted SOAR playbook step password (base64 IV + '.' + base64 ciphertext) exported into content"
+regex = '''(?:^|[^A-Za-z0-9+/])([A-Za-z0-9+/]{22}==\.[A-Za-z0-9+/]{32,}={0,2})'''
+secretGroup = 1
+keywords = ["==."]
+tags = ["severity:HIGH", "category:credential"]
+
+[[rules]]
+id = "siemplify-tenant-url"
+description = "Google SecOps SOAR tenant hostname (*.siemplify-soar.com)"
+regex = '''(?i)\b([a-z0-9][a-z0-9-]{0,62}\.siemplify-soar\.com)\b'''
+secretGroup = 1
+keywords = ["siemplify-soar.com"]
+tags = ["severity:HIGH", "category:tenant-identifier"]
+  [[rules.allowlists]]
+  regexTarget = "secret"
+  regexes = [
+      '''(?i)^(?:example|test|sample|demo|placeholder|your-tenant|my-tenant|tenant|instance)\.siemplify-soar\.com$''',
+  ]
+
+[[rules]]
+id = "chronicle-tenant-url"
+description = "Google SecOps Chronicle tenant hostname (*.backstory.chronicle.security)"
+regex = '''(?i)\b([a-z0-9][a-z0-9-]{0,62}(?:\.[a-z0-9-]+)*\.backstory\.chronicle\.security)\b'''
+secretGroup = 1
+keywords = ["backstory.chronicle.security"]
+tags = ["severity:HIGH", "category:tenant-identifier"]
+  [[rules.allowlists]]
+  regexTarget = "secret"
+  regexes = [
+      '''(?i)^(?:example|test|sample|demo|placeholder|your-tenant|my-tenant|us|eu|europe|asia|ap|me|sa|au|uk|ca|in|il|jp|sg|br|de|fr|ch|[a-z]{2,10}-[a-z0-9-]+)\.backstory\.chronicle\.security$''',
+  ]
+
+# ---------------------------------------------------------------------------
+# Google-Internal References That Must Not Appear in Public Code
+# ---------------------------------------------------------------------------
+
+[[rules]]
+id = "google-internal-golink"
+description = "Google-internal go/ short link"
+regex = '''(?:^|[^\w/.@:-])(go/[a-zA-Z0-9][a-zA-Z0-9_-]{2,}(?:[/#?][\w\-/#?=&.%]*)?)'''
+secretGroup = 1
+keywords = ["go/"]
+tags = ["severity:MEDIUM", "category:internal-reference"]
+  [[rules.allowlists]]
+  paths = [
+      '''(?i)(^|/)\.github/pull_request_template\.md$''',
+  ]
+  regexTarget = "secret"
+  regexes = [
+      '''^go/(?:ast|build|constant|doc|format|importer|internal|parser|printer|scanner|token|types|version)(?:/|$)''',
+  ]
+
+[[rules]]
+id = "google-internal-cl-ref"
+description = "Google-internal Critique changelist reference (cl/<id>)"
+regex = '''(?:^|[^\w/.@:-])(cl/\d{6,10})(?:[^\w/]|$)'''
+secretGroup = 1
+keywords = ["cl/"]
+tags = ["severity:MEDIUM", "category:internal-reference"]
+
+[[rules]]
+id = "google-internal-bug-ref"
+description = "Google-internal Buganizer reference (b/<id>) in source or content files"
+regex = '''(?:^|[^\w/.@:-])(b/\d{6,10})(?:[^\w/]|$)'''
+secretGroup = 1
+keywords = ["b/"]
+tags = ["severity:MEDIUM", "category:internal-reference"]
+  [[rules.allowlists]]
+  paths = [
+      '''(?i)(^|/)\.github/pull_request_template\.md$''',
+  ]
+
+[[rules]]
+id = "google-internal-depot-path"
+description = "Google-internal Piper depot path (//depot/google3/ or google3/)"
+regex = '''(?:^|[^\w-])((?://depot/)?google3/[\w./-]+)'''
+secretGroup = 1
+keywords = ["google3"]
+tags = ["severity:MEDIUM", "category:internal-reference"]
+
+[[rules]]
+id = "google-internal-hostname"
+description = "Google-internal corporate or production hostname"
+regex = '''(?i)\b([a-z0-9][a-z0-9.-]*\.(?:corp\.google\.com|googleplex\.com|prod\.google\.com|borg\.google\.com|sandbox\.google\.com|c\.googlers\.com))\b'''
+secretGroup = 1
+keywords = ["corp.google.com", "googleplex.com", "prod.google.com", "borg.google.com", "sandbox.google.com", "googlers.com"]
+tags = ["severity:MEDIUM", "category:internal-reference"]
+  [[rules.allowlists]]
+  paths = [
+      '''(?i)(^|/)\.github/pull_request_template\.md$''',
+  ]
+
+[[rules]]
+id = "google-internal-email"
+description = "Personal @google.com email address in code or test data"
+regex = '''(?:^|[^\w.+-])([A-Za-z0-9._%+-]+@google\.com)\b'''
+secretGroup = 1
+keywords = ["@google.com"]
+tags = ["severity:MEDIUM", "category:internal-reference"]
+  [[rules.allowlists]]
+  paths = [
+      '''(^|/)pyproject\.toml$''',
+      '''(^|/)display_info\.ya?ml$''',
+      '''(^|/)LICENSE$''',
+      '''(^|/)README\.md$''',
+      '''(^|/)docs/''',
+      '''(^|/)\.github/''',
+  ]
+  regexTarget = "secret"
+  regexes = [
+      '''(?i)^(?:support|chronicle-support|secops-support|cloud-support|noreply|no-reply|security|opensource|dns-admin|network-abuse|arin-contact|registrar|google-registrar|your[_-]?email|user|username|test|example|me|x+)@google\.com$''',
+  ]
