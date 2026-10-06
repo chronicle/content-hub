@@ -36,11 +36,11 @@ from .constants import (
     JOB_README,
     MAPPING_README,
     PLAYBOOK_README_TEMPLATE,
+    STEP_TYPE,
     TRIGGER_TYPES,
     VISUAL_FAMILY_README,
     ScriptType,
     WorkflowTypes,
-    STEP_TYPE,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -273,14 +273,16 @@ class Integration(Content):
         self.zipfile = ZipFile(zip_buffer)
         self.identifier = self.integration_card.get("identifier")
         self.staging = self.integration_card.get("Staging")
-        is_custom = self.integration_card.get("isCustomIntegration")
-        if is_custom is None:
-            is_custom = self.integration_card.get("custom")
-        if is_custom is None:
-            is_custom = self.integration_card.get("Custom")
-        if is_custom is None:
-            is_custom = self.integration_card.get("IsCustom")
-        self.isCustom = bool(is_custom)
+        self.isCustom = bool(
+            next(
+                (
+                    self.integration_card[k]
+                    for k in ("isCustomIntegration", "custom", "Custom", "IsCustom")
+                    if self.integration_card.get(k) is not None
+                ),
+                False,
+            )
+        )
         try:
             self.definition = json.loads(
                 self.zipfile.read(f"Integration-{self.identifier}.def"),
