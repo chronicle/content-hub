@@ -1,4 +1,4 @@
-"""Build SOAR AlertInfo packages from Flare findings (BloodHound-style)."""
+"""Build SOAR AlertInfo packages from Flare findings."""
 from __future__ import annotations
 
 import json
@@ -153,7 +153,7 @@ def create_alerts(
 ) -> list:
     """
     Group Flare findings by source type, build AlertInfo objects, batch at
-    MAX_EVENTS_PER_ALERT (BloodHound-compatible).
+    MAX_EVENTS_PER_ALERT.
     """
     # Import here so managers stay importable outside the SecOps runtime.
     from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo

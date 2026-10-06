@@ -10,7 +10,7 @@ from ..core.utils import format_user_facing_error, parse_tenant_id
 
 @output_handler
 def main():
-    """Connectivity test for the Flare API (BloodHound-style Ping)."""
+    """Connectivity test for the Flare API."""
     siemplify = SiemplifyAction()
     siemplify.script_name = PING_SCRIPT_NAME
     siemplify.LOGGER.info("=============== Main - Param Init ===============")
