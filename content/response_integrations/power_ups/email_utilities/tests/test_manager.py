@@ -19,6 +19,8 @@ import struct
 from email import message_from_bytes
 from unittest.mock import MagicMock
 
+import pytest
+
 from ..actions.ParseBase64Email import body as parse_base64_body
 from ..core.EmailManager import EmailBody, EmailManager, EmailUtils
 from ..core.EmailParser import EmlParser
@@ -175,3 +177,128 @@ def test_fix_malformed_msg_content() -> None:
     assert isinstance(fixed, bytes)
     expected = b"prefix" + tag + b"\x00\x00\x00\x00" + struct.pack("<I", 1252) + b"suffix"
     assert fixed == expected
+
+
+@pytest.mark.parametrize(
+    ("observed_types_param", "expected_created"),
+    [
+        (
+            "URLs",
+            [("https://security.microsoft.com/report", "DestinationURL")],
+        ),
+        (
+            "Emails",
+            [("support@srmbok.com", "USERUNIQNAME")],
+        ),
+        (
+            "IPs",
+            [("198.51.100.42", "ADDRESS")],
+        ),
+        (
+            "Hashes",
+            [
+                (
+                    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "FILEHASH",
+                )
+            ],
+        ),
+        (
+            "URLs, Emails, and IPs",
+            [
+                ("198.51.100.42", "ADDRESS"),
+                ("https://security.microsoft.com/report", "DestinationURL"),
+                ("support@srmbok.com", "USERUNIQNAME"),
+            ],
+        ),
+        (
+            "URLs and Hashes",
+            [
+                ("https://security.microsoft.com/report", "DestinationURL"),
+                (
+                    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "FILEHASH",
+                ),
+            ],
+        ),
+        (
+            "All",
+            [
+                ("198.51.100.42", "ADDRESS"),
+                ("microsoft.com", "DOMAIN"),
+                ("https://security.microsoft.com/report", "DestinationURL"),
+                (
+                    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "FILEHASH",
+                ),
+                ("support@srmbok.com", "USERUNIQNAME"),
+            ],
+        ),
+    ],
+)
+def test_create_entities_observed_entity_types_filtering(
+    observed_types_param: str,
+    expected_created: list[tuple[str, str]],
+) -> None:
+    """Test EmailManager.create_entities filters observed entities using IOC_TYPES."""
+    manager = EmailManager(
+        siemplify=MagicMock(),
+        logger=MagicMock(),
+        custom_regex={},
+    )
+    manager.get_alert_entities = MagicMock(return_value=[])
+    manager.create_entity_with_relation = MagicMock()
+
+    sample_email = {
+        "header": {
+            "subject": "[EXT] SRMBOK Newsletter 66",
+            "from": "sender@srmbok.com",
+            "to": ["recipient@henkel.com"],
+            "cc": [],
+            "bcc": [],
+            "parsed_entities": [],
+        },
+        "body": [
+            {
+                "parsed_entities": [
+                    {
+                        "entity_type": "DestinationURL",
+                        "identifier": "https://security.microsoft.com/report",
+                    },
+                    {
+                        "entity_type": "DOMAIN",
+                        "identifier": "microsoft.com",
+                    },
+                    {
+                        "entity_type": "USERUNIQNAME",
+                        "identifier": "support@srmbok.com",
+                    },
+                    {
+                        "entity_type": "ADDRESS",
+                        "identifier": "198.51.100.42",
+                    },
+                    {
+                        "entity_type": "FILEHASH",
+                        "identifier": (
+                            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                        ),
+                    },
+                ],
+            }
+        ],
+        "attachments": [],
+    }
+
+    manager.create_entities(
+        create_base_entities=False,
+        create_observed_entity_types=observed_types_param,
+        exclude_regex=None,
+        email=sample_email,
+        fang_entities=False,
+    )
+
+    actual_created = sorted(
+        (call.args[0], call.args[2])
+        for call in manager.create_entity_with_relation.call_args_list
+    )
+    assert actual_created == sorted(expected_created)
