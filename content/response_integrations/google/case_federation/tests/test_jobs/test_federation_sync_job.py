@@ -142,6 +142,67 @@ def test_sync_failure_does_not_save_execution_data(
 
 
 @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+def test_first_failed_run_logs_cases_payload_once_and_suppresses_consecutive_failures(
+    federation_cases: GetFederationCasesStub,
+    mock_http_client: MockHttpClient,
+    job_context: dict,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # Arrange
+    federation_cases.response.json.return_value = {
+        "cases": [{"id": 1}, {"id": 2}],
+        "continuationToken": DEFAULT_CONTINUATION,
+    }
+    mock_http_client.response.status_code = 500
+    expected_payload_log = f"Failed cases payload: {json.dumps([{'id': 1}, {'id': 2}])}"
+
+    # Act - first failed run
+    federation_sync_job.main()
+
+    # Assert - payload logged on first failure
+    assert expected_payload_log in caplog.text
+
+    # Act - second consecutive failed run
+    caplog.clear()
+    federation_sync_job.main()
+
+    # Assert - payload is not logged again on consecutive failure
+    assert expected_payload_log not in caplog.text
+
+
+@set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+def test_failed_run_logs_cases_payload_again_after_recovery(
+    federation_cases: GetFederationCasesStub,
+    mock_http_client: MockHttpClient,
+    job_context: dict,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # Arrange
+    federation_cases.response.json.return_value = {
+        "cases": [{"id": 1}],
+        "continuationToken": DEFAULT_CONTINUATION,
+    }
+    expected_payload_log = f"Failed cases payload: {json.dumps([{'id': 1}])}"
+
+    # Act 1 - first failure logs payload
+    mock_http_client.response.status_code = 500
+    federation_sync_job.main()
+    assert expected_payload_log in caplog.text
+
+    # Act 2 - successful run resets failure flag
+    caplog.clear()
+    mock_http_client.response.status_code = 200
+    federation_sync_job.main()
+    assert expected_payload_log not in caplog.text
+
+    # Act 3 - subsequent failure logs payload again
+    caplog.clear()
+    mock_http_client.response.status_code = 500
+    federation_sync_job.main()
+    assert expected_payload_log in caplog.text
+
+
+@set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
 def test_continuation_token_is_reused_on_next_run(
     federation_cases: GetFederationCasesStub,
     mock_http_client: MockHttpClient,

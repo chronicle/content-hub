@@ -44,6 +44,7 @@ class ApiClientParameters:
 class FederationSyncResult:
     status_code: int
     execution_data: FederationSyncExecutionData | None
+    cases_payload: list[TIPCommon.types.SingleJson] | None = None
 
 
 @dataclasses.dataclass
@@ -105,7 +106,11 @@ class FederationSyncManager:
             sync_result = self._sync(cases_payload=updated_cases)
             self.logger.info(f"Response status code: {sync_result.status_code}")
 
-            return FederationSyncResult(status_code=sync_result.status_code, execution_data=execution_data)
+            return FederationSyncResult(
+                status_code=sync_result.status_code,
+                execution_data=execution_data,
+                cases_payload=updated_cases,
+            )
 
         return FederationSyncResult(status_code=SUCCESS_STATUS_CODE, execution_data=execution_data)
 

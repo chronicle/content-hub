@@ -85,6 +85,7 @@ def test_no_cases_returns_success_without_sync_request(
     # Assert
     assert result.status_code == SUCCESS_STATUS_CODE
     assert result.execution_data.continuation_token is None
+    assert result.cases_payload is None
     assert not mock_http_client.requests
 
 
@@ -126,6 +127,7 @@ def test_sync_posts_cases_and_normalizes_sla_statuses(
     assert result.status_code == 200
     assert result.execution_data.continuation_token == DEFAULT_NEXT_CONTINUATION
     assert result.execution_data.execution_message == "message"
+    assert result.cases_payload == payload["cases"]
 
 
 def test_legacy_response_keys_are_supported(
@@ -167,3 +169,4 @@ def test_failed_sync_propagates_status_code(
 
     # Assert
     assert result.status_code == 503
+    assert result.cases_payload == [{"id": 1}]

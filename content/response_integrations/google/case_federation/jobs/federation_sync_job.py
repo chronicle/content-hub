@@ -28,6 +28,7 @@ from ..core.federation_sync_manager import (
 )
 
 LAST_EXECUTION_DATA_KEY = "lastExecutionData"
+HAS_FAILED_KEY = "hasFailed"
 TARGET_PALTFORM_NOT_PROVIDED_ERROR_MESSAGE = "Target Platform must be provided"
 
 
@@ -69,6 +70,9 @@ class CaseFederationSyncJob(Job):
         sync_result = self.api_client.sync_cases_from(previous_execution_data.continuation_token)
 
         if sync_result.status_code == SUCCESS_STATUS_CODE:
+            if self._fetch_has_previous_run_failed():
+                self._save_has_previous_run_failed(has_failed=False)
+
             new_execution_data = sync_result.execution_data
             if new_execution_data.continuation_token is None:
                 self.logger.info(
@@ -84,6 +88,10 @@ class CaseFederationSyncJob(Job):
                 )
 
         else:
+            if not self._fetch_has_previous_run_failed():
+                self.logger.error(f"Failed cases payload: {json.dumps(sync_result.cases_payload)}")
+                self._save_has_previous_run_failed(has_failed=True)
+
             self.logger.error(
                 f"Sync finished unsuccessfully with status code "
                 f"{sync_result.status_code}, keeping previous execution data: "
@@ -125,6 +133,34 @@ class CaseFederationSyncJob(Job):
             identifier=self.name_id,
             property_key=LAST_EXECUTION_DATA_KEY,
             property_value=json.dumps(dataclasses.asdict(execution_data)),
+        )
+
+    def _fetch_has_previous_run_failed(self) -> bool:
+        """Fetch whether the previous run of the job failed.
+
+        Returns:
+            True if the previous run failed, False otherwise.
+
+        """
+        has_failed_json = self.soar_job.get_job_context_property(
+            identifier=self.name_id, property_key=HAS_FAILED_KEY
+        )
+        if has_failed_json is None:
+            return False
+
+        return bool(json.loads(has_failed_json))
+
+    def _save_has_previous_run_failed(self, *, has_failed: bool) -> None:
+        """Save whether the current run of the job failed.
+
+        Args:
+            has_failed: Whether the current sync execution failed.
+
+        """
+        self.soar_job.set_job_context_property(
+            identifier=self.name_id,
+            property_key=HAS_FAILED_KEY,
+            property_value=json.dumps(has_failed),
         )
 
 
