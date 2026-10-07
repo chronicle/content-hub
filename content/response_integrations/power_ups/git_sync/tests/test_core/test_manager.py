@@ -68,3 +68,112 @@ def test_duplicate_step_names_matching_prevention() -> None:
         "local_PA4_1",
         "local_PA4_2",
     }
+
+
+def test_push_block_writes_to_playbooks_path() -> None:
+    """Test that GitContentManager.push_block writes to Playbooks/ path."""
+    from ...core.GitContentManager import PLAYBOOKS_PATH, GitContentManager
+
+    mock_git = MagicMock()
+    mock_git.get_file_contents_from_path.return_value = "{}"
+    mock_api = MagicMock()
+    content_mgr = GitContentManager(mock_git, mock_api)
+
+    block_data = {
+        "name": "TestBlock",
+        "categoryName": "CustomCat",
+        "playbookType": 1,
+    }
+    block = Workflow(block_data)
+
+    content_mgr.push_block(block)
+
+    mock_git.update_objects.assert_called_once()
+    call_args, call_kwargs = mock_git.update_objects.call_args
+    assert call_kwargs.get("base_path") == f"{PLAYBOOKS_PATH}/CustomCat/TestBlock"
+
+
+def test_get_mapping_rule_single_argument() -> None:
+    """Test get_mapping_rule extracts mappingRule dict from single argument."""
+    from ...core.definitions import get_mapping_rule
+
+    assert get_mapping_rule({"mappingRule": {"source": "TestSrc"}}) == {
+        "source": "TestSrc"
+    }
+    assert get_mapping_rule({"source": "DirectSrc"}) == {"source": "DirectSrc"}
+
+
+def test_metadata_readme_addons_isolation() -> None:
+    """Test that Metadata instances do not share mutable nested dicts."""
+    from ...core.definitions import Metadata
+
+    m1 = Metadata()
+    m2 = Metadata()
+
+    m1.set_readme_addon("Integration", "TestIntegration", "Custom Readme")
+    assert m1.get_readme_addon("Integration", "TestIntegration") == "Custom Readme"
+    assert m2.get_readme_addon("Integration", "TestIntegration") is None
+
+
+def test_integration_generate_readme_custom_filtering() -> None:
+    """Test that non-custom integrations only include custom actions/jobs/connectors in README."""
+    import io
+    import zipfile
+    from ...core.definitions import Integration
+
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w") as zf:
+        zf.writestr(
+            "Integration-CommercialTest.def",
+            json.dumps(
+                {
+                    "Identifier": "CommercialTest",
+                    "Description": "desc",
+                    "PythonVersion": "3.11",
+                }
+            ),
+        )
+        zf.writestr(
+            "Actions/BuiltInAction.json",
+            json.dumps(
+                {
+                    "Name": "BuiltIn",
+                    "Description": "builtin",
+                    "TimeoutSeconds": 60,
+                    "IsCustom": False,
+                }
+            ),
+        )
+        zf.writestr(
+            "Actions/LegacyCustomAction.json",
+            json.dumps(
+                {
+                    "Name": "LegacyCustomAct",
+                    "Description": "custom",
+                    "TimeoutSeconds": 60,
+                    "IsCustom": True,
+                }
+            ),
+        )
+        zf.writestr(
+            "Actions/OnePlatformCustomAction.json",
+            json.dumps(
+                {
+                    "Name": "OnePlatformCustomAct",
+                    "Description": "custom 1p",
+                    "TimeoutSeconds": 60,
+                    "Custom": True,
+                }
+            ),
+        )
+    zip_buf.seek(0)
+
+    integration = Integration(
+        {"identifier": "CommercialTest", "isCustomIntegration": False},
+        zip_buf,
+    )
+    integration.generate_readme()
+
+    assert "LegacyCustomAct" in integration.readme
+    assert "OnePlatformCustomAct" in integration.readme
+    assert "BuiltIn" not in integration.readme
