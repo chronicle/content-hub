@@ -29,7 +29,7 @@ from ..core.federation_sync_manager import (
 
 LAST_EXECUTION_DATA_KEY = "lastExecutionData"
 HAS_FAILED_KEY = "hasFailed"
-TARGET_PALTFORM_NOT_PROVIDED_ERROR_MESSAGE = "Target Platform must be provided"
+TARGET_PLATFORM_NOT_PROVIDED_ERROR_MESSAGE = "Target Platform must be provided"
 
 
 class CaseFederationSyncJob(Job):
@@ -41,7 +41,7 @@ class CaseFederationSyncJob(Job):
 
         """
         if not self.params.target_platform:
-            raise MissingParameterError(TARGET_PALTFORM_NOT_PROVIDED_ERROR_MESSAGE)
+            raise MissingParameterError(TARGET_PLATFORM_NOT_PROVIDED_ERROR_MESSAGE)
 
     def _init_api_clients(self) -> FederationSyncManager:
         """Create a federation synchronization manager instance, that will sync the cases.
