@@ -14,11 +14,27 @@
 
 from __future__ import annotations
 
-from typing import List
-from .datamodels import *
-from typing import Any, List, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from .constants import SUCCESSFUL_STATUS_CODES, TOO_MANY_REQUESTS
+from .constants import (
+    OPERATION_LOCATION_HEADER,
+    SUCCESSFUL_STATUS_CODES,
+    TOO_MANY_REQUESTS,
+)
+from .datamodels import (
+    Alert,
+    BlocklistResponse,
+    Endpoint,
+    ExecuteEmail,
+    Script,
+    SubmitFile,
+    SubmitURL,
+    Task,
+    TaskDetail,
+)
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 class TrendVisionOneParser:
@@ -189,18 +205,83 @@ class TrendVisionOneParser:
         )
 
     @staticmethod
-    def build_task_detail_object(raw_json: dict) -> TaskDetail:
-        """
-        Build Task Detail object from raw data
+    def build_task_detail_object(raw_json: SingleJson) -> TaskDetail:
+        """Build a TaskDetail object from raw response data.
+
         Args:
-            raw_json (dict): raw data
+            raw_json: Raw task dictionary returned by the API.
 
         Returns:
-            (TaskDetail): TaskDetail object
+            A parsed TaskDetail instance.
+
         """
         return TaskDetail(
             raw_json,
             task_id=raw_json.get("id"),
             action=raw_json.get("action"),
             status=raw_json.get("status"),
+        )
+
+    @staticmethod
+    def build_blocklist_response_object(raw_json: SingleJson) -> BlocklistResponse:
+        """Build a BlocklistResponse object from raw response data.
+
+        Args:
+            raw_json: Raw dictionary returned for a single blocklist item.
+
+        Returns:
+            A parsed BlocklistResponse instance.
+
+        """
+        task_id: str | None = None
+        task_location_url: str | None = None
+        if raw_json.get("status") in SUCCESSFUL_STATUS_CODES:
+            headers = raw_json.get("headers") or []
+            if isinstance(headers, dict):
+                lower_headers = {k.lower(): v for k, v in headers.items()}
+                task_location_url = lower_headers.get(OPERATION_LOCATION_HEADER)
+            elif isinstance(headers, list):
+                for header in headers:
+                    if (
+                        isinstance(header, dict)
+                        and header.get("name", "").lower() == OPERATION_LOCATION_HEADER
+                    ):
+                        task_location_url = header.get("value")
+                        break
+
+            if task_location_url:
+                task_id = (
+                    task_location_url.split("tasks/")[-1].split("?")[0].rstrip("/")
+                )
+                return BlocklistResponse(
+                    raw_json, task_id=task_id, url=task_location_url, is_success=True
+                )
+
+            return BlocklistResponse(raw_json, is_success=True)
+
+        body = raw_json.get("body")
+        error_message = None
+        if isinstance(body, dict):
+            error_obj = body.get("error")
+            error_msg = (
+                error_obj.get("message")
+                if isinstance(error_obj, dict)
+                else error_obj
+            )
+            error_message = (
+                error_msg or body.get("message") or body.get("errorDescription")
+            )
+        elif isinstance(body, str):
+            error_message = body
+
+        if not error_message:
+            error_message = (
+                raw_json.get("error", {}).get("message")
+                if isinstance(raw_json.get("error"), dict)
+                else raw_json.get("message")
+            )
+
+        return BlocklistResponse(
+            raw_json,
+            error_message=error_message or "Unknown error",
         )
