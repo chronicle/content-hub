@@ -134,6 +134,7 @@ class FakeManager:
                 "limit": limit,
                 "last_sync_start_timestamp": last_sync_start_timestamp,
                 "start_at_index": start_at_index,
+                "lowest_severity": kwargs.get("lowest_severity"),
             }
         )
 

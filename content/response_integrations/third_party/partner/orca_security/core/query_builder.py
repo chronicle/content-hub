@@ -150,15 +150,15 @@ class AlertQueryBuilder(BaseQueryBuilder):
         """Create a filter for RiskLevel field.
 
         Args:
-            lowest_severity (str): The lowest severity to filter by.
+            lowest_severity: The lowest severity to filter by.
 
         Returns:
-            AlertQueryBuilder: The instance of the builder.
+            The instance of the builder.
         """
         if lowest_severity:
             self._add_filter(
                 "RiskLevel",
-                POSSIBLE_SEVERITIES[: POSSIBLE_SEVERITIES.index(lowest_severity) + 1],
+                POSSIBLE_SEVERITIES[: POSSIBLE_SEVERITIES.index(lowest_severity.lower()) + 1],
                 "str",
                 "in",
             )
