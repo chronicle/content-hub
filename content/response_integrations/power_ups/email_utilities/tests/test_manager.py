@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import struct
 from email import message_from_bytes
 from unittest.mock import MagicMock
@@ -28,6 +29,7 @@ from ..core.EmailUtilitiesManager import (
     fix_malformed_eml_content,
     fix_malformed_msg_content,
 )
+from .common import SAMPLE_EMAIL_WITH_ENTITIES
 
 EDGE_CASE_EMAIL = b"""From: sender@example.com
 To: recipient@example.com
@@ -249,51 +251,11 @@ def test_create_entities_observed_entity_types_filtering(
     manager.get_alert_entities = MagicMock(return_value=[])
     manager.create_entity_with_relation = MagicMock()
 
-    sample_email = {
-        "header": {
-            "subject": "[EXT] SRMBOK Newsletter 66",
-            "from": "sender@srmbok.com",
-            "to": ["recipient@henkel.com"],
-            "cc": [],
-            "bcc": [],
-            "parsed_entities": [],
-        },
-        "body": [
-            {
-                "parsed_entities": [
-                    {
-                        "entity_type": "DestinationURL",
-                        "identifier": "https://security.microsoft.com/report",
-                    },
-                    {
-                        "entity_type": "DOMAIN",
-                        "identifier": "microsoft.com",
-                    },
-                    {
-                        "entity_type": "USERUNIQNAME",
-                        "identifier": "support@srmbok.com",
-                    },
-                    {
-                        "entity_type": "ADDRESS",
-                        "identifier": "198.51.100.42",
-                    },
-                    {
-                        "entity_type": "FILEHASH",
-                        "identifier": (
-                            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                        ),
-                    },
-                ],
-            }
-        ],
-        "attachments": [],
-    }
-
     manager.create_entities(
         create_base_entities=False,
         create_observed_entity_types=observed_types_param,
         exclude_regex=None,
-        email=sample_email,
+        email=copy.deepcopy(SAMPLE_EMAIL_WITH_ENTITIES),
         fang_entities=False,
     )
 
