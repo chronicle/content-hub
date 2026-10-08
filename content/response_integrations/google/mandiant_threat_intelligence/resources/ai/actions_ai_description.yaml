@@ -1,0 +1,785 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches multiple entity types (Hostname, IP Address, URL, Domain, File Hash,
+    Threat Actor, and Vulnerability) using Mandiant Threat Intelligence. This action
+    provides deep context including reputation scores, associated malware, actor motivations,
+    and vulnerability details to help analysts assess risk and impact.
+
+
+    ### Flow Description
+
+    1. **Validation**: Validates that the `Severity Score Threshold` is a positive
+    integer within the allowed range (0-100).
+
+    2. **Authentication**: Establishes a session with Mandiant using either Client
+    Credentials or a GTI API Key.
+
+    3. **Entity Processing**: Iterates through all supported entities in the current
+    context.
+
+    4. **Data Retrieval**:
+       - For **Indicators** (IP, Host, Domain, URL, Hash): Fetches reputation data
+    and scores via the Mandiant indicator details API endpoint.
+       - For **Threat Actors**: Fetches actor profiles, motivations, and associated
+    malware via the Mandiant actor details API endpoint.
+       - For **Vulnerabilities**: Fetches CVE details, risk ratings, and executive
+    summaries via the Mandiant vulnerability details API endpoint.
+    5. **Enrichment & Scoring**: Updates entity attributes with retrieved data. If
+    an indicator's score meets the threshold, the entity is marked as suspicious.
+
+    6. **Output Generation**: Populates entity tables, creates insights (based on
+    configuration), and attaches the full JSON response to the action results.
+
+
+    ### Additional Notes
+
+    - Supported hash types: MD5, SHA-1, and SHA-256.
+
+    - Threat Actor and Vulnerability entities are always considered for insights if
+    `Create Insight` is enabled, as they do not use the standard severity score threshold
+    logic.
+  ai_short_description: >-
+    Enriches multiple entity types (Hostname, IP Address, URL, Domain, File Hash,
+    Threat Actor, and Vulnerability) using Mandiant Threat Intelligence to provide
+    deep context, reputation scores, and vulnerability details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Mandiant Threat Intelligence using GET requests
+      (fetches_data=true). It does not perform any state-changing operations on external
+      systems (can_mutate_external_data=false). It updates internal entities with
+      the retrieved enrichment data using `siemplify.update_entities` (can_update_entities=true)
+      and creates insights using `siemplify.add_entity_insight` (can_create_insight=true).
+      It does not modify alert data or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: true
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: true
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: true
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`. The supported types are ADDRESS, HOSTNAME, FILEHASH,
+      CVE, URL, THREATACTOR, and DOMAIN. Therefore, it filters by `entity_type`. Additionally,
+      it checks `if entity.identifier == DEFAULT_FAILED_ENTITY` and `if entity_identifier.lower()
+      not in invalid_entities_lower`, meaning it filters by the entity's identifier.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence, reputation scores, and contextual
+      data for indicators (IP, Hostname, URL, Domain, Hash), CVEs, and Threat Actors
+      from Mandiant. This perfectly matches the 'Enrich IOC' expected outcome. It
+      does not interact with internal assets, alerts, tickets, or perform containment/remediation
+      actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Severity Score Threshold | String | Yes | Specify the lowest severity score
+    that will be used to mark the entity as suspicious. Note: only indicators (hostname,
+    IP address, file hash, url) can be marked as suspicious. Maximum: 100. |
+
+    | Create Insight | Boolean | No | If enabled, action will create an insight containing
+    all of the retrieved information about the entity. |
+
+    | Only Suspicious Entity Insight | Boolean | No | If enabled, action will only
+    create an insight for suspicious entities. Note: parameter "Create Insight" should
+    be enabled. Insights for "Threat Actor" and "Vulnerability" entities will also
+    be created even though they are not marked as suspicious. |
+Enrich IOCs:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comprehensive threat intelligence from Mandiant for a user-provided
+    list of Indicators of Compromise (IOCs). This action allows users to manually
+    input a variety of identifier types, including IP addresses, domains, URLs, file
+    hashes, CVE IDs, malware names, and threat actor names, to fetch detailed context
+    from Mandiant's intelligence database.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the list of IOC identifiers from the
+    action parameters.
+
+    2. **Manager Setup**: Initializes the Mandiant API manager, handling authentication
+    via either OAuth2 (Client ID/Secret) or a Google Threat Intelligence (GTI) API
+    key.
+
+    3. **Sequential Lookup**: For each provided IOC identifier, the script attempts
+    to find a match in Mandiant using a prioritized fallback logic:
+        *   First, it checks if the identifier is a **Vulnerability** (CVE) via a
+    GET request to the vulnerability endpoint.
+        *   If not found, it checks if it is a **Malware** name or ID via a GET request
+    to the malware endpoint.
+        *   If still not found, it checks if it is a **Threat Actor** name or ID via
+    a GET request to the actor endpoint.
+        *   Finally, it attempts to retrieve general **Indicator** details (for IPs,
+    Hashes, Domains, and URLs) via a GET request to the indicator endpoint.
+    4. **Data Aggregation**: Successfully retrieved data is converted into a structured
+    JSON format, including report links back to the Mandiant Advantage UI.
+
+    5. **Result Delivery**: The aggregated intelligence is returned as a JSON result
+    to the SOAR platform for use in downstream playbooks.
+
+
+    ### Additional Notes
+
+    * This action does not automatically process entities associated with the current
+    Google SecOps case; it only processes the strings explicitly provided in the 'IOC
+    Identifiers' parameter.
+
+    * The action is read-only regarding external systems and does not modify existing
+    case entities or create insights automatically.
+  ai_short_description: >-
+    Retrieves comprehensive threat intelligence from Mandiant for a user-provided
+    list of Indicators of Compromise (IOCs) and returns the aggregated data as a JSON
+    result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Mandiant API using GET requests. It does not
+      perform any state-changing operations on external systems. Internally, it only
+      returns a JSON result and does not update entities, create insights, or modify
+      alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      exclusively uses the string values provided in the 'IOC Identifiers' parameter.
+      Therefore, it does not run on entities and all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence (vulnerabilities, malware, threat actors,
+      indicators) for a provided list of IOCs and returns the data as a JSON result.
+      This directly aligns with the 'Enrich IOC' expected outcome, even though it
+      operates on parameter inputs rather than case entities.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | IOC Identifiers | String | Yes | Specify a comma-separated list of IOCs that
+    need to be enriched |
+Get Malware Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get Malware Details** action retrieves comprehensive intelligence about
+    specific malware families or samples from Mandiant Threat Intelligence. It provides
+    details such as malware descriptions, aliases, associated capabilities (e.g.,
+    'Allocates memory', 'Encrypts data'), and targeted industries. This action is
+    useful for security analysts to understand the nature and impact of malware identified
+    during an investigation.
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: The action extracts action parameters including
+    malware names, insight toggle, IOC toggle, and limits.
+
+    2. **Validation**: It validates that the `Max Related IOCs To Return` is a positive
+    integer.
+
+    3. **Manager Setup**: Initializes the `MandiantManager` to handle API communication.
+
+    4. **Malware Processing**: For each malware name provided in the input:
+        - Fetches core malware details from Mandiant via a GET request to `/v4/malware/{malware_identifier}`.
+        - If `Fetch Related IOCs` is enabled, it retrieves associated indicators (hashes,
+    IPs, etc.) up to the specified limit via a GET request to `/v4/malware/{malware_identifier}/indicators`.
+        - If `Create Insight` is enabled, it generates a formatted HTML insight and
+    adds it to the case using `siemplify.create_case_insight`.
+    5. **Result Aggregation**: The action compiles the retrieved data into a JSON
+    result and a data table named 'Malware Results'.
+
+    6. **Completion**: Returns a summary message indicating which malware names were
+    successfully enriched.
+
+
+    ### Additional Notes
+
+    - This action does not automatically process entities from the case; it relies
+    entirely on the names provided in the **Malware Names** parameter.
+  ai_short_description: >-
+    Retrieves comprehensive intelligence about specific malware families or samples
+    from Mandiant Threat Intelligence based on provided malware names.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Mandiant API (malware details and related indicators).
+      It does not mutate external data. It creates case insights using `siemplify.create_case_insight`
+      but does not update entities or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. Instead,
+      it relies entirely on the 'Malware Names' provided as an action parameter. Therefore,
+      it does not run on any specific entity types from the case.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence (malware details, capabilities, and related
+      indicators) for specific malware names. This aligns with the 'Enrich IOC' category,
+      which includes returning threat intelligence such as malware family and attribution.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Malware Names | String | Yes | Specify a comma-separated list of malware names
+    that need to be enriched. |
+
+    | Create Insight | Boolean | No | If enabled, action will create an insight containing
+    information about the malware. |
+
+    | Fetch Related IOCs | Boolean | No | If enabled, action will fetch indicators
+    that are related to the provided malware. |
+
+    | Max Related IOCs To Return | Integer | No | Specify how many indicators action
+    needs to process per malware. Default: 100. |
+Get Related Entities:
+  ai_description: >-
+    ### General Description
+
+    Retrieves indicators of compromise (IOCs) related to specific entities using Mandiant
+    Threat Intelligence. This action identifies associations between the target entity
+    and known malware or threat actors, then fetches the indicators linked to those
+    associations. It is designed to expand the scope of an investigation by uncovering
+    related infrastructure, files, or network identifiers associated with a known
+    threat.
+
+
+    ### Flow Description
+
+    1. **Parameter Validation**: The action validates that the `Lowest Severity Score`
+    is a positive integer no greater than 100 and that `Max IOCs To Return` is a positive
+    integer.
+
+    2. **Entity Filtering**: It identifies supported entities from the case, including
+    IP Addresses, Hostnames, Domains, URLs, File Hashes, and Threat Actors.
+
+    3. **Data Retrieval**:
+        - **For Threat Actor entities**: The action fetches the actor's details and
+    then retrieves all indicators (IOCs) associated with that specific actor via the
+    Mandiant API.
+        - **For Indicator entities (IP, Host, etc.)**: The action fetches the indicator's
+    details to find 'attributed associations' (specifically related Malware or Threat
+    Actors). It then fetches indicators associated with those related malware families
+    or actors.
+    4. **Filtering & Aggregation**: All retrieved related indicators are filtered
+    based on the `Lowest Severity Score` and limited by the `Max IOCs To Return` value.
+
+    5. **Result Categorization**: The found IOCs are grouped by type (e.g., hashes,
+    IPs, URLs, FQDNs) and returned as a structured JSON result for each processed
+    entity.
+
+
+    ### Additional Notes
+
+    - This action performs deep enrichment by pivoting from a single indicator to
+    its broader threat context (malware families and actors) to find related IOCs.
+  ai_short_description: >-
+    Retrieves indicators of compromise (IOCs) related to specific entities using Mandiant
+    Threat Intelligence by identifying associations with known malware or threat actors.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Mandiant API using GET requests (fetches_data=true).
+      It does not mutate external data. It does not update entities or create insights;
+      it only adds a JSON result to the action.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: true
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: true
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`. The supported types are ADDRESS, HOSTNAME, FILEHASH,
+      URL, THREATACTOR, and DOMAIN. Therefore, it filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches related indicators and threat intelligence context (malware/actor
+      associations) for the provided entities. This aligns with the 'Enrich IOC' category.
+      It does not mutate external systems or perform containment/blocking.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Lowest Severity Score | Integer | Yes | Specify the lowest severity score that
+    will be used to return related indicators. Maximum: 100. |
+
+    | Max IOCs To Return | Integer | No | Specify how many indicators action needs
+    to process per entity. Default: 100. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Mandiant Threat Intelligence API using the provided
+    integration configuration parameters. It validates credentials and network paths
+    by performing a sample indicator lookup.
+
+
+    ### Flow Description
+
+    1. Extracts integration configuration parameters (API Root, Client ID, Client
+    Secret, GTI API Key, Verify SSL).
+
+    2. Initializes the MandiantManager to handle authentication.
+
+    3. Executes a GET request to the indicator endpoint using a hardcoded test IP
+    address (192.0.2.1) to verify the connection.
+
+    4. Returns a success message if the API responds correctly, or an error message
+    detailing the failure.
+
+
+    ### Additional Notes
+
+    This action does not process any entities from the current context. It is purely
+    a diagnostic tool to verify integration settings.
+  ai_short_description: >-
+    Tests connectivity to the Mandiant Threat Intelligence API by performing a sample
+    indicator lookup.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to test API connectivity but does not fetch
+      contextual data for alerts/entities. It does not mutate external data, update
+      internal entities, create insights, or modify case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities. It is a connectivity test that uses
+      a hardcoded IP address (192.0.2.1) to verify API access. Therefore, all entity
+      type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic ping to test connectivity to the Mandiant Threat
+      Intelligence API. It does not enrich IOCs, modify alerts, contain hosts, or
+      perform any other operational security tasks. Thus, it does not match any of
+      the expected outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
