@@ -5,16 +5,16 @@ import json
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+from TIPCommon.transformation import construct_csv
 
 from ..core.constants import (
     COMMON_ACTION_ERROR_MESSAGE,
-    INTEGRATION_NAME,
     LIST_GROUPS_SCRIPT_NAME,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
 )
 from ..core.UtilsManager import (
+    get_integration_params,
     process_action_parameter,
     validate_integer,
     validate_limit_param,
@@ -30,117 +30,78 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration parameters
-    api_root = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Root",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_id = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client ID",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_secret = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client Secret",
-        print_value=False,
-        is_mandatory=True,
-    )
+    api_root, client_id, client_secret = get_integration_params(siemplify)
 
     # Action parameters
-    host_names = extract_action_param(
-        siemplify,
+    host_names = siemplify.extract_action_param(
         param_name="Host Names",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    host_ids = extract_action_param(
-        siemplify,
+    host_ids = siemplify.extract_action_param(
         param_name="Host Ids",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    account_names = extract_action_param(
-        siemplify,
+    account_names = siemplify.extract_action_param(
         param_name="Account Names",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    domains = extract_action_param(
-        siemplify,
+    domains = siemplify.extract_action_param(
         param_name="Domains",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    importance = extract_action_param(
-        siemplify,
+    importance = siemplify.extract_action_param(
         param_name="Importance",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    ips = extract_action_param(
-        siemplify,
+    ips = siemplify.extract_action_param(
         param_name="IPs",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    description = extract_action_param(
-        siemplify,
+    description = siemplify.extract_action_param(
         param_name="Description",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    last_modified_timestamp = extract_action_param(
-        siemplify,
+    last_modified_timestamp = siemplify.extract_action_param(
         param_name="Last Modified Timestamp GTE",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    name = extract_action_param(
-        siemplify,
+    name = siemplify.extract_action_param(
         param_name="Name",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    last_modified_by = extract_action_param(
-        siemplify,
+    last_modified_by = siemplify.extract_action_param(
         param_name="Last Modified By",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    group_type = extract_action_param(
-        siemplify,
+    group_type = siemplify.extract_action_param(
         param_name="Type",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    result_limit = extract_action_param(
-        siemplify,
+    result_limit = siemplify.extract_action_param(
         param_name="Limit",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
     action_parameters = [host_names, account_names, domains, ips]
     processed_action_parameters = map(process_action_parameter, action_parameters)
     host_names, account_names, domains, ips = processed_action_parameters
+
+    last_modified_timestamp = last_modified_timestamp.strip() if last_modified_timestamp else None
+    last_modified_by = last_modified_by.strip() if last_modified_by else None
+    name = name.strip() if name else None
+    description = description.strip() if description else None
 
     status = EXECUTION_STATE_COMPLETED
     result_value = RESULT_VALUE_TRUE
