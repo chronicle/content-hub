@@ -21,8 +21,6 @@ from ..core.definitions import (
     Connector,
     Mapping,
     VisualFamily,
-    get_fields,
-    get_mapping_rule,
 )
 from ..core.GitSyncManager import GitSyncManager
 
@@ -79,28 +77,10 @@ def main():
                     ]
                     visual_families = set([x.get("familyName") for x in records])
                     if include_mappings:
-                        rules = []
-                        for record in records:
-                            record["exampleEventFields"] = []  # remove event assets
-                            rule = gitsync.api.get_mapping_rules(
-                                source=record["source"],
-                                mr_id=record["id"],
-                                product=record["product"],
-                                event_name=record["eventName"],
-                            )
-
-                            for r in get_fields(rule):
-                                mapping_rule = get_mapping_rule(r)
-                                source = mapping_rule.get("source")
-                                if (
-                                    not source
-                                    or source.lower() == integration_name.lower()
-                                ):
-                                    if isinstance(rule, list):
-                                        rules.append(r)
-                                    else:
-                                        rules.append(rule)
-                                        break
+                        rules = gitsync.api.get_mapping_rules_for_records(
+                            records,
+                            integration_name,
+                        )
                         if not records and not rules:
                             siemplify.LOGGER.info(
                                 f"{integration_name} mappings don't exist. Skipping",

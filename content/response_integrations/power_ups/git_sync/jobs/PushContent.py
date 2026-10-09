@@ -36,8 +36,6 @@ from ..core.definitions import (
     VisualFamily,
     Workflow,
     WorkflowTypes,
-    get_fields,
-    get_mapping_rule,
 )
 
 from TIPCommon.data_models import Environment
@@ -240,25 +238,10 @@ def main():
                     records = [x for x in all_records if x["source"] == integration]
                     if not records:
                         continue
-                    rules = []
-                    for record in records:
-                        record["exampleEventFields"] = []  # remove event assets
-                        rule = gitsync.api.get_mapping_rules(
-                            source=record["source"],
-                            mr_id=record["id"],
-                            product=record["product"],
-                            event_name=record["eventName"],
-                        )
-
-                        for r in get_fields(rule):
-                            mapping_rule = get_mapping_rule(r)
-                            source = mapping_rule.get("source")
-                            if not source or source.lower() == integration.lower():
-                                if isinstance(rule, list):
-                                    rules.append(r)
-                                else:
-                                    rules.append(rule)
-                                    break
+                    rules = gitsync.api.get_mapping_rules_for_records(
+                        records,
+                        integration,
+                    )
 
                     gitsync.content.push_mapping(Mapping(integration, records, rules))
 

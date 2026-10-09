@@ -14,14 +14,15 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, TYPE_CHECKING
 from urllib.parse import urljoin
 
 import requests
 from packaging import version
+from requests.adapters import HTTPAdapter
 from requests.exceptions import HTTPError
-from TIPCommon.utils import platform_supports_1p_api
-
+from TIPCommon.consts import DATAPLANE_1P_HEADER
 from TIPCommon.rest.soar_api import (
     add_case_stage,
     add_case_tag,
@@ -97,10 +98,14 @@ from TIPCommon.rest.soar_api import (
     update_sla_record,
     update_visual_family,
 )
+from TIPCommon.types import SingleJson
+from TIPCommon.utils import platform_supports_1p_api
+
+from .definitions import get_fields, get_mapping_rule
 
 if TYPE_CHECKING:
     from TIPCommon.data_models import InstalledIntegrationInstance
-    from TIPCommon.types import ChronicleSoar, SingleJson
+    from TIPCommon.types import ChronicleSoar
 
 
 VERSION_6117 = version.parse("6.1.17")
@@ -109,6 +114,7 @@ VERSION_6138 = version.parse("6.1.38.77")
 WORKFLOW_TYPE_PLAYBOOK = 0
 WORKFLOW_TYPE_BLOCK = 1
 MAX_PAGE_SIZE = 10000
+MAX_WORKERS: int = 50
 
 
 class BaseUrlSession(requests.Session):
@@ -119,6 +125,12 @@ class BaseUrlSession(requests.Session):
         if base_url:
             self.base_url = base_url
         super(BaseUrlSession, self).__init__()
+        adapter = HTTPAdapter(
+            pool_connections=MAX_WORKERS,
+            pool_maxsize=MAX_WORKERS,
+        )
+        self.mount("https://", adapter)
+        self.mount("http://", adapter)
 
     def request(self, method, url, *args, **kwargs):
         url = self.create_url(url)
@@ -149,6 +161,14 @@ class SiemplifyApiClient:
         self._version = None
         self._bearer_token = None
         self.siemplify_soar = siemplify_soar
+        soar_session = getattr(self.siemplify_soar, "session", None)
+        if hasattr(soar_session, "mount"):
+            adapter = HTTPAdapter(
+                pool_connections=MAX_WORKERS,
+                pool_maxsize=MAX_WORKERS,
+            )
+            soar_session.mount("https://", adapter)
+            soar_session.mount("http://", adapter)
         if smp_username and smp_password and not platform_supports_1p_api():
             self._bearer_token = self.get_bearer_token(smp_password, smp_username) # type: ignore
         self._integration_instance_names = {}
@@ -388,6 +408,68 @@ class SiemplifyApiClient:
             mr_id,
             product,
             event_name
+        )
+
+    def get_mapping_rules_for_records(
+        self,
+        records: list[SingleJson],
+        source: str,
+    ) -> list[SingleJson]:
+        """Fetches and filters mapping rules concurrently for ontology records.
+
+        Args:
+            records: Ontology status records to process.
+            source: Integration or source name to filter mapping rules by.
+
+        Returns:
+            List of mapping rule dictionaries matching the specified source.
+        """
+        if not records:
+            return []
+
+        for record in records:
+            record["exampleEventFields"] = []  # Remove event assets.
+
+        rules: list[SingleJson] = []
+        source_lower = source.lower()
+        soar_session = getattr(self.siemplify_soar, "session", None)
+        headers = getattr(soar_session, "headers", None)
+        old_dataplane_header = (
+            headers.pop(DATAPLANE_1P_HEADER, None)
+            if hasattr(headers, "pop")
+            else None
+        )
+        try:
+            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                for rule in executor.map(self._fetch_record_rule, records):
+                    for r in get_fields(rule):
+                        mapping_rule = get_mapping_rule(r)
+                        rule_source = (
+                            mapping_rule.get("source")
+                            if isinstance(mapping_rule, dict)
+                            else None
+                        )
+                        if (
+                            not rule_source
+                            or rule_source.lower() == source_lower
+                        ):
+                            if isinstance(rule, list):
+                                rules.append(r)
+                            else:
+                                rules.append(rule)
+                                break
+        finally:
+            if old_dataplane_header is not None and headers is not None:
+                headers[DATAPLANE_1P_HEADER] = old_dataplane_header
+
+        return rules
+
+    def _fetch_record_rule(self, record: SingleJson) -> Any:
+        return self.get_mapping_rules(
+            source=record["source"],
+            mr_id=record["id"],
+            product=record["product"],
+            event_name=record["eventName"],
         )
 
     def add_mapping_rules(self, mapping_rule, mr_id=None):
