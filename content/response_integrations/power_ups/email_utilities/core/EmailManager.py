@@ -2049,13 +2049,20 @@ class EmailManager:
         entity_types = [
             getattr(EntityTypes, a) for a in dir(EntityTypes) if not a.startswith("__")
         ]
+        observed_types_lower = create_observed_entity_types.lower()
+        enabled_ioc_entity_types = {
+            mapped_entity_type
+            for ioc_key, mapped_entity_type in IOC_TYPES.items()
+            if ioc_key in observed_types_lower
+        }
 
         for entity_type in entity_types:
             # self.siemplify.LOGGER.info(f"Checking if {ioc_type} is enabled.")
 
             if (
-                entity_type in create_observed_entity_types.lower()
-                or "all" in create_observed_entity_types.lower()
+                entity_type in enabled_ioc_entity_types
+                or entity_type.lower() in observed_types_lower
+                or "all" in observed_types_lower
             ):
                 # self.siemplify.LOGGER.info(f"Creating any {ioc_type} IOCs from
                 # {email['header']['subject']}")
