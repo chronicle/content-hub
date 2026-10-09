@@ -17,11 +17,7 @@ from __future__ import annotations
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.definitions import (
-    Mapping,
-    get_fields,
-    get_mapping_rule,
-)
+from ..core.definitions import Mapping
 from ..core.GitSyncManager import GitSyncManager
 
 SCRIPT_NAME = "Push Mappings"
@@ -63,28 +59,10 @@ def main():
                 records = [x for x in all_records if x["source"] == integration]
                 if not records:
                     continue
-                rules = []
-                for record in records:
-                    record["exampleEventFields"] = []
-                    rule = gitsync.api.get_mapping_rules(
-                        source=record["source"],
-                        mr_id=record["id"],
-                        product=record["product"],
-                        event_name=record["eventName"],
-                    )
-
-                    for r in get_fields(rule):
-                        mapping_rule = get_mapping_rule(r)
-                        rule_source = mapping_rule.get("source")
-                        if (
-                            not rule_source
-                            or rule_source.lower() == integration.lower()
-                        ):
-                            if isinstance(rule, list):
-                                rules.append(r)
-                            else:
-                                rules.append(rule)
-                                break
+                rules = gitsync.api.get_mapping_rules_for_records(
+                    records,
+                    integration,
+                )
                 if readme_addon:
                     siemplify.LOGGER.info(
                         "Readme addon found - "

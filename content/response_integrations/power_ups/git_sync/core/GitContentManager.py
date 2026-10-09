@@ -22,6 +22,9 @@ import zipfile
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
 
+from TIPCommon.types import SingleJson
+
+from .constants import MAX_MAPPING_RULE_PARTS
 from .definitions import (
     Connector,
     File,
@@ -220,14 +223,14 @@ class GitContentManager:
         except KeyError:
             return []
 
-    def get_mapping(self, source_name) -> Mapping | None:
-        """Reads ontology mappings from the repo
+    def get_mapping(self, source_name: str) -> Mapping | None:
+        """Reads ontology mappings from the repository.
 
         Args:
-            source_name: Source integration name
+            source_name: Source integration name.
 
-        Returns: A Mapping object, or None if the mappings doesn't exist
-
+        Returns:
+            A Mapping object, or None if the mappings do not exist.
         """
         try:
             records = json.loads(
@@ -235,16 +238,34 @@ class GitContentManager:
                     f"{MAPPINGS_PATH}/{source_name}/{source_name}_Records.json",
                 ),
             )
-
-            rules = json.loads(
-                self.git.get_file_contents_from_path(
-                    f"{MAPPINGS_PATH}/{source_name}/{source_name}_Rules.json",
-                ),
-            )
-
+            rules = self._get_mapping_rules_from_repo(source_name)
             return Mapping(source_name, records, rules)
         except KeyError:
             return None
+
+    def _get_mapping_rules_from_repo(
+        self,
+        source_name: str,
+    ) -> list[SingleJson]:
+        base_rules_path = (
+            f"{MAPPINGS_PATH}/{source_name}/{source_name}_Rules.json"
+        )
+        rules: list[SingleJson] = list(
+            json.loads(self.git.get_file_contents_from_path(base_rules_path)),
+        )
+        for part_index in range(2, MAX_MAPPING_RULE_PARTS + 1):
+            part_path = (
+                f"{MAPPINGS_PATH}/{source_name}/"
+                f"{source_name}_Rules_part_{part_index}.json"
+            )
+            try:
+                part_rules = json.loads(
+                    self.git.get_file_contents_from_path(part_path),
+                )
+            except KeyError:
+                break
+            rules.extend(part_rules)
+        return rules
 
     def get_mappings(self) -> list[Mapping]:
         try:
