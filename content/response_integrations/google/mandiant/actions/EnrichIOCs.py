@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from mandiant.core.MandiantManager import MandiantManager
+from ..core.MandiantManager import MandiantManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
@@ -22,7 +22,7 @@ from TIPCommon import (
     extract_action_param,
     string_to_multi_value,
 )
-from mandiant.core.constants import ENRICH_IOCS_SCRIPT_NAME, INTEGRATION_NAME, INDICATOR_TYPE_MAPPING
+from ..core.constants import ENRICH_IOCS_SCRIPT_NAME, INTEGRATION_NAME, INDICATOR_TYPE_MAPPING
 
 
 @output_handler

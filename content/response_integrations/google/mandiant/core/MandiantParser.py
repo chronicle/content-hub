@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from mandiant.core.datamodels import *
+from .datamodels import *
 
 
 class MandiantParser:

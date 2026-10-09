@@ -18,9 +18,9 @@ from urllib.parse import urljoin
 
 import requests
 
-from mandiant.core.MandiantParser import MandiantParser
-from mandiant.core.constants import PAGE_SIZE
-from mandiant.core.datamodels import Indicator, Vulnerability, ThreatActor, Malware
+from .MandiantParser import MandiantParser
+from .constants import PAGE_SIZE
+from .datamodels import Indicator, Vulnerability, ThreatActor, Malware
 
 HEADERS = {"Accept": "application/json"}
 

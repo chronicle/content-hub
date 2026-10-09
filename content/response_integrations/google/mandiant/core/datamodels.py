@@ -17,7 +17,7 @@ from typing import Optional, Dict, Any, List
 from urllib.parse import urljoin, quote
 
 from TIPCommon import dict_to_flat, add_prefix_to_dict
-from mandiant.core.constants import (
+from .constants import (
     ENRICHMENT_PREFIX,
     MALWARE_URL,
     INDICATOR_URL,

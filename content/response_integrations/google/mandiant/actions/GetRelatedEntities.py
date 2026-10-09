@@ -18,8 +18,8 @@ from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon import extract_configuration_param, extract_action_param
-from mandiant.core.MandiantManager import MandiantManager
-from mandiant.core.constants import (
+from ..core.MandiantManager import MandiantManager
+from ..core.constants import (
     INTEGRATION_NAME,
     GET_RELATED_ENTITIES_SCRIPT_NAME,
     MAX_SEVERITY_SCORE,
@@ -30,7 +30,7 @@ from mandiant.core.constants import (
     RELATED_ENTITIES_DICT,
     INDICATOR_TYPE_MAPPING,
 )
-from mandiant.core.UtilsManager import get_entity_original_identifier, validate_positive_integer
+from ..core.UtilsManager import get_entity_original_identifier, validate_positive_integer
 import copy
 
 

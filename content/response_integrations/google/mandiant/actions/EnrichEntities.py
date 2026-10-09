@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import List, Optional, Union
 from urllib.parse import urljoin, quote
 
-from mandiant.core.MandiantManager import MandiantManager
+from ..core.MandiantManager import MandiantManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes, DomainEntityInfo
@@ -26,8 +26,8 @@ from TIPCommon import (
     extract_action_param,
     flat_dict_to_csv,
 )
-from mandiant.core.UtilsManager import get_entity_original_identifier, validate_positive_integer
-from mandiant.core.constants import (
+from ..core.UtilsManager import get_entity_original_identifier, validate_positive_integer
+from ..core.constants import (
     INTEGRATION_NAME,
     ENRICH_ENTITIES_SCRIPT_NAME,
     MAX_SEVERITY_SCORE,
@@ -37,7 +37,7 @@ from mandiant.core.constants import (
     IOC_MAPPING,
     INVALID_ENTITIES,
 )
-from mandiant.core.datamodels import Vulnerability, ThreatActor, Indicator
+from ..core.datamodels import Vulnerability, ThreatActor, Indicator
 
 SUPPORTED_ENTITY_TYPES = [
     EntityTypes.ADDRESS,

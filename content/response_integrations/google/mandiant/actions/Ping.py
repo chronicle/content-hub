@@ -17,8 +17,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon import extract_configuration_param
-from mandiant.core.MandiantManager import MandiantManager
-from mandiant.core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
+from ..core.MandiantManager import MandiantManager
+from ..core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
 
 
 @output_handler
