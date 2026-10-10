@@ -1,0 +1,647 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Execute HTTP Request:
+  ai_description: >-
+    ### General Description
+
+    The **Execute HTTP Request** action allows users to construct and execute customized
+    HTTP API requests against a target URL. It is a versatile tool for interacting
+    with any RESTful API, supporting various HTTP methods, headers, query parameters,
+    and body payloads. It can operate in an asynchronous mode when polling an endpoint
+    is necessary to wait for a specific success condition in the response body.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action extracts and validates all input parameters,
+    ensuring JSON strings are correctly formatted.
+
+    2. **Request Construction**: It builds an HTTP request using the specified method,
+    URL, headers, cookies, and payload.
+
+    3. **Execution**: The request is sent to the target URL using the authenticated
+    session.
+
+    4. **Response Parsing**: The action parses the response, extracts the fields specified
+    in 'Fields To Return', and optionally encodes the body in Base64.
+
+    5. **Async Check**: If 'Expected Response Values' are provided, the action compares
+    the response data against the criteria. If they don't match, the action enters
+    an 'In Progress' state for polling.
+
+    6. **Internal Mutation**: If 'Save To Case Wall' is enabled, the response content
+    is compressed into a ZIP file (optionally password-protected) and attached to
+    the case wall.
+
+    7. **Completion**: The action returns the filtered response data as JSON results.
+
+
+    ### Additional Notes
+
+    - This action does not run on specific entities; it is a global utility action.
+
+    - Providing **Expected Response Values** will trigger asynchronous execution (polling).
+  ai_short_description: >-
+    Constructs and executes a customized HTTP API request against a target URL, supporting
+    various HTTP methods, headers, and payloads, with optional asynchronous polling
+    and case wall attachment capabilities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      The action can execute HTTP methods such as POST, PUT, PATCH, and DELETE, which
+      are designed to create, modify, or delete data on the target external API.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      If the 'Save To Case Wall' parameter is enabled, the action compresses the HTTP
+      response into a ZIP file and attaches it to the case wall.
+    reasoning: >-
+      The action fetches data by making HTTP requests to external APIs. It can mutate
+      external data because it supports HTTP methods like POST, PUT, PATCH, and DELETE.
+      It can mutate internal data by saving the HTTP response as an attachment to
+      the case wall. It does not update entities, create insights, modify alert data,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process any target entities. It operates
+      globally based on the provided URL and request parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      This is a generic utility action designed to execute custom HTTP requests (GET,
+      POST, PUT, etc.) against any RESTful API. It does not inherently match any specific
+      security outcome category such as enriching an IOC, isolating a host, or creating
+      a ticket, as its exact outcome depends entirely on the user-defined parameters
+      and the target API.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Method | String | Yes | The HTTP method (verb) used for the request (e.g., GET,
+    POST, PUT, PATCH, DELETE, HEAD, OPTIONS). |
+
+    | URL Path | String | Yes | The API endpoint where the request executes. This
+    path can optionally include query parameters. |
+
+    | URL Params | String | No | The query parameters (GET parameters) for the URL,
+    provided as a JSON object where each key-value pair is a parameter. |
+
+    | Headers | String | No | The headers for the HTTP request, specified as a JSON
+    object. |
+
+    | Cookie | String | No | The cookies constructed into the HTTP Cookie header,
+    specified as a JSON object. This parameter overrides any cookie values provided
+    in Headers. |
+
+    | Body Payload | String | No | The content payload for the HTTP request, specified
+    as a JSON object. |
+
+    | Expected Response Values | String | No | The JSON object containing the field-value
+    pairs that define the required successful state of the response. If provided,
+    the action runs in asynchronous mode. |
+
+    | Follow Redirects | Boolean | No | If selected, the action automatically follows
+    any HTTP redirect responses (such as 301 or 302 status codes) to the final destination
+    URL. |
+
+    | Fail on 4xx/5xx | Boolean | No | If selected, the action explicitly fails the
+    step when the HTTP response returns a Client Error (4xx) or Server Error (5xx)
+    status code. |
+
+    | Base64 Output | Boolean | No | If selected, the action converts the entire HTTP
+    response body to a Base64 encoded string. |
+
+    | Fields To Return | String | Yes | A comma-separated list of fields that the
+    action returns in the output. Possible values: response_data, redirects, response_code,
+    response_cookies, response_headers, apparent_encoding. |
+
+    | Request Timeout | String | Yes | The maximum time, in seconds, the action waits
+    for the server to send data before the request is aborted. |
+
+    | Save To Case Wall | Boolean | No | If selected, the action saves the file and
+    attaches it to the case wall. The file is archived with a ".zip" extension. |
+
+    | Password Protect Zip | Boolean | No | If selected, the action encrypts the downloaded
+    ZIP archive (created using Save To Case Wall) with a password (such as infected).
+    |
+Generate Token:
+  ai_description: >-
+    ### General Description
+
+    The **Generate Token** action is a utility designed to facilitate the OAuth2 delegated
+    authentication flow for the Azure API integration. Its primary purpose is to exchange
+    an authorization code (obtained from a previous step like 'Get Authorization')
+    for a persistent refresh token. This refresh token is then used by other actions
+    in the integration to maintain authenticated access to Microsoft Graph or other
+    Azure services without requiring manual re-authentication.
+
+
+    ### Flow Description
+
+    1. **Extraction**: The action retrieves the `Authorization URL` from the input
+    parameters.
+
+    2. **Parsing**: It parses the provided URL to extract the `code` value from the
+    query string.
+
+    3. **Token Exchange**: It performs a POST request to the Microsoft identity platform's
+    token endpoint (`/oauth2/v2.0/token`) using the `authorization_code` grant type.
+
+    4. **Output**: Upon a successful response, it extracts the `refresh_token` and
+    provides it in the action's output message for the user to configure in the integration
+    settings.
+
+
+    ### Additional Notes
+
+    - This action does not interact with Google SecOps entities (IPs, Hosts, etc.).
+
+    - It is a one-time setup action used during the initial configuration of delegated
+    permissions.
+  ai_short_description: >-
+    Exchanges an authorization code extracted from a provided URL for a persistent
+    refresh token to facilitate OAuth2 delegated authentication for the Azure API
+    integration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Microsoft identity platform to exchange
+      an authorization code for a refresh token. It does not fetch contextual data
+      for alerts/entities, nor does it mutate external business data, internal case
+      data, or update entities.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on or interact with any Google SecOps entities.
+      It solely processes the provided authorization URL parameter to extract an authentication
+      code.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a utility for generating an OAuth2 refresh token. It does not
+      match any of the predefined outcome categories such as enriching IOCs, managing
+      tickets, or modifying external system state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Authorization URL | String | Yes | The full authorization URL, containing the
+    access code, received from the Get Authorization action. This URL is required
+    to request and generate the refresh token. |
+Get Authorization:
+  ai_description: >-
+    ### General Description
+
+    The **Get Authorization** action initiates the OAuth 2.0 delegated authentication
+    flow for the Azure API integration. It generates a specific authorization URL
+    that allows a user to grant the integration permissions to access Azure resources
+    on their behalf. This is a prerequisite step for integrations requiring user-level
+    access tokens.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the requested OAuth scopes from
+    the user input and fetches the integration's configuration (Tenant ID, Client
+    ID, and Redirect URL) from the Google SecOps environment.
+
+    2. **URL Generation**: It constructs the Microsoft identity platform authorization
+    URL by combining the login API root with the authorization endpoint and appending
+    query parameters including the `client_id`, `redirect_uri`, `response_type=code`,
+    and the requested `scopes`.
+
+    3. **Output**: The action logs the generated URL and adds it as a clickable link
+    in the Google SecOps action results interface.
+
+
+    ### Additional Notes
+
+    * This action does not interact with or process any Google SecOps entities.
+
+    * **Manual Step Required**: After the action completes, a user must manually click
+    the generated link, authenticate with Azure, and then capture the 'code' parameter
+    from the resulting redirect URL to use in subsequent token generation actions.
+  ai_short_description: >-
+    Generates an OAuth 2.0 authorization URL for the Azure API integration to initiate
+    delegated authentication.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action constructs a URL string locally using provided parameters and integration
+      configurations. It does not make any external API calls (fetches_data=false,
+      can_mutate_external_data=false) and does not modify internal SecOps data such
+      as entities, alerts, or case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It operates independently
+      of case entities to generate an authorization URL, so all entity type and filter
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action solely generates an OAuth authorization URL and presents it as a
+      link in the action results. It does not interact with external systems to fetch
+      data, mutate state, or perform any of the specific expected outcomes defined
+      in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Oauth Scopes | String | Yes | A comma-separated list of permissions requested
+    for the access and refresh tokens. These scopes define the level of access the
+    integration has to the user's data and resources. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a diagnostic tool designed to verify connectivity between Google
+    SecOps and the configured Azure API endpoint. It ensures that the integration's
+    authentication and network configuration are correct by performing a test request
+    to a target URL.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the test URL from the integration's
+    configuration parameters.
+
+    2. **Client Initialization**: It initializes the Azure API client using the provided
+    credentials and establishes an authenticated session.
+
+    3. **Connectivity Test**: The action executes an HTTP `GET` request to the test
+    URL via the `test_connectivity` method to validate network access.
+
+    4. **Result Reporting**: If the request is successful, the action returns a success
+    message and populates the JSON results with the tested endpoint URL.
+
+
+    ### Additional Notes
+
+    - This action relies entirely on integration-level configuration and does not
+    require any action-specific parameters.
+
+    - It is primarily used for troubleshooting and validating the initial setup of
+    the integration.
+  ai_short_description: >-
+    A diagnostic action that verifies connectivity between Google SecOps and the configured
+    Azure API endpoint by performing a test HTTP GET request.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a simple HTTP GET request to test connectivity. It does
+      not fetch contextual data for alerts/entities, mutate external systems, update
+      internal entities, create insights, or modify case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It operates independently
+      of case entities to test integration connectivity, so all entity-related flags
+      are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic ping to test connectivity. It does not enrich IOCs
+      or assets, mutate alerts, interact with tickets, modify blocklists, or perform
+      any other categorized outcome. Therefore, all outcome categories are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
