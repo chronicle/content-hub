@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from ...connectors import AlertsConnector
+from ...core.query_builder import AlertQueryBuilder
 from ..common import (
     DEFAULT_PARAMETERS,
     HOUR_MS,
@@ -249,3 +250,38 @@ def test_per_cycle_fetch_limit_is_respected(monkeypatch):
     siemplify, _ = run_connector(monkeypatch, rows, {}, {"Max Alerts To Fetch": "4"})
 
     assert len(ingested_ids(siemplify)) == 4
+
+
+def test_lowest_severity_parameter_reaches_the_query_as_a_risk_level_filter(monkeypatch):
+    """The connector parameter must end up filtering RiskLevel, not Severity."""
+    rows = [build_alert_row("orca-1", NOW_MS - HOUR_MS, NOW_MS - HOUR_MS)]
+
+    _, manager = run_connector(
+        monkeypatch, rows, {}, {"Lowest Severity To Fetch": "Medium"}
+    )
+
+    lowest_severity = manager.calls[0]["lowest_severity"]
+    conditions = AlertQueryBuilder(NOW_MS - HOUR_MS, 100).with_severity(lowest_severity).build()
+    keys = [
+        condition["key"]
+        for condition in conditions["query"]["with"]["values"]
+        if "key" in condition
+    ]
+
+    assert "RiskLevel" in keys
+    assert "Severity" not in keys
+
+
+def test_legacy_severity_value_is_rejected(monkeypatch):
+    """The parameter used to document legacy wording - it must fail loudly now."""
+    rows = [build_alert_row("orca-1", NOW_MS - HOUR_MS, NOW_MS - HOUR_MS)]
+
+    siemplify, _ = run_connector(
+        monkeypatch, rows, {}, {"Lowest Severity To Fetch": "Compromised"}
+    )
+
+    assert ingested_ids(siemplify) == []
+    assert any(
+        'Invalid value provided for "Lowest Severity To Fetch"' in message
+        for message in siemplify.LOGGER.messages
+    )
