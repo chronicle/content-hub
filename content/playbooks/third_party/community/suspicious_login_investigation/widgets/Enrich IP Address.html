@@ -1,0 +1,371 @@
+<!-- Custom Widget / Integration Version when it was updated 13.0 -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700,700i" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet"/>
+  <link href="https://www.siemplify.co/wp-content/cache/min/1/wp-content/themes/siemplify/assets/fonts/fonts.min.css?ver=1628709624" rel="stylesheet"/>
+  <title>Google Threat Intelligence - Enrich IOCs</title>
+  <style>
+      :root {
+          --widget-bg: #212C44;
+          --widget-text-color: #ffffff;
+          --scrollbar-bg-color: hsl(221, 26%, 46%);
+          --divider-border-color: #576B95;
+          --sidebar-item-color: #c3d2e8;
+          --sidebar-item-active-bg: #3a4a6c;
+          --table-header-color: #4e4f63;
+          --table-text-color: #ffffff;
+      }
+
+      html.light-theme {
+          --widget-bg: #ffffff !important;
+          --widget-text-color: #0f1029;
+          --scrollbar-bg-color: #d3d8ea;
+          --divider-border-color: #d3d8ea;
+          --sidebar-item-color: #4e4f63;
+          --sidebar-item-active-bg: #e5e8f2;
+          --table-header-color: #6b6d7a;
+          --table-text-color: #0f1029;
+      }
+
+      html.dark-theme {
+          --widget-bg: #232330 !important;
+          --widget-text-color: #ffffff;
+          --scrollbar-bg-color: #303045;
+          --divider-border-color: #303045;
+          --sidebar-item-color: #c3d2e8;
+          --sidebar-item-active-bg: #5f6368;
+          --table-header-color: #b5b5b5;
+          --table-text-color: #ffffff;
+      }
+
+      html.light-theme body, html.dark-theme body {
+          background-color: var(--widget-bg) !important;
+          color: var(--widget-text-color);
+      }
+
+      ::-webkit-scrollbar {
+          width: 12px;
+          height: 12px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+          border-radius: 10px;
+          border: 3px solid transparent;
+          background: var(--scrollbar-bg-color);
+          background-clip: content-box;
+      }
+
+      ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner {
+          background-color: transparent;
+      }
+
+      body {
+          float: left;
+          width: 100%;
+          padding: 0;
+          margin: 0;
+          box-sizing: border-box;
+          background-color: var(--widget-bg);
+          color: var(--widget-text-color);
+          overflow-y: hidden;
+      }
+
+      .container {
+          width: 100%;
+          display: flex;
+          float: left;
+      }
+
+      p {
+          margin: 0;
+      }
+
+      .invalid-url {
+          width: 100%;
+          border: 0;
+          height: 200px;
+          padding: 0 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+      }
+
+      .nothing-found {
+          width: 100%;
+          float: left;
+          padding: 20px 0;
+          text-align: center;
+          color: var(--widget-text-color);
+          font-family: initial;
+          font-weight: 600;
+      }
+
+      .content-iframe {
+          width: 100%;
+          border: 0;
+          height: 100vh;
+      }
+
+      .entities {
+          height: 100vh;
+          float: left;
+          min-width: 180px;
+          min-height: 275px;
+          overflow-y: auto;
+          border-right: 1px solid var(--divider-border-color);
+      }
+
+      .entities-content {
+          float: left;
+          width: 100%;
+      }
+
+      .widget-text {
+          display: flex;
+          align-items: center;
+      }
+
+      span.container-list-item {
+          font-weight: 400;
+          cursor: pointer;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          padding: 10px;
+          color: var(--sidebar-item-color);
+          display: block;
+      }
+
+      span.container-list-item.active {
+          background: var(--sidebar-item-active-bg);
+          color: var(--widget-text-color);
+          font-weight: 700;
+      }
+
+      .widget-text table tbody tr th {
+          vertical-align: initial !important;
+          text-align: left;
+          text-transform: capitalize;
+          font-weight: 400;
+          font-size: 14px;
+          line-height: 22px;
+          color: var(--table-header-color);
+          width: 130px;
+      }
+
+      .widget-text tr td {
+          font-style: normal;
+          font-weight: 600;
+          font-size: 14px;
+          line-height: 18px;
+          color: var(--table-text-color);
+      }
+
+      #content iframe {
+          display: none;
+      }
+
+      #content iframe:first-child {
+          display: block;
+      }
+  </style>
+</head>
+<body>
+<div class="container" id="container" style="font-family: Open Sans, serif; font-size: 12px;">
+  <div class="entities" id="entitiesList"></div>
+  <div class="entities-content">
+    <div class="widget-text" id="content"></div>
+  </div>
+</div>
+
+<script>
+    const ThemeSettings = {
+        LIGHT_THEME_CLASS: 'light-theme',
+        DARK_THEME_CLASS: 'dark-theme',
+    };
+
+    const LIGHT_THEME_HEX = "#bdc1c6";
+    const DARK_THEME_HEX = "#282837";
+    const GRAY_THEME_HEX = "#2f3d5c";
+
+    function handleThemeUpdate(event) {
+        if (event.source !== window.parent) {
+            return;
+        }
+        const styles = event.data;
+        if (typeof styles !== 'object' || styles === null) return;
+
+        const bg = styles.background || styles.backgroundColor || '';
+        let isLight = false;
+        let isDark = false;
+        let isGray = false;
+        const colorString = bg.toLowerCase();
+
+        if (colorString === LIGHT_THEME_HEX) isLight = true;
+        else if (colorString === DARK_THEME_HEX) isDark = true;
+        else if (colorString === GRAY_THEME_HEX) isGray = true;
+        else {
+            let r, g, b;
+            const rgbMatch = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            if (rgbMatch) { r = parseInt(rgbMatch[1]); g = parseInt(rgbMatch[2]); b = parseInt(rgbMatch[3]); }
+            else if (bg.startsWith('#')) {
+                const hex = bg.replace('#', '');
+                const fH = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+                if (fH.length === 6) { r = parseInt(fH.substring(0, 2), 16); g = parseInt(fH.substring(2, 4), 16); b = parseInt(fH.substring(4, 6), 16); }
+            }
+            if (r !== undefined) {
+                const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                if (brightness > 128) isLight = true;
+            }
+        }
+
+        const html = document.documentElement;
+
+        if (isLight) {
+            html.classList.add(ThemeSettings.LIGHT_THEME_CLASS); html.classList.remove(ThemeSettings.DARK_THEME_CLASS);
+        } else if (isDark) {
+            html.classList.add(ThemeSettings.DARK_THEME_CLASS); html.classList.remove(ThemeSettings.LIGHT_THEME_CLASS);
+        } else {
+            html.classList.remove(ThemeSettings.LIGHT_THEME_CLASS); html.classList.remove(ThemeSettings.DARK_THEME_CLASS);
+        }
+    }
+
+    window.addEventListener('message', handleThemeUpdate);
+    window.onmessage = handleThemeUpdate;
+
+    window.addEventListener("load", init, false);
+    let entitiesData = new Map();
+    const listElement = document.getElementById("entitiesList");
+    const contentElement = document.getElementById("content");
+    const containerElement = document.getElementById("container");
+    let activeItem;
+
+    const actionListData = [{stepInstanceName}.JsonResult];
+
+    function init() {
+        const replacedData = getReplacedData();
+        const dataExists = !isEmptyArray(replacedData);
+        if (dataExists) {
+            setEntitiesData(replacedData);
+            setHtml();
+        } else {
+            setNothingFound();
+        }
+    }
+
+    function getReplacedData() {
+        return actionListData.iocs.map(item => [item.identifier, item.details.widget_link, item.details.widget_html]);
+    }
+
+    function setEntitiesData(replacedData) {
+        replacedData.forEach(([entity, widgetUrl, cachedHtmlWidget]) => {
+            entitiesData.set(entity, {widgetUrl, cachedHtmlWidget});
+        });
+    }
+
+    function setHtml() {
+        let validEntitiesData = new Map();
+
+        entitiesData.forEach((value, entity) => {
+            const {widgetUrl, cachedHtmlWidget} = value;
+            if (widgetUrl !== null && widgetUrl !== "" && cachedHtmlWidget !== null && cachedHtmlWidget !== "") {
+                validEntitiesData.set(entity, value);
+            }
+        });
+
+        if (validEntitiesData.size > 0) {
+            entitiesData = validEntitiesData;
+            setListElements();
+            addListenerToListElement();
+            setFirstItemData();
+        } else {
+            setNothingFound();
+        }
+    }
+
+    function setListElements() {
+        let listHtml = "";
+        entitiesData.forEach((value, entity) => {
+            listHtml += getListItemHtml(entity);
+        });
+        listElement.innerHTML = listHtml;
+        if (entitiesData.size === 1) {
+            listElement.style.display = 'none';
+        }
+    }
+
+    function addListenerToListElement() {
+        listElement.addEventListener("click", onListClick);
+    }
+
+    function onListClick(event) {
+        const targetElement = event.target;
+        if (targetElement.dataset.hasOwnProperty("id")) {
+            activeItem.classList.remove("active");
+            const entity = event.target.dataset.id;
+            targetElement.classList.add("active");
+            setActiveItem(targetElement);
+            setContent(entity);
+        }
+    }
+
+    function getListItemHtml(entity) {
+        return `<span class="container-list-item" data-id="${entity}">${entity}</span>`;
+    }
+
+    function setContent(entity) {
+        const data = entitiesData.get(entity);
+        const url = data.widgetUrl;
+        let cachedHtmlWidget = data.cachedHtmlWidget;
+
+        // Immediately display the live widget.
+        contentElement.innerHTML = `<iframe class="content-iframe" src="${url}"></iframe>`;
+
+        // In parallel (in the background, without blocking the UI rendering),
+        // verify if the link has expired.
+        fetch(url)
+            .then(async response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const htmlContent = await response.text();
+                if (htmlContent.includes('rel="error"') && cachedHtmlWidget) {
+                    contentElement.innerHTML = `<iframe class="content-iframe" srcdoc="${cachedHtmlWidget}"></iframe>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error validating iframe content:', error);
+                if (cachedHtmlWidget) {
+                    contentElement.innerHTML = `<iframe class="content-iframe" srcdoc="${cachedHtmlWidget}"></iframe>`;
+                } else {
+                    setNothingFound();
+                }
+            });
+    }
+
+    function setNothingFound() {
+        containerElement.innerHTML = '<p class="nothing-found"> <b> No information found in Google Threat Intelligence.</b></p>';
+    }
+
+    function setFirstItemData() {
+        const firstKey = entitiesData.keys().next().value;
+        setContent(firstKey);
+        setActiveItem(listElement.children[0]);
+    }
+
+    function setActiveItem(item) {
+        activeItem = item;
+        activeItem.classList.add("active");
+    }
+
+    function isEmptyArray(arr) {
+        return !arr || !arr.length || arr.length === 0;
+    }
+
+</script>
+</body>
+</html>
