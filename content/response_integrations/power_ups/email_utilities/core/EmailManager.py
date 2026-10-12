@@ -2049,8 +2049,8 @@ class EmailManager:
         entity_types = [
             getattr(EntityTypes, a) for a in dir(EntityTypes) if not a.startswith("__")
         ]
-        observed_types_lower = create_observed_entity_types.lower()
-        enabled_ioc_entity_types = {
+        observed_types_lower: str = create_observed_entity_types.lower()
+        enabled_ioc_entity_types: set[str] = {
             mapped_entity_type
             for ioc_key, mapped_entity_type in IOC_TYPES.items()
             if ioc_key in observed_types_lower
