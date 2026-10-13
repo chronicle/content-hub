@@ -23,7 +23,7 @@ from EnvironmentCommon import (
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import convert_datetime_to_unix_time
 from TIPCommon import dict_to_flat
-from phishrod.core.constants import (
+from .constants import (
     DEFAULT_DEVICE_VENDOR,
     DEFAULT_DEVICE_PRODUCT,
     DEFAULT_RULE_GENERATOR,

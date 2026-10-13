@@ -13,13 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
-from phishrod.core.constants import (
+from ..core.constants import (
     RESPONSE_ALREADY_UPDATED,
     INTEGRATION_NAME,
     MARK_INCIDENT_SCRIPT_NAME,
     MARK_INCIDENT_STATUS_TYPE,
 )
-from phishrod.core.PhishrodManager import PhishrodManager
+from ..core.PhishrodManager import PhishrodManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler

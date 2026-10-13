@@ -18,11 +18,11 @@ from urllib.parse import urljoin
 
 import requests
 
-from phishrod.core.PhishrodParser import PhishrodParser
+from .PhishrodParser import PhishrodParser
 from soar_sdk.SiemplifyLogger import SiemplifyLogger
-from phishrod.core.UtilsManager import validate_response
-from phishrod.core.constants import ENDPOINTS
-from phishrod.core.datamodels import Incident
+from .UtilsManager import validate_response
+from .constants import ENDPOINTS
+from .datamodels import Incident
 
 
 class PhishrodManager:

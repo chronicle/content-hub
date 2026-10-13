@@ -16,9 +16,9 @@ from __future__ import annotations
 import requests
 from requests import Response
 
-from phishrod.core.PhishrodExceptions import PhishrodException
-from phishrod.core.constants import FORBIDDEN_STATUS
-from phishrod.core.exceptions import PhishrodUnauthorizedError
+from .PhishrodExceptions import PhishrodException
+from .constants import FORBIDDEN_STATUS
+from .exceptions import PhishrodUnauthorizedError
 
 
 def validate_response(response: Response, error_msg: str = "An error occurred") -> None:

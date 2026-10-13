@@ -17,7 +17,7 @@ import sys
 from typing import List
 
 from EnvironmentCommon import GetEnvironmentCommonFactory
-from phishrod.core.PhishrodManager import PhishrodManager
+from ..core.PhishrodManager import PhishrodManager
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
@@ -30,14 +30,14 @@ from TIPCommon import (
     pass_whitelist_filter,
     is_overflowed,
 )
-from phishrod.core.constants import (
+from ..core.constants import (
     INCIDENTS_CONNECTOR_NAME,
     TIMEOUT_THRESHOLD,
     STORED_IDS_LIMIT,
     SEVERITIES,
 )
-from phishrod.core.datamodels import Incident
-from phishrod.core.exceptions import PhishrodValidationException
+from ..core.datamodels import Incident
+from ..core.exceptions import PhishrodValidationException
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 

@@ -15,7 +15,7 @@
 from __future__ import annotations
 from typing import List, Any
 
-from phishrod.core.datamodels import Incident, UpdateIncidentData, MarkIncidentData
+from .datamodels import Incident, UpdateIncidentData, MarkIncidentData
 
 
 class PhishrodParser:
