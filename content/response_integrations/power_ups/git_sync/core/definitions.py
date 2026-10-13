@@ -177,7 +177,7 @@ class Connector(Content):
 
     def iter_files(self) -> Iterator[File]:
         yield File("README.md", self.readme)
-        yield File(f"{self.name}.json", json.dumps(self.raw_data, indent=4))
+        yield File(f"{self.name}.json", json.dumps(self.raw_data, indent=4, sort_keys=True))
 
 
 class VisualFamily(Content):
@@ -201,7 +201,7 @@ class VisualFamily(Content):
         yield File("README.md", self.readme)
         yield File(
             f"{self.name}.json",
-            json.dumps(self.get_importable_format(), indent=4),
+            json.dumps(self.get_importable_format(), indent=4, sort_keys=True),
         )
         yield File(f"{self.name}.png", base64.b64decode(self.imageBase64))
 
@@ -249,11 +249,11 @@ class Mapping(Content):
         yield File("README.md", self.readme)
         yield File(
             f"{self.integrationName}_Records.json",
-            json.dumps(self.records, indent=4),
+            json.dumps(self.records, indent=4, sort_keys=True),
         )
         yield File(
             f"{self.integrationName}_Rules.json",
-            json.dumps(self.rules, indent=4),
+            json.dumps(self.rules, indent=4, sort_keys=True),
         )
 
     def generate_readme(self, additional_info: str = None) -> None:
@@ -415,7 +415,7 @@ class Integration(Content):
             self.definition["Custom"] = False
             yield File(
                 f"Integration-{self.identifier}.def",
-                json.dumps(self.definition, indent=4),
+                json.dumps(self.definition, indent=4, sort_keys=True),
             )
 
             if self.has_resources:
@@ -431,7 +431,7 @@ class Integration(Content):
                     if card["type"] == ScriptType.ACTION.value:
                         yield File(
                             f"ActionsDefinitions/{card['name']}.actiondef",
-                            json.dumps(definition, indent=4),
+                            json.dumps(definition, indent=4, sort_keys=True),
                         )
                         yield File(
                             f"ActionsScripts/{card['name']}.py",
@@ -450,13 +450,13 @@ class Integration(Content):
                         yield File(script_path, script)
                         yield File(
                             f"Jobs/{card['name']}.jobdef",
-                            json.dumps(definition, indent=4),
+                            json.dumps(definition, indent=4, sort_keys=True),
                         )
 
                     elif card["type"] == ScriptType.CONNECTOR.value:
                         yield File(
                             f"Connectors/{card['name']}.connectordef",
-                            json.dumps(definition, indent=4),
+                            json.dumps(definition, indent=4, sort_keys=True),
                         )
                         yield File(
                             f"ConnectorsScripts/{card['name']}.py",
@@ -468,7 +468,7 @@ class Integration(Content):
                     elif card["type"] == ScriptType.MANAGER.value:
                         yield File(
                             f"Managers/{card['name']}.managerdef",
-                            json.dumps(definition, indent=4),
+                            json.dumps(definition, indent=4, sort_keys=True),
                         )
                         yield File(
                             f"Managers/{card['name']}.py",
@@ -534,7 +534,7 @@ class Workflow(Content):
         )
 
     def iter_files(self) -> Iterator[File]:
-        yield File(self.name + ".json", json.dumps(self.raw_data, indent=4))
+        yield File(self.name + ".json", json.dumps(self.raw_data, indent=4, sort_keys=True))
         yield File("README.md", self.readme)
 
     def get_involved_blocks(self):
@@ -657,7 +657,7 @@ class Job(Content):
     def iter_files(self) -> Iterator[File]:
         name = self.displayName or self.name
         name = name.replace("/", "_")
-        yield File(f"Jobs/{name}.json", json.dumps(self.raw_data, indent=4))
+        yield File(f"Jobs/{name}.json", json.dumps(self.raw_data, indent=4, sort_keys=True))
 
 
 class IntegrationInstance(Content):
