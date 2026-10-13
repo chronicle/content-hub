@@ -37,7 +37,7 @@ from unittest.mock import MagicMock
 import pytest
 import requests
 
-from azure_ad_identity_protection.core import (
+from azure_ad_identity_protection.core.AzureADIdentityProtectionManager import (
     AzureADIdentityProtectionManager,
 )
 
