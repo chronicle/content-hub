@@ -103,6 +103,25 @@ class TestIPLookupAction:
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
         entities=[
+            {"identifier": "192.168.1.100", "entity_type": "ADDRESS", "additional_properties": {}}
+        ],
+    )
+    def test_ip_lookup_community_empty_response(
+        self,
+        action_output: MockActionOutput,
+        greynoise_sdk: GreyNoiseSDK,
+    ) -> None:
+        """Test community tier IP lookup with an empty/None response (benign/unknown IP)."""
+        greynoise_sdk.set_community_ip_response({})
+
+        ip_lookup.main()
+
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert "Not found in GreyNoise dataset: 1 IP(s): 192.168.1.100" in action_output.results.output_message
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        entities=[
             {"identifier": "192.168.1.100", "entity_type": "ADDRESS", "additional_properties": {}},
             {"identifier": "10.0.0.50", "entity_type": "ADDRESS", "additional_properties": {}},
         ],
