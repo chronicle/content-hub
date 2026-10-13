@@ -49,8 +49,14 @@ def main() -> None:
             "Input String",
             print_value=True,
         )
+        check_dns: bool = siemplify.extract_action_param(
+            "Check DNS",
+            default_value=True,
+            input_type=bool,
+            print_value=True,
+        )
         status: int = EXECUTION_STATE_COMPLETED
-        urls_found: list[str] = get_urls(input_string)
+        urls_found: list[str] = get_urls(input_string, check_dns=check_dns)
         domains_found: list[str] = extract_domains_from_urls(urls_found)
         ips_found = extract_ips(input_string)
         emails_found: list[str] = extract_emails(input_string)
@@ -86,11 +92,12 @@ def main() -> None:
         siemplify.end(f"Failed due to error: {e!s}", "", status)
 
 
-def get_urls(body: str) -> list[str]:
+def get_urls(body: str, check_dns: bool = True) -> list[str]:
     """Function for extracting URLs from the input string.
 
     Args:
         body (str): Text input which should be searched for URLs.
+        check_dns: If True, validates domains against DNS.
 
     Returns:
         list: Returns a list of URLs found in the input string.
@@ -98,7 +105,7 @@ def get_urls(body: str) -> list[str]:
     """
     list_observed_urls: dict[str, None] = {}
     extractor: URLExtract = URLExtract(cache_dns=False)
-    for found_url in extractor.find_urls(body, check_dns=True):
+    for found_url in extractor.find_urls(body, check_dns=check_dns):
         if "." not in found_url:
             # If we found a URL like http://afafasasfasfas that makes no
             # sense, thus skip it
@@ -145,12 +152,10 @@ def clean_found_url(url: str) -> str | None:
         else:
             scheme_url = f"noscheme://{url}"
 
-        tld = (
-            urllib.parse.urlparse(scheme_url)
-            .hostname.rstrip(".")
-            .rsplit(".", 1)[-1]
-            .lower()
-        )
+        parsed = urllib.parse.urlparse(scheme_url)
+        if not parsed.hostname:
+            return None
+        tld = parsed.hostname.rstrip(".").rsplit(".", 1)[-1].lower()
         if tld in (
             "aspx",
             "css",
@@ -208,8 +213,9 @@ def extract_ips(body: str, include_internal: bool = True) -> list[str]:
     """Extracts IP addresses from a given string.
 
     Args:
-        body (str): The string from which IPs are to be extracted
-        include_internal (bool): Whether to include internal IPs in the result
+        body: The string from which IPs are to be extracted.
+        include_internal: Whether to include internal IPs in the result.
+
     Returns:
         list: List of IPs extracted from the string.
 
@@ -218,7 +224,7 @@ def extract_ips(body: str, include_internal: bool = True) -> list[str]:
     for ip_type in (IPV4_REGEX, IPV6_REGEX):
         for match in ip_type.findall(body):
             try:
-                ipaddress_match: ipaddress.IPv4Address | ipaddress.IPv6Address = (
+                ip_match: ipaddress.IPv4Address | ipaddress.IPv6Address = (
                     ipaddress.ip_address(match)
                 )
 
@@ -226,9 +232,8 @@ def extract_ips(body: str, include_internal: bool = True) -> list[str]:
                 continue
 
             else:
-                if not ipaddress_match.is_private or (
-                    include_internal and match != "::"
-                ):
+                is_allowed = include_internal and match != "::"
+                if not ip_match.is_private or is_allowed:
                     ips[match] = None
 
     return list(ips)
