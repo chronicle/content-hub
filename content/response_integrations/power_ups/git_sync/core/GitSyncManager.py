@@ -77,7 +77,7 @@ class GitSyncManager:
         smp_credentials: dict = None,
         smp_verify: bool = True,
         git_verify: bool = True,
-        git_server_fingerprint: str = '',
+        git_server_fingerprint: str = "",
         deconstruct_playbooks: bool = True,
     ) -> None:
         self.logger = siemplify.LOGGER
@@ -106,7 +106,9 @@ class GitSyncManager:
             self.logger,
             git_server_fingerprint=git_server_fingerprint,
         )
-        self.content = GitContentManager(self.git_client, self.api, deconstruct_playbooks=deconstruct_playbooks)
+        self.content = GitContentManager(
+            self.git_client, self.api, deconstruct_playbooks=deconstruct_playbooks
+        )
 
     def __del__(self):
         try:
@@ -192,7 +194,7 @@ class GitSyncManager:
             input_type=bool,
         )
         git_verify = get_conf_param("Git Verify SSL", print_value=True, input_type=bool)
-        
+
         return cls(
             siemplify,
             repo_url,
@@ -943,7 +945,7 @@ class WorkflowInstaller:
             elif step_type == 5:  # Nested Workflow
                 self._link_nested_block_step(step)
 
-        for relation in (workflow.raw_data.get("stepsRelations") or []):
+        for relation in workflow.raw_data.get("stepsRelations") or []:
             if relation.get("fromStep") in identifier_mappings:
                 relation["fromStep"] = identifier_mappings.get(relation.get("fromStep"))
             if relation.get("toStep") in identifier_mappings:
@@ -1217,9 +1219,7 @@ class WorkflowInstaller:
             x for x in instances if x.integration_identifier == integration_name
         ]
 
-        configured_instances = [
-            x for x in filtered_instances if x.is_configured
-        ]
+        configured_instances = [x for x in filtered_instances if x.is_configured]
         if configured_instances:
             return sorted(configured_instances, key=lambda x: x.instance_name or "")
 
@@ -1267,7 +1267,7 @@ class WorkflowInstaller:
 
         """
         flat_steps = []
-        for step in (steps or []):
+        for step in steps or []:
             if step.get("actionProvider") == "ParallelActionsContainer":
                 flat_steps.extend(step.get("parallelActions"))
             flat_steps.append(step)
@@ -1294,10 +1294,9 @@ class WorkflowInstaller:
     @staticmethod
     def _is_matching_step(step_1: SingleJson, step_2: SingleJson) -> bool:
         """Checks if step 'step_1' matches the key attributes of 'step_2'."""
-        return (
-            step_1.get("instanceName") == step_2.get("instanceName")
-            and step_1.get("actionProvider") == step_2.get("actionProvider")
-        )
+        return step_1.get("instanceName") == step_2.get("instanceName") and step_1.get(
+            "actionProvider"
+        ) == step_2.get("actionProvider")
 
     @staticmethod
     def _get_step_parameter_by_name(step: dict, parameter_name: str) -> dict | None:
@@ -1330,10 +1329,11 @@ class WorkflowInstaller:
         workflow.raw_data["originalPlaybookIdentifier"] = other.get(
             "originalPlaybookIdentifier",
         )
-        workflow.raw_data["trigger"]["id"] = other.get("trigger").get("id")
-        workflow.raw_data["trigger"]["identifier"] = other.get("trigger").get(
-            "identifier",
-        )
+        if workflow.raw_data.get("trigger") and other.get("trigger"):
+            workflow.raw_data["trigger"]["id"] = other.get("trigger").get("id")
+            workflow.raw_data["trigger"]["identifier"] = other.get("trigger").get(
+                "identifier",
+            )
         workflow.raw_data["categoryName"] = other.get("categoryName")
         workflow.raw_data["categoryId"] = other.get("categoryId")
 
