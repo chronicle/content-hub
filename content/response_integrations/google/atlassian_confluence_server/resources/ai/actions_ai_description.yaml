@@ -1,0 +1,757 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Get Child Pages:
+  ai_description: >-
+    ### General Description
+
+    The **Get Child Pages** action retrieves a list of child pages for a specific
+    Atlassian Confluence Server page. It is designed to help users explore the page
+    hierarchy within a Confluence space by providing metadata for all pages nested
+    directly under a given parent ID.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action initializes the connection using the provided
+    Atlassian Confluence Server credentials.
+
+    2. **Parameter Validation:** It extracts the 'Page ID' and 'Max Records to Return'
+    parameters, ensuring the limit is a positive integer.
+
+    3. **API Request:** The action calls the Confluence REST API endpoint `/rest/api/content/{page_id}/child/page`
+    with the specified limit.
+
+    4. **Response Parsing:** The manager parses the API response into a structured
+    data model, applying sensitive data masking to internal links.
+
+    5. **Result Handling:** If child pages are found, they are added to the action's
+    JSON result and the action completes successfully. If no children exist for the
+    provided ID, it returns a 'No child pages were found' message.
+
+
+    ### Additional Notes
+
+    - **No Entity Support:** This action does not run on Google SecOps entities (e.g.,
+    Hostname, IP). It requires a manual input of a Page ID.
+
+    - **Data Masking:** The action automatically masks sensitive URL components (like
+    'base' and 'self' links) in the returned JSON to ensure security.
+
+    - **Output:** The results are provided as a JSON object containing the list of
+    child pages and their basic metadata (ID, type, status, title).
+  ai_short_description: >-
+    Retrieves a list of child pages for a specific Atlassian Confluence Server page.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Confluence API to fetch child pages (fetches_data=true).
+      It does not perform any state-changing operations on external systems (can_mutate_external_data=false)
+      and does not update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the manually provided 'Page ID' parameter.
+      Therefore, it does not run on any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches child pages from a Confluence Server. This operation does
+      not align with any of the predefined outcome categories such as enriching IOCs/assets,
+      managing alerts/tickets, modifying blocklists, handling identities, or searching
+      events/emails.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Page ID | String | Yes | Specify the page id to return. |
+
+    | Max Records to Return | Integer | Yes | Specify the limit of child pages to
+    return. |
+Get Page Comments:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comments associated with a specific page in Atlassian Confluence Server.
+    This action allows security analysts to gather context from documentation or collaboration
+    threads related to an investigation. It fetches comment data including the body
+    content and metadata, supporting pagination and field expansion for detailed results.
+
+
+    ### Flow Description
+
+    1. Initializes the Confluence Manager using the integration's configuration (API
+    Root, credentials, and SSL settings).
+
+    2. Extracts the 'Page ID', 'Expand', and 'Max Records to Return' parameters from
+    the action input.
+
+    3. Validates that 'Max Records to Return' is a positive integer.
+
+    4. Sends a GET request to the Confluence Server's child comment endpoint (`/rest/api/content/{page_id}/child/comment`)
+    for the specified Page ID.
+
+    5. Parses the retrieved comments into a structured JSON format.
+
+    6. Adds the retrieved comments to the action's JSON results and returns a success
+    message. If no comments are found, it reports the absence of data.
+
+
+    ### Additional Notes
+
+    - This action does not run on Google SecOps entities; it is a standalone utility
+    that requires a specific Page ID as input.
+  ai_short_description: >-
+    Retrieves comments associated with a specific page in Atlassian Confluence Server.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Atlassian Confluence Server API to fetch
+      page comments (fetches_data=true). It does not perform any state-changing operations
+      on external systems (can_mutate_external_data=false) and does not mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates solely on the provided 'Page ID' parameter. Therefore,
+      it does not run on entities, and all entity type and filter flags are set to
+      false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches comments from a Confluence page based on a provided Page
+      ID. It does not interact with IOCs, assets, alerts, tickets, identities, hosts,
+      emails, or files in a way that matches any of the predefined outcome categories.
+      Therefore, all outcome category flags are set to false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Page ID | String | Yes | Specify the page id to return. |
+
+    | Expand | String | No | Specify the expand parameter to return additional information
+    about the page. Parameter accepts multiple values as a comma separated list. By
+    default with body.storage the content of the page is fetched. |
+
+    | Max Records to Return | Integer | Yes | Specify the limit of child pages to
+    return. |
+Get Page by ID:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed information about a specific page from an Atlassian Confluence
+    Server instance using its unique Page ID. This action allows users to fetch page
+    content and metadata, such as the body, history, and space information, to be
+    used within a SOAR workflow. It does not interact with entities and relies solely
+    on the provided Page ID.
+
+
+    ### Flow Description
+
+    1. Connects to the Atlassian Confluence Server using the provided integration
+    credentials.
+
+    2. Extracts the mandatory `Page ID` and the optional `Expand` parameter from the
+    action configuration.
+
+    3. Executes a GET request to the Confluence REST API (`/rest/api/content/{page_id}`)
+    with the specified expansion parameters.
+
+    4. Validates the response from the server. If the page is found, it parses the
+    raw JSON data into a structured format.
+
+    5. Returns the page data as a JSON result to the playbook and sets the action
+    status to completed.
+
+
+    ### Additional Notes
+
+    - This action is a data retrieval task and does not modify any data in Confluence
+    or Google SecOps.
+
+    - It is explicitly designed to run without entity context.
+  ai_short_description: >-
+    Retrieves detailed information about a specific page from an Atlassian Confluence
+    Server instance using its unique Page ID.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Confluence API to fetch page data, so
+      it fetches data. It does not perform any state-changing operations on external
+      systems (no POST/PUT/DELETE). It does not update entities, create insights,
+      modify alert data, or create case comments within Google SecOps.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `siemplify.target_entities` or any entity-specific identifiers.
+      It relies entirely on the `Page ID` parameter provided in the action configuration.
+      Therefore, all entity type flags and filter flags must be false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches information about a Confluence page based on a provided ID.
+      It does not enrich IOCs or assets, update alerts, create tickets, modify blocklists,
+      or perform any of the other specific outcome categories listed. It is a generic
+      data retrieval action from a knowledge base.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Page ID | String | Yes | Specify the page id to return. |
+
+    | Expand | String | No | Specify the expand parameter to return additional information
+    about the page. Parameter accepts multiple values as a comma separated list. By
+    default with body.storage the content of the page is fetched. |
+List Pages:
+  ai_description: >-
+    ### General Description
+
+    The **List Pages** action retrieves a list of pages from an Atlassian Confluence
+    Server instance based on user-defined filtering criteria. It is designed for content
+    discovery and metadata retrieval, allowing users to search for pages by title,
+    space name, or status. This action does not interact with specific entities but
+    provides a broad overview of available content within the Confluence environment.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Retrieves configuration parameters (API Root, credentials)
+    and action-specific filters.
+
+    2. **Validation:** Checks if the `Max Records to Return` is a positive integer
+    and ensures that if a filter logic is selected, a filter key is also provided.
+
+    3. **Data Retrieval:** Executes a GET request to the Confluence API (`/rest/api/content`)
+    with expansions for `space` and `history` data.
+
+    4. **Local Filtering:** Iterates through the paginated results and applies the
+    specified filtering logic (Equal/Contains) against the retrieved page attributes.
+
+    5. **Output:** Constructs a CSV data table for the Case Wall and populates the
+    JSON result with the detailed page metadata.
+
+
+    ### Additional Notes
+
+    - **Entity Support:** This action does not run on Chronicle SOAR entities.
+
+    - **Filter Dependency:** If `Filter Key` and `Filter Logic` are set but `Filter
+    Value` is empty, the action will return results without applying the filter.
+
+    - **Pagination:** The action automatically handles API pagination to retrieve
+    the requested number of records.
+  ai_short_description: >-
+    Retrieves a list of pages from an Atlassian Confluence Server instance based on
+    user-defined filtering criteria.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Confluence API via GET requests. It does not
+      mutate external data, mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates independently of entities to fetch pages from Confluence.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of pages from Confluence. This does not match any
+      of the predefined outcome categories such as enriching IOCs/assets, updating
+      alerts, managing tickets, or modifying blocklists.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Filter Key | Dropdown | No | Specify the key that needs\
+    \ to be used to filter pages. |\n| Filter Logic | Dropdown | No | Specify what\
+    \ filter logic should be applied. Filtering logic is working based on the value\
+    \ provided in the \u201CFilter Key\u201D parameter. |\n| Filter Value | String\
+    \ | No | Specify what value should be used in the filter. If \u201CEqual\u201C\
+    \ is selected, action will try to find the exact match among results and if \u201C\
+    Contains\u201C is selected, action will try to find results that contain that\
+    \ substring. If nothing is provided in this parameter, the filter will not be\
+    \ applied. Filtering logic is working based on the value provided in the \u201C\
+    Filter Key\u201D parameter. |\n| Max Records to Return | Integer | No | Specify\
+    \ how many records to return. If nothing is provided, action will return 50 records.\
+    \ |"
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity between Google SecOps and the Atlassian Confluence Server
+    instance. This action validates the provided credentials (either Username/Password
+    or Personal Access Token) and the API Root URL by performing a lightweight API
+    call to retrieve a single content item. It ensures that the integration is correctly
+    configured and the server is reachable.
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: Retrieves the API Root, authentication credentials
+    (Username/Password or API Token), and SSL verification settings from the integration
+    configuration.
+
+    2. **Manager Setup**: Initializes the Confluence Manager which sets up the authentication
+    headers or basic auth session.
+
+    3. **Connectivity Test**: Executes a GET request to the `/rest/api/content` endpoint
+    with a limit of 1 result.
+
+    4. **Response Validation**: Checks the HTTP response status. If a Personal Access
+    Token is used, it specifically verifies that the response contains results to
+    ensure the token has sufficient permissions.
+
+    5. **Execution Completion**: Returns a success message if the connection is established,
+    or an error message if authentication fails or the server is unreachable.
+
+
+    ### Additional Notes
+
+    Either a combination of Username and Password or a Personal Access Token (API
+    Token) must be provided in the integration configuration for the action to succeed.
+  ai_short_description: >-
+    Tests the connectivity between Google SecOps and the Atlassian Confluence Server
+    instance by validating the provided credentials and API Root URL.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action is a simple ping test that makes a GET request to the Confluence
+      API to verify connectivity. It does not fetch contextual data for alerts, mutate
+      external data, mutate internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It is a generic connectivity
+      test that operates independently of case or alert entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a basic connectivity test (Ping) to verify integration settings.
+      It does not perform any enrichment, remediation, or ticketing operations, and
+      therefore does not match any of the expected outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
