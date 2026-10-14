@@ -156,8 +156,7 @@ class FederationSyncManager:
         self.creds = get_secops_siem_tenant_credentials(
             chronicle_soar=self.chronicle_soar,
             target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
-            quota_project_id=project_id,
-            fallback_to_env_email=True,
+            quota_project_id=project_id
         )
 
     def _prepare_http_client(self) -> None:
