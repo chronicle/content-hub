@@ -8,11 +8,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 def _alert_events(alert) -> list:
     if alert is None:
         return []
-    return list(
-        getattr(alert, "security_events", None)
-        or getattr(alert, "events", None)
-        or []
-    )
+    return list(getattr(alert, "security_events", None) or getattr(alert, "events", None) or [])
 
 
 def _alert_key(alert) -> object:
@@ -116,10 +112,7 @@ def main():
             EXECUTION_STATE_COMPLETED,
         )
     except Exception as error:
-        message = (
-            'Error executing action "Extract Reset Password User". Reason: '
-            f"{format_user_facing_error(error)}"
-        )
+        message = f'Error executing action "Extract Reset Password User". Reason: {format_user_facing_error(error)}'
         siemplify.LOGGER.error(message)
         siemplify.end(message, False, EXECUTION_STATE_FAILED)
 

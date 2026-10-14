@@ -1,4 +1,5 @@
 """Tests for Vega SOAR case/alert/event hierarchy mapping."""
+
 from __future__ import annotations
 
 import json
@@ -37,9 +38,9 @@ from core.Remediator import extract_sync_targets
 
 
 def test_case_display_name_uses_entity_display_id_and_name() -> None:
-    assert case_display_name(
-        {"vegaAlertId": "VALERT-1", "name": "Phish"}, ENTITY_TYPE_ALERT
-    ).startswith("Vega Alert - VALERT-1 - Phish")
+    assert case_display_name({"vegaAlertId": "VALERT-1", "name": "Phish"}, ENTITY_TYPE_ALERT).startswith(
+        "Vega Alert - VALERT-1 - Phish"
+    )
     assert case_display_name(
         {"vegaUniqueIncidentId": "VINC-1", "name": "Campaign"},
         ENTITY_TYPE_INCIDENT,
@@ -55,9 +56,7 @@ def test_case_display_name_uses_entity_display_id_and_name() -> None:
         {"id": uuid, "alertId": uuid, "vegaAlertId": "VALERT-9", "name": "Persist"},
         ENTITY_TYPE_ALERT,
     ).startswith("Vega Alert - VALERT-9 - Persist")
-    uuid_only = case_display_name(
-        {"id": uuid, "alertId": uuid, "name": "Persist"}, ENTITY_TYPE_ALERT
-    )
+    uuid_only = case_display_name({"id": uuid, "alertId": uuid, "name": "Persist"}, ENTITY_TYPE_ALERT)
     assert uuid not in uuid_only
     assert uuid_only.startswith("Vega Alert - Persist")
 
@@ -68,19 +67,17 @@ def test_record_id_reads_nested_alert_stub() -> None:
 
 
 def test_label_tags_are_unique_by_name() -> None:
-    tags = record_label_tags(
-        {
-            "labels": [
-                {"name": "malware"},
-                {"name": "Malware"},
-                {"name": "apt"},
-                "apt",
-                {"name": ""},
-                {"labelName": "c2"},
-                {"name": "x"},
-            ]
-        }
-    )
+    tags = record_label_tags({
+        "labels": [
+            {"name": "malware"},
+            {"name": "Malware"},
+            {"name": "apt"},
+            "apt",
+            {"name": ""},
+            {"labelName": "c2"},
+            {"name": "x"},
+        ]
+    })
     assert tags == ["malware", "apt", "c2"]
 
 
@@ -118,13 +115,11 @@ def test_graphql_queries_request_label_name_and_color_only() -> None:
 
 
 def test_stub_to_alert_keeps_nested_labels() -> None:
-    stub = stub_to_alert(
-        {
-            "alertId": "abc",
-            "name": "x",
-            "labels": [{"name": "incident-33 related alert", "color": "BLUE"}],
-        }
-    )
+    stub = stub_to_alert({
+        "alertId": "abc",
+        "name": "x",
+        "labels": [{"name": "incident-33 related alert", "color": "BLUE"}],
+    })
     assert stub["id"] == "abc"
     assert stub["labels"] == [{"name": "incident-33 related alert", "color": "BLUE"}]
 
@@ -139,9 +134,7 @@ def test_merge_related_alert_uses_stub_labels_when_full_has_none() -> None:
     merged = merge_related_alert(stub, full)
     assert merged["labels"] == [{"name": "incident-33 related alert"}]
     assert merged["vegaAlertId"] == "VEGA-2418"
-    assert merge_related_alert(stub, None)["labels"] == [
-        {"name": "incident-33 related alert"}
-    ]
+    assert merge_related_alert(stub, None)["labels"] == [{"name": "incident-33 related alert"}]
 
 
 def test_alert_event_maps_label_name_and_color_only() -> None:
@@ -252,73 +245,55 @@ def test_related_alert_event_does_not_copy_incident_labels() -> None:
 
 
 def test_tags_from_events_reads_incident_label_names_on_overflow() -> None:
-    tags = tags_from_events(
-        [
-            {
-                "labels": "[]",
-                "vega_incident_label_names": "campaign,IT",
-            },
-            {
-                "labels": json.dumps([{"name": "beacon", "color": "BLUE"}]),
-            },
-        ]
-    )
+    tags = tags_from_events([
+        {
+            "labels": "[]",
+            "vega_incident_label_names": "campaign,IT",
+        },
+        {
+            "labels": json.dumps([{"name": "beacon", "color": "BLUE"}]),
+        },
+    ])
     assert tags == ["campaign", "IT", "beacon"]
 
 
 def test_tags_from_events_unions_incident_and_related_alert_labels() -> None:
-    tags = tags_from_events(
-        [
-            {
-                "labels": json.dumps(
-                    [
-                        {"name": "incident", "color": "BLUE"},
-                        {"name": "IT", "color": "BLUE"},
-                    ]
-                ),
-                "vega_label_names": "incident,IT",
-            },
-            {
-                "labels": json.dumps(
-                    [{"name": "incident-33 related alert", "color": "BLUE"}]
-                ),
-                "vega_label_names": "incident-33 related alert",
-            },
-            {"labels": "[]"},
-        ]
-    )
+    tags = tags_from_events([
+        {
+            "labels": json.dumps([
+                {"name": "incident", "color": "BLUE"},
+                {"name": "IT", "color": "BLUE"},
+            ]),
+            "vega_label_names": "incident,IT",
+        },
+        {
+            "labels": json.dumps([{"name": "incident-33 related alert", "color": "BLUE"}]),
+            "vega_label_names": "incident-33 related alert",
+        },
+        {"labels": "[]"},
+    ])
     assert tags == ["incident", "IT", "incident-33 related alert"]
 
 
 def test_tags_from_events_reads_label_json_and_csv() -> None:
-    tags = tags_from_events(
-        [
-            {"labels": [{"name": "malware"}]},
-            {"vega_label_names": "phish, malware"},
-            {"vega_label_names": "c2"},
-        ]
-    )
+    tags = tags_from_events([
+        {"labels": [{"name": "malware"}]},
+        {"vega_label_names": "phish, malware"},
+        {"vega_label_names": "c2"},
+    ])
     assert tags == ["malware", "phish", "c2"]
 
 
 def test_tags_from_events_reads_nested_soar_event_shapes() -> None:
     class SecurityEvent:
         def __init__(self) -> None:
-            self.additional_properties = {
-                "details": json.dumps({"labels": [{"name": "campaign", "color": "#00aa00"}]})
-            }
+            self.additional_properties = {"details": json.dumps({"labels": [{"name": "campaign", "color": "#00aa00"}]})}
 
-    tags = tags_from_events(
-        [
-            {
-                "additional_properties": {
-                    "labels": json.dumps([{"name": "phish", "color": "#ff0000"}])
-                }
-            },
-            SecurityEvent(),
-            {"vega_label_names": "noise"},
-        ]
-    )
+    tags = tags_from_events([
+        {"additional_properties": {"labels": json.dumps([{"name": "phish", "color": "#ff0000"}])}},
+        SecurityEvent(),
+        {"vega_label_names": "noise"},
+    ])
     assert tags == ["phish", "campaign", "noise"]
 
 
@@ -335,9 +310,10 @@ def test_pending_case_tags_skips_existing_and_duplicates() -> None:
 
 
 def test_related_incident_ref() -> None:
-    assert related_incident_ref(
-        {"relatedIncidents": [{"incidentId": "inc-1", "name": "Campaign"}]}
-    ) == ("inc-1", "Campaign")
+    assert related_incident_ref({"relatedIncidents": [{"incidentId": "inc-1", "name": "Campaign"}]}) == (
+        "inc-1",
+        "Campaign",
+    )
     assert related_incident_ref({}) == ("", "")
 
 
@@ -345,9 +321,9 @@ def test_grouping_ids() -> None:
     assert incident_grouping_id("inc-1") == "Vega:incident:inc-1"
     assert incident_grouping_id("inc-1", related=False) == "Vega:incident:inc-1"
     assert incident_grouping_id("inc-1", related=True) == "Vega:incident:inc-1:related"
-    assert incident_grouping_id("inc-1", batch=1) == "Vega:incident:inc-1:related:batch:1"
-    assert incident_grouping_id("inc-1", batch=2) == "Vega:incident:inc-1:related:batch:2"
-    assert incident_case_title({"name": "Campaign"}, batch=2).endswith("(batch 2)")
+    assert incident_grouping_id("inc-1", batch=1) == "Vega:incident:inc-1:related:cluster:1"
+    assert incident_grouping_id("inc-1", batch=2) == "Vega:incident:inc-1:related:cluster:2"
+    assert incident_case_title({"name": "Campaign"}, batch=2).endswith("(cluster 2)")
     assert alert_grouping_id("a-1") == "Vega:alert:a-1"
     assert is_graphql_alert_id("019e1b27-5119-7822-bde3-344b13e481cf")
     assert not is_graphql_alert_id("VEGA-3219")
@@ -597,9 +573,7 @@ def test_incident_event_extracts_okta_reset_user_from_recommended_actions() -> N
         1,
         1,
     )
-    assert event["vega_recommended_action_keys"] == (
-        "block_ip,revoke_user_sessions,reset_user_password"
-    )
+    assert event["vega_recommended_action_keys"] == ("block_ip,revoke_user_sessions,reset_user_password")
     assert event["vega_reset_password_user"] == "alakesh.kothar@metronlabs.com"
     assert event["user"] == "alakesh.kothar@metronlabs.com"
     assert "reset_user_password" in event["recommended_actions"]
@@ -608,18 +582,14 @@ def test_incident_event_extracts_okta_reset_user_from_recommended_actions() -> N
 def test_reset_password_users_from_payload_reads_recommended_actions_json() -> None:
     from core.mapping import reset_password_users_from_payload
 
-    users = reset_password_users_from_payload(
-        {
-            "recommended_actions": json.dumps(
-                [
-                    {
-                        "actionKey": "reset_user_password",
-                        "targetParams": {"user_id": "alakesh.kothar@metronlabs.com"},
-                    }
-                ]
-            )
-        }
-    )
+    users = reset_password_users_from_payload({
+        "recommended_actions": json.dumps([
+            {
+                "actionKey": "reset_user_password",
+                "targetParams": {"user_id": "alakesh.kothar@metronlabs.com"},
+            }
+        ])
+    })
     assert users == ["alakesh.kothar@metronlabs.com"]
 
 
@@ -633,9 +603,7 @@ def test_child_events_stay_scoped_to_parent_alert() -> None:
         incident_id="inc-1",
         incident_label_tags=["campaign"],
     )
-    event = build_vega_alert_event_dict(
-        parent, {"name": "login", "src_ip": "1.1.1.1"}, 1, 1, 0
-    )
+    event = build_vega_alert_event_dict(parent, {"name": "login", "src_ip": "1.1.1.1"}, 1, 1, 0)
     assert event["product_log_id"] == "alert-1:event:0"
     assert event["vega_id"] == "alert-1"
     assert event["vega_incident_id"] == "inc-1"
@@ -713,50 +681,44 @@ def test_parent_event_keeps_single_start_and_end_time() -> None:
 
 
 def test_extract_sync_targets_incident_case_ignores_related_alerts() -> None:
-    targets = extract_sync_targets(
-        {
-            "events": [
-                {"vega_entity_type": "Incident", "vega_id": "inc-1"},
-                {
-                    "vega_entity_type": "Alert",
-                    "vega_id": "alert-1",
-                    "vega_incident_id": "inc-1",
-                },
-            ]
-        }
-    )
+    targets = extract_sync_targets({
+        "events": [
+            {"vega_entity_type": "Incident", "vega_id": "inc-1"},
+            {
+                "vega_entity_type": "Alert",
+                "vega_id": "alert-1",
+                "vega_incident_id": "inc-1",
+            },
+        ]
+    })
     assert targets["mode"] == "incident"
     assert targets["incident_ids"] == ["inc-1"]
     assert targets["alert_ids"] == []
 
 
 def test_extract_sync_targets_related_batch_does_not_close_incident() -> None:
-    targets = extract_sync_targets(
-        {
-            "events": [
-                {
-                    "vega_entity_type": "Alert",
-                    "vega_id": "alert-1",
-                    "vega_incident_id": "inc-1",
-                },
-                {
-                    "vega_entity_type": "Alert Event",
-                    "vega_id": "alert-1",
-                    "product_log_id": "alert-1:event:0",
-                    "vega_incident_id": "inc-1",
-                },
-            ]
-        }
-    )
+    targets = extract_sync_targets({
+        "events": [
+            {
+                "vega_entity_type": "Alert",
+                "vega_id": "alert-1",
+                "vega_incident_id": "inc-1",
+            },
+            {
+                "vega_entity_type": "Alert Event",
+                "vega_id": "alert-1",
+                "product_log_id": "alert-1:event:0",
+                "vega_incident_id": "inc-1",
+            },
+        ]
+    })
     assert targets["mode"] == "alerts"
     assert targets["incident_ids"] == []
     assert targets["alert_ids"] == ["alert-1"]
 
 
 def test_extract_sync_targets_unrelated_alert() -> None:
-    targets = extract_sync_targets(
-        {"events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]}
-    )
+    targets = extract_sync_targets({"events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]})
     assert targets["mode"] == "alerts"
     assert targets["incident_ids"] == []
     assert targets["alert_ids"] == ["alert-3"]
@@ -764,18 +726,16 @@ def test_extract_sync_targets_unrelated_alert() -> None:
 
 def test_extract_sync_targets_camel_case_prefers_uuid_over_vinc() -> None:
     uuid = "019eea19-551b-7b19-8582-faff640969ff"
-    targets = extract_sync_targets(
-        {
-            "title": "Vega Incident - VINC-1 - phishing",
-            "securityEvents": [
-                {
-                    "vegaEntityType": "Incident",
-                    "vegaUniqueIncidentId": "VINC-1",
-                    "eventClassId": uuid,
-                }
-            ],
-        }
-    )
+    targets = extract_sync_targets({
+        "title": "Vega Incident - VINC-1 - phishing",
+        "securityEvents": [
+            {
+                "vegaEntityType": "Incident",
+                "vegaUniqueIncidentId": "VINC-1",
+                "eventClassId": uuid,
+            }
+        ],
+    })
     assert targets["mode"] == "incident"
     assert targets["incident_ids"] == [uuid]
     assert targets["alert_ids"] == []
@@ -783,30 +743,26 @@ def test_extract_sync_targets_camel_case_prefers_uuid_over_vinc() -> None:
 
 def test_extract_sync_targets_ticket_id_when_events_dropped() -> None:
     uuid = "019eea19-551b-7b19-8582-faff640969ff"
-    targets = extract_sync_targets(
-        {
-            "title": "Vega Incident - VINC-1 - phishing",
-            "cyberAlerts": [{"ticketId": f"Vega:{uuid}"}],
-        }
-    )
+    targets = extract_sync_targets({
+        "title": "Vega Incident - VINC-1 - phishing",
+        "cyberAlerts": [{"ticketId": f"Vega:{uuid}"}],
+    })
     assert targets["mode"] == "incident"
     assert targets["incident_ids"] == [uuid]
 
 
 def test_extract_sync_targets_related_title_does_not_close_incident() -> None:
     uuid = "019eea19-551b-7b19-8582-faff640969ff"
-    targets = extract_sync_targets(
-        {
-            "title": "Vega Incident - VINC-1 - phishing (related alerts)",
-            "events": [
-                {
-                    "vegaEntityType": "Alert",
-                    "vegaId": "alert-1",
-                    "vegaIncidentId": uuid,
-                }
-            ],
-        }
-    )
+    targets = extract_sync_targets({
+        "title": "Vega Incident - VINC-1 - phishing (related alerts)",
+        "events": [
+            {
+                "vegaEntityType": "Alert",
+                "vegaId": "alert-1",
+                "vegaIncidentId": uuid,
+            }
+        ],
+    })
     assert targets["mode"] == "alerts"
     assert targets["alert_ids"] == ["alert-1"]
     assert targets["incident_ids"] == []
@@ -814,12 +770,10 @@ def test_extract_sync_targets_related_title_does_not_close_incident() -> None:
 
 def test_extract_sync_targets_legacy_batch_title_does_not_close_incident() -> None:
     uuid = "019eea19-551b-7b19-8582-faff640969ff"
-    targets = extract_sync_targets(
-        {
-            "title": "Vega Incident - VINC-1 - phishing (batch 1)",
-            "cyberAlerts": [{"ticketId": f"Vega:{uuid}"}],
-        }
-    )
+    targets = extract_sync_targets({
+        "title": "Vega Incident - VINC-1 - phishing (cluster 1)",
+        "cyberAlerts": [{"ticketId": f"Vega:{uuid}"}],
+    })
     assert targets["mode"] == "alerts"
     assert targets["incident_ids"] == []
     assert targets["alert_ids"] == [uuid]

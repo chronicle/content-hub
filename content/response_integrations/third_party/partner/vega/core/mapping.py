@@ -1,4 +1,5 @@
 """Map Vega alert/incident records to SOAR event dictionaries."""
+
 from __future__ import annotations
 
 import json
@@ -17,9 +18,7 @@ from .constants import (
 )
 
 _SAFE_KEY_RE = re.compile(r"[^A-Za-z0-9_]")
-_GRAPHQL_ID_RE = re.compile(
-    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
-)
+_GRAPHQL_ID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 _MAX_EVENT_FIELD_CHARS = 10000
 _MAX_DETAILS_CHARS = 100000
 _MAX_EXTRA_FIELDS = 80
@@ -129,17 +128,8 @@ def set_soar_meta(record: dict, **fields: Any) -> dict:
 
 def record_id(record: dict, entity_type: str) -> str:
     if entity_type == ENTITY_TYPE_INCIDENT:
-        return str(
-            record.get("id")
-            or record.get("incidentId")
-            or ""
-        ).strip()
-    return str(
-        record.get("id")
-        or record.get("vegaAlertId")
-        or record.get("alertId")
-        or ""
-    ).strip()
+        return str(record.get("id") or record.get("incidentId") or "").strip()
+    return str(record.get("id") or record.get("vegaAlertId") or record.get("alertId") or "").strip()
 
 
 def record_alert_ids(record: dict) -> list[str]:
@@ -163,16 +153,13 @@ def record_display_id(record: dict, entity_type: str) -> str:
     Vega Alert names use vegaAlertId only (never the UUID id/alertId).
     """
     if entity_type == ENTITY_TYPE_INCIDENT:
-        return str(
-            record.get("vegaUniqueIncidentId")
-            or record.get("incidentId")
-            or ""
-        ).strip()
+        return str(record.get("vegaUniqueIncidentId") or record.get("incidentId") or "").strip()
     return str(record.get("vegaAlertId") or "").strip()
 
 
 def record_name(record: dict) -> str:
     return str(record.get("name") or record.get("incidentName") or "Vega record").strip()
+
 
 def case_display_name(record: dict, entity_type: str) -> str:
     """Human-readable SOAR alert/case title: Vega {entity} - {display_id} - {name}.
@@ -195,8 +182,8 @@ RELATED_ALERTS_TITLE_MARK = "(related alerts)"
 def incident_case_title(record: dict, related: bool = False, batch: int | None = None) -> str:
     """SOAR case title for the incident case or one related-alert chunk.
 
-    Related alerts use ``(batch N)`` in chunks of up to 90. ``N`` advances per
-    incident in the connector checkpoint so batch numbers are not reused.
+    Related alerts use ``(cluster N)`` in chunks of up to 90. ``N`` advances per
+    incident in the connector checkpoint so cluster numbers are not reused.
     """
     title = case_display_name(record, ENTITY_TYPE_INCIDENT)
     if batch:
@@ -206,13 +193,11 @@ def incident_case_title(record: dict, related: bool = False, batch: int | None =
     return title
 
 
-def incident_grouping_id(
-    incident_id: str, related: bool = False, batch: int | None = None
-) -> str:
+def incident_grouping_id(incident_id: str, related: bool = False, batch: int | None = None) -> str:
     """SOAR source grouping key.
 
     The incident case is ``Vega:incident:<id>``. Related alerts use one
-    grouping key per batch chunk: ``Vega:incident:<id>:related:batch:<N>``.
+    grouping key per cluster chunk: ``Vega:incident:<id>:related:cluster:<N>``.
     Legacy ``related=True`` without ``batch`` keeps ``...:related``.
     """
     base = f"{VENDOR_NAME}:incident:{incident_id}"
@@ -233,12 +218,7 @@ def _label_items(value: Any) -> list:
         parsed = _try_parse_json(labels)
         labels = parsed if parsed is not labels else [labels]
     if isinstance(labels, dict):
-        labels = (
-            labels.get("items")
-            or labels.get("nodes")
-            or labels.get("labels")
-            or list(labels.values())
-        )
+        labels = labels.get("items") or labels.get("nodes") or labels.get("labels") or list(labels.values())
     if not isinstance(labels, list):
         return []
     return labels
@@ -256,11 +236,7 @@ def _display_labels(value: Any) -> list[dict]:
         if not isinstance(item, dict):
             continue
         name = str(
-            item.get("name")
-            or item.get("label")
-            or item.get("labelName")
-            or item.get("displayName")
-            or ""
+            item.get("name") or item.get("label") or item.get("labelName") or item.get("displayName") or ""
         ).strip()
         color = str(item.get("color") or "").strip()
         if not name and not color:
@@ -290,11 +266,7 @@ def record_label_tags(record: dict) -> list[str]:
             name = item.strip()
         elif isinstance(item, dict):
             name = str(
-                item.get("name")
-                or item.get("label")
-                or item.get("labelName")
-                or item.get("displayName")
-                or ""
+                item.get("name") or item.get("label") or item.get("labelName") or item.get("displayName") or ""
             ).strip()
         if len(name) < 2:
             continue
@@ -380,11 +352,7 @@ def tags_from_event_fields(event: Any) -> list[str]:
             continue
         if isinstance(value, str):
             parsed = _try_parse_json(value)
-            blobs.append(
-                parsed
-                if parsed is not value
-                else [part.strip() for part in value.split(",") if part.strip()]
-            )
+            blobs.append(parsed if parsed is not value else [part.strip() for part in value.split(",") if part.strip()])
         else:
             blobs.append(value)
     return collect_label_tags(*[{"labels": blob} for blob in blobs])
@@ -392,11 +360,7 @@ def tags_from_event_fields(event: Any) -> list[str]:
 
 def pending_case_tags(names: list[str], existing: list[str] | set[str] | None = None) -> list[str]:
     """Drop blank, short, and already-assigned tag names (case-insensitive)."""
-    seen = {
-        str(name).strip().casefold()
-        for name in (existing or [])
-        if str(name).strip()
-    }
+    seen = {str(name).strip().casefold() for name in (existing or []) if str(name).strip()}
     pending: list[str] = []
     for name in names or []:
         text = str(name).strip()
@@ -409,9 +373,7 @@ def pending_case_tags(names: list[str], existing: list[str] | set[str] | None = 
 
 
 def tags_from_events(events: list) -> list[str]:
-    return collect_label_tags(
-        *[{"labels": tags_from_event_fields(event)} for event in (events or [])]
-    )
+    return collect_label_tags(*[{"labels": tags_from_event_fields(event)} for event in (events or [])])
 
 
 def incident_alert_summary(stub: dict) -> dict:
@@ -459,9 +421,7 @@ def incident_alert_ids(incident: dict) -> list[str]:
 
 def stub_to_alert(stub: dict) -> dict:
     stub = stub if isinstance(stub, dict) else {}
-    alert_id = str(
-        stub.get("alertId") or stub.get("id") or stub.get("vegaAlertId") or ""
-    ).strip()
+    alert_id = str(stub.get("alertId") or stub.get("id") or stub.get("vegaAlertId") or "").strip()
     return {
         "id": alert_id,
         "alertId": alert_id,
@@ -540,12 +500,7 @@ def record_severity(record: dict) -> str:
 
 
 def record_timestamp(record: dict) -> str:
-    return str(
-        record.get("updatedAt")
-        or record.get("lastUpdated")
-        or record.get("createdAt")
-        or ""
-    )
+    return str(record.get("updatedAt") or record.get("lastUpdated") or record.get("createdAt") or "")
 
 
 def _flatten_entities(record: dict) -> dict[str, str]:
@@ -759,28 +714,20 @@ _INCIDENT_API_FIELDS = (
 )
 
 
-def _apply_label_fields(
-    event: dict, record: dict, *, copy_incident_names: bool
-) -> None:
+def _apply_label_fields(event: dict, record: dict, *, copy_incident_names: bool) -> None:
     """Put this Vega record's labels on a SOAR event.
 
     Incident names stay on `vega_incident_label_names` for related alerts;
     they are not copied onto `labels`.
     """
-    event["labels"] = _soar_value(
-        _display_labels(record.get("labels") if isinstance(record, dict) else None)
-    )
+    event["labels"] = _soar_value(_display_labels(record.get("labels") if isinstance(record, dict) else None))
     label_names = record_label_tags(record)
     if label_names:
         event["vega_label_names"] = ",".join(label_names)
     if not copy_incident_names:
         return
     meta = soar_meta(record)
-    incident_label_names = [
-        str(name).strip()
-        for name in (meta.get("incident_label_tags") or [])
-        if str(name).strip()
-    ]
+    incident_label_names = [str(name).strip() for name in (meta.get("incident_label_tags") or []) if str(name).strip()]
     if incident_label_names:
         event["vega_incident_label_names"] = ",".join(incident_label_names)
 
@@ -810,9 +757,7 @@ def related_alert_ids(rows: list[dict]) -> list[str]:
     for row in rows:
         if not isinstance(row, dict):
             continue
-        alert_id = str(
-            row.get("alertId") or row.get("id") or row.get("vegaAlertId") or ""
-        ).strip()
+        alert_id = str(row.get("alertId") or row.get("id") or row.get("vegaAlertId") or "").strip()
         if not alert_id or alert_id in seen:
             continue
         seen.add(alert_id)
@@ -830,23 +775,11 @@ def build_event_dict(record: dict, entity_type: str, start_time: int, end_time: 
     identifier = record_id(record, entity_type)
     severity = record_severity(record)
     meta = soar_meta(record)
-    incident_id = str(
-        meta.get("incident_id")
-        or record.get("vega_incident_id")
-        or ""
-    ).strip()
-    incident_display_id = str(
-        meta.get("incident_display_id")
-        or record.get("vegaUniqueIncidentId")
-        or ""
-    ).strip()
+    incident_id = str(meta.get("incident_id") or record.get("vega_incident_id") or "").strip()
+    incident_display_id = str(meta.get("incident_display_id") or record.get("vegaUniqueIncidentId") or "").strip()
     soar_alert_type = str(
         meta.get("soar_alert_type")
-        or (
-            SOAR_ALERT_TYPE_INCIDENT
-            if entity_type == ENTITY_TYPE_INCIDENT
-            else             SOAR_ALERT_TYPE_ALERT
-        )
+        or (SOAR_ALERT_TYPE_INCIDENT if entity_type == ENTITY_TYPE_INCIDENT else SOAR_ALERT_TYPE_ALERT)
     )
     event = {
         "StartTime": start_time,
@@ -877,9 +810,7 @@ def build_event_dict(record: dict, entity_type: str, start_time: int, end_time: 
     else:
         _map_api_fields(event, record, _ALERT_API_FIELDS)
     _set_mapped(event, "vega_unique_incident_id", incident_display_id)
-    _apply_label_fields(
-        event, record, copy_incident_names=entity_type == ENTITY_TYPE_ALERT
-    )
+    _apply_label_fields(event, record, copy_incident_names=entity_type == ENTITY_TYPE_ALERT)
     details = _details_payload(record)
     if details:
         event["details"] = details
@@ -930,20 +861,12 @@ def _recommended_action_params(item: dict) -> dict:
 def _recommended_action_user(item: dict) -> str:
     params = _recommended_action_params(item)
     return str(
-        params.get("user_id")
-        or params.get("userId")
-        or params.get("email")
-        or params.get("username")
-        or ""
+        params.get("user_id") or params.get("userId") or params.get("email") or params.get("username") or ""
     ).strip()
 
 
 def _merge_csv_values(event: dict, key: str, values: list[str]) -> None:
-    existing = [
-        item.strip()
-        for item in str(event.get(key) or "").split(",")
-        if item.strip()
-    ]
+    existing = [item.strip() for item in str(event.get(key) or "").split(",") if item.strip()]
     for value in values:
         if value and value not in existing:
             existing.append(value)
@@ -963,6 +886,7 @@ def reset_password_users_from_payload(payload: dict) -> list[str]:
 
     if not isinstance(payload, dict):
         return users
+    _add(payload.get("vega_reset_password_user"))
     _add(payload.get("vega_target_users"))
     records = [payload]
     details = _try_parse_json(payload.get("details"))
@@ -980,7 +904,7 @@ def _apply_recommended_action_fields(event: dict, record: dict) -> None:
     """Expose recommended-action keys and Okta reset target on the SOAR event.
 
     Playbooks can trigger on `vega_recommended_action_keys` / `recommended_actions`
-    and read `vega_target_users` instead of hardcoded emails.
+    and read `vega_reset_password_user` / `user` for Okta reset targets.
     """
     keys: list[str] = []
     for item in _recommended_action_items(record):
@@ -992,7 +916,7 @@ def _apply_recommended_action_fields(event: dict, record: dict) -> None:
     reset_users = reset_password_users_from_payload(record)
     if not reset_users:
         return
-    event["vega_target_users"] = ",".join(reset_users)
+    event["vega_reset_password_user"] = reset_users[0]
     _merge_csv_values(event, "user", reset_users)
 
 
@@ -1095,9 +1019,7 @@ def build_vega_alert_event_dict(
     # Related-alert cases are mostly these child events. Copy the parent
     # Vega Alert labels so Default/Events is not an empty `labels` list.
     _apply_label_fields(event, parent, copy_incident_names=True)
-    details_payload = {
-        key: value for key, value in payload.items() if _has_mapped_value(value)
-    }
+    details_payload = {key: value for key, value in payload.items() if _has_mapped_value(value)}
     if details_payload:
         event["details"] = _soar_value(details_payload, limit=_MAX_DETAILS_CHARS)
     event.update(_flatten_entities(payload))

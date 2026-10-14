@@ -1,4 +1,5 @@
 """Map closed SecOps Vega cases back to Vega status-only mutations."""
+
 from __future__ import annotations
 
 import json
@@ -164,10 +165,7 @@ def _iter_case_events(case_payload: dict) -> list[dict]:
     if not isinstance(case_payload, dict):
         return []
     direct = (
-        case_payload.get("events")
-        or case_payload.get("security_events")
-        or case_payload.get("securityEvents")
-        or []
+        case_payload.get("events") or case_payload.get("security_events") or case_payload.get("securityEvents") or []
     )
     events: list[dict] = [item for item in direct if isinstance(item, dict)]
     alerts = (
@@ -192,9 +190,7 @@ def _iter_case_events(case_payload: dict) -> list[dict]:
             or []
         )
         events.extend(item for item in nested if isinstance(item, dict))
-        extra = _as_dict(
-            alert.get("additional_properties") or alert.get("additionalProperties")
-        )
+        extra = _as_dict(alert.get("additional_properties") or alert.get("additionalProperties"))
         stub = dict(extra)
         for key in (
             "ticketId",
@@ -257,9 +253,7 @@ def extract_sync_targets(case_payload: dict) -> dict:
         if _is_alert_event(payload) or _is_child_event_id(identifier):
             continue
         entity_type = _event_entity_type(payload)
-        if entity_type == ENTITY_TYPE_INCIDENT or (
-            not entity_type and title_is_incident
-        ):
+        if entity_type == ENTITY_TYPE_INCIDENT or (not entity_type and title_is_incident):
             if identifier and identifier not in seen_incidents:
                 seen_incidents.add(identifier)
                 incident_ids.append(identifier)
@@ -271,9 +265,7 @@ def extract_sync_targets(case_payload: dict) -> dict:
         for identifier, entity_type in _walk_vega_targets(case_payload):
             if _is_child_event_id(identifier):
                 continue
-            if entity_type == ENTITY_TYPE_INCIDENT or (
-                not entity_type and title_is_incident
-            ):
+            if entity_type == ENTITY_TYPE_INCIDENT or (not entity_type and title_is_incident):
                 if identifier not in seen_incidents:
                     seen_incidents.add(identifier)
                     incident_ids.append(identifier)
@@ -494,9 +486,9 @@ def _case_title(row: dict) -> str:
 def _is_incident_case_title(payload: dict) -> bool:
     """True for the Vega incident case, not the related-alerts case.
 
-    ``(related alerts)`` is the current title. ``(batch N)`` is kept so cases
-    ingested before grouping moved to one source identifier still resolve
-    alerts instead of the incident.
+    ``(related alerts)`` is the current title. ``(cluster N)`` (and legacy
+    ``(batch N)``) mark related-alert chunks so they resolve alerts instead of
+    the incident.
     """
     from .mapping import RELATED_ALERTS_TITLE_MARK
 
@@ -504,7 +496,7 @@ def _is_incident_case_title(payload: dict) -> bool:
     if not title:
         return False
     lowered = title.lower()
-    if RELATED_ALERTS_TITLE_MARK in lowered or "(batch " in lowered:
+    if RELATED_ALERTS_TITLE_MARK in lowered or "(cluster " in lowered or "(batch " in lowered:
         return False
     return lowered.startswith(SOAR_ALERT_TYPE_INCIDENT.lower())
 
@@ -619,9 +611,7 @@ def _normalize_ref(item) -> dict:
     return {"ticket": ticket, "tokens": [ticket, body], "title": ""}
 
 
-def _merge_tracked_refs(
-    state: dict, ingest_refs: list | None, ingest_tickets: list[str] | None
-) -> list[dict]:
+def _merge_tracked_refs(state: dict, ingest_refs: list | None, ingest_tickets: list[str] | None) -> list[dict]:
     ordered: list[dict] = []
     by_ticket: dict[str, dict] = {}
     raw = list(state.get("tracked_refs") or []) + list(state.get("tracked_tickets") or [])
@@ -659,9 +649,7 @@ def _prune_tracked_refs(refs: list[dict], processed: set[str]) -> list[dict]:
             token = str(item).strip()
             if not token or token.startswith("case:"):
                 continue
-            if ticket == f"{VENDOR_NAME}:{token}" or ticket.startswith(
-                f"{VENDOR_NAME}:{token}:"
-            ):
+            if ticket == f"{VENDOR_NAME}:{token}" or ticket.startswith(f"{VENDOR_NAME}:{token}:"):
                 drop = True
                 break
             if token in (ref.get("tokens") or []):
@@ -673,9 +661,7 @@ def _prune_tracked_refs(refs: list[dict], processed: set[str]) -> list[dict]:
 
 
 def _api_root(siemplify) -> str:
-    return str(
-        getattr(siemplify, "API_ROOT", "") or getattr(siemplify, "api_root", "") or ""
-    ).rstrip("/")
+    return str(getattr(siemplify, "API_ROOT", "") or getattr(siemplify, "api_root", "") or "").rstrip("/")
 
 
 def _environment(siemplify) -> str:
@@ -701,9 +687,7 @@ def _json_response(response) -> dict:
 
 
 def _iso_ms(millis: int) -> str:
-    return datetime.fromtimestamp(max(0, int(millis)) / 1000, tz=timezone.utc).strftime(
-        "%Y-%m-%dT%H:%M:%S.000Z"
-    )
+    return datetime.fromtimestamp(max(0, int(millis)) / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def _time_to_ms(value) -> int:
@@ -786,9 +770,7 @@ class SoarRemediator:
     ) -> dict:
         state = dict(state or {})
         processed = set(state.get("processed_ids") or [])
-        current_skip = {
-            str(item).strip() for item in (skip_ids or []) if str(item).strip()
-        }
+        current_skip = {str(item).strip() for item in (skip_ids or []) if str(item).strip()}
         now_ms = int(utc_now().timestamp() * 1000)
         extra_tickets = list(ingest_tickets or [])
         if not extra_tickets and not ingest_refs and current_skip:
@@ -813,9 +795,7 @@ class SoarRemediator:
             }
 
         skip = current_skip
-        cases, remember_ids = self._closed_vega_cases(
-            last_check_ms, now_ms, refs, processed
-        )
+        cases, remember_ids = self._closed_vega_cases(last_check_ms, now_ms, refs, processed)
         for case_id in remember_ids:
             processed.add(f"case:{case_id}")
         synced = 0
@@ -832,27 +812,21 @@ class SoarRemediator:
             raw_incident_ids = list(targets.get("incident_ids") or [])
             raw_alert_ids = list(targets.get("alert_ids") or [])
             incident_ids = _tracked_target_ids(
-                [
-                    item
-                    for item in raw_incident_ids
-                    if item not in processed and item not in skip
-                ],
+                [item for item in raw_incident_ids if item not in processed and item not in skip],
                 refs,
             )
             alert_ids = _tracked_target_ids(
-                [
-                    item
-                    for item in raw_alert_ids
-                    if item not in processed and item not in skip
-                ],
+                [item for item in raw_alert_ids if item not in processed and item not in skip],
                 refs,
             )
             skipped_ingest = any(item in skip for item in raw_incident_ids) or any(
                 item in skip for item in raw_alert_ids
             )
             if not incident_ids and not alert_ids:
-                if processed_key and not skipped_ingest and (
-                    _tracked_target_ids(raw_incident_ids + raw_alert_ids, refs)
+                if (
+                    processed_key
+                    and not skipped_ingest
+                    and (_tracked_target_ids(raw_incident_ids + raw_alert_ids, refs))
                 ):
                     processed.add(processed_key)
                 continue
@@ -874,9 +848,7 @@ class SoarRemediator:
                 if processed_key:
                     processed.add(processed_key)
             except Exception as exc:
-                entity_type = (
-                    ENTITY_TYPE_INCIDENT if mode == SYNC_MODE_INCIDENT else ENTITY_TYPE_ALERT
-                )
+                entity_type = ENTITY_TYPE_INCIDENT if mode == SYNC_MODE_INCIDENT else ENTITY_TYPE_ALERT
                 safe_log(
                     self.logger,
                     "warning",
@@ -891,9 +863,7 @@ class SoarRemediator:
         state["recent_ingest_ids"] = list(current_skip)[-_TRACKED_CAP:]
         pruned = _prune_tracked_refs(refs, processed)
         state["tracked_refs"] = pruned
-        state["tracked_tickets"] = [
-            str(item.get("ticket") or "") for item in pruned if item.get("ticket")
-        ]
+        state["tracked_tickets"] = [str(item.get("ticket") or "") for item in pruned if item.get("ticket")]
         return {
             "state": state,
             "message": f"Synced {synced} closed Vega case(s).",
@@ -930,8 +900,7 @@ class SoarRemediator:
             safe_log(
                 self.logger,
                 "warning",
-                "Outbound Vega sync skipped: connector has no SOAR session/API_ROOT "
-                "to search closed cases.",
+                "Outbound Vega sync skipped: connector has no SOAR session/API_ROOT to search closed cases.",
             )
             return []
         try:
@@ -954,9 +923,7 @@ class SoarRemediator:
                 continue
             if refs and not _payload_matches_any_ref(payload, refs):
                 targets = extract_sync_targets(payload)
-                ids = list(targets.get("incident_ids") or []) + list(
-                    targets.get("alert_ids") or []
-                )
+                ids = list(targets.get("incident_ids") or []) + list(targets.get("alert_ids") or [])
                 if not _tracked_target_ids(ids, refs):
                     continue
             cases.append(payload)
@@ -1021,29 +988,23 @@ class SoarRemediator:
                 continue
             if refs and not _payload_matches_any_ref(merged, refs):
                 targets = extract_sync_targets(merged)
-                ids = list(targets.get("incident_ids") or []) + list(
-                    targets.get("alert_ids") or []
-                )
+                ids = list(targets.get("incident_ids") or []) + list(targets.get("alert_ids") or [])
                 if not _tracked_target_ids(ids, refs):
                     continue
             cases.append(merged)
         safe_log(
             self.logger,
             "info",
-            "Close-sync found %s closed Vega case(s) via SOAR search "
-            "(%s row(s), dump=%s).",
+            "Close-sync found %s closed Vega case(s) via SOAR search (%s row(s), dump=%s).",
             len(cases),
             len(summaries),
             dump,
         )
         return cases, remember_ids
 
-    def _search_closed_case_summaries(
-        self, session, root: str, since_ms: int, until_ms: int
-    ) -> list[dict]:
+    def _search_closed_case_summaries(self, session, root: str, since_ms: int, until_ms: int) -> list[dict]:
         url = f"{root}/{SOAR_CASE_SEARCH_PATH}?format=camel"
         environment = _environment(self.siemplify)
-        collected: list[dict] = []
         payload = {
             "isCaseClosed": True,
             "title": VENDOR_NAME,

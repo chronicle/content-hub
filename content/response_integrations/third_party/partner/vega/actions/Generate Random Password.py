@@ -17,17 +17,13 @@ def main():
 
     siemplify.script_name = GENERATE_RANDOM_PASSWORD_SCRIPT_NAME
     try:
-        raw_length = siemplify.extract_action_param(
-            "Length", default_value=str(DEFAULT_PASSWORD_LENGTH)
-        )
+        raw_length = siemplify.extract_action_param("Length", default_value=str(DEFAULT_PASSWORD_LENGTH))
         try:
             length = int(str(raw_length or DEFAULT_PASSWORD_LENGTH).strip())
         except ValueError as error:
             raise ValueError("Length must be an integer.") from error
         if length < MIN_PASSWORD_LENGTH:
-            raise ValueError(
-                f"Password length must be at least {MIN_PASSWORD_LENGTH} characters."
-            )
+            raise ValueError(f"Password length must be at least {MIN_PASSWORD_LENGTH} characters.")
         password = generate_random_password(length)
         siemplify.result.add_result_json({"password": password})
         siemplify.end(
@@ -36,10 +32,7 @@ def main():
             EXECUTION_STATE_COMPLETED,
         )
     except Exception as error:
-        message = (
-            'Error executing action "Generate Random Password". Reason: '
-            f"{format_user_facing_error(error)}"
-        )
+        message = f'Error executing action "Generate Random Password". Reason: {format_user_facing_error(error)}'
         siemplify.LOGGER.error(message)
         siemplify.end(message, False, EXECUTION_STATE_FAILED)
 

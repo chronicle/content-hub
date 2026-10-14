@@ -1,7 +1,8 @@
 from __future__ import annotations
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
 
 def _current_vega_id(siemplify):
@@ -52,10 +53,7 @@ def main():
             EXECUTION_STATE_COMPLETED,
         )
     except Exception as error:
-        message = (
-            f'Error executing action "Get Incident Details". '
-            f"Reason: {format_user_facing_error(error)}"
-        )
+        message = f'Error executing action "Get Incident Details". Reason: {format_user_facing_error(error)}'
         siemplify.LOGGER.error(message)
         siemplify.end(message, False, EXECUTION_STATE_FAILED)
 

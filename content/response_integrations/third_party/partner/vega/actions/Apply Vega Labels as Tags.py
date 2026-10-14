@@ -8,11 +8,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 def _alert_events(alert) -> list:
     if alert is None:
         return []
-    return list(
-        getattr(alert, "security_events", None)
-        or getattr(alert, "events", None)
-        or []
-    )
+    return list(getattr(alert, "security_events", None) or getattr(alert, "events", None) or [])
 
 
 def _alert_key(alert) -> object:
@@ -97,11 +93,7 @@ def _existing_case_tags(siemplify) -> list[str]:
 
 def _add_case_tag(siemplify, name: str) -> None:
     case = getattr(siemplify, "case", None)
-    case_id = (
-        getattr(case, "identifier", None)
-        if case is not None
-        else getattr(siemplify, "case_id", None)
-    )
+    case_id = getattr(case, "identifier", None) if case is not None else getattr(siemplify, "case_id", None)
     try:
         if case_id:
             siemplify.add_tag(tag=name, case_id=case_id, alert_identifier=None)
@@ -145,10 +137,7 @@ def main():
             EXECUTION_STATE_COMPLETED,
         )
     except Exception as error:
-        message = (
-            'Error executing action "Apply Vega Labels as Tags". Reason: '
-            f"{format_user_facing_error(error)}"
-        )
+        message = f'Error executing action "Apply Vega Labels as Tags". Reason: {format_user_facing_error(error)}'
         siemplify.LOGGER.error(message)
         siemplify.end(message, False, EXECUTION_STATE_FAILED)
 

@@ -1,4 +1,5 @@
 """Typed exceptions for Vega API interactions."""
+
 from __future__ import annotations
 
 

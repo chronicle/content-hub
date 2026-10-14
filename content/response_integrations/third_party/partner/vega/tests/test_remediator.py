@@ -1,4 +1,5 @@
 """Tests for connector close-sync: status-only, exclusive incident vs alert paths."""
+
 from __future__ import annotations
 
 import json
@@ -39,11 +40,7 @@ class FakeManager:
 
     def resolve_incidents(self, incident_ids):
         self.resolved_incidents.append(list(incident_ids))
-        return {
-            "incidents": [
-                {"incidentId": item, "userStatus": "RESOLVED"} for item in incident_ids
-            ]
-        }
+        return {"incidents": [{"incidentId": item, "userStatus": "RESOLVED"} for item in incident_ids]}
 
     def resolve_alerts(self, alert_ids):
         self.resolved_alerts.append(list(alert_ids))
@@ -102,21 +99,13 @@ def _rest_siemplify(results, details, environment="Default Environment") -> Simp
     return SimpleNamespace(
         API_ROOT="https://soar.example",
         session=FakeSession(results, details),
-        context=SimpleNamespace(
-            connector_info=SimpleNamespace(environment=environment)
-        ),
+        context=SimpleNamespace(connector_info=SimpleNamespace(environment=environment)),
     )
 
 
 def test_first_run_baselines_without_syncing_history() -> None:
     manager = FakeManager()
-    siemplify = _siemplify(
-        {
-            "Vega:alert-3": _closed(
-                {"events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]}
-            )
-        }
-    )
+    siemplify = _siemplify({"Vega:alert-3": _closed({"events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]})})
     result = SoarRemediator(manager, siemplify).run_once({})
     assert manager.resolved_alerts == []
     assert manager.resolved_incidents == []
@@ -126,13 +115,7 @@ def test_first_run_baselines_without_syncing_history() -> None:
 
 def test_close_unrelated_alert_resolves_that_alert_only() -> None:
     manager = FakeManager()
-    siemplify = _siemplify(
-        {
-            "Vega:alert-3": _closed(
-                {"events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]}
-            )
-        }
-    )
+    siemplify = _siemplify({"Vega:alert-3": _closed({"events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]})})
     result = SoarRemediator(manager, siemplify).run_once(_state("Vega:alert-3"))
     assert manager.resolved_alerts == [["alert-3"]]
     assert manager.resolved_incidents == []
@@ -143,22 +126,18 @@ def test_close_unrelated_alert_resolves_that_alert_only() -> None:
 
 def test_close_incident_case_resolves_incident_not_related_alerts() -> None:
     manager = FakeManager()
-    siemplify = _siemplify(
-        {
-            "Vega:inc-1": _closed(
+    siemplify = _siemplify({
+        "Vega:inc-1": _closed({
+            "events": [
+                {"vega_entity_type": "Incident", "vega_id": "inc-1"},
                 {
-                    "events": [
-                        {"vega_entity_type": "Incident", "vega_id": "inc-1"},
-                        {
-                            "vega_entity_type": "Alert",
-                            "vega_id": "alert-1",
-                            "vega_incident_id": "inc-1",
-                        },
-                    ]
-                }
-            )
-        }
-    )
+                    "vega_entity_type": "Alert",
+                    "vega_id": "alert-1",
+                    "vega_incident_id": "inc-1",
+                },
+            ]
+        })
+    })
     SoarRemediator(manager, siemplify).run_once(_state("Vega:inc-1"))
     assert manager.resolved_incidents == [["inc-1"]]
     assert manager.resolved_alerts == []
@@ -180,9 +159,7 @@ def test_close_related_batch_resolves_alerts_not_incident() -> None:
             },
         ]
     }
-    siemplify = _siemplify(
-        {"Vega:alert-4": _closed(payload), "Vega:alert-5": _closed(payload)}
-    )
+    siemplify = _siemplify({"Vega:alert-4": _closed(payload), "Vega:alert-5": _closed(payload)})
     SoarRemediator(manager, siemplify).run_once(_state("Vega:alert-4", "Vega:alert-5"))
     assert manager.resolved_incidents == []
     assert manager.resolved_alerts == [["alert-4", "alert-5"]]
@@ -219,11 +196,7 @@ def test_job_sdk_two_arg_signature_uses_rest_search() -> None:
                     {
                         "ticketId": "Vega:alert-3",
                         "securityEvents": [
-                            {
-                                "additionalProperties": json.dumps(
-                                    {"vega_id": "alert-3", "vega_entity_type": "Alert"}
-                                )
-                            }
+                            {"additionalProperties": json.dumps({"vega_id": "alert-3", "vega_entity_type": "Alert"})}
                         ],
                     }
                 ],
@@ -235,9 +208,7 @@ def test_job_sdk_two_arg_signature_uses_rest_search() -> None:
         get_cases_by_ticket_id=lambda _ticket: {},
         API_ROOT="https://soar.example",
         session=session,
-        context=SimpleNamespace(
-            connector_info=SimpleNamespace(environment="Default Environment")
-        ),
+        context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default Environment")),
     )
     SoarRemediator(manager, siemplify).run_once(_state("Vega:alert-3"))
     assert manager.resolved_alerts == [["alert-3"]]
@@ -261,21 +232,17 @@ def test_rest_search_resolves_incident_from_nested_case_details() -> None:
                         "ticketId": "Vega:inc-1",
                         "securityEvents": [
                             {
-                                "additionalProperties": json.dumps(
-                                    {
-                                        "vega_id": "inc-1",
-                                        "vega_entity_type": "Incident",
-                                    }
-                                )
+                                "additionalProperties": json.dumps({
+                                    "vega_id": "inc-1",
+                                    "vega_entity_type": "Incident",
+                                })
                             },
                             {
-                                "additionalProperties": json.dumps(
-                                    {
-                                        "vega_id": "alert-1",
-                                        "vega_entity_type": "Alert",
-                                        "vega_incident_id": "inc-1",
-                                    }
-                                )
+                                "additionalProperties": json.dumps({
+                                    "vega_id": "alert-1",
+                                    "vega_entity_type": "Alert",
+                                    "vega_incident_id": "inc-1",
+                                })
                             },
                         ],
                     }
@@ -356,46 +323,40 @@ def test_rest_incident_ticket_only_when_events_dropped() -> None:
 
 
 def test_extract_sync_targets_skips_child_events_on_related_batch() -> None:
-    targets = extract_sync_targets(
-        {
-            "events": [
-                {
-                    "vega_entity_type": "Alert",
-                    "vega_id": "alert-1",
-                    "vega_incident_id": "inc-1",
-                },
-                {
-                    "vega_entity_type": "Alert Event",
-                    "vega_id": "alert-1:event:0",
-                    "vega_incident_id": "inc-1",
-                },
-            ]
-        }
-    )
+    targets = extract_sync_targets({
+        "events": [
+            {
+                "vega_entity_type": "Alert",
+                "vega_id": "alert-1",
+                "vega_incident_id": "inc-1",
+            },
+            {
+                "vega_entity_type": "Alert Event",
+                "vega_id": "alert-1:event:0",
+                "vega_incident_id": "inc-1",
+            },
+        ]
+    })
     assert targets["mode"] == "alerts"
     assert targets["alert_ids"] == ["alert-1"]
     assert targets["incident_ids"] == []
 
 
 def test_extract_sync_targets_reads_json_additional_properties() -> None:
-    targets = extract_sync_targets(
-        {
-            "cyberAlerts": [
-                {
-                    "securityEvents": [
-                        {
-                            "additionalProperties": json.dumps(
-                                {
-                                    "vega_id": "alert-9",
-                                    "vega_entity_type": "Alert",
-                                }
-                            )
-                        }
-                    ]
-                }
-            ]
-        }
-    )
+    targets = extract_sync_targets({
+        "cyberAlerts": [
+            {
+                "securityEvents": [
+                    {
+                        "additionalProperties": json.dumps({
+                            "vega_id": "alert-9",
+                            "vega_entity_type": "Alert",
+                        })
+                    }
+                ]
+            }
+        ]
+    })
     assert targets["mode"] == "alerts"
     assert targets["alert_ids"] == ["alert-9"]
 
@@ -406,9 +367,7 @@ def test_resolve_helpers_are_used_not_full_update() -> None:
     manager.resolve_alerts = MagicMock(return_value={})
     manager.update_incidents = MagicMock()
     manager.update_alerts = MagicMock()
-    siemplify = _siemplify(
-        {"Vega:inc-1": _closed({"events": [{"vega_entity_type": "Incident", "vega_id": "inc-1"}]})}
-    )
+    siemplify = _siemplify({"Vega:inc-1": _closed({"events": [{"vega_entity_type": "Incident", "vega_id": "inc-1"}]})})
     SoarRemediator(manager, siemplify).run_once(_state("Vega:inc-1"))
     manager.resolve_incidents.assert_called_once_with(["inc-1"])
     manager.update_incidents.assert_not_called()
@@ -418,15 +377,13 @@ def test_resolve_helpers_are_used_not_full_update() -> None:
 
 def test_open_ingested_case_does_not_resolve_vega() -> None:
     manager = FakeManager()
-    siemplify = _siemplify(
-        {
-            "Vega:alert-3": {
-                "isClosed": False,
-                "lastUpdateTime": 1_800_000_000_000,
-                "events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}],
-            }
+    siemplify = _siemplify({
+        "Vega:alert-3": {
+            "isClosed": False,
+            "lastUpdateTime": 1_800_000_000_000,
+            "events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}],
         }
-    )
+    })
     SoarRemediator(manager, siemplify).run_once(dict(PRIOR_STATE))
     assert manager.resolved_alerts == []
     assert manager.resolved_incidents == []
@@ -464,9 +421,7 @@ def test_is_soar_case_closed_requires_explicit_closed_flag() -> None:
     assert is_soar_case_closed({"statusName": "CLOSED"})
     assert is_soar_case_closed({"status": 2})
     assert not is_soar_case_closed({"status": "RESOLVED"})
-    assert not is_soar_case_closed(
-        {"status": "RESOLVED", "vega_id": "alert-3", "vega_entity_type": "Alert"}
-    )
+    assert not is_soar_case_closed({"status": "RESOLVED", "vega_id": "alert-3", "vega_entity_type": "Alert"})
     assert not is_soar_case_closed({"status": 2, "vega_id": "alert-3", "vega_entity_type": "Alert"})
     assert not is_soar_case_closed({"isClosed": False, "lastUpdateTime": 1})
     assert not is_soar_case_closed({"status": 1, "updateTime": 1})
@@ -476,21 +431,19 @@ def test_is_soar_case_closed_requires_explicit_closed_flag() -> None:
 
 def test_vega_status_on_ingested_case_does_not_resolve() -> None:
     manager = FakeManager()
-    siemplify = _siemplify(
-        {
-            "Vega:alert-3": {
-                "status": "RESOLVED",
-                "lastUpdateTime": 1_800_000_000_000,
-                "events": [
-                    {
-                        "vega_entity_type": "Alert",
-                        "vega_id": "alert-3",
-                        "status": "RESOLVED",
-                    }
-                ],
-            }
+    siemplify = _siemplify({
+        "Vega:alert-3": {
+            "status": "RESOLVED",
+            "lastUpdateTime": 1_800_000_000_000,
+            "events": [
+                {
+                    "vega_entity_type": "Alert",
+                    "vega_id": "alert-3",
+                    "status": "RESOLVED",
+                }
+            ],
         }
-    )
+    })
     SoarRemediator(manager, siemplify).run_once(dict(PRIOR_STATE))
     assert manager.resolved_alerts == []
     assert manager.resolved_incidents == []
@@ -542,17 +495,13 @@ def test_connector_with_sdk_prefers_rest_closed_search() -> None:
         },
     )
     siemplify = SimpleNamespace(
-        get_alerts_ticket_ids_from_cases_closed_since_timestamp=lambda _since: [
-            "Vega:alert-3"
-        ],
-        get_cases_by_ticket_id=lambda _ticket: _closed(
-            {"events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]}
-        ),
+        get_alerts_ticket_ids_from_cases_closed_since_timestamp=lambda _since: ["Vega:alert-3"],
+        get_cases_by_ticket_id=lambda _ticket: _closed({
+            "events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]
+        }),
         API_ROOT="https://soar.example",
         session=session,
-        context=SimpleNamespace(
-            connector_info=SimpleNamespace(environment="Default Environment")
-        ),
+        context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default Environment")),
     )
     SoarRemediator(manager, siemplify).run_once(_state("Vega:alert-3"))
     assert manager.resolved_alerts == []
@@ -562,16 +511,10 @@ def test_connector_with_sdk_prefers_rest_closed_search() -> None:
 
 def test_skip_ids_does_not_resolve_current_ingest() -> None:
     manager = FakeManager()
-    siemplify = _siemplify(
-        {
-            "Vega:alert-3": _closed(
-                {"id": "9", "events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]}
-            )
-        }
-    )
-    result = SoarRemediator(manager, siemplify).run_once(
-        dict(PRIOR_STATE), skip_ids={"alert-3"}
-    )
+    siemplify = _siemplify({
+        "Vega:alert-3": _closed({"id": "9", "events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]})
+    })
+    result = SoarRemediator(manager, siemplify).run_once(dict(PRIOR_STATE), skip_ids={"alert-3"})
     assert manager.resolved_alerts == []
     assert manager.resolved_incidents == []
     assert "case:9" not in result["state"]["processed_ids"]
@@ -580,13 +523,9 @@ def test_skip_ids_does_not_resolve_current_ingest() -> None:
 
 def test_previous_ingest_ids_are_resolved_on_next_poll() -> None:
     manager = FakeManager()
-    siemplify = _siemplify(
-        {
-            "Vega:alert-3": _closed(
-                {"id": "9", "events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]}
-            )
-        }
-    )
+    siemplify = _siemplify({
+        "Vega:alert-3": _closed({"id": "9", "events": [{"vega_entity_type": "Alert", "vega_id": "alert-3"}]})
+    })
     state = _state("Vega:alert-3")
     state["recent_ingest_ids"] = ["alert-3"]
     result = SoarRemediator(manager, siemplify).run_once(state)
@@ -691,15 +630,13 @@ def test_rest_unfiltered_dump_still_syncs_matching_ticket() -> None:
         }
         for index in range(50)
     ]
-    results.append(
-        {
-            "id": "9",
-            "title": "Vega Alert - alert-3",
-            "ticketId": "Vega:alert-3",
-            "isCaseClosed": True,
-            "updateTime": AFTER_BASELINE_MS,
-        }
-    )
+    results.append({
+        "id": "9",
+        "title": "Vega Alert - alert-3",
+        "ticketId": "Vega:alert-3",
+        "isCaseClosed": True,
+        "updateTime": AFTER_BASELINE_MS,
+    })
     session = FakeSession(
         results,
         {
@@ -714,16 +651,12 @@ def test_rest_unfiltered_dump_still_syncs_matching_ticket() -> None:
     siemplify = SimpleNamespace(
         API_ROOT="https://soar.example",
         session=session,
-        context=SimpleNamespace(
-            connector_info=SimpleNamespace(environment="Default Environment")
-        ),
+        context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default Environment")),
     )
     result = SoarRemediator(manager, siemplify).run_once(_state("Vega:alert-3"))
     assert manager.resolved_alerts == [["alert-3"]]
     assert "Synced 1" in result["message"]
-    assert session.gets == [
-        "https://soar.example/external/v1/cases/GetCaseFullDetails/9?format=camel"
-    ]
+    assert session.gets == ["https://soar.example/external/v1/cases/GetCaseFullDetails/9?format=camel"]
 
 
 def test_rest_dump_of_old_ingested_closes_does_not_sync() -> None:
@@ -753,10 +686,7 @@ def test_rest_dump_of_old_ingested_closes_does_not_sync() -> None:
 
 
 def test_rest_dump_without_timestamps_does_not_sync() -> None:
-    results = [
-        {"id": str(index), "title": f"Vega Alert {index}", "isCaseClosed": True}
-        for index in range(50)
-    ]
+    results = [{"id": str(index), "title": f"Vega Alert {index}", "isCaseClosed": True} for index in range(50)]
     results[0] = {
         "id": "9",
         "title": "Vega Alert - alert-3 - old",
@@ -775,9 +705,7 @@ def test_rest_dump_without_timestamps_does_not_sync() -> None:
     remediator = SoarRemediator(FakeManager(), siemplify)
     result = remediator.run_once(_state("Vega:alert-3"))
     assert result["message"].startswith("Synced 0")
-    assert siemplify.session.gets == [
-        "https://soar.example/external/v1/cases/GetCaseFullDetails/9?format=camel"
-    ]
+    assert siemplify.session.gets == ["https://soar.example/external/v1/cases/GetCaseFullDetails/9?format=camel"]
     assert "case:9" in result["state"]["processed_ids"]
 
     siemplify.session.gets.clear()
@@ -787,10 +715,7 @@ def test_rest_dump_without_timestamps_does_not_sync() -> None:
 
 
 def test_rest_dump_without_summary_time_syncs_recent_details() -> None:
-    results = [
-        {"id": str(index), "title": f"Vega Alert {index}", "isCaseClosed": True}
-        for index in range(50)
-    ]
+    results = [{"id": str(index), "title": f"Vega Alert {index}", "isCaseClosed": True} for index in range(50)]
     results[0] = {
         "id": "9",
         "title": "Vega Alert - alert-3",
@@ -811,16 +736,11 @@ def test_rest_dump_without_summary_time_syncs_recent_details() -> None:
     result = SoarRemediator(manager, siemplify).run_once(_state("Vega:alert-3"))
     assert manager.resolved_alerts == [["alert-3"]]
     assert "Synced 1" in result["message"]
-    assert siemplify.session.gets == [
-        "https://soar.example/external/v1/cases/GetCaseFullDetails/9?format=camel"
-    ]
+    assert siemplify.session.gets == ["https://soar.example/external/v1/cases/GetCaseFullDetails/9?format=camel"]
 
 
 def test_rest_dump_matching_old_details_does_not_sync() -> None:
-    results = [
-        {"id": str(index), "title": f"Vega Alert {index}", "isCaseClosed": True}
-        for index in range(50)
-    ]
+    results = [{"id": str(index), "title": f"Vega Alert {index}", "isCaseClosed": True} for index in range(50)]
     results[0] = {
         "id": "9",
         "title": "Vega Alert - alert-3 - old",
@@ -841,9 +761,7 @@ def test_rest_dump_matching_old_details_does_not_sync() -> None:
     result = SoarRemediator(manager, siemplify).run_once(_state("Vega:alert-3"))
     assert manager.resolved_alerts == []
     assert result["message"].startswith("Synced 0")
-    assert siemplify.session.gets == [
-        "https://soar.example/external/v1/cases/GetCaseFullDetails/9?format=camel"
-    ]
+    assert siemplify.session.gets == ["https://soar.example/external/v1/cases/GetCaseFullDetails/9?format=camel"]
     assert "case:9" in result["state"]["processed_ids"]
 
 
@@ -883,9 +801,7 @@ def test_rest_pascal_case_search_row_and_nested_details() -> None:
             "9": {
                 "Id": 9,
                 "Status": 2,
-                "involvedRelations": [
-                    {"eventClassId": uuid, "vega_entity_type": "Alert"}
-                ],
+                "involvedRelations": [{"eventClassId": uuid, "vega_entity_type": "Alert"}],
             }
         },
     )
@@ -896,10 +812,7 @@ def test_rest_pascal_case_search_row_and_nested_details() -> None:
 
 def test_rest_dump_skips_untracked_historical_closes() -> None:
     uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-    historical = [
-        {"id": str(index), "title": f"Vega Alert {index}", "isCaseClosed": True}
-        for index in range(50)
-    ]
+    historical = [{"id": str(index), "title": f"Vega Alert {index}", "isCaseClosed": True} for index in range(50)]
     historical[0] = {
         "id": "99",
         "title": "Vega Alert - ALRT-1 - brute force",
@@ -920,9 +833,7 @@ def test_rest_dump_skips_untracked_historical_closes() -> None:
     siemplify = SimpleNamespace(
         API_ROOT="https://soar.example",
         session=session,
-        context=SimpleNamespace(
-            connector_info=SimpleNamespace(environment="Default Environment")
-        ),
+        context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default Environment")),
     )
     manager = FakeManager()
     result = SoarRemediator(manager, siemplify).run_once(
@@ -937,9 +848,7 @@ def test_rest_dump_skips_untracked_historical_closes() -> None:
     )
     assert manager.resolved_alerts == [[uuid]]
     assert "Synced 1" in result["message"]
-    assert session.gets == [
-        "https://soar.example/external/v1/cases/GetCaseFullDetails/99?format=camel"
-    ]
+    assert session.gets == ["https://soar.example/external/v1/cases/GetCaseFullDetails/99?format=camel"]
 
 
 def test_rest_empty_closed_search_does_not_sync() -> None:
@@ -966,14 +875,10 @@ def test_rest_empty_closed_search_does_not_sync() -> None:
     siemplify = SimpleNamespace(
         API_ROOT="https://soar.example",
         session=session,
-        context=SimpleNamespace(
-            connector_info=SimpleNamespace(environment="Default Environment")
-        ),
+        context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default Environment")),
     )
     manager = FakeManager()
-    result = SoarRemediator(manager, siemplify).run_once(
-        _state("Vega:a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-    )
+    result = SoarRemediator(manager, siemplify).run_once(_state("Vega:a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
     assert manager.resolved_alerts == []
     assert "Synced 0" in result["message"]
 
@@ -999,9 +904,7 @@ def test_ingest_refs_enrich_existing_uuid_tickets() -> None:
 
 def test_first_run_stores_ingest_tickets() -> None:
     manager = FakeManager()
-    result = SoarRemediator(manager, _siemplify({})).run_once(
-        {}, ingest_tickets=["Vega:alert-3"]
-    )
+    result = SoarRemediator(manager, _siemplify({})).run_once({}, ingest_tickets=["Vega:alert-3"])
     assert "baseline" in result["message"].lower()
     assert result["state"]["tracked_tickets"] == ["Vega:alert-3"]
     assert manager.resolved_alerts == []

@@ -1,7 +1,8 @@
 from __future__ import annotations
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
 
 def _current_vega_id(siemplify):
@@ -32,26 +33,18 @@ def main():
     from ..core.VegaManager import VegaManager
 
     siemplify.script_name = UPDATE_INCIDENT_SCRIPT_NAME
-    incident_ids = parse_csv_list(
-        siemplify.extract_action_param("Incident IDs", default_value="")
-    )
+    incident_ids = parse_csv_list(siemplify.extract_action_param("Incident IDs", default_value=""))
     if not incident_ids:
         current = _current_vega_id(siemplify)
         if current:
             incident_ids = [current]
     payload = {"incidentIds": incident_ids}
-    user_status = str(
-        siemplify.extract_action_param("User Status", default_value="") or ""
-    ).strip()
+    user_status = str(siemplify.extract_action_param("User Status", default_value="") or "").strip()
     severity = str(siemplify.extract_action_param("Severity", default_value="") or "").strip()
     verdict = str(siemplify.extract_action_param("Verdict", default_value="") or "").strip()
-    reasoning = str(
-        siemplify.extract_action_param("Verdict Reasoning", default_value="") or ""
-    ).strip()
+    reasoning = str(siemplify.extract_action_param("Verdict Reasoning", default_value="") or "").strip()
     comment = str(siemplify.extract_action_param("Comment", default_value="") or "").strip()
-    emails = parse_csv_list(
-        siemplify.extract_action_param("Assignee Emails", default_value="")
-    )
+    emails = parse_csv_list(siemplify.extract_action_param("Assignee Emails", default_value=""))
     if user_status:
         payload["userStatus"] = to_graphql_enum(user_status)
     if severity:

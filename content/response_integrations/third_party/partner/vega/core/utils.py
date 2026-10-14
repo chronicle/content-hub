@@ -1,4 +1,5 @@
 """Validation, filter mapping, timestamps, and log redaction."""
+
 from __future__ import annotations
 
 import json
@@ -25,7 +26,6 @@ from .constants import (
     MSG_INVALID_ACCESS_KEY_ID,
     MSG_NOT_FOUND,
     MSG_RATE_LIMIT,
-    MSG_SERVER_ERROR,
     MSG_TIMEOUT,
     MSG_UNAUTHORIZED,
     MSG_UNREACHABLE,
@@ -133,9 +133,7 @@ def normalize_api_root(value: Any) -> str:
         )
     parsed = urlparse(text)
     if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
-        raise VegaValidationException(
-            "API Root must be an HTTPS URL, for example https://api.vega.io."
-        )
+        raise VegaValidationException("API Root must be an HTTPS URL, for example https://api.vega.io.")
     return text
 
 
@@ -158,19 +156,15 @@ def parse_int_in_range(
     if text == "":
         if default is not None:
             return default
-        raise VegaValidationException(
-            f"{name} is required. Enter an integer from {minimum} to {maximum}."
-        )
+        raise VegaValidationException(f"{name} is required. Enter an integer from {minimum} to {maximum}.")
     if not re.fullmatch(r"-?\d+", text):
         raise VegaValidationException(
-            f'"{text}" is not a valid value for {name}. '
-            f"Enter an integer from {minimum} to {maximum}."
+            f'"{text}" is not a valid value for {name}. Enter an integer from {minimum} to {maximum}.'
         )
     number = int(text)
     if number < minimum or number > maximum:
         raise VegaValidationException(
-            f'"{text}" is not a valid value for {name}. '
-            f"Use a number from {minimum} to {maximum}."
+            f'"{text}" is not a valid value for {name}. Use a number from {minimum} to {maximum}.'
         )
     return number
 
@@ -202,12 +196,8 @@ def _raise_unsupported(param_name: str, unknown: list[str], allowed: Iterable[st
     quoted = ", ".join(f'"{item}"' for item in unknown)
     possible = ", ".join(allowed)
     if len(unknown) == 1:
-        raise VegaValidationException(
-            f'{quoted} is not a valid value for {param_name}. Possible values: {possible}.'
-        )
-    raise VegaValidationException(
-        f"{quoted} are not valid values for {param_name}. Possible values: {possible}."
-    )
+        raise VegaValidationException(f"{quoted} is not a valid value for {param_name}. Possible values: {possible}.")
+    raise VegaValidationException(f"{quoted} are not valid values for {param_name}. Possible values: {possible}.")
 
 
 def _filter_known(selected: list[str], allowed: Iterable[str]) -> tuple[list[str], list[str]]:
@@ -259,9 +249,7 @@ def resolve_multi_filter(
 def resolve_entities(raw: Any) -> list[str]:
     selected = parse_csv_list(raw)
     if not selected:
-        raise VegaValidationException(
-            f"{PARAM_ENTITIES} is required. Use one or both of: {', '.join(ENTITY_OPTIONS)}."
-        )
+        raise VegaValidationException(f"{PARAM_ENTITIES} is required. Use one or both of: {', '.join(ENTITY_OPTIONS)}.")
     known = {item.lower(): item for item in ENTITY_OPTIONS}
     known["alert"] = "Alerts"
     known["incident"] = "Incidents"
@@ -278,9 +266,7 @@ def resolve_entities(raw: Any) -> list[str]:
     if unknown:
         _raise_unsupported(PARAM_ENTITIES, unknown, ENTITY_OPTIONS)
     if not resolved:
-        raise VegaValidationException(
-            f"{PARAM_ENTITIES} is required. Use one or both of: {', '.join(ENTITY_OPTIONS)}."
-        )
+        raise VegaValidationException(f"{PARAM_ENTITIES} is required. Use one or both of: {', '.join(ENTITY_OPTIONS)}.")
     return resolved
 
 
@@ -437,17 +423,11 @@ def format_connector_field_errors(errors: list[str]) -> str:
     """Friendly message that names each invalid connector field."""
     cleaned = [str(item).strip() for item in errors if str(item).strip()]
     if not cleaned:
-        return (
-            "Cannot run the Vega Alerts and Incidents Connector. "
-            "Check the connector fields and try again."
-        )
+        return "Cannot run the Vega Alerts and Incidents Connector. Check the connector fields and try again."
     if len(cleaned) == 1:
         return f"Cannot run the Vega Alerts and Incidents Connector. {cleaned[0]}"
     bullets = "\n".join(f"- {item}" for item in cleaned)
-    return (
-        "Cannot run the Vega Alerts and Incidents Connector because some fields "
-        f"are invalid:\n{bullets}"
-    )
+    return f"Cannot run the Vega Alerts and Incidents Connector because some fields are invalid:\n{bullets}"
 
 
 def format_test_connection_summary(
@@ -477,10 +457,7 @@ def format_test_connection_summary(
     sample_line = (
         f"Showing {sample_count} sample alert(s) below. Nothing was ingested."
         if sample_count
-        else (
-            "No sample alerts were found for the current filters and time window. "
-            "Nothing was ingested."
-        )
+        else ("No sample alerts were found for the current filters and time window. Nothing was ingested.")
     )
     lines.extend(["", sample_line])
     return "\n".join(lines)
@@ -618,11 +595,7 @@ def iter_current_vega_ids(siemplify) -> list[str]:
     keys = ("vega_id", "product_log_id", "vega_alert_id", "vegaAlertId")
     try:
         alert = siemplify.current_alert
-        events = (
-            getattr(alert, "security_events", None)
-            or getattr(alert, "events", None)
-            or []
-        )
+        events = getattr(alert, "security_events", None) or getattr(alert, "events", None) or []
         for event in events:
             additional = getattr(event, "additional_properties", None) or {}
             sources = []
@@ -662,11 +635,7 @@ def compute_time_window(
     # Missing origin_from means an upgraded or poisoned checkpoint that already
     # jumped watermark to "now". Rescan the original createdAt backfill and skip
     # ingested IDs instead of polling a 5-minute updatedAt window.
-    catching_up = (
-        incomplete
-        or query_mode == "created"
-        or not str(state.get("origin_from") or "").strip()
-    )
+    catching_up = incomplete or query_mode == "created" or not str(state.get("origin_from") or "").strip()
     if catching_up:
         return {
             "first_run": watermark is None,
@@ -700,9 +669,7 @@ def generate_random_password(length: int = 16) -> str:
     from .constants import MIN_PASSWORD_LENGTH, PASSWORD_SYMBOLS
 
     if length < MIN_PASSWORD_LENGTH:
-        raise ValueError(
-            f"Password length must be at least {MIN_PASSWORD_LENGTH} characters."
-        )
+        raise ValueError(f"Password length must be at least {MIN_PASSWORD_LENGTH} characters.")
     lower = string.ascii_lowercase
     upper = string.ascii_uppercase
     digits = string.digits

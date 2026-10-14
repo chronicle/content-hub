@@ -7,11 +7,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 def _add_case_comment(siemplify, comment: str) -> None:
     case = getattr(siemplify, "case", None)
-    case_id = (
-        getattr(case, "identifier", None)
-        if case is not None
-        else getattr(siemplify, "case_id", None)
-    )
+    case_id = getattr(case, "identifier", None) if case is not None else getattr(siemplify, "case_id", None)
     try:
         if case_id:
             siemplify.add_comment(comment=comment, case_id=case_id)
@@ -32,19 +28,14 @@ def main():
 
     siemplify.script_name = ADD_CASE_COMMENT_SCRIPT_NAME
     try:
-        comment = str(
-            siemplify.extract_action_param("Comment", default_value="") or ""
-        ).strip()
+        comment = str(siemplify.extract_action_param("Comment", default_value="") or "").strip()
         if not comment:
             raise ValueError("Comment is required.")
         _add_case_comment(siemplify, comment)
         siemplify.result.add_result_json({"comment": comment})
         siemplify.end("Added a case comment.", True, EXECUTION_STATE_COMPLETED)
     except Exception as error:
-        message = (
-            'Error executing action "Add Case Comment". Reason: '
-            f"{format_user_facing_error(error)}"
-        )
+        message = f'Error executing action "Add Case Comment". Reason: {format_user_facing_error(error)}'
         siemplify.LOGGER.error(message)
         siemplify.end(message, False, EXECUTION_STATE_FAILED)
 

@@ -15,6 +15,7 @@ Vega Alerts and Incidents Connector.
    sync sets Vega userStatus to RESOLVED when the matching SOAR case closes
    (incident case → incident only; related-alert or alert case → those alerts only).
 """
+
 from __future__ import annotations
 
 import json
@@ -118,27 +119,13 @@ def _read_params(siemplify) -> dict:
         "api_root": siemplify.extract_connector_param(param_name=PARAM_API_ROOT),
         "access_key_id": siemplify.extract_connector_param(param_name=PARAM_ACCESS_KEY_ID),
         "access_key": siemplify.extract_connector_param(param_name=PARAM_ACCESS_KEY),
-        "entities_raw": siemplify.extract_connector_param(
-            param_name=PARAM_ENTITIES, default_value="Alerts,Incidents"
-        ),
-        "lookback_minutes": siemplify.extract_connector_param(
-            param_name=PARAM_LOOKBACK, default_value="5"
-        ),
-        "backfill_days": siemplify.extract_connector_param(
-            param_name=PARAM_BACKFILL, default_value="30"
-        ),
-        "alert_severities": siemplify.extract_connector_param(
-            param_name=PARAM_ALERT_SEVERITIES, default_value=""
-        ),
-        "alert_statuses": siemplify.extract_connector_param(
-            param_name=PARAM_ALERT_STATUSES, default_value=""
-        ),
-        "alert_verdicts": siemplify.extract_connector_param(
-            param_name=PARAM_ALERT_VERDICTS, default_value=""
-        ),
-        "has_related": siemplify.extract_connector_param(
-            param_name=PARAM_HAS_RELATED, default_value="Yes,No"
-        ),
+        "entities_raw": siemplify.extract_connector_param(param_name=PARAM_ENTITIES, default_value="Alerts,Incidents"),
+        "lookback_minutes": siemplify.extract_connector_param(param_name=PARAM_LOOKBACK, default_value="5"),
+        "backfill_days": siemplify.extract_connector_param(param_name=PARAM_BACKFILL, default_value="30"),
+        "alert_severities": siemplify.extract_connector_param(param_name=PARAM_ALERT_SEVERITIES, default_value=""),
+        "alert_statuses": siemplify.extract_connector_param(param_name=PARAM_ALERT_STATUSES, default_value=""),
+        "alert_verdicts": siemplify.extract_connector_param(param_name=PARAM_ALERT_VERDICTS, default_value=""),
+        "has_related": siemplify.extract_connector_param(param_name=PARAM_HAS_RELATED, default_value="Yes,No"),
         "incident_severities": siemplify.extract_connector_param(
             param_name=PARAM_INCIDENT_SEVERITIES, default_value=""
         ),
@@ -148,9 +135,7 @@ def _read_params(siemplify) -> dict:
         "incident_investigation_statuses": siemplify.extract_connector_param(
             param_name=PARAM_INCIDENT_INVESTIGATION_STATUSES, default_value=""
         ),
-        "incident_verdicts": siemplify.extract_connector_param(
-            param_name=PARAM_INCIDENT_VERDICTS, default_value=""
-        ),
+        "incident_verdicts": siemplify.extract_connector_param(param_name=PARAM_INCIDENT_VERDICTS, default_value=""),
         "python_timeout": siemplify.extract_connector_param(
             param_name=PARAM_PYTHON_TIMEOUT,
             default_value=PYTHON_PROCESS_TIMEOUT_DEFAULT,
@@ -158,9 +143,7 @@ def _read_params(siemplify) -> dict:
         "fetch_related_alert_metadata": siemplify.extract_connector_param(
             param_name=PARAM_FETCH_RELATED_ALERT_METADATA, default_value="false"
         ),
-        "sync_close": siemplify.extract_connector_param(
-            param_name=PARAM_SYNC, default_value="true"
-        ),
+        "sync_close": siemplify.extract_connector_param(param_name=PARAM_SYNC, default_value="true"),
     }
 
 
@@ -211,9 +194,7 @@ def _build_manager_and_pipeline(siemplify, params):
         incident_user_statuses=params["incident_user_statuses"],
         incident_investigation_statuses=params["incident_investigation_statuses"],
         incident_verdicts=params["incident_verdicts"],
-        fetch_related_alert_metadata=truthy(
-            params.get("fetch_related_alert_metadata")
-        ),
+        fetch_related_alert_metadata=truthy(params.get("fetch_related_alert_metadata")),
         max_fetch=TEST_RUN_MAX_FETCH if params.get("is_test_run") else None,
         logger_instance=siemplify.LOGGER,
     )
@@ -263,9 +244,7 @@ def _run_ingest(siemplify, params) -> list:
     _validate_params(params)
     manager, pipeline = _build_manager_and_pipeline(siemplify, params)
     manager.test_connection()
-    checkpoint = _read_json(
-        siemplify, _connector_id(siemplify), CHECKPOINT_PROPERTY_KEY
-    )
+    checkpoint = _read_json(siemplify, _connector_id(siemplify), CHECKPOINT_PROPERTY_KEY)
     timeout_seconds = parse_int_in_range(
         params["python_timeout"],
         PARAM_PYTHON_TIMEOUT,
@@ -291,7 +270,7 @@ def _run_ingest(siemplify, params) -> list:
     if summary.get("incomplete"):
         siemplify.LOGGER.info(
             "Cycle stopped early to avoid connector timeout; next run resumes "
-            f"from watermark { (summary.get('checkpoint') or {}).get('watermark') }."
+            f"from watermark {(summary.get('checkpoint') or {}).get('watermark')}."
         )
     _write_json(
         siemplify,
@@ -300,9 +279,7 @@ def _run_ingest(siemplify, params) -> list:
         summary.get("checkpoint") or {},
     )
     if (not summary.get("incomplete")) and truthy(params.get("sync_close")):
-        rem_state = _read_json(
-            siemplify, _connector_id(siemplify), REMEDIATION_PROPERTY_KEY
-        )
+        rem_state = _read_json(siemplify, _connector_id(siemplify), REMEDIATION_PROPERTY_KEY)
         remediator = SoarRemediator(
             manager=manager,
             siemplify=siemplify,

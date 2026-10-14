@@ -1,4 +1,5 @@
 """getAlertsEvents alertIds batching keeps each alert's events separate."""
+
 from __future__ import annotations
 
 from core.constants import ALERT_EVENTS_ID_BATCH, GET_ALERT_EVENTS_QUERY
@@ -61,14 +62,12 @@ def test_alert_events_batch_assigns_each_alert_only_its_rows() -> None:
         alerts = []
         for alert_id in reversed(alert_ids):
             rows = store[alert_id]
-            alerts.append(
-                {
-                    "alertId": alert_id,
-                    "total": len(rows),
-                    "results": rows[offset : offset + limit],
-                    "error": {},
-                }
-            )
+            alerts.append({
+                "alertId": alert_id,
+                "total": len(rows),
+                "results": rows[offset : offset + limit],
+                "error": {},
+            })
         mixed = [row for rows in store.values() for row in rows]
         return {
             "getAlertsEvents": {
@@ -124,9 +123,7 @@ def test_alert_events_batch_never_sends_more_than_ten_ids() -> None:
     assert [len(batch) for batch in calls] == [10, 2]
     for alert_id in ids:
         assert [item["name"] for item in fetched[alert_id]] == [alert_id[-2:]]
-        assert "mixed-should-not-attach" not in {
-            item["name"] for item in fetched[alert_id]
-        }
+        assert "mixed-should-not-attach" not in {item["name"] for item in fetched[alert_id]}
 
 
 def test_foreign_alert_bucket_is_not_attached() -> None:

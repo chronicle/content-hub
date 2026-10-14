@@ -1,10 +1,10 @@
 """Build SOAR AlertInfo packages from Vega alerts and incidents."""
+
 from __future__ import annotations
 
 from .constants import (
     DEVICE_PRODUCT,
     ENTITY_TYPE_ALERT,
-    ENTITY_TYPE_INCIDENT,
     MAX_EVENTS_PER_ALERT,
     VENDOR_NAME,
 )
@@ -20,7 +20,6 @@ from .mapping import (
     soar_meta,
 )
 from .utils import parse_iso_timestamp, safe_log
-
 
 # Reject epoch-0 / 1970 timestamps and values that are not real event times.
 _MIN_VALID_EVENT_MS = 946684800000  # 2000-01-01
@@ -131,12 +130,8 @@ def _attach_child_events(
     for index, vega_event in enumerate(child_events):
         payload = vega_event if isinstance(vega_event, dict) else {}
         normalized = normalize_alert_event(payload) if payload else {}
-        child_start, child_end = event_start_end(
-            normalized, parent_start, parent_end
-        )
-        child = build_vega_alert_event_dict(
-            record, vega_event, child_start, child_end, index
-        )
+        child_start, child_end = event_start_end(normalized, parent_start, parent_end)
+        child = build_vega_alert_event_dict(record, vega_event, child_start, child_end, index)
         alert.events.append(child)
 
 
@@ -201,10 +196,7 @@ def create_alerts(records: list[tuple[str, dict]], siemplify, logger_instance=No
         alert.source_grouping_identifier = grouping_id
         alert.environment = environment
         alert.description = str(
-            record.get("description")
-            or record.get("incidentSummary")
-            or record.get("incidentFindings")
-            or alert.name
+            record.get("description") or record.get("incidentSummary") or record.get("incidentFindings") or alert.name
         )
         alert.start_time = start_time
         alert.end_time = end_time

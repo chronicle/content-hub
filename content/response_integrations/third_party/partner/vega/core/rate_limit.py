@@ -1,4 +1,5 @@
 """Linear +2 second wait for consecutive Vega HTTP 429 responses."""
+
 from __future__ import annotations
 
 import time

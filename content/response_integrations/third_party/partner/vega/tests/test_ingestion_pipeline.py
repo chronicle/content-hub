@@ -1,4 +1,5 @@
 """Tests for incident-case vs unrelated-alert ingestion."""
+
 from __future__ import annotations
 
 import time
@@ -80,9 +81,7 @@ class FakeManager:
     def count_incidents(self, variables):
         return len(self.get_incidents(variables))
 
-    def get_all_alert_events(
-        self, alert_id, page_size=None, max_records=None, deadline_monotonic=None, **_kwargs
-    ):
+    def get_all_alert_events(self, alert_id, page_size=None, max_records=None, deadline_monotonic=None, **_kwargs):
         self.event_calls.append(alert_id)
         return list(self.alert_events.get(alert_id) or [])
 
@@ -99,13 +98,9 @@ class FakeManager:
             raise AssertionError(f"alertIds batch of {len(ids)} exceeds 10")
         self.event_batch_calls.append(ids)
         self.event_calls.extend(ids)
-        return {
-            alert_id: list(self.alert_events.get(alert_id) or []) for alert_id in ids
-        }
+        return {alert_id: list(self.alert_events.get(alert_id) or []) for alert_id in ids}
 
-    def get_all_incident_timeline(
-        self, incident_id, page_size=None, deadline_monotonic=None, **_kwargs
-    ):
+    def get_all_incident_timeline(self, incident_id, page_size=None, deadline_monotonic=None, **_kwargs):
         self.timeline_calls.append(incident_id)
         return list(self.timelines.get(incident_id) or [])
 
@@ -182,23 +177,16 @@ def test_incident_related_alerts_share_one_grouping_id() -> None:
     assert {item[0] for item in related[1:]} == {ENTITY_TYPE_ALERT}
     assert soar_meta(related[0][1])["grouping_id"] == "Vega:incident:inc-1"
     assert soar_meta(related[0][1])["case_part"] == 0
-    assert all(
-        soar_meta(item[1])["grouping_id"] == "Vega:incident:inc-1:related:batch:1"
-        for item in related[1:]
-    )
+    assert all(soar_meta(item[1])["grouping_id"] == "Vega:incident:inc-1:related:cluster:1" for item in related[1:])
     assert all(soar_meta(item[1])["case_part"] == 1 for item in related[1:])
     titles = {soar_meta(item[1])["case_title"] for item in related}
     assert all(title.startswith("Vega Incident - VINC-1 - Campaign") for title in titles)
     assert "(related alerts)" not in soar_meta(related[0][1])["case_title"]
-    assert all(
-        soar_meta(item[1])["case_title"].endswith("(batch 1)") for item in related[1:]
-    )
+    assert all(soar_meta(item[1])["case_title"].endswith("(cluster 1)") for item in related[1:])
     assert soar_meta(related[0][1])["case_tags"] == ["malware"]
     assert all(soar_meta(item[1])["case_tags"] == ["malware"] for item in related)
     assert all(
-        soar_meta(item[1])["incident_label_tags"] == ["malware"]
-        for item in related
-        if item[0] == ENTITY_TYPE_ALERT
+        soar_meta(item[1])["incident_label_tags"] == ["malware"] for item in related if item[0] == ENTITY_TYPE_ALERT
     )
     assert soar_meta(unrelated[0][1])["case_tags"] == []
     assert "incident_label_tags" not in soar_meta(unrelated[0][1])
@@ -212,25 +200,17 @@ def test_incident_related_alerts_share_one_grouping_id() -> None:
     assert soar_meta(unrelated[0][1])["soar_alert_type"] == SOAR_ALERT_TYPE_ALERT
     assert soar_meta(unrelated[0][1])["grouping_id"] == "Vega:alert:alert-3"
     assert soar_meta(unrelated[0][1])["case_title"].startswith("Vega Alert - VALERT-3 - Noise")
-    id_lookups = [
-        call
-        for call in manager.alert_calls
-        if call.get("alertIds") or call.get("vegaAlertIds")
-    ]
+    id_lookups = [call for call in manager.alert_calls if call.get("alertIds") or call.get("vegaAlertIds")]
     assert id_lookups
     looked_up = set()
     for call in id_lookups:
         looked_up.update(str(item) for item in (call.get("alertIds") or []) if item)
         looked_up.update(str(item) for item in (call.get("vegaAlertIds") or []) if item)
     assert {"alert-1", "alert-2"} <= looked_up
-    assert not any(
-        "VEGA-" in str(item) for call in id_lookups for item in (call.get("alertIds") or [])
-    )
+    assert not any("VEGA-" in str(item) for call in id_lookups for item in (call.get("alertIds") or []))
     assert "hasRelatedIncidents" not in id_lookups[0]
     assert "from" in id_lookups[0] or "updatedFrom" in id_lookups[0]
-    unrelated_lookups = [
-        call for call in manager.alert_calls if call.get("hasRelatedIncidents") is False
-    ]
+    unrelated_lookups = [call for call in manager.alert_calls if call.get("hasRelatedIncidents") is False]
     assert unrelated_lookups
 
 
@@ -289,9 +269,7 @@ def test_related_stub_keeps_nested_incident_alert_labels() -> None:
     summary = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes").run()
     related = [item[1] for item in summary["records"] if item[0] == ENTITY_TYPE_ALERT]
     assert related
-    assert related[0]["labels"] == [
-        {"name": "incident-33 related alert", "color": "BLUE"}
-    ]
+    assert related[0]["labels"] == [{"name": "incident-33 related alert", "color": "BLUE"}]
     assert related[0]["vegaAlertId"] == "VEGA-2418"
     assert soar_meta(related[0])["case_tags"] == [
         "campaign",
@@ -305,9 +283,7 @@ def test_related_alert_keeps_own_labels_and_unions_tags() -> None:
         {"name": "incident", "color": "BLUE"},
         {"name": "IT", "color": "BLUE"},
     ]
-    manager.alerts[0]["labels"] = [
-        {"name": "incident-33 related alert", "color": "BLUE"}
-    ]
+    manager.alerts[0]["labels"] = [{"name": "incident-33 related alert", "color": "BLUE"}]
     manager.alerts[1]["labels"] = []
     summary = _pipeline(manager).run()
     by_id = {item[1]["id"]: item[1] for item in summary["records"]}
@@ -315,9 +291,7 @@ def test_related_alert_keeps_own_labels_and_unions_tags() -> None:
         {"name": "incident", "color": "BLUE"},
         {"name": "IT", "color": "BLUE"},
     ]
-    assert by_id["alert-1"]["labels"] == [
-        {"name": "incident-33 related alert", "color": "BLUE"}
-    ]
+    assert by_id["alert-1"]["labels"] == [{"name": "incident-33 related alert", "color": "BLUE"}]
     assert not by_id["alert-2"].get("labels")
     related = [item for item in summary["records"] if soar_meta(item[1]).get("is_incident_case")]
     assert soar_meta(related[0][1])["case_tags"] == ["incident", "IT"]
@@ -348,10 +322,7 @@ def test_incident_case_unions_incident_and_related_alert_labels() -> None:
     incident = [item for item in related if item[0] == ENTITY_TYPE_INCIDENT]
     related_alerts = [item for item in related if item[0] == ENTITY_TYPE_ALERT]
     assert all(soar_meta(item[1])["case_tags"] == ["malware", "campaign"] for item in incident)
-    assert all(
-        soar_meta(item[1])["case_tags"] == ["malware", "campaign", "phish", "c2"]
-        for item in related_alerts
-    )
+    assert all(soar_meta(item[1])["case_tags"] == ["malware", "campaign", "phish", "c2"] for item in related_alerts)
     assert soar_meta(unrelated[0][1])["case_tags"] == ["noise"]
     assert unrelated[0][1]["labels"] == [{"name": "noise"}]
 
@@ -488,20 +459,12 @@ def test_short_nested_alert_list_backfills_related_alerts() -> None:
     summary = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes").run()
     assert _ids(summary) == ["inc-1", "alert-1", "alert-2"]
     related = [item[1] for item in summary["records"] if item[0] == ENTITY_TYPE_ALERT]
-    assert {soar_meta(item)["grouping_id"] for item in related} == {
-        "Vega:incident:inc-1:related:batch:1"
-    }
-    assert {soar_meta(item)["grouping_start"] for item in related} == {
-        "2026-07-28T11:22:43Z"
-    }
-    assert {soar_meta(item)["grouping_end"] for item in related} == {
-        "2026-07-29T01:00:00Z"
-    }
+    assert {soar_meta(item)["grouping_id"] for item in related} == {"Vega:incident:inc-1:related:cluster:1"}
+    assert {soar_meta(item)["grouping_start"] for item in related} == {"2026-07-28T11:22:43Z"}
+    assert {soar_meta(item)["grouping_end"] for item in related} == {"2026-07-29T01:00:00Z"}
     assert any(call.get("hasRelatedIncidents") is True for call in manager.alert_calls)
     backfill_calls = [
-        call
-        for call in manager.alert_calls
-        if call.get("hasRelatedIncidents") is True and not call.get("alertIds")
+        call for call in manager.alert_calls if call.get("hasRelatedIncidents") is True and not call.get("alertIds")
     ]
     assert backfill_calls
     assert "alertSeverities" not in backfill_calls[0]
@@ -541,9 +504,7 @@ def test_by_id_incident_replaces_truncated_nested_alert_ids() -> None:
     summary = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes").run()
     assert _ids(summary) == ["inc-1", "alert-1", "alert-2", "alert-3"]
     backfill_calls = [
-        call
-        for call in manager.alert_calls
-        if call.get("hasRelatedIncidents") is True and not call.get("alertIds")
+        call for call in manager.alert_calls if call.get("hasRelatedIncidents") is True and not call.get("alertIds")
     ]
     assert not backfill_calls
     assert summary["checkpoint"]["related_backfill"]["settled"].get("inc-1") == 3
@@ -561,18 +522,12 @@ def test_every_related_alert_id_is_fetched_and_packaged() -> None:
             "alerts": [{"alertId": f"alert-{index}"} for index in range(1, total + 1)],
         }
     ]
-    manager.alerts = [
-        {"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, total + 1)
-    ]
-    summary = _pipeline(
-        manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=200
-    ).run()
+    manager.alerts = [{"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, total + 1)]
+    summary = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=200).run()
     packaged = [item for item in _ids(summary) if str(item).startswith("alert-")]
     assert packaged == [f"alert-{index}" for index in range(1, total + 1)]
     requested = {
-        str(item)
-        for call in manager.alert_calls
-        for item in (call.get("alertIds") or call.get("vegaAlertIds") or [])
+        str(item) for call in manager.alert_calls for item in (call.get("alertIds") or call.get("vegaAlertIds") or [])
     }
     assert requested == {f"alert-{index}" for index in range(1, total + 1)}
     assert "inc-1" not in summary["checkpoint"]["related_backfill"]["open"]
@@ -596,23 +551,17 @@ def test_related_alerts_are_batched_by_ninety_in_one_run() -> None:
                 "alerts": [{"alertId": f"alert-{index}"} for index in range(1, total + 1)],
             }
         ]
-        manager.alerts = [
-            {"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, total + 1)
-        ]
-        summary = _pipeline(
-            manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=50
-        ).run()
+        manager.alerts = [{"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, total + 1)]
+        summary = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=50).run()
         alerts = [item for item in summary["records"] if item[0] == ENTITY_TYPE_ALERT]
-        assert [item[1]["id"] for item in alerts] == [
-            f"alert-{index}" for index in range(1, total + 1)
-        ]
+        assert [item[1]["id"] for item in alerts] == [f"alert-{index}" for index in range(1, total + 1)]
         assert [soar_meta(item[1])["grouping_id"] for item in alerts] == [
-            "Vega:incident:inc-1:related:batch:1",
-            "Vega:incident:inc-1:related:batch:1",
-            "Vega:incident:inc-1:related:batch:2",
-            "Vega:incident:inc-1:related:batch:2",
-            "Vega:incident:inc-1:related:batch:3",
-            "Vega:incident:inc-1:related:batch:3",
+            "Vega:incident:inc-1:related:cluster:1",
+            "Vega:incident:inc-1:related:cluster:1",
+            "Vega:incident:inc-1:related:cluster:2",
+            "Vega:incident:inc-1:related:cluster:2",
+            "Vega:incident:inc-1:related:cluster:3",
+            "Vega:incident:inc-1:related:cluster:3",
         ]
         assert summary["checkpoint"]["related_backfill"]["settled"]["inc-1"] == total
         assert "inc-1" not in summary["checkpoint"]["related_backfill"]["open"]
@@ -631,9 +580,7 @@ def test_related_batch_numbers_continue_from_checkpoint() -> None:
             "alerts": [{"alertId": f"alert-{index}"} for index in range(1, 4)],
         }
     ]
-    manager.alerts = [
-        {"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, 4)
-    ]
+    manager.alerts = [{"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, 4)]
     checkpoint = {
         "ingested_ids": ["incident:inc-1", "alert-1", "alert-2"],
         "related_backfill": {
@@ -645,14 +592,14 @@ def test_related_batch_numbers_continue_from_checkpoint() -> None:
             "related_batch_filled": {"inc-1": 0},
         },
     }
-    summary = _pipeline(
-        manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=20
-    ).run(checkpoint=checkpoint)
+    summary = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=20).run(
+        checkpoint=checkpoint
+    )
     alerts = [record for kind, record in summary["records"] if kind == ENTITY_TYPE_ALERT]
     assert len(alerts) == 1
     meta = soar_meta(alerts[0])
-    assert meta["grouping_id"] == "Vega:incident:inc-1:related:batch:3"
-    assert meta["case_title"].endswith("(batch 3)")
+    assert meta["grouping_id"] == "Vega:incident:inc-1:related:cluster:3"
+    assert meta["case_title"].endswith("(cluster 3)")
     backfill = summary["checkpoint"]["related_backfill"]
     assert backfill["next_related_batch"]["inc-1"] == 3
     assert backfill["related_batch_filled"]["inc-1"] == 1
@@ -661,15 +608,9 @@ def test_related_batch_numbers_continue_from_checkpoint() -> None:
 def test_missing_id_from_batch_is_fetched_on_its_own_and_packaged() -> None:
     class DropSecond(FakeManager):
         def get_alerts(self, variables, max_records=None, deadline_monotonic=None, start_offset=0, **kwargs):
-            rows = super().get_alerts(
-                variables, max_records, deadline_monotonic, start_offset, **kwargs
-            )
+            rows = super().get_alerts(variables, max_records, deadline_monotonic, start_offset, **kwargs)
             requested = [
-                str(item)
-                for item in (
-                    variables.get("alertIds") or variables.get("vegaAlertIds") or []
-                )
-                if item
+                str(item) for item in (variables.get("alertIds") or variables.get("vegaAlertIds") or []) if item
             ]
             if len(requested) > 1:
                 return [row for row in rows if row.get("id") != "alert-2"]
@@ -689,12 +630,8 @@ def test_missing_id_from_batch_is_fetched_on_its_own_and_packaged() -> None:
             ],
         }
     ]
-    manager.alerts = [
-        {"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, 4)
-    ]
-    summary = _pipeline(
-        manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=20
-    ).run()
+    manager.alerts = [{"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, 4)]
+    summary = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=20).run()
     assert [item for item in _ids(summary) if str(item).startswith("alert-")] == [
         "alert-1",
         "alert-2",
@@ -720,12 +657,9 @@ def test_checkpointed_related_alerts_are_fetched_and_packaged_again() -> None:
             "alerts": [{"alertId": f"alert-{index}"} for index in range(1, total + 1)],
         }
     ]
-    manager.alerts = [
-        {"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, total + 1)
-    ]
+    manager.alerts = [{"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, total + 1)]
     checkpoint = {
-        "ingested_ids": ["incident:inc-1"]
-        + [f"alert-{index}" for index in range(1, total + 1)],
+        "ingested_ids": ["incident:inc-1"] + [f"alert-{index}" for index in range(1, total + 1)],
         "related_backfill": {
             "offset": 0,
             "open": {},
@@ -733,15 +667,13 @@ def test_checkpointed_related_alerts_are_fetched_and_packaged_again() -> None:
             "batch_version": 1,
         },
     }
-    summary = _pipeline(
-        manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=20
-    ).run(checkpoint=checkpoint)
+    summary = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=20).run(
+        checkpoint=checkpoint
+    )
     sent = [item for item in _ids(summary) if str(item).startswith("alert-")]
     assert set(sent) == {f"alert-{index}" for index in range(1, total + 1)}
     requested = {
-        str(item)
-        for call in manager.alert_calls
-        for item in (call.get("alertIds") or call.get("vegaAlertIds") or [])
+        str(item) for call in manager.alert_calls for item in (call.get("alertIds") or call.get("vegaAlertIds") or [])
     }
     assert requested == {f"alert-{index}" for index in range(1, total + 1)}
     assert summary["checkpoint"]["related_backfill"]["settled"]["inc-1"] == total
@@ -810,16 +742,12 @@ def test_truncated_related_scan_resumes_remaining_alerts() -> None:
     assert progress["open"]["inc-1"]["have"] == 1
     assert progress["open"]["inc-1"]["expected"] == 4
     assert progress["offset"] == 1
-    second = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes").run(
-        checkpoint=first["checkpoint"]
-    )
+    second = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes").run(checkpoint=first["checkpoint"])
     assert _ids(second) == ["alert-2", "alert-3", "alert-4"]
     assert "inc-1" not in second["checkpoint"]["related_backfill"]["open"]
     assert second["checkpoint"]["related_backfill"]["settled"]["inc-1"] == 4
     related = [item[1] for item in second["records"]]
-    assert {soar_meta(item)["grouping_id"] for item in related} == {
-        "Vega:incident:inc-1:related:batch:1"
-    }
+    assert {soar_meta(item)["grouping_id"] for item in related} == {"Vega:incident:inc-1:related:cluster:1"}
 
 
 def test_many_related_alerts_share_one_grouping_id() -> None:
@@ -838,9 +766,7 @@ def test_many_related_alerts_share_one_grouping_id() -> None:
             ],
         }
     ]
-    manager.alerts = [
-        {"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, 6)
-    ]
+    manager.alerts = [{"id": f"alert-{index}", "name": f"A{index}"} for index in range(1, 6)]
     summary = _pipeline(
         manager,
         entities="Alerts,Incidents",
@@ -861,19 +787,17 @@ def test_many_related_alerts_share_one_grouping_id() -> None:
     titles = [soar_meta(record)["case_title"] for _, record in records]
     assert all(title.startswith("Vega Incident - VINC-1 - Campaign") for title in titles)
     assert "(related alerts)" not in titles[0]
-    assert all(title.endswith("(batch 1)") for title in titles[1:])
+    assert all(title.endswith("(cluster 1)") for title in titles[1:])
     assert groupings == [
         "Vega:incident:inc-1",
-        "Vega:incident:inc-1:related:batch:1",
-        "Vega:incident:inc-1:related:batch:1",
-        "Vega:incident:inc-1:related:batch:1",
-        "Vega:incident:inc-1:related:batch:1",
-        "Vega:incident:inc-1:related:batch:1",
+        "Vega:incident:inc-1:related:cluster:1",
+        "Vega:incident:inc-1:related:cluster:1",
+        "Vega:incident:inc-1:related:cluster:1",
+        "Vega:incident:inc-1:related:cluster:1",
+        "Vega:incident:inc-1:related:cluster:1",
     ]
     assert parts == [0, 1, 1, 1, 1, 1]
-    assert [record.get("id") for kind, record in records if kind == ENTITY_TYPE_INCIDENT] == [
-        "inc-1"
-    ]
+    assert [record.get("id") for kind, record in records if kind == ENTITY_TYPE_INCIDENT] == ["inc-1"]
     assert [record.get("id") for kind, record in records if kind == ENTITY_TYPE_ALERT] == [
         "alert-1",
         "alert-2",
@@ -908,22 +832,14 @@ def test_related_case_unions_incident_and_alert_labels() -> None:
         max_fetch=20,
     ).run()
     incident_tags = [
-        soar_meta(record)["case_tags"]
-        for kind, record in summary["records"]
-        if kind == ENTITY_TYPE_INCIDENT
+        soar_meta(record)["case_tags"] for kind, record in summary["records"] if kind == ENTITY_TYPE_INCIDENT
     ]
     related_tags = [
-        soar_meta(record)["case_tags"]
-        for _, record in summary["records"]
-        if soar_meta(record).get("case_part") == 1
+        soar_meta(record)["case_tags"] for _, record in summary["records"] if soar_meta(record).get("case_part") == 1
     ]
     assert incident_tags == [["campaign"]]
     assert related_tags == [["campaign", "phish", "c2", "beacon", "persist"]] * 5
-    related = [
-        record
-        for kind, record in summary["records"]
-        if kind == ENTITY_TYPE_ALERT
-    ]
+    related = [record for kind, record in summary["records"] if kind == ENTITY_TYPE_ALERT]
     assert all(soar_meta(record)["incident_label_tags"] == ["campaign"] for record in related)
     assert not related[3].get("labels")
     assert related[0]["labels"] == [{"name": "phish"}]
@@ -963,7 +879,7 @@ def test_two_incidents_one_related_and_overflow() -> None:
     assert small[1][1]["id"] == "small-1"
     assert [evt["name"] for evt in small[1][1]["alert_events"]] == ["evt-small"]
     assert soar_meta(small[0][1])["grouping_id"] == "Vega:incident:inc-small"
-    assert soar_meta(small[1][1])["grouping_id"] == "Vega:incident:inc-small:related:batch:1"
+    assert soar_meta(small[1][1])["grouping_id"] == "Vega:incident:inc-small:related:cluster:1"
     assert [kind for kind, _ in large] == [
         ENTITY_TYPE_INCIDENT,
         ENTITY_TYPE_ALERT,
@@ -973,12 +889,8 @@ def test_two_incidents_one_related_and_overflow() -> None:
         ENTITY_TYPE_ALERT,
     ]
     assert [soar_meta(item[1]).get("case_part") for item in large] == [0, 1, 1, 1, 1, 1]
-    assert {soar_meta(item[1])["grouping_id"] for item in large[1:]} == {
-        "Vega:incident:inc-large:related:batch:1"
-    }
-    assert [record.get("id") for kind, record in large if kind == ENTITY_TYPE_INCIDENT] == [
-        "inc-large"
-    ]
+    assert {soar_meta(item[1])["grouping_id"] for item in large[1:]} == {"Vega:incident:inc-large:related:cluster:1"}
+    assert [record.get("id") for kind, record in large if kind == ENTITY_TYPE_INCIDENT] == ["inc-large"]
 
 
 def test_incident_without_related_alerts_creates_incident_package() -> None:
@@ -1028,9 +940,7 @@ def test_related_alert_lookup_does_not_send_vega_ids_as_graphql_ids() -> None:
     assert related[0]["labels"] == [{"name": "phish", "color": "#ff0000"}]
     id_lookups = [call for call in manager.alert_calls if call.get("alertIds")]
     assert id_lookups
-    assert all(
-        all(item.count("-") == 4 for item in call["alertIds"]) for call in id_lookups
-    )
+    assert all(all(item.count("-") == 4 for item in call["alertIds"]) for call in id_lookups)
     assert related[0]["id"] == uuid
 
 
@@ -1043,11 +953,7 @@ def test_related_alert_labels_survive_when_uuid_lookup_fails() -> None:
                 raise RuntimeError("getAlerts(alertIds) rejected mixed IDs")
             vega_ids = {str(item) for item in (variables.get("vegaAlertIds") or []) if item}
             if vega_ids:
-                rows = [
-                    alert
-                    for alert in self.alerts
-                    if str(alert.get("vegaAlertId") or "") in vega_ids
-                ]
+                rows = [alert for alert in self.alerts if str(alert.get("vegaAlertId") or "") in vega_ids]
                 self.alert_calls.append(dict(variables or {}))
                 if max_records is not None:
                     return rows[:max_records]
@@ -1077,9 +983,7 @@ def test_related_alert_labels_survive_when_uuid_lookup_fails() -> None:
 
 def test_related_alerts_are_not_ingested_twice_when_both_entities_selected() -> None:
     manager = FakeManager()
-    manager.incidents = [
-        {"id": "inc-1", "name": "Campaign", "alerts": [{"alertId": "alert-1"}]}
-    ]
+    manager.incidents = [{"id": "inc-1", "name": "Campaign", "alerts": [{"alertId": "alert-1"}]}]
     manager.alerts = [
         {
             "id": "alert-1",
@@ -1101,9 +1005,7 @@ def test_unrelated_fetch_failure_still_emits_incident_cases() -> None:
             return super().get_alerts(variables, max_records, **kwargs)
 
     manager = BoomManager()
-    manager.incidents = [
-        {"id": "inc-1", "name": "Campaign", "alerts": [{"alertId": "alert-1"}]}
-    ]
+    manager.incidents = [{"id": "inc-1", "name": "Campaign", "alerts": [{"alertId": "alert-1"}]}]
     manager.alerts = [{"id": "alert-1", "name": "Phish"}]
     summary = _pipeline(manager, has_related="Yes,No").run()
     ids = [record.get("id") for _, record in summary["records"]]
@@ -1146,9 +1048,7 @@ def test_related_alert_name_uses_vega_alert_id_not_uuid() -> None:
     assert related[0][1]["vegaAlertId"] == "VALERT-9"
     from core.mapping import case_display_name
 
-    assert case_display_name(related[0][1], ENTITY_TYPE_ALERT).startswith(
-        "Vega Alert - VALERT-9 - Persist"
-    )
+    assert case_display_name(related[0][1], ENTITY_TYPE_ALERT).startswith("Vega Alert - VALERT-9 - Persist")
     assert uuid not in case_display_name(related[0][1], ENTITY_TYPE_ALERT)
 
 
@@ -1162,9 +1062,7 @@ def test_alert_id_lookup_falls_back_to_related_window_query() -> None:
             return super().get_alerts(variables, max_records, **kwargs)
 
     manager = EmptyIdManager()
-    manager.incidents = [
-        {"id": "inc-1", "name": "Campaign", "alerts": [{"alertId": "alert-1"}]}
-    ]
+    manager.incidents = [{"id": "inc-1", "name": "Campaign", "alerts": [{"alertId": "alert-1"}]}]
     manager.alerts = [
         {
             "id": "alert-1",
@@ -1219,12 +1117,8 @@ def test_related_alert_events_are_batched_by_ten_and_not_mixed() -> None:
             "alerts": [{"alertId": _event_uuid(index)} for index in range(1, 13)],
         }
     ]
-    manager.alerts = [
-        {"id": _event_uuid(index), "name": f"A{index}"} for index in range(1, 13)
-    ]
-    manager.alert_events = {
-        _event_uuid(index): [{"name": f"e{index}"}] for index in range(1, 13)
-    }
+    manager.alerts = [{"id": _event_uuid(index), "name": f"A{index}"} for index in range(1, 13)]
+    manager.alert_events = {_event_uuid(index): [{"name": f"e{index}"}] for index in range(1, 13)}
     summary = _pipeline(
         manager,
         entities="Alerts,Incidents",
@@ -1271,9 +1165,7 @@ def test_timeout_saves_watermark_and_next_run_continues() -> None:
         "alert-1": [{"name": "e1"}],
         "alert-2": [{"name": "e2"}],
     }
-    pipeline = _pipeline(
-        manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=20
-    )
+    pipeline = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=20)
     original_append = pipeline._append_incident_alert
 
     def _append_then_expire(*args, **kwargs):
@@ -1291,9 +1183,9 @@ def test_timeout_saves_watermark_and_next_run_continues() -> None:
     assert first["checkpoint"]["query_mode"] == "created"
     assert manager.timeline_calls == ["inc-1"]
 
-    second = _pipeline(
-        manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=20
-    ).run(checkpoint=first["checkpoint"])
+    second = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=20).run(
+        checkpoint=first["checkpoint"]
+    )
     ids = [record.get("id") for _, record in second["records"]]
     assert ids == ["alert-1", "alert-2"]
     assert [item[1]["alert_events"][0]["name"] for item in second["records"]] == [
@@ -1414,9 +1306,7 @@ def test_timeout_with_zero_packaged_keeps_previous_watermark() -> None:
         "query_mode": "created",
         "ingested_ids": ["incident:inc-old"],
     }
-    summary = _pipeline(manager, entities="Incidents").run(
-        checkpoint=checkpoint, deadline_monotonic=0
-    )
+    summary = _pipeline(manager, entities="Incidents").run(checkpoint=checkpoint, deadline_monotonic=0)
     assert summary["fetched"] == 0
     assert summary["incomplete"] is True
     assert summary["checkpoint"]["watermark"] == "2026-01-01T00:00:00Z"
@@ -1495,9 +1385,7 @@ def test_preview_counts_and_samples_without_enrichment() -> None:
 
 def test_preview_samples_follow_entity_selection() -> None:
     manager = _sample_manager()
-    preview = _pipeline(
-        manager, entities="Incidents", has_related="Yes,No", max_fetch=5
-    ).preview(sample_limit=5)
+    preview = _pipeline(manager, entities="Incidents", has_related="Yes,No", max_fetch=5).preview(sample_limit=5)
     assert preview["incident_count"] == 1
     assert preview["related_alert_count"] == 0
     assert preview["unrelated_alert_count"] == 0
@@ -1510,9 +1398,7 @@ def test_preview_samples_follow_entity_selection() -> None:
 
 def test_preview_yes_only_omits_unrelated_counts() -> None:
     manager = _sample_manager()
-    preview = _pipeline(
-        manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=5
-    ).preview(sample_limit=5)
+    preview = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=5).preview(sample_limit=5)
     assert preview["include_related"] is True
     assert preview["include_unrelated"] is False
     assert preview["related_alert_count"] == 2
@@ -1533,9 +1419,7 @@ def test_preview_related_count_uses_incident_nested_alerts() -> None:
         }
     ]
     manager.alerts = [{"id": "alert-3", "name": "Noise"}]
-    preview = _pipeline(
-        manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=5
-    ).preview(sample_limit=5)
+    preview = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes", max_fetch=5).preview(sample_limit=5)
     assert preview["related_alert_count"] == 2
     assert preview["unrelated_alert_count"] == 0
 
@@ -1546,22 +1430,16 @@ def test_already_ingested_incident_skips_timeline_and_id_lookup() -> None:
     assert manager.timeline_calls == ["inc-1"]
     manager.alert_calls.clear()
     manager.timeline_calls.clear()
-    second = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes").run(
-        checkpoint=first["checkpoint"]
-    )
+    second = _pipeline(manager, entities="Alerts,Incidents", has_related="Yes").run(checkpoint=first["checkpoint"])
     assert second["fetched"] == 0
     assert manager.timeline_calls == []
-    assert not any(
-        call.get("alertIds") or call.get("vegaAlertIds") for call in manager.alert_calls
-    )
+    assert not any(call.get("alertIds") or call.get("vegaAlertIds") for call in manager.alert_calls)
 
 
 def test_uuid_stubs_are_not_retried_as_vega_alert_ids() -> None:
     uuid = "019e1b27-5119-7822-bde3-344b13e481cf"
     manager = FakeManager()
-    manager.incidents = [
-        {"id": "inc-1", "name": "Campaign", "alerts": [{"alertId": uuid, "name": "Phish"}]}
-    ]
+    manager.incidents = [{"id": "inc-1", "name": "Campaign", "alerts": [{"alertId": uuid, "name": "Phish"}]}]
     manager.alerts = [{"id": uuid, "name": "Phish"}]
     _pipeline(manager, entities="Alerts,Incidents", has_related="Yes").run()
     assert not any(call.get("vegaAlertIds") for call in manager.alert_calls)
@@ -1679,9 +1557,7 @@ def test_vega_alerts_sends_human_ids_as_vega_alert_ids() -> None:
         }
     ]
     manager.alerts = [{"id": "ignored", "vegaAlertId": "VEGA-9", "detectionId": "det-9"}]
-    summary = _pipeline(
-        manager, entities="Incidents", fetch_related_alert_metadata=True
-    ).run()
+    summary = _pipeline(manager, entities="Incidents", fetch_related_alert_metadata=True).run()
     assert manager.alert_calls[0]["vegaAlertIds"] == ["VEGA-9"]
     assert "alertIds" not in manager.alert_calls[0]
     assert summary["records"][0][1]["vega_alerts"][0]["detectionId"] == "det-9"
@@ -1700,9 +1576,7 @@ def test_vega_alerts_batches_one_thousand_uuids_per_request() -> None:
             "alerts": [{"alertId": item} for item in ids],
         }
     ]
-    summary = _pipeline(
-        manager, entities="Incidents", fetch_related_alert_metadata=True
-    ).run()
+    summary = _pipeline(manager, entities="Incidents", fetch_related_alert_metadata=True).run()
     assert [len(call["alertIds"]) for call in manager.alert_calls] == [
         ALERT_METADATA_ID_BATCH,
         1,

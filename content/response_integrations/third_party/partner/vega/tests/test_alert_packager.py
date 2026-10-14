@@ -1,4 +1,5 @@
 """Tests for AlertInfo packaging fields used by SOAR search and grouping."""
+
 from __future__ import annotations
 
 import json
@@ -93,9 +94,7 @@ def test_packager_related_alerts_share_case_title_not_alert_type() -> None:
         case_tags=[],
         is_incident_case=False,
     )
-    siemplify = SimpleNamespace(
-        context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default"))
-    )
+    siemplify = SimpleNamespace(context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default")))
     _install_fake_sdk()
     from core.AlertPackager import create_alerts
 
@@ -148,21 +147,13 @@ def test_packager_related_alerts_share_case_title_not_alert_type() -> None:
     assert "SourceGroupingIdentifier" not in related_alert.extensions
     assert "sourceGroupIdentifier" not in related_alert.events[0]
     assert "SourceGroupingIdentifier" not in related_alert.events[0]
-    assert json.loads(incident_alert.events[0]["labels"]) == [
-        {"name": "campaign", "color": "#00aa00"}
-    ]
+    assert json.loads(incident_alert.events[0]["labels"]) == [{"name": "campaign", "color": "#00aa00"}]
     assert "categoryId" not in incident_alert.events[0]["labels"]
-    assert json.loads(related_alert.events[0]["labels"]) == [
-        {"name": "phish", "color": "#ff0000"}
-    ]
+    assert json.loads(related_alert.events[0]["labels"]) == [{"name": "phish", "color": "#ff0000"}]
     assert related_alert.events[0]["vega_label_names"] == "phish"
-    assert json.loads(related_alert.events[1]["labels"]) == [
-        {"name": "phish", "color": "#ff0000"}
-    ]
+    assert json.loads(related_alert.events[1]["labels"]) == [{"name": "phish", "color": "#ff0000"}]
     assert related_alert.events[1]["vega_label_names"] == "phish"
-    assert json.loads(standalone.events[0]["labels"]) == [
-        {"name": "noise", "color": "#888888"}
-    ]
+    assert json.loads(standalone.events[0]["labels"]) == [{"name": "noise", "color": "#888888"}]
     assert len(standalone.events) == 1
 
 
@@ -220,9 +211,7 @@ def test_packager_keeps_empty_labels_and_incident_tag_names() -> None:
         case_tags=[],
         is_incident_case=False,
     )
-    siemplify = SimpleNamespace(
-        context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default"))
-    )
+    siemplify = SimpleNamespace(context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default")))
     _install_fake_sdk()
     from core.AlertPackager import create_alerts
 
@@ -286,9 +275,7 @@ def test_related_alerts_keep_their_own_timestamps() -> None:
             "name": "Beacon",
             "createdAt": "2026-04-05T01:18:35Z",
             "updatedAt": "2026-04-06T02:00:00Z",
-            "alert_events": [
-                {"name": "login", "_time": "2026-01-01T00:00:00Z"}
-            ],
+            "alert_events": [{"name": "login", "_time": "2026-01-01T00:00:00Z"}],
         },
         grouping_id="Vega:incident:inc-1:related",
         case_title="Vega Incident - VINC-1 - Campaign (related alerts)",
@@ -297,9 +284,7 @@ def test_related_alerts_keep_their_own_timestamps() -> None:
         is_incident_case=True,
         is_related_batch=True,
     )
-    siemplify = SimpleNamespace(
-        context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default"))
-    )
+    siemplify = SimpleNamespace(context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default")))
     _install_fake_sdk()
     from core.AlertPackager import create_alerts, record_start_end
 
@@ -348,9 +333,7 @@ def test_record_start_is_created_at_and_end_is_last_update() -> None:
     assert incident_end == 1_785_286_800_000
     assert alert_start == 1_775_351_915_000
     assert alert_end == 1_775_440_800_000
-    missing_end, missing_end_close = record_start_end(
-        {"createdAt": "2024-07-01T00:00:00Z"}, 1
-    )
+    missing_end, missing_end_close = record_start_end({"createdAt": "2024-07-01T00:00:00Z"}, 1)
     assert missing_end == missing_end_close == 1_719_792_000_000
 
 
@@ -398,9 +381,7 @@ def test_overflow_incident_uses_unique_ticket_and_same_case_title() -> None:
         case_part=2,
         is_incident_case=True,
     )
-    siemplify = SimpleNamespace(
-        context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default"))
-    )
+    siemplify = SimpleNamespace(context=SimpleNamespace(connector_info=SimpleNamespace(environment="Default")))
     _install_fake_sdk()
     from core.AlertPackager import create_alerts
 

@@ -1,5 +1,4 @@
 import pytest
-
 from core.constants import GRAPHQL_PAGE_SIZE, MSG_BAD_REQUEST, MSG_INVALID_ACCESS_KEY_ID
 from core.exceptions import VegaBadRequestException, VegaUnauthorizedException, VegaValidationException
 from core.utils import (
@@ -164,12 +163,10 @@ def test_get_incident_uses_uuid_or_vega_id_not_both() -> None:
 
 
 def test_resolve_incident_filters_maps_user_and_investigation_status() -> None:
-    filters = resolve_incident_filters(
-        {
-            "incident_user_statuses": "OPEN, IN REVIEW",
-            "incident_investigation_statuses": "NEW,INVESTIGATING",
-        }
-    )
+    filters = resolve_incident_filters({
+        "incident_user_statuses": "OPEN, IN REVIEW",
+        "incident_investigation_statuses": "NEW,INVESTIGATING",
+    })
     assert filters["user_statuses"] == ["OPEN", "IN_REVIEW"]
     assert filters["investigation_statuses"] == ["NEW", "INVESTIGATING"]
 
@@ -226,11 +223,7 @@ def test_resolve_incidents_looks_up_human_id() -> None:
     def _graphql(query, variables=None):
         captured.append({"query": query, "variables": dict(variables or {})})
         if "getIncidents" in query:
-            return {
-                "getIncidents": {
-                    "incidents": [{"id": uuid, "vegaUniqueIncidentId": "VINC-1"}]
-                }
-            }
+            return {"getIncidents": {"incidents": [{"id": uuid, "vegaUniqueIncidentId": "VINC-1"}]}}
         return {"updateIncidents": {"incidents": [{"incidentId": uuid}]}}
 
     manager.graphql = _graphql
@@ -305,6 +298,4 @@ def test_get_alerts_pages_alert_id_lookup() -> None:
     assert len(records) == 120
     assert [call["offset"] for call in calls] == [0, GRAPHQL_PAGE_SIZE, GRAPHQL_PAGE_SIZE * 2]
     assert [call["limit"] for call in calls] == [GRAPHQL_PAGE_SIZE, GRAPHQL_PAGE_SIZE, 20]
-    assert all(
-        call["alertIds"] == ["019e1b27-5119-7822-bde3-344b13e481cf"] for call in calls
-    )
+    assert all(call["alertIds"] == ["019e1b27-5119-7822-bde3-344b13e481cf"] for call in calls)

@@ -3,6 +3,7 @@ Vega HTTP manager: login_machine session JWT + GraphQL /api/v1/query.
 
 Does not import the SecOps SDK.
 """
+
 from __future__ import annotations
 
 import json
@@ -73,7 +74,7 @@ def _unwrap_json(value: Any, *, depth: int = 3) -> Any:
         text = current.strip()
         if not text:
             return current
-        if text[0] not in "{[\"":
+        if text[0] not in '{["':
             return current
         try:
             current = json.loads(text)
@@ -96,11 +97,7 @@ def _rows_to_event_dicts(fields: list, rows: list) -> list[dict]:
     for row in rows:
         if not isinstance(row, list):
             continue
-        event = {
-            colnames[index]: row[index]
-            for index in range(min(len(colnames), len(row)))
-            if colnames[index]
-        }
+        event = {colnames[index]: row[index] for index in range(min(len(colnames), len(row))) if colnames[index]}
         if event:
             parsed.append(event)
     return parsed
@@ -114,12 +111,7 @@ def parse_alert_events_results(results: Any) -> list[dict]:
     if isinstance(results, dict):
         fields = results.get("fields")
         rows = results.get("rows")
-        if (
-            isinstance(fields, list)
-            and isinstance(rows, list)
-            and rows
-            and not isinstance(rows[0], dict)
-        ):
+        if isinstance(fields, list) and isinstance(rows, list) and rows and not isinstance(rows[0], dict):
             tabular = _rows_to_event_dicts(fields, rows)
             if tabular:
                 return tabular
@@ -221,9 +213,7 @@ class VegaManager:
         self.session = session or _requests().Session()
         self.session.trust_env = False
         self.session.verify = self.verify_ssl
-        self.rate_limiter = rate_limiter or RateLimitController(
-            sleeper=sleeper or __import__("time").sleep
-        )
+        self.rate_limiter = rate_limiter or RateLimitController(sleeper=sleeper or __import__("time").sleep)
         self._sleeper = sleeper or __import__("time").sleep
         self._jwt: Optional[str] = None
         self.last_fetch_truncated = False
@@ -358,11 +348,7 @@ class VegaManager:
             payload = response.json()
         except Exception as exc:
             raise VegaValidationException(MSG_INVALID_API_ROOT) from exc
-        token = (
-            payload.get("session_jwt")
-            or payload.get("sessionJwt")
-            or payload.get("token")
-        )
+        token = payload.get("session_jwt") or payload.get("sessionJwt") or payload.get("token")
         if not token:
             raise VegaUnauthorizedException(MSG_INVALID_ACCESS_KEY)
         self._jwt = str(token)
@@ -425,9 +411,7 @@ class VegaManager:
                 message = error.get("message") or "Vega query failed."
             elif isinstance(error, list) and error:
                 first = error[0]
-                message = (
-                    first.get("message") if isinstance(first, dict) else str(first)
-                )
+                message = first.get("message") if isinstance(first, dict) else str(first)
             if message:
                 if is_rate_limit_message(message):
                     self._wait_rate_limit("GraphQL")
@@ -446,14 +430,10 @@ class VegaManager:
             return len(records) if isinstance(records, list) else 0
 
     def count_alerts(self, variables: dict) -> int:
-        return self._count_records(
-            GET_ALERTS_QUERY, "getAlerts", "alerts", variables
-        )
+        return self._count_records(GET_ALERTS_QUERY, "getAlerts", "alerts", variables)
 
     def count_incidents(self, variables: dict) -> int:
-        return self._count_records(
-            GET_INCIDENTS_QUERY, "getIncidents", "incidents", variables
-        )
+        return self._count_records(GET_INCIDENTS_QUERY, "getIncidents", "incidents", variables)
 
     def _deadline_passed(self, deadline_monotonic: Optional[float]) -> bool:
         if deadline_monotonic is None:
@@ -580,19 +560,14 @@ class VegaManager:
             unique.append(alert_id)
         return unique
 
-    def _buckets_from_alerts_events(
-        self, envelope: dict, requested: list[str]
-    ) -> dict[str, dict]:
+    def _buckets_from_alerts_events(self, envelope: dict, requested: list[str]) -> dict[str, dict]:
         """Map a getAlertsEvents payload onto the ids that were requested.
 
         Per-alert `alerts[]` buckets are the source of truth. Top-level
         `results` is used only for a single-id call that did not return
         `alerts`, so a batch response cannot smear every row onto every alert.
         """
-        buckets = {
-            alert_id: {"results": [], "total": None, "error": {}, "present": False}
-            for alert_id in requested
-        }
+        buckets = {alert_id: {"results": [], "total": None, "error": {}, "present": False} for alert_id in requested}
         raw_alerts = envelope.get("alerts") if isinstance(envelope, dict) else None
         if isinstance(raw_alerts, list) and raw_alerts:
             seen_ids: set[str] = set()
@@ -601,11 +576,7 @@ class VegaManager:
                     continue
                 raw_id = str(item.get("alertId") or "").strip()
                 alert_id = next(
-                    (
-                        candidate
-                        for candidate in requested
-                        if _same_alert_id(candidate, raw_id)
-                    ),
+                    (candidate for candidate in requested if _same_alert_id(candidate, raw_id)),
                     "",
                 )
                 if not alert_id:
@@ -619,8 +590,7 @@ class VegaManager:
                 if alert_id in seen_ids:
                     self._log(
                         "warning",
-                        "getAlertsEvents returned alertId=%s more than once; "
-                        "keeping the first bucket only.",
+                        "getAlertsEvents returned alertId=%s more than once; keeping the first bucket only.",
                         alert_id,
                     )
                     continue
@@ -647,8 +617,7 @@ class VegaManager:
                 if not parsed and raw_results not in (None, "", [], {}):
                     self._log(
                         "warning",
-                        "getAlertsEvents returned results that did not parse to "
-                        "events (alertId=%s, type=%s).",
+                        "getAlertsEvents returned results that did not parse to events (alertId=%s, type=%s).",
                         alert_id,
                         type(raw_results).__name__,
                     )
@@ -683,8 +652,7 @@ class VegaManager:
                 if not parsed and raw_results not in (None, "", [], {}):
                     self._log(
                         "warning",
-                        "getAlertsEvents returned results that did not parse to "
-                        "events (alertId=%s, type=%s).",
+                        "getAlertsEvents returned results that did not parse to events (alertId=%s, type=%s).",
                         alert_id,
                         type(raw_results).__name__,
                     )
@@ -711,15 +679,12 @@ class VegaManager:
             return buckets
         self._log(
             "warning",
-            "getAlertsEvents batch of %s alert id(s) did not include per-alert "
-            "results; no events were assigned.",
+            "getAlertsEvents batch of %s alert id(s) did not include per-alert results; no events were assigned.",
             len(requested),
         )
         return buckets
 
-    def _fetch_alerts_events_page(
-        self, alert_ids: list[str], limit: int, offset: int
-    ) -> dict[str, dict]:
+    def _fetch_alerts_events_page(self, alert_ids: list[str], limit: int, offset: int) -> dict[str, dict]:
         """One getAlertsEvents call. UUID ids go in alertIds (max 10)."""
         ids = self._dedupe_alert_ids(alert_ids)[: max(1, int(ALERT_EVENTS_ID_BATCH))]
         if not ids:
@@ -734,8 +699,7 @@ class VegaManager:
             variables["alertId"] = ids[0]
         else:
             raise VegaValidationException(
-                "getAlertsEvents alertIds accepts at most "
-                f"{ALERT_EVENTS_ID_BATCH} UUID alert ids."
+                f"getAlertsEvents alertIds accepts at most {ALERT_EVENTS_ID_BATCH} UUID alert ids."
             )
         data = self.graphql(GET_ALERT_EVENTS_QUERY, variables)
         envelope = data.get("getAlertsEvents") or {}
@@ -753,9 +717,7 @@ class VegaManager:
                 return True
         return False
 
-    def get_alert_events(
-        self, alert_id: str, limit: int = ALERT_EVENTS_PAGE_SIZE, offset: int = 0
-    ) -> dict:
+    def get_alert_events(self, alert_id: str, limit: int = ALERT_EVENTS_PAGE_SIZE, offset: int = 0) -> dict:
         alert_id = str(alert_id or "").strip()
         if not alert_id:
             return {}
@@ -810,9 +772,7 @@ class VegaManager:
                         error.get("message") or error.get("code"),
                     )
                     break
-                raise VegaException(
-                    error.get("message") or f"{label} fetch failed."
-                )
+                raise VegaException(error.get("message") or f"{label} fetch failed.")
             records = envelope.get(records_key) or []
             if isinstance(records, dict):
                 records = [records]
@@ -866,10 +826,7 @@ class VegaManager:
         self.last_fetch_truncated = False
         graphql_ids = [alert_id for alert_id in requested if _graphql_alert_id(alert_id)]
         other_ids = [alert_id for alert_id in requested if alert_id not in graphql_ids]
-        groups = [
-            graphql_ids[index : index + batch_size]
-            for index in range(0, len(graphql_ids), batch_size)
-        ]
+        groups = [graphql_ids[index : index + batch_size] for index in range(0, len(graphql_ids), batch_size)]
         groups.extend([alert_id] for alert_id in other_ids)
 
         for group in groups:
@@ -881,33 +838,24 @@ class VegaManager:
             finished: set[str] = set()
             while len(finished) < len(group):
                 active = [alert_id for alert_id in group if alert_id not in finished]
-                if any(collected[alert_id] for alert_id in active) and self._deadline_passed(
-                    deadline_monotonic
-                ):
+                if any(collected[alert_id] for alert_id in active) and self._deadline_passed(deadline_monotonic):
                     self.last_fetch_truncated = True
                     break
                 offset = min(offsets[alert_id] for alert_id in active)
-                page_ids = [
-                    alert_id for alert_id in active if offsets[alert_id] == offset
-                ][:batch_size]
-                remaining = max(
-                    record_cap - len(collected[alert_id]) for alert_id in page_ids
-                )
+                page_ids = [alert_id for alert_id in active if offsets[alert_id] == offset][:batch_size]
+                remaining = max(record_cap - len(collected[alert_id]) for alert_id in page_ids)
                 if remaining <= 0:
                     finished.update(page_ids)
                     continue
                 request_size = min(page_size, remaining)
                 try:
-                    buckets = self._fetch_alerts_events_page(
-                        page_ids, request_size, offset
-                    )
+                    buckets = self._fetch_alerts_events_page(page_ids, request_size, offset)
                 except Exception:
                     if any(collected[alert_id] for alert_id in page_ids):
                         self.last_fetch_truncated = True
                         self._log(
                             "warning",
-                            "Stopped paging Vega alert events after a partial "
-                            "batch of %s alert(s).",
+                            "Stopped paging Vega alert events after a partial batch of %s alert(s).",
                             len(page_ids),
                         )
                         finished.update(page_ids)
@@ -924,8 +872,7 @@ class VegaManager:
                         if collected[alert_id]:
                             self._log(
                                 "warning",
-                                "Stopped paging Vega alert events for %s after "
-                                "%s row(s): %s",
+                                "Stopped paging Vega alert events for %s after %s row(s): %s",
                                 alert_id,
                                 len(collected[alert_id]),
                                 message,
@@ -957,10 +904,7 @@ class VegaManager:
                     elif returned < request_size:
                         finished.add(alert_id)
 
-        return {
-            alert_id: [normalize_alert_event(item) for item in collected[alert_id]]
-            for alert_id in requested
-        }
+        return {alert_id: [normalize_alert_event(item) for item in collected[alert_id]] for alert_id in requested}
 
     def get_all_alert_events(
         self,
@@ -1009,9 +953,7 @@ class VegaManager:
         deadline_monotonic: Optional[float] = None,
     ) -> list:
         return self._collect_paged(
-            lambda limit, offset: self.get_incident_timeline(
-                incident_id, limit, offset
-            ),
+            lambda limit, offset: self.get_incident_timeline(incident_id, limit, offset),
             "events",
             page_size,
             TIMELINE_MAX_FETCH,
@@ -1029,7 +971,6 @@ class VegaManager:
             variables = {"vegaIncidentIds": [lookup]}
         records = self.get_incidents(variables, max_records=1)
         return records[0] if records else {}
-
 
     def update_alerts(self, payload: dict) -> dict:
         data = self.graphql(UPDATE_ALERTS_MUTATION, {"input": payload})

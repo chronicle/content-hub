@@ -1,4 +1,5 @@
 """Shared constants for the Vega Google SecOps integration."""
+
 from __future__ import annotations
 
 INTEGRATION_NAME = "Vega"
@@ -18,12 +19,8 @@ GET_INCIDENT_DETAILS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Get Incident Details"
 UPDATE_ALERT_SCRIPT_NAME = f"{INTEGRATION_NAME} - Update Alert"
 UPDATE_INCIDENT_SCRIPT_NAME = f"{INTEGRATION_NAME} - Update Incident"
 APPLY_VEGA_LABELS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Apply Vega Labels as Tags"
-EXTRACT_RESET_PASSWORD_USER_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Extract Reset Password User"
-)
-GENERATE_RANDOM_PASSWORD_SCRIPT_NAME = (
-    f"{INTEGRATION_NAME} - Generate Random Password"
-)
+EXTRACT_RESET_PASSWORD_USER_SCRIPT_NAME = f"{INTEGRATION_NAME} - Extract Reset Password User"
+GENERATE_RANDOM_PASSWORD_SCRIPT_NAME = f"{INTEGRATION_NAME} - Generate Random Password"
 ADD_CASE_COMMENT_SCRIPT_NAME = f"{INTEGRATION_NAME} - Add Case Comment"
 DEFAULT_PASSWORD_LENGTH = 16
 MIN_PASSWORD_LENGTH = 12
@@ -134,28 +131,18 @@ SEVERITY_TO_ALERT_PRIORITY = {
     "LOW": 40,
 }
 
-MSG_UNAUTHORIZED = (
-    "The Access Key or Access Key ID is incorrect. Check both values and try again."
-)
-MSG_INVALID_ACCESS_KEY = (
-    "The Access Key is incorrect. Enter a valid Access Key and try again."
-)
-MSG_INVALID_ACCESS_KEY_ID = (
-    "The Access Key ID is incorrect. Enter a valid Access Key ID and try again."
-)
+MSG_UNAUTHORIZED = "The Access Key or Access Key ID is incorrect. Check both values and try again."
+MSG_INVALID_ACCESS_KEY = "The Access Key is incorrect. Enter a valid Access Key and try again."
+MSG_INVALID_ACCESS_KEY_ID = "The Access Key ID is incorrect. Enter a valid Access Key ID and try again."
 MSG_INVALID_API_ROOT = (
-    "The API Root is incorrect or unreachable. Enter a valid Vega HTTPS URL, "
-    "for example https://api.vega.io."
+    "The API Root is incorrect or unreachable. Enter a valid Vega HTTPS URL, for example https://api.vega.io."
 )
 MSG_FORBIDDEN = "Access denied by Vega. Verify the Access Key permissions."
 MSG_BAD_REQUEST = "Invalid request to Vega. Check filters and identifiers."
 MSG_NOT_FOUND = "Requested Vega resource was not found."
 MSG_RATE_LIMIT = "Vega rate limit reached. Wait and try again."
 MSG_SERVER_ERROR = "Vega is temporarily unavailable. Try again later."
-MSG_TIMEOUT = (
-    "Connection to Vega timed out. Check the API Root and network access, "
-    "then try again."
-)
+MSG_TIMEOUT = "Connection to Vega timed out. Check the API Root and network access, then try again."
 MSG_UNREACHABLE = MSG_INVALID_API_ROOT
 
 # getAlerts used by ingest. Arguments match what the connector sends. Extra

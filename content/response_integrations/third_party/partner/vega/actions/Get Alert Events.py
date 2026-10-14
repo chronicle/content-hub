@@ -1,7 +1,8 @@
 from __future__ import annotations
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
 
 @output_handler
@@ -30,8 +31,7 @@ def main():
     try:
         if not candidates:
             raise ValueError(
-                "Alert ID is required. Enter the Vega alert UUID, or run this action "
-                "on a Vega Alert case."
+                "Alert ID is required. Enter the Vega alert UUID, or run this action on a Vega Alert case."
             )
         manager = VegaManager(
             api_root=siemplify.extract_configuration_param(INTEGRATION_NAME, PARAM_API_ROOT),
