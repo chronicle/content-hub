@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Optional
+from typing import Any
 
 from .constants import (
     ALERT_EVENTS_ID_BATCH,
@@ -132,7 +132,7 @@ def parse_alert_events_results(results: Any) -> list[dict]:
     return parsed
 
 
-def _optional_int(value: Any) -> Optional[int]:
+def _optional_int(value: Any) -> int | None:
     if value is None or value == "":
         return None
     try:
@@ -201,7 +201,7 @@ class VegaManager:
         timeout=DEFAULT_HTTP_TIMEOUT,
         logger_instance=None,
         session=None,
-        rate_limiter: Optional[RateLimitController] = None,
+        rate_limiter: RateLimitController | None = None,
         sleeper=None,
     ) -> None:
         self.api_root = normalize_api_root(api_root)
@@ -215,7 +215,7 @@ class VegaManager:
         self.session.verify = self.verify_ssl
         self.rate_limiter = rate_limiter or RateLimitController(sleeper=sleeper or __import__("time").sleep)
         self._sleeper = sleeper or __import__("time").sleep
-        self._jwt: Optional[str] = None
+        self._jwt: str | None = None
         self.last_fetch_truncated = False
 
     def _log(self, level: str, msg: str, *args) -> None:
@@ -354,7 +354,7 @@ class VegaManager:
         self._jwt = str(token)
         return self._jwt
 
-    def graphql(self, query: str, variables: Optional[dict] = None) -> dict:
+    def graphql(self, query: str, variables: dict | None = None) -> dict:
         while True:
             response = self._request(
                 "POST",
@@ -435,7 +435,7 @@ class VegaManager:
     def count_incidents(self, variables: dict) -> int:
         return self._count_records(GET_INCIDENTS_QUERY, "getIncidents", "incidents", variables)
 
-    def _deadline_passed(self, deadline_monotonic: Optional[float]) -> bool:
+    def _deadline_passed(self, deadline_monotonic: float | None) -> bool:
         if deadline_monotonic is None:
             return False
         return time.monotonic() >= float(deadline_monotonic)
@@ -446,10 +446,10 @@ class VegaManager:
         envelope_key: str,
         records_key: str,
         variables: dict,
-        max_records: Optional[int] = None,
-        deadline_monotonic: Optional[float] = None,
+        max_records: int | None = None,
+        deadline_monotonic: float | None = None,
         start_offset: int = 0,
-        page_size: Optional[int] = None,
+        page_size: int | None = None,
     ) -> list:
         collected: list = []
         offset = max(int(start_offset or 0), 0)
@@ -511,10 +511,10 @@ class VegaManager:
     def get_alerts(
         self,
         variables: dict,
-        max_records: Optional[int] = None,
-        deadline_monotonic: Optional[float] = None,
+        max_records: int | None = None,
+        deadline_monotonic: float | None = None,
         start_offset: int = 0,
-        page_size: Optional[int] = None,
+        page_size: int | None = None,
     ) -> list:
         """Page getAlerts. Pass alertIds to resolve incident-related alerts.
 
@@ -536,8 +536,8 @@ class VegaManager:
     def get_incidents(
         self,
         variables: dict,
-        max_records: Optional[int] = None,
-        deadline_monotonic: Optional[float] = None,
+        max_records: int | None = None,
+        deadline_monotonic: float | None = None,
     ) -> list:
         self.last_fetch_truncated = False
         return self._paged(
@@ -738,11 +738,11 @@ class VegaManager:
         page_size: int,
         max_records: int,
         label: str,
-        deadline_monotonic: Optional[float] = None,
+        deadline_monotonic: float | None = None,
     ) -> list:
         collected: list = []
         offset = 0
-        total: Optional[int] = None
+        total: int | None = None
         self.last_fetch_truncated = False
         while len(collected) < max_records:
             if collected and self._deadline_passed(deadline_monotonic):
@@ -800,7 +800,7 @@ class VegaManager:
         alert_ids: list,
         page_size: int = ALERT_EVENTS_PAGE_SIZE,
         max_records: int = MAX_EVENTS_PER_ALERT,
-        deadline_monotonic: Optional[float] = None,
+        deadline_monotonic: float | None = None,
     ) -> dict[str, list]:
         """Page getAlertsEvents for many alerts.
 
@@ -911,7 +911,7 @@ class VegaManager:
         alert_id: str,
         page_size: int = ALERT_EVENTS_PAGE_SIZE,
         max_records: int = MAX_EVENTS_PER_ALERT,
-        deadline_monotonic: Optional[float] = None,
+        deadline_monotonic: float | None = None,
     ) -> list:
         alert_id = str(alert_id or "").strip()
         if not alert_id:
@@ -950,7 +950,7 @@ class VegaManager:
         self,
         incident_id: str,
         page_size: int = TIMELINE_PAGE_SIZE,
-        deadline_monotonic: Optional[float] = None,
+        deadline_monotonic: float | None = None,
     ) -> list:
         return self._collect_paged(
             lambda limit, offset: self.get_incident_timeline(incident_id, limit, offset),

@@ -6,7 +6,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     from ..core.constants import (
         DEFAULT_PASSWORD_LENGTH,

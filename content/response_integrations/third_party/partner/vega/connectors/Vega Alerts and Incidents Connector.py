@@ -22,16 +22,17 @@ import json
 import sys
 import time
 from contextlib import contextmanager
+from typing import Any, Iterator
 
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyUtils import output_handler
 
 
-def _connector_id(siemplify) -> str:
+def _connector_id(siemplify: SiemplifyConnectorExecution) -> str:
     return str(siemplify.context.connector_info.identifier)
 
 
-def _read_json(siemplify, identifier: str, key: str) -> dict:
+def _read_json(siemplify: SiemplifyConnectorExecution, identifier: str, key: str) -> dict:
     raw = siemplify.get_connector_context_property(identifier=identifier, property_key=key)
     if not raw:
         return {}
@@ -39,7 +40,7 @@ def _read_json(siemplify, identifier: str, key: str) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def _write_json(siemplify, identifier: str, key: str, payload: dict) -> None:
+def _write_json(siemplify: SiemplifyConnectorExecution, identifier: str, key: str, payload: dict) -> None:
     siemplify.set_connector_context_property(
         identifier=identifier,
         property_key=key,
@@ -48,7 +49,7 @@ def _write_json(siemplify, identifier: str, key: str, payload: dict) -> None:
 
 
 @contextmanager
-def _mute_siemplify_logs(siemplify):
+def _mute_siemplify_logs(siemplify: SiemplifyConnectorExecution) -> Iterator[None]:
     """Keep test-connection output to the friendly summary or field error."""
     logger = getattr(siemplify, "LOGGER", None)
     if logger is None:
@@ -57,7 +58,7 @@ def _mute_siemplify_logs(siemplify):
     names = ("info", "error", "warning", "warn", "debug", "exception")
     original = {name: getattr(logger, name, None) for name in names}
 
-    def _noop(*_args, **_kwargs):
+    def _noop(*_args: Any, **_kwargs: Any) -> None:
         return None
 
     for name, method in original.items():
@@ -71,7 +72,7 @@ def _mute_siemplify_logs(siemplify):
                 setattr(logger, name, method)
 
 
-def _clear_captured_output(siemplify) -> None:
+def _clear_captured_output(siemplify: SiemplifyConnectorExecution) -> None:
     """Drop SDK noise (overflow_settings, stack traces) from test output."""
     logger = getattr(siemplify, "LOGGER", None)
     rows = getattr(logger, "_log_rows", None) if logger is not None else None
@@ -93,7 +94,7 @@ def _clear_captured_output(siemplify) -> None:
             pass
 
 
-def _read_params(siemplify) -> dict:
+def _read_params(siemplify: SiemplifyConnectorExecution) -> dict[str, Any]:
     from ..core.constants import (
         PARAM_ACCESS_KEY,
         PARAM_ACCESS_KEY_ID,
@@ -147,7 +148,7 @@ def _read_params(siemplify) -> dict:
     }
 
 
-def _validate_params(params: dict) -> None:
+def _validate_params(params: dict[str, Any]) -> None:
     from ..core.utils import validate_connector_fields
 
     validate_connector_fields(
@@ -169,7 +170,10 @@ def _validate_params(params: dict) -> None:
     )
 
 
-def _build_manager_and_pipeline(siemplify, params):
+def _build_manager_and_pipeline(
+    siemplify: SiemplifyConnectorExecution,
+    params: dict[str, Any],
+) -> tuple[Any, Any]:
     from ..core.constants import TEST_RUN_MAX_FETCH
     from ..core.IngestionPipeline import IngestionPipeline
     from ..core.utils import truthy
@@ -201,7 +205,7 @@ def _build_manager_and_pipeline(siemplify, params):
     return manager, pipeline
 
 
-def _run_test_connection(siemplify, params) -> tuple[list, str]:
+def _run_test_connection(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) -> tuple[list[Any], str]:
     from ..core.AlertPackager import create_alerts
     from ..core.utils import format_test_connection_summary
 
@@ -223,7 +227,7 @@ def _run_test_connection(siemplify, params) -> tuple[list, str]:
     return alerts, summary
 
 
-def _run_ingest(siemplify, params) -> list:
+def _run_ingest(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) -> list[Any]:
     from ..core.AlertPackager import create_alerts
     from ..core.constants import (
         CHECKPOINT_PROPERTY_KEY,
@@ -304,7 +308,7 @@ def _run_ingest(siemplify, params) -> list:
 
 
 @output_handler
-def main(is_test_run: bool):
+def main(is_test_run: bool) -> None:
     siemplify = SiemplifyConnectorExecution()
     from ..core.constants import CONNECTOR_NAME
     from ..core.utils import format_user_facing_error

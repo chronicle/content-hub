@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+from typing import Any
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 
-def _alert_events(alert) -> list:
+def _alert_events(alert: Any) -> list[Any]:
     if alert is None:
         return []
     return list(getattr(alert, "security_events", None) or getattr(alert, "events", None) or [])
 
 
-def _alert_key(alert) -> object:
+def _alert_key(alert: Any) -> object:
     return (
         getattr(alert, "identifier", None)
         or getattr(alert, "alert_identifier", None)
@@ -20,11 +22,11 @@ def _alert_key(alert) -> object:
     )
 
 
-def _case_alerts(siemplify) -> list:
-    alerts = []
-    seen = set()
+def _case_alerts(siemplify: SiemplifyAction) -> list[Any]:
+    alerts: list[Any] = []
+    seen: set[object] = set()
 
-    def _add(alert) -> None:
+    def _add(alert: Any) -> None:
         if alert is None:
             return
         marker = _alert_key(alert)
@@ -50,14 +52,14 @@ def _case_alerts(siemplify) -> list:
     return alerts
 
 
-def _case_events(siemplify) -> list:
+def _case_events(siemplify: SiemplifyAction) -> list[Any]:
     events = []
     for alert in _case_alerts(siemplify):
         events.extend(_alert_events(alert))
     return events
 
 
-def _event_payload(event) -> dict:
+def _event_payload(event: Any) -> dict[str, Any]:
     if isinstance(event, dict):
         payload = dict(event)
     else:
@@ -84,7 +86,7 @@ def _event_payload(event) -> dict:
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     from ..core.constants import EXTRACT_RESET_PASSWORD_USER_SCRIPT_NAME
     from ..core.mapping import reset_password_users_from_payload

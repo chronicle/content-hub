@@ -5,7 +5,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 
-def _add_case_comment(siemplify, comment: str) -> None:
+def _add_case_comment(siemplify: SiemplifyAction, comment: str) -> None:
     case = getattr(siemplify, "case", None)
     case_id = getattr(case, "identifier", None) if case is not None else getattr(siemplify, "case_id", None)
     try:
@@ -21,7 +21,7 @@ def _add_case_comment(siemplify, comment: str) -> None:
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     from ..core.constants import ADD_CASE_COMMENT_SCRIPT_NAME
     from ..core.utils import format_user_facing_error

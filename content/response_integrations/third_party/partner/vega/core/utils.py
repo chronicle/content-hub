@@ -8,7 +8,7 @@ import re
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable
 from urllib.parse import urlparse
 
 from .constants import (
@@ -79,7 +79,7 @@ def utc_now_iso() -> str:
     return utc_now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def parse_iso_timestamp(value: Optional[str]) -> Optional[datetime]:
+def parse_iso_timestamp(value: str | None) -> datetime | None:
     if not value or not isinstance(value, str):
         return None
     raw = value.strip()
@@ -149,7 +149,7 @@ def parse_int_in_range(
     name: str,
     minimum: int,
     maximum: int,
-    default: Optional[int] = None,
+    default: int | None = None,
 ) -> int:
     """Parse a required integer in [minimum, maximum]. Invalid values raise."""
     text = "" if value is None else str(value).strip()
@@ -230,7 +230,7 @@ def resolve_multi_filter(
     *,
     param_name: str,
     empty_means_all: bool = True,
-) -> Optional[list[str]]:
+) -> list[str] | None:
     """Return GraphQL enum values. Empty = all/omit. Unsupported values raise."""
     selected = parse_csv_list(raw)
     if not selected:
@@ -270,7 +270,7 @@ def resolve_entities(raw: Any) -> list[str]:
     return resolved
 
 
-def resolve_has_related(raw: Any) -> Optional[bool]:
+def resolve_has_related(raw: Any) -> bool | None:
     selected = parse_csv_list(raw)
     if not selected:
         raise VegaValidationException(
@@ -373,7 +373,7 @@ _KEY_ID_HINTS = (
 _ACCESS_KEY_ONLY_RE = re.compile(r"access[_\s]?key(?![_\s]?id)")
 
 
-def classify_credential_error(text: str) -> Optional[str]:
+def classify_credential_error(text: str) -> str | None:
     """Return a specific credential message when the API text names the field."""
     raw = (text or "").lower()
     mentions_key_id = any(hint in raw for hint in _KEY_ID_HINTS)
@@ -579,7 +579,7 @@ def safe_log(logger_obj, level: str, msg: str, *args) -> None:
         getattr(logger, level)(text)
 
 
-def iter_current_vega_ids(siemplify) -> list[str]:
+def iter_current_vega_ids(siemplify: Any) -> list[str]:
     """Collect Vega IDs from the current SOAR alert's events."""
     found: list[str] = []
     seen: set[str] = set()
@@ -621,7 +621,7 @@ def compute_time_window(
     checkpoint: dict,
     backfill_days: int,
     lookback_minutes: int,
-    now: Optional[datetime] = None,
+    now: datetime | None = None,
 ) -> dict:
     current = now or utc_now()
     lookback = timedelta(minutes=lookback_minutes)

@@ -40,7 +40,6 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime
-from typing import Optional
 
 from .constants import (
     ALERT_EVENTS_ID_BATCH,
@@ -115,7 +114,7 @@ class IngestionPipeline:
         incident_investigation_statuses: str = "",
         incident_verdicts: str = "",
         fetch_related_alert_metadata: bool = False,
-        max_fetch: Optional[int] = None,
+        max_fetch: int | None = None,
         logger_instance=None,
     ) -> None:
         self.manager = manager
@@ -139,8 +138,8 @@ class IngestionPipeline:
         self.logger = logger_instance or logger
         self._incident_cache: dict[str, dict] = {}
         self._incomplete = False
-        self._progress_ts: Optional[datetime] = None
-        self._deadline: Optional[float] = None
+        self._progress_ts: datetime | None = None
+        self._deadline: float | None = None
         self._open_related: dict[str, dict] = {}
         self._settled_related: dict[str, int] = {}
         self._open_ids_at_start: set[str] = set()
@@ -157,9 +156,9 @@ class IngestionPipeline:
     def _alert_variables(
         self,
         window: dict,
-        has_related: Optional[bool],
-        alert_ids: Optional[list[str]] = None,
-        vega_alert_ids: Optional[list[str]] = None,
+        has_related: bool | None,
+        alert_ids: list[str | None] = None,
+        vega_alert_ids: list[str | None] = None,
         include_time: bool = True,
     ) -> dict:
         payload: dict = {}
@@ -274,7 +273,7 @@ class IngestionPipeline:
                 return candidate
         return candidates[0] if candidates else ""
 
-    def _lookup_prefetched_events(self, events_by_id: dict[str, list], alert_id: str) -> Optional[list]:
+    def _lookup_prefetched_events(self, events_by_id: dict[str, list], alert_id: str) -> list | None:
         if alert_id in events_by_id:
             return list(events_by_id.get(alert_id) or [])
         if not is_graphql_alert_id(alert_id):
@@ -380,7 +379,7 @@ class IngestionPipeline:
         record["alert_events"] = events
         return record
 
-    def _remaining(self, collected: int) -> Optional[int]:
+    def _remaining(self, collected: int) -> int | None:
         if self.max_fetch is None:
             return None
         leftover = self.max_fetch - collected
@@ -674,7 +673,7 @@ class IngestionPipeline:
             )
         return index_alert_records(collected)
 
-    def _pool_limit(self) -> Optional[int]:
+    def _pool_limit(self) -> int | None:
         if self.max_fetch is None:
             return None
         return max(self.max_fetch * 10, self.max_fetch)
@@ -734,7 +733,7 @@ class IngestionPipeline:
         self,
         alert: dict,
         incident: dict,
-        case_tags: Optional[list[str]] = None,
+        case_tags: list[str | None] = None,
         batch: int = 1,
     ) -> dict:
         incident_id = record_id(incident, ENTITY_TYPE_INCIDENT)
@@ -777,7 +776,7 @@ class IngestionPipeline:
         records: list[tuple[str, dict]],
         ingested: list[str],
         ingested_set: set[str],
-        case_tags: Optional[list[str]] = None,
+        case_tags: list[str | None] = None,
     ) -> bool:
         if self._should_stop(len(records)):
             return False
@@ -812,10 +811,10 @@ class IngestionPipeline:
         records: list[tuple[str, dict]],
         ingested: list[str],
         ingested_set: set[str],
-        case_tags: Optional[list[str]] = None,
+        case_tags: list[str | None] = None,
         apply_case_tags: bool = False,
-        events_by_id: Optional[dict[str, list]] = None,
-        batch: Optional[int] = None,
+        events_by_id: dict[str, list | None] = None,
+        batch: int | None = None,
     ) -> bool:
         if self._should_stop(len(records)):
             return False
@@ -1542,7 +1541,7 @@ class IngestionPipeline:
         records: list[tuple[str, dict]],
         ingested: list[str],
         ingested_set: set[str],
-        events_by_id: Optional[dict[str, list]] = None,
+        events_by_id: dict[str, list | None] = None,
     ) -> bool:
         if self._should_stop(len(records)):
             return False
@@ -1644,7 +1643,7 @@ class IngestionPipeline:
         window: dict,
         records: list[tuple[str, dict]],
         remaining: int,
-        incidents: Optional[list[dict]] = None,
+        incidents: list[dict | None] = None,
     ) -> int:
         if remaining <= 0:
             return 0
@@ -1780,8 +1779,8 @@ class IngestionPipeline:
 
     def run(
         self,
-        checkpoint: Optional[dict] = None,
-        deadline_monotonic: Optional[float] = None,
+        checkpoint: dict | None = None,
+        deadline_monotonic: float | None = None,
     ) -> dict:
         # 1. Configuration is already on this pipeline (entities, filters, has-related).
         # 2. Time window: first run uses backfill; later runs resume from watermark.

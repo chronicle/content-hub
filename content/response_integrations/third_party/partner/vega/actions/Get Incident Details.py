@@ -5,7 +5,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 
-def _current_vega_id(siemplify):
+def _current_vega_id(siemplify: SiemplifyAction) -> str:
     try:
         alert = siemplify.current_alert
         events = getattr(alert, "security_events", None) or getattr(alert, "events", None) or []
@@ -20,7 +20,7 @@ def _current_vega_id(siemplify):
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     from ..core.constants import (
         GET_INCIDENT_DETAILS_SCRIPT_NAME,
