@@ -1,0 +1,1045 @@
+"""Map closed SecOps Vega cases back to Vega status-only mutations."""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+
+from .constants import (
+    ENTITY_TYPE_ALERT,
+    ENTITY_TYPE_INCIDENT,
+    NESTED_RELATED_KEY,
+    SOAR_ALERT_TYPE_INCIDENT,
+    SOAR_CASE_DETAILS_PATH,
+    SOAR_CASE_SEARCH_PATH,
+    SOAR_CASE_STATUS_CLOSED,
+    SOAR_CASE_STATUS_OPEN,
+    SOAR_DETAILS_GET_CAP,
+    SOAR_SEARCH_PAGE_SIZE,
+    SOAR_TIME_RANGE_MODIFIED,
+    VENDOR_NAME,
+)
+from .utils import parse_iso_timestamp, safe_log, utc_now
+
+SYNC_MODE_INCIDENT = "incident"
+SYNC_MODE_ALERTS = "alerts"
+_SOAR_TIMEOUT = 30
+_TRACKED_CAP = 5000
+
+
+_VEGA_ID_KEYS = (
+    "vega_id",
+    "vegaId",
+    "product_log_id",
+    "productLogId",
+    "event_class_id",
+    "eventClassId",
+    "DeviceEventClassID",
+    "DeviceEventClassId",
+    "incidentId",
+    "ticketId",
+    "ticket_id",
+    "vegaAlertId",
+    "vega_alert_id",
+    "vegaUniqueIncidentId",
+    "vega_unique_incident_id",
+)
+_ENTITY_TYPE_KEYS = (
+    "vega_entity_type",
+    "vegaEntityType",
+    "event_type",
+    "eventType",
+    "vega_soar_alert_type",
+    "vegaSoarAlertType",
+)
+
+
+def _normalize_vega_identifier(value: str) -> str:
+    """Strip ``Vega:`` tickets and prefer a UUID prefix over a suffix."""
+    from .mapping import is_graphql_alert_id
+
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    prefix = f"{VENDOR_NAME}:"
+    if text.startswith(prefix) or text.lower().startswith(prefix.lower()):
+        text = text.split(":", 1)[1].strip()
+    if is_graphql_alert_id(text):
+        return text
+    head = text.split(":", 1)[0].strip()
+    if is_graphql_alert_id(head):
+        return head
+    return text
+
+
+def _event_vega_id(event: dict) -> str:
+    """Own Vega ID for this event. GraphQL UUID wins over VINC-/vegaAlertId."""
+    if not isinstance(event, dict):
+        return ""
+    from .mapping import is_graphql_alert_id
+
+    candidates: list[str] = []
+    for key in _VEGA_ID_KEYS:
+        raw = str(event.get(key) or "").strip()
+        if not raw:
+            continue
+        value = _normalize_vega_identifier(raw)
+        if value and value not in candidates:
+            candidates.append(value)
+    usable = [item for item in candidates if not _is_child_event_id(item)]
+    pool = usable or candidates
+    for item in pool:
+        if is_graphql_alert_id(item):
+            return item
+    return pool[0] if pool else ""
+
+
+def _event_entity_type(event: dict) -> str:
+    """Incident, Alert, or empty when SOAR omitted the type fields."""
+    if not isinstance(event, dict):
+        return ""
+    for key in _ENTITY_TYPE_KEYS:
+        raw = str(event.get(key) or "").strip().lower()
+        if raw in ("incident", "vega incident"):
+            return ENTITY_TYPE_INCIDENT
+        if raw in ("alert", "vega alert", "alert event"):
+            return ENTITY_TYPE_ALERT
+    return ""
+
+
+def _is_child_event_id(identifier: str) -> bool:
+    return ":event:" in identifier
+
+
+def _is_alert_event(payload: dict) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    for key in _ENTITY_TYPE_KEYS:
+        if str(payload.get(key) or "").strip().lower() == "alert event":
+            return True
+    return False
+
+
+def _as_dict(value) -> dict:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str) and value.strip().startswith("{"):
+        try:
+            parsed = json.loads(value)
+        except Exception:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
+def _fields_from_event_card(card: dict) -> dict:
+    payload: dict = {}
+    for group in card.get("fields") or []:
+        if not isinstance(group, dict):
+            continue
+        for item in group.get("items") or []:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get("originalName") or item.get("name") or "").strip()
+            if key:
+                payload[key] = item.get("value")
+    return payload
+
+
+def _flatten_event(event: dict) -> dict:
+    payload = dict(event) if isinstance(event, dict) else {}
+    extra = _as_dict(
+        payload.get("additional_properties")
+        or payload.get("additionalProperties")
+        or payload.get("AdditionalProperties")
+    )
+    field_values = _fields_from_event_card(payload)
+    merged = dict(extra)
+    merged.update(field_values)
+    merged.update(payload)
+    return merged
+
+
+def _iter_case_events(case_payload: dict) -> list[dict]:
+    """Events from a case dict (SDK ticket payload or GetCaseFullDetails)."""
+    if not isinstance(case_payload, dict):
+        return []
+    direct = (
+        case_payload.get("events") or case_payload.get("security_events") or case_payload.get("securityEvents") or []
+    )
+    events: list[dict] = [item for item in direct if isinstance(item, dict)]
+    alerts = (
+        case_payload.get("cyber_alerts")
+        or case_payload.get("cyberAlerts")
+        or case_payload.get("alerts")
+        or case_payload.get("alertCards")
+        or case_payload.get("alert_cards")
+        or []
+    )
+    for alert in alerts:
+        if not isinstance(alert, dict):
+            continue
+        nested = (
+            alert.get("security_events")
+            or alert.get("securityEvents")
+            or alert.get("events")
+            or alert.get("involvedRelations")
+            or alert.get("involved_relations")
+            or alert.get("securityEventCards")
+            or alert.get("security_event_cards")
+            or []
+        )
+        events.extend(item for item in nested if isinstance(item, dict))
+        extra = _as_dict(alert.get("additional_properties") or alert.get("additionalProperties"))
+        stub = dict(extra)
+        for key in (
+            "ticketId",
+            "ticket_id",
+            "deviceEventClassId",
+            "device_event_class_id",
+            "DeviceEventClassId",
+            "vega_entity_type",
+            "vegaEntityType",
+            "event_type",
+            "eventType",
+        ):
+            value = alert.get(key)
+            if value not in (None, "") and key not in stub:
+                stub[key] = value
+        if stub:
+            events.append(stub)
+    return events
+
+
+def _walk_vega_targets(payload, entity_hint: str = "") -> list[tuple[str, str]]:
+    """Find Vega IDs anywhere in a GetCaseFullDetails payload."""
+    found: list[tuple[str, str]] = []
+    if isinstance(payload, list):
+        for item in payload:
+            found.extend(_walk_vega_targets(item, entity_hint))
+        return found
+    if not isinstance(payload, dict):
+        return found
+    hinted = entity_hint
+    typed = _event_entity_type(payload)
+    if typed == ENTITY_TYPE_INCIDENT:
+        hinted = ENTITY_TYPE_INCIDENT
+    elif typed == ENTITY_TYPE_ALERT:
+        hinted = ENTITY_TYPE_ALERT
+    identifier = _event_vega_id(payload)
+    if identifier and not _is_alert_event(payload):
+        found.append((identifier, hinted))
+    for value in payload.values():
+        if isinstance(value, (dict, list)):
+            found.extend(_walk_vega_targets(value, hinted))
+    return found
+
+
+def extract_sync_targets(case_payload: dict) -> dict:
+    """Classify a closed case as incident-only or alerts-only.
+
+    Incident case → resolve the Vega incident only.
+    Related-alert case or unrelated alert case → resolve those Vega alerts
+    only. ``vega_incident_id`` on related alerts is not a close target.
+    """
+    incident_ids: list[str] = []
+    alert_ids: list[str] = []
+    seen_incidents: set[str] = set()
+    seen_alerts: set[str] = set()
+    title_is_incident = _is_incident_case_title(case_payload)
+    for event in _iter_case_events(case_payload):
+        payload = _flatten_event(event)
+        identifier = _event_vega_id(payload)
+        if _is_alert_event(payload) or _is_child_event_id(identifier):
+            continue
+        entity_type = _event_entity_type(payload)
+        if entity_type == ENTITY_TYPE_INCIDENT or (not entity_type and title_is_incident):
+            if identifier and identifier not in seen_incidents:
+                seen_incidents.add(identifier)
+                incident_ids.append(identifier)
+            continue
+        if identifier and identifier not in seen_alerts:
+            seen_alerts.add(identifier)
+            alert_ids.append(identifier)
+    if not incident_ids and not alert_ids:
+        for identifier, entity_type in _walk_vega_targets(case_payload):
+            if _is_child_event_id(identifier):
+                continue
+            if entity_type == ENTITY_TYPE_INCIDENT or (not entity_type and title_is_incident):
+                if identifier not in seen_incidents:
+                    seen_incidents.add(identifier)
+                    incident_ids.append(identifier)
+            elif identifier not in seen_alerts:
+                seen_alerts.add(identifier)
+                alert_ids.append(identifier)
+    if incident_ids:
+        return {
+            "mode": SYNC_MODE_INCIDENT,
+            "incident_ids": incident_ids,
+            "alert_ids": [],
+        }
+    return {
+        "mode": SYNC_MODE_ALERTS,
+        "incident_ids": [],
+        "alert_ids": alert_ids,
+    }
+
+
+def ingest_skip_ids(records) -> set[str]:
+    """Vega IDs packaged this poll must not be resolved on the same run."""
+    from .mapping import record_alert_ids, record_id
+
+    skip: set[str] = set()
+    for entity_type, record in records or []:
+        if not isinstance(record, dict):
+            continue
+        identifier = record_id(record, entity_type)
+        if identifier:
+            skip.add(identifier)
+        if entity_type == ENTITY_TYPE_ALERT:
+            skip.update(record_alert_ids(record))
+        for related in record.get(NESTED_RELATED_KEY) or []:
+            if isinstance(related, dict):
+                skip.update(record_alert_ids(related))
+    return {item for item in skip if item}
+
+
+def ingest_sync_refs(records) -> list[dict]:
+    """Case lookup keys: SOAR ticket, human Vega IDs, and case title."""
+    from .mapping import case_display_name, record_display_id, record_id, soar_meta
+
+    refs: list[dict] = []
+    seen: set[str] = set()
+    for entity_type, record in records or []:
+        if not isinstance(record, dict):
+            continue
+        identifier = record_id(record, entity_type)
+        if not identifier:
+            continue
+        meta = soar_meta(record)
+        suffix = str(meta.get("ticket_suffix") or "").strip()
+        ticket_key = f"{identifier}:{suffix}" if suffix else identifier
+        ticket = f"{VENDOR_NAME}:{ticket_key}"
+        if ticket in seen:
+            continue
+        seen.add(ticket)
+        display = record_display_id(record, entity_type)
+        title = str(meta.get("case_title") or case_display_name(record, entity_type) or "").strip()
+        tokens = []
+        for item in (ticket, ticket_key, identifier, display):
+            text = str(item or "").strip()
+            if text and text not in tokens:
+                tokens.append(text)
+        refs.append({"ticket": ticket, "tokens": tokens, "title": title})
+    return refs
+
+
+def ingest_ticket_ids(records) -> list[str]:
+    """SOAR ticket IDs the packager assigns: ``Vega:<record_id>``."""
+    return [str(item.get("ticket") or "") for item in ingest_sync_refs(records) if item.get("ticket")]
+
+
+_CLOSED_STATUS_NAMES = {"closed", "close"}
+_OPEN_STATUS_NAMES = {"open", "opened", "new", "inprogress", "in progress"}
+_SOAR_CLOSED_FLAG_KEYS = (
+    "isClosed",
+    "isCaseClosed",
+    "IsCaseClosed",
+    "caseClosed",
+)
+_SOAR_STATUS_NAME_KEYS = ("statusName", "caseStatusName")
+
+
+def _ci_get(payload: dict, *keys):
+    if not isinstance(payload, dict):
+        return None
+    lowered = {str(key).lower(): value for key, value in payload.items()}
+    for key in keys:
+        if key.lower() in lowered and lowered[key.lower()] not in (None, ""):
+            return lowered[key.lower()]
+    return None
+
+
+def _first_present(payload: dict, keys: tuple[str, ...]):
+    return _ci_get(payload, *keys)
+
+
+def _is_vega_event_payload(payload: dict) -> bool:
+    return bool(
+        payload.get("vega_id")
+        or payload.get("vegaId")
+        or payload.get("vega_entity_type")
+        or payload.get("vegaEntityType")
+    )
+
+
+def _explicit_soar_closed_flag(payload: dict) -> bool | None:
+    """SOAR closed flag only. None means the payload has no case-closed field.
+
+    Vega events map ``status`` / ``userStatus`` (OPEN/RESOLVED) onto the same
+    case dict. Those fields are not a SecOps close and must not trigger
+    outbound resolve.
+    """
+    flag = _first_present(payload, _SOAR_CLOSED_FLAG_KEYS)
+    if isinstance(flag, bool):
+        return flag
+    if isinstance(flag, (int, float)) and not isinstance(flag, bool):
+        return int(flag) != 0
+    if flag is not None:
+        text = str(flag).strip().lower()
+        if text in ("true", "yes"):
+            return True
+        if text in ("false", "no"):
+            return False
+    name = _first_present(payload, _SOAR_STATUS_NAME_KEYS)
+    if name is not None:
+        text = str(name).strip().lower().replace("_", " ")
+        if text in _CLOSED_STATUS_NAMES:
+            return True
+        if text in _OPEN_STATUS_NAMES:
+            return False
+    return None
+
+
+def _soar_numeric_status_closed(payload: dict) -> bool | None:
+    """CaseDataStatus on a SOAR case dict. None for Vega event payloads."""
+    if _is_vega_event_payload(payload):
+        return None
+    value = _ci_get(payload, "status", "Status")
+    if value is None:
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        if text.isdigit():
+            value = int(text)
+        else:
+            lowered = text.lower().replace("_", " ")
+            if lowered in _CLOSED_STATUS_NAMES:
+                return True
+            if lowered in _OPEN_STATUS_NAMES:
+                return False
+            return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = int(value)
+    if number == SOAR_CASE_STATUS_CLOSED:
+        return True
+    if number in SOAR_CASE_STATUS_OPEN:
+        return False
+    return None
+
+
+def is_soar_case_closed(payload: dict) -> bool:
+    """True only when SecOps/SOAR marks the case closed.
+
+    Accepts ``isClosed`` / ``statusName=CLOSED`` / numeric ``status=2``
+    (CaseDataStatus.CLOSED). Vega event ``status`` / ``userStatus``
+    (OPEN/RESOLVED) is ignored.
+    """
+    if not isinstance(payload, dict):
+        return False
+    nested = (
+        payload.get("case")
+        or payload.get("Case")
+        or payload.get("caseInfo")
+        or payload.get("case_info")
+        or payload.get("caseDetails")
+        or payload.get("CaseDetails")
+    )
+    if isinstance(nested, dict) and not _is_vega_event_payload(nested):
+        nested_flag = is_soar_case_closed(nested)
+        explicit = _explicit_soar_closed_flag(payload)
+        if explicit is False:
+            return False
+        numeric = _soar_numeric_status_closed(payload)
+        if numeric is False:
+            return False
+        if nested_flag:
+            return True
+    flag = _explicit_soar_closed_flag(payload)
+    if flag is not None:
+        return flag
+    numeric = _soar_numeric_status_closed(payload)
+    return bool(numeric)
+
+
+def _ticket_body(ticket: str) -> str:
+    text = str(ticket or "").strip()
+    prefix = f"{VENDOR_NAME}:"
+    if text.startswith(prefix):
+        return text[len(prefix) :]
+    return text
+
+
+def _case_id(row: dict) -> str:
+    value = _ci_get(row, "id", "Id", "ID", "identifier", "Identifier", "caseId", "CaseId")
+    return str(value).strip() if value not in (None, "") else ""
+
+
+def _case_title(row: dict) -> str:
+    value = _ci_get(row, "title", "Title", "name", "Name", "displayName", "DisplayName")
+    return str(value).strip() if value not in (None, "") else ""
+
+
+def _is_incident_case_title(payload: dict) -> bool:
+    """True for the Vega incident case, not the related-alerts case.
+
+    ``(related alerts)`` is the current title. ``(cluster N)`` (and legacy
+    ``(batch N)``) mark related-alert chunks so they resolve alerts instead of
+    the incident.
+    """
+    from .mapping import RELATED_ALERTS_TITLE_MARK
+
+    title = _case_title(payload)
+    if not title:
+        return False
+    lowered = title.lower()
+    if RELATED_ALERTS_TITLE_MARK in lowered or "(cluster " in lowered or "(batch " in lowered:
+        return False
+    return lowered.startswith(SOAR_ALERT_TYPE_INCIDENT.lower())
+
+
+def _unwrap_case(payload) -> dict:
+    if isinstance(payload, list) and payload and isinstance(payload[0], dict):
+        payload = payload[0]
+    if not isinstance(payload, dict):
+        return {}
+    for key in ("case", "Case", "caseDetails", "CaseDetails", "caseInfo", "case_info", "data"):
+        nested = payload.get(key)
+        if not isinstance(nested, dict):
+            continue
+        if _case_id(nested) or nested.get("alerts") or nested.get("alertCards") or nested.get("cyberAlerts"):
+            merged = dict(payload)
+            merged.update(nested)
+            return merged
+    return payload
+
+
+def _row_text(row: dict) -> str:
+    parts = []
+    for value in row.values() if isinstance(row, dict) else []:
+        if isinstance(value, (str, int, float, bool)) and value not in (None, ""):
+            parts.append(str(value).strip())
+    return " ".join(parts)
+
+
+def _usable_tokens(ref: dict) -> list[str]:
+    tokens: list[str] = []
+    seen: set[str] = set()
+    ticket = str(ref.get("ticket") or "").strip()
+    for item in (ticket, *(ref.get("tokens") or [])):
+        text = str(item or "").strip()
+        lowered = text.lower()
+        if len(text) < 4 or lowered in seen:
+            continue
+        if text == VENDOR_NAME or text == f"{VENDOR_NAME}:":
+            continue
+        seen.add(lowered)
+        tokens.append(text)
+    return tokens
+
+
+def _row_matches_ref(row: dict, ref: dict) -> bool:
+    if not isinstance(row, dict) or not isinstance(ref, dict):
+        return False
+    blob = _row_text(row).lower()
+    for token in _usable_tokens(ref):
+        if token.lower() in blob:
+            return True
+    title = str(ref.get("title") or "").strip().lower()
+    row_title = _case_title(row).lower()
+    return bool(title and row_title and (title in row_title or row_title in title))
+
+
+def _payload_identity_blob(payload: dict) -> str:
+    try:
+        return json.dumps(payload, default=str).lower()
+    except Exception:
+        return _row_text(payload).lower()
+
+
+def _payload_matches_ref(payload: dict, ref: dict) -> bool:
+    if _row_matches_ref(payload, ref):
+        return True
+    blob = _payload_identity_blob(payload)
+    return any(token.lower() in blob for token in _usable_tokens(ref))
+
+
+def _explicitly_open(payload: dict) -> bool:
+    flag = _explicit_soar_closed_flag(payload)
+    if flag is False:
+        return True
+    numeric = _soar_numeric_status_closed(payload)
+    return numeric is False
+
+
+def _search_row_closed(row: dict) -> bool:
+    flag = _explicit_soar_closed_flag(row)
+    if flag is True:
+        return True
+    numeric = _soar_numeric_status_closed(row)
+    return bool(numeric)
+
+
+def _treat_as_closed(merged: dict, row: dict) -> bool:
+    if _explicitly_open(merged):
+        return False
+    if is_soar_case_closed(merged):
+        return True
+    return _search_row_closed(row)
+
+
+def _normalize_ref(item) -> dict:
+    if isinstance(item, dict) and str(item.get("ticket") or "").startswith(f"{VENDOR_NAME}:"):
+        tokens = [str(token).strip() for token in (item.get("tokens") or []) if str(token).strip()]
+        ticket = str(item.get("ticket")).strip()
+        body = _ticket_body(ticket)
+        for extra in (ticket, body):
+            if extra and extra not in tokens:
+                tokens.append(extra)
+        return {
+            "ticket": ticket,
+            "tokens": tokens,
+            "title": str(item.get("title") or "").strip(),
+        }
+    ticket = str(item or "").strip()
+    if not ticket.startswith(f"{VENDOR_NAME}:"):
+        return {}
+    body = _ticket_body(ticket)
+    return {"ticket": ticket, "tokens": [ticket, body], "title": ""}
+
+
+def _merge_tracked_refs(state: dict, ingest_refs: list | None, ingest_tickets: list[str] | None) -> list[dict]:
+    ordered: list[dict] = []
+    by_ticket: dict[str, dict] = {}
+    raw = list(state.get("tracked_refs") or []) + list(state.get("tracked_tickets") or [])
+    raw.extend(ingest_refs or [])
+    raw.extend(ingest_tickets or [])
+    for item in raw:
+        ref = _normalize_ref(item)
+        ticket = ref.get("ticket") or ""
+        if not ticket:
+            continue
+        existing = by_ticket.get(ticket)
+        if existing is None:
+            by_ticket[ticket] = ref
+            ordered.append(ref)
+            continue
+        tokens = list(existing.get("tokens") or [])
+        for token in ref.get("tokens") or []:
+            if token not in tokens:
+                tokens.append(token)
+        existing["tokens"] = tokens
+        if not existing.get("title") and ref.get("title"):
+            existing["title"] = ref["title"]
+    return ordered[-_TRACKED_CAP:]
+
+
+def _prune_tracked_refs(refs: list[dict], processed: set[str]) -> list[dict]:
+    kept: list[dict] = []
+    for ref in refs:
+        ticket = str(ref.get("ticket") or "")
+        body = _ticket_body(ticket)
+        if ticket in processed or body in processed:
+            continue
+        drop = False
+        for item in processed:
+            token = str(item).strip()
+            if not token or token.startswith("case:"):
+                continue
+            if ticket == f"{VENDOR_NAME}:{token}" or ticket.startswith(f"{VENDOR_NAME}:{token}:"):
+                drop = True
+                break
+            if token in (ref.get("tokens") or []):
+                drop = True
+                break
+        if not drop:
+            kept.append(ref)
+    return kept
+
+
+def _api_root(siemplify) -> str:
+    return str(getattr(siemplify, "API_ROOT", "") or getattr(siemplify, "api_root", "") or "").rstrip("/")
+
+
+def _environment(siemplify) -> str:
+    try:
+        return str(siemplify.context.connector_info.environment or "").strip()
+    except Exception:
+        return ""
+
+
+def _json_response(response) -> dict:
+    if response is None:
+        return {}
+    raise_for_status = getattr(response, "raise_for_status", None)
+    if callable(raise_for_status):
+        raise_for_status()
+    parser = getattr(response, "json", None)
+    if not callable(parser):
+        return {}
+    payload = parser()
+    if isinstance(payload, list):
+        return {"results": payload}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _iso_ms(millis: int) -> str:
+    return datetime.fromtimestamp(max(0, int(millis)) / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
+def _time_to_ms(value) -> int:
+    if value in (None, ""):
+        return 0
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        number = float(value)
+        if number > 1e12:
+            return int(number)
+        if number > 1e9:
+            return int(number * 1000)
+        return 0
+    parsed = parse_iso_timestamp(str(value))
+    if parsed is None:
+        return 0
+    return int(parsed.timestamp() * 1000)
+
+
+def _case_close_ms(payload: dict) -> int:
+    return _time_to_ms(
+        _ci_get(
+            payload,
+            "closedTime",
+            "closeTime",
+            "closureTime",
+            "updateTime",
+            "lastUpdateTime",
+            "updatedTime",
+            "modificationTimeUnixTimeInMs",
+            "modification_time_unix_time_in_ms",
+        )
+    )
+
+
+def _closed_after_since(payload: dict, since_ms: int, require_time: bool) -> bool:
+    closed_ms = _case_close_ms(payload)
+    if closed_ms:
+        return closed_ms >= since_ms
+    return not require_time
+
+
+def _id_is_tracked(identifier: str, refs: list[dict]) -> bool:
+    needle = str(identifier or "").strip().lower()
+    if not needle or not refs:
+        return False
+    for ref in refs:
+        for token in _usable_tokens(ref):
+            token_l = token.lower()
+            if needle == token_l or needle == _ticket_body(token).lower():
+                return True
+    return False
+
+
+def _row_matches_any_ref(row: dict, refs: list[dict]) -> bool:
+    return any(_row_matches_ref(row, ref) for ref in refs)
+
+
+def _payload_matches_any_ref(payload: dict, refs: list[dict]) -> bool:
+    return any(_payload_matches_ref(payload, ref) for ref in refs)
+
+
+def _tracked_target_ids(identifiers: list[str], refs: list[dict]) -> list[str]:
+    return [item for item in identifiers if _id_is_tracked(item, refs)]
+
+
+class SoarRemediator:
+    """Close matching Vega alerts or incidents when SOAR cases close."""
+
+    def __init__(self, manager, siemplify, logger_instance=None) -> None:
+        self.manager = manager
+        self.siemplify = siemplify
+        self.logger = logger_instance
+
+    def run_once(
+        self,
+        state: dict,
+        skip_ids: set[str] | None = None,
+        ingest_tickets: list[str] | None = None,
+        ingest_refs: list | None = None,
+    ) -> dict:
+        state = dict(state or {})
+        processed = set(state.get("processed_ids") or [])
+        current_skip = {str(item).strip() for item in (skip_ids or []) if str(item).strip()}
+        now_ms = int(utc_now().timestamp() * 1000)
+        extra_tickets = list(ingest_tickets or [])
+        if not extra_tickets and not ingest_refs and current_skip:
+            extra_tickets = [f"{VENDOR_NAME}:{item}" for item in current_skip]
+        refs = _merge_tracked_refs(state, ingest_refs, extra_tickets)
+        tickets = [str(item.get("ticket") or "") for item in refs if item.get("ticket")]
+        last_check_ms = int(state.get("last_check_ms") or 0)
+        if last_check_ms <= 0:
+            state["processed_ids"] = list(processed)[-_TRACKED_CAP:]
+            state["last_check_ms"] = now_ms
+            state["recent_ingest_ids"] = list(current_skip)[-_TRACKED_CAP:]
+            state["tracked_tickets"] = tickets
+            state["tracked_refs"] = refs
+            safe_log(
+                self.logger,
+                "info",
+                "Outbound Vega sync baseline set; cases closed after this run will sync.",
+            )
+            return {
+                "state": state,
+                "message": "Close-sync baseline set (no historical closes sent).",
+            }
+
+        skip = current_skip
+        cases, remember_ids = self._closed_vega_cases(last_check_ms, now_ms, refs, processed)
+        for case_id in remember_ids:
+            processed.add(f"case:{case_id}")
+        synced = 0
+        synced_ids: set[str] = set()
+        for case_payload in cases:
+            case_key = _case_id(case_payload)
+            processed_key = f"case:{case_key}" if case_key else ""
+            if processed_key and processed_key in processed:
+                continue
+            if not is_soar_case_closed(case_payload):
+                continue
+            targets = extract_sync_targets(case_payload)
+            mode = targets.get("mode")
+            raw_incident_ids = list(targets.get("incident_ids") or [])
+            raw_alert_ids = list(targets.get("alert_ids") or [])
+            incident_ids = _tracked_target_ids(
+                [item for item in raw_incident_ids if item not in processed and item not in skip],
+                refs,
+            )
+            alert_ids = _tracked_target_ids(
+                [item for item in raw_alert_ids if item not in processed and item not in skip],
+                refs,
+            )
+            skipped_ingest = any(item in skip for item in raw_incident_ids) or any(
+                item in skip for item in raw_alert_ids
+            )
+            if not incident_ids and not alert_ids:
+                if (
+                    processed_key
+                    and not skipped_ingest
+                    and (_tracked_target_ids(raw_incident_ids + raw_alert_ids, refs))
+                ):
+                    processed.add(processed_key)
+                continue
+            if mode == SYNC_MODE_INCIDENT and not incident_ids:
+                continue
+            if mode != SYNC_MODE_INCIDENT and not alert_ids:
+                continue
+            try:
+                if mode == SYNC_MODE_INCIDENT:
+                    self.manager.resolve_incidents(incident_ids)
+                    processed.update(incident_ids)
+                    synced_ids.update(incident_ids)
+                    synced += 1
+                elif alert_ids:
+                    self.manager.resolve_alerts(alert_ids)
+                    processed.update(alert_ids)
+                    synced_ids.update(alert_ids)
+                    synced += 1
+                if processed_key:
+                    processed.add(processed_key)
+            except Exception as exc:
+                entity_type = ENTITY_TYPE_INCIDENT if mode == SYNC_MODE_INCIDENT else ENTITY_TYPE_ALERT
+                safe_log(
+                    self.logger,
+                    "warning",
+                    "Failed to sync Vega %s %s: %s",
+                    entity_type,
+                    case_key or incident_ids or alert_ids,
+                    exc,
+                )
+        processed.update(synced_ids)
+        state["processed_ids"] = list(processed)[-_TRACKED_CAP:]
+        state["last_check_ms"] = now_ms
+        state["recent_ingest_ids"] = list(current_skip)[-_TRACKED_CAP:]
+        pruned = _prune_tracked_refs(refs, processed)
+        state["tracked_refs"] = pruned
+        state["tracked_tickets"] = [str(item.get("ticket") or "") for item in pruned if item.get("ticket")]
+        return {
+            "state": state,
+            "message": f"Synced {synced} closed Vega case(s).",
+        }
+
+    def _closed_vega_cases(
+        self,
+        since_ms: int,
+        until_ms: int,
+        refs: list[dict],
+        processed: set[str],
+    ) -> tuple[list[dict], list[str]]:
+        session = getattr(self.siemplify, "session", None)
+        root = _api_root(self.siemplify)
+        if session is not None and root:
+            if not refs:
+                safe_log(
+                    self.logger,
+                    "info",
+                    "Close-sync has no ingested Vega tickets to check.",
+                )
+                return [], []
+            return self._closed_cases_from_rest(since_ms, until_ms, refs, processed)
+        return self._closed_cases_from_sdk(since_ms, refs), []
+
+    def _closed_cases_from_sdk(self, since_ms: int, refs: list[dict]) -> list[dict]:
+        method = getattr(
+            self.siemplify,
+            "get_alerts_ticket_ids_from_cases_closed_since_timestamp",
+            None,
+        )
+        getter = getattr(self.siemplify, "get_cases_by_ticket_id", None)
+        if not callable(method) or not callable(getter):
+            safe_log(
+                self.logger,
+                "warning",
+                "Outbound Vega sync skipped: connector has no SOAR session/API_ROOT to search closed cases.",
+            )
+            return []
+        try:
+            ticket_ids = method(int(since_ms)) or []
+        except TypeError:
+            return []
+        except Exception as exc:
+            safe_log(self.logger, "warning", "Closed-case SDK lookup failed: %s", exc)
+            return []
+        cases: list[dict] = []
+        for ticket_id in ticket_ids:
+            if not str(ticket_id).startswith(f"{VENDOR_NAME}:"):
+                continue
+            try:
+                payload = getter(ticket_id) or {}
+            except Exception as exc:
+                safe_log(self.logger, "warning", "Case fetch failed for %s: %s", ticket_id, exc)
+                continue
+            if not isinstance(payload, dict) or not payload:
+                continue
+            if refs and not _payload_matches_any_ref(payload, refs):
+                targets = extract_sync_targets(payload)
+                ids = list(targets.get("incident_ids") or []) + list(targets.get("alert_ids") or [])
+                if not _tracked_target_ids(ids, refs):
+                    continue
+            cases.append(payload)
+        return cases
+
+    def _closed_cases_from_rest(
+        self,
+        since_ms: int,
+        until_ms: int,
+        refs: list[dict],
+        processed: set[str],
+    ) -> tuple[list[dict], list[str]]:
+        session = getattr(self.siemplify, "session", None)
+        root = _api_root(self.siemplify)
+        summaries = self._search_closed_case_summaries(session, root, since_ms, until_ms)
+        dump = len(summaries) >= SOAR_SEARCH_PAGE_SIZE
+        if dump:
+            safe_log(
+                self.logger,
+                "info",
+                "Close-sync SOAR search returned %s rows (time filter ignored); "
+                "fetching matching ingested cases and syncing only if details "
+                "closed after the last poll.",
+                len(summaries),
+            )
+        cases: list[dict] = []
+        remember_ids: list[str] = []
+        fetched = 0
+        seen_ids: set[str] = set()
+        for summary in summaries:
+            title = _case_title(summary)
+            if title and not title.startswith(VENDOR_NAME):
+                continue
+            case_id = _case_id(summary)
+            if not case_id or case_id in seen_ids:
+                continue
+            if f"case:{case_id}" in processed:
+                continue
+            if dump:
+                summary_ms = _case_close_ms(summary)
+                if summary_ms and summary_ms < since_ms:
+                    continue
+                if refs and not _row_matches_any_ref(summary, refs):
+                    continue
+            elif not _closed_after_since(summary, since_ms, require_time=False):
+                continue
+            if fetched >= SOAR_DETAILS_GET_CAP:
+                break
+            details = self._get_case_details(session, root, case_id)
+            fetched += 1
+            seen_ids.add(case_id)
+            merged = dict(summary)
+            if details:
+                merged.update(details)
+            if _explicitly_open(merged):
+                continue
+            if not is_soar_case_closed(merged) and not _search_row_closed(summary):
+                continue
+            if dump and not _closed_after_since(merged, since_ms, require_time=True):
+                if details:
+                    remember_ids.append(case_id)
+                continue
+            if refs and not _payload_matches_any_ref(merged, refs):
+                targets = extract_sync_targets(merged)
+                ids = list(targets.get("incident_ids") or []) + list(targets.get("alert_ids") or [])
+                if not _tracked_target_ids(ids, refs):
+                    continue
+            cases.append(merged)
+        safe_log(
+            self.logger,
+            "info",
+            "Close-sync found %s closed Vega case(s) via SOAR search (%s row(s), dump=%s).",
+            len(cases),
+            len(summaries),
+            dump,
+        )
+        return cases, remember_ids
+
+    def _search_closed_case_summaries(self, session, root: str, since_ms: int, until_ms: int) -> list[dict]:
+        url = f"{root}/{SOAR_CASE_SEARCH_PATH}?format=camel"
+        environment = _environment(self.siemplify)
+        payload = {
+            "isCaseClosed": True,
+            "title": VENDOR_NAME,
+            "startTime": _iso_ms(since_ms),
+            "endTime": _iso_ms(until_ms),
+            "timeRangeFilter": SOAR_TIME_RANGE_MODIFIED,
+            "pageSize": SOAR_SEARCH_PAGE_SIZE,
+            "requestedPage": 0,
+        }
+        if environment:
+            payload["environments"] = [environment]
+        try:
+            response = session.post(url, json=payload, timeout=_SOAR_TIMEOUT)
+            body = _json_response(response)
+        except Exception as exc:
+            safe_log(self.logger, "warning", "Closed-case SOAR search failed: %s", exc)
+            return []
+        rows = body.get("results") or body.get("Results") or []
+        if not isinstance(rows, list):
+            return []
+        return [row for row in rows if isinstance(row, dict)]
+
+    def _get_case_details(self, session, root: str, case_id: str) -> dict:
+        path = SOAR_CASE_DETAILS_PATH.format(case_id=case_id)
+        url = f"{root}/{path}?format=camel"
+        try:
+            response = session.get(url, timeout=_SOAR_TIMEOUT)
+            payload = _unwrap_case(_json_response(response))
+        except Exception as exc:
+            safe_log(
+                self.logger,
+                "warning",
+                "GetCaseFullDetails failed for case %s: %s",
+                case_id,
+                exc,
+            )
+            return {}
+        return payload if isinstance(payload, dict) else {}
