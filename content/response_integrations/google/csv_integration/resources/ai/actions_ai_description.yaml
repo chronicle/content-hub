@@ -1,0 +1,671 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+CSV Search by Entity:
+  ai_description: >-
+    ### General Description
+
+    This action searches for all entities present in the current Google SecOps scope
+    within local or mounted CSV files. It identifies rows where the entity's identifier
+    matches data in specified (or all) columns. When a match is found, the action
+    can enrich the entity with the row's data, mark the entity as suspicious, and
+    create case insights. This is particularly useful for cross-referencing internal
+    assets or threat intelligence stored in flat files.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves and validates input parameters, including
+    file paths and encoding types.
+
+    2. **File Discovery**: It identifies all relevant CSV files at the specified path,
+    applying the 'Days Back' time filter if provided.
+
+    3. **Entity Processing**: It iterates through every entity in the current scope.
+
+    4. **Search Execution**: For each entity, the action reads the CSV files and searches
+    for the entity's identifier in the target columns using the `pandas` library.
+
+    5. **Data Extraction**: If matches are found, the action extracts the row data,
+    applying the 'Fields To Return' filter and 'Return the first row only' logic.
+
+    6. **Internal Mutation**: Based on configuration, it creates insights for found
+    entities and updates entity objects with enrichment data and suspicious flags.
+
+    7. **Result Finalization**: The action generates data tables for the case wall,
+    populates the JSON result with the raw matches, and returns a summary message
+    of found vs. not found entities.
+
+
+    ### Additional Notes
+
+    - The action supports directory traversal; if a folder is provided in 'CSV Path',
+    it will iterate through all `.csv` files within that folder.
+
+    - Multiple encodings can be provided to handle files with different character
+    sets; the action will try them in the order provided.
+  ai_short_description: >-
+    Searches for entities within local or mounted CSV files to enrich them, mark them
+    as suspicious, and generate case insights based on matched data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity properties (enrichment data, suspicious flag) and creates case
+      insights based on CSV matches.
+    reasoning: >-
+      The action fetches data by reading local or mounted CSV files to find contextual
+      information about entities. It does not mutate any external systems or APIs.
+      It mutates internal data by updating entities (setting `is_enriched`, `is_suspicious`,
+      and adding `additional_properties`) and creating insights via `siemplify.add_entity_insight`
+      and `siemplify.update_entities`.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and maps them by identifier
+      (`suitable_entities = {entity.identifier: entity for entity in siemplify.target_entities}`).
+      It does not apply any filtering based on `entity_type` or other entity attributes
+      before processing. Therefore, it runs on all supported entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for entity identifiers in CSV files and uses the matched
+      rows to enrich the entities. Since it operates on all entity types, it can enrich
+      both IOCs (hashes, IPs, domains) and Assets (hostnames, users) with contextual
+      metadata found in the CSV files. It does not interact with external ticketing
+      systems, blocklists, or identity providers.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | CSV Path | String | Yes | Specify the file path to the CSV file or a folder
+    path that contains all of the CSV files. If folder is provide, action will iterate
+    over all CSV files in the folder. |
+
+    | CSV Column | String | No | Specify a comma-separated list of columns that can
+    contain entity information. If nothing is provided, action will search in all
+    of the columns. |
+
+    | Days Back | String | No | Specify how many days backwards to process the CSV
+    files. |
+
+    | Mark As Suspicious | Boolean | No | If enabled, action will mark entity as suspicious,
+    if it was found in file. |
+
+    | Return the first row only | Boolean | No | If enabled, action will only return
+    1 row in the first file that matched the entity. |
+
+    | File Encoding Types | String | Yes | A comma separated list CSV encoding types
+    used for decoding your CSV files, e.g. utf-8, latin-1, iso-8859-1, utf-16... Order
+    in which the encoding types are given sets the order in which they are used for
+    decoding files. |
+
+    | Enrich Entities | Boolean | No | If enabled, action will add information from
+    CSV file and add it to the enrichment table of entity. |
+
+    | Create Insight | Boolean | No | If enabled, action will create an insight, if
+    entity was found in the file. |
+
+    | Fields To Return | String | No | Specify a comma-separated list of values that
+    need to be returned. |
+CSV Search by String:
+  ai_description: >-
+    ### General Description
+
+    The **CSV Search by String** action allows users to search for specific strings
+    within one or more CSV files. It is designed to retrieve matching rows from files
+    located on the local file system or a network share accessible to the runner.
+    This is useful for looking up threat intelligence, asset lists, or historical
+    logs stored in CSV format.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action parses input parameters and validates the provided
+    file encodings.
+
+    2. **File Discovery**: It identifies relevant CSV files at the specified path,
+    applying the `Days Back` filter if provided.
+
+    3. **Data Retrieval**: For each file, it attempts to read the content using the
+    provided encodings via the `pandas` library.
+
+    4. **Search Logic**: It searches for the `Search Value`(s) within the specified
+    columns (or all columns).
+
+    5. **Data Processing**: Matching rows are processed to include the source file
+    path and filtered to include only requested fields.
+
+    6. **Output Generation**: Results are returned as a JSON object and individual
+    Data Tables for each search term found.
+
+
+    ### Additional Notes
+
+    - This action does not run on SOAR entities; it uses the `Search Value` parameter
+    as the primary input.
+
+    - If a folder is provided in `CSV Path`, the action iterates through all `.csv`
+    files in that folder.
+  ai_short_description: >-
+    Searches for specific strings within one or more CSV files located on the local
+    file system or a network share, returning matching rows as JSON and Data Tables.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action reads local or network-accessible CSV files to search for strings.
+      It does not fetch data from external APIs, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It relies entirely on the `Search Value` parameter to perform the
+      search. Therefore, it does not run on entities and all entity type flags are
+      false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for strings within local or network-accessible CSV files.
+      It does not interact with external APIs to enrich IOCs/assets, mutate external
+      state, or perform any of the specific expected outcomes defined in the categories.
+      Therefore, it does not match any outcome category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | CSV Path | String | Yes | Specify the file path to the CSV file or a folder
+    path that contains all of the CSV files. If folder is provide, action will iterate
+    over all CSV files in the folder. |
+
+    | CSV Column | String | No | Specify a comma-separated list of columns that can
+    contain entity information. If nothing is provided, action will search in all
+    of the columns. |
+
+    | Days Back | String | No | Specify how many days backwards to process the CSV
+    files. |
+
+    | Search Value | String | Yes | Specify a string that needs to be searched. If
+    'Search Multiple Strings' is enabled, this parameter is treated as a comma-separated
+    list of strings that need to be searched. |
+
+    | Return the first row only | Boolean | No | If enabled, action will only return
+    1 row in the first file that matched the entity. |
+
+    | File Encoding Types | String | Yes | A comma separated list CSV encoding types
+    used for decoding your CSV files, e.g. utf-8, latin-1, iso-8859-1, utf-16... Order
+    in which the encoding types are given sets the order in which they are used for
+    decoding files, e.g.(from example above) the utf-8 has the highest priority and
+    will be used primarily for decoding all the files, if there is a CSV file that
+    uses some other encoding then the next in the order: latin-1 encoding will be
+    used, and so on, until the last encoding is used. |
+
+    | Fields To Return | String | No | Specify a comma-separated list of values that
+    need to be returned. |
+
+    | Search Multiple Strings | Boolean | No | If enabled, 'Search Value' will work
+    as a comma-separated list of values, instead of a single string. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Verifies the connectivity and configuration of the CSV integration. This action
+    is used to confirm that the integration is properly initialized and ready for
+    use within the Google SecOps environment. It serves as a health check to ensure
+    the integration script can execute successfully.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The script initializes the `SiemplifyAction` object and
+    sets the internal script name to 'CSV - Ping'.
+
+    2. **Status Definition**: It defines the execution state as completed and sets
+    the result value to true.
+
+    3. **Completion**: The action terminates by calling the `end` method, returning
+    a 'Connection Established.' message to the Google SecOps workbench.
+
+
+    ### Additional Notes
+
+    This is a standard 'Ping' action. Per the system guidelines, it is not categorized
+    as an enrichment action. It does not interact with any external APIs or local
+    files in this specific implementation; it simply returns a success status to verify
+    the environment is functional.
+  ai_short_description: >-
+    Verifies the connectivity and configuration of the CSV integration by returning
+    a success status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only returns a static success message. It does not fetch data, mutate
+      external or internal data, update entities, create insights, modify alerts,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or perform any entity-specific
+      operations. It simply returns a static success message.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity check (Ping). It does not fetch threat intelligence,
+      mutate external systems, update alerts, or perform any operations that match
+      the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Save Json To CSV:
+  ai_description: >-
+    ### General Description
+
+    Converts a JSON-formatted string into a CSV file and saves it to a specified location
+    on the local filesystem. It is primarily used for data transformation and reporting
+    within a playbook flow, allowing users to export structured JSON data into a tabular
+    format for further processing or manual review.
+
+
+    ### Flow Description
+
+    1. Extracts the JSON string, file path, and configuration flags (Overwrite, Advanced
+    Handling).
+
+    2. Validates the provided file path, ensuring it is an absolute path and checking
+    for existing files or directory name conflicts.
+
+    3. Parses the input string into a Python dictionary or list.
+
+    4. Flattens the data using either standard wide-format flattening or vertical
+    unpacking based on the Advanced Nested JSON Handling parameter.
+
+    5. Converts the flattened data into a CSV-formatted string.
+
+    6. Writes the CSV content to the target file path on the disk.
+
+    7. Returns the final file path as a JSON result.
+
+
+    ### Additional Notes
+
+    - The action requires absolute paths for the File Path parameter unless a simple
+    filename is used (which defaults to `/tmp/`).
+
+    - If the input JSON is empty or malformed, the action will raise an error or produce
+    an empty CSV depending on the structure.
+  ai_short_description: >-
+    Converts a JSON-formatted string into a CSV file and saves it to a specified location
+    on the local filesystem.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local data transformation and file writing. It does not
+      fetch data from external APIs, mutate external system state, update entities,
+      or modify internal case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates solely on the provided JSON string and file path parameters,
+      meaning it does not run on entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a utility for data transformation (JSON to CSV) and local file
+      saving. It does not interact with external systems, enrich data, or match any
+      of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | JSON Object | String | Yes | Specify the JSON object that needs to be saved
+    as CSV. |
+
+    | Overwrite | Boolean | No | If enabled, action will overwrite existing file.
+    |
+
+    | File Path | String | Yes | Specify the absolute file path for the newly created
+    CSV file. If only the file name is provided, action will store the file in /tmp/
+    folder. |
+
+    | Advanced Nested JSON Handling | Boolean | No | If enabled, action will create
+    a CSV, where nested JSONs keys will be in separate columns and lists of JSON objects
+    will be converted into rows. Data in CSV will be filled. |
