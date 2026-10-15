@@ -307,11 +307,11 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         meta: SyncMetadata | None = job_case.alert_metadata.get(
             alert.identifier
         )
-        wiz_reason: str | None = (
-            meta.closure_reason
-            if meta and meta.closure_reason
-            else getattr(alert.incident, "resolution_reason", None)
-        )
+        wiz_reason: str | None = None
+        if meta and meta.closure_reason:
+            wiz_reason = meta.closure_reason
+        elif getattr(alert, "incident", None) is not None:
+            wiz_reason = getattr(alert.incident, "resolution_reason", None)
         reason, root_cause = self._determine_secops_closure_details(wiz_reason)
         self.sync_product_status_to_case(
             case_id=str(job_case.case_detail.id_),
@@ -641,18 +641,14 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
             ):
                 continue
 
+            close_reason = getattr(job_case.case_detail, "close_reason", None)
             if (
                 not case_closure_fetched
                 and job_case.case_detail.status == CaseDataStatus.CLOSED
                 and (
-                    getattr(
-                        job_case.case_detail,
-                        "close_reason",
-                        constants.REASON_UNSPECIFIED,
-                    )
-                    or constants.REASON_UNSPECIFIED
+                    not close_reason
+                    or close_reason == constants.REASON_UNSPECIFIED
                 )
-                == constants.REASON_UNSPECIFIED
             ):
                 fetched_case_reason = self._get_case_closure_reason(job_case)
                 case_closure_fetched = True
@@ -728,7 +724,7 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         if not isinstance(closure_details, list) or not closure_details:
             return None
 
-        first_detail: Any = closure_details[constants.DEFAULT_FALLBACK_VALUE]
+        first_detail: Any = closure_details[0]
         if not isinstance(first_detail, dict):
             return None
 
