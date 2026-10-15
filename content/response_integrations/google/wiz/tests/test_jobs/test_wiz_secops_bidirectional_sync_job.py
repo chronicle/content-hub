@@ -532,3 +532,114 @@ class TestWizSecopsBidirectionalSyncJob:
         # Alert should NOT be reopened:
         job.soar_job.session.post.assert_not_called()
         job.soar_job.add_comment.assert_not_called()
+
+    def test_sync_status_inbound_maps_wiz_resolution_reason_to_secops(self) -> None:
+        """Verifies inbound alert closure maps Wiz resolutionReason to SecOps reason and root_cause."""
+        test_cases = [
+            ("MALICIOUS_THREAT", "Malicious", "Other"),
+            ("NOT_MALICIOUS_THREAT", "NotMalicious", "Other"),
+            ("PLANNED_ACTION_THREAT", "Maintenance", "Other"),
+            ("SECURITY_TEST_THREAT", "Maintenance", "Other"),
+            ("INCONCLUSIVE_THREAT", "Inconclusive", "No clear conclusion"),
+        ]
+        for wiz_reason, expected_reason, expected_root_cause in test_cases:
+            job = _make_job()
+            alerts = [_make_mock_alert("alert_1", "wiz_threat_1", status="open")]
+            case = _make_mock_case(1234, alerts)
+            job_case = JobCase(case_detail=case, modification_time=1000)
+            job.api_client.get_issue_details.return_value = Issue.from_json(
+                {
+                    "id": "wiz_threat_1",
+                    "status": "RESOLVED",
+                    "severity": "HIGH",
+                    "resolutionReason": wiz_reason,
+                }
+            )
+            job.map_product_data_to_case(job_case)
+
+            captured: dict[str, str] = {}
+
+            def mock_close_status(
+                root_cause: str,
+                comment: str,
+                reason: str,
+                case_id: str,
+                alert_id: str,
+                _captured: dict[str, str] = captured,
+                _alerts: list[AlertCard] = alerts,
+            ) -> None:
+                _captured["reason"] = reason
+                _captured["root_cause"] = root_cause
+                _alerts[0].status = "closed"
+
+            job.soar_job.close_alert = mock_close_status
+            job.sync_status(job_case)
+
+            assert captured["reason"] == expected_reason
+            assert captured["root_cause"] == expected_root_cause
+
+    def test_sync_status_outbound_fetches_case_closure_details_once_per_case(self) -> None:
+        """Verifies outbound closure fetches reason from get_case_closure_details once per case."""
+        test_cases = [
+            ("Malicious", "Malicious Threat"),
+            ("NotMalicious", "Not Malicious Threat"),
+            ("Maintenance", "Planned Action Threat"),
+            ("Inconclusive", "Inconclusive Threat"),
+        ]
+        for secops_reason, expected_wiz_reason in test_cases:
+            job = _make_job()
+            alerts = [
+                _make_mock_alert("alert_1", "wiz_threat_1"),
+                _make_mock_alert("alert_2", "wiz_threat_2"),
+            ]
+            case = _make_mock_case(
+                1234,
+                alerts,
+                status=CaseDataStatus.CLOSED,
+                close_reason="REASON_UNSPECIFIED",
+            )
+            job.soar_job.get_case_closure_details.return_value = [
+                {"caseId": 1234, "reason": secops_reason, "rootCause": "Other"}
+            ]
+            job_case = JobCase(case_detail=case, modification_time=1000)
+            job._map_alerts_to_threat_ids(job_case)
+            job_case.alert_metadata["alert_1"] = SyncMetadata(status="OPEN")
+            job_case.alert_metadata["alert_2"] = SyncMetadata(status="OPEN")
+
+            job.sync_status(job_case)
+
+            job.soar_job.get_case_closure_details.assert_called_once_with([1234])
+            assert job.api_client.resolve_issue.call_count == 2
+            job.api_client.resolve_issue.assert_any_call(
+                issue_id="wiz_threat_1",
+                resolution_reason=expected_wiz_reason,
+                resolution_note="Closed via SecOps Case Sync",
+            )
+            job.api_client.resolve_issue.assert_any_call(
+                issue_id="wiz_threat_2",
+                resolution_reason=expected_wiz_reason,
+                resolution_note="Closed via SecOps Case Sync",
+            )
+
+    def test_sync_status_outbound_uses_alert_closure_details_in_open_case(self) -> None:
+        """Verifies outbound closure uses alert.closure_details and skips REASON_UNSPECIFIED."""
+        job = _make_job()
+        alert_1 = _make_mock_alert("alert_1", "wiz_threat_1", status="closed")
+        alert_1.closure_details = {"reason": "REASON_UNSPECIFIED"}
+        alert_2 = _make_mock_alert("alert_2", "wiz_threat_1", status="closed")
+        alert_2.closure_details = {"reason": "Malicious", "rootCause": "Attack"}
+        alerts = [alert_1, alert_2]
+        case = _make_mock_case(1234, alerts, status=CaseDataStatus.OPENED)
+        job_case = JobCase(case_detail=case, modification_time=1000)
+        job.case_threat_alerts[1234] = {"wiz_threat_1": alerts}
+        job_case.product_ids_from_secops_alerts = {"wiz_threat_1": alert_1}
+        job_case.alert_metadata["alert_1"] = SyncMetadata(status="OPEN")
+        job_case.alert_metadata["alert_2"] = SyncMetadata(status="OPEN")
+
+        job.sync_status(job_case)
+
+        job.api_client.resolve_issue.assert_called_once_with(
+            issue_id="wiz_threat_1",
+            resolution_reason="Malicious Threat",
+            resolution_note="Closed via SecOps Case Sync",
+        )
