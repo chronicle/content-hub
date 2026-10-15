@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.35} }
+
+body {
+  background-color: #070f1a;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  margin: 0;
+  padding: 16px;
+}
+
+.wrap { background: #0b1929; border: 1px solid #1a3350; border-radius: 14px; overflow: hidden; max-width: 580px; font-family: 'Segoe UI', Arial, sans-serif; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.hdr { background: linear-gradient(135deg,#0f2540,#0b1929); border-bottom: 1px solid #1a3350; padding: 14px 20px; display:flex; align-items:center; justify-content:space-between; }
+.hdr-left .title { font-size:15px; font-weight:700; color:#e2e8f0; display:flex; align-items:center; gap:8px; }
+.hdr-left .sub { font-size:10px; color:#3d5a7a; margin-top:2px; }
+
+/* Overall health badge (header) */
+.status-badge { display:flex; align-items:center; gap:6px; padding:5px 14px; border-radius:20px; }
+.status-dot { width:7px; height:7px; border-radius:50%; }
+.status-lbl { font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; }
+
+/* Per-card state badge (inline in sla-hdr) */
+.card-state { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:9px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+.card-dot { width:5px; height:5px; border-radius:50%; }
+
+.sec-div { display:flex;align-items:center;gap:10px;padding:14px 18px 8px; }
+.sec-line { flex:1;height:1px;background:#1a3350; }
+.sec-lbl { font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase; }
+.sec-sla { color:#3b82f6; }
+.sec-kpi { color:#8b5cf6; }
+.sla-card { margin:0 12px 10px; background:rgba(255,255,255,0.03); border:1px solid #1a3350; border-radius:10px; overflow:hidden; transition: border-color 0.3s; }
+.sla-hdr { display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,0.25);border-bottom:1px solid #1a3350; }
+.sla-hdr-left { display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#94a3b8; }
+.pill { display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700; }
+.pill-met { background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);color:#22c55e; }
+.pill-breach { background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);color:#ef4444; }
+.pill-risk { background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);color:#f59e0b; }
+.pill-empty { color:#3d5a7a;font-size:14px; }
+.sla-grid { display:grid;grid-template-columns:1fr 1fr; }
+.sla-cell { padding:10px 14px;border-right:1px solid #1a3350;border-bottom:1px solid #1a3350; }
+.sla-cell:nth-child(2n){border-right:none;}
+.sla-cell:nth-last-child(-n+2){border-bottom:none;}
+.cell-lbl { font-size:10px;color:#3d5a7a;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px;font-weight:700; }
+.cell-val { font-size:20px;font-weight:700;font-family:'Courier New',monospace;color:#e2e8f0; }
+.cell-unit { font-size:10px;color:#3d5a7a;margin-left:3px;font-family:'Segoe UI',Arial,sans-serif; }
+.pbar-wrap { height:3px;background:#1a2a3e;border-radius:2px;overflow:hidden;margin-top:6px; }
+.pbar { height:100%;border-radius:2px; }
+.pri-wrap { display:flex;align-items:center;gap:4px;margin-top:5px; }
+.pri-seg { height:5px;border-radius:3px; }
+.pri-lbl { font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-left:4px; }
+.kpi-sec { padding:0 12px 12px; }
+.kpi-row { display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #111f30; }
+.kpi-row:last-child{border-bottom:none;}
+.kpi-badge { min-width:36px;padding:3px 4px;border-radius:5px;text-align:center;font-size:8px;font-weight:800;font-family:'Courier New',monospace;letter-spacing:0.05em; }
+.kpi-mid { flex:1; }
+.kpi-name { font-size:12px;color:#cbd5e1;margin-bottom:3px; }
+.kpi-track { height:3px;background:#1a2a3e;border-radius:2px;overflow:hidden; }
+.kpi-fill { height:100%;border-radius:2px; }
+.kpi-num { font-size:17px;font-weight:800;font-family:'Courier New',monospace;min-width:28px;text-align:right; }
+.kpi-unit { font-size:9px;color:#3d5a7a;margin-left:2px; }
+.kpi-chk { width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px; }
+.chk-ok { background:rgba(34,197,94,0.12);color:#22c55e; }
+.chk-bad { background:rgba(239,68,68,0.12);color:#ef4444; }
+.ftr { display:flex;justify-content:space-between;align-items:center;padding:9px 18px;border-top:1px solid #1a3350;background:rgba(0,0,0,0.2); }
+.ftr-ts { font-size:9px;color:#2a4060;font-family:'Courier New',monospace; }
+.ftr-live { font-size:9px;color:#2a4060; }
+.of-limit { font-size:10px;color:#3d5a7a;margin-top:3px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="title"><span style="font-size:16px">📋</span> Case Management</div>
+      <div class="sub">SLA &amp; KPI Dashboard</div>
+    </div>
+  </div>
+
+  <!-- SLA Section -->
+  <div class="sec-div">
+    <div class="sec-line"></div>
+    <div class="sec-lbl sec-sla">SLA Metrics</div>
+    <div class="sec-line"></div>
+  </div>
+
+  <!-- Triage Card -->
+  <div class="sla-card" id="card-triage">
+    <div class="sla-hdr">
+      <div class="sla-hdr-left"><span>🚨</span> Triage</div>
+      <!-- Per-card state badge injected here by JS -->
+      <div id="triage-state-badge"></div>
+    </div>
+    <div class="sla-grid">
+      <div class="sla-cell">
+        <div class="cell-lbl">Breach Time</div>
+        <div><span class="cell-val" id="t-breach">[Case.Triage_calculated_breach_time]</span><span class="cell-unit">min</span></div>
+        <div class="pbar-wrap"><div class="pbar" id="t-breach-bar" style="width:0%"></div></div>
+        <div class="of-limit" id="t-breach-of"></div>
+      </div>
+      <div class="sla-cell">
+        <div class="cell-lbl">Critical Time</div>
+        <div><span class="cell-val" id="t-critical">[Case.Triage_calculated_critical_time]</span><span class="cell-unit">min</span></div>
+        <div class="pbar-wrap"><div class="pbar" id="t-critical-bar" style="width:0%"></div></div>
+        <div class="of-limit" id="t-critical-of"></div>
+      </div>
+      <div class="sla-cell" style="border-bottom:none">
+        <div class="cell-lbl">Case Priority</div>
+        <div class="pri-wrap" id="t-pri-wrap"><span style="font-size:10px;color:#3d5a7a">—</span></div>
+      </div>
+      <div class="sla-cell" style="border-bottom:none">
+        <div class="cell-lbl">SLA Status</div>
+        <div style="margin-top:5px" id="pill-triage-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Card -->
+  <div class="sla-card" id="card-notif">
+    <div class="sla-hdr">
+      <div class="sla-hdr-left"><span>🔔</span> Notification</div>
+      <!-- Per-card state badge injected here by JS -->
+      <div id="notif-state-badge"></div>
+    </div>
+    <div class="sla-grid">
+      <div class="sla-cell">
+        <div class="cell-lbl">Breach Time</div>
+        <div><span class="cell-val" id="n-breach">[Case.Notified_calculated_breach_time]</span><span class="cell-unit">min</span></div>
+        <div class="pbar-wrap"><div class="pbar" id="n-breach-bar" style="width:0%"></div></div>
+        <div class="of-limit" id="n-breach-of"></div>
+      </div>
+      <div class="sla-cell">
+        <div class="cell-lbl">Critical Time</div>
+        <div><span class="cell-val" id="n-critical">[Case.Notified_calculated_critical_time]</span><span class="cell-unit">min</span></div>
+        <div class="pbar-wrap"><div class="pbar" id="n-critical-bar" style="width:0%"></div></div>
+        <div class="of-limit" id="n-critical-of"></div>
+      </div>
+      <div class="sla-cell" style="border-bottom:none">
+        <div class="cell-lbl">Case Priority</div>
+        <div class="pri-wrap" id="n-pri-wrap"><span style="font-size:10px;color:#3d5a7a">—</span></div>
+      </div>
+      <div class="sla-cell" style="border-bottom:none">
+        <div class="cell-lbl">SLA Status</div>
+        <div style="margin-top:5px" id="pill-notif-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Section -->
+  <div class="sec-div">
+    <div class="sec-line"></div>
+    <div class="sec-lbl sec-kpi">KPI Metrics</div>
+    <div class="sec-line"></div>
+  </div>
+
+  <div class="kpi-sec">
+    <div class="kpi-row">
+      <div class="kpi-badge" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#3b82f6">TTA</div>
+      <div class="kpi-mid">
+        <div class="kpi-name">Time to Assess</div>
+        <div class="kpi-track"><div class="kpi-fill" id="tta-bar" style="width:0%;background:#3b82f6"></div></div>
+      </div>
+      <span class="kpi-num" id="tta-val" style="color:#3b82f6">[Case.Assessment_rounded_duration_time_minutes]</span>
+      <span class="kpi-unit">min</span>
+      <div class="kpi-chk" id="tta-chk" style="color:#3d5a7a">—</div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-badge" style="background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);color:#8b5cf6">TTI</div>
+      <div class="kpi-mid">
+        <div class="kpi-name">Time to Investigate</div>
+        <div class="kpi-track"><div class="kpi-fill" id="tti-bar" style="width:0%;background:#8b5cf6"></div></div>
+      </div>
+      <span class="kpi-num" id="tti-val" style="color:#8b5cf6">[Case.Incident_rounded_duration_time_minutes]</span>
+      <span class="kpi-unit">min</span>
+      <div class="kpi-chk" id="tti-chk" style="color:#3d5a7a">—</div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-badge" style="background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.3);color:#06b6d4">TTN</div>
+      <div class="kpi-mid">
+        <div class="kpi-name">Time to Notify</div>
+        <div class="kpi-track"><div class="kpi-fill" id="ttn-bar" style="width:0%;background:#06b6d4"></div></div>
+      </div>
+      <span class="kpi-num" id="ttn-val" style="color:#06b6d4">[Case.Notified_rounded_duration_time_minutes]</span>
+      <span class="kpi-unit">min</span>
+      <div class="kpi-chk" id="ttn-chk" style="color:#3d5a7a">—</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="ftr">
+    <span class="ftr-ts" id="ftr-ts">Last updated: just now</span>
+    <span class="ftr-live">● Live</span>
+  </div>
+
+</div>
+
+<script>
+var PLEVELS = ['Informative','Low','Medium','High','Critical'];
+var PCOLORS = {Informative:'#64748b',Low:'#06b6d4',Medium:'#f59e0b',High:'#f97316',Critical:'#ef4444'};
+
+var TRIAGE_MAP = {
+  BreachTime:   {Critical:15,  High:30,  Medium:120, Low:480,  Informative:480},
+  CriticalTime: {Critical:10,  High:20,  Medium:90,  Low:450,  Informative:450}
+};
+var NOTIF_MAP = {
+  BreachTime:   {Critical:120, High:240, Medium:1440, Low:4320, Informative:4320},
+  CriticalTime: {Critical:90,  High:210, Medium:720,  Low:2880, Informative:2880}
+};
+
+var KPI_RAW = { tta: "[Alert.TTA_Threshold]", tti: "[Alert.TTI_Threshold]", ttn: "[Alert.TTN_Threshold]" };
+var KPI_DEFAULTS = { tta: 30, tti: 60, ttn: 30 };
+var KPI = {
+  tta: (!isUnset(KPI_RAW.tta) && !isNaN(parseFloat(KPI_RAW.tta))) ? parseFloat(KPI_RAW.tta) : KPI_DEFAULTS.tta,
+  tti: (!isUnset(KPI_RAW.tti) && !isNaN(parseFloat(KPI_RAW.tti))) ? parseFloat(KPI_RAW.tti) : KPI_DEFAULTS.tti,
+  ttn: (!isUnset(KPI_RAW.ttn) && !isNaN(parseFloat(KPI_RAW.ttn))) ? parseFloat(KPI_RAW.ttn) : KPI_DEFAULTS.ttn
+};
+
+function isUnset(v) {
+  return !v || v.trim()==='' || v==='null' || v==='None' || v==='undefined' || v==='N/A' || /^\[Case\..+\]$/.test(v.trim());
+}
+
+/**
+ * Reads an element's text, handles unset placeholders.
+ * Display is clamped to 0 for negatives (since negative remaining = already past limit).
+ * Returns the RAW (possibly negative) number for accurate state logic, or null if unset.
+ */
+function cleanAndClamp(id) {
+  var el = document.getElementById(id);
+  if (!el) return null;
+  var t = (el.innerText || el.textContent || '').trim();
+  if (isUnset(t)) { el.textContent = '—'; return null; }
+  var n = parseFloat(t);
+  if (isNaN(n)) { el.textContent = '—'; return null; }
+  // Display as 0 for negatives — but return the raw value for breach logic
+  el.textContent = Math.max(0, n);
+  return n;
+}
+
+function barColor(p) {
+  // p = proportion of time CONSUMED (0 = nothing consumed, 1 = fully consumed / breached)
+  if (p >= 1)   return '#ef4444';
+  if (p >= 0.8) return '#f97316';
+  if (p >= 0.6) return '#f59e0b';
+  return '#3b82f6';
+}
+
+/**
+ * Fills the bar based on REMAINING time — less remaining = more bar filled.
+ * consumed = 1 - (remaining / limit), clamped to [0, 1].
+ * Returns the consumed fraction for state evaluation.
+ */
+function setBar(id, remaining, limit) {
+  var el = document.getElementById(id);
+  if (!el || remaining === null || isNaN(remaining)) return 0;
+  // Negative remaining means already past limit → fully consumed
+  var consumed = Math.min(Math.max(1 - (remaining / limit), 0), 1);
+  el.style.width = (consumed * 100) + '%';
+  el.style.background = barColor(consumed);
+  return consumed;
+}
+
+function setOfLabel(id, remaining, limit) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  if (remaining !== null && !isNaN(remaining)) {
+    var display = Math.max(0, remaining);
+    el.textContent = display + ' min remaining of ' + limit + ' min';
+  } else {
+    el.textContent = '';
+  }
+}
+
+/**
+ * Determines the state of a single SLA card.
+ * Values are REMAINING TIME — lower is worse, negative means already breached.
+ *
+ * Rules:
+ *   - No data (both null)                    → 'pending'
+ *   - breachRemaining <= 0                   → 'breached'  (SLA Not Met)
+ *   - criticalRemaining <= 0                 → 'caution'   (inside critical window, breach not yet)
+ *   - breachConsumed >= 0.7 (30% or less left) → 'caution' (approaching breach)
+ *   - else                                   → 'on-track'
+ */
+function evalCardState(breachRemaining, criticalRemaining, breachLimit, criticalLimit) {
+  var hasData = (breachRemaining !== null) || (criticalRemaining !== null);
+  if (!hasData) return { state: 'pending', consumed: 0 };
+
+  // Breach time exhausted (zero or negative remaining) → SLA Not Met
+  if (breachRemaining !== null && breachRemaining <= 0) {
+    return { state: 'breached', consumed: 1 };
+  }
+
+  // How much of the breach window has been consumed
+  var consumed = (breachRemaining !== null)
+    ? Math.min(Math.max(1 - (breachRemaining / breachLimit), 0), 1)
+    : 0;
+
+  // Critical time exhausted → inside critical window, breach not yet → Caution
+  var inCriticalWindow = (criticalRemaining !== null && criticalRemaining <= 0);
+  if (inCriticalWindow || consumed >= 0.7) {
+    return { state: 'caution', consumed: consumed };
+  }
+
+  return { state: 'on-track', consumed: consumed };
+}
+
+/** State → visual tokens */
+var STATE_TOKENS = {
+  'pending':  { c:'#64748b', bg:'rgba(100,116,139,0.12)', br:'rgba(100,116,139,0.35)', lbl:'Pending',  icon:'◌' },
+  'breached': { c:'#ef4444', bg:'rgba(239,68,68,0.12)',   br:'rgba(239,68,68,0.35)',   lbl:'Breached', icon:'✕' },
+  'caution':  { c:'#f59e0b', bg:'rgba(245,158,11,0.12)',  br:'rgba(245,158,11,0.35)',  lbl:'Caution',  icon:'⚠' },
+  'on-track': { c:'#22c55e', bg:'rgba(34,197,94,0.12)',   br:'rgba(34,197,94,0.35)',   lbl:'On Track', icon:'✓' }
+};
+
+/**
+ * Renders the per-card state badge in the card header.
+ */
+function renderCardBadge(containerId, state, animate) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  var tk = STATE_TOKENS[state] || STATE_TOKENS['pending'];
+  el.innerHTML =
+    '<span class="card-state" style="background:' + tk.bg + ';border:1px solid ' + tk.br + '">' +
+      '<span class="card-dot" style="background:' + tk.c + ';box-shadow:0 0 4px ' + tk.c + ';' +
+        (animate ? 'animation:pulse 1.5s infinite' : '') + '"></span>' +
+      '<span style="color:' + tk.c + '">' + tk.lbl + '</span>' +
+    '</span>';
+}
+
+/**
+ * Renders the SLA Met / SLA Not Met pill in the grid cell.
+ * "SLA Not Met" ONLY when breach time is exceeded (or zero).
+ * Critical-only → "SLA Met" (but card badge will show Caution).
+ */
+function renderSLAPill(containerId, state) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  var pill = document.createElement('span');
+  if (state === 'pending') {
+    pill.className = 'pill-empty';
+    pill.textContent = '—';
+  } else if (state === 'breached') {
+    pill.className = 'pill pill-breach';
+    pill.textContent = '✕ SLA Not Met';
+  } else {
+    // on-track OR caution (critical exceeded but breach not yet) → SLA Met
+    pill.className = 'pill pill-met';
+    pill.textContent = '✓ SLA Met';
+  }
+  el.appendChild(pill);
+}
+
+function renderPriority(wrapId, priority) {
+  var wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  if (!priority || !PCOLORS[priority]) {
+    wrap.innerHTML = '<span style="font-size:10px;color:#3d5a7a">—</span>';
+    return;
+  }
+  var idx = PLEVELS.indexOf(priority);
+  wrap.innerHTML = '';
+  PLEVELS.forEach(function(l, i) {
+    var s = document.createElement('div');
+    s.className = 'pri-seg';
+    s.style.width = i === idx ? '22px' : '14px';
+    s.style.background = i <= idx ? PCOLORS[l] : '#1a2a3e';
+    wrap.appendChild(s);
+  });
+  var lbl = document.createElement('span');
+  lbl.className = 'pri-lbl';
+  lbl.style.color = PCOLORS[priority];
+  lbl.textContent = priority;
+  wrap.appendChild(lbl);
+}
+
+/**
+ * Sets the overall header badge to the worst state across all cards.
+ * Priority: breached > caution > on-track > pending
+ */
+function setOverallHealth(tState, nState, kpiExceeded) {
+  var rank = { 'pending':0, 'on-track':1, 'caution':2, 'breached':3 };
+  var worst = rank[tState] >= rank[nState] ? tState : nState;
+  // KPI exceeded at least bumps to caution
+  if (kpiExceeded && rank[worst] < rank['caution']) worst = 'caution';
+
+  var tk = STATE_TOKENS[worst];
+  var badge = document.getElementById('health-badge');
+  var dot   = document.getElementById('health-dot');
+  var lbl   = document.getElementById('health-lbl');
+  if (!badge || !dot || !lbl) return;
+
+  badge.style.background   = tk.bg;
+  badge.style.borderColor  = tk.br;
+  dot.style.background     = tk.c;
+  dot.style.boxShadow      = '0 0 6px ' + tk.c;
+  lbl.style.color          = tk.c;
+  lbl.textContent          = tk.lbl;
+  dot.style.animation      = (worst === 'breached') ? 'pulse 1.5s infinite' : '';
+}
+
+window.onload = function() {
+  var rawPri = '[Case.Priority]';
+  var pri = isUnset(rawPri) ? null : rawPri;
+
+  var p = (pri && TRIAGE_MAP.BreachTime[pri]) ? pri : 'Medium';
+  var tBreachLimit   = TRIAGE_MAP.BreachTime[p];
+  var tCriticalLimit = TRIAGE_MAP.CriticalTime[p];
+  var nBreachLimit   = NOTIF_MAP.BreachTime[p];
+  var nCriticalLimit = NOTIF_MAP.CriticalTime[p];
+
+  /* ── Triage ───────────────────────────────────────────────────────── */
+  // Raw values returned (may be negative); display already clamped to 0 by cleanAndClamp
+  var tbN = cleanAndClamp('t-breach');
+  var tcN = cleanAndClamp('t-critical');
+
+  // Bar fills as remaining time decreases — less remaining = more bar
+  setBar('t-breach-bar',   tbN, tBreachLimit);
+  setBar('t-critical-bar', tcN, tCriticalLimit);
+  setOfLabel('t-breach-of',   tbN, tBreachLimit);
+  setOfLabel('t-critical-of', tcN, tCriticalLimit);
+
+  var tResult = evalCardState(tbN, tcN, tBreachLimit, tCriticalLimit);
+  renderCardBadge('triage-state-badge', tResult.state, tResult.state === 'breached');
+  renderSLAPill('pill-triage-container', tResult.state);
+
+  var tCard = document.getElementById('card-triage');
+  if (tResult.state === 'breached') tCard.style.borderColor = 'rgba(239,68,68,0.4)';
+  else if (tResult.state === 'caution') tCard.style.borderColor = 'rgba(245,158,11,0.35)';
+
+  /* ── Notification ─────────────────────────────────────────────────── */
+  var nbN = cleanAndClamp('n-breach');
+  var ncN = cleanAndClamp('n-critical');
+
+  setBar('n-breach-bar',   nbN, nBreachLimit);
+  setBar('n-critical-bar', ncN, nCriticalLimit);
+  setOfLabel('n-breach-of',   nbN, nBreachLimit);
+  setOfLabel('n-critical-of', ncN, nCriticalLimit);
+
+  var nResult = evalCardState(nbN, ncN, nBreachLimit, nCriticalLimit);
+  renderCardBadge('notif-state-badge', nResult.state, nResult.state === 'breached');
+  renderSLAPill('pill-notif-container', nResult.state);
+
+  var nCard = document.getElementById('card-notif');
+  if (nResult.state === 'breached') nCard.style.borderColor = 'rgba(239,68,68,0.4)';
+  else if (nResult.state === 'caution') nCard.style.borderColor = 'rgba(245,158,11,0.35)';
+
+  renderPriority('t-pri-wrap', pri);
+  renderPriority('n-pri-wrap', pri);
+
+  /* ── KPI rows ─────────────────────────────────────────────────────── */
+  var kpiExceeded = false;
+  [{raw:'[Case.Assessment_rounded_duration_time_minutes]', valId:'tta-val', barId:'tta-bar', chkId:'tta-chk', target:KPI.tta},
+   {raw:'[Case.Incident_rounded_duration_time_minutes]',   valId:'tti-val', barId:'tti-bar', chkId:'tti-chk', target:KPI.tti},
+   {raw:'[Case.Notified_rounded_duration_time_minutes]',   valId:'ttn-val', barId:'ttn-bar', chkId:'ttn-chk', target:KPI.ttn}
+  ].forEach(function(k) {
+    var el = document.getElementById(k.valId); if (!el) return;
+    if (isUnset(k.raw)) { el.textContent = '—'; return; }
+    var n = parseFloat(k.raw); if (isNaN(n)) { el.textContent = '—'; return; }
+    el.textContent = n;
+    var pct = Math.min(n / k.target, 1);
+    var bar = document.getElementById(k.barId); if (bar) bar.style.width = (pct * 100) + '%';
+    var chk = document.getElementById(k.chkId);
+    if (chk) {
+      chk.className = 'kpi-chk ' + (n <= k.target ? 'chk-ok' : 'chk-bad');
+      chk.style.color = '';
+      chk.textContent = n <= k.target ? '✓' : '↑';
+    }
+    if (n > k.target) kpiExceeded = true;
+  });
+
+  /* ── Overall health badge ─────────────────────────────────────────── */
+  setOverallHealth(tResult.state, nResult.state, kpiExceeded);
+
+  /* ── Fallback dash ────────────────────────────────────────────────── */
+  document.querySelectorAll('.cell-val, .kpi-num').forEach(function(el) {
+    if (isUnset(el.textContent)) el.textContent = '—';
+  });
+
+  var now = new Date();
+  document.getElementById('ftr-ts').textContent =
+    'Last updated: ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+};
+
+/* SOAR body style bridge */
+onmessage = function(evt) {
+  for (var key in evt.data) {
+    if (Object.prototype.hasOwnProperty.call(evt.data, key)) {
+      document.body.style[key] = evt.data[key];
+    }
+  }
+};
+</script>
+
+</body>
+</html>
