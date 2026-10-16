@@ -592,12 +592,7 @@ class TestWizSecopsBidirectionalSyncJob:
                 _make_mock_alert("alert_1", "wiz_threat_1"),
                 _make_mock_alert("alert_2", "wiz_threat_2"),
             ]
-            case = _make_mock_case(
-                1234,
-                alerts,
-                status=CaseDataStatus.CLOSED,
-                close_reason="REASON_UNSPECIFIED",
-            )
+            case = _make_mock_case(1234, alerts, status=CaseDataStatus.CLOSED, close_reason="REASON_UNSPECIFIED")
             job.soar_job.get_case_closure_details.return_value = [
                 {"caseId": 1234, "reason": secops_reason, "rootCause": "Other"}
             ]
