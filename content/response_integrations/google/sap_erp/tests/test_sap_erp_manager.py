@@ -31,8 +31,21 @@ def test_audience_falls_back_to_raw_value_without_scheme():
     assert manager.audience == "gw-abc.a.run.app"
 
 
-def test_default_timeout():
-    assert SapErpManager(cloud_run_url=BASE).timeout == DEFAULT_TIMEOUT_SECONDS
+def test_defaults():
+    manager = SapErpManager(cloud_run_url=BASE)
+    assert manager.timeout == DEFAULT_TIMEOUT_SECONDS
+    assert manager.verify_ssl is True
+
+
+@patch("google.oauth2.id_token.fetch_id_token", return_value="tok")
+@patch("requests.get")
+@patch("requests.post")
+def test_verify_ssl_false_is_passed_to_requests(mock_post, mock_get, mock_fetch):
+    manager = SapErpManager(cloud_run_url=BASE, verify_ssl=False)
+    manager.execute_function("A", "I", "100", {})
+    manager.ping()
+    assert mock_post.call_args.kwargs["verify"] is False
+    assert mock_get.call_args.kwargs["verify"] is False
 
 
 @patch("google.oauth2.id_token.fetch_id_token", return_value="tok")
@@ -59,6 +72,7 @@ def test_execute_function_posts_envelope(mock_post, mock_fetch):
         },
         headers={"Authorization": "Bearer tok"},
         timeout=12,
+        verify=True,
     )
 
 
@@ -79,6 +93,7 @@ def test_ping_gets_configured_url(mock_get, mock_fetch):
         BASE,
         headers={"Authorization": "Bearer tok"},
         timeout=PING_TIMEOUT_SECONDS,
+        verify=True,
     )
 
 

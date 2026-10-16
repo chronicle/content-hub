@@ -210,3 +210,15 @@ def test_unexpected_status_is_failure(case, manager, make_response, body):
     action._perform_action()
 
     assert_failed(action, f"Unexpected SAP status: {body.get('status')}")
+
+
+@pytest.mark.parametrize("verify_ssl", [True, False])
+def test_init_api_clients_passes_verify_ssl(case, verify_ssl):
+    action = case.action_cls(name=case.name)
+    action.cloud_run_url = "https://gw-abc.a.run.app"
+    action.verify_ssl = verify_ssl
+
+    manager = action._init_api_clients()
+
+    assert manager.cloud_run_url == "https://gw-abc.a.run.app"
+    assert manager.verify_ssl is verify_ssl

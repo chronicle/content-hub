@@ -29,10 +29,16 @@ class SapErpAuthError(Exception):
 class SapErpManager:
     """Manager for SAP ERP interactions."""
 
-    def __init__(self, cloud_run_url: str, timeout: int = DEFAULT_TIMEOUT_SECONDS):
+    def __init__(
+        self,
+        cloud_run_url: str,
+        timeout: int = DEFAULT_TIMEOUT_SECONDS,
+        verify_ssl: bool = True,
+    ):
         # Strip accidental whitespace and trailing slash
         self.cloud_run_url = (cloud_run_url or "").strip().rstrip("/")
         self.timeout = timeout
+        self.verify_ssl = verify_ssl
 
         # Extract root origin (https://<service>.run.app) for Cloud Run OIDC token audience
         parsed = urlsplit(self.cloud_run_url)
@@ -76,6 +82,7 @@ class SapErpManager:
             json=envelope_payload,
             headers=headers,
             timeout=self.timeout,
+            verify=self.verify_ssl,
         )
 
     def ping(self) -> requests.Response:
@@ -85,6 +92,7 @@ class SapErpManager:
             self.cloud_run_url,
             headers=headers,
             timeout=PING_TIMEOUT_SECONDS,
+            verify=self.verify_ssl,
         )
 
     @staticmethod

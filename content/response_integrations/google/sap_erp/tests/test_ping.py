@@ -2,7 +2,7 @@ import pytest
 import requests
 from TIPCommon.base.action import ExecutionState
 
-from sap_erp.actions.ping import PingAction
+from sap_erp.actions.ping import FAILURE_PREFIX, SUCCESS_MESSAGE, PingAction
 from sap_erp.core.sap_erp_manager import SapErpAuthError
 
 
@@ -16,6 +16,9 @@ def build_action(manager):
 def assert_failed(action, message_substring):
     assert action.result_value is False
     assert action.execution_state == ExecutionState.FAILED
+    # mp validate requires the standard Ping failure wording.
+    assert action.output_message.startswith(FAILURE_PREFIX)
+    assert FAILURE_PREFIX.startswith("Failed to connect to the")
     assert message_substring in action.output_message
 
 
@@ -31,7 +34,8 @@ def test_healthy(manager, make_response, status_code):
 
     assert action.result_value is True
     assert action.execution_state == ExecutionState.COMPLETED
-    assert action.output_message == "Successfully connected to SAP ERP gateway!"
+    assert action.output_message == SUCCESS_MESSAGE
+    assert SUCCESS_MESSAGE.startswith("Successfully connected to the")
 
 
 @pytest.mark.parametrize("status_code", [401, 403])
@@ -71,4 +75,4 @@ def test_network_error(manager):
 
     action._perform_action()
 
-    assert_failed(action, "Failed to connect to Cloud Run service: DNS failure")
+    assert_failed(action, "Network error: DNS failure")

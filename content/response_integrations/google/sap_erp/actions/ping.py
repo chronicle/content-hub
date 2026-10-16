@@ -18,6 +18,14 @@ from TIPCommon.extraction import extract_configuration_param
 from ..core.sap_erp_manager import SapErpAuthError, SapErpManager
 
 
+INTEGRATION_DISPLAY_NAME = "SAP ERP"
+SUCCESS_MESSAGE = (
+    f"Successfully connected to the {INTEGRATION_DISPLAY_NAME} gateway "
+    "with the provided connection parameters!"
+)
+FAILURE_PREFIX = f"Failed to connect to the {INTEGRATION_DISPLAY_NAME} gateway!"
+
+
 class PingAction(Action):
     def _extract_action_parameters(self) -> None:
         self.cloud_run_url = (
@@ -30,13 +38,24 @@ class PingAction(Action):
             )
             or ""
         ).strip()
+        self.verify_ssl = extract_configuration_param(
+            siemplify=self.soar_action,
+            provider_name="SapErp",
+            param_name="Verify SSL",
+            input_type=bool,
+            default_value=True,
+            is_mandatory=False,
+            print_value=True,
+        )
 
     def _validate_params(self) -> None:
         if not self.cloud_run_url:
             raise ValueError("Cloud Run Service URL is missing.")
 
     def _init_api_clients(self) -> SapErpManager:
-        return SapErpManager(cloud_run_url=self.cloud_run_url)
+        return SapErpManager(
+            cloud_run_url=self.cloud_run_url, verify_ssl=self.verify_ssl
+        )
 
     def _perform_action(self, _: None = None) -> None:
         self.result_value = False
@@ -48,14 +67,14 @@ class PingAction(Action):
             self.logger.error(f"Authentication token generation failed: {e}")
             self.execution_state = ExecutionState.FAILED
             self.output_message = (
-                "Failed to generate Google Cloud authentication token. "
-                "Verify service account credentials and permissions."
+                f"{FAILURE_PREFIX} Failed to generate Google Cloud authentication "
+                "token. Verify service account credentials and permissions."
             )
             return
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Network error connecting to Cloud Run service: {e}")
             self.execution_state = ExecutionState.FAILED
-            self.output_message = f"Failed to connect to Cloud Run service: {e}"
+            self.output_message = f"{FAILURE_PREFIX} Network error: {e}"
             return
 
         if response.status_code in (401, 403):
@@ -64,7 +83,8 @@ class PingAction(Action):
             )
             self.execution_state = ExecutionState.FAILED
             self.output_message = (
-                f"Authentication to Cloud Run failed (HTTP {response.status_code}). "
+                f"{FAILURE_PREFIX} Authentication to Cloud Run failed "
+                f"(HTTP {response.status_code}). "
                 "Verify the caller has roles/run.invoker on the service."
             )
             return
@@ -78,14 +98,15 @@ class PingAction(Action):
             )
             self.execution_state = ExecutionState.FAILED
             self.output_message = (
-                f"Cloud Run service returned unexpected HTTP {response.status_code}: {error_detail}"
+                f"{FAILURE_PREFIX} Cloud Run service returned unexpected "
+                f"HTTP {response.status_code}: {error_detail}"
             )
             return
 
         self.logger.info("Successfully pinged SAP ERP Cloud Run service.")
         self.result_value = True
         self.execution_state = ExecutionState.COMPLETED
-        self.output_message = "Successfully connected to SAP ERP gateway!"
+        self.output_message = SUCCESS_MESSAGE
 
 
 def main() -> None:

@@ -30,6 +30,15 @@ class DeleteUserSessionAction(Action):
             )
             or ""
         ).strip()
+        self.verify_ssl = extract_configuration_param(
+            siemplify=self.soar_action,
+            provider_name="SapErp",
+            param_name="Verify SSL",
+            input_type=bool,
+            default_value=True,
+            is_mandatory=False,
+            print_value=True,
+        )
         self.sap_client_number = str(
             extract_action_param(
                 siemplify=self.soar_action,
@@ -69,7 +78,9 @@ class DeleteUserSessionAction(Action):
             raise ValueError("SAP Username is missing.")
 
     def _init_api_clients(self) -> SapErpManager:
-        return SapErpManager(cloud_run_url=self.cloud_run_url)
+        return SapErpManager(
+            cloud_run_url=self.cloud_run_url, verify_ssl=self.verify_ssl
+        )
 
     def _perform_action(self, _: None = None) -> None:
         self.result_value = False
