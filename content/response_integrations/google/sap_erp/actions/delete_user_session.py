@@ -12,13 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import requests
 from TIPCommon.base.action import Action, ExecutionState
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
+
 from ..core.sap_erp_manager import SapErpAuthError, SapErpManager
 
 
 class DeleteUserSessionAction(Action):
+    """Terminate a user's active SAP sessions via TH_DELETE_USER."""
+
     def _extract_action_parameters(self) -> None:
         self.cloud_run_url = (
             extract_configuration_param(
@@ -68,14 +73,16 @@ class DeleteUserSessionAction(Action):
         ).strip()
 
     def _validate_params(self) -> None:
-        if not self.cloud_run_url:
-            raise ValueError("Cloud Run Service URL is missing.")
-        if not self.sap_client_number:
-            raise ValueError("SAP Client Number is missing.")
-        if not self.sap_instance_name:
-            raise ValueError("SAP Instance Name is missing.")
-        if not self.sap_username:
-            raise ValueError("SAP Username is missing.")
+        required = {
+            "Cloud Run Service URL": self.cloud_run_url,
+            "SAP Client Number": self.sap_client_number,
+            "SAP Instance Name": self.sap_instance_name,
+            "SAP Username": self.sap_username,
+        }
+        for name, value in required.items():
+            if not value:
+                msg = f"{name} is missing."
+                raise ValueError(msg)
 
     def _init_api_clients(self) -> SapErpManager:
         return SapErpManager(
@@ -92,17 +99,18 @@ class DeleteUserSessionAction(Action):
                 sap_instance=self.sap_instance_name,
                 sap_client=self.sap_client_number,
                 payload={
+                    # TH_DELETE_USER takes CLIENT as an import parameter.
                     "username": self.sap_username,
                     "client": self.sap_client_number,
                 },
             )
         except SapErpAuthError as e:
-            self.logger.error(f"Authentication error calling SAP RFC Gateway: {e}")
+            self.logger.exception("Authentication error calling SAP RFC Gateway")
             self.execution_state = ExecutionState.FAILED
             self.output_message = f"Authentication error: {e}"
             return
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"Network error calling SAP RFC Gateway: {e}")
+            self.logger.exception("Network error calling SAP RFC Gateway")
             self.execution_state = ExecutionState.FAILED
             self.output_message = f"Failed to communicate with SAP RFC Gateway: {e}"
             return
@@ -110,7 +118,8 @@ class DeleteUserSessionAction(Action):
         if not response.ok:
             error_detail = manager.extract_error_detail(response)
             self.logger.error(
-                f"Request failed with status {response.status_code}. Error: {error_detail}"
+                f"Request failed with status {response.status_code}. "
+                f"Error: {error_detail}"
             )
             self.execution_state = ExecutionState.FAILED
             self.output_message = (
@@ -121,7 +130,7 @@ class DeleteUserSessionAction(Action):
         try:
             response_json = response.json()
         except ValueError:
-            self.logger.error(f"Received non-JSON response. Text: {response.text}")
+            self.logger.exception(f"Received non-JSON response. Text: {response.text}")
             self.execution_state = ExecutionState.FAILED
             self.output_message = (
                 f"Received unexpected non-JSON response: {response.text}"
@@ -143,7 +152,8 @@ class DeleteUserSessionAction(Action):
         else:
             error_messages = [
                 ret.get("message", "Unknown error")
-                for ret in response_json.get("return", [])
+                # "return" may be present but null.
+                for ret in (response_json.get("return") or [])
                 if isinstance(ret, dict)
             ]
             error_summary = (
@@ -160,6 +170,7 @@ class DeleteUserSessionAction(Action):
 
 
 def main() -> None:
+    """Run the Delete User Session action."""
     DeleteUserSessionAction(name="Delete User Session").run()
 
 

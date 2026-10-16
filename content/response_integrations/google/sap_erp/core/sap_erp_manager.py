@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Optional
+from __future__ import annotations
+
+from typing import Any
 from urllib.parse import urlsplit
+
 import google.auth.transport.requests
 import google.oauth2.id_token
 import requests
@@ -27,29 +30,31 @@ class SapErpAuthError(Exception):
 
 
 class SapErpManager:
-    """Manager for SAP ERP interactions."""
+    """Manager for SAP ERP interactions via the SAP RFC Gateway on Cloud Run."""
 
     def __init__(
         self,
         cloud_run_url: str,
+        *,
         timeout: int = DEFAULT_TIMEOUT_SECONDS,
         verify_ssl: bool = True,
-    ):
-        # Strip accidental whitespace and trailing slash
+    ) -> None:
+        # Strip accidental whitespace and trailing slash.
         self.cloud_run_url = (cloud_run_url or "").strip().rstrip("/")
         self.timeout = timeout
         self.verify_ssl = verify_ssl
 
-        # Extract root origin (https://<service>.run.app) for Cloud Run OIDC token audience
+        # Cloud Run ID tokens must be minted for the service origin
+        # (https://<service>.run.app), not for a path under it.
         parsed = urlsplit(self.cloud_run_url)
         self.audience = (
             f"{parsed.scheme}://{parsed.netloc}"
             if parsed.scheme and parsed.netloc
             else self.cloud_run_url
         )
-        self._id_token: Optional[str] = None
+        self._id_token: str | None = None
 
-    def _get_auth_headers(self) -> Dict[str, str]:
+    def _get_auth_headers(self) -> dict[str, str]:
         if not self._id_token:
             try:
                 auth_req = google.auth.transport.requests.Request()
@@ -57,9 +62,8 @@ class SapErpManager:
                     auth_req, self.audience
                 )
             except Exception as e:
-                raise SapErpAuthError(
-                    f"Failed to generate Google Cloud authentication token: {e}"
-                ) from e
+                msg = f"Failed to generate Google Cloud authentication token: {e}"
+                raise SapErpAuthError(msg) from e
         return {"Authorization": f"Bearer {self._id_token}"}
 
     def execute_function(
@@ -67,9 +71,21 @@ class SapErpManager:
         function_id: str,
         sap_instance: str,
         sap_client: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
     ) -> requests.Response:
-        """Executes an SAP function via the Cloud Run proxy."""
+        """Execute an SAP RFC function through the Cloud Run gateway.
+
+        Args:
+            function_id: Gateway function ID, e.g. ``USER_LOCK``.
+            sap_instance: Name of the SAP instance configured in the gateway.
+            sap_client: SAP client number.
+            payload: Function-specific parameters.
+
+        Returns:
+            The raw HTTP response from the gateway.
+
+
+        """
         envelope_payload = {
             "functionId": function_id,
             "sap_instance": sap_instance,
@@ -86,7 +102,13 @@ class SapErpManager:
         )
 
     def ping(self) -> requests.Response:
-        """Pings the Cloud Run proxy to test connectivity."""
+        """Send an authenticated GET to the gateway to test connectivity.
+
+        Returns:
+            The raw HTTP response from the gateway.
+
+
+        """
         headers = self._get_auth_headers()
         return requests.get(
             self.cloud_run_url,
@@ -97,7 +119,16 @@ class SapErpManager:
 
     @staticmethod
     def extract_error_detail(response: requests.Response) -> str:
-        """Extracts structured error text from a GatewayHttpHandler error response."""
+        """Extract readable error text from a gateway error response.
+
+        Args:
+            response: The gateway HTTP response.
+
+        Returns:
+            The ``error`` field of a JSON body if present, otherwise the raw
+            body text, otherwise ``HTTP <status>``.
+
+        """
         try:
             body = response.json()
             if isinstance(body, dict) and body.get("error"):

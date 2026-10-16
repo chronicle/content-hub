@@ -15,10 +15,12 @@
 from __future__ import annotations
 
 import importlib
-import pathlib
+from typing import TYPE_CHECKING
 
 from .. import common
 
+if TYPE_CHECKING:
+    import pathlib
 
 VALID_SUFFIXES = (".py",)
 
