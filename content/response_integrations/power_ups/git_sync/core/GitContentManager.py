@@ -22,6 +22,8 @@ import zipfile
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
 
+from TIPCommon.utils import platform_supports_1p_api
+
 from .definitions import (
     Connector,
     File,
@@ -32,8 +34,11 @@ from .definitions import (
     VisualFamily,
     Workflow,
 )
+from .PlaybookYAMLConverter import PlaybookYAMLConverter
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from .GitManager import Git
     from .SiemplifyApiClient import SiemplifyApiClient
 
@@ -66,9 +71,15 @@ SLA_DEFINITIONS_FILE = f"{SETTINGS_PATH}/slaDefinitions.json"
 
 
 class GitContentManager:
-    def __init__(self, git: Git, api: SiemplifyApiClient):
+    def __init__(
+        self,
+        git: Git,
+        api: SiemplifyApiClient,
+        deconstruct_playbooks: bool = True,
+    ) -> None:
         self.git = git
         self.api = api
+        self.deconstruct_playbooks = deconstruct_playbooks
         self._metadata = None
 
     @property
@@ -130,7 +141,8 @@ class GitContentManager:
         return Integration(
             {
                 "identifier": integration_name,
-                "isCustomIntegration": definition.get("IsCustom") or definition.get("Custom", False),
+                "isCustomIntegration": definition.get("IsCustom")
+                or definition.get("Custom", False),
                 "Staging": definition.get("Staging", "False"),
             },
             zip_buffer,
@@ -146,6 +158,68 @@ class GitContentManager:
         except KeyError:
             return []
 
+    def _group_deconstructed_files(self, base_path: str) -> dict[str, dict[str, bytes]]:
+        """Group files under base_path by playbook directory containing definition.yaml."""
+        try:
+            all_files = self.git.get_file_objects_from_path(base_path)
+        except KeyError:
+            return {}
+
+        definition_paths: dict[str, dict[str, bytes]] = {}
+        for f in all_files:
+            p = pathlib.Path(f.path)
+            if p.name == "definition.yaml":
+                playbook_dir_path = str(p.parent)
+                definition_paths[playbook_dir_path] = {}
+
+        for f in all_files:
+            p = pathlib.Path(f.path)
+            for pb_dir in definition_paths:
+                pb_path = pathlib.Path(pb_dir)
+                if p.is_relative_to(pb_path) and p != pb_path:
+                    rel_path = str(p.relative_to(pb_path))
+                    definition_paths[pb_dir][rel_path] = f.content
+                    break
+        return definition_paths
+
+    def _reconstruct_workflow_from_files(
+        self, pb_dir: str, files_dict: dict[str, bytes], is_1p: bool
+    ) -> Workflow:
+        """Reconstruct a single Workflow from a dictionary of file contents."""
+        playbook_dict = PlaybookYAMLConverter.reconstruct_playbook(
+            files_dict, is_1p=is_1p
+        )
+        parts = pb_dir.split("/")
+        if len(parts) >= 2:
+            category_name = parts[-2]
+            playbook_dict["categoryName"] = category_name
+            if "Definition" in playbook_dict:
+                playbook_dict["Definition"]["categoryName"] = category_name
+        return Workflow(playbook_dict)
+
+    def _reconstruct_deconstructed_workflows(self, base_path: str) -> list[Workflow]:
+        """Find and reconstruct all deconstructed playbooks/blocks under base_path.
+
+        Args:
+            base_path: Base directory path to search for deconstructed workflows.
+
+        Returns:
+            List of reconstructed Workflow objects.
+        """
+        definition_paths = self._group_deconstructed_files(base_path)
+        is_1p = platform_supports_1p_api()
+        workflows: list[Workflow] = []
+        for pb_dir, files_dict in definition_paths.items():
+            try:
+                workflows.append(
+                    self._reconstruct_workflow_from_files(pb_dir, files_dict, is_1p)
+                )
+            except Exception as e:
+                self.git.logger.exception(
+                    f"Failed to reconstruct deconstructed playbook in {pb_dir}: {e}"
+                )
+        return workflows
+
     def get_playbook(self, playbook_name: str) -> Workflow | None:
         """Reads a playbook or block from the repo object store
 
@@ -155,6 +229,13 @@ class GitContentManager:
         Returns: A Workflow instance
 
         """
+        for wf in self._reconstruct_deconstructed_workflows(PLAYBOOKS_PATH):
+            if wf.name == playbook_name:
+                return wf
+        for wf in self._reconstruct_deconstructed_workflows(BLOCKS_PATH):
+            if wf.name == playbook_name:
+                return wf
+
         try:
             for playbook in self.git.get_file_objects_from_path(PLAYBOOKS_PATH):
                 if pathlib.Path(playbook.path).name == f"{playbook_name}.json":
@@ -164,17 +245,28 @@ class GitContentManager:
                     return Workflow(json.loads(block.content))
         except KeyError:
             return None
+        return None
 
-    def get_playbooks(self) -> list[Workflow]:
+    def get_playbooks(self) -> Iterator[Workflow]:
+        """Yield all workflows (playbooks and blocks) from the repository."""
+        for wf in self._reconstruct_deconstructed_workflows(PLAYBOOKS_PATH):
+            yield wf
+        for wf in self._reconstruct_deconstructed_workflows(BLOCKS_PATH):
+            yield wf
+
         try:
             for playbook in self.git.get_file_objects_from_path(PLAYBOOKS_PATH):
                 if pathlib.Path(playbook.path).suffix == ".json":
                     yield Workflow(json.loads(playbook.content))
+        except KeyError:
+            pass
+
+        try:
             for block in self.git.get_file_objects_from_path(BLOCKS_PATH):
                 if block.path.endswith(".json"):
                     yield Workflow(json.loads(block.content))
         except KeyError:
-            return []
+            pass
 
     def get_connector(self, connector_name: str) -> Connector | None:
         """Reads a connector instance from the repo
@@ -486,11 +578,26 @@ class GitContentManager:
         content.generate_readme(
             self.metadata.get_readme_addon(content_type, content_name),
         )
-        self.git.update_objects(content.iter_files(), base_path=path)
+        if self.deconstruct_playbooks and content_type in ("Playbook", "Block"):
+            existing_files: dict[str, bytes] = {}
+            try:
+                existing_files = {
+                    pathlib.Path(f.path).name: f.content
+                    for f in self.git.get_file_objects_from_path(path)
+                }
+            except KeyError:
+                pass
+            deconstructed_files = PlaybookYAMLConverter.deconstruct_playbook(
+                content.raw_data, existing_files
+            )
+            deconstructed_files.append(File("README.md", content.readme))
+            self.git.update_objects(deconstructed_files, base_path=path)
+        else:
+            self.git.update_objects(content.iter_files(), base_path=path)
 
     def _push_file(self, path: str, content) -> None:
         self.git.update_objects([File(path, self._json_encoder(content))])
 
     @staticmethod
     def _json_encoder(d: dict) -> str:
-        return json.dumps(d, indent=4)
+        return json.dumps(d, indent=4, sort_keys=True)
