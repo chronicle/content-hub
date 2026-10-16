@@ -35,6 +35,7 @@ from .constants import (
     INTEGRATION_README_TEMPLATE,
     JOB_README,
     MAPPING_README,
+    MAX_MAPPING_RULES_FILE_SIZE_BYTES,
     PLAYBOOK_README_TEMPLATE,
     STEP_TYPE,
     TRIGGER_TYPES,
@@ -81,7 +82,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from .SiemplifyApiClient import SiemplifyApiClient
-    from TIPCommon.types import ChronicleSOAR
+    from TIPCommon.types import ChronicleSOAR, SingleJson
 
 
 class File:
@@ -246,15 +247,48 @@ class Mapping(Content):
                     rule["modificationTimeUnixTimeInMs"] = 0
 
     def iter_files(self) -> Iterator[File]:
+        """Yields repository files representing the ontology mapping.
+
+        Yields:
+            File objects for the mapping README, records, and rules.
+        """
         yield File("README.md", self.readme)
         yield File(
             f"{self.integrationName}_Records.json",
             json.dumps(self.records, indent=4),
         )
-        yield File(
-            f"{self.integrationName}_Rules.json",
-            json.dumps(self.rules, indent=4),
-        )
+        yield from self._iter_rule_files()
+
+    def _iter_rule_files(self) -> Iterator[File]:
+        serialized_rules: str = json.dumps(self.rules, indent=4)
+        total_bytes: int = len(serialized_rules.encode("utf-8"))
+        if total_bytes <= MAX_MAPPING_RULES_FILE_SIZE_BYTES or len(self.rules) <= 1:
+            yield File(f"{self.integrationName}_Rules.json", serialized_rules)
+            return
+
+        for part_index, chunk_json in enumerate(self._split_rules_into_chunks(self.rules, total_bytes), start=1):
+            file_name: str = (
+                f"{self.integrationName}_Rules.json"
+                if part_index == 1
+                else f"{self.integrationName}_Rules_part_{part_index}.json"
+            )
+            yield File(file_name, chunk_json)
+
+    def _split_rules_into_chunks(self, rules: list[SingleJson], total_bytes: int) -> Iterator[str]:
+        estimated_parts: int = (total_bytes // MAX_MAPPING_RULES_FILE_SIZE_BYTES) + 1
+        chunk_size: int = max(1, (len(rules) + estimated_parts - 1) // estimated_parts)
+        for index in range(0, len(rules), chunk_size):
+            yield from self._serialize_rule_slice(rules[index : index + chunk_size])
+
+    def _serialize_rule_slice(self, rule_slice: list[SingleJson]) -> Iterator[str]:
+        serialized: str = json.dumps(rule_slice, indent=4)
+        if len(serialized.encode("utf-8")) <= MAX_MAPPING_RULES_FILE_SIZE_BYTES or len(rule_slice) <= 1:
+            yield serialized
+            return
+
+        midpoint: int = len(rule_slice) // 2
+        yield from self._serialize_rule_slice(rule_slice[:midpoint])
+        yield from self._serialize_rule_slice(rule_slice[midpoint:])
 
     def generate_readme(self, additional_info: str = None) -> None:
         template = MAPPING_README
