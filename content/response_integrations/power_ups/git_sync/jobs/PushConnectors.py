@@ -82,12 +82,7 @@ def main():
                     ]
                     visual_families = set([x.get("familyName") for x in records])
                     if include_mappings:
-                        rules: list[SingleJson] = (
-                            gitsync.api.get_mapping_rules_for_records(
-                                records,
-                                integration_name,
-                            )
-                        )
+                        rules: list[SingleJson] = gitsync.api.get_mapping_rules_for_records(records, integration_name)
                         if not records and not rules:
                             siemplify.LOGGER.info(
                                 f"{integration_name} mappings don't exist. Skipping",
