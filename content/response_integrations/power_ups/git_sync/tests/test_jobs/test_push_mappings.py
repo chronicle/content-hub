@@ -80,11 +80,7 @@ class _MockGit:
         pass
 
 
-def _install_mock_git(
-    monkeypatch: pytest.MonkeyPatch,
-    *,
-    include_base_path: bool = False,
-) -> dict[str, bytes]:
+def _install_mock_git(monkeypatch: pytest.MonkeyPatch, *, include_base_path: bool = False) -> dict[str, bytes]:
     store: dict[str, bytes] = {"GitSync.json": GITSYNC_METADATA_BYTES}
 
     class _BoundMockGit(_MockGit):
@@ -113,12 +109,7 @@ def _make_record(
     }
 
 
-def _make_legacy_rule_response(
-    rule_id: int,
-    source: str,
-    product: str,
-    event_name: str | None,
-) -> MockResponse:
+def _make_legacy_rule_response(rule_id: int, source: str, product: str, event_name: str | None) -> MockResponse:
     field_entry: SingleJson = {
         "creationTimeUnixTimeInMs": 100,
         "modificationTimeUnixTimeInMs": 100,
@@ -156,6 +147,17 @@ def _bind_routes(
             if substr in route_pattern:
                 sdk_session.routes[method][route_pattern] = handler
                 break
+
+
+def _make_add_rules_collector(installed_events: list[str]) -> Callable[[MockRequest], MockResponse]:
+    def _handler(request: MockRequest) -> MockResponse:
+        for field in get_request_payload(request):
+            event_name: str | None = (field.get("mappingRule") or {}).get("eventName")
+            if event_name:
+                installed_events.append(event_name)
+        return MockResponse(content={}, status_code=200)
+
+    return _handler
 
 
 @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
@@ -225,11 +227,7 @@ def test_push_mappings_chronicle_1p_api_concurrent_rules(
             return _make_1p_rule_response(21, "Security Command Center", "SCC", "Event_1P_A")
         return _make_1p_rule_response(22, "UnrelatedSource", "Other", "Event_1P_B")
 
-    _bind_routes(
-        sdk_session,
-        "GET",
-        {"mappingRules": mock_get_1p_rules, "ontologyRecords": mock_get_1p_records},
-    )
+    _bind_routes(sdk_session, "GET", {"mappingRules": mock_get_1p_rules, "ontologyRecords": mock_get_1p_records})
     updated_files: dict[str, bytes] = _install_mock_git(monkeypatch)
 
     PushMappings.main()
@@ -265,20 +263,13 @@ def test_push_and_pull_mappings_large_rules_chunking(
         event_name: str | None = get_request_payload(request).get("eventName")
         return _make_legacy_rule_response(11, "Security Command Center", "SCC", event_name)
 
-    def mock_add_rules(request: MockRequest) -> MockResponse:
-        for field in get_request_payload(request):
-            event_name: str | None = (field.get("mappingRule") or {}).get("eventName")
-            if event_name:
-                installed_rule_events.append(event_name)
-        return MockResponse(content={}, status_code=200)
-
     _bind_routes(
         sdk_session,
         "POST",
         {
             "GetOntologyStatusRecords": mock_get_records,
             "GetMappingRulesForSettings": mock_get_rules,
-            "AddOrUpdateMappingRules": mock_add_rules,
+            "AddOrUpdateMappingRules": _make_add_rules_collector(installed_rule_events),
         },
     )
     repo_files: dict[str, bytes] = _install_mock_git(monkeypatch, include_base_path=True)
