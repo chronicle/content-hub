@@ -147,7 +147,7 @@ class FederationSyncManager:
         """
         url = self.sync_endpoint + "/legacyFederatedCases:legacyBatchPatchFederatedCases"
         payload = json.dumps({"cases": cases_payload})
-        header = {"CLIENT-ADDRESS": os.getenv("CLIENT_ADDRESS")}
+        header = {"REMOTE-PLATFORM-BACKSTORY-REDIRECT": os.getenv("CLIENT_ADDRESS")}
         return self.http_client.request("POST", url, data=payload, headers=header)
 
     def _get_credentials_using_p4sa(self) -> None:
