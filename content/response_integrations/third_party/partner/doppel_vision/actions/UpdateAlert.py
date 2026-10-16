@@ -4,7 +4,14 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.DoppelManager import DoppelManager
+from ..core.config import create_manager_from_siemplify
+
+
+def _clean(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 @output_handler
@@ -12,66 +19,50 @@ def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = "Update Alert Action"
 
-    # Extract parameters
-    api_key = siemplify.extract_configuration_param(
-        provider_name="DoppelVision",
-        param_name="API Key",
+    entity = _clean(siemplify.extract_action_param(param_name="Entity", default_value=None))
+    alert_id = _clean(siemplify.extract_action_param(param_name="Alert_ID", default_value=None))
+    queue_state = _clean(
+        siemplify.extract_action_param(
+            param_name="Queue_State",
+        ),
     )
-    user_api_key = siemplify.extract_configuration_param(
-        provider_name="DoppelVision",
-        param_name="User API Key",
+    entity_state = _clean(
+        siemplify.extract_action_param(
+            param_name="Entity_State",
+        ),
     )
-    org_code = siemplify.extract_configuration_param(
-        provider_name="DoppelVision",
-        param_name="Organization Code",
-    )
-    entity = siemplify.extract_action_param(param_name="Entity", default_value=None)
-    alert_id = siemplify.extract_action_param(param_name="Alert_ID", default_value=None)
-    queue_state = siemplify.extract_action_param(
-        param_name="Queue_State",
-        is_mandatory=True,
-    )
-    entity_state = siemplify.extract_action_param(
-        param_name="Entity_State",
-        is_mandatory=True,
-    )
+    comment = _clean(siemplify.extract_action_param(param_name="Comment", default_value=None))
 
-    # Instantiate the manager
-    manager = DoppelManager(api_key=api_key, user_api_key=user_api_key, org_code=org_code)
-
-    # Initialize action result values
     status = EXECUTION_STATE_COMPLETED
     output_message = "Alert updated successfully."
     result_value = True
 
     try:
-        # Validate parameters
         if entity and alert_id:
             raise ValueError(
                 "Only one of 'Entity' or 'Alert_ID' can be provided, not both.",
             )
         if not entity and not alert_id:
             raise ValueError("Either 'Entity' or 'Alert_ID' must be provided.")
+        if not queue_state and not entity_state and not comment:
+            raise ValueError(
+                "At least one of Queue_State, Entity_State, or Comment must be provided.",
+            )
 
-        # Perform the update_alert action
+        manager = create_manager_from_siemplify(siemplify)
         updated_alert = manager.update_alert(
             queue_state=queue_state,
             entity_state=entity_state,
             entity=entity,
             alert_id=alert_id,
+            comment=comment,
         )
-        if updated_alert:
-            siemplify.result.add_result_json(
-                updated_alert,
-            )  # Store updated alert in the action result JSON
-        else:
-            raise Exception("Empty response or update failed.")
+        siemplify.result.add_result_json(updated_alert)
     except Exception as e:
         output_message = f"Failed to update alert: {e!s}"
         status = EXECUTION_STATE_FAILED
         result_value = False
 
-    # Log results and complete the action
     siemplify.LOGGER.info(
         f"status: {status}\nresult_value: {result_value}\noutput_message: {output_message}",
     )

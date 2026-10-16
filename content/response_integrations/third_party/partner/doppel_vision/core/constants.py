@@ -1,0 +1,27 @@
+from __future__ import annotations
+
+INTEGRATION_NAME = "DoppelVision"
+
+API_HOST = "https://api.doppel.com"
+OAUTH_TOKEN_URL = f"{API_HOST}/oauth/token"
+OAUTH_AUDIENCE = "doppel-external"
+DOPPEL_CLIENT_HEADER = "doppel-google-secops/8.0"
+
+API_VERSION_V1 = "v1"
+API_VERSION_V2 = "v2"
+SUPPORTED_API_VERSIONS = (API_VERSION_V1, API_VERSION_V2)
+
+DEFAULT_TOKEN_EXPIRES_IN_SECONDS = 86400
+TOKEN_EXPIRY_BUFFER_SECONDS = 300
+HTTP_TIMEOUT_SECONDS = 30
+MAX_HTTP_RETRIES = 3
+
+PARAM_API_VERSION = "API Version"
+PARAM_API_KEY = "API Key"
+PARAM_USER_API_KEY = "User API Key"
+PARAM_ORG_CODE = "Organization Code"
+PARAM_CLIENT_ID = "Client ID"
+PARAM_CLIENT_SECRET = "Client Secret"
+
+TOKEN_CACHE_PROPERTY_KEY = "doppel_oauth_token"
+GLOBAL_CONTEXT_SCOPE = 0
