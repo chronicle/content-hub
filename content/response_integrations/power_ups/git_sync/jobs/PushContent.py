@@ -242,12 +242,7 @@ def main():
                     records = [x for x in all_records if x["source"] == integration]
                     if not records:
                         continue
-                    rules: list[SingleJson] = (
-                        gitsync.api.get_mapping_rules_for_records(
-                            records,
-                            integration,
-                        )
-                    )
+                    rules: list[SingleJson] = gitsync.api.get_mapping_rules_for_records(records, integration)
 
                     gitsync.content.push_mapping(Mapping(integration, records, rules))
 

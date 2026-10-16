@@ -22,8 +22,6 @@ import zipfile
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
 
-from TIPCommon.types import SingleJson
-
 from .constants import MAX_MAPPING_RULE_PARTS
 from .definitions import (
     Connector,
@@ -37,6 +35,8 @@ from .definitions import (
 )
 
 if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
     from .GitManager import Git
     from .SiemplifyApiClient import SiemplifyApiClient
 
@@ -233,7 +233,7 @@ class GitContentManager:
             A Mapping object, or None if the mappings do not exist.
         """
         try:
-            records = json.loads(
+            records: list[SingleJson] = json.loads(
                 self.git.get_file_contents_from_path(
                     f"{MAPPINGS_PATH}/{source_name}/{source_name}_Records.json",
                 ),
@@ -243,25 +243,16 @@ class GitContentManager:
         except KeyError:
             return None
 
-    def _get_mapping_rules_from_repo(
-        self,
-        source_name: str,
-    ) -> list[SingleJson]:
-        base_rules_path: str = (
-            f"{MAPPINGS_PATH}/{source_name}/{source_name}_Rules.json"
-        )
-        rules: list[SingleJson] = list(
-            json.loads(self.git.get_file_contents_from_path(base_rules_path)),
-        )
+    def _get_mapping_rules_from_repo(self, source_name: str) -> list[SingleJson]:
+        base_rules_path: str = f"{MAPPINGS_PATH}/{source_name}/{source_name}_Rules.json"
+        rules: list[SingleJson] = list(json.loads(self.git.get_file_contents_from_path(base_rules_path)))
         for part_index in range(2, MAX_MAPPING_RULE_PARTS + 1):
             part_path: str = (
                 f"{MAPPINGS_PATH}/{source_name}/"
                 f"{source_name}_Rules_part_{part_index}.json"
             )
             try:
-                part_rules: list[SingleJson] = json.loads(
-                    self.git.get_file_contents_from_path(part_path),
-                )
+                part_rules: list[SingleJson] = json.loads(self.git.get_file_contents_from_path(part_path))
             except KeyError:
                 break
             rules.extend(part_rules)

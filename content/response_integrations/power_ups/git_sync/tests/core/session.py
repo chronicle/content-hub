@@ -49,42 +49,27 @@ class GitSyncMockSession(MockSession[MockRequest, MockResponse, GitSyncProduct])
 
     @router.post(r".*/ontology/GetOntologyStatusRecords")
     def get_ontology_status_records(self, _: MockRequest) -> MockResponse:
-        return MockResponse(
-            content={"objectsList": [], "metadata": {"totalNumberOfPages": 1}},
-            status_code=200,
-        )
+        return MockResponse(content={"objectsList": [], "metadata": {"totalNumberOfPages": 1}}, status_code=200)
 
     @router.post(r".*/ontology/GetMappingRulesForSettings")
     def get_mapping_rules_for_settings(self, _: MockRequest) -> MockResponse:
-        return MockResponse(
-            content={"familyFields": [], "systemFields": []},
-            status_code=200,
-        )
+        return MockResponse(content={"familyFields": [], "systemFields": []}, status_code=200)
 
     @router.post(r".*/ontology/AddOrUpdateMappingRules")
     def add_or_update_mapping_rules(self, _: MockRequest) -> MockResponse:
         return MockResponse(content={}, status_code=200)
 
     @router.post(r".*/ontology/AddOrUpdateProductToVisualizationFamilyRecord")
-    def add_or_update_product_to_visualization_family_record(
-        self,
-        _: MockRequest,
-    ) -> MockResponse:
+    def add_or_update_product_to_visualization_family_record(self, _: MockRequest) -> MockResponse:
         return MockResponse(content={}, status_code=200)
 
     @router.get(r".*/ontologyRecords(\?.*)?$")
     def get_1p_ontology_records(self, _: MockRequest) -> MockResponse:
-        return MockResponse(
-            content={"ontologyRecords": []},
-            status_code=200,
-        )
+        return MockResponse(content={"ontologyRecords": []}, status_code=200)
 
     @router.get(r".*/ontologyRecords/[^/]+/mappingRules$")
     def get_1p_mapping_rules(self, _: MockRequest) -> MockResponse:
-        return MockResponse(
-            content={"mappingRules": []},
-            status_code=200,
-        )
+        return MockResponse(content={"mappingRules": []}, status_code=200)
 
     @router.post(r".*/settings/GetEnvironmentNames")
     def get_environment_names(self, _: MockRequest) -> MockResponse:

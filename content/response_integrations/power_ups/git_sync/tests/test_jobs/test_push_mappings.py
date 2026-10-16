@@ -14,23 +14,25 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-import pytest
 from integration_testing.common import get_request_payload
-from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.set_meta import set_metadata
-from TIPCommon.types import SingleJson
 
 from ...jobs import PullMappings, PushMappings
 from ..common import CONFIG_PATH
-from ..core.session import GitSyncMockSession
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
+    import pytest
+    from integration_testing.request import MockRequest
+    from TIPCommon.types import SingleJson
+
     from ...core.definitions import File
+    from ..core.session import GitSyncMockSession
 
 DEFAULT_PARAMETERS: SingleJson = {
     "Repo URL": "https://github.com/example/repo.git",
@@ -43,156 +45,156 @@ DEFAULT_PARAMETERS: SingleJson = {
     "Commit Author": "Test Author <test@example.com>",
 }
 
+GITSYNC_METADATA_BYTES: bytes = (
+    b'{"system_version": "6.1.38.77", "settings": {"update_root_readme": false}}'
+)
+
+
+class _MockGit:
+    """In-memory Git test double capturing pushed repository files."""
+
+    files: dict[str, bytes]
+    include_base_path: bool = False
+
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        pass
+
+    def get_file_contents_from_path(self, path: str) -> bytes:
+        if path in self.files:
+            return self.files[path]
+        raise KeyError(f"File not found: {path}")
+
+    def get_file_objects_from_path(self, path: str) -> list[File]:
+        _ = path
+        return []
+
+    def update_objects(self, files: Iterable[File], base_path: str = "") -> None:
+        prefix: str = f"{base_path}/" if (self.include_base_path and base_path) else ""
+        for file_obj in files:
+            self.files[f"{prefix}{file_obj.path}"] = file_obj.content
+
+    def commit_and_push(self, message: str) -> None:
+        _ = message
+
+    def cleanup(self) -> None:
+        pass
+
+
+def _install_mock_git(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    include_base_path: bool = False,
+) -> dict[str, bytes]:
+    store: dict[str, bytes] = {"GitSync.json": GITSYNC_METADATA_BYTES}
+
+    class _BoundMockGit(_MockGit):
+        files = store
+
+    _BoundMockGit.include_base_path = include_base_path
+    monkeypatch.setattr("git_sync.core.GitSyncManager.Git", _BoundMockGit)
+    return store
+
+
+def _make_record(
+    record_id: int,
+    source: str,
+    product: str,
+    event_name: str,
+    example_fields: list[SingleJson] | None = None,
+) -> SingleJson:
+    return {
+        "id": record_id,
+        "source": source,
+        "product": product,
+        "eventName": event_name,
+        "familyName": "Network",
+        "familyId": 10,
+        "exampleEventFields": example_fields if example_fields is not None else [],
+    }
+
+
+def _make_legacy_rule_response(
+    rule_id: int,
+    source: str,
+    product: str,
+    event_name: str | None,
+) -> MockResponse:
+    field_entry: SingleJson = {
+        "creationTimeUnixTimeInMs": 100,
+        "modificationTimeUnixTimeInMs": 100,
+        "mappingRule": {
+            "id": rule_id,
+            "source": source,
+            "product": product,
+            "eventName": event_name,
+            "creationTimeUnixTimeInMs": 100,
+            "modificationTimeUnixTimeInMs": 100,
+        },
+    }
+    return MockResponse(content={"familyFields": [field_entry], "systemFields": []}, status_code=200)
+
+
+def _make_1p_rule_response(rule_id: int, source: str, product: str, event_name: str) -> MockResponse:
+    rule_entry: SingleJson = {
+        "id": rule_id,
+        "source": source,
+        "product": product,
+        "eventName": event_name,
+        "creationTimeUnixTimeInMs": 100,
+        "modificationTimeUnixTimeInMs": 100,
+    }
+    return MockResponse(content={"mappingRules": [rule_entry]}, status_code=200)
+
+
+def _bind_routes(
+    sdk_session: GitSyncMockSession,
+    method: str,
+    overrides: dict[str, Callable[[MockRequest], MockResponse]],
+) -> None:
+    for route_pattern in list(sdk_session.routes[method].keys()):
+        for substr, handler in overrides.items():
+            if substr in route_pattern:
+                sdk_session.routes[method][route_pattern] = handler
+                break
+
 
 @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
 def test_push_mappings_legacy_api_concurrent_rules(
     monkeypatch: pytest.MonkeyPatch,
     sdk_session: GitSyncMockSession,
 ) -> None:
-    """Verifies that PushMappings fetches multi-page ontology records and mapping rules
-    concurrently over the Legacy API while preserving record order and source filtering.
-    """
+    """Verify PushMappings fetches and filters mapping rules concurrently over the Legacy API."""
     monkeypatch.setattr(
         "TIPCommon.rest.soar_platform_clients.api_client_factory.platform_supports_1p_api",
         lambda: False,
     )
-    page_0_records: list[SingleJson] = [
-        {
-            "id": 1,
-            "source": "Security Command Center",
-            "product": "SCC",
-            "eventName": "Event_A",
-            "familyName": "Network",
-            "familyId": 10,
-            "exampleEventFields": [{"key": "val"}],
-        },
-    ]
-    page_1_records: list[SingleJson] = [
-        {
-            "id": 2,
-            "source": "Security Command Center",
-            "product": "SCC",
-            "eventName": "Event_B",
-            "familyName": "Network",
-            "familyId": 10,
-            "exampleEventFields": [{"key": "val2"}],
-        },
-        {
-            "id": 3,
-            "source": "OtherIntegration",
-            "product": "Other",
-            "eventName": "Event_C",
-            "familyName": "Network",
-            "familyId": 10,
-            "exampleEventFields": [],
-        },
+    page_0: list[SingleJson] = [_make_record(1, "Security Command Center", "SCC", "Event_A", [{"key": "val"}])]
+    page_1: list[SingleJson] = [
+        _make_record(2, "Security Command Center", "SCC", "Event_B", [{"key": "val2"}]),
+        _make_record(3, "OtherIntegration", "Other", "Event_C"),
     ]
 
-    def mock_get_ontology_records(request: MockRequest) -> MockResponse:
-        payload: SingleJson = get_request_payload(request)
-        req_page: int = payload.get("requestedPage", 0)
-        objs: list[SingleJson] = page_0_records if req_page == 0 else page_1_records
-        return MockResponse(
-            content={"objectsList": objs, "metadata": {"totalNumberOfPages": 2}},
-            status_code=200,
-        )
+    def mock_get_records(request: MockRequest) -> MockResponse:
+        req_page: int = get_request_payload(request).get("requestedPage", 0)
+        objs: list[SingleJson] = page_0 if req_page == 0 else page_1
+        return MockResponse(content={"objectsList": objs, "metadata": {"totalNumberOfPages": 2}}, status_code=200)
 
-    def mock_get_mapping_rules(request: MockRequest) -> MockResponse:
-        payload: SingleJson = get_request_payload(request)
-        event_name: str | None = payload.get("eventName")
-        if event_name == "Event_A":
-            return MockResponse(
-                content={
-                    "familyFields": [
-                        {
-                            "creationTimeUnixTimeInMs": 100,
-                            "modificationTimeUnixTimeInMs": 100,
-                            "mappingRule": {
-                                "id": 11,
-                                "source": "Security Command Center",
-                                "product": "SCC",
-                                "eventName": "Event_A",
-                                "creationTimeUnixTimeInMs": 100,
-                                "modificationTimeUnixTimeInMs": 100,
-                            },
-                        },
-                    ],
-                    "systemFields": [],
-                },
-                status_code=200,
-            )
-        return MockResponse(
-            content={
-                "familyFields": [
-                    {
-                        "creationTimeUnixTimeInMs": 100,
-                        "modificationTimeUnixTimeInMs": 100,
-                        "mappingRule": {
-                            "id": 12,
-                            "source": "DifferentSource",
-                            "product": "Other",
-                            "eventName": "Event_B",
-                            "creationTimeUnixTimeInMs": 100,
-                            "modificationTimeUnixTimeInMs": 100,
-                        },
-                    },
-                ],
-                "systemFields": [],
-            },
-            status_code=200,
-        )
+    def mock_get_rules(request: MockRequest) -> MockResponse:
+        if get_request_payload(request).get("eventName") == "Event_A":
+            return _make_legacy_rule_response(11, "Security Command Center", "SCC", "Event_A")
+        return _make_legacy_rule_response(12, "DifferentSource", "Other", "Event_B")
 
-    for route_pattern in list(sdk_session.routes["POST"].keys()):
-        if "GetOntologyStatusRecords" in route_pattern:
-            sdk_session.routes["POST"][route_pattern] = mock_get_ontology_records
-        elif "GetMappingRulesForSettings" in route_pattern:
-            sdk_session.routes["POST"][route_pattern] = mock_get_mapping_rules
+    _bind_routes(
+        sdk_session,
+        "POST",
+        {"GetOntologyStatusRecords": mock_get_records, "GetMappingRulesForSettings": mock_get_rules},
+    )
+    updated_files: dict[str, bytes] = _install_mock_git(monkeypatch)
 
-    updated_files: dict[str, bytes] = {}
-
-    class MockGit:
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            pass
-
-        def get_file_contents_from_path(self, path: str) -> bytes:
-            if path == "GitSync.json":
-                return b'{"system_version": "6.1.38.77", "settings": {"update_root_readme": false}}'
-            raise KeyError(f"File not found: {path}")
-
-        def get_file_objects_from_path(self, path: str) -> list[File]:
-            return []
-
-        def update_objects(
-            self,
-            files: Iterable[File],
-            base_path: str = "",
-        ) -> None:
-            for f in files:
-                updated_files[f.path] = f.content
-
-        def commit_and_push(self, message: str) -> None:
-            pass
-
-        def cleanup(self) -> None:
-            pass
-
-    monkeypatch.setattr("git_sync.core.GitSyncManager.Git", MockGit)
-
-    # Act
     PushMappings.main()
 
-    # Assert
-    assert "Security Command Center_Records.json" in updated_files
-    assert "Security Command Center_Rules.json" in updated_files
-
-    pushed_records: list[SingleJson] = json.loads(
-        updated_files["Security Command Center_Records.json"].decode("utf-8"),
-    )
-    pushed_rules: list[SingleJson] = json.loads(
-        updated_files["Security Command Center_Rules.json"].decode("utf-8"),
-    )
-
-    assert len(pushed_records) == 2
+    pushed_records: list[SingleJson] = json.loads(updated_files["Security Command Center_Records.json"].decode("utf-8"))
+    pushed_rules: list[SingleJson] = json.loads(updated_files["Security Command Center_Rules.json"].decode("utf-8"))
     assert [r["eventName"] for r in pushed_records] == ["Event_A", "Event_B"]
     assert all(r["exampleEventFields"] == [] for r in pushed_records)
     assert len(pushed_rules) == 1
@@ -204,129 +206,36 @@ def test_push_mappings_chronicle_1p_api_concurrent_rules(
     monkeypatch: pytest.MonkeyPatch,
     sdk_session: GitSyncMockSession,
 ) -> None:
-    """Verifies that PushMappings fetches ontology records and mapping rules concurrently
-    over the Chronicle (1P) API while preserving record order and source filtering.
-    """
+    """Verify PushMappings fetches and filters mapping rules concurrently over the 1P API."""
     monkeypatch.setattr(
         "TIPCommon.rest.soar_platform_clients.api_client_factory.platform_supports_1p_api",
         lambda: True,
     )
-    monkeypatch.setattr(
-        "git_sync.core.SiemplifyApiClient.platform_supports_1p_api",
-        lambda: True,
-    )
+    monkeypatch.setattr("git_sync.core.SiemplifyApiClient.platform_supports_1p_api", lambda: True)
     records_1p: list[SingleJson] = [
-        {
-            "id": 101,
-            "source": "Security Command Center",
-            "product": "SCC",
-            "eventName": "Event_1P_A",
-            "familyName": "Network",
-            "familyId": 10,
-            "exampleEventFields": [{"key": "val"}],
-        },
-        {
-            "id": 102,
-            "source": "Security Command Center",
-            "product": "SCC",
-            "eventName": "Event_1P_B",
-            "familyName": "Network",
-            "familyId": 10,
-            "exampleEventFields": [{"key": "val2"}],
-        },
+        _make_record(101, "Security Command Center", "SCC", "Event_1P_A", [{"key": "val"}]),
+        _make_record(102, "Security Command Center", "SCC", "Event_1P_B", [{"key": "val2"}]),
     ]
 
-    def mock_get_1p_ontology_records(_request: MockRequest) -> MockResponse:
-        return MockResponse(
-            content={"ontologyRecords": records_1p},
-            status_code=200,
-        )
+    def mock_get_1p_records(_request: MockRequest) -> MockResponse:
+        return MockResponse(content={"ontologyRecords": records_1p}, status_code=200)
 
-    def mock_get_1p_mapping_rules(request: MockRequest) -> MockResponse:
-        url: str = str(getattr(request, "url", ""))
-        if "/101/mappingRules" in url:
-            return MockResponse(
-                content={
-                    "mappingRules": [
-                        {
-                            "id": 21,
-                            "source": "Security Command Center",
-                            "product": "SCC",
-                            "eventName": "Event_1P_A",
-                            "creationTimeUnixTimeInMs": 100,
-                            "modificationTimeUnixTimeInMs": 100,
-                        },
-                    ],
-                },
-                status_code=200,
-            )
-        return MockResponse(
-            content={
-                "mappingRules": [
-                    {
-                        "id": 22,
-                        "source": "UnrelatedSource",
-                        "product": "Other",
-                        "eventName": "Event_1P_B",
-                        "creationTimeUnixTimeInMs": 100,
-                        "modificationTimeUnixTimeInMs": 100,
-                    },
-                ],
-            },
-            status_code=200,
-        )
+    def mock_get_1p_rules(request: MockRequest) -> MockResponse:
+        if "/101/mappingRules" in str(getattr(request, "url", "")):
+            return _make_1p_rule_response(21, "Security Command Center", "SCC", "Event_1P_A")
+        return _make_1p_rule_response(22, "UnrelatedSource", "Other", "Event_1P_B")
 
-    for route_pattern in list(sdk_session.routes["GET"].keys()):
-        if "mappingRules" in route_pattern:
-            sdk_session.routes["GET"][route_pattern] = mock_get_1p_mapping_rules
-        elif "ontologyRecords" in route_pattern:
-            sdk_session.routes["GET"][route_pattern] = mock_get_1p_ontology_records
+    _bind_routes(
+        sdk_session,
+        "GET",
+        {"mappingRules": mock_get_1p_rules, "ontologyRecords": mock_get_1p_records},
+    )
+    updated_files: dict[str, bytes] = _install_mock_git(monkeypatch)
 
-    updated_files: dict[str, bytes] = {}
-
-    class MockGit:
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            pass
-
-        def get_file_contents_from_path(self, path: str) -> bytes:
-            if path == "GitSync.json":
-                return b'{"system_version": "6.1.38.77", "settings": {"update_root_readme": false}}'
-            raise KeyError(f"File not found: {path}")
-
-        def get_file_objects_from_path(self, path: str) -> list[File]:
-            return []
-
-        def update_objects(
-            self,
-            files: Iterable[File],
-            base_path: str = "",
-        ) -> None:
-            for f in files:
-                updated_files[f.path] = f.content
-
-        def commit_and_push(self, message: str) -> None:
-            pass
-
-        def cleanup(self) -> None:
-            pass
-
-    monkeypatch.setattr("git_sync.core.GitSyncManager.Git", MockGit)
-
-    # Act
     PushMappings.main()
 
-    # Assert
-    assert "Security Command Center_Records.json" in updated_files
-    assert "Security Command Center_Rules.json" in updated_files
-
-    pushed_records: list[SingleJson] = json.loads(
-        updated_files["Security Command Center_Records.json"].decode("utf-8"),
-    )
-    pushed_rules: list[SingleJson] = json.loads(
-        updated_files["Security Command Center_Rules.json"].decode("utf-8"),
-    )
-
-    assert len(pushed_records) == 2
+    pushed_records: list[SingleJson] = json.loads(updated_files["Security Command Center_Records.json"].decode("utf-8"))
+    pushed_rules: list[SingleJson] = json.loads(updated_files["Security Command Center_Rules.json"].decode("utf-8"))
     assert [r["eventName"] for r in pushed_records] == ["Event_1P_A", "Event_1P_B"]
     assert all(r["exampleEventFields"] == [] for r in pushed_records)
     assert len(pushed_rules) == 1
@@ -338,133 +247,53 @@ def test_push_and_pull_mappings_large_rules_chunking(
     monkeypatch: pytest.MonkeyPatch,
     sdk_session: GitSyncMockSession,
 ) -> None:
-    """Verifies that mapping rules exceeding MAX_MAPPING_RULES_FILE_SIZE_BYTES are split
-    into multiple part files on push and reassembled in exact order on pull.
-    """
+    """Verify large mapping rules are split into part files on push and reassembled on pull."""
     monkeypatch.setattr(
         "TIPCommon.rest.soar_platform_clients.api_client_factory.platform_supports_1p_api",
         lambda: False,
     )
-    monkeypatch.setattr(
-        "git_sync.core.definitions.MAX_MAPPING_RULES_FILE_SIZE_BYTES",
-        600,
-    )
-
+    monkeypatch.setattr("git_sync.core.definitions.MAX_MAPPING_RULES_FILE_SIZE_BYTES", 600)
     records: list[SingleJson] = [
-        {
-            "id": index,
-            "source": "Security Command Center",
-            "product": "SCC",
-            "eventName": f"Event_{index}",
-            "familyName": "Network",
-            "familyId": 10,
-            "exampleEventFields": [],
-        }
-        for index in (1, 2, 3)
+        _make_record(index, "Security Command Center", "SCC", f"Event_{index}") for index in (1, 2, 3)
     ]
-
-    def mock_get_ontology_records(_request: MockRequest) -> MockResponse:
-        return MockResponse(
-            content={"objectsList": records, "metadata": {"totalNumberOfPages": 1}},
-            status_code=200,
-        )
-
-    def mock_get_mapping_rules(request: MockRequest) -> MockResponse:
-        payload: SingleJson = get_request_payload(request)
-        event_name: str | None = payload.get("eventName")
-        return MockResponse(
-            content={
-                "familyFields": [
-                    {
-                        "creationTimeUnixTimeInMs": 100,
-                        "modificationTimeUnixTimeInMs": 100,
-                        "mappingRule": {
-                            "id": 11,
-                            "source": "Security Command Center",
-                            "product": "SCC",
-                            "eventName": event_name,
-                            "creationTimeUnixTimeInMs": 100,
-                            "modificationTimeUnixTimeInMs": 100,
-                        },
-                    },
-                ],
-                "systemFields": [],
-            },
-            status_code=200,
-        )
-
     installed_rule_events: list[str] = []
 
-    def mock_add_mapping_rules(request: MockRequest) -> MockResponse:
-        payload: list[SingleJson] = get_request_payload(request)
-        for field in payload:
+    def mock_get_records(_request: MockRequest) -> MockResponse:
+        return MockResponse(content={"objectsList": records, "metadata": {"totalNumberOfPages": 1}}, status_code=200)
+
+    def mock_get_rules(request: MockRequest) -> MockResponse:
+        event_name: str | None = get_request_payload(request).get("eventName")
+        return _make_legacy_rule_response(11, "Security Command Center", "SCC", event_name)
+
+    def mock_add_rules(request: MockRequest) -> MockResponse:
+        for field in get_request_payload(request):
             event_name: str | None = (field.get("mappingRule") or {}).get("eventName")
             if event_name:
                 installed_rule_events.append(event_name)
         return MockResponse(content={}, status_code=200)
 
-    for route_pattern in list(sdk_session.routes["POST"].keys()):
-        if "GetOntologyStatusRecords" in route_pattern:
-            sdk_session.routes["POST"][route_pattern] = mock_get_ontology_records
-        elif "GetMappingRulesForSettings" in route_pattern:
-            sdk_session.routes["POST"][route_pattern] = mock_get_mapping_rules
-        elif "AddOrUpdateMappingRules" in route_pattern:
-            sdk_session.routes["POST"][route_pattern] = mock_add_mapping_rules
+    _bind_routes(
+        sdk_session,
+        "POST",
+        {
+            "GetOntologyStatusRecords": mock_get_records,
+            "GetMappingRulesForSettings": mock_get_rules,
+            "AddOrUpdateMappingRules": mock_add_rules,
+        },
+    )
+    repo_files: dict[str, bytes] = _install_mock_git(monkeypatch, include_base_path=True)
 
-    repo_files: dict[str, bytes] = {
-        "GitSync.json": (
-            b'{"system_version": "6.1.38.77", '
-            b'"settings": {"update_root_readme": false}}'
-        ),
-    }
-
-    class MockGit:
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            pass
-
-        def get_file_contents_from_path(self, path: str) -> bytes:
-            if path in repo_files:
-                return repo_files[path]
-            raise KeyError(f"File not found: {path}")
-
-        def get_file_objects_from_path(self, path: str) -> list[File]:
-            return []
-
-        def update_objects(
-            self,
-            files: Iterable[File],
-            base_path: str = "",
-        ) -> None:
-            prefix: str = f"{base_path}/" if base_path else ""
-            for file_obj in files:
-                repo_files[f"{prefix}{file_obj.path}"] = file_obj.content
-
-        def commit_and_push(self, message: str) -> None:
-            pass
-
-        def cleanup(self) -> None:
-            pass
-
-    monkeypatch.setattr("git_sync.core.GitSyncManager.Git", MockGit)
-
-    # Act 1: Push Mappings (should split 3 rules into _Rules.json, _Rules_part_2.json, _Rules_part_3.json)
     PushMappings.main()
 
     base_dir: str = "Ontology/Mappings/Security Command Center"
-    assert f"{base_dir}/Security Command Center_Records.json" in repo_files
-    assert f"{base_dir}/Security Command Center_Rules.json" in repo_files
-    assert f"{base_dir}/Security Command Center_Rules_part_2.json" in repo_files
-    assert f"{base_dir}/Security Command Center_Rules_part_3.json" in repo_files
-    assert f"{base_dir}/Security Command Center_Rules_part_4.json" not in repo_files
-
-    for key in (
+    expected_parts: tuple[str, ...] = (
         f"{base_dir}/Security Command Center_Rules.json",
         f"{base_dir}/Security Command Center_Rules_part_2.json",
         f"{base_dir}/Security Command Center_Rules_part_3.json",
-    ):
-        assert len(repo_files[key]) <= 600
+    )
+    assert f"{base_dir}/Security Command Center_Records.json" in repo_files
+    assert f"{base_dir}/Security Command Center_Rules_part_4.json" not in repo_files
+    assert all(key in repo_files and len(repo_files[key]) <= 600 for key in expected_parts)
 
-    # Act 2: Pull Mappings (should reassemble all 3 parts in order and install them)
     PullMappings.main()
-
     assert installed_rule_events == ["Event_1", "Event_2", "Event_3"]

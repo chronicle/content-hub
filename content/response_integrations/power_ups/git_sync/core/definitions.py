@@ -25,7 +25,6 @@ from zipfile import ZipFile
 from jinja2 import Environment as JinjaEnvironment
 from jinja2 import Template
 from requests.exceptions import HTTPError
-from TIPCommon.types import SingleJson
 
 from .constants import (
     ACTION_PARAMETER_TYPES,
@@ -83,7 +82,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from .SiemplifyApiClient import SiemplifyApiClient
-    from TIPCommon.types import ChronicleSOAR
+    from TIPCommon.types import ChronicleSOAR, SingleJson
 
 
 class File:
@@ -263,17 +262,11 @@ class Mapping(Content):
     def _iter_rule_files(self) -> Iterator[File]:
         serialized_rules: str = json.dumps(self.rules, indent=4)
         total_bytes: int = len(serialized_rules.encode("utf-8"))
-        if (
-            total_bytes <= MAX_MAPPING_RULES_FILE_SIZE_BYTES
-            or len(self.rules) <= 1
-        ):
+        if total_bytes <= MAX_MAPPING_RULES_FILE_SIZE_BYTES or len(self.rules) <= 1:
             yield File(f"{self.integrationName}_Rules.json", serialized_rules)
             return
 
-        for part_index, chunk_json in enumerate(
-            self._split_rules_into_chunks(self.rules, total_bytes),
-            start=1,
-        ):
+        for part_index, chunk_json in enumerate(self._split_rules_into_chunks(self.rules, total_bytes), start=1):
             file_name: str = (
                 f"{self.integrationName}_Rules.json"
                 if part_index == 1
@@ -281,30 +274,15 @@ class Mapping(Content):
             )
             yield File(file_name, chunk_json)
 
-    def _split_rules_into_chunks(
-        self,
-        rules: list[SingleJson],
-        total_bytes: int,
-    ) -> Iterator[str]:
+    def _split_rules_into_chunks(self, rules: list[SingleJson], total_bytes: int) -> Iterator[str]:
         estimated_parts: int = (total_bytes // MAX_MAPPING_RULES_FILE_SIZE_BYTES) + 1
-        chunk_size: int = max(
-            1,
-            (len(rules) + estimated_parts - 1) // estimated_parts,
-        )
+        chunk_size: int = max(1, (len(rules) + estimated_parts - 1) // estimated_parts)
         for index in range(0, len(rules), chunk_size):
-            yield from self._serialize_rule_slice(
-                rules[index : index + chunk_size],
-            )
+            yield from self._serialize_rule_slice(rules[index : index + chunk_size])
 
-    def _serialize_rule_slice(
-        self,
-        rule_slice: list[SingleJson],
-    ) -> Iterator[str]:
+    def _serialize_rule_slice(self, rule_slice: list[SingleJson]) -> Iterator[str]:
         serialized: str = json.dumps(rule_slice, indent=4)
-        if (
-            len(serialized.encode("utf-8")) <= MAX_MAPPING_RULES_FILE_SIZE_BYTES
-            or len(rule_slice) <= 1
-        ):
+        if len(serialized.encode("utf-8")) <= MAX_MAPPING_RULES_FILE_SIZE_BYTES or len(rule_slice) <= 1:
             yield serialized
             return
 
