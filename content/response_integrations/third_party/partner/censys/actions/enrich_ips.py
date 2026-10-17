@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from soar_sdk.ScriptResult import (
@@ -8,7 +8,7 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_FAILED,
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
 
 from ..core.api_manager import APIManager
 from ..core.censys_exceptions import (
@@ -20,10 +20,13 @@ from ..core.constants import (
     ENRICH_IPS_SCRIPT_NAME,
     ENRICHMENT_PREFIX,
     NO_ADDRESS_ENTITIES_ERROR,
+    REPUTATION_CLASS_PROBABILITIES_TABLE_NAME,
+    REPUTATION_EVIDENCE_TABLE_NAME,
+    REPUTATION_SUMMARY_TABLE_NAME,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
 )
-from ..core.datamodels import HostDatamodel
+from ..core.datamodels import HostDatamodel, ReputationExtractor
 from ..core.utils import (
     filter_valid_ips,
     get_integration_params,
@@ -31,6 +34,39 @@ from ..core.utils import (
     remove_ip_enrichment,
     validate_rfc3339_timestamp,
 )
+
+
+def _add_reputation_tables(
+    siemplify: SiemplifyAction,
+    reputation_summary_rows: list[dict],
+    class_probability_rows: list[dict],
+    evidence_rows: list[dict],
+) -> None:
+    """
+    Add combined reputation data tables to the case wall, one row per
+    processed IP. No-ops for any table whose row list is empty (e.g. when
+    no processed host had reputation data).
+    """
+    if reputation_summary_rows:
+        siemplify.result.add_data_table(
+            REPUTATION_SUMMARY_TABLE_NAME,
+            construct_csv(reputation_summary_rows),
+            "Censys",
+        )
+
+    if class_probability_rows:
+        siemplify.result.add_data_table(
+            REPUTATION_CLASS_PROBABILITIES_TABLE_NAME,
+            construct_csv(class_probability_rows),
+            "Censys",
+        )
+
+    if evidence_rows:
+        siemplify.result.add_data_table(
+            REPUTATION_EVIDENCE_TABLE_NAME,
+            construct_csv(evidence_rows),
+            "Censys",
+        )
 
 
 def _extract_resources_from_response(
@@ -170,6 +206,9 @@ def main():
     ip_addresses = []
     ip_entities = []
     valid_ips = []
+    reputation_summary_rows = []
+    class_probability_rows = []
+    evidence_rows = []
 
     try:
         # Initialize API Manager
@@ -270,7 +309,7 @@ def main():
 
                 # Add timestamp and enrich entity
                 enrichment_data[f"{ENRICHMENT_PREFIX}last_enriched"] = (
-                    datetime.utcnow().isoformat() + "Z"
+                    datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
                 )
 
                 entity.additional_properties.update(enrichment_data)
@@ -283,6 +322,25 @@ def main():
                         "Entity": entity_identifier,
                         "EntityResult": host_model.to_json(),
                     }
+                )
+
+                # Accumulate reputation table rows for this IP (no-op if the
+                # host has no reputation data)
+                reputation = host_model.host_data.get("reputation")
+                summary_row = ReputationExtractor.get_summary_row(
+                    entity_identifier, reputation
+                )
+                if summary_row:
+                    reputation_summary_rows.append(summary_row)
+                class_probability_rows.extend(
+                    ReputationExtractor.get_class_probability_rows(
+                        entity_identifier, reputation
+                    )
+                )
+                evidence_rows.extend(
+                    ReputationExtractor.get_evidence_rows(
+                        entity_identifier, reputation
+                    )
                 )
 
                 siemplify.LOGGER.info(f"Successfully enriched: {entity_identifier}")
@@ -342,6 +400,11 @@ def main():
 
     # Add JSON results
     siemplify.result.add_result_json(json_results)
+
+    # Add reputation data tables (no-op for any table with no rows)
+    _add_reputation_tables(
+        siemplify, reputation_summary_rows, class_probability_rows, evidence_rows
+    )
 
     siemplify.LOGGER.info("================= Main - Finished =================")
     siemplify.LOGGER.info(f"Status: {status}")

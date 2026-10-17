@@ -17,6 +17,24 @@ class ItemNotFoundException(CensysException):
     pass
 
 
+class ForbiddenErrorException(CensysException):
+    """
+    Exception raised when the account does not have permission to access the
+    requested resource (403 status code).
+    """
+
+    pass
+
+
+class FeatureNotEnabledException(CensysException):
+    """
+    Exception raised when the requested feature is not enabled for the
+    account's tier (409 status code).
+    """
+
+    pass
+
+
 class RateLimitException(CensysException):
     """
     Exception raised when API rate limit is exceeded.
