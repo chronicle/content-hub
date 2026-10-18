@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from gspread.utils import rowcol_to_a1
+from gspread.worksheet import Worksheet
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
@@ -12,7 +14,19 @@ from ..core.google_sheets import GoogleSheetFactory
 IDENTIFIER = "Google Sheet"
 
 
-def parse_column_number(value, parameter_name):
+def parse_column_number(value: str | int | None, parameter_name: str) -> int:
+    """Parses a column parameter into a positive, one-based integer.
+
+    Args:
+        value: The column parameter value to parse.
+        parameter_name: The parameter name to include in validation errors.
+
+    Returns:
+        The positive, one-based column number.
+
+    Raises:
+        ValueError: If the value cannot be parsed as a positive integer.
+    """
     try:
         column_number = int(value)
     except (TypeError, ValueError):
@@ -25,15 +39,33 @@ def parse_column_number(value, parameter_name):
 
 
 def add_or_update_row(
-    siemplify,
-    worksheet,
-    field_name,
-    column_number_int,
-    values_dict,
-    start_column_int,
-    end_column_int,
-):
-    ret_val = {"row_number": -1, "output_message": ""}
+    siemplify: SiemplifyAction,
+    worksheet: Worksheet,
+    field_name: str,
+    column_number_int: int,
+    values_dict: dict[str, Any],
+    start_column_int: int,
+    end_column_int: int,
+) -> dict[str, str | int]:
+    """Updates the matching row or appends a row when no matching cell exists.
+
+    Args:
+        siemplify: The action instance used to report matching row values.
+        worksheet: The worksheet to search and modify.
+        field_name: The row field whose value identifies the matching cell.
+        column_number_int: The one-based column number to search.
+        values_dict: The row values in the order they should be written.
+        start_column_int: The one-based starting column for an update.
+        end_column_int: The one-based ending column for an update.
+
+    Returns:
+        A dictionary containing the updated A1 range, an output message, and
+        the existing row_number placeholder of -1.
+
+    Raises:
+        ValueError: If the configured field is missing from the row values.
+    """
+    ret_val: dict[str, str | int] = {"row_number": -1, "output_message": ""}
     if field_name not in values_dict:
         raise ValueError(f"Field Name '{field_name}' was not found in the row JSON.")
 
