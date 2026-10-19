@@ -14,22 +14,23 @@ def main() -> None:
     siemplify.script_name = PING_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
+    api_root = siemplify.extract_configuration_param(INTEGRATION_NAME, param_name="API Root")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, param_name="API Key")
     verify_ssl = siemplify.extract_configuration_param(
         INTEGRATION_NAME, param_name="Verify SSL", default_value=True, input_type=bool
     )
 
     try:
-        HoudinManager(api_key, verify_ssl).ping()
+        HoudinManager(api_key, api_root, verify_ssl).ping()
         status = EXECUTION_STATE_COMPLETED
         result_value = "true"
-        output_message = "Successfully connected to the Houdin.io API with the provided API key."
+        output_message = "Successfully connected to the Houdin-io server with the provided connection parameters!"
     except Exception as error:
         siemplify.LOGGER.error(f"Ping failed: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = f"Failed to connect to the Houdin.io API. Error is {error}"
+        output_message = f"Failed to connect to the Houdin-io server! Error is {error}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"status: {status}, result_value: {result_value}, output_message: {output_message}")

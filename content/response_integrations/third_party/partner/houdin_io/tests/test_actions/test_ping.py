@@ -15,7 +15,10 @@ class TestPing:
         ping.main()
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert "Successfully connected to the Houdin.io API" in action_output.results.output_message
+        assert (
+            action_output.results.output_message
+            == "Successfully connected to the Houdin-io server with the provided connection parameters!"
+        )
         request = houdin.request_history[0].request
         assert request.url.path == "/api/v1/ping"
         assert request.headers["X-API-Key"] == "test-api-key"
@@ -27,7 +30,7 @@ class TestPing:
         ping.main()
 
         assert action_output.results.execution_state == ExecutionState.FAILED
-        assert "Failed to connect to the Houdin.io API" in action_output.results.output_message
+        assert action_output.results.output_message.startswith("Failed to connect to the Houdin-io server! Error is ")
         assert "Invalid API Key" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)

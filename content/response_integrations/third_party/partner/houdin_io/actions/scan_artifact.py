@@ -17,6 +17,7 @@ def main() -> None:
     siemplify.script_name = SCAN_ARTIFACT_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
+    api_root = siemplify.extract_configuration_param(INTEGRATION_NAME, param_name="API Root")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, param_name="API Key")
     verify_ssl = siemplify.extract_configuration_param(
         INTEGRATION_NAME, param_name="Verify SSL", default_value=True, input_type=bool
@@ -27,7 +28,7 @@ def main() -> None:
     state = load_state(siemplify.extract_action_param("additional_data"))
 
     try:
-        houdin = HoudinManager(api_key, verify_ssl)
+        houdin = HoudinManager(api_key, api_root, verify_ssl)
 
         if state is None:
             launch = houdin.launch_scan(artifact.strip(), scanners, force_rescan)

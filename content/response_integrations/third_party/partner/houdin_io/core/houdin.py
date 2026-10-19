@@ -40,9 +40,11 @@ class ScanLaunch:
 class HoudinManager:
     """Thin client for the Houdin REST API (https://app.houdin.io/docs/api)."""
 
-    def __init__(self, api_key: str, verify_ssl: bool = True) -> None:
+    def __init__(self, api_key: str, api_root: str | None = None, verify_ssl: bool = True) -> None:
         if not api_key:
             raise HoudinError("API Key is missing from the integration configuration.")
+        # The API Root parameter of the instance; the constant is its default.
+        self.api_root = (api_root or API_ROOT).strip().rstrip("/")
         self.session = requests.Session()
         self.session.verify = verify_ssl
         self.session.headers.update({
@@ -55,7 +57,7 @@ class HoudinManager:
 
     def _request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
         """One call to the API, retried on a 5xx or a dropped connection."""
-        url = f"{API_ROOT}/{path}"
+        url = f"{self.api_root}/{path}"
         kwargs.setdefault("timeout", REQUEST_TIMEOUT)
         last_error: Exception | None = None
         for _attempt in range(MAX_RETRIES + 1):

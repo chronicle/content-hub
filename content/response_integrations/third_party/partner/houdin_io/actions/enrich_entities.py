@@ -35,6 +35,7 @@ def main() -> None:
     siemplify.script_name = ENRICH_ENTITIES_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
+    api_root = siemplify.extract_configuration_param(INTEGRATION_NAME, param_name="API Root")
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, param_name="API Key")
     verify_ssl = siemplify.extract_configuration_param(
         INTEGRATION_NAME, param_name="Verify SSL", default_value=True, input_type=bool
@@ -47,7 +48,7 @@ def main() -> None:
 
     try:
         threshold = parse_threshold(threshold_raw, DEFAULT_SUSPICIOUS_THRESHOLD)
-        houdin = HoudinManager(api_key, verify_ssl)
+        houdin = HoudinManager(api_key, api_root, verify_ssl)
         entities_by_id = {entity.identifier: entity for entity in siemplify.target_entities}
 
         # The state carried between runs: scanID -> entity identifier for every
