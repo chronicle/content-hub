@@ -56,7 +56,7 @@ class CaseFederationSyncJob(Job):
             session,
             self.logger,
             ApiClientParameters(
-                sync_api_root=self.params.target_platform,
+                sync_api_root=self.params.target_platform.replace("/projects/", "/v1alpha/projects/"),
                 verify_ssl=self.params.verify_ssl,
             ),
             chronicle_soar=self.soar_job,
