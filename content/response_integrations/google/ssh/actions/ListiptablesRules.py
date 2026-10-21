@@ -39,7 +39,7 @@ def main():
     except SshManagerError as err:
         siemplify.result.add_result_json(json_results)
         siemplify.end(
-            f"Error executing action 'List iptables Rules'. Reason: {err}", "False"
+            f'Error executing action "List iptables Rules". Reason: {err}', "False"
         )
         return
 

@@ -37,7 +37,7 @@ def main():
         )
     except SshManagerError as err:
         siemplify.end(
-            f"Error executing action 'Block IP Address In Iptables'. Reason: {err}",
+            f'Error executing action "Block IP Address In Iptables". Reason: {err}',
             "False",
         )
         return
