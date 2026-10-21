@@ -438,9 +438,9 @@ class TestAggregatedErrors:
         job.connector_name_to_identifier = {}
 
         mock_api = AsyncMock()
-        mock_api.get_installed_integrations_of_environment.return_value = {
-            "instances": [{"displayName": "other-inst", "identifier": "other-inst-id"}]
-        }
+        mock_api.get_installed_integrations_of_environment.return_value = [
+            {"displayName": "other-inst", "identifier": "other-inst-id"}
+        ]
         mock_api.get_connector_cards.return_value = {
             "connectorInstances": [{"displayName": "other-conn", "identifier": "other-conn-id"}]
         }
@@ -476,9 +476,9 @@ class TestAggregatedErrors:
 
             # Mock the marketplace API methods
             mock_market = AsyncMock()
-            mock_market.get_installed_integrations_of_environment.return_value = {
-                "instances": [{"displayName": "other-inst", "identifier": "other-inst-id"}]
-            }
+            mock_market.get_installed_integrations_of_environment.return_value = [
+                {"displayName": "other-inst", "identifier": "other-inst-id"}
+            ]
             mock_market.get_connector_cards.return_value = {
                 "connectorInstances": [{"displayName": "other-conn", "identifier": "other-conn-id"}]
             }
