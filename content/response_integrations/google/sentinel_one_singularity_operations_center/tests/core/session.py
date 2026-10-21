@@ -39,7 +39,7 @@ class SentinelOneSession(MockSession[MockRequest, MockResponse, SentinelOne]):
         ]
 
     @router.post(r"/web/api/v2.1/unifiedalerts/graphql")
-    def graphql_endpoint(self, request: MockRequest) -> MockResponse:  # noqa: PLR0911
+    def graphql_endpoint(self, request: MockRequest) -> MockResponse:
         try:
             payload: SingleJson = get_request_payload(request)
         except Exception as e:  # noqa: BLE001

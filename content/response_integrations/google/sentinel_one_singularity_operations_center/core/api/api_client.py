@@ -279,7 +279,7 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
         alert_id: str,
         status: str | None = None,
         analyst_verdict: str | None = None,
-        assignee_id: int | bool | None = False,  # noqa: FBT001, FBT002
+        assignee_id: int | bool | None = False,
     ) -> AlertUpdateResult:
         """Update a SentinelOne alert's status, analyst verdict, and/or assignee.
 

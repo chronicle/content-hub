@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,6 +22,12 @@ from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from ...actions import Whois
+from ...core.data_model import (
+    ContactInfo,
+    get_domain_whois,
+    has_whois_data,
+    map_rdap_to_whois,
+)
 from ..core.product import EnrichmentProduct
 from ..core.session import EnrichmentMockSession
 
@@ -31,14 +38,14 @@ MOCK_GOOGLE_RDAP = {
     "events": [
         {"eventAction": "registration", "eventDate": "1997-09-15T04:00:00Z"},
         {"eventAction": "expiration", "eventDate": "2028-09-14T04:00:00Z"},
-        {"eventAction": "last changed", "eventDate": "2019-09-09T15:39:04Z"}
+        {"eventAction": "last changed", "eventDate": "2019-09-09T15:39:04Z"},
     ],
     "entities": [
         {
             "roles": ["registrar"],
-            "vcardArray": ["vcard", [["version", {}, "text", "4.0"], ["fn", {}, "text", "MarkMonitor Inc."]]]
+            "vcardArray": ["vcard", [["version", {}, "text", "4.0"], ["fn", {}, "text", "MarkMonitor Inc."]]],
         }
-    ]
+    ],
 }
 
 MOCK_AFNIC_RDAP = {
@@ -46,7 +53,7 @@ MOCK_AFNIC_RDAP = {
     "ldhName": "univ-lyon1.fr",
     "events": [
         {"eventAction": "registration", "eventDate": "1994-12-31T23:00:00Z"},
-        {"eventAction": "expiration", "eventDate": "2026-12-31T23:00:00Z"}
+        {"eventAction": "expiration", "eventDate": "2026-12-31T23:00:00Z"},
     ],
     "entities": [
         {
@@ -64,19 +71,19 @@ MOCK_AFNIC_RDAP = {
                         ["", "", "43, boulevard du 11 Novembre 1918", "Villeurbanne", "", "69622"],
                     ],
                 ],
-            ]
+            ],
         },
         {
             "handle": "FF16254-FRNIC",
             "roles": ["administrative"],
-            "vcardArray": ["vcard", [["version", {}, "text", "4.0"], ["fn", {}, "text", "Frédéric Fleury"]]]
+            "vcardArray": ["vcard", [["version", {}, "text", "4.0"], ["fn", {}, "text", "Frédéric Fleury"]]],
         },
         {
             "handle": "CG47488-FRNIC",
             "roles": ["technical"],
-            "vcardArray": ["vcard", [["version", {}, "text", "4.0"], ["fn", {}, "text", "Cédric Gallo"]]]
-        }
-    ]
+            "vcardArray": ["vcard", [["version", {}, "text", "4.0"], ["fn", {}, "text", "Cédric Gallo"]]],
+        },
+    ],
 }
 
 MOCK_GOOGLE_WHOIS = """Domain Name: GOOGLE.COM
@@ -90,19 +97,30 @@ def setup_whois_action_mocks(
     monkeypatch: pytest.MonkeyPatch,
     mock_siemplify: MagicMock,
 ) -> None:
+    def mock_extract_action_param(
+        param_name: str, default_value: Any = None, *args: Any, **kwargs: Any
+    ) -> Any:
+        params = {"Create Entities": "true", "Domain Age Threshold": 0}
+        return params.get(param_name, default_value if default_value is not None else "")
+
+    mock_siemplify.extract_action_param.side_effect = mock_extract_action_param
+
     monkeypatch.setattr(
         Whois,
         "SiemplifyAction",
         lambda: mock_siemplify,
     )
 
-    def mock_extract(target, *args, **kwargs):
+    def mock_extract(target: Any, *args: Any, **kwargs: Any) -> MagicMock:
+        """Mock tldextract.extract to simulate domain resolution for test targets."""
         mock_res = MagicMock()
         identifier = str(target).lower().strip().split("/")[-1]
         if identifier == "univ-lyon1.fr":
             mock_res.registered_domain = "univ-lyon1.fr"
         elif identifier == "failed.com":
             mock_res.registered_domain = "failed.com"
+        elif identifier == "positivacaoseguros.com.br":
+            mock_res.registered_domain = "positivacaoseguros.com.br"
         else:
             mock_res.registered_domain = "google.com"
         return mock_res
@@ -151,7 +169,7 @@ def test_whois_action_standard_domain_rdap(
         Whois.main()
 
     assert action_output.results.execution_state == ExecutionState.COMPLETED
-    
+
     res_list = mock_siemplify.result.add_result_json.call_args[0][0]
     assert len(res_list) == 1
     assert res_list[0]["Entity"] == "google.com"
@@ -199,13 +217,13 @@ def test_whois_action_afnic_domain_rdap(
         Whois.main()
 
     assert action_output.results.execution_state == ExecutionState.COMPLETED
-    
+
     res_list = mock_siemplify.result.add_result_json.call_args[0][0]
     assert len(res_list) == 1
     assert res_list[0]["Entity"] == "univ-lyon1.fr"
     assert res_list[0]["EntityResult"]["id"] == ["univ-lyon1.fr"]
     contacts = res_list[0]["EntityResult"]["contacts"]
-    
+
     assert contacts["registrant"]["handle"] == "ULUC6-FRNIC"
     assert contacts["registrant"]["name"] == "UNIVERSITE LYON 1 CLAUDE BERNARD"
     assert contacts["admin"]["handle"] == "FF16254-FRNIC"
@@ -247,18 +265,20 @@ def test_whois_action_fallback_to_classic_whois(
 
         # Mock whois network request to return standard mock data
         with patch("whois_alt.net.whois_request") as mock_req:
+
             def whois_request_side_effect(domain, server, *args, **kwargs):
                 if server == "whois.iana.org":
                     return "refer: whois.verisign-grs.com\n"
                 elif server == "whois.verisign-grs.com":
                     return MOCK_GOOGLE_WHOIS
                 return ""
+
             mock_req.side_effect = whois_request_side_effect
 
             Whois.main()
 
     assert action_output.results.execution_state == ExecutionState.COMPLETED
-    
+
     res_list = mock_siemplify.result.add_result_json.call_args[0][0]
     assert len(res_list) == 1
     assert res_list[0]["Entity"] == "google.com"
@@ -293,7 +313,7 @@ def test_whois_action_with_failed_entities(
                         "identifier": "failed.com",
                         "entity_type": "DOMAIN",
                         "additional_properties": {},
-                    }
+                    },
                 ],
             }
         ]
@@ -301,6 +321,7 @@ def test_whois_action_with_failed_entities(
 
     # Mock requests.get: google.com returns MOCK_GOOGLE_RDAP, failed.com raises Exception
     with patch("requests.get") as mock_get:
+
         def get_side_effect(request_url, *args, **kwargs):
             mock_res = MagicMock()
             target_domain = str(request_url).rstrip("/").split("/")[-1]
@@ -354,9 +375,7 @@ def test_whois_action_rdap_no_creation_date(
         "objectClassName": "domain",
         "handle": "2138514_DOMAIN_COM-VRSN",
         "ldhName": "GOOGLE.COM",
-        "events": [
-            {"eventAction": "last changed", "eventDate": "2019-09-09T15:39:04Z"}
-        ],
+        "events": [{"eventAction": "last changed", "eventDate": "2019-09-09T15:39:04Z"}],
         "entities": [],
     }
 
@@ -425,8 +444,6 @@ def test_whois_action_fallback_no_raw_key(
 
 
 def test_map_rdap_to_whois_deterministic_emails() -> None:
-    from ...core.data_model import map_rdap_to_whois
-
     rdap_with_emails = {
         "handle": "TEST-DOMAIN",
         "ldhName": "test.com",
@@ -468,3 +485,245 @@ def test_map_rdap_to_whois_deterministic_emails() -> None:
     result = map_rdap_to_whois(rdap_with_emails)
     assert result["emails"] == ["b@example.com", "a@example.com"]
 
+
+@pytest.mark.execution_scope("Alert")
+@set_metadata(
+    parameters={"Create Entities": "true", "Domain Age Threshold": "0"},
+    input_context={"environment": "Default", "alert_id": "alert_1"},
+)
+def test_whois_action_fallback_empty_response(
+    product: EnrichmentProduct,
+    action_output: MockActionOutput,
+    mock_siemplify: MagicMock,
+) -> None:
+    """Test Whois action fallback handling when classic WHOIS query returns an empty response."""
+    product.set_case_metadata({"title": "Simulated Whois Case", "case_id": "case_whois"})
+    product.set_alerts_full_details({
+        "alerts": [
+            {
+                "identifier": "alert_1",
+                "entities": [
+                    {
+                        "identifier": "positivacaoseguros.com.br",
+                        "entity_type": "DOMAIN",
+                        "additional_properties": {},
+                    }
+                ],
+            }
+        ]
+    })
+
+    with patch("requests.get") as mock_get:
+        mock_res = MagicMock()
+        mock_res.status_code = 404
+        mock_get.return_value = mock_res
+
+        with patch("whois_alt.get_whois") as mock_whois:
+            mock_whois.return_value = {
+                "contacts": {
+                    "registrant": None,
+                    "tech": None,
+                    "admin": None,
+                    "billing": None,
+                },
+                "raw": ["The queried object does not exist: DOMAIN NOT FOUND\n"],
+            }
+
+            Whois.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    end_msg, result_val, _ = mock_siemplify.end.call_args[0]
+    assert result_val == "false"
+    assert "No entities were enriched." in end_msg
+    assert "Failed to enrich the following entities: positivacaoseguros.com.br" in end_msg
+    mock_siemplify.result.add_result_json.assert_not_called()
+    mock_siemplify.update_entities.assert_not_called()
+
+
+def test_has_whois_data_validation() -> None:
+    """Validate has_whois_data heuristics against varied payloads, empty models, and edge cases."""
+    assert not has_whois_data(None)
+    assert not has_whois_data({})
+    assert not has_whois_data({"raw": ["some raw string"]})
+    assert not has_whois_data({
+        "contacts": {
+            "registrant": None,
+            "tech": None,
+            "admin": None,
+            "billing": None,
+        }
+    })
+    assert not has_whois_data({
+        "contacts": {
+            "registrant": None,
+            "tech": None,
+            "admin": None,
+            "billing": None,
+        },
+        "raw": ["some raw string"],
+    })
+    assert not has_whois_data({
+        "id": None,
+        "status": None,
+        "creation_date": None,
+        "expiration_date": None,
+        "updated_date": None,
+        "registrar": None,
+        "whois_server": None,
+        "nameservers": None,
+        "emails": None,
+        "contacts": {
+            "registrant": None,
+            "tech": None,
+            "admin": None,
+            "billing": None,
+        },
+        "raw": ["..."],
+    })
+    assert not has_whois_data({
+        "contacts": {
+            "registrant": {},
+            "tech": {},
+            "admin": {},
+            "billing": {},
+        }
+    })
+    assert not has_whois_data({
+        "contacts": {
+            "registrant": ContactInfo(),
+        }
+    })
+    assert not has_whois_data({
+        "contacts": {
+            "registrant": ContactInfo(name=""),
+        }
+    })
+    assert not has_whois_data({
+        "contacts": {
+            "registrant": {"name": ""},
+        }
+    })
+
+    assert has_whois_data({"id": ["example.com"]})
+    assert has_whois_data({"registrar": ["MarkMonitor Inc."]})
+    assert has_whois_data({"contacts": {"registrant": {"name": "Test Org"}}})
+    assert has_whois_data({"contacts": {"registrant": ContactInfo(name="Test Org")}})
+
+
+def test_get_domain_whois_empty_fallback_logs_warning() -> None:
+    """Test that get_domain_whois emits a warning and returns an empty dictionary on empty fallback."""
+    mock_logger = MagicMock()
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.status_code = 404
+
+        with patch("whois_alt.get_whois") as mock_whois:
+            mock_whois.return_value = {
+                "contacts": {
+                    "registrant": None,
+                    "tech": None,
+                    "admin": None,
+                    "billing": None,
+                },
+                "raw": ["error"],
+            }
+            result = get_domain_whois("positivacaoseguros.com.br", logger=mock_logger)
+
+    assert result == {}
+    mock_logger.warn.assert_any_call(
+        "Classic WHOIS query for domain positivacaoseguros.com.br returned empty response."
+    )
+
+
+@pytest.mark.execution_scope("Alert")
+@set_metadata(
+    parameters={"Create Entities": "true", "Domain Age Threshold": "0"},
+    input_context={"environment": "Default", "alert_id": "alert_1"},
+)
+def test_whois_action_entity_creation_failure_does_not_fail_enrichment(
+    product: EnrichmentProduct,
+    script_session: EnrichmentMockSession,
+    action_output: MockActionOutput,
+    mock_siemplify: MagicMock,
+) -> None:
+    """Test that if creating a related entity fails, the main entity enrichment still succeeds."""
+    product.set_case_metadata({"title": "Simulated Whois Case", "case_id": "case_whois"})
+    product.set_alerts_full_details({
+        "alerts": [
+            {
+                "identifier": "alert_1",
+                "entities": [
+                    {
+                        "identifier": "https://sub.google.com/path",
+                        "entity_type": "DestinationURL",
+                        "additional_properties": {},
+                    }
+                ],
+            }
+        ]
+    })
+
+    with patch("requests.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = MOCK_GOOGLE_RDAP
+        mock_get.return_value = mock_response
+
+        with patch.object(
+            Whois,
+            "create_entity_with_relation",
+            side_effect=Exception("404 Client Error: Not Found"),
+        ):
+            Whois.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    end_msg, result_val, _ = mock_siemplify.end.call_args[0]
+    assert result_val == "true"
+    assert "Successfully enriched the following entities: https://sub.google.com/path" in end_msg
+    assert "Failed to enrich" not in end_msg
+
+
+@pytest.mark.execution_scope("Case")
+@set_metadata(
+    parameters={"Create Entities": "true", "Domain Age Threshold": "0"},
+    input_context={"environment": "Default", "alert_id": "alert_1"},
+)
+def test_whois_action_case_scope_create_entities_success(
+    product: EnrichmentProduct,
+    script_session: EnrichmentMockSession,
+    action_output: MockActionOutput,
+    mock_siemplify: MagicMock,
+) -> None:
+    """Test that in Case Scope, CreateEntity resolves and uses the alert identifier from the case alert."""
+    product.set_case_metadata({"title": "Simulated Whois Case", "case_id": "case_whois"})
+    product.set_alerts_full_details({
+        "alerts": [
+            {
+                "identifier": "case_alert_42",
+                "entities": [
+                    {
+                        "identifier": "https://sub.google.com/path",
+                        "entity_type": "DestinationURL",
+                        "additional_properties": {},
+                    }
+                ],
+            }
+        ]
+    })
+
+    with patch("requests.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = MOCK_GOOGLE_RDAP
+        mock_get.return_value = mock_response
+
+        with patch.object(Whois, "create_entity") as mock_create_entity:
+            Whois.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert mock_create_entity.called
+    created_entity_arg = mock_create_entity.call_args[0][1]
+    assert created_entity_arg.alert_identifier == "case_alert_42"
+    assert created_entity_arg.entity_identifier == "GOOGLE.COM"
+    end_msg, result_val, _ = mock_siemplify.end.call_args[0]
+    assert result_val == "true"
+    assert "Successfully enriched the following entities: https://sub.google.com/path" in end_msg

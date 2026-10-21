@@ -428,3 +428,91 @@ def test_get_traking_list_record_url_encoded(
         params=None,
         json=None,
     )
+
+
+def test_attach_case_playbook_to_case_without_original_identifier(
+    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
+    """Test attach_case_playbook_to_case sends correct payload when original_workflow_definition_identifier is not set."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.case_id = 123
+    params.playbook_name = "Case Triage"
+    params.should_run_automatic = True
+    params.original_workflow_definition_identifier = None
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_chronicle_soar.session.request.return_value = mock_response
+
+    res = client.attach_case_playbook_to_case()
+
+    assert res == mock_response
+    mock_chronicle_soar.session.request.assert_called_once_with(
+        "POST",
+        "https://mock-soar-api.com/legacyPlaybooks:legacyAttachWorkflowToCase",
+        params={"format": "camel"},
+        json={
+            "cyberCaseId": 123,
+            "shouldRunAutomatic": True,
+            "wfName": "Case Triage",
+        },
+    )
+
+
+def test_attach_case_playbook_to_case_with_original_identifier(
+    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
+    """Test attach_case_playbook_to_case sends originalWorkflowDefinitionIdentifier when provided."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.case_id = 456
+    params.playbook_name = "Incident Playbook"
+    params.should_run_automatic = False
+    params.original_workflow_definition_identifier = "orig_wf_def_123"
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_chronicle_soar.session.request.return_value = mock_response
+
+    res = client.attach_case_playbook_to_case()
+
+    assert res == mock_response
+    mock_chronicle_soar.session.request.assert_called_once_with(
+        "POST",
+        "https://mock-soar-api.com/legacyPlaybooks:legacyAttachWorkflowToCase",
+        params={"format": "camel"},
+        json={
+            "cyberCaseId": 456,
+            "shouldRunAutomatic": False,
+            "wfName": "Incident Playbook",
+            "originalWorkflowDefinitionIdentifier": "orig_wf_def_123",
+        },
+    )
+
+
+def test_get_enabled_workflow_cards(
+    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
+    """Test get_enabled_workflow_cards sends correct request payload and parameters."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.environment = "Production"
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"payload": [{"id": "card_1"}]}
+    mock_chronicle_soar.session.request.return_value = mock_response
+
+    res = client.get_enabled_workflow_cards()
+
+    assert res == mock_response
+    mock_chronicle_soar.session.request.assert_called_once_with(
+        "POST",
+        "https://mock-soar-api.com/legacyPlaybooks:legacyGetEnabledWFCards",
+        params={"format": "camel"},
+        json={
+            "caseEnvironment": "Production",
+            "executionScope": "CASE",
+        },
+    )

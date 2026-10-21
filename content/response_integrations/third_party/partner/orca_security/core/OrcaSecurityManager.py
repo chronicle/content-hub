@@ -113,6 +113,8 @@ class OrcaSecurityManager:
         title_filter_type: int | None = WHITELIST_FILTER,
         alert_types: list[str] | None = None,
         lowest_score: float | None = None,
+        last_sync_start_timestamp: int | None = None,
+        start_at_index: int = 0,
     ) -> list[Alert]:
         """Retrieve alerts from the API.
         Builds an alert query payload with the provided filters (severity, categories,
@@ -120,7 +122,8 @@ class OrcaSecurityManager:
         response, and parses it into a list of Alert objects.
 
         Args:
-            start_timestamp (int): The start timestamp in milliseconds to fetch alerts.
+            start_timestamp (int): The start timestamp in milliseconds to filter
+            alerts by creation time.
             limit (int): The maximum number of alerts to fetch.
             lowest_severity (str): The lowest severity to filter by.
             categories (list[str]): List of categories to filter by.
@@ -129,13 +132,19 @@ class OrcaSecurityManager:
             or BLACKLIST_FILTER. Defaults to WHITELIST_FILTER.
             alert_types (list[str]): List of alert types to filter by.
             lowest_score (float): The lowest score to filter by.
+            last_sync_start_timestamp (int): The start timestamp in milliseconds to
+            filter alerts by DB write time. When provided, results are ordered by
+            last_sync so it can be used as a pagination cursor.
+            start_at_index (int): The offset to start fetching results from. Used to
+            page within results sharing one last_sync value.
 
         Returns:
             list[Alert]: List of Alert objects.
         """
         url: str = self._get_full_url("get_alerts")
         payload: AlertQueryBuilder = (
-            AlertQueryBuilder(start_timestamp, limit)
+            AlertQueryBuilder(start_timestamp, limit, last_sync_start_timestamp)
+            .start_at_index(start_at_index)
             .with_severity(lowest_severity)
             .with_categories(categories)
             .with_title_filter(title_filter, title_filter_type)

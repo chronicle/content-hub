@@ -35,6 +35,7 @@ class OrcaSecurityParser:
             details=alert_data.get("Details", {}).get("value"),
             severity=alert_data.get("Severity", {}).get("value"),
             created_at=alert_data.get("CreatedAt", {}).get("value"),
+            last_sync=alert_data.get("last_sync", {}).get("value"),
             asset_name=asset_data.get("asset_name"),
             asset_type=asset_data.get("asset_type"),
             type_string=alert_data.get("AlertType", {}).get("value"),
