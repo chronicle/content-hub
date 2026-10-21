@@ -15,7 +15,7 @@
 from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import *
-from ..core.SshManager import SshManager
+from ..core.SshManager import SshManager, SshManagerError
 
 
 @output_handler
@@ -31,13 +31,17 @@ def main():
     )
     ssh_wrapper = SshManager(server, username, password, port)
 
-    if "Chain" in siemplify.parameters and siemplify.parameters["Chain"]:
-        chain = siemplify.parameters["Chain"]
-    else:
-        chain = ""
+    chain = siemplify.parameters.get("Chain") or ""
 
     json_results = {}
-    status_code, output, error = ssh_wrapper.list_iptables_rules(chain)
+    try:
+        status_code, output, error = ssh_wrapper.list_iptables_rules(chain)
+    except SshManagerError as err:
+        siemplify.result.add_result_json(json_results)
+        siemplify.end(
+            f"Error executing action 'List iptables Rules'. Reason: {err}", "False"
+        )
+        return
 
     if status_code == 0:
         siemplify.result.add_data_table("Results:", output)

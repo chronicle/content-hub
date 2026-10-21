@@ -15,7 +15,7 @@
 from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import *
-from ..core.SshManager import SshManager
+from ..core.SshManager import SshManager, SshManagerError
 
 
 @output_handler
@@ -31,9 +31,17 @@ def main():
     )
     ssh_wrapper = SshManager(server, username, password, port)
 
-    output_message, status_code = ssh_wrapper.block_ip_in_iptables(
-        siemplify.parameters["Block IP Address"]
-    )
+    try:
+        output_message, status_code = ssh_wrapper.block_ip_in_iptables(
+            siemplify.parameters.get("Block IP Address")
+        )
+    except SshManagerError as err:
+        siemplify.end(
+            f"Error executing action 'Block IP Address In Iptables'. Reason: {err}",
+            "False",
+        )
+        return
+
     if status_code == 0:
         results = "True"
     else:
