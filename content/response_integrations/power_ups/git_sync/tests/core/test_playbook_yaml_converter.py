@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import yaml
+from TIPCommon.types import SingleJson
 
 from ...core.definitions import File
 from ...core.PlaybookYAMLConverter import PlaybookYAMLConverter
@@ -28,7 +28,7 @@ with open(MOCKS_PATH / "mock_data.json", encoding="utf-8") as f:
 
 GIT_PLAYBOOK_DATA = MOCK_DATA["git_playbook"]
 
-SAMPLE_FLAT_PLAYBOOK: dict[str, Any] = {
+SAMPLE_FLAT_PLAYBOOK: SingleJson = {
     "id": 123,
     "identifier": "my-playbook-uuid",
     "name": "My Great Playbook",
@@ -101,7 +101,7 @@ SAMPLE_FLAT_PLAYBOOK: dict[str, Any] = {
     ],
 }
 
-REAL_WORLD_PLAYBOOK_PAYLOAD: dict[str, Any] = {
+REAL_WORLD_PLAYBOOK_PAYLOAD: SingleJson = {
     "id": 0,
     "identifier": "366d3145-8131-4cd4-be2a-1d402c0fd1a4",
     "version": "0",
@@ -453,7 +453,7 @@ def _assert_deconstructed_files(deconstructed: list[File]) -> None:
     assert step["parameters"][0]["value"] == "8.8.8.8"
 
 
-def _assert_reconstructed_legacy(reconstructed: dict[str, Any]) -> None:
+def _assert_reconstructed_legacy(reconstructed: SingleJson) -> None:
     """Asserts that legacy reconstructed structure is equivalent and valid."""
     assert reconstructed["identifier"] == SAMPLE_FLAT_PLAYBOOK["identifier"]
     assert reconstructed["name"] == SAMPLE_FLAT_PLAYBOOK["name"]
@@ -485,32 +485,25 @@ def _assert_reconstructed_legacy(reconstructed: dict[str, Any]) -> None:
     assert rel["toStep"] == "87654321"
 
 
-def _assert_reconstructed_1p(reconstructed: dict[str, Any]) -> None:
+def _assert_reconstructed_1p(reconstructed: SingleJson) -> None:
     """Asserts that 1P reconstructed structure produces clean canonical schema."""
     _assert_reconstructed_legacy(reconstructed)
 
 
 def test_deconstruct_and_reconstruct_playbook() -> None:
-    """Tests deconstruction and reconstruction of playbooks in legacy and 1P modes."""
+    """Tests deconstruction and reconstruction of playbooks."""
     # Act - Deconstruct
     deconstructed = PlaybookYAMLConverter.deconstruct_playbook(SAMPLE_FLAT_PLAYBOOK)
     _assert_deconstructed_files(deconstructed)
 
-    # Act - Reconstruct (Legacy mode)
+    # Act - Reconstruct
     files_dict = {
         f.path: f.content.encode("utf-8") if isinstance(f.content, str) else f.content
         for f in deconstructed
     }
-    reconstructed_legacy = PlaybookYAMLConverter.reconstruct_playbook(
-        files_dict, is_1p=False
-    )
-    _assert_reconstructed_legacy(reconstructed_legacy)
-
-    # Act - Reconstruct (1P mode)
-    reconstructed_1p = PlaybookYAMLConverter.reconstruct_playbook(
-        files_dict, is_1p=True
-    )
-    _assert_reconstructed_1p(reconstructed_1p)
+    reconstructed = PlaybookYAMLConverter.reconstruct_playbook(files_dict)
+    _assert_reconstructed_legacy(reconstructed)
+    _assert_reconstructed_1p(reconstructed)
 
 
 def test_reconstruct_real_world_playbook_relations() -> None:
@@ -522,7 +515,12 @@ def test_reconstruct_real_world_playbook_relations() -> None:
         f.path: f.content.encode("utf-8") if isinstance(f.content, str) else f.content
         for f in deconstructed
     }
-    reconstructed = PlaybookYAMLConverter.reconstruct_playbook(files_dict, is_1p=False)
+    reconstructed = PlaybookYAMLConverter.reconstruct_playbook(files_dict)
+
+    # Verify unmapped trigger fields are preserved
+    assert reconstructed["trigger"]["reactionLogicalOperator"] == 1
+    assert reconstructed["trigger"]["reactionConditions"] is None
+    assert reconstructed["trigger"]["executionMode"] == 0
 
     assert len(reconstructed["stepsRelations"]) == 13
 
@@ -549,3 +547,99 @@ def test_reconstruct_real_world_playbook_relations() -> None:
         and r["toStep"] == "4d58e0f3-007b-48c2-85f4-2ea67f75c99e"
     )
     assert r3["condition"] == ""
+
+
+def test_overview_widgets_and_definition_exclusion() -> None:
+    """Tests overview template widget preservation and definition.yaml key exclusions."""
+    playbook_with_overview: SingleJson = {
+        "id": 1,
+        "identifier": "test-pb",
+        "name": "Test Playbook",
+        "playbookType": 0,
+        "OverviewTemplatesDetails": [
+            {
+                "Roles": ["Tier 1 Analyst"],
+                "OverviewTemplate": {
+                    "Identifier": "ov-1",
+                    "Name": "Custom Overview",
+                    "Creator": "admin",
+                    "PlaybookDefinitionIdentifier": "test-pb",
+                    "AlertRuleType": 0,
+                    "Roles": ["Tier 1 Analyst"],
+                    "Type": 1,
+                    "Widgets": [
+                        {
+                            "Title": "Alert Summary",
+                            "WidgetSize": 2,
+                            "Order": 1,
+                            "Type": 3,
+                            "HtmlContent": "<b>[Alert.Name]</b>",
+                            "Creator": "admin",
+                            "Description": "Header description",
+                            "Identifier": "w-uuid-1",
+                            "SystemWidgetIdentifier": "sys-w-1",
+                        }
+                    ],
+                },
+            }
+        ],
+        "WidgetTemplates": [],
+        "steps": [
+            {
+                "identifier": "step-1",
+                "instanceName": "First Step",
+                "type": 0,
+            },
+            {
+                "identifier": "step-2",
+                "instanceName": "Second Step",
+                "type": 0,
+            },
+        ],
+        "stepsRelations": [
+            {
+                "fromStep": "step-1",
+                "toStep": "step-2",
+                "condition": "True",
+                "destinationActionStatus": 1,
+            }
+        ],
+    }
+
+    deconstructed = PlaybookYAMLConverter.deconstruct_playbook(playbook_with_overview)
+
+    # Verify definition.yaml does not contain duplicated overview keys
+    def_file = next(f for f in deconstructed if f.path == "definition.yaml")
+    assert b"overview_templates_details" not in def_file.content
+    assert b"widget_templates" not in def_file.content
+
+    # Reconstruct
+    files_dict = {
+        f.path: f.content.encode("utf-8") if isinstance(f.content, str) else f.content
+        for f in deconstructed
+    }
+    reconstructed = PlaybookYAMLConverter.reconstruct_playbook(files_dict)
+
+    # Verify OverviewTemplatesDetails and Widgets are completely preserved
+    assert len(reconstructed["OverviewTemplatesDetails"]) == 1
+    ov = reconstructed["OverviewTemplatesDetails"][0]
+    assert ov["Roles"] == ["Tier 1 Analyst"]
+    template = ov["OverviewTemplate"]
+    assert template["Name"] == "Custom Overview"
+    assert template["Type"] == 1
+
+    assert len(template["Widgets"]) == 1
+    widget = template["Widgets"][0]
+    assert widget["Title"] == "Alert Summary"
+    assert widget["WidgetSize"] == 2
+    assert widget["Order"] == 1
+    assert widget["Type"] == 3
+    assert widget["HtmlContent"] == "<b>[Alert.Name]</b>"
+    assert widget["Creator"] == "admin"
+    assert widget["Description"] == "Header description"
+    assert widget["Identifier"] == "w-uuid-1"
+    assert widget["SystemWidgetIdentifier"] == "sys-w-1"
+
+    # Verify destinationActionStatus non-zero value is preserved
+    assert len(reconstructed["stepsRelations"]) == 1
+    assert reconstructed["stepsRelations"][0]["destinationActionStatus"] == 1

@@ -22,8 +22,6 @@ import zipfile
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
 
-from TIPCommon.utils import platform_supports_1p_api
-
 from .definitions import (
     Connector,
     File,
@@ -174,21 +172,18 @@ class GitContentManager:
 
         for f in all_files:
             p = pathlib.Path(f.path)
-            for pb_dir in definition_paths:
-                pb_path = pathlib.Path(pb_dir)
-                if p.is_relative_to(pb_path) and p != pb_path:
-                    rel_path = str(p.relative_to(pb_path))
-                    definition_paths[pb_dir][rel_path] = f.content
+            for parent in p.parents:
+                key = str(parent)
+                if key in definition_paths:
+                    definition_paths[key][str(p.relative_to(parent))] = f.content
                     break
         return definition_paths
 
     def _reconstruct_workflow_from_files(
-        self, pb_dir: str, files_dict: dict[str, bytes], is_1p: bool
+        self, pb_dir: str, files_dict: dict[str, bytes]
     ) -> Workflow:
         """Reconstruct a single Workflow from a dictionary of file contents."""
-        playbook_dict = PlaybookYAMLConverter.reconstruct_playbook(
-            files_dict, is_1p=is_1p
-        )
+        playbook_dict = PlaybookYAMLConverter.reconstruct_playbook(files_dict)
         parts = pb_dir.split("/")
         if len(parts) >= 2:
             category_name = parts[-2]
@@ -207,12 +202,11 @@ class GitContentManager:
             List of reconstructed Workflow objects.
         """
         definition_paths = self._group_deconstructed_files(base_path)
-        is_1p = platform_supports_1p_api()
         workflows: list[Workflow] = []
         for pb_dir, files_dict in definition_paths.items():
             try:
                 workflows.append(
-                    self._reconstruct_workflow_from_files(pb_dir, files_dict, is_1p)
+                    self._reconstruct_workflow_from_files(pb_dir, files_dict)
                 )
             except Exception as e:
                 self.git.logger.exception(
@@ -229,12 +223,10 @@ class GitContentManager:
         Returns: A Workflow instance
 
         """
-        for wf in self._reconstruct_deconstructed_workflows(PLAYBOOKS_PATH):
-            if wf.name == playbook_name:
-                return wf
-        for wf in self._reconstruct_deconstructed_workflows(BLOCKS_PATH):
-            if wf.name == playbook_name:
-                return wf
+        for base_path in (PLAYBOOKS_PATH, BLOCKS_PATH):
+            for pb_dir, files in self._group_deconstructed_files(base_path).items():
+                if pathlib.Path(pb_dir).name == playbook_name:
+                    return self._reconstruct_workflow_from_files(pb_dir, files)
 
         try:
             for playbook in self.git.get_file_objects_from_path(PLAYBOOKS_PATH):

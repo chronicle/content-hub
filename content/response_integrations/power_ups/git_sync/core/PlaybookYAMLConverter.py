@@ -17,12 +17,14 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from TIPCommon.types import SingleJson
 import yaml
 
 from .definitions import File
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 LOGGER = logging.getLogger(__name__)
 
@@ -123,6 +125,7 @@ STEP_FIELD_MAPPING: dict[str, str] = {
     "parent_step_ids": "parentStepIdentifiers",
     "parent_step_id": "parentStepIdentifier",
     "previous_result_condition": "previousResultCondition",
+    "destination_action_statuses": "destinationActionStatuses",
     "instance_name": "instanceName",
     "is_automatic": "isAutomatic",
     "name": "name",
@@ -207,6 +210,10 @@ def definition_to_non_built(defn: SingleJson) -> SingleJson:
         "steps",
         "stepsRelations",
         "id",
+        "OverviewTemplatesDetails",
+        "WidgetTemplates",
+        "overviewTemplatesDetails",
+        "widgetTemplates",
     }
     for k, v in defn.items():
         if k not in mapped_keys:
@@ -299,15 +306,34 @@ def trigger_to_non_built(trig: SingleJson) -> SingleJson:
                 }
             )
     nb["conditions"] = nb_conds
+
+    handled_keys = {
+        "id",
+        "identifier",
+        "isEnabled",
+        "definitionIdentifier",
+        "workflowName",
+        "environments",
+        "type",
+        "Type",
+        "logicalOperator",
+        "LogicalOperator",
+        "conditions",
+        "Conditions",
+    }
+    for k, v in trig.items():
+        if k not in handled_keys:
+            snake_k = re.sub(r"(?<!^)(?=[A-Z])", "_", k).lower()
+            nb[snake_k] = v
+
     return nb
 
 
-def non_built_to_trigger(nb: SingleJson, is_1p: bool = False) -> SingleJson:
+def non_built_to_trigger(nb: SingleJson) -> SingleJson:
     """Convert non-built trigger YAML structure back to built trigger dict.
 
     Args:
         nb: Non-built trigger dictionary.
-        is_1p: Whether target platform is 1P Chronicle API.
 
     Returns:
         Built trigger dictionary.
@@ -339,6 +365,23 @@ def non_built_to_trigger(nb: SingleJson, is_1p: bool = False) -> SingleJson:
                 }
             )
     trig["conditions"] = b_conds
+
+    handled_nb_keys = {
+        "identifier",
+        "is_enabled",
+        "playbook_id",
+        "playbook_name",
+        "environments",
+        "type_",
+        "logical_operator",
+        "conditions",
+    }
+    for k, v in nb.items():
+        if k not in handled_nb_keys:
+            parts = k.split("_")
+            camel_k = parts[0] + "".join(x.title() for x in parts[1:])
+            trig[camel_k] = v
+
     return trig
 
 
@@ -372,15 +415,29 @@ def overview_to_non_built(ov: SingleJson) -> SingleJson:
     if "Type" in template:
         nb["type"] = OVERVIEW_TYPE_MAP.get(template["Type"], "regular")
 
+    widget_mapping = {
+        "Title": "title",
+        "Order": "order",
+        "Type": "type",
+        "HtmlContent": "html_content",
+        "Creator": "creator",
+        "Description": "description",
+        "Identifier": "identifier",
+        "SystemWidgetIdentifier": "system_widget_identifier",
+    }
     nb_widgets: list[SingleJson] = []
     for w in template.get("Widgets", []):
-        nb_widgets.append(
-            {
-                "title": w.get("Title"),
-                "size": WIDGET_SIZE_MAP.get(w.get("WidgetSize"), "medium"),
-                "order": w.get("Order"),
-            }
-        )
+        w_dict: SingleJson = {}
+        for b_k, nb_k in widget_mapping.items():
+            if b_k in w:
+                w_dict[nb_k] = w[b_k]
+        if "WidgetSize" in w:
+            w_dict["size"] = WIDGET_SIZE_MAP.get(w.get("WidgetSize"), "medium")
+        for k, v in w.items():
+            if k not in widget_mapping and k != "WidgetSize":
+                snake_k = re.sub(r"(?<!^)(?=[A-Z])", "_", k).lower()
+                w_dict[snake_k] = v
+        nb_widgets.append(w_dict)
     nb["widgets_details"] = nb_widgets
     return nb
 
@@ -410,21 +467,36 @@ def non_built_to_overview(nb: SingleJson) -> SingleJson:
     if "type" in nb:
         template["Type"] = OVERVIEW_TYPE_MAP_REV.get(nb["type"], 1)
 
+    widget_mapping_rev = {
+        "title": "Title",
+        "order": "Order",
+        "type": "Type",
+        "html_content": "HtmlContent",
+        "creator": "Creator",
+        "description": "Description",
+        "identifier": "Identifier",
+        "system_widget_identifier": "SystemWidgetIdentifier",
+    }
     widgets: list[SingleJson] = []
     for w in nb.get("widgets_details", []):
-        widgets.append(
-            {
-                "Title": w.get("title"),
-                "WidgetSize": WIDGET_SIZE_MAP_REV.get(w.get("size"), 1),
-                "Order": w.get("order"),
-                "Type": 0,
-                "HtmlContent": "",
-                "Creator": None,
-                "Description": "",
-                "Identifier": "",
-                "SystemWidgetIdentifier": "",
-            }
-        )
+        widget: SingleJson = {
+            "Title": w.get("title", ""),
+            "WidgetSize": WIDGET_SIZE_MAP_REV.get(w.get("size"), 1),
+            "Order": w.get("order", 0),
+            "Type": w.get("type", 0),
+            "HtmlContent": w.get("html_content", ""),
+            "Creator": w.get("creator"),
+            "Description": w.get("description", ""),
+            "Identifier": w.get("identifier", ""),
+            "SystemWidgetIdentifier": w.get("system_widget_identifier", ""),
+        }
+        for k, v in w.items():
+            if k not in widget_mapping_rev and k != "size":
+                parts = k.split("_")
+                camel_k = parts[0] + "".join(x.title() for x in parts[1:])
+                pascal_k = camel_k[0].upper() + camel_k[1:]
+                widget[pascal_k] = v
+        widgets.append(widget)
     template["Widgets"] = widgets
     return {
         "Roles": nb.get("role_names", []),
@@ -455,7 +527,7 @@ def _step_params_to_non_built(params: list[SingleJson] | None) -> list[SingleJso
 
 
 def _non_built_to_step_params(
-    nb_params: list[SingleJson], is_1p: bool = False
+    nb_params: list[SingleJson],
 ) -> list[SingleJson]:
     """Convert non-built step parameters to built parameters list."""
     b_params: list[SingleJson] = []
@@ -499,7 +571,7 @@ def _step_debug_data_to_non_built(sdd: SingleJson | None) -> SingleJson | None:
 
 
 def _non_built_to_step_debug_data(
-    sdd: SingleJson | None, is_1p: bool = False
+    sdd: SingleJson | None,
 ) -> SingleJson | None:
     """Convert non-built step debug data to built structure."""
     if not sdd:
@@ -553,12 +625,11 @@ def step_to_non_built(step: SingleJson) -> SingleJson:
     return nb
 
 
-def non_built_to_step(nb: SingleJson, is_1p: bool = False) -> SingleJson:
+def non_built_to_step(nb: SingleJson) -> SingleJson:
     """Convert non-built step YAML structure back to built step dict.
 
     Args:
         nb: Non-built step dictionary.
-        is_1p: Whether target platform is 1P Chronicle API.
 
     Returns:
         Built step dictionary.
@@ -571,14 +642,12 @@ def non_built_to_step(nb: SingleJson, is_1p: bool = False) -> SingleJson:
     if "type" in nb:
         step["type"] = STEP_TYPE_MAP_REV.get(nb["type"], 0)
 
-    step["parameters"] = _non_built_to_step_params(
-        nb.get("parameters", []), is_1p=is_1p
-    )
+    step["parameters"] = _non_built_to_step_params(nb.get("parameters", []))
     step["parallelActions"] = [
-        non_built_to_step(pa, is_1p=is_1p) for pa in nb.get("parallel_actions", [])
+        non_built_to_step(pa) for pa in nb.get("parallel_actions", [])
     ]
     step["stepDebugData"] = _non_built_to_step_debug_data(
-        nb.get("step_debug_data"), is_1p=is_1p
+        nb.get("step_debug_data")
     )
 
     if "playbook_id" in nb:
@@ -592,25 +661,32 @@ def non_built_to_step(nb: SingleJson, is_1p: bool = False) -> SingleJson:
 
 def _build_parent_maps(
     relations: list[SingleJson],
-) -> tuple[dict[str, list[str]], dict[str, dict[str, str]]]:
-    """Build parent step mappings and conditions from relations."""
+) -> tuple[
+    dict[str, list[str]],
+    dict[str, dict[str, str]],
+    dict[str, dict[str, int]],
+]:
+    """Build parent step mappings, conditions, and action statuses from relations."""
     parents_map: dict[str, list[str]] = {}
     conditions_map: dict[str, dict[str, str]] = {}
+    dest_status_map: dict[str, dict[str, int]] = {}
     for rel in relations:
         from_step = rel.get("fromStep")
         to_step = rel.get("toStep")
         cond = rel.get("condition") or ""
+        status = rel.get("destinationActionStatus", 0)
         if from_step and to_step:
             parents_map.setdefault(to_step, []).append(from_step)
             conditions_map.setdefault(to_step, {})[from_step] = cond
-    return parents_map, conditions_map
+            dest_status_map.setdefault(to_step, {})[from_step] = status
+    return parents_map, conditions_map, dest_status_map
 
 
 def _inject_step_relations(
     steps: list[SingleJson], relations: list[SingleJson]
 ) -> list[SingleJson]:
     """Inject parent relation metadata into shallow-copied steps without mutating originals."""
-    parents_map, conditions_map = _build_parent_maps(relations)
+    parents_map, conditions_map, dest_status_map = _build_parent_maps(relations)
     copied_steps: list[SingleJson] = []
     for s in steps:
         step_copy = dict(s)
@@ -633,6 +709,13 @@ def _inject_step_relations(
             ):
                 conds = conditions_map.get(step_id, {})
                 step_copy["previousResultCondition"] = json.dumps(conds)
+            if (
+                "destinationActionStatuses" not in step_copy
+                and "DestinationActionStatuses" not in step_copy
+            ):
+                statuses = dest_status_map.get(step_id, {})
+                if any(v != 0 for v in statuses.values()):
+                    step_copy["destinationActionStatuses"] = json.dumps(statuses)
         copied_steps.append(step_copy)
     return copied_steps
 
@@ -706,7 +789,7 @@ def _build_release_notes(
 
 
 def _reconstruct_step_relations(
-    nb_step: SingleJson, step_obj: SingleJson, is_1p: bool
+    nb_step: SingleJson, step_obj: SingleJson
 ) -> list[SingleJson]:
     """Reconstruct step relations for a single non-built step."""
     parent_ids = list(nb_step.get("parent_step_ids") or [])
@@ -724,20 +807,84 @@ def _reconstruct_step_relations(
     except (json.JSONDecodeError, TypeError):
         prev_cond = {}
 
+    status_map_str = nb_step.get("destination_action_statuses") or "{}"
+    try:
+        status_map = (
+            json.loads(status_map_str)
+            if isinstance(status_map_str, str)
+            else status_map_str
+        )
+    except (json.JSONDecodeError, TypeError):
+        status_map = {}
+
     to_step_id = step_obj.get("identifier") or step_obj.get("Identifier")
     relations: list[SingleJson] = []
     for p_id in parent_ids:
         if p_id:
             cond_val = prev_cond.get(p_id, "") if isinstance(prev_cond, dict) else ""
+            status_val = status_map.get(p_id, 0) if isinstance(status_map, dict) else 0
             relations.append(
                 {
                     "condition": str(cond_val),
                     "fromStep": p_id,
                     "toStep": to_step_id,
-                    "destinationActionStatus": 0,
+                    "destinationActionStatus": (
+                        int(status_val)
+                        if isinstance(status_val, int)
+                        or (isinstance(status_val, str) and status_val.isdigit())
+                        else 0
+                    ),
                 }
             )
     return relations
+
+
+def _yaml_file(path: str, data: Any) -> File:
+    """Helper to serialize data to a YAML File object."""
+    return File(path, yaml.safe_dump(data, indent=4, sort_keys=False))
+
+
+def _build_trigger_data(playbook_dict: SingleJson) -> SingleJson:
+    """Build non-built trigger data dictionary."""
+    trigger = playbook_dict.get("trigger")
+    if trigger:
+        return trigger_to_non_built(trigger)
+    return {
+        "identifier": "",
+        "is_enabled": True,
+        "playbook_id": playbook_dict.get("identifier", ""),
+        "type_": "all",
+        "conditions": [],
+        "logical_operator": "and",
+        "environments": ["*"],
+    }
+
+
+def _build_step_files(steps: list[SingleJson]) -> list[File]:
+    """Build list of File objects for deconstructed steps."""
+    step_files: list[File] = []
+    for s in steps:
+        non_built_s = step_to_non_built(s)
+        step_name = s.get("instanceName") or s.get("name") or s.get("Name") or ""
+        step_id = s.get("identifier") or s.get("Identifier")
+        filename = f"steps/{sanitize_step_filename(step_name, step_id)}.yaml"
+        step_files.append(_yaml_file(filename, non_built_s))
+    return step_files
+
+
+def _reconstruct_steps(
+    files_dict: dict[str, bytes],
+) -> tuple[list[SingleJson], list[SingleJson]]:
+    """Parse and reconstruct steps and step relations from deconstructed files."""
+    steps: list[SingleJson] = []
+    steps_relations: list[SingleJson] = []
+    for filename, content in files_dict.items():
+        if filename.startswith("steps/") and filename.endswith(".yaml"):
+            nb_step = yaml.safe_load(content.decode("utf-8")) or {}
+            step_obj = non_built_to_step(nb_step)
+            steps.append(step_obj)
+            steps_relations.extend(_reconstruct_step_relations(nb_step, step_obj))
+    return steps, steps_relations
 
 
 class PlaybookYAMLConverter:
@@ -761,111 +908,51 @@ class PlaybookYAMLConverter:
             List of File objects containing the deconstructed YAML files.
         """
         existing_files = existing_files or {}
-        files: list[File] = []
-
         relations = playbook_dict.get("stepsRelations") or []
         steps = _inject_step_relations(playbook_dict.get("steps", []), relations)
 
-        # 1. definition.yaml
-        non_built_meta = definition_to_non_built(playbook_dict)
-        files.append(
-            File(
-                "definition.yaml",
-                yaml.safe_dump(non_built_meta, indent=4, sort_keys=False),
-            )
-        )
-
-        # 2. trigger.yaml
-        trigger = playbook_dict.get("trigger")
-        non_built_trig = (
-            trigger_to_non_built(trigger)
-            if trigger
-            else {
-                "identifier": "",
-                "is_enabled": True,
-                "playbook_id": playbook_dict.get("identifier", ""),
-                "type_": "all",
-                "conditions": [],
-                "logical_operator": "and",
-                "environments": ["*"],
-            }
-        )
-        files.append(
-            File(
-                "trigger.yaml",
-                yaml.safe_dump(non_built_trig, indent=4, sort_keys=False),
-            )
-        )
-
-        # 3. display_info.yaml
-        display_info = _build_display_info(playbook_dict, existing_files)
-        files.append(
-            File(
-                "display_info.yaml",
-                yaml.safe_dump(display_info, indent=4, sort_keys=False),
-            )
-        )
-
-        # 4. overviews.yaml
         overviews = playbook_dict.get("OverviewTemplatesDetails", [])
         nb_overviews = [overview_to_non_built(ov) for ov in overviews]
-        files.append(
-            File(
-                "overviews.yaml",
-                yaml.safe_dump(nb_overviews, indent=4, sort_keys=False),
-            )
-        )
 
-        # 5. release_notes.yaml
-        release_notes = _build_release_notes(playbook_dict, existing_files)
-        files.append(
-            File(
+        files = [
+            _yaml_file("definition.yaml", definition_to_non_built(playbook_dict)),
+            _yaml_file("trigger.yaml", _build_trigger_data(playbook_dict)),
+            _yaml_file(
+                "display_info.yaml",
+                _build_display_info(playbook_dict, existing_files),
+            ),
+            _yaml_file("overviews.yaml", nb_overviews),
+            _yaml_file(
                 "release_notes.yaml",
-                yaml.safe_dump(release_notes, indent=4, sort_keys=False),
-            )
-        )
-
-        # 6. steps/*.yaml
-        for s in steps:
-            non_built_s = step_to_non_built(s)
-            step_name = s.get("instanceName") or s.get("name") or s.get("Name") or ""
-            step_id = s.get("identifier") or s.get("Identifier")
-            filename = f"steps/{sanitize_step_filename(step_name, step_id)}.yaml"
-            files.append(
-                File(filename, yaml.safe_dump(non_built_s, indent=4, sort_keys=False))
-            )
-
+                _build_release_notes(playbook_dict, existing_files),
+            ),
+        ]
+        files.extend(_build_step_files(steps))
         return files
 
     @staticmethod
-    def reconstruct_playbook(
-        files_dict: dict[str, bytes], is_1p: bool = False
-    ) -> SingleJson:
+    def reconstruct_playbook(files_dict: dict[str, bytes]) -> SingleJson:
         """Convert deconstructed YAML files back into a built playbook JSON dictionary.
 
         Args:
             files_dict: Map of relative filenames to file contents in bytes.
-            is_1p: Whether target platform is 1P Chronicle API.
 
         Returns:
             Built playbook dictionary.
         """
-        # 1. Parse definition.yaml
         nb_meta = (
             yaml.safe_load(files_dict.get("definition.yaml", b"{}").decode("utf-8"))
             or {}
         )
         playbook = non_built_to_definition(nb_meta)
 
-        # 2. Parse trigger.yaml
         if "trigger.yaml" in files_dict:
             nb_trig = yaml.safe_load(files_dict["trigger.yaml"].decode("utf-8")) or {}
-            playbook["trigger"] = non_built_to_trigger(nb_trig, is_1p=is_1p)
+            playbook["trigger"] = non_built_to_trigger(nb_trig)
         else:
             playbook["trigger"] = None
 
-        # 3. Parse overviews.yaml
-        overviews_details = []
+        overviews_details: list[SingleJson] = []
         if "overviews.yaml" in files_dict:
             nb_overviews = (
                 yaml.safe_load(files_dict["overviews.yaml"].decode("utf-8")) or []
@@ -874,18 +961,7 @@ class PlaybookYAMLConverter:
         playbook["OverviewTemplatesDetails"] = overviews_details
         playbook["WidgetTemplates"] = []
 
-        # 4. Parse steps/*.yaml
-        steps: list[SingleJson] = []
-        steps_relations: list[SingleJson] = []
-        for filename, content in files_dict.items():
-            if filename.startswith("steps/") and filename.endswith(".yaml"):
-                nb_step = yaml.safe_load(content.decode("utf-8")) or {}
-                step_obj = non_built_to_step(nb_step, is_1p=is_1p)
-                steps.append(step_obj)
-                steps_relations.extend(
-                    _reconstruct_step_relations(nb_step, step_obj, is_1p)
-                )
-
+        steps, steps_relations = _reconstruct_steps(files_dict)
         playbook["steps"] = steps
         playbook["stepsRelations"] = steps_relations
         playbook["id"] = 0

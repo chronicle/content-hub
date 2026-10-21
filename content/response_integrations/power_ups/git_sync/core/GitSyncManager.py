@@ -17,12 +17,12 @@ from __future__ import annotations
 import re
 import tempfile
 import uuid
-from TIPCommon.types import SingleJson
-from TIPCommon.utils import platform_supports_1p_api
-from TIPCommon.rest.soar_api import install_integration
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from jinja2 import Template
+from TIPCommon.rest.soar_api import install_integration
+from TIPCommon.types import SingleJson
+from TIPCommon.utils import platform_supports_1p_api
 
 from .cache import Cache, Context, get_context_factory
 from .constants import (
@@ -194,6 +194,12 @@ class GitSyncManager:
             input_type=bool,
         )
         git_verify = get_conf_param("Git Verify SSL", print_value=True, input_type=bool)
+        deconstruct_playbooks = get_conf_param(
+            "Deconstruct Playbooks",
+            print_value=True,
+            input_type=bool,
+            default_value=True,
+        )
 
         return cls(
             siemplify,
@@ -206,6 +212,7 @@ class GitSyncManager:
             smp_verify,
             git_verify,
             git_server_fingerprint,
+            deconstruct_playbooks=deconstruct_playbooks,
         )
 
     def install_integration(self, integration: Integration) -> None:
