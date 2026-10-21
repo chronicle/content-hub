@@ -14,8 +14,39 @@
 
 const fs = require("fs");
 
+/**
+ * Redacts potential credentials and SOAR tenant hostnames from CI report text
+ * before posting it to a public pull request comment.
+ *
+ * @param {string} rawText The raw report markdown content.
+ * @return {string} The sanitized report content with secrets redacted.
+ */
+function redactSensitivePatterns(rawText) {
+    return rawText
+        .replace(
+            /((?:x-?siemplify-?app-?key|x-?app-?key|siemplify[_-]?app[_-]?key|eval[_-]?sdk[_-]?app[_-]?key|soar[_-]?api[_-]?key|app[_-]?key|api[_-]?key)["']?\s*[:=]\s*["']?)([A-Za-z0-9+/]{43}=|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi,
+            "$1[REDACTED_APP_KEY]"
+        )
+        .replace(
+            /((?:--api-key|--password|access[_-]?key|secret[_-]?key)\s*[:=]?\s*["']?)([^\s"'<>]{8,})/gi,
+            "$1[REDACTED_SECRET]"
+        )
+        .replace(
+            /\b([a-z0-9][a-z0-9-]{0,62})\.siemplify-soar\.com\b/gi,
+            "[REDACTED_TENANT].siemplify-soar.com"
+        );
+}
+
+/**
+ * Posts a collapsible CI failure report comment on a pull request.
+ *
+ * @param {{github: object, context: object, prNumber: number, title: string, reportPath: string}} params
+ *   The GitHub client context, pull request number, comment title, and report file path.
+ * @return {Promise<void>} A promise that resolves when the comment is created.
+ */
 async function postComment({github, context, prNumber, title, reportPath}) {
-    const body = fs.readFileSync(reportPath, "utf8");
+    const rawBody = fs.readFileSync(reportPath, "utf8");
+    const body = redactSensitivePatterns(rawBody);
     const comment =
         `❌ **${title}**\n` +
         `<details>\n<summary>Click to view the full report</summary>\n\n---\n` +
@@ -30,4 +61,4 @@ async function postComment({github, context, prNumber, title, reportPath}) {
     });
 }
 
-module.exports = {postComment};
+module.exports = {postComment, redactSensitivePatterns};
