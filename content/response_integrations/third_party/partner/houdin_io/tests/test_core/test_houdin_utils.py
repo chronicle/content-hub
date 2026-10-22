@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from houdin_io.core.houdin import HoudinManager
 from houdin_io.core.houdin_utils import (
     enrichment_fields,
     insight_content,
     markdown_to_html,
+    normalize_scanners,
     parse_scanners,
     parse_threshold,
     scan_link,
@@ -70,9 +70,9 @@ def test_parse_scanners(raw: object, expected: list[str] | None) -> None:
 
 
 def test_normalize_scanners_appends_mesmer_modules() -> None:
-    assert HoudinManager.normalize_scanners(None) is None
-    assert HoudinManager.normalize_scanners([" ", ""]) is None
-    assert HoudinManager.normalize_scanners([" vt ", "mesmer"]) == ["vt", "mesmer", "mesmer-summary"]
+    assert normalize_scanners(None) is None
+    assert normalize_scanners([" ", ""]) is None
+    assert normalize_scanners([" vt ", "mesmer"]) == ["vt", "mesmer", "mesmer-summary"]
 
 
 @pytest.mark.parametrize(

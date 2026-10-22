@@ -30,7 +30,7 @@ class TestPing:
         ping.main()
 
         assert action_output.results.execution_state == ExecutionState.FAILED
-        assert action_output.results.output_message.startswith("Failed to connect to the Houdin-io server! Error is ")
+        assert action_output.results.output_message.startswith("Failed to connect to the Houdin-io server!")
         assert "Invalid API Key" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)

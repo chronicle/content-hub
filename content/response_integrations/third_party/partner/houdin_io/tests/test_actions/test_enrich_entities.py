@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING
 
 from integration_testing.platform.script_output import MockActionOutput
 from TIPCommon.base.action import ExecutionState
@@ -10,13 +10,20 @@ from houdin_io.actions import enrich_entities
 from houdin_io.tests.conftest import make_entity, run_action
 from houdin_io.tests.mock_session import HoudinSession
 
+if TYPE_CHECKING:
+    from unittest.mock import MagicMock
+
+    from soar_sdk.SiemplifyDataModel import DomainEntityInfo
+    from TIPCommon.types import SingleJson
+
 IP = make_entity("5.149.250.54", "ADDRESS")
 PRIVATE_IP = make_entity("10.0.0.7", "ADDRESS")
 URL = make_entity("HTTP://MARKOSSOLOMON.COM/F1Q7QX.PHP", "DestinationURL")
 DOMAIN = make_entity("update-service.win", "DOMAIN")
 HOSTNAME = make_entity("WS-0042", "HOSTNAME")
 USER = make_entity("jdoe", "USERUNIQNAME")
-ENTITIES = [IP, PRIVATE_IP, URL, DOMAIN, HOSTNAME, USER]
+ENTITIES: list[DomainEntityInfo] = [IP, PRIVATE_IP, URL, DOMAIN, HOSTNAME, USER]
+SCANNED: set[str] = {IP.identifier, URL.identifier, DOMAIN.identifier}
 
 
 def reset_entities() -> None:
@@ -26,7 +33,11 @@ def reset_entities() -> None:
         entity.is_enriched = False
 
 
-def first_run(action_output: MockActionOutput, parameters: dict | None = None, entities: list = ENTITIES) -> str:
+def first_run(
+    action_output: MockActionOutput,
+    parameters: SingleJson | None = None,
+    entities: list[DomainEntityInfo] = ENTITIES,
+) -> str:
     """Launch, assert IN_PROGRESS, return the state handed back for the next run."""
     run_action(enrich_entities.main, parameters, entities)
     results = action_output.results
@@ -35,7 +46,11 @@ def first_run(action_output: MockActionOutput, parameters: dict | None = None, e
     return results.result_value
 
 
-def run_until_done(houdin: HoudinSession, action_output: MockActionOutput, parameters: dict | None = None) -> None:
+def run_until_done(
+    houdin: HoudinSession,
+    action_output: MockActionOutput,
+    parameters: SingleJson | None = None,
+) -> None:
     """First run launches, finish() every scan, second run completes."""
     parameters = dict(parameters or {})
     parameters["additional_data"] = first_run(action_output, parameters)
@@ -52,22 +67,22 @@ class TestEnrichEntities:
 
         results = action_output.results
         assert results.execution_state == ExecutionState.IN_PROGRESS
-        assert sorted(houdin.launched.values()) == sorted([IP.identifier, URL.identifier, DOMAIN.identifier])
-        state = json.loads(results.result_value)
-        assert set(state["scans"].values()) == {IP.identifier, URL.identifier, DOMAIN.identifier}
+        assert set(houdin.launched.values()) == SCANNED
+        state: SingleJson = json.loads(results.result_value)
+        assert set(state["scans"].values()) == SCANNED
         assert state["done"] == [] and state["failed"] == {}
+        assert len(houdin.result_reads()) == 1, "one poll per run, then back to the platform"
 
-    def test_scans_finishing_within_the_run_complete_on_first_run(
-        self, houdin: HoudinSession, action_output: MockActionOutput
-    ) -> None:
-        houdin.finish_after_reads = 3
+    def test_cached_scans_complete_on_first_run(self, houdin: HoudinSession, action_output: MockActionOutput) -> None:
+        houdin.launch_status = "Done"
 
         run_action(enrich_entities.main, {}, ENTITIES)
 
         results = action_output.results
         assert results.execution_state == ExecutionState.COMPLETED
-        assert results.result_value == 3
+        assert results.result_value is True
         assert IP.additional_properties["Houdin-io_Threat_Score"] == "8"
+        assert len(houdin.result_reads()) == 1, "the documents of this run are not read a second time"
 
     def test_enrichment_and_json_result(
         self,
@@ -82,7 +97,7 @@ class TestEnrichEntities:
 
         results = action_output.results
         assert results.execution_state == ExecutionState.COMPLETED
-        assert results.result_value == 3
+        assert results.result_value is True
         assert IP.additional_properties["Houdin-io_Threat_Score"] == "8"
         assert IP.additional_properties["Houdin-io_Confidence"] == "high"
         assert IP.additional_properties["Houdin-io_Tags"].startswith("Malicious hosting infrastructure")
@@ -95,17 +110,19 @@ class TestEnrichEntities:
         assert DOMAIN.additional_properties["Houdin-io_Threat_Score"] == "3"
         assert DOMAIN.is_suspicious is False
         assert PRIVATE_IP.additional_properties == {} and USER.additional_properties == {}
-        json_result = results.json_output.json_result
-        assert {row["Entity"] for row in json_result} == {IP.identifier, URL.identifier, DOMAIN.identifier}
+        json_result: list[SingleJson] = results.json_output.json_result
+        assert {row["Entity"] for row in json_result} == SCANNED
         assert all(row["EntityResult"]["scanResults"]["mesmer"]["result"]["globalScore"] for row in json_result)
         assert update_entities.call_count == 1
         assert add_entity_insight.call_count == 3
         assert "Enriched 3 entities" in results.output_message
 
     def test_partial_completion_enriches_as_scans_finish(
-        self, houdin: HoudinSession, action_output: MockActionOutput, update_entities: MagicMock
+        self,
+        houdin: HoudinSession,
+        action_output: MockActionOutput,
     ) -> None:
-        state = first_run(action_output)
+        state: str = first_run(action_output)
         houdin.finish(IP.identifier)
         houdin.clear_record()
 
@@ -116,21 +133,39 @@ class TestEnrichEntities:
         assert "still scanning 2 entities" in results.output_message
         assert IP.additional_properties["Houdin-io_Threat_Score"] == "8"
         assert DOMAIN.additional_properties == {}
-        new_state = json.loads(results.result_value)
+        new_state: SingleJson = json.loads(results.result_value)
         assert len(new_state["done"]) == 1
         assert len(houdin.launched) == 3, "continuation runs never relaunch"
-        # The continuation run reads the pending scans in bulk, then only the ones still running
-        reads = [
-            r.request.kwargs["json"]["scanIDs"]
-            for r in houdin.request_history
-            if r.request.url.path == "/api/v1/scan/result"
-        ]
-        assert len(reads[0]) == 3
-        assert all(len(ids) == 2 for ids in reads[1:])
+        reads: list[list[str]] = houdin.result_reads()
+        assert len(reads) == 1 and len(reads[0]) == 3, "one bulk read of the pending scans"
         assert not [r for r in houdin.request_history if r.request.url.path == "/api/v1/scan/launch"]
 
+    def test_final_run_reads_again_only_the_scans_done_earlier(
+        self,
+        houdin: HoudinSession,
+        action_output: MockActionOutput,
+    ) -> None:
+        state: str = first_run(action_output)
+        houdin.finish(IP.identifier)
+        run_action(enrich_entities.main, {"additional_data": state}, ENTITIES)
+        state = action_output.results.result_value
+        action_output.flush()
+        houdin.finish()
+        houdin.clear_record()
+
+        run_action(enrich_entities.main, {"additional_data": state}, ENTITIES)
+
+        results = action_output.results
+        assert results.execution_state == ExecutionState.COMPLETED
+        reads: list[list[str]] = houdin.result_reads()
+        assert [len(ids) for ids in reads] == [2, 1], "the pending pair, then the one scan enriched by the earlier run"
+        assert {row["Entity"] for row in results.json_output.json_result} == SCANNED
+
     def test_threshold_and_insight_parameters(
-        self, houdin: HoudinSession, action_output: MockActionOutput, add_entity_insight: MagicMock
+        self,
+        houdin: HoudinSession,
+        action_output: MockActionOutput,
+        add_entity_insight: MagicMock,
     ) -> None:
         run_until_done(houdin, action_output, {"Suspicious Threshold": "9", "Create Insight": "false"})
 
@@ -153,7 +188,9 @@ class TestEnrichEntities:
         assert houdin.launched == {}
 
     def test_refused_artifact_is_reported_and_others_continue(
-        self, houdin: HoudinSession, action_output: MockActionOutput
+        self,
+        houdin: HoudinSession,
+        action_output: MockActionOutput,
     ) -> None:
         houdin.refuse[URL.identifier] = (403, "Scanners not available on your plan: misp")
 
@@ -161,7 +198,8 @@ class TestEnrichEntities:
 
         results = action_output.results
         assert results.execution_state == ExecutionState.COMPLETED
-        assert results.result_value == 2
+        assert results.result_value is True
+        assert "Enriched 2 entities" in results.output_message
         assert "not scanned, Scanners not available on your plan: misp" in results.output_message
         assert URL.additional_properties == {}
 
@@ -188,6 +226,6 @@ class TestEnrichEntities:
 
         results = action_output.results
         assert results.execution_state == ExecutionState.COMPLETED
-        assert results.result_value == 0
+        assert results.result_value is False
         assert "No entity was scanned" in results.output_message
         assert houdin.request_history == []

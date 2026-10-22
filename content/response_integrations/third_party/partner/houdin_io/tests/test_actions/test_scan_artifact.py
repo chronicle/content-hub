@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
 from integration_testing.platform.script_output import MockActionOutput
 from TIPCommon.base.action import ExecutionState
@@ -9,10 +10,13 @@ from houdin_io.actions import scan_artifact
 from houdin_io.tests.conftest import run_action
 from houdin_io.tests.mock_session import HoudinSession
 
-ARTIFACT = {"Artifact": "5.149.250.54"}
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+ARTIFACT: dict[str, str] = {"Artifact": "5.149.250.54"}
 
 
-def first_run(action_output: MockActionOutput, parameters: dict | None = None) -> str:
+def first_run(action_output: MockActionOutput, parameters: SingleJson | None = None) -> str:
     """Launch, assert IN_PROGRESS, return the state handed back for the next run."""
     run_action(scan_artifact.main, parameters or ARTIFACT)
     results = action_output.results
@@ -22,38 +26,33 @@ def first_run(action_output: MockActionOutput, parameters: dict | None = None) -
 
 
 class TestScanArtifact:
-    def test_first_run_launches_and_waits(self, houdin: HoudinSession, action_output: MockActionOutput) -> None:
+    def test_first_run_launches_polls_once_and_waits(
+        self,
+        houdin: HoudinSession,
+        action_output: MockActionOutput,
+    ) -> None:
         run_action(scan_artifact.main, ARTIFACT)
 
         results = action_output.results
         assert results.execution_state == ExecutionState.IN_PROGRESS
-        state = json.loads(results.result_value)
+        state: SingleJson = json.loads(results.result_value)
         assert state["scanID"] in houdin.launched
         assert "in progress" in results.output_message
+        assert [r.request.url.path for r in houdin.request_history] == ["/api/v1/scan/launch", "/api/v1/scan/result"]
         launch = houdin.request_history[0].request
-        assert launch.url.path == "/api/v1/scan/launch"
         assert launch.kwargs["json"] == {"artifact": "5.149.250.54"}
         assert launch.headers["X-API-Key"] == "test-api-key"
 
     def test_explicit_scanners_get_mesmer_and_force_rescan(
-        self, houdin: HoudinSession, action_output: MockActionOutput
+        self,
+        houdin: HoudinSession,
+        action_output: MockActionOutput,
     ) -> None:
         run_action(scan_artifact.main, {**ARTIFACT, "Scanners": "vt, abuseipdb", "Force Rescan": "true"})
 
-        payload = houdin.request_history[0].request.kwargs["json"]
+        payload: SingleJson = houdin.request_history[0].request.kwargs["json"]
         assert payload["scanners"] == ["vt", "abuseipdb", "mesmer", "mesmer-summary"]
         assert payload["forceRescan"] is True
-
-    def test_scan_finishing_within_the_run_completes_on_first_run(
-        self, houdin: HoudinSession, action_output: MockActionOutput
-    ) -> None:
-        houdin.finish_after_reads = 2
-
-        run_action(scan_artifact.main, ARTIFACT)
-
-        results = action_output.results
-        assert results.execution_state == ExecutionState.COMPLETED
-        assert houdin.reads == 3, "polled until the scan was done, then stopped"
 
     def test_cache_hit_completes_on_first_run(self, houdin: HoudinSession, action_output: MockActionOutput) -> None:
         houdin.launch_status = "Done"
@@ -62,11 +61,12 @@ class TestScanArtifact:
 
         results = action_output.results
         assert results.execution_state == ExecutionState.COMPLETED
+        assert results.result_value is True
         assert results.json_output.json_result["artifact"] == "5.149.250.54"
         assert "8/10, high confidence" in results.output_message
 
     def test_second_run_still_waiting(self, houdin: HoudinSession, action_output: MockActionOutput) -> None:
-        state = first_run(action_output)
+        state: str = first_run(action_output)
 
         run_action(scan_artifact.main, {**ARTIFACT, "additional_data": state})
 
@@ -76,14 +76,14 @@ class TestScanArtifact:
         assert len(houdin.launched) == 1, "a continuation run must not launch again"
 
     def test_second_run_returns_document(self, houdin: HoudinSession, action_output: MockActionOutput) -> None:
-        state = first_run(action_output)
+        state: str = first_run(action_output)
         houdin.finish()
 
         run_action(scan_artifact.main, {**ARTIFACT, "additional_data": state})
 
         results = action_output.results
         assert results.execution_state == ExecutionState.COMPLETED
-        document = results.json_output.json_result
+        document: SingleJson = results.json_output.json_result
         assert document["scanID"] == json.loads(state)["scanID"]
         assert document["scanResults"]["mesmer"]["result"]["globalScore"] == 8
         assert "app.houdin.io/scans/" in results.output_message

@@ -18,7 +18,7 @@ Enrich Entities:
     2. Keeps `scanID -> entity` in `additional_data` and ends IN_PROGRESS.
 
 
-    3. Each run reads all pending scans in one `POST /api/v1/scan/result` call with `scanIDs`; finished
+    3. Each run reads all pending scans once, in one `POST /api/v1/scan/result` call with `scanIDs`; finished
     scans enrich their entity at once (`Houdin-io_Threat_Score`, `Houdin-io_Confidence`, `Houdin-io_Confidence_Reason`,
     `Houdin-io_AI_Analysis`, `Houdin-io_Tags`, `Houdin-io_Related_IOCs`, `Houdin-io_Sources`, `Houdin-io_Scan_ID`,
     `Houdin-io_Scan_Link`, `Houdin-io_Scan_Time`, `Houdin-io_Unrecorded`), mark the entity suspicious
@@ -27,14 +27,14 @@ Enrich Entities:
 
 
     4. Once every scan is done, fetches the full documents and attaches `[{Entity, EntityResult}]` as
-    the JSON result, then completes; the result value is the number of enriched entities.
+    the JSON result, then completes; the result value is true, or false when no entity could be scanned.
 
 
     ### Additional Notes
 
 
-    - Asynchronous: the platform re-runs the action until every scan is done. Set the action timeout to
-    three minutes or more when URLScan is in the set.
+    - Asynchronous: the platform re-runs the action until every scan is done, one poll per run at the step''s
+    Async Polling Interval. Set the action timeout to three minutes or more when URLScan is in the set.
 
     - Private IP addresses and hostnames without a dot are skipped.'
   ai_short_description: Scans the alert's IPs, URLs, domains and hashes on Houdin.io and enriches them
@@ -165,7 +165,7 @@ Ping:
     ### Flow Description
 
 
-    1. Reads the API Key and Verify SSL settings from the integration configuration.
+    1. Reads the API Root, API Key, and Verify SSL settings from the integration configuration.
 
 
     2. Sends `POST /api/v1/ping` to app.houdin.io.
@@ -292,11 +292,12 @@ Scan Artifact:
     modules always appended) and `forceRescan`.
 
 
-    2. Stores the returned `scanID` in `additional_data` and ends in the IN_PROGRESS state.
+    2. Stores the returned `scanID` in `additional_data`, reads the result once and ends in the IN_PROGRESS
+    state when the scan is still running; a cached scan completes in the first run.
 
 
-    3. Each following run reads `GET /api/v1/scan/result?scanID=...`: `202` means still running (IN_PROGRESS
-    again), `200` returns the document.
+    3. Each following run reads the scan once with `POST /api/v1/scan/result` (`scanIDs`): a scan still
+    running is left out of the answer (IN_PROGRESS again), otherwise the document is returned.
 
 
     4. Attaches the document as the JSON result, adds a link to the scan in the Houdin app and completes
