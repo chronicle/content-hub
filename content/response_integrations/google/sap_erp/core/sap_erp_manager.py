@@ -14,19 +14,23 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from urllib.parse import urlsplit
 
+import google.auth
+import google.auth.impersonated_credentials
 import google.auth.transport.requests
 import google.oauth2.id_token
+import google.oauth2.service_account
 import requests
 
-DEFAULT_TIMEOUT_SECONDS = 60
-PING_TIMEOUT_SECONDS = 30
-
-
-class SapErpAuthError(Exception):
-    """Raised when generating a Google Cloud ID token fails."""
+from .constants import (
+    CLOUD_PLATFORM_SCOPE,
+    DEFAULT_TIMEOUT_SECONDS,
+    PING_TIMEOUT_SECONDS,
+)
+from .exceptions import SapErpAuthError
 
 
 class SapErpManager:
@@ -36,11 +40,15 @@ class SapErpManager:
         self,
         cloud_run_url: str,
         *,
+        service_account_json: str | None = None,
+        workload_identity_email: str | None = None,
         timeout: int = DEFAULT_TIMEOUT_SECONDS,
         verify_ssl: bool = True,
     ) -> None:
         # Strip accidental whitespace and trailing slash.
         self.cloud_run_url = (cloud_run_url or "").strip().rstrip("/")
+        self.service_account_json = (service_account_json or "").strip() or None
+        self.workload_identity_email = (workload_identity_email or "").strip() or None
         self.timeout = timeout
         self.verify_ssl = verify_ssl
 
@@ -52,15 +60,74 @@ class SapErpManager:
             if parsed.scheme and parsed.netloc
             else self.cloud_run_url
         )
+        # Cached for the manager's lifetime without an expiry check. This is
+        # safe for short-lived SOAR actions; do not reuse a manager instance in
+        # a long-running job or connector where the 1-hour ID token may expire.
         self._id_token: str | None = None
+
+    def _prepare_auth_request(self) -> google.auth.transport.requests.Request:
+        """Build an HTTP transport request respecting ``self.verify_ssl``.
+
+        Returns:
+            Configured Google Auth transport Request.
+
+        """
+        session = requests.Session()
+        session.verify = self.verify_ssl
+        return google.auth.transport.requests.Request(session=session)
+
+    def _mint_id_token(self) -> str:
+        """Mint a Google-signed ID token for ``self.audience``.
+
+        Uses ``service_account_json`` when provided, otherwise impersonates
+        ``workload_identity_email`` via Application Default Credentials, and
+        falls back to ``google.oauth2.id_token.fetch_id_token`` only when
+        neither credential parameter is configured.
+
+        Returns:
+            The signed ID token string.
+
+        Raises:
+            ValueError: If ``service_account_json`` does not decode to a dict.
+
+        """
+        auth_req = self._prepare_auth_request()
+
+        if self.service_account_json:
+            info = json.loads(self.service_account_json)
+            if not isinstance(info, dict):
+                msg = "Invalid Service Account JSON: expected a JSON object."
+                raise ValueError(msg)
+            sa_creds = (
+                google.oauth2.service_account.IDTokenCredentials.from_service_account_info(
+                    info,
+                    target_audience=self.audience,
+                )
+            )
+            sa_creds.refresh(auth_req)
+            return str(sa_creds.token)
+
+        if self.workload_identity_email:
+            source_creds, _ = google.auth.default(scopes=[CLOUD_PLATFORM_SCOPE])
+            impersonated_creds = google.auth.impersonated_credentials.Credentials(
+                source_credentials=source_creds,
+                target_principal=self.workload_identity_email,
+                target_scopes=[CLOUD_PLATFORM_SCOPE],
+            )
+            id_creds = google.auth.impersonated_credentials.IDTokenCredentials(
+                impersonated_creds,
+                target_audience=self.audience,
+                include_email=True,
+            )
+            id_creds.refresh(auth_req)
+            return str(id_creds.token)
+
+        return str(google.oauth2.id_token.fetch_id_token(auth_req, self.audience))
 
     def _get_auth_headers(self) -> dict[str, str]:
         if not self._id_token:
             try:
-                auth_req = google.auth.transport.requests.Request()
-                self._id_token = google.oauth2.id_token.fetch_id_token(
-                    auth_req, self.audience
-                )
+                self._id_token = self._mint_id_token()
             except Exception as e:
                 msg = f"Failed to generate Google Cloud authentication token: {e}"
                 raise SapErpAuthError(msg) from e
@@ -84,8 +151,11 @@ class SapErpManager:
         Returns:
             The raw HTTP response from the gateway.
 
+        Raises:
+            SapErpAuthError: If generating the Google Cloud ID token fails.
+            requests.RequestException: If the HTTP request to the gateway fails.
 
-        """
+        """  # ruff: ignore[docstring-extraneous-exception]
         envelope_payload = {
             "functionId": function_id,
             "sap_instance": sap_instance,
@@ -107,8 +177,11 @@ class SapErpManager:
         Returns:
             The raw HTTP response from the gateway.
 
+        Raises:
+            SapErpAuthError: If generating the Google Cloud ID token fails.
+            requests.RequestException: If the HTTP request to the gateway fails.
 
-        """
+        """  # ruff: ignore[docstring-extraneous-exception]
         headers = self._get_auth_headers()
         return requests.get(
             self.cloud_run_url,

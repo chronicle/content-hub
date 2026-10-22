@@ -14,145 +14,27 @@
 
 from __future__ import annotations
 
-import requests
-from TIPCommon.base.action import Action, ExecutionState
-from TIPCommon.extraction import extract_action_param, extract_configuration_param
+from ..core.base_action import SapErpRfcAction
+from ..core.constants import (
+    ACTIVATE_AUDIT_LOG_FUNCTION_ID,
+    ACTIVATE_AUDIT_LOG_SCRIPT_NAME,
+)
 
-from ..core.sap_erp_manager import SapErpAuthError, SapErpManager
 
+class ActivateAuditLogAction(SapErpRfcAction):
+    """Activate the SAP Security Audit Log via the SAP RFC Gateway."""
 
-class ActivateAuditLogAction(Action):
-    """Activate the SAP Security Audit Log."""
+    function_id = ACTIVATE_AUDIT_LOG_FUNCTION_ID
+    success_message = "Successfully activated SAP audit log."
+    failure_prefix = "Failed to activate audit log"
 
-    def _extract_action_parameters(self) -> None:
-        self.cloud_run_url = (
-            extract_configuration_param(
-                siemplify=self.soar_action,
-                provider_name="SapErp",
-                param_name="Cloud Run Service URL",
-                is_mandatory=True,
-                print_value=False,
-            )
-            or ""
-        ).strip()
-        self.verify_ssl = extract_configuration_param(
-            siemplify=self.soar_action,
-            provider_name="SapErp",
-            param_name="Verify SSL",
-            input_type=bool,
-            default_value=True,
-            is_mandatory=False,
-            print_value=True,
-        )
-        self.sap_client_number = str(
-            extract_action_param(
-                siemplify=self.soar_action,
-                param_name="SAP Client Number",
-                is_mandatory=True,
-                print_value=True,
-            )
-            or ""
-        ).strip()
-        self.sap_instance_name = (
-            extract_action_param(
-                siemplify=self.soar_action,
-                param_name="SAP Instance Name",
-                is_mandatory=True,
-                print_value=True,
-            )
-            or ""
-        ).strip()
-
-    def _validate_params(self) -> None:
-        required = {
-            "Cloud Run Service URL": self.cloud_run_url,
-            "SAP Client Number": self.sap_client_number,
-            "SAP Instance Name": self.sap_instance_name,
-        }
-        for name, value in required.items():
-            if not value:
-                msg = f"{name} is missing."
-                raise ValueError(msg)
-
-    def _init_api_clients(self) -> SapErpManager:
-        return SapErpManager(
-            cloud_run_url=self.cloud_run_url, verify_ssl=self.verify_ssl
-        )
-
-    def _perform_action(self, _: None = None) -> None:
-        self.result_value = False
-        manager = self.api_client
-
-        try:
-            response = manager.execute_function(
-                function_id="ACTIVATE_AUDIT_LOG",
-                sap_instance=self.sap_instance_name,
-                sap_client=self.sap_client_number,
-                payload={},
-            )
-        except SapErpAuthError as e:
-            self.logger.exception("Authentication error calling SAP RFC Gateway")
-            self.execution_state = ExecutionState.FAILED
-            self.output_message = f"Authentication error: {e}"
-            return
-        except requests.exceptions.RequestException as e:
-            self.logger.exception("Network error calling SAP RFC Gateway")
-            self.execution_state = ExecutionState.FAILED
-            self.output_message = f"Failed to communicate with SAP RFC Gateway: {e}"
-            return
-
-        if not response.ok:
-            error_detail = manager.extract_error_detail(response)
-            self.logger.error(
-                f"Request failed with status {response.status_code}. "
-                f"Error: {error_detail}"
-            )
-            self.execution_state = ExecutionState.FAILED
-            self.output_message = (
-                f"Proxy request failed (HTTP {response.status_code}): {error_detail}"
-            )
-            return
-
-        try:
-            response_json = response.json()
-        except ValueError:
-            self.logger.exception(f"Received non-JSON response. Text: {response.text}")
-            self.execution_state = ExecutionState.FAILED
-            self.output_message = (
-                f"Received unexpected non-JSON response: {response.text}"
-            )
-            return
-
-        self.soar_action.result.add_result_json(response_json)
-        sap_status = response_json.get("status")
-
-        if sap_status == "SUCCESS":
-            self.logger.info("Successfully activated SAP audit log.")
-            self.result_value = True
-            self.execution_state = ExecutionState.COMPLETED
-            self.output_message = "Successfully activated SAP audit log."
-        else:
-            error_messages = [
-                ret.get("message", "Unknown error")
-                # "return" may be present but null.
-                for ret in (response_json.get("return") or [])
-                if isinstance(ret, dict)
-            ]
-            error_summary = (
-                "; ".join(error_messages)
-                or response_json.get("error")
-                or f"Unexpected SAP status: {sap_status}"
-            )
-            self.logger.error(f"SAP returned an error: {error_summary}")
-            self.execution_state = ExecutionState.FAILED
-            self.output_message = (
-                f"Failed to activate audit log. SAP Error: {error_summary}"
-            )
+    def __init__(self, name: str = ACTIVATE_AUDIT_LOG_SCRIPT_NAME) -> None:
+        super().__init__(name)
 
 
 def main() -> None:
     """Run the Activate Audit Log action."""
-    ActivateAuditLogAction(name="Activate Audit Log").run()
+    ActivateAuditLogAction().run()
 
 
 if __name__ == "__main__":

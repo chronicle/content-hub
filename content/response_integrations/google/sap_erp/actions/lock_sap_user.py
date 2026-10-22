@@ -14,157 +14,50 @@
 
 from __future__ import annotations
 
-import requests
-from TIPCommon.base.action import Action, ExecutionState
-from TIPCommon.extraction import extract_action_param, extract_configuration_param
+from typing import Any
 
-from ..core.sap_erp_manager import SapErpAuthError, SapErpManager
+from TIPCommon.extraction import extract_action_param
+
+from ..core.base_action import SapErpRfcAction
+from ..core.constants import (
+    LOCK_SAP_USER_SCRIPT_NAME,
+    SAP_USERNAME_PARAM,
+    USER_LOCK_FUNCTION_ID,
+)
 
 
-class LockSapUserAction(Action):
-    """Lock an SAP user account via BAPI_USER_LOCK."""
+class LockSapUserAction(SapErpRfcAction):
+    """Lock a specified SAP user account via the SAP RFC Gateway."""
 
-    def _extract_action_parameters(self) -> None:
-        self.cloud_run_url = (
-            extract_configuration_param(
-                siemplify=self.soar_action,
-                provider_name="SapErp",
-                param_name="Cloud Run Service URL",
-                is_mandatory=True,
-                print_value=False,
-            )
-            or ""
-        ).strip()
-        self.verify_ssl = extract_configuration_param(
-            siemplify=self.soar_action,
-            provider_name="SapErp",
-            param_name="Verify SSL",
-            input_type=bool,
-            default_value=True,
-            is_mandatory=False,
-            print_value=True,
-        )
-        self.sap_client_number = str(
+    function_id = USER_LOCK_FUNCTION_ID
+
+    def __init__(self, name: str = LOCK_SAP_USER_SCRIPT_NAME) -> None:
+        super().__init__(name)
+
+    def _extract_rfc_parameters(self) -> None:
+        self.sap_username: str = (
             extract_action_param(
                 siemplify=self.soar_action,
-                param_name="SAP Client Number",
-                is_mandatory=True,
-                print_value=True,
-            )
-            or ""
-        ).strip()
-        self.sap_instance_name = (
-            extract_action_param(
-                siemplify=self.soar_action,
-                param_name="SAP Instance Name",
-                is_mandatory=True,
-                print_value=True,
-            )
-            or ""
-        ).strip()
-        self.sap_username = (
-            extract_action_param(
-                siemplify=self.soar_action,
-                param_name="SAP Username",
+                param_name=SAP_USERNAME_PARAM,
                 is_mandatory=True,
                 print_value=True,
             )
             or ""
         ).strip()
 
-    def _validate_params(self) -> None:
-        required = {
-            "Cloud Run Service URL": self.cloud_run_url,
-            "SAP Client Number": self.sap_client_number,
-            "SAP Instance Name": self.sap_instance_name,
-            "SAP Username": self.sap_username,
-        }
-        for name, value in required.items():
-            if not value:
-                msg = f"{name} is missing."
-                raise ValueError(msg)
+    def _build_payload(self) -> dict[str, Any]:
+        return {"username": self.sap_username}
 
-    def _init_api_clients(self) -> SapErpManager:
-        return SapErpManager(
-            cloud_run_url=self.cloud_run_url, verify_ssl=self.verify_ssl
-        )
+    def _get_success_message(self) -> str:
+        return f"Successfully locked user {self.sap_username}."
 
-    def _perform_action(self, _: None = None) -> None:
-        self.result_value = False
-        manager = self.api_client
-
-        try:
-            response = manager.execute_function(
-                function_id="USER_LOCK",
-                sap_instance=self.sap_instance_name,
-                sap_client=self.sap_client_number,
-                payload={
-                    "username": self.sap_username,
-                },
-            )
-        except SapErpAuthError as e:
-            self.logger.exception("Authentication error calling SAP RFC Gateway")
-            self.execution_state = ExecutionState.FAILED
-            self.output_message = f"Authentication error: {e}"
-            return
-        except requests.exceptions.RequestException as e:
-            self.logger.exception("Network error calling SAP RFC Gateway")
-            self.execution_state = ExecutionState.FAILED
-            self.output_message = f"Failed to communicate with SAP RFC Gateway: {e}"
-            return
-
-        if not response.ok:
-            error_detail = manager.extract_error_detail(response)
-            self.logger.error(
-                f"Request failed with status {response.status_code}. "
-                f"Error: {error_detail}"
-            )
-            self.execution_state = ExecutionState.FAILED
-            self.output_message = (
-                f"Proxy request failed (HTTP {response.status_code}): {error_detail}"
-            )
-            return
-
-        try:
-            response_json = response.json()
-        except ValueError:
-            self.logger.exception(f"Received non-JSON response. Text: {response.text}")
-            self.execution_state = ExecutionState.FAILED
-            self.output_message = (
-                f"Received unexpected non-JSON response: {response.text}"
-            )
-            return
-
-        self.soar_action.result.add_result_json(response_json)
-        sap_status = response_json.get("status")
-
-        if sap_status == "SUCCESS":
-            self.logger.info(f"Successfully locked user {self.sap_username}.")
-            self.result_value = True
-            self.execution_state = ExecutionState.COMPLETED
-            self.output_message = f"Successfully locked user {self.sap_username}."
-        else:
-            error_messages = [
-                ret.get("message", "Unknown error")
-                # "return" may be present but null.
-                for ret in (response_json.get("return") or [])
-                if isinstance(ret, dict)
-            ]
-            error_summary = (
-                "; ".join(error_messages)
-                or response_json.get("error")
-                or f"Unexpected SAP status: {sap_status}"
-            )
-            self.logger.error(f"SAP returned an error: {error_summary}")
-            self.execution_state = ExecutionState.FAILED
-            self.output_message = (
-                f"Failed to lock user {self.sap_username}. SAP Error: {error_summary}"
-            )
+    def _get_failure_prefix(self) -> str:
+        return f"Failed to lock user {self.sap_username}"
 
 
 def main() -> None:
     """Run the Lock SAP User action."""
-    LockSapUserAction(name="Lock SAP User").run()
+    LockSapUserAction().run()
 
 
 if __name__ == "__main__":

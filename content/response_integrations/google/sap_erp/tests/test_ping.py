@@ -12,43 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Tests for the Ping action."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
+from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
-from sap_erp.actions.ping import SUCCESS_MESSAGE, PingAction
-from sap_erp.core.sap_erp_manager import SapErpAuthError
+from sap_erp.actions import ping
+from sap_erp.actions.ping import SUCCESS_MESSAGE
+from sap_erp.core.exceptions import SapErpAuthError
+from sap_erp.tests.common import CONFIG_PATH
 
 if TYPE_CHECKING:
-    from unittest.mock import MagicMock
+    from integration_testing.platform.script_output import MockActionOutput
 
     from .conftest import ResponseFactory
-
-pytestmark = pytest.mark.usefixtures("mock_soar_action")
 
 # Exact wording required by the repository style guide.
 EXPECTED_SUCCESS = (
     "Successfully connected to the SAP ERP server with the provided connection parameters!"
 )
-EXPECTED_FAILURE_PREFIX = "Failed to connect to the SAP ERP server! Error is "
+EXPECTED_FAILURE_PREFIX = "Failed to connect to the SAP ERP server!\nReason: "
 
 
-def build_action(manager: MagicMock) -> PingAction:
-    action = PingAction(name="Ping")
-    action._api_client = manager
-    action.cloud_run_url = "https://gw-abc.a.run.app"
-    return action
-
-
-def assert_failed(action: PingAction, error: str) -> None:
-    assert action.result_value is False
-    assert action.execution_state == ExecutionState.FAILED
-    assert action.output_message.startswith(EXPECTED_FAILURE_PREFIX)
-    assert error in action.output_message
+def assert_failed(action_output: MockActionOutput, error: str) -> None:
+    assert action_output.results.result_value is False
+    assert action_output.results.execution_state == ExecutionState.FAILED
+    assert action_output.results.output_message.startswith(EXPECTED_FAILURE_PREFIX)
+    assert error in action_output.results.output_message
 
 
 def test_success_message_matches_style_guide() -> None:
@@ -57,58 +54,85 @@ def test_success_message_matches_style_guide() -> None:
 
 # The gateway only accepts POST, so a healthy service answers GET with 405.
 @pytest.mark.parametrize("status_code", [200, 405])
+@set_metadata(integration_config_file_path=CONFIG_PATH)
+@patch("sap_erp.core.sap_erp_manager.SapErpManager.ping")
 def test_healthy(
-    manager: MagicMock, make_response: ResponseFactory, status_code: int
+    mock_ping: MagicMock,
+    make_response: ResponseFactory,
+    status_code: int,
+    action_output: MockActionOutput,
 ) -> None:
-    manager.ping.return_value = make_response(
+    mock_ping.return_value = make_response(
         status_code, {"error": "Only POST requests are supported."}
     )
-    action = build_action(manager)
 
-    action._perform_action()
+    ping.main()
 
-    assert action.result_value is True
-    assert action.execution_state == ExecutionState.COMPLETED
-    assert action.output_message == EXPECTED_SUCCESS
+    mock_ping.assert_called_once_with()
+    assert action_output.results.result_value is True
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.output_message == EXPECTED_SUCCESS
 
 
 @pytest.mark.parametrize("status_code", [401, 403])
+@set_metadata(integration_config_file_path=CONFIG_PATH)
+@patch("sap_erp.core.sap_erp_manager.SapErpManager.ping")
 def test_iam_rejected(
-    manager: MagicMock, make_response: ResponseFactory, status_code: int
+    mock_ping: MagicMock,
+    make_response: ResponseFactory,
+    status_code: int,
+    action_output: MockActionOutput,
 ) -> None:
-    manager.ping.return_value = make_response(status_code, text="Forbidden")
-    action = build_action(manager)
+    mock_ping.return_value = make_response(status_code, text="Forbidden")
 
-    action._perform_action()
-
-    assert_failed(action, f"Authentication to Cloud Run failed (HTTP {status_code})")
-    assert "roles/run.invoker" in action.output_message
-
-
-def test_unexpected_status(manager: MagicMock, make_response: ResponseFactory) -> None:
-    manager.ping.return_value = make_response(503, {"error": "Service Unavailable"})
-    action = build_action(manager)
-
-    action._perform_action()
+    ping.main()
 
     assert_failed(
-        action, "Cloud Run service returned unexpected HTTP 503: Service Unavailable"
+        action_output, f"Authentication to Cloud Run failed (HTTP {status_code})"
+    )
+    assert "roles/run.invoker" in action_output.results.output_message
+
+
+@set_metadata(integration_config_file_path=CONFIG_PATH)
+@patch("sap_erp.core.sap_erp_manager.SapErpManager.ping")
+def test_unexpected_status(
+    mock_ping: MagicMock,
+    make_response: ResponseFactory,
+    action_output: MockActionOutput,
+) -> None:
+    mock_ping.return_value = make_response(503, {"error": "Service Unavailable"})
+
+    ping.main()
+
+    assert_failed(
+        action_output,
+        "Cloud Run service returned unexpected HTTP 503: Service Unavailable",
     )
 
 
-def test_token_failure(manager: MagicMock) -> None:
-    manager.ping.side_effect = SapErpAuthError("no creds")
-    action = build_action(manager)
+@set_metadata(integration_config_file_path=CONFIG_PATH)
+@patch("sap_erp.core.sap_erp_manager.SapErpManager.ping")
+def test_token_failure(
+    mock_ping: MagicMock,
+    action_output: MockActionOutput,
+) -> None:
+    mock_ping.side_effect = SapErpAuthError("no creds")
 
-    action._perform_action()
+    ping.main()
 
-    assert_failed(action, "Failed to generate Google Cloud authentication token.")
+    assert_failed(
+        action_output, "Failed to generate Google Cloud authentication token."
+    )
 
 
-def test_network_error(manager: MagicMock) -> None:
-    manager.ping.side_effect = requests.exceptions.ConnectionError("DNS failure")
-    action = build_action(manager)
+@set_metadata(integration_config_file_path=CONFIG_PATH)
+@patch("sap_erp.core.sap_erp_manager.SapErpManager.ping")
+def test_network_error(
+    mock_ping: MagicMock,
+    action_output: MockActionOutput,
+) -> None:
+    mock_ping.side_effect = requests.exceptions.ConnectionError("DNS failure")
 
-    action._perform_action()
+    ping.main()
 
-    assert_failed(action, "Network error: DNS failure")
+    assert_failed(action_output, "Network error: DNS failure")

@@ -14,23 +14,26 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sap_erp.core.sap_erp_manager import (
+from sap_erp.core.constants import (
+    CLOUD_PLATFORM_SCOPE,
     DEFAULT_TIMEOUT_SECONDS,
     PING_TIMEOUT_SECONDS,
-    SapErpAuthError,
-    SapErpManager,
 )
+from sap_erp.core.exceptions import SapErpAuthError
+from sap_erp.core.sap_erp_manager import SapErpManager
 
 if TYPE_CHECKING:
     from .conftest import ResponseFactory
 
 BASE = "https://gw-abc.a.run.app"
 INSTANCE = "S4H_SANDBOX_00"
+SA_INFO = {"type": "service_account", "project_id": "test-project"}
 
 
 @pytest.mark.parametrize("raw_url", [BASE, f"{BASE}/", f"  {BASE}  ", f"  {BASE}/ "])
@@ -56,6 +59,8 @@ def test_defaults() -> None:
     manager = SapErpManager(cloud_run_url=BASE)
     assert manager.timeout == DEFAULT_TIMEOUT_SECONDS
     assert manager.verify_ssl is True
+    assert manager.service_account_json is None
+    assert manager.workload_identity_email is None
 
 
 @patch("google.oauth2.id_token.fetch_id_token", return_value="tok")
@@ -99,6 +104,71 @@ def test_execute_function_posts_envelope(
         timeout=12,
         verify=True,
     )
+
+
+@patch(
+    "google.oauth2.service_account.IDTokenCredentials.from_service_account_info"
+)
+@patch("requests.post")
+def test_service_account_json_mints_id_token(
+    mock_post: MagicMock, mock_from_sa: MagicMock
+) -> None:
+    mock_creds = MagicMock()
+    mock_creds.token = "sa-id-tok"  # ruff: ignore[hardcoded-password-string]
+    mock_from_sa.return_value = mock_creds
+
+    manager = SapErpManager(
+        cloud_run_url=BASE,
+        service_account_json=json.dumps(SA_INFO),
+    )
+    manager.execute_function("USER_LOCK", INSTANCE, "100", {"username": "JDOE"})
+
+    mock_from_sa.assert_called_once_with(SA_INFO, target_audience=BASE)
+    mock_creds.refresh.assert_called_once()
+    assert mock_post.call_args.kwargs["headers"] == {"Authorization": "Bearer sa-id-tok"}
+
+
+def test_invalid_service_account_json_raises_auth_error() -> None:
+    manager = SapErpManager(cloud_run_url=BASE, service_account_json="[]")
+    with pytest.raises(SapErpAuthError, match="expected a JSON object"):
+        manager.execute_function("A", INSTANCE, "100", {})
+
+
+@patch("google.auth.impersonated_credentials.IDTokenCredentials")
+@patch("google.auth.impersonated_credentials.Credentials")
+@patch("google.auth.default")
+@patch("requests.post")
+def test_workload_identity_email_mints_impersonated_id_token(
+    mock_post: MagicMock,
+    mock_default: MagicMock,
+    mock_imp_creds_cls: MagicMock,
+    mock_id_creds_cls: MagicMock,
+) -> None:
+    source_creds = MagicMock()
+    mock_default.return_value = (source_creds, "proj")
+    imp_creds = MagicMock()
+    mock_imp_creds_cls.return_value = imp_creds
+    id_creds = MagicMock()
+    id_creds.token = "wi-id-tok"  # ruff: ignore[hardcoded-password-string]
+    mock_id_creds_cls.return_value = id_creds
+
+    sa_email = "invoker@proj.iam.gserviceaccount.com"
+    manager = SapErpManager(cloud_run_url=BASE, workload_identity_email=sa_email)
+    manager.execute_function("USER_LOCK", INSTANCE, "100", {"username": "JDOE"})
+
+    mock_default.assert_called_once_with(scopes=[CLOUD_PLATFORM_SCOPE])
+    mock_imp_creds_cls.assert_called_once_with(
+        source_credentials=source_creds,
+        target_principal=sa_email,
+        target_scopes=[CLOUD_PLATFORM_SCOPE],
+    )
+    mock_id_creds_cls.assert_called_once_with(
+        imp_creds,
+        target_audience=BASE,
+        include_email=True,
+    )
+    id_creds.refresh.assert_called_once()
+    assert mock_post.call_args.kwargs["headers"] == {"Authorization": "Bearer wi-id-tok"}
 
 
 @patch("google.oauth2.id_token.fetch_id_token", return_value="tok")
