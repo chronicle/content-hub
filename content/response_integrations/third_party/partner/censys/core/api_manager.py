@@ -7,6 +7,7 @@ import urllib.parse
 from typing import Any
 
 import requests
+from TIPCommon.types import SingleJson
 
 from .censys_exceptions import (
     CensysException,
@@ -117,11 +118,11 @@ class APIManager:
         api_identifier: str,
         method: str,
         url: str,
-        params: dict[str, Any] | None = None,
-        body: dict[str, Any] | None = None,
+        params: SingleJson | None = None,
+        body: SingleJson | None = None,
         data: str | None = None,
         retry_count: int = RETRY_COUNT,
-    ) -> dict[str, Any]:
+    ) -> SingleJson:
         """Make a REST call to the Censys API with automatic retry logic.
 
         Args:
@@ -353,7 +354,7 @@ class APIManager:
         port: int,
         protocol: str | None = None,
         transport_protocol: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> SingleJson:
         """Initiate a live rescan for a known host service.
 
         Args:
@@ -404,7 +405,7 @@ class APIManager:
 
         return response
 
-    def get_rescan_status(self, scan_id: str) -> dict[str, Any]:
+    def get_rescan_status(self, scan_id: str) -> SingleJson:
         """Get the current status of a scan by its ID.
 
         Args:
@@ -431,7 +432,7 @@ class APIManager:
         host_id: str,
         start_time: str,
         end_time: str,
-    ) -> dict[str, Any]:
+    ) -> SingleJson:
         """Get the event history for a host (IP address) with time-based pagination.
 
         The API uses reversed time semantics:
@@ -624,7 +625,7 @@ class APIManager:
             }
         }
 
-    def get_host_enrichment(self, host_ip: str) -> dict[str, Any]:
+    def get_host_enrichment(self, host_ip: str) -> SingleJson:
         """
         Retrieve enrichment data for a single host from the new enrichment endpoint.
 
@@ -650,7 +651,7 @@ class APIManager:
 
     def enrich_hosts(
         self, host_ids: list[str], at_time: str | None = None
-    ) -> dict[str, Any]:
+    ) -> SingleJson:
         """
         Enrich multiple hosts with detailed information.
 
@@ -678,7 +679,7 @@ class APIManager:
 
     def enrich_web_properties(
         self, webproperty_ids: list[str], at_time: str | None = None
-    ) -> dict[str, Any]:
+    ) -> SingleJson:
         """
         Enrich multiple web properties with detailed information.
 
@@ -704,7 +705,7 @@ class APIManager:
 
         return response
 
-    def enrich_certificates(self, certificate_ids: list[str]) -> dict[str, Any]:
+    def enrich_certificates(self, certificate_ids: list[str]) -> SingleJson:
         """
         Enrich certificates using Censys API.
 
@@ -731,7 +732,7 @@ class APIManager:
         self,
         target_type: str,
         target_value: str,
-    ) -> dict[str, Any]:
+    ) -> SingleJson:
         """
         Create a CensEye (Related Infrastructure) job.
 
@@ -769,7 +770,7 @@ class APIManager:
 
         return response
 
-    def get_censeye_job_status(self, job_id: str) -> dict[str, Any]:
+    def get_censeye_job_status(self, job_id: str) -> SingleJson:
         """
         Get the current status of a CensEye job.
 
@@ -797,7 +798,7 @@ class APIManager:
     def get_censeye_job_results(
         self,
         job_id: str,
-    ) -> dict[str, Any]:
+    ) -> SingleJson:
         """
         Get the results from a completed CensEye job.
 

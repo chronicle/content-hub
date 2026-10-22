@@ -516,15 +516,17 @@ def convert_entities(monkeypatch: pytest.MonkeyPatch):
 @pytest.fixture(autouse=True)
 def mock_siemplify_methods(monkeypatch: pytest.MonkeyPatch):
     """Mock Siemplify methods that are not provided by integration_testing framework."""
-    # Mock update_entities
     mock_update = MagicMock(return_value=None)
-    monkeypatch.setattr(
-        "soar_sdk.SiemplifyAction.SiemplifyAction.update_entities", mock_update
-    )
-
     # Mock get_system_version to prevent API calls during APIManager initialization
     mock_version = MagicMock(return_value="1.0.0")
-    monkeypatch.setattr(
-        "soar_sdk.SiemplifyAction.SiemplifyAction.get_system_version",
-        mock_version,
-    )
+
+    # TIPCommon's Action base class instantiates SiemplifyAction through the
+    # top-level "SiemplifyAction" module, while the older actions use the
+    # "soar_sdk" path, so both classes are patched.
+    for module_path in ("soar_sdk.SiemplifyAction", "SiemplifyAction"):
+        monkeypatch.setattr(
+            f"{module_path}.SiemplifyAction.update_entities", mock_update
+        )
+        monkeypatch.setattr(
+            f"{module_path}.SiemplifyAction.get_system_version", mock_version
+        )

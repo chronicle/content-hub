@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
 
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_FAILED,
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.types import Entity, SingleJson
 
 from ..core.api_manager import APIManager
 from ..core.censys_exceptions import (
@@ -20,13 +20,11 @@ from ..core.constants import (
     ENRICH_IPS_SCRIPT_NAME,
     ENRICHMENT_PREFIX,
     NO_ADDRESS_ENTITIES_ERROR,
-    REPUTATION_CLASS_PROBABILITIES_TABLE_NAME,
-    REPUTATION_EVIDENCE_TABLE_NAME,
-    REPUTATION_SUMMARY_TABLE_NAME,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
 )
-from ..core.datamodels import HostDatamodel, ReputationExtractor
+from ..core.datamodels import HostDatamodel
+from ..core.reputation import ReputationTables
 from ..core.utils import (
     filter_valid_ips,
     get_integration_params,
@@ -36,42 +34,9 @@ from ..core.utils import (
 )
 
 
-def _add_reputation_tables(
-    siemplify: SiemplifyAction,
-    reputation_summary_rows: list[dict],
-    class_probability_rows: list[dict],
-    evidence_rows: list[dict],
-) -> None:
-    """
-    Add combined reputation data tables to the case wall, one row per
-    processed IP. No-ops for any table whose row list is empty (e.g. when
-    no processed host had reputation data).
-    """
-    if reputation_summary_rows:
-        siemplify.result.add_data_table(
-            REPUTATION_SUMMARY_TABLE_NAME,
-            construct_csv(reputation_summary_rows),
-            "Censys",
-        )
-
-    if class_probability_rows:
-        siemplify.result.add_data_table(
-            REPUTATION_CLASS_PROBABILITIES_TABLE_NAME,
-            construct_csv(class_probability_rows),
-            "Censys",
-        )
-
-    if evidence_rows:
-        siemplify.result.add_data_table(
-            REPUTATION_EVIDENCE_TABLE_NAME,
-            construct_csv(evidence_rows),
-            "Censys",
-        )
-
-
 def _extract_resources_from_response(
-    response: dict[str, Any],
-) -> list[dict[str, Any]]:
+    response: SingleJson,
+) -> list[SingleJson]:
     """
     Extract resource list from API response.
 
@@ -89,8 +54,8 @@ def _extract_resources_from_response(
 
 
 def _find_entity_resource(
-    resources: list[dict[str, Any]], entity_identifier: str
-) -> dict[str, Any] | None:
+    resources: list[SingleJson], entity_identifier: str
+) -> SingleJson | None:
     """
     Find matching resource for an entity identifier.
 
@@ -126,7 +91,7 @@ def _build_output_message(
     Returns:
         Formatted output message string
     """
-    message_parts = []
+    message_parts: list[str] = []
 
     if successful:
         message_parts.append(
@@ -198,17 +163,15 @@ def main():
     output_message = ""
 
     # Entity tracking
-    successful_entities = []
-    failed_entities = []
-    not_found_entities = []
-    invalid_entities = []
-    json_results = []
-    ip_addresses = []
-    ip_entities = []
-    valid_ips = []
-    reputation_summary_rows = []
-    class_probability_rows = []
-    evidence_rows = []
+    successful_entities: list[str] = []
+    failed_entities: list[str] = []
+    not_found_entities: list[str] = []
+    invalid_entities: list[str] = []
+    json_results: list[SingleJson] = []
+    ip_addresses: list[str] = []
+    ip_entities: list[Entity] = []
+    valid_ips: list[str] = []
+    reputation_tables = ReputationTables()
 
     try:
         # Initialize API Manager
@@ -326,21 +289,8 @@ def main():
 
                 # Accumulate reputation table rows for this IP (no-op if the
                 # host has no reputation data)
-                reputation = host_model.host_data.get("reputation")
-                summary_row = ReputationExtractor.get_summary_row(
-                    entity_identifier, reputation
-                )
-                if summary_row:
-                    reputation_summary_rows.append(summary_row)
-                class_probability_rows.extend(
-                    ReputationExtractor.get_class_probability_rows(
-                        entity_identifier, reputation
-                    )
-                )
-                evidence_rows.extend(
-                    ReputationExtractor.get_evidence_rows(
-                        entity_identifier, reputation
-                    )
+                reputation_tables.add(
+                    entity_identifier, host_model.host_data.get("reputation")
                 )
 
                 siemplify.LOGGER.info(f"Successfully enriched: {entity_identifier}")
@@ -402,9 +352,7 @@ def main():
     siemplify.result.add_result_json(json_results)
 
     # Add reputation data tables (no-op for any table with no rows)
-    _add_reputation_tables(
-        siemplify, reputation_summary_rows, class_probability_rows, evidence_rows
-    )
+    reputation_tables.add_to_case_wall(siemplify)
 
     siemplify.LOGGER.info("================= Main - Finished =================")
     siemplify.LOGGER.info(f"Status: {status}")
