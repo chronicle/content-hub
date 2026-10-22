@@ -13,19 +13,26 @@
 # limitations under the License.
 
 from __future__ import annotations
-from urllib.parse import urljoin
-import requests
-from .constants import ENDPOINTS, EXECUTION_IN_PROGRESS, EXECUTION_FINISHED
-from .UtilsManager import validate_response
-from .SnowflakeParser import SnowflakeParser
+
 import base64
-import jwt
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from cryptography.hazmat.primitives.serialization import Encoding
-from cryptography.hazmat.primitives.serialization import PublicFormat
-from cryptography.hazmat.backends import default_backend
 import hashlib
-from datetime import timedelta, timezone, datetime
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urljoin
+
+import jwt
+import requests
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat, load_pem_private_key
+
+from .constants import ALL_FIELDS_WILDCARD, ENDPOINTS, EXECUTION_FINISHED, EXECUTION_IN_PROGRESS
+from .query_validation import (
+    validate_fields_to_return,
+    validate_identifier,
+    validate_sort_order,
+    validate_where_filter,
+)
+from .SnowflakeParser import SnowflakeParser
+from .UtilsManager import validate_response
 
 
 class SnowflakeManager:
@@ -188,6 +195,7 @@ class SnowflakeManager:
     ):
         """
         Build the query to submit
+        Each value is validated so it can't change the query structure.
         :param fields_to_return: {str} Csv of fields to return
         :param table: {str} Name of the table where to execute the query
         :param where_filter: {str} Where filter to add to the query
@@ -195,13 +203,15 @@ class SnowflakeManager:
         :param sort_field: {str} Field to sort with
         :return: {str}
         """
-        query_string = f"SELECT {fields_to_return}" if fields_to_return else "SELECT *"
+        fields: str = validate_fields_to_return(fields_to_return) if fields_to_return else ALL_FIELDS_WILDCARD
+        query_string = f"SELECT {fields}"
         if table:
-            query_string += f" FROM {table}"
+            query_string += f" FROM {validate_identifier(table, 'Table')}"
         if where_filter:
-            query_string += f" WHERE {where_filter}"
+            query_string += f" WHERE ({validate_where_filter(where_filter)})"
         if sort_field:
-            query_string += f" ORDER BY {sort_field} {sort_order}"
+            order_by: str = validate_identifier(sort_field, "Sort Field")
+            query_string += f" ORDER BY {order_by} {validate_sort_order(sort_order)}"
 
         return query_string
 
