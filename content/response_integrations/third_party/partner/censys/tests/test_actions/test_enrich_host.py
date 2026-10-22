@@ -280,13 +280,14 @@ class TestEnrichHost:
         action_output: MockActionOutput,
         censys_manager: CensysAPIManager,
     ) -> None:
-        """Test host enrichment when host not found in Censys (empty resource)."""
+        """Host not found in Censys (empty resource): result stays true so the
+        playbook does not fall back to Enrich Host - Get Host API."""
         censys_manager.set_enrich_host_response({"result": {"resource": {}}})
 
         enrich_host.main()
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.result_value is False
+        assert action_output.results.result_value is True
         assert "not found in Censys" in action_output.results.output_message
 
     @set_metadata(
@@ -465,7 +466,8 @@ class TestEnrichHost:
         action_output: MockActionOutput,
         censys_manager: CensysAPIManager,
     ) -> None:
-        """Test that a 404 from the API is treated as 'not found', not a failure."""
+        """A 404 from the API is 'not found', not a failure: result stays true so
+        the playbook does not fall back and repeat the lookup."""
         censys_manager.simulate_enrich_host_failure(
             should_fail=True, exception_type="not_found"
         )
@@ -473,9 +475,74 @@ class TestEnrichHost:
         enrich_host.main()
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.result_value is False
+        assert action_output.results.result_value is True
         assert "not found in Censys" in action_output.results.output_message
         assert "failed to process" not in action_output.results.output_message
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        entities=[
+            {
+                "identifier": "8.8.8.8",
+                "entity_type": "ADDRESS",
+                "additional_properties": {},
+            },
+            {
+                "identifier": "1.1.1.1",
+                "entity_type": "ADDRESS",
+                "additional_properties": {},
+            },
+        ],
+    )
+    def test_enrich_host_all_ips_not_found_does_not_request_fallback(
+        self,
+        action_output: MockActionOutput,
+        censys_manager: CensysAPIManager,
+    ) -> None:
+        """Every IP unindexed (404) is a routine outcome: the run completes with
+        a true result so the playbook does not repeat the lookups via Enrich
+        Host - Get Host API."""
+        censys_manager.simulate_enrich_host_failure_for_ip("8.8.8.8", "not_found")
+        censys_manager.simulate_enrich_host_failure_for_ip("1.1.1.1", "not_found")
+
+        enrich_host.main()
+
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is True
+        assert "2 host(s) not found in Censys" in action_output.results.output_message
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        entities=[
+            {
+                "identifier": "8.8.8.8",
+                "entity_type": "ADDRESS",
+                "additional_properties": {},
+            },
+            {
+                "identifier": "1.1.1.1",
+                "entity_type": "ADDRESS",
+                "additional_properties": {},
+            },
+        ],
+    )
+    def test_enrich_host_not_found_and_failed_requests_fallback(
+        self,
+        action_output: MockActionOutput,
+        censys_manager: CensysAPIManager,
+    ) -> None:
+        """A per-IP failure (possibly transient) with nothing enriched keeps the
+        result false so the playbook can still try Enrich Host - Get Host API,
+        even when another IP was simply not found."""
+        censys_manager.simulate_enrich_host_failure_for_ip("8.8.8.8", "not_found")
+        censys_manager.simulate_enrich_host_failure_for_ip("1.1.1.1", "generic")
+
+        enrich_host.main()
+
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is False
+        assert "not found in Censys" in action_output.results.output_message
+        assert "failed to process" in action_output.results.output_message
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,

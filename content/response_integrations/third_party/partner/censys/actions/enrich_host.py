@@ -169,9 +169,15 @@ class EnrichHost(Action):
     not a routine bypass condition. The playbook step running this action is
     configured with AutoSkipOnFailure so a FAILED run doesn't block the
     downstream Previous Actions Condition from evaluating, and result_value is
-    always set to false on the FAILED path (see below), so the condition's
-    existing "result equals false" check still correctly routes to the
-    Enrich Host - Get Host API fallback.
+    always set to false on the FAILED path, so the condition's existing
+    "result equals false" check still correctly routes to the Enrich Host -
+    Get Host API fallback.
+
+    On a normal COMPLETED run, result_value is true when at least one host was
+    enriched, or when nothing was enriched but nothing failed either (every IP
+    was simply not found in Censys). It is false only when the run produced
+    per-IP failures and no enrichment. A not-found host is therefore never a
+    reason to fall back, which avoids a second, redundant API call per IP.
     """
 
     def __init__(self) -> None:
@@ -391,7 +397,13 @@ class EnrichHost(Action):
             self.result_value = False
         else:
             self.output_message = _build_output_message(self.summary)
-            self.result_value = bool(self.summary.successful)
+            # The result value tells the playbook whether to fall back to
+            # Enrich Host - Get Host API. A routine "not found" (404 or empty
+            # resource) is a valid answer, not a reason to fall back: the
+            # fallback would hit the same data and spend a second API call per
+            # IP. Only per-IP failures with nothing enriched may be transient,
+            # so those keep the result false and still reach the fallback.
+            self.result_value = bool(self.summary.successful) or not self.summary.failed
 
         # Update entities in Siemplify - any entity enriched before an
         # account-level error occurred should still have its data persisted,
