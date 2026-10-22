@@ -562,9 +562,7 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
                     )
                     return True
         except Exception as error:  # ruff: ignore[blind-except]
-            self.logger.warning(
-                f"Could not verify status of linked SecOps case {case_id}: {error}"
-            )
+            self.logger.warn(f"Could not verify status of linked SecOps case {case_id}: {error}")
         return False
 
     def _are_all_linked_cases_closed(
@@ -584,9 +582,7 @@ class WizSecopsBidirectionalSyncJob(BaseSyncJob[WizApiClient]):
         try:
             threat_issue: Issue = self.api_client.get_issue_details(threat_id)
         except Exception as error:  # ruff: ignore[blind-except]
-            self.logger.warning(
-                f"Could not fetch latest details for Wiz threat {threat_id}: {error}"
-            )
+            self.logger.warn(f"Could not fetch latest details for Wiz threat {threat_id}: {error}")
             return True
 
         for ticket in getattr(threat_issue, "service_tickets", []):
