@@ -24,7 +24,9 @@ import yaml
 from .definitions import File
 
 if TYPE_CHECKING:
-    from TIPCommon.types import SingleJson
+    from collections.abc import Callable
+
+    from TIPCommon.types import JSON, SingleJson
 
 LOGGER = logging.getLogger(__name__)
 
@@ -141,6 +143,100 @@ STEP_FIELD_MAPPING: dict[str, str] = {
     "start_loop_step_id": "startLoopStepIdentifier",
 }
 
+DEFINITION_FIELD_MAPPING: dict[str, str] = {
+    "identifier": "identifier",
+    "isEnabled": "is_enable",
+    "version": "version",
+    "name": "name",
+    "description": "description",
+    "priority": "priority",
+    "categoryName": "category_name",
+    "categoryId": "category",
+    "environments": "environments",
+    "isDebugMode": "is_debug_mode",
+    "simulationClone": "simulation_clone",
+}
+DEFINITION_FIELD_MAPPING_REV: dict[str, str] = {
+    v: k for k, v in DEFINITION_FIELD_MAPPING.items()
+}
+
+DEFINITION_HANDLED_KEYS: set[str] = set(DEFINITION_FIELD_MAPPING.keys()) | {
+    "playbookType",
+    "trigger",
+    "steps",
+    "stepsRelations",
+    "id",
+    "OverviewTemplatesDetails",
+    "WidgetTemplates",
+    "overviewTemplatesDetails",
+    "widgetTemplates",
+}
+DEFINITION_HANDLED_NB_KEYS: set[str] = set(DEFINITION_FIELD_MAPPING_REV.keys()) | {
+    "type",
+}
+
+TRIGGER_FIELD_MAPPING: dict[str, str] = {
+    "identifier": "identifier",
+    "isEnabled": "is_enabled",
+    "definitionIdentifier": "playbook_id",
+    "workflowName": "playbook_name",
+    "environments": "environments",
+}
+TRIGGER_FIELD_MAPPING_REV: dict[str, str] = {
+    v: k for k, v in TRIGGER_FIELD_MAPPING.items()
+}
+
+TRIGGER_HANDLED_KEYS: set[str] = {
+    "id",
+    "identifier",
+    "isEnabled",
+    "definitionIdentifier",
+    "workflowName",
+    "environments",
+    "type",
+    "Type",
+    "logicalOperator",
+    "LogicalOperator",
+    "conditions",
+    "Conditions",
+}
+TRIGGER_HANDLED_NB_KEYS: set[str] = {
+    "identifier",
+    "is_enabled",
+    "playbook_id",
+    "playbook_name",
+    "environments",
+    "type_",
+    "logical_operator",
+    "conditions",
+}
+
+OVERVIEW_TEMPLATE_MAPPING: dict[str, str] = {
+    "Identifier": "identifier",
+    "Name": "name",
+    "Creator": "creator",
+    "PlaybookDefinitionIdentifier": "playbook_id",
+    "AlertRuleType": "alert_rule_type",
+    "Roles": "roles",
+}
+OVERVIEW_TEMPLATE_MAPPING_REV: dict[str, str] = {
+    v: k for k, v in OVERVIEW_TEMPLATE_MAPPING.items()
+}
+
+WIDGET_MAPPING: dict[str, str] = {
+    "Title": "title",
+    "Order": "order",
+    "Type": "type",
+    "HtmlContent": "html_content",
+    "Creator": "creator",
+    "Description": "description",
+    "Identifier": "identifier",
+    "SystemWidgetIdentifier": "system_widget_identifier",
+}
+WIDGET_MAPPING_REV: dict[str, str] = {v: k for k, v in WIDGET_MAPPING.items()}
+WIDGET_HANDLED_KEYS: set[str] = set(WIDGET_MAPPING.keys()) | {"WidgetSize"}
+WIDGET_HANDLED_NB_KEYS: set[str] = set(WIDGET_MAPPING_REV.keys()) | {"size"}
+
 
 def _get_cased(d: SingleJson, camel: str, pascal: str, default: Any = None) -> Any:
     """Retrieve value checking camelCase then PascalCase, preserving valid falsy values."""
@@ -171,6 +267,34 @@ def sanitize_step_filename(filename: str, step_id: str | None = None) -> str:
     return sanitized.lower()
 
 
+def _to_snake(key: str) -> str:
+    """Convert camelCase or PascalCase string to snake_case."""
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", key).lower()
+
+
+def _to_camel(key: str) -> str:
+    """Convert snake_case string to camelCase."""
+    parts = key.split("_")
+    return parts[0] + "".join(x.title() for x in parts[1:])
+
+
+def _to_pascal(key: str) -> str:
+    """Convert snake_case string to PascalCase."""
+    return "".join(x.title() for x in key.split("_"))
+
+
+def _passthrough(
+    src: SingleJson,
+    dst: SingleJson,
+    handled: set[str],
+    convert: Callable[[str], str],
+) -> None:
+    """Copy unhandled keys from src to dst converting key names."""
+    for k, v in src.items():
+        if k not in handled:
+            dst[convert(k)] = v
+
+
 # Playbook Definition Mapping
 
 
@@ -184,42 +308,14 @@ def definition_to_non_built(defn: SingleJson) -> SingleJson:
         Non-built playbook definition dictionary.
     """
     non_built: SingleJson = {}
-    mapping = {
-        "identifier": "identifier",
-        "isEnabled": "is_enable",
-        "version": "version",
-        "name": "name",
-        "description": "description",
-        "priority": "priority",
-        "categoryName": "category_name",
-        "categoryId": "category",
-        "environments": "environments",
-        "isDebugMode": "is_debug_mode",
-        "simulationClone": "simulation_clone",
-    }
-    for b_key, nb_key in mapping.items():
+    for b_key, nb_key in DEFINITION_FIELD_MAPPING.items():
         if b_key in defn:
             non_built[nb_key] = defn[b_key]
 
     if "playbookType" in defn:
         non_built["type"] = PLAYBOOK_TYPE_MAP.get(defn["playbookType"], "playbook")
 
-    mapped_keys = set(mapping.keys()) | {
-        "playbookType",
-        "trigger",
-        "steps",
-        "stepsRelations",
-        "id",
-        "OverviewTemplatesDetails",
-        "WidgetTemplates",
-        "overviewTemplatesDetails",
-        "widgetTemplates",
-    }
-    for k, v in defn.items():
-        if k not in mapped_keys:
-            snake_k = re.sub(r"(?<!^)(?=[A-Z])", "_", k).lower()
-            non_built[snake_k] = v
-
+    _passthrough(defn, non_built, DEFINITION_HANDLED_KEYS, _to_snake)
     return non_built
 
 
@@ -233,33 +329,14 @@ def non_built_to_definition(nb: SingleJson) -> SingleJson:
         Built playbook definition dictionary.
     """
     defn: SingleJson = {}
-    mapping = {
-        "identifier": "identifier",
-        "is_enable": "isEnabled",
-        "version": "version",
-        "name": "name",
-        "description": "description",
-        "priority": "priority",
-        "category_name": "categoryName",
-        "category": "categoryId",
-        "environments": "environments",
-        "is_debug_mode": "isDebugMode",
-        "simulation_clone": "simulationClone",
-    }
-    for nb_key, b_key in mapping.items():
+    for nb_key, b_key in DEFINITION_FIELD_MAPPING_REV.items():
         if nb_key in nb:
             defn[b_key] = nb[nb_key]
 
     if "type" in nb:
         defn["playbookType"] = PLAYBOOK_TYPE_MAP_REV.get(nb["type"], 0)
 
-    mapped_nb_keys = set(mapping.keys()) | {"type"}
-    for k, v in nb.items():
-        if k not in mapped_nb_keys:
-            parts = k.split("_")
-            camel_k = parts[0] + "".join(x.title() for x in parts[1:])
-            defn[camel_k] = v
-
+    _passthrough(nb, defn, DEFINITION_HANDLED_NB_KEYS, _to_camel)
     return defn
 
 
@@ -306,26 +383,7 @@ def trigger_to_non_built(trig: SingleJson) -> SingleJson:
                 }
             )
     nb["conditions"] = nb_conds
-
-    handled_keys = {
-        "id",
-        "identifier",
-        "isEnabled",
-        "definitionIdentifier",
-        "workflowName",
-        "environments",
-        "type",
-        "Type",
-        "logicalOperator",
-        "LogicalOperator",
-        "conditions",
-        "Conditions",
-    }
-    for k, v in trig.items():
-        if k not in handled_keys:
-            snake_k = re.sub(r"(?<!^)(?=[A-Z])", "_", k).lower()
-            nb[snake_k] = v
-
+    _passthrough(trig, nb, TRIGGER_HANDLED_KEYS, _to_snake)
     return nb
 
 
@@ -365,23 +423,7 @@ def non_built_to_trigger(nb: SingleJson) -> SingleJson:
                 }
             )
     trig["conditions"] = b_conds
-
-    handled_nb_keys = {
-        "identifier",
-        "is_enabled",
-        "playbook_id",
-        "playbook_name",
-        "environments",
-        "type_",
-        "logical_operator",
-        "conditions",
-    }
-    for k, v in nb.items():
-        if k not in handled_nb_keys:
-            parts = k.split("_")
-            camel_k = parts[0] + "".join(x.title() for x in parts[1:])
-            trig[camel_k] = v
-
+    _passthrough(nb, trig, TRIGGER_HANDLED_NB_KEYS, _to_camel)
     return trig
 
 
@@ -399,15 +441,7 @@ def overview_to_non_built(ov: SingleJson) -> SingleJson:
     """
     nb: SingleJson = {}
     template = ov.get("OverviewTemplate", {})
-    mapping = {
-        "Identifier": "identifier",
-        "Name": "name",
-        "Creator": "creator",
-        "PlaybookDefinitionIdentifier": "playbook_id",
-        "AlertRuleType": "alert_rule_type",
-        "Roles": "roles",
-    }
-    for b_key, nb_key in mapping.items():
+    for b_key, nb_key in OVERVIEW_TEMPLATE_MAPPING.items():
         if b_key in template:
             nb[nb_key] = template[b_key]
 
@@ -415,28 +449,15 @@ def overview_to_non_built(ov: SingleJson) -> SingleJson:
     if "Type" in template:
         nb["type"] = OVERVIEW_TYPE_MAP.get(template["Type"], "regular")
 
-    widget_mapping = {
-        "Title": "title",
-        "Order": "order",
-        "Type": "type",
-        "HtmlContent": "html_content",
-        "Creator": "creator",
-        "Description": "description",
-        "Identifier": "identifier",
-        "SystemWidgetIdentifier": "system_widget_identifier",
-    }
     nb_widgets: list[SingleJson] = []
     for w in template.get("Widgets", []):
         w_dict: SingleJson = {}
-        for b_k, nb_k in widget_mapping.items():
+        for b_k, nb_k in WIDGET_MAPPING.items():
             if b_k in w:
                 w_dict[nb_k] = w[b_k]
         if "WidgetSize" in w:
             w_dict["size"] = WIDGET_SIZE_MAP.get(w.get("WidgetSize"), "medium")
-        for k, v in w.items():
-            if k not in widget_mapping and k != "WidgetSize":
-                snake_k = re.sub(r"(?<!^)(?=[A-Z])", "_", k).lower()
-                w_dict[snake_k] = v
+        _passthrough(w, w_dict, WIDGET_HANDLED_KEYS, _to_snake)
         nb_widgets.append(w_dict)
     nb["widgets_details"] = nb_widgets
     return nb
@@ -452,31 +473,13 @@ def non_built_to_overview(nb: SingleJson) -> SingleJson:
         Built overview dictionary.
     """
     template: SingleJson = {}
-    mapping = {
-        "identifier": "Identifier",
-        "name": "Name",
-        "creator": "Creator",
-        "playbook_id": "PlaybookDefinitionIdentifier",
-        "alert_rule_type": "AlertRuleType",
-        "roles": "Roles",
-    }
-    for nb_key, b_key in mapping.items():
+    for nb_key, b_key in OVERVIEW_TEMPLATE_MAPPING_REV.items():
         if nb_key in nb:
             template[b_key] = nb[nb_key]
 
     if "type" in nb:
         template["Type"] = OVERVIEW_TYPE_MAP_REV.get(nb["type"], 1)
 
-    widget_mapping_rev = {
-        "title": "Title",
-        "order": "Order",
-        "type": "Type",
-        "html_content": "HtmlContent",
-        "creator": "Creator",
-        "description": "Description",
-        "identifier": "Identifier",
-        "system_widget_identifier": "SystemWidgetIdentifier",
-    }
     widgets: list[SingleJson] = []
     for w in nb.get("widgets_details", []):
         widget: SingleJson = {
@@ -490,12 +493,7 @@ def non_built_to_overview(nb: SingleJson) -> SingleJson:
             "Identifier": w.get("identifier", ""),
             "SystemWidgetIdentifier": w.get("system_widget_identifier", ""),
         }
-        for k, v in w.items():
-            if k not in widget_mapping_rev and k != "size":
-                parts = k.split("_")
-                camel_k = parts[0] + "".join(x.title() for x in parts[1:])
-                pascal_k = camel_k[0].upper() + camel_k[1:]
-                widget[pascal_k] = v
+        _passthrough(w, widget, WIDGET_HANDLED_NB_KEYS, _to_pascal)
         widgets.append(widget)
     template["Widgets"] = widgets
     return {
@@ -646,13 +644,13 @@ def non_built_to_step(nb: SingleJson) -> SingleJson:
     step["parallelActions"] = [
         non_built_to_step(pa) for pa in nb.get("parallel_actions", [])
     ]
-    step["stepDebugData"] = _non_built_to_step_debug_data(
-        nb.get("step_debug_data")
-    )
+    step["stepDebugData"] = _non_built_to_step_debug_data(nb.get("step_debug_data"))
 
     if "playbook_id" in nb:
         step["workflowIdentifier"] = nb["playbook_id"]
 
+    # Only used to rebuild stepsRelations; not a platform step field.
+    step.pop("destinationActionStatuses", None)
     return step
 
 
@@ -839,7 +837,7 @@ def _reconstruct_step_relations(
     return relations
 
 
-def _yaml_file(path: str, data: Any) -> File:
+def _yaml_file(path: str, data: JSON) -> File:
     """Helper to serialize data to a YAML File object."""
     return File(path, yaml.safe_dump(data, indent=4, sort_keys=False))
 

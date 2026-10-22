@@ -22,7 +22,7 @@ import pytest
 from integration_testing.set_meta import set_metadata
 
 from ...core.definitions import File
-from ...core.PlaybookYAMLConverter import PlaybookYAMLConverter
+from ...core.playbook_yaml_converter import PlaybookYAMLConverter
 from ...jobs import PullPlaybook
 from ..common import CONFIG_PATH, MOCKS_PATH
 from ..core.product import GitSyncProduct

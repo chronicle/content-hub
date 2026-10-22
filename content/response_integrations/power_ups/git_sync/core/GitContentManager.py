@@ -32,7 +32,7 @@ from .definitions import (
     VisualFamily,
     Workflow,
 )
-from .PlaybookYAMLConverter import PlaybookYAMLConverter
+from .playbook_yaml_converter import PlaybookYAMLConverter
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -208,9 +208,9 @@ class GitContentManager:
                 workflows.append(
                     self._reconstruct_workflow_from_files(pb_dir, files_dict)
                 )
-            except Exception as e:
+            except Exception:
                 self.git.logger.exception(
-                    f"Failed to reconstruct deconstructed playbook in {pb_dir}: {e}"
+                    f"Failed to reconstruct deconstructed playbook in {pb_dir}"
                 )
         return workflows
 
