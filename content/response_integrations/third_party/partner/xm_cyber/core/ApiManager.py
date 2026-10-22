@@ -21,6 +21,11 @@ from .utils import generate_encryption_key
 from .xmcyber_oauth_adapter import XMCyberOAuthAdapter, XMCyberOAuthManager
 
 
+def _connector_name_version_header() -> str:
+    """Format the connector name and version header value."""
+    return f"{INTEGRATION_IDENTIFIER}-v{INTEGRATION_VERSION}"
+
+
 class ApiManager:
     """Handle API calls made to XMCyber."""
 
@@ -40,7 +45,7 @@ class ApiManager:
         self.api_key = api_key
         self.logger = siemplify.LOGGER
 
-        self.connector_name_version = f"{INTEGRATION_IDENTIFIER}-v{INTEGRATION_VERSION}"
+        self.connector_name_version = _connector_name_version_header()
 
         self.session = requests.Session()
         self.session.headers.update(

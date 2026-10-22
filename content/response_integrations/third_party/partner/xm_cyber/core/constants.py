@@ -2,11 +2,25 @@
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
+
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
 INTEGRATION_NAME = "XM Cyber"
 INTEGRATION_IDENTIFIER = "XMCyber"
-INTEGRATION_VERSION = "7.0"  # keep in sync with pyproject.toml + release_notes.yaml
+# Used only when package metadata is unavailable at runtime; pyproject.toml is the source of truth.
+FALLBACK_INTEGRATION_VERSION = "7.0"
+
+
+def _get_integration_version() -> str:
+    """Read the integration version from the installed package metadata."""
+    try:
+        return version(INTEGRATION_IDENTIFIER)
+    except PackageNotFoundError:
+        return FALLBACK_INTEGRATION_VERSION
+
+
+INTEGRATION_VERSION = _get_integration_version()
 CONNECTOR_NAME_VERSION_HEADER = "X-XMCYBER-CONNECTOR-NAME-VERSION"
 SUPPORTED_ENTITY_TYPES = [EntityTypes.USER, EntityTypes.HOSTNAME]
 # Action Names

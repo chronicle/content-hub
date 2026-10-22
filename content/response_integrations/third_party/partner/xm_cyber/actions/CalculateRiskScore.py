@@ -109,7 +109,7 @@ def calculate_score(data_properties, score_components, event_type=None):
         else:
             field_value = data_properties.get(PREFIX_PARAMETER_FOR_ENTITY_ID.format(field_name), "")
 
-        if field_value == value_to_check:
+        if str(field_value).strip().lower() == str(value_to_check).lower():
             score += score_value
     return score
 
