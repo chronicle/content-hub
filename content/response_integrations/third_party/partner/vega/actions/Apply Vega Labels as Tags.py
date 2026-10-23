@@ -42,7 +42,12 @@ def _case_alerts(siemplify: SiemplifyAction) -> list[Any]:
             if callable(group):
                 try:
                     group = group()
-                except Exception:
+                except Exception as error:
+                    siemplify.LOGGER.warning(
+                        "Failed to load case.%s while collecting alerts: %s",
+                        attr,
+                        error,
+                    )
                     group = None
             if isinstance(group, list) and group:
                 for alert in group:
@@ -53,7 +58,7 @@ def _case_alerts(siemplify: SiemplifyAction) -> list[Any]:
 
 
 def _case_events(siemplify: SiemplifyAction) -> list[Any]:
-    events = []
+    events: list[Any] = []
     for alert in _case_alerts(siemplify):
         events.extend(_alert_events(alert))
     return events
@@ -68,7 +73,7 @@ def _tag_name(item: Any) -> str:
 
 
 def _existing_case_tags(siemplify: SiemplifyAction) -> list[str]:
-    blobs = []
+    blobs: list[Any] = []
     case = getattr(siemplify, "case", None)
     if case is not None:
         blobs.append(getattr(case, "tags", None))
@@ -76,12 +81,12 @@ def _existing_case_tags(siemplify: SiemplifyAction) -> list[str]:
         if isinstance(extra, dict):
             blobs.append(extra.get("tags") or extra.get("Tags"))
     blobs.append(getattr(siemplify, "tags", None))
-    names = []
+    names: list[str] = []
     for blob in blobs:
         if not blob:
             continue
         if isinstance(blob, str):
-            items = [part.strip() for part in blob.split(",") if part.strip()]
+            items: list[Any] = [part.strip() for part in blob.split(",") if part.strip()]
         elif isinstance(blob, list):
             items = blob
         else:
@@ -101,7 +106,12 @@ def _add_case_tag(siemplify: SiemplifyAction, name: str) -> None:
             siemplify.add_tag(tag=name, case_id=case_id, alert_identifier=None)
         else:
             siemplify.add_tag(tag=name)
-    except TypeError:
+    except TypeError as error:
+        siemplify.LOGGER.warning(
+            "add_tag keyword signature failed for %r (%s); retrying positional.",
+            name,
+            error,
+        )
         siemplify.add_tag(name)
 
 
@@ -128,7 +138,7 @@ def main() -> None:
                 EXECUTION_STATE_COMPLETED,
             )
             return
-        added = []
+        added: list[str] = []
         for name in names:
             _add_case_tag(siemplify, name)
             added.append(name)

@@ -42,7 +42,12 @@ def _case_alerts(siemplify: SiemplifyAction) -> list[Any]:
             if callable(group):
                 try:
                     group = group()
-                except Exception:
+                except Exception as error:
+                    siemplify.LOGGER.warning(
+                        "Failed to load case.%s while collecting alerts: %s",
+                        attr,
+                        error,
+                    )
                     group = None
             if isinstance(group, list) and group:
                 for alert in group:
@@ -53,7 +58,7 @@ def _case_alerts(siemplify: SiemplifyAction) -> list[Any]:
 
 
 def _case_events(siemplify: SiemplifyAction) -> list[Any]:
-    events = []
+    events: list[Any] = []
     for alert in _case_alerts(siemplify):
         events.extend(_alert_events(alert))
     return events
