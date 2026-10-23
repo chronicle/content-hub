@@ -77,7 +77,7 @@ class GitSyncManager:
         smp_credentials: dict = None,
         smp_verify: bool = True,
         git_verify: bool = True,
-        git_server_fingerprint: str = "",
+        git_server_fingerprint: str = '',
     ):
         self.logger = siemplify.LOGGER
         self._siemplify = siemplify
@@ -941,7 +941,7 @@ class WorkflowInstaller:
             elif step_type == 5:  # Nested Workflow
                 self._link_nested_block_step(step)
 
-        for relation in workflow.raw_data.get("stepsRelations") or []:
+        for relation in (workflow.raw_data.get("stepsRelations") or []):
             if relation.get("fromStep") in identifier_mappings:
                 relation["fromStep"] = identifier_mappings.get(relation.get("fromStep"))
             if relation.get("toStep") in identifier_mappings:
@@ -1215,7 +1215,9 @@ class WorkflowInstaller:
             x for x in instances if x.integration_identifier == integration_name
         ]
 
-        configured_instances = [x for x in filtered_instances if x.is_configured]
+        configured_instances = [
+            x for x in filtered_instances if x.is_configured
+        ]
         if configured_instances:
             return sorted(configured_instances, key=lambda x: x.instance_name or "")
 
@@ -1263,7 +1265,7 @@ class WorkflowInstaller:
 
         """
         flat_steps = []
-        for step in steps or []:
+        for step in (steps or []):
             if step.get("actionProvider") == "ParallelActionsContainer":
                 flat_steps.extend(step.get("parallelActions"))
             flat_steps.append(step)
@@ -1290,9 +1292,10 @@ class WorkflowInstaller:
     @staticmethod
     def _is_matching_step(step_1: SingleJson, step_2: SingleJson) -> bool:
         """Checks if step 'step_1' matches the key attributes of 'step_2'."""
-        return step_1.get("instanceName") == step_2.get("instanceName") and step_1.get(
-            "actionProvider"
-        ) == step_2.get("actionProvider")
+        return (
+            step_1.get("instanceName") == step_2.get("instanceName")
+            and step_1.get("actionProvider") == step_2.get("actionProvider")
+        )
 
     @staticmethod
     def _get_step_parameter_by_name(step: dict, parameter_name: str) -> dict | None:

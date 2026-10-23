@@ -66,7 +66,6 @@ SLA_DEFINITIONS_FILE = f"{SETTINGS_PATH}/slaDefinitions.json"
 
 
 class GitContentManager:
-
     def __init__(self, git: Git, api: SiemplifyApiClient):
         self.git = git
         self.api = api
@@ -131,8 +130,7 @@ class GitContentManager:
         return Integration(
             {
                 "identifier": integration_name,
-                "isCustomIntegration": definition.get("IsCustom")
-                or definition.get("Custom", False),
+                "isCustomIntegration": definition.get("IsCustom") or definition.get("Custom", False),
                 "Staging": definition.get("Staging", "False"),
             },
             zip_buffer,
