@@ -617,6 +617,12 @@ def iter_current_vega_ids(siemplify: Any) -> list[str]:
     return found
 
 
+def get_current_vega_id(siemplify: Any) -> str:
+    """Return the first Vega ID from the current alert, or '' when none."""
+    ids = iter_current_vega_ids(siemplify)
+    return ids[0] if ids else ""
+
+
 def compute_time_window(
     checkpoint: dict,
     backfill_days: int,

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from TIPCommon.extraction import extract_action_param
 
-from ..core.base_action import VegaApiAction, current_vega_id
+from ..core.base_action import VegaApiAction
 from ..core.constants import GET_INCIDENT_TIMELINE_SCRIPT_NAME
+from ..core.utils import get_current_vega_id
 
 
 class GetIncidentTimeline(VegaApiAction):
@@ -22,7 +23,7 @@ class GetIncidentTimeline(VegaApiAction):
         )
 
     def _perform_action(self, _=None) -> None:
-        incident_id = str(self.incident_id or "").strip() or current_vega_id(self.soar_action)
+        incident_id = str(self.incident_id or "").strip() or get_current_vega_id(self.soar_action)
         if not incident_id:
             raise ValueError("Incident ID is required.")
         events = self.api_client.get_all_incident_timeline(incident_id)

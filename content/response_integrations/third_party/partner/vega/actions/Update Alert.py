@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from TIPCommon.extraction import extract_action_param
 
-from ..core.base_action import VegaApiAction, current_vega_id
+from ..core.base_action import VegaApiAction
 from ..core.constants import UPDATE_ALERT_SCRIPT_NAME
-from ..core.utils import parse_csv_list, to_graphql_enum
+from ..core.utils import get_current_vega_id, parse_csv_list, to_graphql_enum
 
 
 class UpdateAlert(VegaApiAction):
@@ -46,7 +46,7 @@ class UpdateAlert(VegaApiAction):
     def _perform_action(self, _=None) -> None:
         alert_ids = parse_csv_list(self.alert_ids_raw)
         if not alert_ids:
-            current = current_vega_id(self.soar_action)
+            current = get_current_vega_id(self.soar_action)
             if current:
                 alert_ids = [current]
         if not alert_ids:
