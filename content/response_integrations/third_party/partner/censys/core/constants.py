@@ -2,7 +2,7 @@ from __future__ import annotations
 
 INTEGRATION_NAME = "Censys"
 
-INTEGRATION_VERSION = "1.0.0"
+INTEGRATION_VERSION = "5.0"
 
 # API Configuration
 API_ROOT = "https://api.platform.censys.io"
@@ -32,6 +32,9 @@ WAIT_TIME_FOR_RETRY = 5
 DEFAULT_RESULTS_LIMIT = 10000000
 RATE_LIMIT_EXCEEDED_STATUS_CODE = 429
 UNAUTHORIZED_STATUS_CODE = 401
+FORBIDDEN_STATUS_CODE = 403
+NOT_FOUND_STATUS_CODE = 404
+FEATURE_NOT_ENABLED_STATUS_CODE = 409
 VALIDATION_ERROR_STATUS_CODES = [400, 422]
 DEFAULT_REQUEST_TIMEOUT = 60
 DEFAULT_OFFSET = "0"
@@ -78,7 +81,14 @@ GET_RELATED_INFRA_JOB_STATUS_SCRIPT_NAME = (
 GET_RELATED_INFRA_RESULTS_SCRIPT_NAME = (
     f"{INTEGRATION_NAME} - Get Related Infrastructure Results"
 )
-ENRICH_IPS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich IPs"
+ENRICH_IPS_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich Host - Get Host API"
+ENRICH_HOST_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich Host - Get Host Enrichment API"
+
+# Enrich Host - Get Host Enrichment API - New API Rollout Toggle
+ENABLE_NEW_HOST_ENRICHMENT_PARAM = "Enable Get Host Enrichment API"
+NEW_HOST_ENRICHMENT_DISABLED_MESSAGE = (
+    f"'{ENABLE_NEW_HOST_ENRICHMENT_PARAM}' is disabled for this Censys instance."
+)
 ENRICH_WEB_PROPERTIES_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich Web Properties"
 ENRICH_CERTIFICATES_SCRIPT_NAME = f"{INTEGRATION_NAME} - Enrich Certificates"
 
@@ -91,6 +101,7 @@ CREATE_RELATED_INFRA_JOB_ACTION_IDENTIFIER = "create_related_infra_job"
 GET_RELATED_INFRA_JOB_STATUS_ACTION_IDENTIFIER = "get_related_infra_job_status"
 GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER = "get_related_infra_results"
 ENRICH_IPS_ACTION_IDENTIFIER = "enrich_ips"
+ENRICH_HOST_ACTION_IDENTIFIER = "enrich_host"
 ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER = "enrich_web_properties"
 ENRICH_CERTIFICATES_ACTION_IDENTIFIER = "enrich_certificates"
 
@@ -138,6 +149,9 @@ ENDPOINTS = {
     GET_RELATED_INFRA_RESULTS_ACTION_IDENTIFIER: API_VERSION_V3
     + "/threat-hunting/censeye/jobs/{job_id}/results",
     ENRICH_IPS_ACTION_IDENTIFIER: API_VERSION_V3 + "/global/asset/host",
+    ENRICH_HOST_ACTION_IDENTIFIER: (
+        API_VERSION_V3 + "/global/asset/enrichment/host/{host_ip}"
+    ),
     ENRICH_WEB_PROPERTIES_ACTION_IDENTIFIER: (
         API_VERSION_V3 + "/global/asset/webproperty"
     ),
@@ -170,3 +184,14 @@ CENSYS_SEARCH_BASE_URL = f"{CENSYS_PLATFORM_BASE_URL}/search"
 ENRICHMENT_PREFIX = "Censys_"
 ENRICHMENT_PREFIX_CERT = f"{ENRICHMENT_PREFIX}cert_"
 ENRICHMENT_PREFIX_WEB = ENRICHMENT_PREFIX
+
+# Reputation - display scaling and limits
+# Censys returns score/probability/contribution as 0-1 fractions; the Censys UI
+# displays them multiplied by 100 (e.g. raw 0.666 -> displayed 66.6).
+REPUTATION_DISPLAY_SCALE_FACTOR = 100
+REPUTATION_MAX_EVIDENCE_RECORDS = 5
+
+# Reputation - Data Table Titles
+REPUTATION_SUMMARY_TABLE_NAME = "Reputation Summary"
+REPUTATION_CLASS_PROBABILITIES_TABLE_NAME = "Reputation - Class Probabilities"
+REPUTATION_EVIDENCE_TABLE_NAME = "Reputation - Evidence"

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timezone
+from typing import Any
 from urllib.parse import quote
 
+from TIPCommon.types import SingleJson
+
+from .base_model import BaseModel
 from .constants import (
     CENSYS_HOSTS_URL_TEMPLATE,
     CENSYS_PLATFORM_BASE_URL,
@@ -20,41 +23,20 @@ from .constants import (
     RESOURCE_TYPE_SERVICE_SCANNED,
     RESOURCE_TYPE_WHOIS_UPDATED,
 )
+from .host_enrichment_datamodel import HostEnrichmentDatamodel
+from .reputation import ReputationExtractor
 
-
-class BaseModel(object):
-    """
-    Base data model class for all Censys API responses.
-    Provides common functionality for data transformation and output formatting.
-    """
-
-    def __init__(self, raw_data: Optional[Dict[str, Any]] = None) -> None:
-        """
-        Initialize the base model.
-
-        Args:
-            raw_data: Raw API response data
-        """
-        self.raw_data = raw_data or {}
-
-    def to_json(self) -> Dict[str, Any]:
-        """
-        Convert the model to JSON format.
-
-        Returns:
-            Dict containing the raw API response data
-        """
-        return self.raw_data
-
-    def to_csv(self) -> List[Dict[str, Any]]:
-        """
-        Convert the model to CSV format.
-        Should be overridden by child classes.
-
-        Returns:
-            List of dictionaries suitable for CSV output
-        """
-        return [self.raw_data] if self.raw_data else []
+__all__ = [
+    "BaseModel",
+    "CertificateDatamodel",
+    "HostDatamodel",
+    "HostEnrichmentDatamodel",
+    "HostHistoryEventModel",
+    "PingDatamodel",
+    "RelatedInfraResultModel",
+    "ReputationExtractor",
+    "WebPropertyDatamodel",
+]
 
 
 class PingDatamodel(BaseModel):
@@ -73,7 +55,7 @@ class PingDatamodel(BaseModel):
         super().__init__()
         self.success = success
 
-    def to_csv(self) -> List[Dict[str, str]]:
+    def to_csv(self) -> list[dict[str, str]]:
         """
         Convert ping result to CSV format.
 
@@ -82,7 +64,7 @@ class PingDatamodel(BaseModel):
         """
         return [{"Status": "Connected" if self.success else "Failed"}]
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> SingleJson:
         """
         Convert ping result to JSON format.
 
@@ -103,7 +85,7 @@ class HostHistoryEventModel(BaseModel):
 
     def __init__(
         self,
-        raw_data: Dict[str, Any],
+        raw_data: SingleJson,
         index: int,
         host_id: str = None,
         organization_id: str = None,
@@ -202,7 +184,7 @@ class HostHistoryEventModel(BaseModel):
         else:
             self.historical_view_link = DEFAULT_VALUE_NA
 
-    def to_csv(self) -> Dict[str, Any]:
+    def to_csv(self) -> SingleJson:
         """Convert event to CSV-compatible dictionary."""
         return {
             "Sr. No.": self.index,
@@ -219,7 +201,7 @@ class HostDatamodel(BaseModel):
     Extracts and formats host information for entity enrichment.
     """
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         """
         Initialize the Host data model.
 
@@ -227,18 +209,10 @@ class HostDatamodel(BaseModel):
             raw_data: Raw API response data from Censys host lookup
         """
         super().__init__(raw_data)
-        self.host_data = raw_data.get("result", {}).get("resource", {})
+        self.host_data = (raw_data.get("result") or {}).get("resource") or {}
+        self._resource_data = self.host_data
 
-    def is_found(self) -> bool:
-        """
-        Check if host data was found.
-
-        Returns:
-            bool: True if host data exists
-        """
-        return bool(self.host_data)
-
-    def get_enrichment_data(self) -> Dict[str, Any]:
+    def get_enrichment_data(self) -> SingleJson:
         """
         Extract enrichment data for entity properties.
 
@@ -324,46 +298,16 @@ class HostDatamodel(BaseModel):
                 "longitude"
             ),
         }
+        reputation = self.host_data.get("reputation") or {}
+        enrichment[f"{ENRICHMENT_PREFIX}reputation_score"] = reputation.get("score")
+        enrichment[f"{ENRICHMENT_PREFIX}reputation_score_level"] = (
+            reputation.get("score_level") or None
+        )
+        enrichment.update(ReputationExtractor.get_entity_enrichment_fields(reputation))
 
         return {k: v for k, v in enrichment.items() if v is not None}
 
-    def _get_top_values(self, values: List[Any], max_count: int = 5) -> Optional[str]:
-        """
-        Get top N unique values as comma-separated string.
-
-        Args:
-            values: List of values to process
-            max_count: Maximum number of values to return
-
-        Returns:
-            Comma-separated string of top values or None
-        """
-        if not values:
-            return None
-
-        unique_values = []
-        seen = set()
-        for val in values:
-            if not val:
-                continue
-
-            # Handle dict values (like vulnerability objects)
-            if isinstance(val, dict):
-                # Extract CVE ID or other identifier
-                val_str = val.get("id") or str(val)
-            else:
-                val_str = str(val)
-
-            # Use string representation for deduplication
-            if val_str not in seen:
-                unique_values.append(val_str)
-                seen.add(val_str)
-                if len(unique_values) >= max_count:
-                    break
-
-        return ", ".join(unique_values) if unique_values else None
-
-    def _get_latest_scan_time(self, services: List[Dict]) -> Optional[str]:
+    def _get_latest_scan_time(self, services: list[SingleJson]) -> str | None:
         """
         Get the most recent scan time from services.
 
@@ -383,7 +327,7 @@ class WebPropertyDatamodel(BaseModel):
     Extracts and formats web property information for entity enrichment.
     """
 
-    def __init__(self, raw_data: Dict[str, Any], port: int) -> None:
+    def __init__(self, raw_data: SingleJson, port: int) -> None:
         """
         Initialize the Web Property data model.
 
@@ -394,17 +338,9 @@ class WebPropertyDatamodel(BaseModel):
         super().__init__(raw_data)
         self.port = port
         self.web_data = raw_data.get("resource", {})
+        self._resource_data = self.web_data
 
-    def is_found(self) -> bool:
-        """
-        Check if web property data was found.
-
-        Returns:
-            bool: True if web property data exists
-        """
-        return bool(self.web_data)
-
-    def get_enrichment_data(self) -> Dict[str, Any]:
+    def get_enrichment_data(self) -> SingleJson:
         """
         Extract enrichment data for entity properties with port prefix.
 
@@ -455,7 +391,7 @@ class WebPropertyDatamodel(BaseModel):
             f"{port_prefix}software_version": self._get_top_values(
                 [sw.get("version") for sw in software_list if sw.get("version")]
             ),
-            f"{port_prefix}last_enriched": (datetime.utcnow().isoformat() + "Z"),
+            f"{port_prefix}last_enriched": (datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")),
         }
 
         if cert:
@@ -479,9 +415,13 @@ class WebPropertyDatamodel(BaseModel):
 
         return {k: v for k, v in enrichment.items() if v is not None}
 
-    def _get_top_values(self, values: List[Any], max_count: int = 5) -> Optional[str]:
+    def _get_top_values(self, values: list[Any], max_count: int = 5) -> str | None:
         """
         Get top N unique values as comma-separated string.
+
+        Overrides BaseModel._get_top_values: web property dict values (e.g.
+        software entries) are commonly identified by "name" rather than "id",
+        so this variant falls back to "name" before stringifying.
 
         Args:
             values: List of values to process
@@ -512,7 +452,7 @@ class WebPropertyDatamodel(BaseModel):
 
         return ", ".join(unique_values) if unique_values else None
 
-    def _get_first_value(self, values: List[Any]) -> Optional[str]:
+    def _get_first_value(self, values: list[Any]) -> str | None:
         """
         Get first non-empty value from list.
 
@@ -536,7 +476,7 @@ class CertificateDatamodel(BaseModel):
     Handles certificate data from /v3/global/asset/certificate endpoint.
     """
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         """
         Initialize the Certificate data model.
 
@@ -545,17 +485,9 @@ class CertificateDatamodel(BaseModel):
         """
         super().__init__(raw_data)
         self.cert_data = raw_data.get("result", {}).get("resource", {})
+        self._resource_data = self.cert_data
 
-    def is_found(self) -> bool:
-        """
-        Check if certificate data was found.
-
-        Returns:
-            bool: True if certificate data exists
-        """
-        return bool(self.cert_data)
-
-    def get_enrichment_data(self) -> Dict[str, Any]:
+    def get_enrichment_data(self) -> SingleJson:
         """
         Extract enrichment data for entity properties.
 
@@ -580,12 +512,12 @@ class CertificateDatamodel(BaseModel):
             f"{ENRICHMENT_PREFIX_CERT}not_before": validity.get("not_before"),
             f"{ENRICHMENT_PREFIX_CERT}not_after": validity.get("not_after"),
             f"{ENRICHMENT_PREFIX_CERT}is_self_signed": signature.get("self_signed"),
-            f"{ENRICHMENT_PREFIX}last_enriched": (datetime.utcnow().isoformat() + "Z"),
+            f"{ENRICHMENT_PREFIX}last_enriched": (datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")),
         }
 
         return enrichment
 
-    def _get_first_value(self, value_list: List[Any]) -> Optional[str]:
+    def _get_first_value(self, value_list: list[Any]) -> str | None:
         """
         Get first value from a list.
 
@@ -599,7 +531,7 @@ class CertificateDatamodel(BaseModel):
             return str(value_list[0])
         return None
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> SingleJson:
         """
         Convert certificate data to JSON format for case wall.
 
@@ -620,7 +552,7 @@ class RelatedInfraResultModel(BaseModel):
 
     def __init__(
         self,
-        raw_data: Dict[str, Any],
+        raw_data: SingleJson,
         index: int,
     ) -> None:
         """
@@ -722,7 +654,7 @@ class RelatedInfraResultModel(BaseModel):
 
         return f"{CENSYS_SEARCH_BASE_URL}?q={encoded_query}"
 
-    def to_csv(self) -> Dict[str, Any]:
+    def to_csv(self) -> SingleJson:
         """
         Convert to CSV-compatible dictionary for table output.
 
@@ -737,7 +669,7 @@ class RelatedInfraResultModel(BaseModel):
             "See results in Censys": self.search_url,
         }
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> SingleJson:
         """
         Convert to JSON format for case wall.
 
