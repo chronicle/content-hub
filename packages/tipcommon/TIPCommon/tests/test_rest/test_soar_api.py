@@ -21,11 +21,19 @@ from pytest_mock import MockerFixture
 from TIPCommon.data_models import InstalledIntegrationInstance, UserDetails
 from TIPCommon.rest.soar_api import (
     attach_case_playbook_to_case,
+    attach_workflow_to_case,
+    create_integrations_instance,
+    export_package,
     get_case_insights,
     get_enabled_workflow_cards,
+    get_environment_group_names,
+    get_installed_connectors,
     get_installed_integrations_of_environment,
     get_siemplify_user_details,
+    get_sla_records,
+    get_system_version,
     get_user_profile_cards,
+    install_integration,
     save_or_update_job,
     search_cases_by_everything,
 )
@@ -342,3 +350,215 @@ def test_get_enabled_workflow_cards_one_platform_list_response(
     res = get_enabled_workflow_cards(mock_chronicle_soar, "Production")
 
     assert res == [{"id": "card_2"}]
+
+
+# ==================== Connectors ====================
+def test_get_installed_connectors_list_response(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test get_installed_connectors returns list directly when client returns list of connectors."""
+    mock_oneplatform_client.get_installed_connectors = mocker.MagicMock(
+        return_value=[{"name": "conn1", "identifier": "c1"}]
+    )
+
+    res = get_installed_connectors(mock_chronicle_soar)
+
+    assert res == [{"name": "conn1", "identifier": "c1"}]
+    params: Any = mock_oneplatform_client.params
+    assert params.connector_instance_id is None
+
+
+def test_get_installed_connectors_response_object(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test get_installed_connectors validates and returns JSON when client returns a Response object."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"name": "conn1", "identifier": "c1"}
+    mock_oneplatform_client.get_installed_connectors = mocker.MagicMock(return_value=mock_response)
+
+    res = get_installed_connectors(mock_chronicle_soar, connector_instance_id=123)
+
+    assert res == {"name": "conn1", "identifier": "c1"}
+    params: Any = mock_oneplatform_client.params
+    assert params.connector_instance_id == 123
+
+
+# ==================== Integrations ====================
+def test_install_integration(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test install_integration sets params, validates response, and returns JSON."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"status": "installed"}
+    mock_oneplatform_client.install_integration = mocker.MagicMock(return_value=mock_response)
+
+    res = install_integration(
+        mock_chronicle_soar,
+        integration_identifier="custom_integ",
+        integration_name="Custom Integration",
+        version="1.0.0",
+        is_certified="true",
+        override_mapping=True,
+        stage=False,
+    )
+
+    assert res == {"status": "installed"}
+    params: Any = mock_oneplatform_client.params
+    assert params.integration_identifier == "custom_integ"
+    assert params.integration_name == "Custom Integration"
+    assert params.version == "1.0.0"
+    assert params.is_certified == "true"
+    assert params.override_mapping is True
+    assert params.stage is False
+
+
+def test_export_package(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test export_package validates response without json check and returns binary content."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.content = b"PK\x03\x04mock_zip_content"
+    mock_oneplatform_client.export_package = mocker.MagicMock(return_value=mock_response)
+
+    res = export_package(mock_chronicle_soar, integration_identifier="custom_integ")
+
+    assert res == b"PK\x03\x04mock_zip_content"
+    params: Any = mock_oneplatform_client.params
+    assert params.integration_identifier == "custom_integ"
+
+
+def test_create_integrations_instance(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test create_integrations_instance validates response and returns instance JSON."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"instanceId": "inst_123", "environment": "Production"}
+    mock_oneplatform_client.create_integrations_instance = mocker.MagicMock(return_value=mock_response)
+
+    res = create_integrations_instance(
+        mock_chronicle_soar,
+        integration_identifier="integ_1",
+        environment="Production",
+    )
+
+    assert res == {"instanceId": "inst_123", "environment": "Production"}
+    params: Any = mock_oneplatform_client.params
+    assert params.integration_identifier == "integ_1"
+    assert params.environment == "Production"
+
+
+# ==================== Jobs / SLA / Playbooks / Settings ====================
+def test_get_sla_records_one_platform_list(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test get_sla_records returns list directly when OnePlatform returns a list."""
+    mock_oneplatform_client.get_sla_records = mocker.MagicMock(
+        return_value=[{"id": "sla_1", "name": "Critical SLA"}]
+    )
+
+    res = get_sla_records(mock_chronicle_soar)
+
+    assert res == [{"id": "sla_1", "name": "Critical SLA"}]
+
+
+def test_get_sla_records_legacy_dict_response(
+    mocker: MockerFixture,
+    mock_get_soar_client_legacy: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_legacy_client: "LegacySoarApi",
+) -> None:
+    """Test get_sla_records extracts slaDefinitions from response dict under Legacy client."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"slaDefinitions": [{"id": "sla_legacy_1"}]}
+    mock_legacy_client.get_sla_records = mocker.MagicMock(return_value=mock_response)
+
+    res = get_sla_records(mock_chronicle_soar)
+
+    assert res == [{"id": "sla_legacy_1"}]
+
+
+def test_attach_workflow_to_case(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test attach_workflow_to_case sets parameters and returns parsed JSON response."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"status": "attached"}
+    mock_oneplatform_client.attach_workflow_to_case = mocker.MagicMock(return_value=mock_response)
+
+    res = attach_workflow_to_case(
+        mock_chronicle_soar,
+        case_id=1001,
+        alert_group_identifier="ag_1",
+        alert_identifier="alert_1",
+        wf_name="Investigation Workflow",
+        original_wf_identifier="orig_wf_1",
+    )
+
+    assert res == {"status": "attached"}
+    params: Any = mock_oneplatform_client.params
+    assert params.case_id == 1001
+    assert params.alert_group_identifier == "ag_1"
+    assert params.alert_identifier == "alert_1"
+    assert params.wf_name == "Investigation Workflow"
+    assert params.original_wf_identifier == "orig_wf_1"
+
+
+def test_get_system_version(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test get_system_version validates and returns system version JSON."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"version": "6.3.0"}
+    mock_oneplatform_client.get_system_version = mocker.MagicMock(return_value=mock_response)
+
+    res = get_system_version(mock_chronicle_soar)
+
+    assert res == {"version": "6.3.0"}
+
+
+def test_get_environment_group_names(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test get_environment_group_names validates and returns environment group names JSON."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"environmentGroups": ["Group1", "Group2"]}
+    mock_oneplatform_client.get_environment_group_names = mocker.MagicMock(return_value=mock_response)
+
+    res = get_environment_group_names(mock_chronicle_soar)
+
+    assert res == {"environmentGroups": ["Group1", "Group2"]}
