@@ -539,7 +539,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         records: list[tuple[str, SingleJson]],
         ingested: list[str],
         ingested_set: set[str],
-        events_by_id: dict[str, list | None] = None,
+        events_by_id: dict[str, list[SingleJson]] | None = None,
     ) -> bool:
         if self._should_stop(len(records)):
             return False
@@ -641,7 +641,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         window: SingleJson,
         records: list[tuple[str, SingleJson]],
         remaining: int,
-        incidents: list[SingleJson | None] = None,
+        incidents: list[SingleJson] | None = None,
     ) -> int:
         if remaining <= 0:
             return 0

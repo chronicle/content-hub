@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import time
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 from .constants import (
     ALERT_EVENTS_ID_BATCH,
@@ -419,7 +423,7 @@ class CaseEmissionMixin:
         ingested_set: set[str],
         case_tags: list[str | None] = None,
         apply_case_tags: bool = False,
-        events_by_id: dict[str, list | None] = None,
+        events_by_id: dict[str, list[SingleJson]] | None = None,
         batch: int | None = None,
     ) -> bool:
         if self._should_stop(len(records)):
