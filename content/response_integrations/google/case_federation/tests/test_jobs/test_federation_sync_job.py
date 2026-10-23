@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import pytest
 from integration_testing.set_meta import set_metadata
 
-from ...core.constants import FEDERATION_SYNC_JOB_SCRIPT_NAME
+from ...core.constants import FEDERATION_SYNC_JOB_SCRIPT_NAME, LAST_EXECUTION_DATA_KEY
 from ...core.exceptions import MissingParameterError
 from ...jobs import federation_sync_job
 from ..common import CONFIG_PATH
@@ -34,13 +34,8 @@ SYNC_URL: str = f"{TARGET_PLATFORM}/legacyFederatedCases:legacyBatchPatchFederat
 DEFAULT_CONTINUATION: str = "blabla"
 
 
-@set_metadata(
-    integration_config_file_path=CONFIG_PATH,
-    parameters={"Target Platform": ""},
-)
-def test_missing_target_platform_fails(
-    federation_cases: GetFederationCasesStub,
-) -> None:
+@set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Target Platform": ""})
+def test_missing_target_platform_fails(federation_cases: GetFederationCasesStub) -> None:
     job = federation_sync_job.CaseFederationSyncJob(FEDERATION_SYNC_JOB_SCRIPT_NAME)
     job.params.target_platform = ""
 
@@ -52,7 +47,7 @@ def test_missing_target_platform_fails(
 def test_first_run_without_cases_does_not_save_execution_data(
     federation_cases: GetFederationCasesStub,
     mock_http_client: MockHttpClient,
-    job_context: dict,
+    job_context: dict[tuple[str, str], str],
 ) -> None:
     # Arrange
     federation_cases.response.json.return_value = {
@@ -74,7 +69,7 @@ def test_first_run_without_cases_does_not_save_execution_data(
 def test_sync_success_sends_cases_and_saves_execution_data(
     federation_cases: GetFederationCasesStub,
     mock_http_client: MockHttpClient,
-    job_context: dict,
+    job_context: dict[tuple[str, str], str],
 ) -> None:
     # Arrange
     federation_cases.response.json.return_value = {
@@ -85,19 +80,10 @@ def test_sync_success_sends_cases_and_saves_execution_data(
                 "caseSla": {"expirationStatus": "alreadyExpired"},
             },
         ],
-        "continuation_token": DEFAULT_CONTINUATION,
-        "execution_message": "Synced up to case 1",
+        "continuationToken": DEFAULT_CONTINUATION,
+        "executionMessage": "Synced up to case 1",
     }
     mock_http_client.response.status_code = 200
-    mock_http_client.response.json.return_value = {
-        "continuation_token": DEFAULT_CONTINUATION,
-        "execution_message": "Synced up to case 1",
-    }
-    job_context.clear()
-    job_context["CaseFederationSyncJob"] = json.dumps({
-        "continuation_token": DEFAULT_CONTINUATION,
-        "execution_message": "Synced up to case 1",
-    })
 
     # Act
     federation_sync_job.main()
@@ -124,7 +110,7 @@ def test_sync_success_sends_cases_and_saves_execution_data(
 def test_sync_failure_does_not_save_execution_data(
     federation_cases: GetFederationCasesStub,
     mock_http_client: MockHttpClient,
-    job_context: dict,
+    job_context: dict[tuple[str, str], str],
 ) -> None:
     # Arrange
     federation_cases.response.json.return_value = {
@@ -138,14 +124,14 @@ def test_sync_failure_does_not_save_execution_data(
 
     # Assert
     assert len(mock_http_client.requests) == 1  # sync was attempted
-    assert not job_context  # previous execution data is kept
+    assert LAST_EXECUTION_DATA_KEY not in {key for _, key in job_context}
 
 
 @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
 def test_first_failed_run_logs_cases_payload_once_and_suppresses_consecutive_failures(
     federation_cases: GetFederationCasesStub,
     mock_http_client: MockHttpClient,
-    job_context: dict,
+    job_context: dict[tuple[str, str], str],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     # Arrange
@@ -174,7 +160,7 @@ def test_first_failed_run_logs_cases_payload_once_and_suppresses_consecutive_fai
 def test_failed_run_logs_cases_payload_again_after_recovery(
     federation_cases: GetFederationCasesStub,
     mock_http_client: MockHttpClient,
-    job_context: dict,
+    job_context: dict[tuple[str, str], str],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     # Arrange
@@ -206,7 +192,7 @@ def test_failed_run_logs_cases_payload_again_after_recovery(
 def test_continuation_token_is_reused_on_next_run(
     federation_cases: GetFederationCasesStub,
     mock_http_client: MockHttpClient,
-    job_context: dict,
+    job_context: dict[tuple[str, str], str],
 ) -> None:
     # Arrange - first run returns a case and a continuation token
     federation_cases.response.json.return_value = {

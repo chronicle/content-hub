@@ -14,7 +14,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 class MockHttpClient:
@@ -24,11 +28,11 @@ class MockHttpClient:
     """
 
     def __init__(self) -> None:
-        self.requests: list[dict[str, str]] = []
+        self.requests: list[SingleJson] = []
         self.response: MagicMock = MagicMock()
         self.response.status_code = 200
 
-    def request(self, method: str, url: str, **kwargs: str) -> MagicMock:
+    def request(self, method: str, url: str, **kwargs: Any) -> MagicMock:  # ruff: ignore[any-type]
         self.requests.append({"method": method, "url": url, **kwargs})
         return self.response
 
@@ -40,11 +44,11 @@ class GetFederationCasesStub:
     """
 
     def __init__(self) -> None:
-        self.calls: list[dict[str, str]] = []
+        self.calls: list[SingleJson] = []
         self.response: MagicMock = MagicMock()
         self.response.status_code = 200
         self.response.json.return_value = {"cases": [], "continuationToken": None}
 
-    def __call__(self, **kwargs: str) -> MagicMock:
+    def __call__(self, **kwargs: Any) -> MagicMock:  # ruff: ignore[any-type]
         self.calls.append(kwargs)
         return self.response

@@ -26,7 +26,12 @@ from TIPCommon.rest.soar_api import get_federation_cases
 from TIPCommon.transformation import convert_list_to_comma_string
 from TIPCommon.utils import camel_to_snake_case
 
-from .constants import SUCCESS_STATUS_CODE
+from .constants import (
+    BATCH_PATCH_FEDERATED_CASES_ENDPOINT_SUFFIX,
+    CLIENT_ADDRESS_ENV_VAR,
+    REMOTE_PLATFORM_BACKSTORY_REDIRECT_HEADER,
+    SUCCESS_STATUS_CODE,
+)
 
 if TYPE_CHECKING:
     import requests
@@ -65,7 +70,7 @@ class FederationSyncManager:
         self.logger = logger
         self.sync_endpoint = api_client_parameters.sync_api_root
         self.chronicle_soar = chronicle_soar
-        self.http_client = None
+        self.http_client: AuthorizedSession | None = None
         self.verify_ssl = api_client_parameters.verify_ssl
         self._get_credentials_using_p4sa()
         self._prepare_http_client()
@@ -99,10 +104,9 @@ class FederationSyncManager:
 
         if len(updated_cases) > 0:
             for case in updated_cases:
-                if (alerts_sla := case.get("alertsSla")) and (expiration_status := alerts_sla.get("expirationStatus")):
-                    alerts_sla["expirationStatus"] = camel_to_snake_case(expiration_status)
-                if (case_sla := case.get("caseSla")) and (expiration_status := case_sla.get("expirationStatus")):
-                    case_sla["expirationStatus"] = camel_to_snake_case(expiration_status)
+                for sla_key in ("alertsSla", "caseSla"):
+                    if (sla := case.get(sla_key)) and (expiration_status := sla.get("expirationStatus")):
+                        sla["expirationStatus"] = camel_to_snake_case(expiration_status)
             sync_result = self._sync(cases_payload=updated_cases)
             self.logger.info(f"Response status code: {sync_result.status_code}")
 
@@ -145,9 +149,9 @@ class FederationSyncManager:
             The response of the sync.
 
         """
-        url = self.sync_endpoint + "/legacyFederatedCases:legacyBatchPatchFederatedCases"
+        url = f"{self.sync_endpoint.rstrip('/')}{BATCH_PATCH_FEDERATED_CASES_ENDPOINT_SUFFIX}"
         payload = json.dumps({"cases": cases_payload})
-        header = {"REMOTE-PLATFORM-BACKSTORY-REDIRECT": os.getenv("CLIENT_ADDRESS")}
+        header = {REMOTE_PLATFORM_BACKSTORY_REDIRECT_HEADER: os.getenv(CLIENT_ADDRESS_ENV_VAR)}
         return self.http_client.request("POST", url, data=payload, headers=header)
 
     def _get_credentials_using_p4sa(self) -> None:
@@ -156,7 +160,7 @@ class FederationSyncManager:
         self.creds = get_secops_siem_tenant_credentials(
             chronicle_soar=self.chronicle_soar,
             target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
-            quota_project_id=project_id
+            quota_project_id=project_id,
         )
 
     def _prepare_http_client(self) -> None:

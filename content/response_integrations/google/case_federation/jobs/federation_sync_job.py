@@ -19,17 +19,19 @@ import json
 
 from TIPCommon.base.job import Job
 
-from ..core.constants import FEDERATION_SYNC_JOB_SCRIPT_NAME, SUCCESS_STATUS_CODE
+from ..core.constants import (
+    FEDERATION_SYNC_JOB_SCRIPT_NAME,
+    HAS_FAILED_KEY,
+    LAST_EXECUTION_DATA_KEY,
+    SUCCESS_STATUS_CODE,
+    TARGET_PLATFORM_NOT_PROVIDED_ERROR_MESSAGE,
+)
 from ..core.exceptions import MissingParameterError
 from ..core.federation_sync_manager import (
     ApiClientParameters,
     FederationSyncExecutionData,
     FederationSyncManager,
 )
-
-LAST_EXECUTION_DATA_KEY = "lastExecutionData"
-HAS_FAILED_KEY = "hasFailed"
-TARGET_PLATFORM_NOT_PROVIDED_ERROR_MESSAGE = "Target Platform must be provided"
 
 
 class CaseFederationSyncJob(Job):
@@ -47,7 +49,7 @@ class CaseFederationSyncJob(Job):
         """Create a federation synchronization manager instance, that will sync the cases.
 
         Returns:
-             FederationSyncManager: The initialized federation synchronization manager.
+            The initialized federation synchronization manager.
 
         """
         session = self.soar_job.session
@@ -56,7 +58,11 @@ class CaseFederationSyncJob(Job):
             session,
             self.logger,
             ApiClientParameters(
-                sync_api_root=self.params.target_platform.replace("/projects/", "/v1alpha/projects/"),
+                sync_api_root=(
+                    self.params.target_platform
+                    if "/v1alpha/projects/" in self.params.target_platform
+                    else self.params.target_platform.replace("/projects/", "/v1alpha/projects/", 1)
+                ),
                 verify_ssl=self.params.verify_ssl,
             ),
             chronicle_soar=self.soar_job,
@@ -113,7 +119,7 @@ class CaseFederationSyncJob(Job):
             # This is the first run, provide default first values to sync all items
             return FederationSyncExecutionData(
                 continuation_token=None,
-                execution_message=("This is the first execution, starting sync of all relevant cases."),
+                execution_message="This is the first execution, starting sync of all relevant cases.",
             )
 
         previous_execution_data = json.loads(previous_execution_data_json)
@@ -142,9 +148,7 @@ class CaseFederationSyncJob(Job):
             True if the previous run failed, False otherwise.
 
         """
-        has_failed_json = self.soar_job.get_job_context_property(
-            identifier=self.name_id, property_key=HAS_FAILED_KEY
-        )
+        has_failed_json = self.soar_job.get_job_context_property(identifier=self.name_id, property_key=HAS_FAILED_KEY)
         if has_failed_json is None:
             return False
 

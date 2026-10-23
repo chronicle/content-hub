@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
@@ -27,8 +28,11 @@ from ...core.federation_sync_manager import (
 )
 from ..core.mocks import GetFederationCasesStub, MockHttpClient
 
+if TYPE_CHECKING:
+    import requests
+
 SYNC_API_ROOT: str = "https://primary.example.com"
-DEFAULT_LEGACY_CONTINUTATION: str = "blabla1"
+DEFAULT_LEGACY_CONTINUATION: str = "blabla1"
 DEFAULT_NEXT_CONTINUATION: str = "blabla2"
 DEFAULT_PREVIOUS_CONTINUATION: str = "blabla3"
 
@@ -46,15 +50,8 @@ def federation_cases(monkeypatch: pytest.MonkeyPatch) -> GetFederationCasesStub:
 
 
 @pytest.fixture
-def manager(
-    monkeypatch: pytest.MonkeyPatch,
-    mock_http_client: MockHttpClient,
-) -> FederationSyncManager:
-    monkeypatch.setattr(
-        FederationSyncManager,
-        "_get_credentials_using_p4sa",
-        lambda self: None,
-    )
+def manager(monkeypatch: pytest.MonkeyPatch, mock_http_client: MockHttpClient) -> FederationSyncManager:
+    monkeypatch.setattr(FederationSyncManager, "_get_credentials_using_p4sa", lambda self: None)
     monkeypatch.setattr(
         FederationSyncManager,
         "_prepare_http_client",
@@ -66,6 +63,56 @@ def manager(
         api_client_parameters=ApiClientParameters(sync_api_root=SYNC_API_ROOT, verify_ssl=True),
         chronicle_soar=MagicMock(),
     )
+
+
+def test_get_credentials_using_p4sa(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Arrange
+    mock_creds = MagicMock()
+    mock_get_creds = MagicMock(return_value=mock_creds)
+    mock_soar = MagicMock()
+    monkeypatch.setenv("GCP_PROJECT_ID", "test-gcp-project")
+    monkeypatch.setattr(manager_module, "get_secops_siem_tenant_credentials", mock_get_creds)
+    monkeypatch.setattr(FederationSyncManager, "_prepare_http_client", lambda self: None)
+
+    # Act
+    sync_manager = FederationSyncManager(
+        session=MagicMock(),
+        logger=MagicMock(),
+        api_client_parameters=ApiClientParameters(sync_api_root=SYNC_API_ROOT, verify_ssl=True),
+        chronicle_soar=mock_soar,
+    )
+
+    # Assert
+    mock_get_creds.assert_called_once_with(
+        chronicle_soar=mock_soar,
+        target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        quota_project_id="test-gcp-project",
+    )
+    assert sync_manager.creds is mock_creds
+
+
+def test_prepare_http_client(monkeypatch: pytest.MonkeyPatch, script_session: requests.Session) -> None:
+    # Arrange
+    mock_creds = MagicMock()
+    monkeypatch.setattr(
+        FederationSyncManager,
+        "_get_credentials_using_p4sa",
+        lambda self: setattr(self, "creds", mock_creds),
+    )
+
+    # Act
+    sync_manager = FederationSyncManager(
+        session=MagicMock(),
+        logger=MagicMock(),
+        api_client_parameters=ApiClientParameters(sync_api_root=SYNC_API_ROOT, verify_ssl=False),
+        chronicle_soar=MagicMock(),
+    )
+
+    # Assert
+    assert script_session.verify is False
+    assert isinstance(sync_manager.http_client, manager_module.AuthorizedSession)
+    assert sync_manager.http_client.credentials is mock_creds
+    assert sync_manager.http_client.verify is False
 
 
 def test_no_cases_returns_success_without_sync_request(
@@ -118,7 +165,7 @@ def test_sync_posts_cases_and_normalizes_sla_statuses(
     assert len(mock_http_client.requests) == 1
     request = mock_http_client.requests[0]
     assert request["method"] == "POST"
-    assert request["url"] == (f"{SYNC_API_ROOT}/legacyFederatedCases:legacyBatchPatchFederatedCases")
+    assert request["url"] == f"{SYNC_API_ROOT}/legacyFederatedCases:legacyBatchPatchFederatedCases"
     payload = json.loads(request["data"])
     assert payload["cases"][0]["alertsSla"]["expirationStatus"] == "not_expired"
     assert payload["cases"][0]["caseSla"]["expirationStatus"] == "already_expired"
@@ -138,7 +185,7 @@ def test_legacy_response_keys_are_supported(
     # Arrange - response uses the legacy keys
     federation_cases.response.json.return_value = {
         "legacyFederatedCases": [{"id": 7}],
-        "nextPageToken": DEFAULT_LEGACY_CONTINUTATION,
+        "nextPageToken": DEFAULT_LEGACY_CONTINUATION,
     }
     mock_http_client.response.status_code = 200
 
@@ -149,7 +196,7 @@ def test_legacy_response_keys_are_supported(
     assert len(mock_http_client.requests) == 1
     payload = json.loads(mock_http_client.requests[0]["data"])
     assert payload["cases"] == [{"id": 7}]
-    assert result.execution_data.continuation_token == DEFAULT_LEGACY_CONTINUTATION
+    assert result.execution_data.continuation_token == DEFAULT_LEGACY_CONTINUATION
 
 
 def test_failed_sync_propagates_status_code(

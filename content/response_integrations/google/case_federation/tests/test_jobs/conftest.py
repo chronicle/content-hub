@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import pytest
 from soar_sdk.SiemplifyJob import SiemplifyJob
+from TIPCommon.base import utils as tip_utils
 
 from ...core import federation_sync_manager as manager_module
 from ..core.mocks import GetFederationCasesStub, MockHttpClient
@@ -25,11 +26,7 @@ from ..core.mocks import GetFederationCasesStub, MockHttpClient
 def mock_http_client(monkeypatch: pytest.MonkeyPatch) -> MockHttpClient:
     """Mock HTTP client that bypasses GCP credentials and replaces the AuthorizedSession."""
     client = MockHttpClient()
-    monkeypatch.setattr(
-        manager_module.FederationSyncManager,
-        "_get_credentials_using_p4sa",
-        lambda self: None,
-    )
+    monkeypatch.setattr(manager_module.FederationSyncManager, "_get_credentials_using_p4sa", lambda self: None)
     monkeypatch.setattr(
         manager_module.FederationSyncManager,
         "_prepare_http_client",
@@ -47,16 +44,17 @@ def federation_cases(monkeypatch: pytest.MonkeyPatch) -> GetFederationCasesStub:
 
 
 @pytest.fixture
-def job_context(monkeypatch: pytest.MonkeyPatch) -> dict:
+def job_context(monkeypatch: pytest.MonkeyPatch) -> dict[tuple[str, str], str]:
     """In-memory replacement for the job context properties storage."""
-    context: dict = {}
+    context: dict[tuple[str, str], str] = {}
 
-    def get_property(identifier: str, property_key: str) -> str | None:
+    def get_property(_self: SiemplifyJob, identifier: str, property_key: str) -> str | None:
         return context.get((identifier, property_key))
 
-    def set_property(identifier: str, property_key: str, property_value: str) -> None:
+    def set_property(_self: SiemplifyJob, identifier: str, property_key: str, property_value: str) -> None:
         context[identifier, property_key] = property_value
 
-    monkeypatch.setattr(SiemplifyJob, "get_job_context_property", get_property)
-    monkeypatch.setattr(SiemplifyJob, "set_job_context_property", set_property)
+    for cls in (SiemplifyJob, tip_utils.SiemplifyJob):
+        monkeypatch.setattr(cls, "get_job_context_property", get_property)
+        monkeypatch.setattr(cls, "set_job_context_property", set_property)
     return context

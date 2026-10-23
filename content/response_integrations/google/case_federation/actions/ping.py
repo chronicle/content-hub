@@ -18,9 +18,7 @@ from TIPCommon.base.action import Action
 
 from ..core.constants import PING_SCRIPT_NAME
 
-SUCCESS_MESSAGE: str = (
-    "Successfully connected to the API Service server with the provided connection parameters!"
-)
+SUCCESS_MESSAGE: str = "Successfully connected to the API Service server with the provided connection parameters!"
 ERROR_MESSAGE: str = "Failed to connect to the API Service server!"
 
 
@@ -34,8 +32,9 @@ class Ping(Action):
     def _init_api_clients(self) -> None:
         pass
 
-    def _perform_action(self, nothing: str | None) -> None:
-        pass
+    def _perform_action(self, _: str | None = None) -> None:
+        self.output_message = SUCCESS_MESSAGE
+        self.error_output_message = ERROR_MESSAGE
 
 
 def main() -> None:
