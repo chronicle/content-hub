@@ -20,6 +20,7 @@ from unittest.mock import MagicMock
 from TIPCommon.types import ChronicleSOAR
 
 from ...core.definitions import Workflow
+from ...core.GitContentManager import GitContentManager
 from ...core.GitSyncManager import WorkflowInstaller
 from ..common import MOCKS_PATH
 from ..core.product import GitSyncProduct
@@ -177,3 +178,40 @@ def test_integration_generate_readme_custom_filtering() -> None:
     assert "LegacyCustomAct" in integration.readme
     assert "OnePlatformCustomAct" in integration.readme
     assert "BuiltIn" not in integration.readme
+
+
+def test_stable_json_sorting() -> None:
+    """Verifies that Workflow and GitContentManager output deterministically sorted JSON keys."""
+    unsorted_data = {
+        "name": "Test Playbook",
+        "zeta": 1,
+        "alpha": 2,
+        "gamma": 3,
+        "beta": 4,
+    }
+
+    # Test GitContentManager._json_encoder
+    encoded = GitContentManager._json_encoder(unsorted_data)
+    assert (
+        encoded.index('"alpha"')
+        < encoded.index('"beta"')
+        < encoded.index('"gamma"')
+        < encoded.index('"zeta"')
+    )
+
+    # Test Workflow.iter_files()
+    workflow = Workflow(unsorted_data)
+    files = list(workflow.iter_files())
+    json_file = next(f for f in files if f.path.endswith(".json"))
+    wf_content = (
+        json_file.content.decode("utf-8")
+        if isinstance(json_file.content, bytes)
+        else json_file.content
+    )
+    assert (
+        wf_content.index('"alpha"')
+        < wf_content.index('"beta"')
+        < wf_content.index('"gamma"')
+        < wf_content.index('"zeta"')
+    )
+

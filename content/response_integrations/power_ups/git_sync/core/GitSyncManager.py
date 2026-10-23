@@ -17,12 +17,12 @@ from __future__ import annotations
 import re
 import tempfile
 import uuid
-from typing import TYPE_CHECKING, Any
-
-from jinja2 import Template
-from TIPCommon.rest.soar_api import install_integration
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import platform_supports_1p_api
+from TIPCommon.rest.soar_api import install_integration
+from typing import Any, TYPE_CHECKING
+
+from jinja2 import Template
 
 from .cache import Cache, Context, get_context_factory
 from .constants import (
@@ -78,8 +78,7 @@ class GitSyncManager:
         smp_verify: bool = True,
         git_verify: bool = True,
         git_server_fingerprint: str = "",
-        deconstruct_playbooks: bool = True,
-    ) -> None:
+    ):
         self.logger = siemplify.LOGGER
         self._siemplify = siemplify
         self._cache = {}
@@ -106,9 +105,7 @@ class GitSyncManager:
             self.logger,
             git_server_fingerprint=git_server_fingerprint,
         )
-        self.content = GitContentManager(
-            self.git_client, self.api, deconstruct_playbooks=deconstruct_playbooks
-        )
+        self.content = GitContentManager(self.git_client, self.api)
 
     def __del__(self):
         try:
@@ -194,13 +191,6 @@ class GitSyncManager:
             input_type=bool,
         )
         git_verify = get_conf_param("Git Verify SSL", print_value=True, input_type=bool)
-        deconstruct_playbooks = get_conf_param(
-            "Deconstruct Playbooks",
-            print_value=True,
-            input_type=bool,
-            default_value=True,
-        )
-
         return cls(
             siemplify,
             repo_url,
@@ -212,7 +202,6 @@ class GitSyncManager:
             smp_verify,
             git_verify,
             git_server_fingerprint,
-            deconstruct_playbooks=deconstruct_playbooks,
         )
 
     def install_integration(self, integration: Integration) -> None:
@@ -1336,11 +1325,10 @@ class WorkflowInstaller:
         workflow.raw_data["originalPlaybookIdentifier"] = other.get(
             "originalPlaybookIdentifier",
         )
-        if workflow.raw_data.get("trigger") and other.get("trigger"):
-            workflow.raw_data["trigger"]["id"] = other.get("trigger").get("id")
-            workflow.raw_data["trigger"]["identifier"] = other.get("trigger").get(
-                "identifier",
-            )
+        workflow.raw_data["trigger"]["id"] = other.get("trigger").get("id")
+        workflow.raw_data["trigger"]["identifier"] = other.get("trigger").get(
+            "identifier",
+        )
         workflow.raw_data["categoryName"] = other.get("categoryName")
         workflow.raw_data["categoryId"] = other.get("categoryId")
 

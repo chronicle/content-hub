@@ -143,12 +143,9 @@ def test_push_playbook_excludes_blocks_when_include_blocks_false(
 
     # Assert
     pushed_paths = [f.path for f, _ in updated_files]
-    pushed_base_paths = [base_path for _, base_path in updated_files]
 
     # Standard playbook should be pushed
-    assert any(bp.endswith("/Standard Playbook") for bp in pushed_base_paths)
-    assert "definition.yaml" in pushed_paths
+    assert "Standard Playbook.json" in pushed_paths
 
     # Block playbook should NOT be pushed (since include_blocks=False)
     assert "Block Playbook.json" not in pushed_paths
-    assert not any("Block Playbook" in bp for bp in pushed_base_paths)

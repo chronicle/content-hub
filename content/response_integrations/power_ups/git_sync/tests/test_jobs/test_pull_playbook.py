@@ -14,15 +14,12 @@
 
 from __future__ import annotations
 
-import copy
 import json
-from typing import Any
 
 import pytest
 from integration_testing.set_meta import set_metadata
 
 from ...core.definitions import File
-from ...core.playbook_yaml_converter import PlaybookYAMLConverter
 from ...jobs import PullPlaybook
 from ..common import CONFIG_PATH, MOCKS_PATH
 from ..core.product import GitSyncProduct
@@ -46,76 +43,41 @@ DEFAULT_PARAMETERS = {
 }
 
 
-class MockLegacyGit:
-    """Mock Git client returning legacy playbook JSON files."""
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        pass
-
-    def get_file_contents_from_path(self, path: str) -> bytes:
-        if path == "GitSync.json":
-            return b'{"system_version": "6.1.38.77", "settings": {}}'
-        raise KeyError(f"File not found: {path}")
-
-    def get_file_objects_from_path(self, path: str) -> list[File]:
-        if path == "Playbooks":
-            return [
-                File(
-                    "Playbooks/Default/Test Playbook.json",
-                    json.dumps(GIT_PLAYBOOK_DATA),
-                ),
-            ]
-        raise KeyError(f"Directory not found: {path}")
-
-    def cleanup(self) -> None:
-        pass
-
-
-class MockDeconstructedGit:
-    """Mock Git client returning deconstructed playbook YAML files."""
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        pass
-
-    def get_file_contents_from_path(self, path: str) -> bytes:
-        if path == "GitSync.json":
-            return b'{"system_version": "6.1.38.77", "settings": {}}'
-        raise KeyError(f"File not found: {path}")
-
-    def get_file_objects_from_path(self, path: str) -> list[File]:
-        if path == "Playbooks":
-            test_playbook_data = copy.deepcopy(GIT_PLAYBOOK_DATA)
-            test_playbook_data["steps"][0]["identifier"] = "1_git_PA4"
-            test_playbook_data["steps"][0]["originalStepIdentifier"] = "1_git_PA4"
-            test_playbook_data["steps"][1]["identifier"] = "2_git_PA4"
-            test_playbook_data["steps"][1]["originalStepIdentifier"] = "2_git_PA4"
-
-            deconstructed = PlaybookYAMLConverter.deconstruct_playbook(
-                test_playbook_data
-            )
-            for f in deconstructed:
-                f.path = f"Playbooks/Default/Test Playbook/{f.path}"
-            return deconstructed
-        raise KeyError(f"Directory not found: {path}")
-
-    def cleanup(self) -> None:
-        pass
-
-
 @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
 def test_pull_playbook_success(
     monkeypatch: pytest.MonkeyPatch,
     script_session: GitSyncMockSession,
     git_sync_product: GitSyncProduct,
 ) -> None:
-    """Tests PullPlaybook job as a black box.
-
-    Verifies that when importing (Pulling) playbooks with duplicate-named steps,
-    they map to unique local step IDs.
+    """Tests PullPlaybook job as a black box. Verifies that when importing (Pulling)
+    playbooks with duplicate-named steps, they map to unique local step IDs.
     """
     # Arrange
     git_sync_product.local_playbook = LOCAL_PLAYBOOK_DATA
-    monkeypatch.setattr("git_sync.core.GitSyncManager.Git", MockLegacyGit)
+
+    class MockGit:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def get_file_contents_from_path(self, path):
+            if path == "GitSync.json":
+                return b'{"system_version": "6.1.38.77", "settings": {}}'
+            raise KeyError(f"File not found: {path}")
+
+        def get_file_objects_from_path(self, path):
+            if path == "Playbooks":
+                return [
+                    File(
+                        "Playbooks/Default/Test Playbook.json",
+                        json.dumps(GIT_PLAYBOOK_DATA),
+                    ),
+                ]
+            raise KeyError(f"Directory not found: {path}")
+
+        def cleanup(self):
+            pass
+
+    monkeypatch.setattr("git_sync.core.GitSyncManager.Git", MockGit)
 
     # Act
     PullPlaybook.main()
@@ -129,35 +91,6 @@ def test_pull_playbook_success(
     step_2 = next(x for x in steps if x["identifier"] == "local_PA4_2")
 
     # Assert that duplicate steps matched DIFFERENT, UNIQUE local step IDs
-    assert step_1["identifier"] != step_2["identifier"]
-    assert {step_1["identifier"], step_2["identifier"]} == {
-        "local_PA4_1",
-        "local_PA4_2",
-    }
-
-
-@set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
-def test_pull_deconstructed_playbook_success(
-    monkeypatch: pytest.MonkeyPatch,
-    script_session: GitSyncMockSession,
-    git_sync_product: GitSyncProduct,
-) -> None:
-    """Tests PullPlaybook job with deconstructed YAML structure."""
-    # Arrange
-    git_sync_product.local_playbook = LOCAL_PLAYBOOK_DATA
-    monkeypatch.setattr("git_sync.core.GitSyncManager.Git", MockDeconstructedGit)
-
-    # Act
-    PullPlaybook.main()
-
-    # Assert
-    saved_playbook = git_sync_product.saved_playbook
-    assert saved_playbook is not None
-
-    steps = saved_playbook["steps"]
-    step_1 = next(x for x in steps if x["identifier"] == "local_PA4_1")
-    step_2 = next(x for x in steps if x["identifier"] == "local_PA4_2")
-
     assert step_1["identifier"] != step_2["identifier"]
     assert {step_1["identifier"], step_2["identifier"]} == {
         "local_PA4_1",
