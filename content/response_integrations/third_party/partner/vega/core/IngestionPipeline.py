@@ -227,7 +227,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             )
         except Exception as exc:
             self._log(
-                "warning",
+                "warn",
                 "Unable to fetch timeline for Vega incident %s: %s",
                 identifier,
                 exc,
@@ -325,7 +325,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             self._mark_if_truncated()
         except Exception as exc:
             self._log(
-                "warning",
+                "warn",
                 "Unable to batch-fetch Vega alert events for %s alert(s): %s",
                 len(query_ids),
                 exc,
@@ -349,7 +349,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             except Exception as exc:
                 identifier = record_id(alert, ENTITY_TYPE_ALERT)
                 self._log(
-                    "warning",
+                    "warn",
                     "Unable to fetch events for Vega alert %s: %s",
                     identifier,
                     exc,
@@ -375,7 +375,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
                 self._mark_if_truncated()
             except Exception as exc:
                 self._log(
-                    "warning",
+                    "warn",
                     "Unable to fetch events for Vega alert %s: %s",
                     alert_id,
                     exc,

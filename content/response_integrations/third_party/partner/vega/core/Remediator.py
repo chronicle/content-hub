@@ -601,7 +601,7 @@ class SoarRemediator:
                 entity_type = ENTITY_TYPE_INCIDENT if mode == SYNC_MODE_INCIDENT else ENTITY_TYPE_ALERT
                 safe_log(
                     self.logger,
-                    "warning",
+                    "warn",
                     "Failed to sync Vega %s %s: %s",
                     entity_type,
                     case_key or incident_ids or alert_ids,
@@ -649,7 +649,7 @@ class SoarRemediator:
         if not callable(method) or not callable(getter):
             safe_log(
                 self.logger,
-                "warning",
+                "warn",
                 "Outbound Vega sync skipped: connector has no SOAR session/API_ROOT to search closed cases.",
             )
             return []
@@ -658,7 +658,7 @@ class SoarRemediator:
         except TypeError:
             return []
         except Exception as exc:
-            safe_log(self.logger, "warning", "Closed-case SDK lookup failed: %s", exc)
+            safe_log(self.logger, "warn", "Closed-case SDK lookup failed: %s", exc)
             return []
         cases: list[SingleJson] = []
         for ticket_id in ticket_ids:
@@ -667,7 +667,7 @@ class SoarRemediator:
             try:
                 payload = getter(ticket_id) or {}
             except Exception as exc:
-                safe_log(self.logger, "warning", "Case fetch failed for %s: %s", ticket_id, exc)
+                safe_log(self.logger, "warn", "Case fetch failed for %s: %s", ticket_id, exc)
                 continue
             if not isinstance(payload, dict) or not payload:
                 continue
@@ -770,7 +770,7 @@ class SoarRemediator:
             response = session.post(url, json=payload, timeout=_SOAR_TIMEOUT)
             body = _json_response(response)
         except Exception as exc:
-            safe_log(self.logger, "warning", "Closed-case SOAR search failed: %s", exc)
+            safe_log(self.logger, "warn", "Closed-case SOAR search failed: %s", exc)
             return []
         rows = body.get("results") or body.get("Results") or []
         if not isinstance(rows, list):
@@ -786,7 +786,7 @@ class SoarRemediator:
         except Exception as exc:
             safe_log(
                 self.logger,
-                "warning",
+                "warn",
                 "GetCaseFullDetails failed for case %s: %s",
                 case_id,
                 exc,

@@ -572,11 +572,15 @@ def safe_log(logger_obj, level: str, msg: str, *args) -> None:
             text = msg % args
         except Exception:
             text = " ".join([msg] + [str(arg) for arg in args])
-    log_fn = getattr(logger_obj, level, None) if logger_obj else None
+    # SiemplifyLogger exposes warn(), not warning().
+    if logger_obj is not None and level in ("warn", "warning"):
+        log_fn = getattr(logger_obj, "warn", None) or getattr(logger_obj, "warning", None)
+    else:
+        log_fn = getattr(logger_obj, level, None) if logger_obj else None
     if callable(log_fn):
         log_fn(text)
     else:
-        getattr(logger, level)(text)
+        getattr(logger, "warning" if level == "warn" else level)(text)
 
 
 def iter_current_vega_ids(siemplify: Any) -> list[str]:

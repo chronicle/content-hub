@@ -91,7 +91,7 @@ class RelatedBackfillMixin:
                 full = self.manager.get_incident(identifier)
             except Exception as exc:
                 self._log(
-                    "warning",
+                    "warn",
                     "Unable to load full alert ids for Vega incident %s: %s",
                     identifier,
                     exc,
@@ -213,7 +213,7 @@ class RelatedBackfillMixin:
                 self._mark_if_truncated()
             except Exception as exc:
                 self._related_scan_incomplete = True
-                self._log("warning", "Unable to backfill related Vega alerts: %s", exc)
+                self._log("warn", "Unable to backfill related Vega alerts: %s", exc)
                 break
             page = [item for item in (page or []) if isinstance(item, dict)]
             if not page:
@@ -346,7 +346,7 @@ class RelatedBackfillMixin:
                 record = self.manager.get_incident(incident_id)
             except Exception as exc:
                 self._log(
-                    "warning",
+                    "warn",
                     "Unable to reload open Vega incident %s: %s",
                     incident_id,
                     exc,
@@ -421,7 +421,7 @@ class RelatedBackfillMixin:
             return
         if have < expected and short:
             self._log(
-                "warning",
+                "warn",
                 "Vega incident %s related-alert scan finished with %s of %s alert(s).",
                 identifier,
                 have,

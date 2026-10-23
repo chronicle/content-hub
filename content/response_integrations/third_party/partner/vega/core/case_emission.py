@@ -69,7 +69,7 @@ class CaseEmissionMixin:
                 self._mark_if_truncated()
             except Exception as exc:
                 self._log(
-                    "warning",
+                    "warn",
                     "Unable to fetch related-alert metadata by %s: %s",
                     key,
                     exc,
@@ -177,7 +177,7 @@ class CaseEmissionMixin:
                 )
                 self._mark_if_truncated()
             except Exception as exc:
-                self._log("warning", "Unable to fetch Vega alerts by %s: %s", key, exc)
+                self._log("warn", "Unable to fetch Vega alerts by %s: %s", key, exc)
                 return []
             return [item for item in page if isinstance(item, dict)]
 
@@ -237,7 +237,7 @@ class CaseEmissionMixin:
 
         if not collected:
             self._log(
-                "warning",
+                "warn",
                 "getAlerts(alertIds) returned 0 of %s ids; falling back to "
                 "hasRelatedIncidents=true in the ingest window.",
                 len(unique),
@@ -255,7 +255,7 @@ class CaseEmissionMixin:
                 self._mark_if_truncated()
             except Exception as exc:
                 self._log(
-                    "warning",
+                    "warn",
                     "Fallback getAlerts(hasRelatedIncidents=true) failed: %s",
                     exc,
                 )
@@ -275,7 +275,7 @@ class CaseEmissionMixin:
             sample = ", ".join(missing[:10])
             extra = "" if len(missing) <= 10 else f" and {len(missing) - 10} more"
             self._log(
-                "warning",
+                "warn",
                 "Step 4 — getAlerts did not return these ids: %s%s. "
                 "They are still packaged from the nested incident stub.",
                 sample,
@@ -441,7 +441,7 @@ class CaseEmissionMixin:
                 enriched = self._enrich_alert(alert)
         except Exception as exc:
             self._log(
-                "warning",
+                "warn",
                 "Unable to enrich Vega alert %s; packaging without events: %s",
                 identifier,
                 exc,
@@ -631,7 +631,7 @@ class CaseEmissionMixin:
             )
         elif still_waiting:
             self._log(
-                "warning",
+                "warn",
                 "Step 6 — %s: added %s related alert(s) to this package. %s were not packaged.",
                 label,
                 packaged,

@@ -177,7 +177,7 @@ class VegaManager:
 
     def _wait_rate_limit(self, source: str) -> int:
         wait = self.rate_limiter.on_429()
-        self._log("warning", "Vega %s rate limit; waiting %s seconds.", source, wait)
+        self._log("warn", "Vega %s rate limit; waiting %s seconds.", source, wait)
         return wait
 
     def _request(
@@ -479,7 +479,7 @@ class VegaManager:
                 )
                 if not alert_id:
                     self._log(
-                        "warning",
+                        "warn",
                         "getAlertsEvents returned alertId=%s which was not in "
                         "this batch; those events were not attached to another alert.",
                         raw_id or "<missing>",
@@ -487,7 +487,7 @@ class VegaManager:
                     continue
                 if alert_id in seen_ids:
                     self._log(
-                        "warning",
+                        "warn",
                         "getAlertsEvents returned alertId=%s more than once; keeping the first bucket only.",
                         alert_id,
                     )
@@ -506,7 +506,7 @@ class VegaManager:
                 parsed, dropped = events_for_alert_bucket(raw_results, alert_id)
                 if dropped:
                     self._log(
-                        "warning",
+                        "warn",
                         "Dropped %s getAlertsEvents row(s) for alert %s because "
                         "they were tagged with a different alert id.",
                         dropped,
@@ -514,7 +514,7 @@ class VegaManager:
                     )
                 if not parsed and raw_results not in (None, "", [], {}):
                     self._log(
-                        "warning",
+                        "warn",
                         "getAlertsEvents returned results that did not parse to events (alertId=%s, type=%s).",
                         alert_id,
                         type(raw_results).__name__,
@@ -541,7 +541,7 @@ class VegaManager:
                 returned = len(parsed) + dropped
                 if dropped:
                     self._log(
-                        "warning",
+                        "warn",
                         "Dropped %s getAlertsEvents row(s) for alert %s because "
                         "they were tagged with a different alert id.",
                         dropped,
@@ -549,7 +549,7 @@ class VegaManager:
                     )
                 if not parsed and raw_results not in (None, "", [], {}):
                     self._log(
-                        "warning",
+                        "warn",
                         "getAlertsEvents returned results that did not parse to events (alertId=%s, type=%s).",
                         alert_id,
                         type(raw_results).__name__,
@@ -576,7 +576,7 @@ class VegaManager:
                 }
             return buckets
         self._log(
-            "warning",
+            "warn",
             "getAlertsEvents batch of %s alert id(s) did not include per-alert results; no events were assigned.",
             len(requested),
         )
@@ -664,7 +664,7 @@ class VegaManager:
                     continue
                 if collected:
                     self._log(
-                        "warning",
+                        "warn",
                         "Stopped paging Vega %s after %s row(s): %s",
                         label,
                         len(collected),
@@ -753,7 +753,7 @@ class VegaManager:
                     if any(collected[alert_id] for alert_id in page_ids):
                         self.last_fetch_truncated = True
                         self._log(
-                            "warning",
+                            "warn",
                             "Stopped paging Vega alert events after a partial batch of %s alert(s).",
                             len(page_ids),
                         )
@@ -770,7 +770,7 @@ class VegaManager:
                     if message:
                         if collected[alert_id]:
                             self._log(
-                                "warning",
+                                "warn",
                                 "Stopped paging Vega alert events for %s after %s row(s): %s",
                                 alert_id,
                                 len(collected[alert_id]),
@@ -778,7 +778,7 @@ class VegaManager:
                             )
                         else:
                             self._log(
-                                "warning",
+                                "warn",
                                 "getAlertsEvents failed for alert %s: %s",
                                 alert_id,
                                 message,

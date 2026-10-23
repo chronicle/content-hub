@@ -44,7 +44,7 @@ def _case_alerts(siemplify: Any) -> list[Any]:
                 try:
                     group = group()
                 except Exception as error:
-                    siemplify.LOGGER.warning(
+                    siemplify.LOGGER.warn(
                         "Failed to load case.%s while collecting alerts: %s",
                         attr,
                         error,
