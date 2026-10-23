@@ -1,0 +1,189 @@
+name: Vega Alerts and Incidents Connector
+parameters:
+-   name: API Root
+    default_value: https://api.vega.io
+    type: url
+    description: The Base URL of the Vega API, for example https://api.vega.io. Invalid
+        values cause a configuration error.
+    is_mandatory: true
+    is_advanced: false
+    mode: script
+-   name: Access Key
+    default_value: ''
+    type: password
+    description: Vega Access Key used with login_machine. Invalid values cause a configuration
+        error.
+    is_mandatory: true
+    is_advanced: false
+    mode: script
+-   name: Access Key ID
+    default_value: ''
+    type: password
+    description: Vega Access Key ID (X-Vega-Key-Id header). Invalid values cause a
+        configuration error.
+    is_mandatory: true
+    is_advanced: false
+    mode: script
+-   name: Vega Entities to Fetch
+    default_value: Alerts,Incidents
+    type: string
+    description: 'Possible Values: Alerts, Incidents (singular Alert or Incident is
+        also accepted). Combined with Has Related Incidents: Incidents+Alerts creates
+        one SOAR case for the Vega incident and groups related Vega alerts by one
+        source grouping identifier when Yes is selected. SecOps fills that case
+        up to Max. alerts grouped into a case, then starts another. Unrelated
+        alerts are one SOAR case each when No is selected. Incidents only creates
+        Vega Incident cases. Alerts only
+        creates one case per Vega alert. At least one is required. Unsupported values
+        cause a configuration error.'
+    is_mandatory: true
+    is_advanced: false
+    mode: script
+-   name: Fetch Lookback (Minutes)
+    default_value: '5'
+    type: string
+    description: Minutes to shift the query window backwards to catch late-indexed
+        records. Enter an integer from 1 to 60. Invalid values cause a configuration
+        error.
+    is_mandatory: true
+    is_advanced: false
+    mode: script
+-   name: Backfill Days
+    default_value: '30'
+    type: string
+    description: Days to backfill on the first run only. Enter an integer from 0 to
+        365 (0 starts from today). Invalid values cause a configuration error.
+    is_mandatory: true
+    is_advanced: false
+    mode: script
+-   name: Alert Severities to Fetch
+    default_value: LOW,MEDIUM,HIGH,CRITICAL
+    type: string
+    description: 'Possible Values: LOW, MEDIUM, HIGH, CRITICAL. Empty = all. Unsupported
+        values cause a configuration error.'
+    is_mandatory: false
+    is_advanced: true
+    mode: script
+-   name: Alert Statuses to Fetch
+    default_value: OPEN, IN PROGRESS, PEER REVIEW, RESOLVED
+    type: string
+    description: 'Possible Values: OPEN, IN PROGRESS, PEER REVIEW, RESOLVED. Empty
+        = all. Unsupported values cause a configuration error.'
+    is_mandatory: false
+    is_advanced: true
+    mode: script
+-   name: Alert Verdicts to Fetch
+    default_value: MALICIOUS,SUSPICIOUS,BENIGN,INCONCLUSIVE,NA
+    type: string
+    description: 'Possible Values: MALICIOUS, SUSPICIOUS, BENIGN, INCONCLUSIVE, NA.
+        Empty = all. Unsupported values cause a configuration error.'
+    is_mandatory: false
+    is_advanced: true
+    mode: script
+-   name: Has Related Incidents
+    default_value: Yes,No
+    type: string
+    description: 'Possible Values: Yes, No. Applies when Alerts are selected. Yes
+        loads related Vega alerts in chunks of up to 90 per source grouping
+        identifier (Vega:incident:<id>:related:batch:<N>, not on the incident
+        case) when Incidents is also selected, or as one case per alert when only
+        Alerts is selected. No loads unrelated Vega alerts as one SOAR case each
+        and does not fetch related alerts. Select both to run both flows. At least
+        one is required. Unsupported values cause a configuration error.'
+    is_mandatory: true
+    is_advanced: false
+    mode: script
+-   name: Incident Severities to Fetch
+    default_value: LOW,MEDIUM,HIGH,CRITICAL
+    type: string
+    description: 'Possible Values: LOW, MEDIUM, HIGH, CRITICAL. Empty = all. Unsupported
+        values cause a configuration error.'
+    is_mandatory: false
+    is_advanced: true
+    mode: script
+-   name: Incident User Statuses to Fetch
+    default_value: OPEN,IN REVIEW,ON HOLD,RESOLVED
+    type: string
+    description: 'Possible Values: OPEN, IN REVIEW, ON HOLD, RESOLVED. Empty
+        = all. Unsupported values cause a configuration error.'
+    is_mandatory: false
+    is_advanced: true
+    mode: script
+-   name: Incident Investigation Statuses to Fetch
+    default_value: NEW,INVESTIGATING,COMPLETED,FAILED
+    type: string
+    description: 'Possible Values: NEW, INVESTIGATING, COMPLETED, FAILED. Empty
+        = all. Unsupported values cause a configuration error.'
+    is_mandatory: false
+    is_advanced: true
+    mode: script
+-   name: Incident Verdicts to Fetch
+    default_value: MALICIOUS, SUSPICIOUS, BENIGN, INCONCLUSIVE, NA
+    type: string
+    description: 'Possible Values: MALICIOUS, SUSPICIOUS, BENIGN, INCONCLUSIVE, NA.
+        Empty = all. Unsupported values cause a configuration error.'
+    is_mandatory: false
+    is_advanced: true
+    mode: script
+-   name: Fetch Related Alert Metadata
+    default_value: 'true'
+    type: boolean
+    description: When enabled, the incident event field vega_alerts is the full
+        getAlerts metadata for related alerts. Alert UUIDs are sent in batches
+        of up to 1000 per request, and each response is paged until those alerts
+        are returned. When disabled, vega_alerts is only alertId, name, and
+        createdAt from getIncidents. vega_related_alert_ids lists those ids.
+        The event field is not named alerts, because SecOps reserves that name.
+        This does not create extra SOAR cases.
+    is_mandatory: false
+    is_advanced: true
+    mode: script
+-   name: Sync Case Close to Vega
+    default_value: 'true'
+    type: boolean
+    description: When true, closing a SOAR case sets Vega alert status or incident
+        user status to RESOLVED on the next connector run. Only cases that are
+        actually closed in SecOps are synced. Creating or updating a case during
+        ingest does not resolve Vega. The first run after enable only sets a
+        baseline and does not send historical closes. An incident-only case
+        resolves that Vega incident. A related-alert case or unrelated alert
+        case resolves those Vega alerts. Closing the related-alert case does not
+        resolve the Vega incident.
+    is_mandatory: false
+    is_advanced: true
+    mode: script
+-   name: DeviceProductField
+    default_value: product
+    type: string
+    description: Platform Product Field Name (required by SecOps).
+    is_mandatory: true
+    is_advanced: false
+    mode: regular
+-   name: EventClassId
+    default_value: event_class_id
+    type: string
+    description: Platform Event Field Name (required by SecOps).
+    is_mandatory: true
+    is_advanced: false
+    mode: regular
+-   name: PythonProcessTimeout
+    default_value: '930'
+    type: string
+    description: Max seconds for one connector run before SecOps kills the Python
+        process. This is not the schedule. Use Run Every to control how often a run
+        starts. The connector stops before this limit, packages what it fetched,
+        and saves the last packaged record timestamp as the watermark. The next
+        run continues from that watermark so remaining incidents, alerts, and
+        events are not skipped.
+    is_mandatory: true
+    is_advanced: false
+    mode: regular
+description: 'Ingests Vega incidents and alerts as SOAR cases. Incidents become
+    their own cases. Related alerts go into separate grouped cases. Unrelated alerts become one case each. Add an Alerts Grouping
+    rule for Product Vega, Group By Source Grouping Identifier, above All alerts,
+    and set Case Name to Rule Generator.'
+integration: Vega
+documentation_link: https://vega.io/
+rules: []
+is_connector_rules_supported: false
+creator: admin
