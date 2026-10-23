@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+
 from .constants import (
     DEVICE_PRODUCT,
     ENTITY_TYPE_ALERT,
@@ -26,7 +32,7 @@ _MIN_VALID_EVENT_MS = 946684800000  # 2000-01-01
 _MAX_VALID_EVENT_MS = 4102444800000  # 2100-01-01
 
 
-def _coerce_unix_ms(raw) -> int | None:
+def _coerce_unix_ms(raw: Any) -> int | None:
     if raw in (None, "", 0, "0"):
         return None
     value = None
@@ -58,7 +64,7 @@ def _coerce_unix_ms(raw) -> int | None:
     return millis
 
 
-def _field_ms(record: dict, *keys: str) -> int | None:
+def _field_ms(record: SingleJson, *keys: str) -> int | None:
     if not isinstance(record, dict):
         return None
     for key in keys:
@@ -68,7 +74,7 @@ def _field_ms(record: dict, *keys: str) -> int | None:
     return None
 
 
-def record_start_end(record: dict, fallback: int) -> tuple[int, int]:
+def record_start_end(record: SingleJson, fallback: int) -> tuple[int, int]:
     """Incident and alert window: start is createdAt, end is last update.
 
     Incidents send lastUpdated. Alerts send updatedAt for the same moment.
@@ -83,7 +89,7 @@ def record_start_end(record: dict, fallback: int) -> tuple[int, int]:
     return start, end
 
 
-def _time_values(payload: dict) -> list[int]:
+def _time_values(payload: SingleJson) -> list[int]:
     """Valid timestamps from keys whose name contains 'time'."""
     found: list[int] = []
     if not isinstance(payload, dict):
@@ -100,7 +106,7 @@ def _time_values(payload: dict) -> list[int]:
     return found
 
 
-def event_start_end(payload: dict, parent_start: int, parent_end: int) -> tuple[int, int]:
+def event_start_end(payload: SingleJson, parent_start: int, parent_end: int) -> tuple[int, int]:
     """Alert-event window from any time field, otherwise the parent alert."""
     times = _time_values(payload if isinstance(payload, dict) else {})
     if not times:
@@ -109,11 +115,11 @@ def event_start_end(payload: dict, parent_start: int, parent_end: int) -> tuple[
 
 
 def _attach_child_events(
-    alert,
-    record: dict,
+    alert: Any,
+    record: SingleJson,
     parent_start: int,
     parent_end: int,
-    logger_instance=None,
+    logger_instance: Any = None,
 ) -> None:
     identifier = record_id(record, ENTITY_TYPE_ALERT)
     child_events = list(record.get("alert_events") or [])
@@ -135,7 +141,11 @@ def _attach_child_events(
         alert.events.append(child)
 
 
-def create_alerts(records: list[tuple[str, dict]], siemplify, logger_instance=None) -> list:
+def create_alerts(
+    records: list[tuple[str, SingleJson]],
+    siemplify: Any,
+    logger_instance: Any = None,
+) -> list[Any]:
     """Turn pipeline records into SOAR AlertInfo packages.
 
     Incident case: one AlertInfo for the Vega incident. Related Vega alerts

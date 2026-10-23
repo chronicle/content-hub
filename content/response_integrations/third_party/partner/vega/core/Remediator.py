@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+
 import json
 from datetime import datetime, timezone
 
@@ -25,7 +31,7 @@ _SOAR_TIMEOUT = 30
 _TRACKED_CAP = 5000
 from .utils import parse_iso_timestamp, safe_log, utc_now
 
-def ingest_skip_ids(records) -> set[str]:
+def ingest_skip_ids(records: list[tuple[str, SingleJson]] | None) -> set[str]:
     """Vega IDs packaged this poll must not be resolved on the same run."""
     from .mapping import record_alert_ids, record_id
 
@@ -44,11 +50,11 @@ def ingest_skip_ids(records) -> set[str]:
     return {item for item in skip if item}
 
 
-def ingest_sync_refs(records) -> list[dict]:
+def ingest_sync_refs(records: list[tuple[str, SingleJson]] | None) -> list[SingleJson]:
     """Case lookup keys: SOAR ticket, human Vega IDs, and case title."""
     from .mapping import case_display_name, record_display_id, record_id, soar_meta
 
-    refs: list[dict] = []
+    refs: list[SingleJson] = []
     seen: set[str] = set()
     for entity_type, record in records or []:
         if not isinstance(record, dict):
@@ -74,7 +80,7 @@ def ingest_sync_refs(records) -> list[dict]:
     return refs
 
 
-def ingest_ticket_ids(records) -> list[str]:
+def ingest_ticket_ids(records: list[tuple[str, SingleJson]] | None) -> list[str]:
     """SOAR ticket IDs the packager assigns: ``Vega:<record_id>``."""
     return [str(item.get("ticket") or "") for item in ingest_sync_refs(records) if item.get("ticket")]
 
@@ -90,7 +96,7 @@ _SOAR_CLOSED_FLAG_KEYS = (
 _SOAR_STATUS_NAME_KEYS = ("statusName", "caseStatusName")
 
 
-def _ci_get(payload: dict, *keys):
+def _ci_get(payload: SingleJson, *keys: str) -> Any:
     if not isinstance(payload, dict):
         return None
     lowered = {str(key).lower(): value for key, value in payload.items()}
@@ -100,11 +106,11 @@ def _ci_get(payload: dict, *keys):
     return None
 
 
-def _first_present(payload: dict, keys: tuple[str, ...]):
+def _first_present(payload: SingleJson, keys: tuple[str, ...]) -> Any:
     return _ci_get(payload, *keys)
 
 
-def _is_vega_event_payload(payload: dict) -> bool:
+def _is_vega_event_payload(payload: SingleJson) -> bool:
     return bool(
         payload.get("vega_id")
         or payload.get("vegaId")
@@ -113,7 +119,7 @@ def _is_vega_event_payload(payload: dict) -> bool:
     )
 
 
-def _explicit_soar_closed_flag(payload: dict) -> bool | None:
+def _explicit_soar_closed_flag(payload: SingleJson) -> bool | None:
     """SOAR closed flag only. None means the payload has no case-closed field.
 
     Vega events map ``status`` / ``userStatus`` (OPEN/RESOLVED) onto the same
@@ -141,7 +147,7 @@ def _explicit_soar_closed_flag(payload: dict) -> bool | None:
     return None
 
 
-def _soar_numeric_status_closed(payload: dict) -> bool | None:
+def _soar_numeric_status_closed(payload: SingleJson) -> bool | None:
     """CaseDataStatus on a SOAR case dict. None for Vega event payloads."""
     if _is_vega_event_payload(payload):
         return None
@@ -171,7 +177,7 @@ def _soar_numeric_status_closed(payload: dict) -> bool | None:
     return None
 
 
-def is_soar_case_closed(payload: dict) -> bool:
+def is_soar_case_closed(payload: SingleJson) -> bool:
     """True only when SecOps/SOAR marks the case closed.
 
     Accepts ``isClosed`` / ``statusName=CLOSED`` / numeric ``status=2``
@@ -213,17 +219,17 @@ def _ticket_body(ticket: str) -> str:
     return text
 
 
-def _case_id(row: dict) -> str:
+def _case_id(row: SingleJson) -> str:
     value = _ci_get(row, "id", "Id", "ID", "identifier", "Identifier", "caseId", "CaseId")
     return str(value).strip() if value not in (None, "") else ""
 
 
-def _case_title(row: dict) -> str:
+def _case_title(row: SingleJson) -> str:
     value = _ci_get(row, "title", "Title", "name", "Name", "displayName", "DisplayName")
     return str(value).strip() if value not in (None, "") else ""
 
 
-def _is_incident_case_title(payload: dict) -> bool:
+def _is_incident_case_title(payload: SingleJson) -> bool:
     """True for the Vega incident case, not the related-alerts case.
 
     ``(related alerts)`` is the current title. ``(cluster N)`` (and legacy
@@ -241,7 +247,7 @@ def _is_incident_case_title(payload: dict) -> bool:
     return lowered.startswith(SOAR_ALERT_TYPE_INCIDENT.lower())
 
 
-def _unwrap_case(payload) -> dict:
+def _unwrap_case(payload: Any) -> SingleJson:
     if isinstance(payload, list) and payload and isinstance(payload[0], dict):
         payload = payload[0]
     if not isinstance(payload, dict):
@@ -257,7 +263,7 @@ def _unwrap_case(payload) -> dict:
     return payload
 
 
-def _row_text(row: dict) -> str:
+def _row_text(row: SingleJson) -> str:
     parts = []
     for value in row.values() if isinstance(row, dict) else []:
         if isinstance(value, (str, int, float, bool)) and value not in (None, ""):
@@ -265,7 +271,7 @@ def _row_text(row: dict) -> str:
     return " ".join(parts)
 
 
-def _usable_tokens(ref: dict) -> list[str]:
+def _usable_tokens(ref: SingleJson) -> list[str]:
     tokens: list[str] = []
     seen: set[str] = set()
     ticket = str(ref.get("ticket") or "").strip()
@@ -281,7 +287,7 @@ def _usable_tokens(ref: dict) -> list[str]:
     return tokens
 
 
-def _row_matches_ref(row: dict, ref: dict) -> bool:
+def _row_matches_ref(row: SingleJson, ref: SingleJson) -> bool:
     if not isinstance(row, dict) or not isinstance(ref, dict):
         return False
     blob = _row_text(row).lower()
@@ -293,21 +299,21 @@ def _row_matches_ref(row: dict, ref: dict) -> bool:
     return bool(title and row_title and (title in row_title or row_title in title))
 
 
-def _payload_identity_blob(payload: dict) -> str:
+def _payload_identity_blob(payload: SingleJson) -> str:
     try:
         return json.dumps(payload, default=str).lower()
     except Exception:
         return _row_text(payload).lower()
 
 
-def _payload_matches_ref(payload: dict, ref: dict) -> bool:
+def _payload_matches_ref(payload: SingleJson, ref: SingleJson) -> bool:
     if _row_matches_ref(payload, ref):
         return True
     blob = _payload_identity_blob(payload)
     return any(token.lower() in blob for token in _usable_tokens(ref))
 
 
-def _explicitly_open(payload: dict) -> bool:
+def _explicitly_open(payload: SingleJson) -> bool:
     flag = _explicit_soar_closed_flag(payload)
     if flag is False:
         return True
@@ -315,7 +321,7 @@ def _explicitly_open(payload: dict) -> bool:
     return numeric is False
 
 
-def _search_row_closed(row: dict) -> bool:
+def _search_row_closed(row: SingleJson) -> bool:
     flag = _explicit_soar_closed_flag(row)
     if flag is True:
         return True
@@ -323,7 +329,7 @@ def _search_row_closed(row: dict) -> bool:
     return bool(numeric)
 
 
-def _treat_as_closed(merged: dict, row: dict) -> bool:
+def _treat_as_closed(merged: SingleJson, row: SingleJson) -> bool:
     if _explicitly_open(merged):
         return False
     if is_soar_case_closed(merged):
@@ -331,7 +337,7 @@ def _treat_as_closed(merged: dict, row: dict) -> bool:
     return _search_row_closed(row)
 
 
-def _normalize_ref(item) -> dict:
+def _normalize_ref(item: Any) -> SingleJson:
     if isinstance(item, dict) and str(item.get("ticket") or "").startswith(f"{VENDOR_NAME}:"):
         tokens = [str(token).strip() for token in (item.get("tokens") or []) if str(token).strip()]
         ticket = str(item.get("ticket")).strip()
@@ -351,9 +357,9 @@ def _normalize_ref(item) -> dict:
     return {"ticket": ticket, "tokens": [ticket, body], "title": ""}
 
 
-def _merge_tracked_refs(state: dict, ingest_refs: list | None, ingest_tickets: list[str] | None) -> list[dict]:
-    ordered: list[dict] = []
-    by_ticket: dict[str, dict] = {}
+def _merge_tracked_refs(state: SingleJson, ingest_refs: list | None, ingest_tickets: list[str] | None) -> list[SingleJson]:
+    ordered: list[SingleJson] = []
+    by_ticket: dict[str, SingleJson] = {}
     raw = list(state.get("tracked_refs") or []) + list(state.get("tracked_tickets") or [])
     raw.extend(ingest_refs or [])
     raw.extend(ingest_tickets or [])
@@ -377,8 +383,8 @@ def _merge_tracked_refs(state: dict, ingest_refs: list | None, ingest_tickets: l
     return ordered[-_TRACKED_CAP:]
 
 
-def _prune_tracked_refs(refs: list[dict], processed: set[str]) -> list[dict]:
-    kept: list[dict] = []
+def _prune_tracked_refs(refs: list[SingleJson], processed: set[str]) -> list[SingleJson]:
+    kept: list[SingleJson] = []
     for ref in refs:
         ticket = str(ref.get("ticket") or "")
         body = _ticket_body(ticket)
@@ -400,18 +406,18 @@ def _prune_tracked_refs(refs: list[dict], processed: set[str]) -> list[dict]:
     return kept
 
 
-def _api_root(siemplify) -> str:
+def _api_root(siemplify: Any) -> str:
     return str(getattr(siemplify, "API_ROOT", "") or getattr(siemplify, "api_root", "") or "").rstrip("/")
 
 
-def _environment(siemplify) -> str:
+def _environment(siemplify: Any) -> str:
     try:
         return str(siemplify.context.connector_info.environment or "").strip()
     except Exception:
         return ""
 
 
-def _json_response(response) -> dict:
+def _json_response(response: Any) -> SingleJson:
     if response is None:
         return {}
     raise_for_status = getattr(response, "raise_for_status", None)
@@ -446,7 +452,7 @@ def _time_to_ms(value) -> int:
     return int(parsed.timestamp() * 1000)
 
 
-def _case_close_ms(payload: dict) -> int:
+def _case_close_ms(payload: SingleJson) -> int:
     return _time_to_ms(
         _ci_get(
             payload,
@@ -462,14 +468,14 @@ def _case_close_ms(payload: dict) -> int:
     )
 
 
-def _closed_after_since(payload: dict, since_ms: int, require_time: bool) -> bool:
+def _closed_after_since(payload: SingleJson, since_ms: int, require_time: bool) -> bool:
     closed_ms = _case_close_ms(payload)
     if closed_ms:
         return closed_ms >= since_ms
     return not require_time
 
 
-def _id_is_tracked(identifier: str, refs: list[dict]) -> bool:
+def _id_is_tracked(identifier: str, refs: list[SingleJson]) -> bool:
     needle = str(identifier or "").strip().lower()
     if not needle or not refs:
         return False
@@ -481,33 +487,37 @@ def _id_is_tracked(identifier: str, refs: list[dict]) -> bool:
     return False
 
 
-def _row_matches_any_ref(row: dict, refs: list[dict]) -> bool:
+def _row_matches_any_ref(row: SingleJson, refs: list[SingleJson]) -> bool:
     return any(_row_matches_ref(row, ref) for ref in refs)
 
 
-def _payload_matches_any_ref(payload: dict, refs: list[dict]) -> bool:
+def _payload_matches_any_ref(payload: SingleJson, refs: list[SingleJson]) -> bool:
     return any(_payload_matches_ref(payload, ref) for ref in refs)
 
 
-def _tracked_target_ids(identifiers: list[str], refs: list[dict]) -> list[str]:
+def _tracked_target_ids(identifiers: list[str], refs: list[SingleJson]) -> list[str]:
     return [item for item in identifiers if _id_is_tracked(item, refs)]
 
 
 class SoarRemediator:
     """Close matching Vega alerts or incidents when SOAR cases close."""
 
-    def __init__(self, manager, siemplify, logger_instance=None) -> None:
+    def __init__(self, manager: Any, siemplify: Any, logger_instance: Any = None) -> None:
         self.manager = manager
         self.siemplify = siemplify
         self.logger = logger_instance
 
     def run_once(
         self,
-        state: dict,
+        state: SingleJson,
         skip_ids: set[str] | None = None,
         ingest_tickets: list[str] | None = None,
-        ingest_refs: list | None = None,
-    ) -> dict:
+        ingest_refs: list[SingleJson] | None = None,
+    ) -> SingleJson:
+        """Scan recently modified SOAR cases and resolve matching Vega entities.
+
+        Tracks ingested tickets across polls and skips ids packaged in this run.
+        """
         state = dict(state or {})
         processed = set(state.get("processed_ids") or [])
         current_skip = {str(item).strip() for item in (skip_ids or []) if str(item).strip()}
@@ -613,9 +623,9 @@ class SoarRemediator:
         self,
         since_ms: int,
         until_ms: int,
-        refs: list[dict],
+        refs: list[SingleJson],
         processed: set[str],
-    ) -> tuple[list[dict], list[str]]:
+    ) -> tuple[list[SingleJson], list[str]]:
         session = getattr(self.siemplify, "session", None)
         root = _api_root(self.siemplify)
         if session is not None and root:
@@ -629,7 +639,7 @@ class SoarRemediator:
             return self._closed_cases_from_rest(since_ms, until_ms, refs, processed)
         return self._closed_cases_from_sdk(since_ms, refs), []
 
-    def _closed_cases_from_sdk(self, since_ms: int, refs: list[dict]) -> list[dict]:
+    def _closed_cases_from_sdk(self, since_ms: int, refs: list[SingleJson]) -> list[SingleJson]:
         method = getattr(
             self.siemplify,
             "get_alerts_ticket_ids_from_cases_closed_since_timestamp",
@@ -650,7 +660,7 @@ class SoarRemediator:
         except Exception as exc:
             safe_log(self.logger, "warning", "Closed-case SDK lookup failed: %s", exc)
             return []
-        cases: list[dict] = []
+        cases: list[SingleJson] = []
         for ticket_id in ticket_ids:
             if not str(ticket_id).startswith(f"{VENDOR_NAME}:"):
                 continue
@@ -673,9 +683,9 @@ class SoarRemediator:
         self,
         since_ms: int,
         until_ms: int,
-        refs: list[dict],
+        refs: list[SingleJson],
         processed: set[str],
-    ) -> tuple[list[dict], list[str]]:
+    ) -> tuple[list[SingleJson], list[str]]:
         session = getattr(self.siemplify, "session", None)
         root = _api_root(self.siemplify)
         summaries = self._search_closed_case_summaries(session, root, since_ms, until_ms)
@@ -689,7 +699,7 @@ class SoarRemediator:
                 "closed after the last poll.",
                 len(summaries),
             )
-        cases: list[dict] = []
+        cases: list[SingleJson] = []
         remember_ids: list[str] = []
         fetched = 0
         seen_ids: set[str] = set()
@@ -742,7 +752,7 @@ class SoarRemediator:
         )
         return cases, remember_ids
 
-    def _search_closed_case_summaries(self, session, root: str, since_ms: int, until_ms: int) -> list[dict]:
+    def _search_closed_case_summaries(self, session, root: str, since_ms: int, until_ms: int) -> list[SingleJson]:
         url = f"{root}/{SOAR_CASE_SEARCH_PATH}?format=camel"
         environment = _environment(self.siemplify)
         payload = {
@@ -767,7 +777,7 @@ class SoarRemediator:
             return []
         return [row for row in rows if isinstance(row, dict)]
 
-    def _get_case_details(self, session, root: str, case_id: str) -> dict:
+    def _get_case_details(self, session, root: str, case_id: str) -> SingleJson:
         path = SOAR_CASE_DETAILS_PATH.format(case_id=case_id)
         url = f"{root}/{path}?format=camel"
         try:

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+
 import json
 import re
-from typing import Any
-
 from .constants import (
     DEVICE_PRODUCT,
     ENTITY_TYPE_ALERT,
@@ -102,7 +106,7 @@ _ENTITY_ALIASES = {
 }
 
 
-def _as_dict(value: Any) -> dict:
+def _as_dict(value: Any) -> SingleJson:
     return value if isinstance(value, dict) else {}
 
 
@@ -113,12 +117,14 @@ def _safe_json(value: Any) -> str:
         return str(value)
 
 
-def soar_meta(record: dict) -> dict:
+def soar_meta(record: SingleJson) -> SingleJson:
+    """Return the private SOAR metadata bag stored on a Vega record."""
     meta = record.get(SOAR_META_KEY) if isinstance(record, dict) else None
     return dict(meta) if isinstance(meta, dict) else {}
 
 
-def set_soar_meta(record: dict, **fields: Any) -> dict:
+def set_soar_meta(record: SingleJson, **fields: Any) -> SingleJson:
+    """Return a copy of the record with updated private SOAR metadata fields."""
     updated = dict(record or {})
     meta = soar_meta(updated)
     meta.update({key: value for key, value in fields.items() if value is not None})
@@ -126,13 +132,14 @@ def set_soar_meta(record: dict, **fields: Any) -> dict:
     return updated
 
 
-def record_id(record: dict, entity_type: str) -> str:
+def record_id(record: SingleJson, entity_type: str) -> str:
+    """Return the canonical Vega id for an alert or incident record."""
     if entity_type == ENTITY_TYPE_INCIDENT:
         return str(record.get("id") or record.get("incidentId") or "").strip()
     return str(record.get("id") or record.get("vegaAlertId") or record.get("alertId") or "").strip()
 
 
-def record_alert_ids(record: dict) -> list[str]:
+def record_alert_ids(record: SingleJson) -> list[str]:
     """IDs to try with getAlertsEvents: UUID first, then human vegaAlertId."""
     ids: list[str] = []
     for key in ("id", "vegaAlertId", "alertId"):
@@ -147,7 +154,7 @@ def is_graphql_alert_id(value: str) -> bool:
     return bool(_GRAPHQL_ID_RE.match(str(value or "").strip()))
 
 
-def record_display_id(record: dict, entity_type: str) -> str:
+def record_display_id(record: SingleJson, entity_type: str) -> str:
     """Human-facing Vega ID used in the SOAR alert/case title.
 
     Vega Alert names use vegaAlertId only (never the UUID id/alertId).
@@ -157,11 +164,12 @@ def record_display_id(record: dict, entity_type: str) -> str:
     return str(record.get("vegaAlertId") or "").strip()
 
 
-def record_name(record: dict) -> str:
+def record_name(record: SingleJson) -> str:
+    """Return the display name from a Vega alert or incident record."""
     return str(record.get("name") or record.get("incidentName") or "Vega record").strip()
 
 
-def case_display_name(record: dict, entity_type: str) -> str:
+def case_display_name(record: SingleJson, entity_type: str) -> str:
     """Human-readable SOAR alert/case title: Vega {entity} - {display_id} - {name}.
 
     Alert Type in SOAR search is rule_generator. For incident-case members the
@@ -171,15 +179,15 @@ def case_display_name(record: dict, entity_type: str) -> str:
     display_id = record_display_id(record, entity_type)
     name = record_name(record)
     if display_id:
-        return f"Vega {entity_type} - {display_id} - {name}"
-    return f"Vega {entity_type} - {name}"
+        return f"Vega {entity_type} - {display_id} - {name} FEEDBACK TEST 12"
+    return f"Vega {entity_type} - {name} FEEDBACK TEST 12"
 
 
 # Marks the related-alert case so close-sync does not treat it as the incident.
 RELATED_ALERTS_TITLE_MARK = "(related alerts)"
 
 
-def incident_case_title(record: dict, related: bool = False, batch: int | None = None) -> str:
+def incident_case_title(record: SingleJson, related: bool = False, batch: int | None = None) -> str:
     """SOAR case title for the incident case or one related-alert chunk.
 
     Related alerts use ``(cluster N)`` in chunks of up to 90. ``N`` advances per
@@ -209,6 +217,7 @@ def incident_grouping_id(incident_id: str, related: bool = False, batch: int | N
 
 
 def alert_grouping_id(alert_id: str) -> str:
+    """Return the SOAR source grouping id for a standalone Vega alert."""
     return f"{VENDOR_NAME}:alert:{alert_id}"
 
 
@@ -224,9 +233,9 @@ def _label_items(value: Any) -> list:
     return labels
 
 
-def _display_labels(value: Any) -> list[dict]:
+def _display_labels(value: Any) -> list[SingleJson]:
     """Keep only Vega label name and color on SOAR events."""
-    displayed: list[dict] = []
+    displayed: list[SingleJson] = []
     for item in _label_items(value):
         if isinstance(item, str):
             name = item.strip()
@@ -250,7 +259,7 @@ def _display_labels(value: Any) -> list[dict]:
     return displayed
 
 
-def record_label_tags(record: dict) -> list[str]:
+def record_label_tags(record: SingleJson) -> list[str]:
     """SOAR case tags from Vega incident or alert `labels` names.
 
     SecOps creates a tag on first use when AlertInfo.case_tags is set, so
@@ -278,7 +287,7 @@ def record_label_tags(record: dict) -> list[str]:
     return tags
 
 
-def collect_label_tags(*records: dict) -> list[str]:
+def collect_label_tags(*records: SingleJson) -> list[str]:
     """Unique case tags from an incident and every related alert in the case."""
     tags: list[str] = []
     seen: set[str] = set()
@@ -300,9 +309,9 @@ _LABEL_TAG_KEYS = (
 )
 
 
-def flatten_event_for_tags(event: Any) -> dict:
+def flatten_event_for_tags(event: Any) -> SingleJson:
     """SOAR events store Vega fields on the object, in additional_properties, or in details JSON."""
-    payload: dict = {}
+    payload: SingleJson = {}
     if isinstance(event, dict):
         payload.update(event)
     elif event is not None:
@@ -319,7 +328,7 @@ def flatten_event_for_tags(event: Any) -> dict:
         if isinstance(fields, list):
             payload.setdefault("fields", fields)
     nested = payload.get("additional_properties") or payload.get("AdditionalProperties")
-    merged: dict = {}
+    merged: SingleJson = {}
     if isinstance(nested, dict):
         merged.update(nested)
     for key, value in payload.items():
@@ -372,11 +381,12 @@ def pending_case_tags(names: list[str], existing: list[str] | set[str] | None = 
     return pending
 
 
-def tags_from_events(events: list) -> list[str]:
+def tags_from_events(events: list[Any]) -> list[str]:
+    """Extract unique Vega label tag names from a list of SOAR events."""
     return collect_label_tags(*[{"labels": tags_from_event_fields(event)} for event in (events or [])])
 
 
-def incident_alert_summary(stub: dict) -> dict:
+def incident_alert_summary(stub: SingleJson) -> SingleJson:
     """alertId, name, and createdAt from a getIncidents nested alert."""
     stub = stub if isinstance(stub, dict) else {}
     alert_id = str(stub.get("alertId") or stub.get("id") or "").strip()
@@ -392,13 +402,14 @@ def incident_alert_summary(stub: dict) -> dict:
     return summary
 
 
-def incident_alert_stubs(incident: dict) -> list[dict]:
+def incident_alert_stubs(incident: SingleJson) -> list[SingleJson]:
+    """Return nested alert stub dicts from a getIncidents record."""
     raw = incident.get("alerts") if isinstance(incident, dict) else None
     if isinstance(raw, dict):
         raw = [raw]
     if not isinstance(raw, list):
         return []
-    stubs: list[dict] = []
+    stubs: list[SingleJson] = []
     for item in raw:
         if isinstance(item, str) and item.strip():
             stubs.append({"alertId": item.strip(), "id": item.strip()})
@@ -407,7 +418,7 @@ def incident_alert_stubs(incident: dict) -> list[dict]:
     return stubs
 
 
-def incident_alert_ids(incident: dict) -> list[str]:
+def incident_alert_ids(incident: SingleJson) -> list[str]:
     """Unique alert IDs from getIncidents `alerts { alertId name createdAt }`."""
     ids: list[str] = []
     seen: set[str] = set()
@@ -419,7 +430,8 @@ def incident_alert_ids(incident: dict) -> list[str]:
     return ids
 
 
-def stub_to_alert(stub: dict) -> dict:
+def stub_to_alert(stub: SingleJson) -> SingleJson:
+    """Expand a nested incident alert stub into a minimal alert record."""
     stub = stub if isinstance(stub, dict) else {}
     alert_id = str(stub.get("alertId") or stub.get("id") or stub.get("vegaAlertId") or "").strip()
     return {
@@ -436,7 +448,7 @@ def stub_to_alert(stub: dict) -> dict:
     }
 
 
-def merge_related_alert(stub: dict, full: dict | None) -> dict:
+def merge_related_alert(stub: SingleJson, full: SingleJson | None) -> SingleJson:
     """Prefer the full getAlerts record; keep nested incident stub labels if needed.
 
     getIncidents `alerts { ... }` is often what we package when getAlerts(id)
@@ -455,7 +467,7 @@ def merge_related_alert(stub: dict, full: dict | None) -> dict:
     return merged
 
 
-def _related_incident_items(alert: dict) -> list[dict]:
+def _related_incident_items(alert: SingleJson) -> list[SingleJson]:
     related = alert.get("relatedIncidents") if isinstance(alert, dict) else None
     if isinstance(related, dict):
         related = [related]
@@ -464,7 +476,7 @@ def _related_incident_items(alert: dict) -> list[dict]:
     return [item for item in related if isinstance(item, dict)]
 
 
-def related_incident_ids(alert: dict) -> list[str]:
+def related_incident_ids(alert: SingleJson) -> list[str]:
     """Every incident id on the alert. The first entry is not the only link."""
     ids: list[str] = []
     for item in _related_incident_items(alert):
@@ -474,7 +486,8 @@ def related_incident_ids(alert: dict) -> list[str]:
     return ids
 
 
-def related_incident_ref(alert: dict) -> tuple[str, str]:
+def related_incident_ref(alert: SingleJson) -> tuple[str, str]:
+    """Return the first related incident id and name for an alert."""
     for item in _related_incident_items(alert):
         identifier = str(item.get("incidentId") or item.get("id") or "").strip()
         if identifier:
@@ -482,8 +495,9 @@ def related_incident_ref(alert: dict) -> tuple[str, str]:
     return "", ""
 
 
-def index_alert_records(alerts: list[dict]) -> dict[str, dict]:
-    index: dict[str, dict] = {}
+def index_alert_records(alerts: list[SingleJson]) -> dict[str, SingleJson]:
+    """Index alert records by every known alert id variant."""
+    index: dict[str, SingleJson] = {}
     for alert in alerts:
         if not isinstance(alert, dict):
             continue
@@ -492,18 +506,20 @@ def index_alert_records(alerts: list[dict]) -> dict[str, dict]:
     return index
 
 
-def record_severity(record: dict) -> str:
+def record_severity(record: SingleJson) -> str:
+    """Return the Vega severity string for a record."""
     raw = str(record.get("severity") or "MEDIUM").strip().upper()
     if raw not in SEVERITY_TO_ALERT_PRIORITY:
         return "MEDIUM"
     return raw
 
 
-def record_timestamp(record: dict) -> str:
+def record_timestamp(record: SingleJson) -> str:
+    """Return the best timestamp string for ordering a Vega record."""
     return str(record.get("updatedAt") or record.get("lastUpdated") or record.get("createdAt") or "")
 
 
-def _flatten_entities(record: dict) -> dict[str, str]:
+def _flatten_entities(record: SingleJson) -> dict[str, str]:
     buckets = {
         "ip": [],
         "domain": [],
@@ -570,7 +586,7 @@ def _is_skipped_payload_key(key: Any) -> bool:
     return _normalized_field_name(text) in _SKIP_TIME_NORMALIZED
 
 
-def _apply_event_times(event: dict, start_time: int, end_time: int) -> None:
+def _apply_event_times(event: SingleJson, start_time: int, end_time: int) -> None:
     """Keep a single StartTime/EndTime pair so SecOps does not repeat dates."""
     event["StartTime"] = start_time
     event["EndTime"] = end_time
@@ -600,13 +616,13 @@ def _has_mapped_value(value: Any) -> bool:
     return True
 
 
-def _set_mapped(event: dict, key: str, value: Any) -> None:
+def _set_mapped(event: SingleJson, key: str, value: Any) -> None:
     if not key or key in event or not _has_mapped_value(value):
         return
     event[key] = _soar_value(value)
 
 
-def _map_api_fields(event: dict, record: dict, fields: tuple[tuple[str, str], ...]) -> None:
+def _map_api_fields(event: SingleJson, record: SingleJson, fields: tuple[tuple[str, str], ...]) -> None:
     if not isinstance(record, dict):
         return
     for api_key, event_key in fields:
@@ -618,7 +634,7 @@ def _map_api_fields(event: dict, record: dict, fields: tuple[tuple[str, str], ..
         _set_mapped(event, event_key, value)
 
 
-def _apply_entity_aliases(event: dict, payload: dict) -> None:
+def _apply_entity_aliases(event: SingleJson, payload: SingleJson) -> None:
     for key, value in payload.items():
         bucket = _ENTITY_ALIASES.get(str(key).strip().lower())
         if not bucket or bucket in event or not _has_mapped_value(value):
@@ -628,7 +644,7 @@ def _apply_entity_aliases(event: dict, payload: dict) -> None:
         event[bucket] = _soar_value(value)
 
 
-def _details_payload(record: dict) -> str:
+def _details_payload(record: SingleJson) -> str:
     """JSON snapshot of the Vega record without duplicating child events."""
     if not isinstance(record, dict):
         return _safe_json(record)
@@ -714,7 +730,7 @@ _INCIDENT_API_FIELDS = (
 )
 
 
-def _apply_label_fields(event: dict, record: dict, *, copy_incident_names: bool) -> None:
+def _apply_label_fields(event: SingleJson, record: SingleJson, *, copy_incident_names: bool) -> None:
     """Put this Vega record's labels on a SOAR event.
 
     Incident names stay on `vega_incident_label_names` for related alerts;
@@ -732,11 +748,11 @@ def _apply_label_fields(event: dict, record: dict, *, copy_incident_names: bool)
         event["vega_incident_label_names"] = ",".join(incident_label_names)
 
 
-def related_alert_rows(record: dict) -> list[dict]:
+def related_alert_rows(record: SingleJson) -> list[SingleJson]:
     """Rows for the incident event: full vega_alerts, else getIncidents stubs."""
     raw = record.get("vega_alerts") if isinstance(record, dict) else None
     if isinstance(raw, list):
-        rows: list[dict] = []
+        rows: list[SingleJson] = []
         for item in raw:
             if isinstance(item, dict):
                 rows.append(item)
@@ -751,7 +767,8 @@ def related_alert_rows(record: dict) -> list[dict]:
     return rows
 
 
-def related_alert_ids(rows: list[dict]) -> list[str]:
+def related_alert_ids(rows: list[SingleJson]) -> list[str]:
+    """Return unique alert ids from related-alert row dicts."""
     ids: list[str] = []
     seen: set[str] = set()
     for row in rows:
@@ -765,7 +782,7 @@ def related_alert_ids(rows: list[dict]) -> list[str]:
     return ids
 
 
-def build_event_dict(record: dict, entity_type: str, start_time: int, end_time: int) -> dict:
+def build_event_dict(record: SingleJson, entity_type: str, start_time: int, end_time: int) -> SingleJson:
     """Map a Vega alert or incident onto a SOAR event using API fields only.
 
     Empty or missing Vega values are omitted so the Default event section does
@@ -832,7 +849,7 @@ def _try_parse_json(value: Any) -> Any:
         return value
 
 
-def _recommended_action_items(record: dict) -> list[dict]:
+def _recommended_action_items(record: SingleJson) -> list[SingleJson]:
     raw = record.get("recommendedActions")
     if raw is None:
         raw = record.get("recommended_actions")
@@ -841,7 +858,7 @@ def _recommended_action_items(record: dict) -> list[dict]:
         parsed = [parsed]
     if not isinstance(parsed, list):
         return []
-    items: list[dict] = []
+    items: list[SingleJson] = []
     for item in parsed:
         item = _try_parse_json(item)
         if isinstance(item, dict):
@@ -849,23 +866,23 @@ def _recommended_action_items(record: dict) -> list[dict]:
     return items
 
 
-def _recommended_action_key(item: dict) -> str:
+def _recommended_action_key(item: SingleJson) -> str:
     return str(item.get("actionKey") or item.get("action_key") or "").strip()
 
 
-def _recommended_action_params(item: dict) -> dict:
+def _recommended_action_params(item: SingleJson) -> SingleJson:
     params = _try_parse_json(item.get("targetParams") or item.get("target_params") or {})
     return params if isinstance(params, dict) else {}
 
 
-def _recommended_action_user(item: dict) -> str:
+def _recommended_action_user(item: SingleJson) -> str:
     params = _recommended_action_params(item)
     return str(
         params.get("user_id") or params.get("userId") or params.get("email") or params.get("username") or ""
     ).strip()
 
 
-def _merge_csv_values(event: dict, key: str, values: list[str]) -> None:
+def _merge_csv_values(event: SingleJson, key: str, values: list[str]) -> None:
     existing = [item.strip() for item in str(event.get(key) or "").split(",") if item.strip()]
     for value in values:
         if value and value not in existing:
@@ -874,7 +891,7 @@ def _merge_csv_values(event: dict, key: str, values: list[str]) -> None:
         event[key] = ",".join(existing)
 
 
-def reset_password_users_from_payload(payload: dict) -> list[str]:
+def reset_password_users_from_payload(payload: SingleJson) -> list[str]:
     """User emails/logins from mapped fields or reset_user_password actions."""
     users: list[str] = []
 
@@ -900,7 +917,7 @@ def reset_password_users_from_payload(payload: dict) -> list[str]:
     return users
 
 
-def _apply_recommended_action_fields(event: dict, record: dict) -> None:
+def _apply_recommended_action_fields(event: SingleJson, record: SingleJson) -> None:
     """Expose recommended-action keys and Okta reset target on the SOAR event.
 
     Playbooks can trigger on `vega_recommended_action_keys` / `recommended_actions`
@@ -920,7 +937,7 @@ def _apply_recommended_action_fields(event: dict, record: dict) -> None:
     _merge_csv_values(event, "user", reset_users)
 
 
-def normalize_alert_event(vega_event: Any) -> dict:
+def normalize_alert_event(vega_event: Any) -> SingleJson:
     """Parse getAlertsEvents rows, including JSON `fields` / `fields._raw` payloads."""
     payload = dict(vega_event) if isinstance(vega_event, dict) else {"value": vega_event}
     fields = _try_parse_json(payload.get("fields"))
@@ -943,6 +960,7 @@ def normalize_alert_event(vega_event: Any) -> dict:
 
 
 def alert_priority(severity: str) -> int:
+    """Map a Vega severity string to a SecOps alert priority integer."""
     return SEVERITY_TO_ALERT_PRIORITY.get(str(severity).upper(), 60)
 
 from .alert_event_mapping import build_vega_alert_event_dict

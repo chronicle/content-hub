@@ -6,11 +6,15 @@ Does not import the SecOps SDK.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+
 import json
 import logging
 import time
-from typing import Any
-
 from .constants import (
     ALERT_EVENTS_ID_BATCH,
     ALERT_EVENTS_PAGE_SIZE,
@@ -72,7 +76,7 @@ def is_rate_limit_message(value: Any) -> bool:
     return "rate limit" in text or "too many requests" in text
 
 
-def _requests():
+def _requests() -> Any:
     import requests
 
     return requests
@@ -87,11 +91,11 @@ class VegaManager:
         access_key_id: str,
         access_key: str,
         verify_ssl: bool = True,
-        timeout=DEFAULT_HTTP_TIMEOUT,
-        logger_instance=None,
-        session=None,
+        timeout: float | tuple[float, float] = DEFAULT_HTTP_TIMEOUT,
+        logger_instance: Any = None,
+        session: Any = None,
         rate_limiter: RateLimitController | None = None,
-        sleeper=None,
+        sleeper: Any = None,
     ) -> None:
         self.api_root = normalize_api_root(api_root)
         self.access_key_id = require_secret(access_key_id, "Access Key ID")
@@ -113,7 +117,7 @@ class VegaManager:
     def _url(self, path: str) -> str:
         return f"{self.api_root}{path}"
 
-    def _response_error_text(self, response) -> str:
+    def _response_error_text(self, response: Any) -> str:
         try:
             payload = response.json()
         except Exception:
@@ -132,7 +136,7 @@ class VegaManager:
             return str(payload)
         return str(payload)
 
-    def _raise_http(self, response, path: str = "") -> None:
+    def _raise_http(self, response: Any, path: str = "") -> None:
         status = response.status_code
         classified = classify_credential_error(self._response_error_text(response))
         if classified:
@@ -213,7 +217,7 @@ class VegaManager:
                 self.rate_limiter.on_success()
             return response
 
-    def _auth_headers(self) -> dict:
+    def _auth_headers(self) -> SingleJson:
         if not self._jwt:
             self.login()
         return {
@@ -223,6 +227,7 @@ class VegaManager:
         }
 
     def login(self) -> str:
+        """Authenticate with Vega and return a bearer JWT."""
         response = self._request(
             "POST",
             LOGIN_PATH,
@@ -243,7 +248,8 @@ class VegaManager:
         self._jwt = str(token)
         return self._jwt
 
-    def graphql(self, query: str, variables: dict | None = None) -> dict:
+    def graphql(self, query: str, variables: SingleJson | None = None) -> SingleJson:
+        """Execute a GraphQL query/mutation and return the data object."""
         while True:
             response = self._request(
                 "POST",
@@ -283,7 +289,7 @@ class VegaManager:
         query: str,
         envelope_key: str,
         records_key: str,
-        variables: dict,
+        variables: SingleJson,
     ) -> int:
         """Return GraphQL `total` without paging the full result set."""
         page_vars = dict(variables or {})
@@ -318,10 +324,12 @@ class VegaManager:
             records = envelope.get(records_key) or []
             return len(records) if isinstance(records, list) else 0
 
-    def count_alerts(self, variables: dict) -> int:
+    def count_alerts(self, variables: SingleJson) -> int:
+        """Return the total alert count for the given GraphQL variables."""
         return self._count_records(GET_ALERTS_QUERY, "getAlerts", "alerts", variables)
 
-    def count_incidents(self, variables: dict) -> int:
+    def count_incidents(self, variables: SingleJson) -> int:
+        """Return the total incident count for the given GraphQL variables."""
         return self._count_records(GET_INCIDENTS_QUERY, "getIncidents", "incidents", variables)
 
     def _deadline_passed(self, deadline_monotonic: float | None) -> bool:
@@ -334,7 +342,7 @@ class VegaManager:
         query: str,
         envelope_key: str,
         records_key: str,
-        variables: dict,
+        variables: SingleJson,
         max_records: int | None = None,
         deadline_monotonic: float | None = None,
         start_offset: int = 0,
@@ -399,7 +407,7 @@ class VegaManager:
 
     def get_alerts(
         self,
-        variables: dict,
+        variables: SingleJson,
         max_records: int | None = None,
         deadline_monotonic: float | None = None,
         start_offset: int = 0,
@@ -424,10 +432,11 @@ class VegaManager:
 
     def get_incidents(
         self,
-        variables: dict,
+        variables: SingleJson,
         max_records: int | None = None,
         deadline_monotonic: float | None = None,
     ) -> list:
+        """Page getIncidents and return incident records up to max_records."""
         self.last_fetch_truncated = False
         return self._paged(
             GET_INCIDENTS_QUERY,
@@ -449,7 +458,7 @@ class VegaManager:
             unique.append(alert_id)
         return unique
 
-    def _buckets_from_alerts_events(self, envelope: dict, requested: list[str]) -> dict[str, dict]:
+    def _buckets_from_alerts_events(self, envelope: SingleJson, requested: list[str]) -> dict[str, SingleJson]:
         """Map a getAlertsEvents payload onto the ids that were requested.
 
         Per-alert `alerts[]` buckets are the source of truth. Top-level
@@ -525,7 +534,7 @@ class VegaManager:
             if isinstance(envelope, dict) and isinstance(envelope.get("error"), dict):
                 error = envelope.get("error") or {}
             raw_results = envelope.get("results") if isinstance(envelope, dict) else None
-            parsed: list[dict] = []
+            parsed: list[SingleJson] = []
             returned = 0
             if not (error.get("code") or error.get("message")):
                 parsed, dropped = events_for_alert_bucket(raw_results, alert_id)
@@ -573,12 +582,12 @@ class VegaManager:
         )
         return buckets
 
-    def _fetch_alerts_events_page(self, alert_ids: list[str], limit: int, offset: int) -> dict[str, dict]:
+    def _fetch_alerts_events_page(self, alert_ids: list[str], limit: int, offset: int) -> dict[str, SingleJson]:
         """One getAlertsEvents call. UUID ids go in alertIds (max 10)."""
         ids = self._dedupe_alert_ids(alert_ids)[: max(1, int(ALERT_EVENTS_ID_BATCH))]
         if not ids:
             return {}
-        variables: dict[str, Any] = {
+        variables: SingleJson = {
             "limit": int(limit),
             "offset": int(offset),
         }
@@ -596,7 +605,7 @@ class VegaManager:
             envelope = {}
         return self._buckets_from_alerts_events(envelope, ids)
 
-    def _page_has_rate_limit(self, buckets: dict[str, dict], alert_ids: list[str]) -> bool:
+    def _page_has_rate_limit(self, buckets: dict[str, SingleJson], alert_ids: list[str]) -> bool:
         for alert_id in alert_ids:
             error = (buckets.get(alert_id) or {}).get("error") or {}
             if not isinstance(error, dict):
@@ -606,7 +615,8 @@ class VegaManager:
                 return True
         return False
 
-    def get_alert_events(self, alert_id: str, limit: int = ALERT_EVENTS_PAGE_SIZE, offset: int = 0) -> dict:
+    def get_alert_events(self, alert_id: str, limit: int = ALERT_EVENTS_PAGE_SIZE, offset: int = 0) -> SingleJson:
+        """Return one page of getAlertsEvents for a single alert id."""
         alert_id = str(alert_id or "").strip()
         if not alert_id:
             return {}
@@ -686,11 +696,11 @@ class VegaManager:
 
     def get_all_alerts_events(
         self,
-        alert_ids: list,
+        alert_ids: list[str],
         page_size: int = ALERT_EVENTS_PAGE_SIZE,
         max_records: int = MAX_EVENTS_PER_ALERT,
         deadline_monotonic: float | None = None,
-    ) -> dict[str, list]:
+    ) -> dict[str, list[SingleJson]]:
         """Page getAlertsEvents for many alerts.
 
         UUID ids are sent in `alertIds` batches of at most 10. Each alert
@@ -801,7 +811,8 @@ class VegaManager:
         page_size: int = ALERT_EVENTS_PAGE_SIZE,
         max_records: int = MAX_EVENTS_PER_ALERT,
         deadline_monotonic: float | None = None,
-    ) -> list:
+    ) -> list[SingleJson]:
+        """Fetch every event page for one alert id."""
         alert_id = str(alert_id or "").strip()
         if not alert_id:
             return []
@@ -818,7 +829,8 @@ class VegaManager:
         incident_id: str,
         limit: int = TIMELINE_PAGE_SIZE,
         offset: int = 0,
-    ) -> dict:
+    ) -> SingleJson:
+        """Return one page of getIncidentTimeline for an incident id."""
         data = self.graphql(
             GET_INCIDENT_TIMELINE_QUERY,
             {"incidentId": incident_id, "limit": limit, "offset": offset},
@@ -841,6 +853,7 @@ class VegaManager:
         page_size: int = TIMELINE_PAGE_SIZE,
         deadline_monotonic: float | None = None,
     ) -> list:
+        """Fetch every timeline page for one incident id."""
         return self._collect_paged(
             lambda limit, offset: self.get_incident_timeline(incident_id, limit, offset),
             "events",
@@ -850,7 +863,8 @@ class VegaManager:
             deadline_monotonic=deadline_monotonic,
         )
 
-    def get_incident(self, incident_id: str) -> dict:
+    def get_incident(self, incident_id: str) -> SingleJson:
+        """Fetch one incident by GraphQL UUID or human Vega incident id."""
         from .mapping import is_graphql_alert_id
 
         lookup = str(incident_id).strip()
@@ -861,7 +875,8 @@ class VegaManager:
         records = self.get_incidents(variables, max_records=1)
         return records[0] if records else {}
 
-    def update_alerts(self, payload: dict) -> dict:
+    def update_alerts(self, payload: SingleJson) -> SingleJson:
+        """Apply an updateAlerts mutation and return the response envelope."""
         data = self.graphql(UPDATE_ALERTS_MUTATION, {"input": payload})
         envelope = data.get("updateAlerts") or {}
         error = envelope.get("error") or {}
@@ -869,7 +884,8 @@ class VegaManager:
             raise VegaException(error.get("message") or "updateAlerts failed.")
         return envelope
 
-    def update_incidents(self, payload: dict) -> dict:
+    def update_incidents(self, payload: SingleJson) -> SingleJson:
+        """Apply an updateIncidents mutation and return the response envelope."""
         data = self.graphql(UPDATE_INCIDENTS_MUTATION, {"input": payload})
         envelope = data.get("updateIncidents") or {}
         errors = envelope.get("errors") or []
@@ -878,7 +894,8 @@ class VegaManager:
             raise VegaException(message or "updateIncidents failed.")
         return envelope
 
-    def resolve_alerts(self, alert_ids: list[str]) -> dict:
+    def resolve_alerts(self, alert_ids: list[str]) -> SingleJson:
+        """Set Vega alert status to resolved for the given alert ids."""
         payload = {"alertIds": list(alert_ids), "status": SYNC_RESOLVED_STATUS}
         data = self.graphql(UPDATE_ALERTS_STATUS_MUTATION, {"input": payload})
         envelope = data.get("updateAlerts") or {}
@@ -887,7 +904,8 @@ class VegaManager:
             raise VegaException(error.get("message") or "updateAlerts failed.")
         return envelope
 
-    def resolve_incidents(self, incident_ids: list[str]) -> dict:
+    def resolve_incidents(self, incident_ids: list[str]) -> SingleJson:
+        """Set Vega incident userStatus to resolved for the given incident ids."""
         from .constants import ENTITY_TYPE_INCIDENT
         from .mapping import is_graphql_alert_id, record_id
 

@@ -37,6 +37,12 @@ Connector flow
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+
 import logging
 import time
 from datetime import datetime
@@ -101,7 +107,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
 
     def __init__(
         self,
-        manager,
+        manager: Any,
         entities_raw: str,
         lookback_minutes: str,
         backfill_days: str,
@@ -115,7 +121,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         incident_verdicts: str = "",
         fetch_related_alert_metadata: bool = False,
         max_fetch: int | None = None,
-        logger_instance=None,
+        logger_instance: Any = None,
     ) -> None:
         self.manager = manager
         self.entities = resolve_entities(entities_raw)
@@ -136,11 +142,11 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             "incident_verdicts": incident_verdicts,
         })
         self.logger = logger_instance or logger
-        self._incident_cache: dict[str, dict] = {}
+        self._incident_cache: dict[str, SingleJson] = {}
         self._incomplete = False
         self._progress_ts: datetime | None = None
         self._deadline: float | None = None
-        self._open_related: dict[str, dict] = {}
+        self._open_related: dict[str, SingleJson] = {}
         self._settled_related: dict[str, int] = {}
         self._open_ids_at_start: set[str] = set()
         self._upgrade_incident_ids: list[str] = []
@@ -155,13 +161,13 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
 
     def _alert_variables(
         self,
-        window: dict,
+        window: SingleJson,
         has_related: bool | None,
         alert_ids: list[str | None] = None,
         vega_alert_ids: list[str | None] = None,
         include_time: bool = True,
-    ) -> dict:
-        payload: dict = {}
+    ) -> SingleJson:
+        payload: SingleJson = {}
         if not (alert_ids or vega_alert_ids):
             filters = self.alert_filters
             payload = {
@@ -191,7 +197,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         payload["updatedTo"] = (window or {}).get("updated_to")
         return _drop_none(payload)
 
-    def _incident_variables(self, window: dict) -> dict:
+    def _incident_variables(self, window: SingleJson) -> SingleJson:
         filters = self.incident_filters
         return _drop_none({
             "severities": filters["severities"],
@@ -204,7 +210,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             "updatedTo": window.get("updated_to"),
         })
 
-    def _enrich_incident(self, record: dict) -> dict:
+    def _enrich_incident(self, record: SingleJson) -> SingleJson:
         identifier = record_id(record, ENTITY_TYPE_INCIDENT)
         if not identifier:
             return record
@@ -255,17 +261,17 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             )
         return True
 
-    def _note_progress(self, record: dict) -> None:
+    def _note_progress(self, record: SingleJson) -> None:
         parsed = parse_iso_timestamp(record_timestamp(record))
         if parsed is None:
             return
         if self._progress_ts is None or parsed > self._progress_ts:
             self._progress_ts = parsed
 
-    def _sort_by_timestamp(self, rows: list[dict]) -> list[dict]:
+    def _sort_by_timestamp(self, rows: list[SingleJson]) -> list[SingleJson]:
         return sorted(rows, key=lambda row: record_timestamp(row) or "")
 
-    def _preferred_event_id(self, record: dict) -> str:
+    def _preferred_event_id(self, record: SingleJson) -> str:
         """UUID for getAlertsEvents(alertIds), otherwise the first candidate."""
         candidates = record_alert_ids(record)
         for candidate in candidates:
@@ -283,7 +289,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
                 return list(value or [])
         return None
 
-    def _apply_prefetched_events(self, record: dict, events_by_id: dict[str, list]) -> dict:
+    def _apply_prefetched_events(self, record: SingleJson, events_by_id: dict[str, list]) -> SingleJson:
         """Attach only the events fetched for this alert's own id."""
         record = dict(record)
         candidates = record_alert_ids(record)
@@ -297,7 +303,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         record["alert_events"] = events
         return record
 
-    def _fetch_events_for_alerts(self, alerts: list[dict]) -> dict[str, list]:
+    def _fetch_events_for_alerts(self, alerts: list[SingleJson]) -> dict[str, list]:
         """Load events for these alerts. UUID ids are batched (max 10 per call)."""
         query_ids: list[str] = []
         seen: set[str] = set()
@@ -333,7 +339,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
                     events_by_id[alert_id] = list(value or [])
         return events_by_id
 
-    def _fetch_events_one_by_one(self, alerts: list[dict]) -> dict[str, list]:
+    def _fetch_events_one_by_one(self, alerts: list[SingleJson]) -> dict[str, list]:
         events_by_id: dict[str, list] = {}
         for alert in alerts:
             if not isinstance(alert, dict):
@@ -355,7 +361,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
                 events_by_id[candidate] = events
         return events_by_id
 
-    def _enrich_alert(self, record: dict) -> dict:
+    def _enrich_alert(self, record: SingleJson) -> SingleJson:
         # Child Vega Alert Events live on the Vega Alert, not the incident.
         record = dict(record)
         candidates = record_alert_ids(record)
@@ -391,7 +397,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         ingested_set.add(identifier)
         ingested.append(identifier)
 
-    def _cache_incident(self, incident: dict) -> None:
+    def _cache_incident(self, incident: SingleJson) -> None:
         identifier = record_id(incident, ENTITY_TYPE_INCIDENT)
         if identifier:
             self._incident_cache[identifier] = incident
@@ -399,7 +405,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         if display_id:
             self._incident_cache[display_id] = incident
 
-    def _id_lookup_window(self, window: dict) -> dict:
+    def _id_lookup_window(self, window: SingleJson) -> SingleJson:
         """Wide created/updated range so related alerts older than the ingest window still resolve."""
         end = (window or {}).get("to") or (window or {}).get("updated_to") or (window or {}).get("end")
         return {
@@ -409,7 +415,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             "updated_to": end,
         }
 
-    def _metadata_lookup_ids(self, incident: dict) -> list[str]:
+    def _metadata_lookup_ids(self, incident: SingleJson) -> list[str]:
         """One id per nested alert. UUID alertId is preferred for getAlerts."""
         ids: list[str] = []
         seen: set[str] = set()
@@ -430,8 +436,8 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
 
     def _ingest_incidents(
         self,
-        window: dict,
-        records: list[tuple[str, dict]],
+        window: SingleJson,
+        records: list[tuple[str, SingleJson]],
         ingested: list[str],
         ingested_set: set[str],
         include_related: bool = True,
@@ -469,7 +475,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             for incident in incidents:
                 self._release_oversized_related(incident, ingested, ingested_set)
         self._log("info", "Fetched %s Vega incident(s).", len(incidents))
-        related_index: dict[str, dict] = {}
+        related_index: dict[str, SingleJson] = {}
         if include_related and incidents and not self._should_stop(len(records)):
             all_alert_ids: list[str] = []
             for incident in incidents:
@@ -529,8 +535,8 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
 
     def _append_standalone_alert(
         self,
-        alert: dict,
-        records: list[tuple[str, dict]],
+        alert: SingleJson,
+        records: list[tuple[str, SingleJson]],
         ingested: list[str],
         ingested_set: set[str],
         events_by_id: dict[str, list | None] = None,
@@ -560,8 +566,8 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
 
     def _ingest_standalone_alerts(
         self,
-        window: dict,
-        records: list[tuple[str, dict]],
+        window: SingleJson,
+        records: list[tuple[str, SingleJson]],
         ingested: list[str],
         ingested_set: set[str],
         has_related: bool,
@@ -615,7 +621,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
                 break
             index += batch_size
 
-    def _ingest_plan(self) -> dict:
+    def _ingest_plan(self) -> SingleJson:
         """Map Vega Entities + Has Related Incidents to fetch/package behavior."""
         fetch_alerts = "Alerts" in self.entities
         fetch_incidents = "Incidents" in self.entities
@@ -632,10 +638,10 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
 
     def _append_sample_incidents(
         self,
-        window: dict,
-        records: list[tuple[str, dict]],
+        window: SingleJson,
+        records: list[tuple[str, SingleJson]],
         remaining: int,
-        incidents: list[dict | None] = None,
+        incidents: list[SingleJson | None] = None,
     ) -> int:
         if remaining <= 0:
             return 0
@@ -672,8 +678,8 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
 
     def _append_sample_alerts(
         self,
-        window: dict,
-        records: list[tuple[str, dict]],
+        window: SingleJson,
+        records: list[tuple[str, SingleJson]],
         remaining: int,
         has_related: bool,
     ) -> int:
@@ -702,7 +708,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
             added += 1
         return added
 
-    def _related_alert_count(self, incidents: list[dict]) -> int:
+    def _related_alert_count(self, incidents: list[SingleJson]) -> int:
         """Count unique nested alerts on incidents (not getAlerts time-window).
 
         Related Vega alerts are often older than the ingest window, so
@@ -720,7 +726,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
                 pass
         return len(seen) if seen else alerts_count_sum
 
-    def preview(self, sample_limit: int = TEST_RUN_MAX_FETCH) -> dict:
+    def preview(self, sample_limit: int = TEST_RUN_MAX_FETCH) -> SingleJson:
         """Count matching Vega records and return sample packages without ingest.
 
         Does not fetch timelines or alert events, and does not write a checkpoint.
@@ -736,7 +742,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         incident_count = 0
         related_count = 0
         unrelated_count = 0
-        incidents: list[dict] = []
+        incidents: list[SingleJson] = []
         if include_incidents:
             incidents = [
                 item for item in self.manager.get_incidents(self._incident_variables(window)) if isinstance(item, dict)
@@ -750,7 +756,7 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
         if include_unrelated:
             unrelated_count = self.manager.count_alerts(self._alert_variables(window, False))
         remaining = max(1, int(sample_limit))
-        records: list[tuple[str, dict]] = []
+        records: list[tuple[str, SingleJson]] = []
         if include_incidents:
             remaining -= self._append_sample_incidents(window, records, remaining, incidents=incidents)
         if remaining and include_related:
@@ -771,16 +777,21 @@ class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):
 
     def run(
         self,
-        checkpoint: dict | None = None,
+        checkpoint: SingleJson | None = None,
         deadline_monotonic: float | None = None,
-    ) -> dict:
+    ) -> SingleJson:
+        """Fetch, enrich, and package Vega records for one connector poll.
+
+        Uses the checkpoint watermark and optional deadline so a long cycle can
+        resume without skipping remaining incidents, alerts, or events.
+        """
         # 1. Configuration is already on this pipeline (entities, filters, has-related).
         # 2. Time window: first run uses backfill; later runs resume from watermark.
         state = dict(checkpoint or {})
         ingested = list(state.get("ingested_ids") or [])
         ingested_set = set(ingested)
         window = compute_time_window(state, self.backfill_days, self.lookback_minutes)
-        records: list[tuple[str, dict]] = []
+        records: list[tuple[str, SingleJson]] = []
         plan = self._ingest_plan()
 
         self._incomplete = False
