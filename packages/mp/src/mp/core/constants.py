@@ -201,6 +201,7 @@ EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
 }
 
 INTEGRATIONS_WITH_INTEGRATION_SUFFIX: set[str] = {
+    "csv_integration",
     "http_integration",
     "twilio_integration",
 }
