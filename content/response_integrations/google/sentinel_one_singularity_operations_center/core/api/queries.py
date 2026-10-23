@@ -146,6 +146,12 @@ GET_ALERT_DETAILS_QUERY = """query GetAlertByIdAllFields($id: ID!) {
       message
       eventTime
       severity
+      observables {
+        name
+        type
+        typeName
+        value
+      }
     }
     observables {
       name
