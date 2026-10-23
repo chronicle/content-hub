@@ -309,6 +309,7 @@ def _run_ingest(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) 
 
 @output_handler
 def main(is_test_run: bool) -> None:
+    """Run a test preview or a full ingest cycle and return the alert package."""
     siemplify = SiemplifyConnectorExecution()
     from ..core.constants import CONNECTOR_NAME
     from ..core.utils import format_user_facing_error
