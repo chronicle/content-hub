@@ -22,17 +22,61 @@ import json
 import sys
 import time
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyUtils import output_handler
 
+from ..core.AlertPackager import create_alerts
+from ..core.constants import (
+    CHECKPOINT_PROPERTY_KEY,
+    CONNECTOR_NAME,
+    INGEST_STOP_BUFFER_SECONDS,
+    PARAM_ACCESS_KEY,
+    PARAM_ACCESS_KEY_ID,
+    PARAM_ALERT_SEVERITIES,
+    PARAM_ALERT_STATUSES,
+    PARAM_ALERT_VERDICTS,
+    PARAM_API_ROOT,
+    PARAM_BACKFILL,
+    PARAM_ENTITIES,
+    PARAM_FETCH_RELATED_ALERT_METADATA,
+    PARAM_HAS_RELATED,
+    PARAM_INCIDENT_INVESTIGATION_STATUSES,
+    PARAM_INCIDENT_SEVERITIES,
+    PARAM_INCIDENT_USER_STATUSES,
+    PARAM_INCIDENT_VERDICTS,
+    PARAM_LOOKBACK,
+    PARAM_PYTHON_TIMEOUT,
+    PARAM_SYNC,
+    PYTHON_PROCESS_TIMEOUT_DEFAULT,
+    PYTHON_TIMEOUT_MAX,
+    PYTHON_TIMEOUT_MIN,
+    REMEDIATION_PROPERTY_KEY,
+    TEST_RUN_MAX_FETCH,
+)
+from ..core.IngestionPipeline import IngestionPipeline
+from ..core.Remediator import SoarRemediator, ingest_skip_ids, ingest_sync_refs
+from ..core.utils import (
+    format_test_connection_summary,
+    format_user_facing_error,
+    parse_int_in_range,
+    truthy,
+    validate_connector_fields,
+)
+from ..core.VegaManager import VegaManager
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
 
 def _connector_id(siemplify: SiemplifyConnectorExecution) -> str:
+    """Return the connector instance identifier used for context properties."""
     return str(siemplify.context.connector_info.identifier)
 
 
-def _read_json(siemplify: SiemplifyConnectorExecution, identifier: str, key: str) -> dict:
+def _read_json(siemplify: SiemplifyConnectorExecution, identifier: str, key: str) -> SingleJson:
+    """Load a JSON object from connector context, or {} when missing/invalid."""
     raw = siemplify.get_connector_context_property(identifier=identifier, property_key=key)
     if not raw:
         return {}
@@ -40,7 +84,13 @@ def _read_json(siemplify: SiemplifyConnectorExecution, identifier: str, key: str
     return data if isinstance(data, dict) else {}
 
 
-def _write_json(siemplify: SiemplifyConnectorExecution, identifier: str, key: str, payload: dict) -> None:
+def _write_json(
+    siemplify: SiemplifyConnectorExecution,
+    identifier: str,
+    key: str,
+    payload: SingleJson,
+) -> None:
+    """Persist a JSON object to connector context."""
     siemplify.set_connector_context_property(
         identifier=identifier,
         property_key=key,
@@ -95,27 +145,7 @@ def _clear_captured_output(siemplify: SiemplifyConnectorExecution) -> None:
 
 
 def _read_params(siemplify: SiemplifyConnectorExecution) -> dict[str, Any]:
-    from ..core.constants import (
-        PARAM_ACCESS_KEY,
-        PARAM_ACCESS_KEY_ID,
-        PARAM_ALERT_SEVERITIES,
-        PARAM_ALERT_STATUSES,
-        PARAM_ALERT_VERDICTS,
-        PARAM_API_ROOT,
-        PARAM_BACKFILL,
-        PARAM_ENTITIES,
-        PARAM_FETCH_RELATED_ALERT_METADATA,
-        PARAM_HAS_RELATED,
-        PARAM_INCIDENT_INVESTIGATION_STATUSES,
-        PARAM_INCIDENT_SEVERITIES,
-        PARAM_INCIDENT_USER_STATUSES,
-        PARAM_INCIDENT_VERDICTS,
-        PARAM_LOOKBACK,
-        PARAM_PYTHON_TIMEOUT,
-        PARAM_SYNC,
-        PYTHON_PROCESS_TIMEOUT_DEFAULT,
-    )
-
+    """Read connector configuration parameters into a plain dict."""
     return {
         "api_root": siemplify.extract_connector_param(param_name=PARAM_API_ROOT),
         "access_key_id": siemplify.extract_connector_param(param_name=PARAM_ACCESS_KEY_ID),
@@ -149,8 +179,7 @@ def _read_params(siemplify: SiemplifyConnectorExecution) -> dict[str, Any]:
 
 
 def _validate_params(params: dict[str, Any]) -> None:
-    from ..core.utils import validate_connector_fields
-
+    """Raise when required connector fields fail validation."""
     validate_connector_fields(
         api_root=params["api_root"],
         access_key_id=params["access_key_id"],
@@ -173,12 +202,8 @@ def _validate_params(params: dict[str, Any]) -> None:
 def _build_manager_and_pipeline(
     siemplify: SiemplifyConnectorExecution,
     params: dict[str, Any],
-) -> tuple[Any, Any]:
-    from ..core.constants import TEST_RUN_MAX_FETCH
-    from ..core.IngestionPipeline import IngestionPipeline
-    from ..core.utils import truthy
-    from ..core.VegaManager import VegaManager
-
+) -> tuple[VegaManager, IngestionPipeline]:
+    """Construct VegaManager and IngestionPipeline from connector params."""
     manager = VegaManager(
         api_root=params["api_root"],
         access_key_id=params["access_key_id"],
@@ -205,10 +230,49 @@ def _build_manager_and_pipeline(
     return manager, pipeline
 
 
-def _run_test_connection(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) -> tuple[list[Any], str]:
-    from ..core.AlertPackager import create_alerts
-    from ..core.utils import format_test_connection_summary
+def _compute_deadline(python_timeout: Any) -> float:
+    """Return a monotonic deadline that leaves buffer before connector timeout."""
+    timeout_seconds = parse_int_in_range(
+        python_timeout,
+        PARAM_PYTHON_TIMEOUT,
+        PYTHON_TIMEOUT_MIN,
+        PYTHON_TIMEOUT_MAX,
+        default=int(PYTHON_PROCESS_TIMEOUT_DEFAULT),
+    )
+    budget = max(timeout_seconds - INGEST_STOP_BUFFER_SECONDS, 15)
+    return time.monotonic() + budget
 
+
+def _run_close_sync(
+    siemplify: SiemplifyConnectorExecution,
+    manager: VegaManager,
+    records: list[tuple[str, SingleJson]],
+) -> None:
+    """Resolve matching Vega entities when tracked SOAR cases have closed."""
+    rem_state = _read_json(siemplify, _connector_id(siemplify), REMEDIATION_PROPERTY_KEY)
+    remediator = SoarRemediator(
+        manager=manager,
+        siemplify=siemplify,
+        logger_instance=siemplify.LOGGER,
+    )
+    rem_result = remediator.run_once(
+        rem_state,
+        skip_ids=ingest_skip_ids(records),
+        ingest_refs=ingest_sync_refs(records),
+    )
+    if rem_result.get("message"):
+        siemplify.LOGGER.info(rem_result["message"])
+    if rem_result.get("state"):
+        _write_json(
+            siemplify,
+            _connector_id(siemplify),
+            REMEDIATION_PROPERTY_KEY,
+            rem_result["state"],
+        )
+
+
+def _run_test_connection(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) -> tuple[list[Any], str]:
+    """Ping Vega, preview matching records, and return sample AlertInfo packages."""
     _validate_params(params)
     manager, pipeline = _build_manager_and_pipeline(siemplify, params)
     manager.test_connection()
@@ -228,36 +292,12 @@ def _run_test_connection(siemplify: SiemplifyConnectorExecution, params: dict[st
 
 
 def _run_ingest(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) -> list[Any]:
-    from ..core.AlertPackager import create_alerts
-    from ..core.constants import (
-        CHECKPOINT_PROPERTY_KEY,
-        INGEST_STOP_BUFFER_SECONDS,
-        PARAM_PYTHON_TIMEOUT,
-        PYTHON_PROCESS_TIMEOUT_DEFAULT,
-        PYTHON_TIMEOUT_MAX,
-        PYTHON_TIMEOUT_MIN,
-        REMEDIATION_PROPERTY_KEY,
-    )
-    from ..core.Remediator import (
-        SoarRemediator,
-        ingest_skip_ids,
-        ingest_sync_refs,
-    )
-    from ..core.utils import parse_int_in_range, truthy
-
+    """Run one ingest cycle, update checkpoint, and optionally close-sync to Vega."""
     _validate_params(params)
     manager, pipeline = _build_manager_and_pipeline(siemplify, params)
     manager.test_connection()
     checkpoint = _read_json(siemplify, _connector_id(siemplify), CHECKPOINT_PROPERTY_KEY)
-    timeout_seconds = parse_int_in_range(
-        params["python_timeout"],
-        PARAM_PYTHON_TIMEOUT,
-        PYTHON_TIMEOUT_MIN,
-        PYTHON_TIMEOUT_MAX,
-        default=int(PYTHON_PROCESS_TIMEOUT_DEFAULT),
-    )
-    budget = max(timeout_seconds - INGEST_STOP_BUFFER_SECONDS, 15)
-    deadline = time.monotonic() + budget
+    deadline = _compute_deadline(params["python_timeout"])
     summary = pipeline.run(checkpoint=checkpoint, deadline_monotonic=deadline)
     records = summary.get("records") or []
     alerts = create_alerts(records, siemplify, siemplify.LOGGER)
@@ -283,27 +323,7 @@ def _run_ingest(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) 
         summary.get("checkpoint") or {},
     )
     if (not summary.get("incomplete")) and truthy(params.get("sync_close")):
-        rem_state = _read_json(siemplify, _connector_id(siemplify), REMEDIATION_PROPERTY_KEY)
-        remediator = SoarRemediator(
-            manager=manager,
-            siemplify=siemplify,
-            logger_instance=siemplify.LOGGER,
-        )
-        records = summary.get("records") or []
-        rem_result = remediator.run_once(
-            rem_state,
-            skip_ids=ingest_skip_ids(records),
-            ingest_refs=ingest_sync_refs(records),
-        )
-        if rem_result.get("message"):
-            siemplify.LOGGER.info(rem_result["message"])
-        if rem_result.get("state"):
-            _write_json(
-                siemplify,
-                _connector_id(siemplify),
-                REMEDIATION_PROPERTY_KEY,
-                rem_result["state"],
-            )
+        _run_close_sync(siemplify, manager, records)
     return alerts
 
 
@@ -311,11 +331,8 @@ def _run_ingest(siemplify: SiemplifyConnectorExecution, params: dict[str, Any]) 
 def main(is_test_run: bool) -> None:
     """Run a test preview or a full ingest cycle and return the alert package."""
     siemplify = SiemplifyConnectorExecution()
-    from ..core.constants import CONNECTOR_NAME
-    from ..core.utils import format_user_facing_error
-
     siemplify.script_name = CONNECTOR_NAME
-    alerts = []
+    alerts: list[Any] = []
     try:
         if is_test_run:
             with _mute_siemplify_logs(siemplify):
