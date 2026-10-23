@@ -7,6 +7,7 @@ import logging
 import re
 import secrets
 import string
+from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable
 from urllib.parse import urlparse
@@ -109,12 +110,10 @@ def parse_csv_list(raw: Any) -> list[str]:
     if not text:
         return []
     if text.startswith("[") and text.endswith("]"):
-        try:
+        with suppress(Exception):
             parsed = json.loads(text)
             if isinstance(parsed, list):
                 return [str(item).strip() for item in parsed if str(item).strip()]
-        except Exception:
-            pass
     for sep in (",", ";", "|"):
         if sep in text:
             return [part.strip() for part in text.split(sep) if part.strip()]

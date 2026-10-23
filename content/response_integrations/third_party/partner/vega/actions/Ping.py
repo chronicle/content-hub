@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from typing import Any, Iterator
 
 from TIPCommon.base.action import Action
@@ -47,11 +47,9 @@ def _clear_captured_output(siemplify: Any) -> None:
         rows.clear()
     stdout = getattr(sys, "stdout", None)
     if stdout is not None and hasattr(stdout, "truncate") and hasattr(stdout, "seek"):
-        try:
+        with suppress(Exception):
             stdout.truncate(0)
             stdout.seek(0)
-        except Exception:
-            pass
 
 
 class Ping(Action):

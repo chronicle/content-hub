@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 import sys
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from typing import TYPE_CHECKING, Any, Iterator
 
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
@@ -130,18 +130,14 @@ def _clear_captured_output(siemplify: SiemplifyConnectorExecution) -> None:
         rows.clear()
     stdout = getattr(sys, "stdout", None)
     if stdout is not None and hasattr(stdout, "truncate") and hasattr(stdout, "seek"):
-        try:
+        with suppress(Exception):
             stdout.truncate(0)
             stdout.seek(0)
-        except Exception:
-            pass
     stderr = getattr(sys, "stderr", None)
     if stderr is not None and hasattr(stderr, "truncate") and hasattr(stderr, "seek"):
-        try:
+        with suppress(Exception):
             stderr.truncate(0)
             stderr.seek(0)
-        except Exception:
-            pass
 
 
 def _read_params(siemplify: SiemplifyConnectorExecution) -> dict[str, Any]:
