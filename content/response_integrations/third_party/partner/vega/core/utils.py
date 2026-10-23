@@ -8,6 +8,7 @@ import re
 import secrets
 import string
 from contextlib import suppress
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable
 from urllib.parse import urlparse
@@ -462,24 +463,28 @@ def format_test_connection_summary(
     return "\n".join(lines)
 
 
-def validate_connector_fields(
-    *,
-    api_root: Any,
-    access_key_id: Any,
-    access_key: Any,
-    entities_raw: Any,
-    lookback_minutes: Any,
-    backfill_days: Any,
-    alert_severities: Any = "",
-    alert_statuses: Any = "",
-    alert_verdicts: Any = "",
-    has_related: Any = "Yes,No",
-    incident_severities: Any = "",
-    incident_user_statuses: Any = "",
-    incident_investigation_statuses: Any = "",
-    incident_verdicts: Any = "",
-    python_timeout: Any = None,
-) -> None:
+@dataclass(frozen=True)
+class ConnectorConfig:
+    """Connector parameter values validated before login or ingest."""
+
+    api_root: Any
+    access_key_id: Any
+    access_key: Any
+    entities_raw: Any
+    lookback_minutes: Any
+    backfill_days: Any
+    alert_severities: Any = ""
+    alert_statuses: Any = ""
+    alert_verdicts: Any = ""
+    has_related: Any = "Yes,No"
+    incident_severities: Any = ""
+    incident_user_statuses: Any = ""
+    incident_investigation_statuses: Any = ""
+    incident_verdicts: Any = ""
+    python_timeout: Any = None
+
+
+def validate_connector_fields(config: ConnectorConfig) -> None:
     """Validate every connector field before login or ingest.
 
     Collects all field problems so the test-connection output and connector
@@ -495,66 +500,66 @@ def validate_connector_fields(
             if text and text not in errors:
                 errors.append(text)
 
-    _check(lambda: normalize_api_root(api_root))
-    _check(lambda: require_secret(access_key_id, "Access Key ID"))
-    _check(lambda: require_secret(access_key, "Access Key"))
-    _check(lambda: resolve_entities(entities_raw))
-    _check(lambda: parse_lookback_minutes(lookback_minutes))
-    _check(lambda: parse_backfill_days(backfill_days))
+    _check(lambda: normalize_api_root(config.api_root))
+    _check(lambda: require_secret(config.access_key_id, "Access Key ID"))
+    _check(lambda: require_secret(config.access_key, "Access Key"))
+    _check(lambda: resolve_entities(config.entities_raw))
+    _check(lambda: parse_lookback_minutes(config.lookback_minutes))
+    _check(lambda: parse_backfill_days(config.backfill_days))
     _check(
         lambda: resolve_multi_filter(
-            alert_severities,
+            config.alert_severities,
             SEVERITY_OPTIONS,
             param_name=PARAM_ALERT_SEVERITIES,
         )
     )
     _check(
         lambda: resolve_multi_filter(
-            alert_statuses,
+            config.alert_statuses,
             ALERT_STATUS_OPTIONS,
             param_name=PARAM_ALERT_STATUSES,
         )
     )
     _check(
         lambda: resolve_multi_filter(
-            alert_verdicts,
+            config.alert_verdicts,
             VERDICT_OPTIONS,
             param_name=PARAM_ALERT_VERDICTS,
         )
     )
-    _check(lambda: resolve_has_related(has_related))
+    _check(lambda: resolve_has_related(config.has_related))
     _check(
         lambda: resolve_multi_filter(
-            incident_severities,
+            config.incident_severities,
             SEVERITY_OPTIONS,
             param_name=PARAM_INCIDENT_SEVERITIES,
         )
     )
     _check(
         lambda: resolve_multi_filter(
-            incident_user_statuses,
+            config.incident_user_statuses,
             INCIDENT_USER_STATUS_OPTIONS,
             param_name=PARAM_INCIDENT_USER_STATUSES,
         )
     )
     _check(
         lambda: resolve_multi_filter(
-            incident_investigation_statuses,
+            config.incident_investigation_statuses,
             INCIDENT_INVESTIGATION_STATUS_OPTIONS,
             param_name=PARAM_INCIDENT_INVESTIGATION_STATUSES,
         )
     )
     _check(
         lambda: resolve_multi_filter(
-            incident_verdicts,
+            config.incident_verdicts,
             VERDICT_OPTIONS,
             param_name=PARAM_INCIDENT_VERDICTS,
         )
     )
-    if python_timeout is not None:
+    if config.python_timeout is not None:
         _check(
             lambda: parse_int_in_range(
-                python_timeout,
+                config.python_timeout,
                 PARAM_PYTHON_TIMEOUT,
                 PYTHON_TIMEOUT_MIN,
                 PYTHON_TIMEOUT_MAX,

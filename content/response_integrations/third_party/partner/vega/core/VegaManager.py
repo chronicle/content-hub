@@ -6,6 +6,7 @@ Does not import the SecOps SDK.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -82,26 +83,33 @@ def _requests() -> Any:
     return requests
 
 
+@dataclass(frozen=True)
+class VegaClientConfig:
+    """Connection settings for VegaManager."""
+
+    api_root: str
+    access_key_id: str
+    access_key: str
+    verify_ssl: bool = True
+    timeout: float | tuple[float, float] = DEFAULT_HTTP_TIMEOUT
+
+
 class VegaManager:
     """Client for Vega login and GraphQL APIs."""
 
     def __init__(
         self,
-        api_root: str,
-        access_key_id: str,
-        access_key: str,
-        verify_ssl: bool = True,
-        timeout: float | tuple[float, float] = DEFAULT_HTTP_TIMEOUT,
+        config: VegaClientConfig,
         logger_instance: Any = None,
         session: Any = None,
         rate_limiter: RateLimitController | None = None,
         sleeper: Any = None,
     ) -> None:
-        self.api_root = normalize_api_root(api_root)
-        self.access_key_id = require_secret(access_key_id, "Access Key ID")
-        self.access_key = require_secret(access_key, "Access Key")
-        self.verify_ssl = bool(verify_ssl)
-        self.timeout = timeout
+        self.api_root = normalize_api_root(config.api_root)
+        self.access_key_id = require_secret(config.access_key_id, "Access Key ID")
+        self.access_key = require_secret(config.access_key, "Access Key")
+        self.verify_ssl = bool(config.verify_ssl)
+        self.timeout = config.timeout
         self.logger = logger_instance or logger
         self.session = session or _requests().Session()
         self.session.trust_env = False

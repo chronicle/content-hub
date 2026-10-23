@@ -58,13 +58,14 @@ from ..core.constants import (
 from ..core.IngestionPipeline import IngestionPipeline
 from ..core.Remediator import SoarRemediator, ingest_skip_ids, ingest_sync_refs
 from ..core.utils import (
+    ConnectorConfig,
     format_test_connection_summary,
     format_user_facing_error,
     parse_int_in_range,
     truthy,
     validate_connector_fields,
 )
-from ..core.VegaManager import VegaManager
+from ..core.VegaManager import VegaClientConfig, VegaManager
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
@@ -177,21 +178,23 @@ def _read_params(siemplify: SiemplifyConnectorExecution) -> dict[str, Any]:
 def _validate_params(params: dict[str, Any]) -> None:
     """Raise when required connector fields fail validation."""
     validate_connector_fields(
-        api_root=params["api_root"],
-        access_key_id=params["access_key_id"],
-        access_key=params["access_key"],
-        entities_raw=params["entities_raw"],
-        lookback_minutes=params["lookback_minutes"],
-        backfill_days=params["backfill_days"],
-        alert_severities=params["alert_severities"],
-        alert_statuses=params["alert_statuses"],
-        alert_verdicts=params["alert_verdicts"],
-        has_related=params["has_related"],
-        incident_severities=params["incident_severities"],
-        incident_user_statuses=params["incident_user_statuses"],
-        incident_investigation_statuses=params["incident_investigation_statuses"],
-        incident_verdicts=params["incident_verdicts"],
-        python_timeout=params["python_timeout"],
+        ConnectorConfig(
+            api_root=params["api_root"],
+            access_key_id=params["access_key_id"],
+            access_key=params["access_key"],
+            entities_raw=params["entities_raw"],
+            lookback_minutes=params["lookback_minutes"],
+            backfill_days=params["backfill_days"],
+            alert_severities=params["alert_severities"],
+            alert_statuses=params["alert_statuses"],
+            alert_verdicts=params["alert_verdicts"],
+            has_related=params["has_related"],
+            incident_severities=params["incident_severities"],
+            incident_user_statuses=params["incident_user_statuses"],
+            incident_investigation_statuses=params["incident_investigation_statuses"],
+            incident_verdicts=params["incident_verdicts"],
+            python_timeout=params["python_timeout"],
+        )
     )
 
 
@@ -201,9 +204,11 @@ def _build_manager_and_pipeline(
 ) -> tuple[VegaManager, IngestionPipeline]:
     """Construct VegaManager and IngestionPipeline from connector params."""
     manager = VegaManager(
-        api_root=params["api_root"],
-        access_key_id=params["access_key_id"],
-        access_key=params["access_key"],
+        VegaClientConfig(
+            api_root=params["api_root"],
+            access_key_id=params["access_key_id"],
+            access_key=params["access_key"],
+        ),
         logger_instance=siemplify.LOGGER,
     )
     pipeline = IngestionPipeline(

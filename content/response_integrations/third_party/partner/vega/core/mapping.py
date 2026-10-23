@@ -179,8 +179,8 @@ def case_display_name(record: SingleJson, entity_type: str) -> str:
     display_id = record_display_id(record, entity_type)
     name = record_name(record)
     if display_id:
-        return f"Vega {entity_type} - {display_id} - {name}"
-    return f"Vega {entity_type} - {name}"
+        return f"Vega {entity_type} - {display_id} - {name} FEEDBACK TEST 15"
+    return f"Vega {entity_type} - {name} FEEDBACK TEST 15"
 
 
 # Marks the related-alert case so close-sync does not treat it as the incident.

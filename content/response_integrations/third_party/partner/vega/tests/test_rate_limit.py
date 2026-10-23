@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 from core.exceptions import VegaRateLimitException
 from core.rate_limit import RateLimitController
-from core.VegaManager import VegaManager, is_rate_limit_message
+from core.VegaManager import VegaClientConfig, VegaManager, is_rate_limit_message
 
 
 class DummySession:
@@ -14,9 +14,11 @@ class DummySession:
 def _manager():
     waits: list[int] = []
     manager = VegaManager(
-        api_root="https://api.vega.io",
-        access_key_id="kid",
-        access_key="secret",
+        VegaClientConfig(
+            api_root="https://api.vega.io",
+            access_key_id="kid",
+            access_key="secret",
+        ),
         session=DummySession(),
         rate_limiter=RateLimitController(sleeper=lambda seconds: waits.append(seconds)),
         sleeper=lambda seconds: waits.append(seconds),

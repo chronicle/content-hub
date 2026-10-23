@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from core.constants import ALERT_EVENTS_ID_BATCH, GET_ALERT_EVENTS_QUERY
 from core.rate_limit import RateLimitController
-from core.VegaManager import VegaManager, events_for_alert_bucket
+from core.VegaManager import VegaClientConfig, VegaManager, events_for_alert_bucket
 
 
 class _DummySession:
@@ -14,9 +14,11 @@ class _DummySession:
 
 def _manager():
     manager = VegaManager(
-        api_root="https://api.vega.io",
-        access_key_id="kid",
-        access_key="secret",
+        VegaClientConfig(
+            api_root="https://api.vega.io",
+            access_key_id="kid",
+            access_key="secret",
+        ),
         session=_DummySession(),
         rate_limiter=RateLimitController(sleeper=lambda _seconds: None),
         sleeper=lambda _seconds: None,

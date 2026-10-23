@@ -13,7 +13,7 @@ from ..core.constants import (
     PARAM_API_ROOT,
     PING_SCRIPT_NAME,
 )
-from ..core.VegaManager import VegaManager
+from ..core.VegaManager import VegaClientConfig, VegaManager
 
 
 @contextmanager
@@ -69,9 +69,11 @@ class Ping(Action):
             conf = soar.get_configuration(INTEGRATION_NAME) or {}
         _clear_captured_output(soar)
         return VegaManager(
-            api_root=conf.get(PARAM_API_ROOT),
-            access_key_id=conf.get(PARAM_ACCESS_KEY_ID),
-            access_key=conf.get(PARAM_ACCESS_KEY),
+            VegaClientConfig(
+                api_root=conf.get(PARAM_API_ROOT),
+                access_key_id=conf.get(PARAM_ACCESS_KEY_ID),
+                access_key=conf.get(PARAM_ACCESS_KEY),
+            )
         )
 
     def _perform_action(self, _=None) -> None:
