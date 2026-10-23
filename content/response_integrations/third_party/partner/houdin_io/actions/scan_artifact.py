@@ -1,49 +1,84 @@
+from __future__ import annotations
+
 import json
+from typing import TYPE_CHECKING
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.base.action.data_models import ExecutionState, Link
+from TIPCommon.extraction import extract_action_param
 
-from ..core.houdin import HoudinManager
+from ..core.base_action import HoudinAction
+from ..core.houdin_constants import SCAN_ARTIFACT_SCRIPT_NAME
+from ..core.houdin_utils import load_state, parse_scanners, scan_link, verdict_line
 
-IDENTIFIER = "Houdin-io"
-SCRIPT_NAME = "Houdin-io - Scan Artifact"
+if TYPE_CHECKING:
+    from soar_sdk.SiemplifyDataModel import DomainEntityInfo
+    from TIPCommon.types import SingleJson
+
+    from ..core.data_models import ScanLaunch
+
+IN_PROGRESS_MESSAGE: str = "Houdin scan of {artifact} is in progress: {link}"
+SUCCESS_MESSAGE: str = "Houdin scan of {artifact} completed. Threat score {verdict}. {link}"
 
 
-@output_handler
-def main():
-    siemplify = SiemplifyAction()
-    siemplify.script_name = SCRIPT_NAME
+class ScanArtifact(HoudinAction):
+    """Scan one artifact and attach the scan document as the JSON result.
 
-    api_key = siemplify.extract_configuration_param(siemplify, param_name="API Key")
-    houdin = HoudinManager(api_key, verify_ssl=True)
+    The first run launches the scan and keeps its scanID in additional_data;
+    every run reads the result once and ends IN_PROGRESS while the scan runs.
+    """
 
-    artifact = siemplify.extract_action_param("artifact")
-    scanOn = siemplify.extract_action_param("scanOn")
-    if isinstance(scanOn, str):
-        scanOn = json.loads(scanOn or "[]")
+    def __init__(self) -> None:
+        super().__init__(SCAN_ARTIFACT_SCRIPT_NAME)
 
-    # Launch a scan on the provided artifact
-    try:
-        scan_id, status = houdin.launch_scan(artifact, scanOn)
-    except Exception as e:
-        siemplify.LOGGER.error(f"Error launching scan: {e}")
-        siemplify.end(f"Error launching scan: {e}", False, EXECUTION_STATE_FAILED)
-    siemplify.LOGGER.info(f"Scan launched with ID: {scan_id} and status: {status}")
+    def _extract_action_parameters(self) -> None:
+        self.params.artifact = extract_action_param(
+            self.soar_action,
+            param_name="Artifact",
+            is_mandatory=True,
+            print_value=True,
+        )
+        self.params.scanners = parse_scanners(
+            extract_action_param(self.soar_action, param_name="Scanners", print_value=True),
+        )
+        self.params.force_rescan = extract_action_param(
+            self.soar_action,
+            param_name="Force Rescan",
+            input_type=bool,
+            default_value=False,
+        )
+        self.params.state = load_state(extract_action_param(self.soar_action, param_name="additional_data"))
 
-    # Poll for the scan result
-    try:
-        result = houdin.poll_scan_result(scan_id)
-        status = result.get("status", "Unknown")
-        siemplify.LOGGER.info(f"Scan completed with status: {status}")
-    except Exception as e:
-        siemplify.LOGGER.error(f"Error polling scan result: {e}")
-        siemplify.end(f"Error polling scan result: {e}", False, EXECUTION_STATE_FAILED)
+    def _perform_action(self, _: DomainEntityInfo | None = None) -> None:
+        state: SingleJson | None = self.params.state
+        if state is None:
+            launch: ScanLaunch = self.api_client.launch_scan(
+                self.params.artifact,
+                self.params.scanners,
+                self.params.force_rescan,
+            )
+            self.logger.info(f"Scan {launch.scan_id} launched, status {launch.status!r}, cached {launch.cached}")
+            state = {"scanID": launch.scan_id}
+        scan_id: str = state["scanID"]
+        link: str = scan_link(scan_id)
+        document: SingleJson | None = self.api_client.get_results([scan_id]).get(scan_id)
+        if document is None:
+            self.logger.info(f"Scan {scan_id} is still in progress")
+            self.execution_state = ExecutionState.IN_PROGRESS
+            self.result_value = json.dumps(state)
+            self.output_message = IN_PROGRESS_MESSAGE.format(artifact=self.params.artifact, link=link)
+            return
+        self.json_results = document
+        self.links = [Link(title="Open in Houdin", link=link)]
+        self.result_value = True
+        self.output_message = SUCCESS_MESSAGE.format(
+            artifact=self.params.artifact,
+            verdict=verdict_line(document),
+            link=link,
+        )
 
-    # Add the result to Siemplify
-    siemplify.result.add_result_json(result)
-    siemplify.result.add_json("HoudinResult", result)
-    siemplify.end(f"Scan completed with status: {status}", True, EXECUTION_STATE_COMPLETED)
+
+def main() -> None:
+    ScanArtifact().run()
 
 
 if __name__ == "__main__":

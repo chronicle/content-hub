@@ -1,9 +1,13 @@
 creator: Admin
 default_result_value: ''
-description: 'Scan compatible entities on Houdin.io, and add enrichment results for
-    each one. Compatible types are: Public IPv4/IPv6, URL, Domain, MD5, SHA1, SHA256
-    Note: Action is running as async, adjust script timeout value in Google SecOps
-    IDE for action, as needed.'
+description: 'Scan every supported entity of the alert on Houdin and enrich it with
+    the MesmerAI verdict: threat score, confidence, tags, summary, sources and a link
+    to the scan. Entities scoring at or above the threshold are marked suspicious,
+    and an insight carries the verdict into the case. Supported entities: public
+    IPv4 and IPv6 addresses, URLs, domains and hostnames, MD5, SHA1 and SHA256
+    hashes. The action is asynchronous: it launches every scan at once, then is
+    re-run by the platform until all of them are done, so set the action timeout
+    to at least three minutes when URLScan is in the set.'
 dynamic_results_metadata:
 -   result_example_path: resources/enrich_entities_JsonResult_example.json
     result_name: JsonResult
@@ -13,16 +17,33 @@ is_async: true
 name: Enrich Entities
 parameters:
 -   default_value: ''
-    description: (Optional) An array of scanners you want Houdin to use.
+    description: Comma-separated Houdin scanner shortnames to run, for example
+        'vt, abuseipdb, urlscan'. Leave empty for the default set of your plan for
+        each entity type. The MesmerAI verdict and summary are always included.
+        Available - vt, urlscan, abuseipdb, alienvault, triage, threatfox, urlhaus,
+        gtithreatactors, misp, netlas, rosti, mesmerdeepsearch, mesmerunmask. Enterprise
+        hunting connectors (servicenow, jira, elasticsearch, sentinel, mde, crowdstrike,
+        googlesecops) only run once configured on your Houdin account.
     is_mandatory: false
-    name: scanOn
-    optional_values:
-    - vt
-    - urlscan
-    - alienvault
-    - abuseipdb
-    - triage
-    - mesmer
-    - servicenow
-    type: multi_choice_parameter
+    name: Scanners
+    type: string
+-   default_value: false
+    description: Query every source again instead of answering from Houdin's scan
+        cache. A rescan counts against the monthly allowance.
+    is_mandatory: false
+    name: Force Rescan
+    type: boolean
+-   default_value: '7'
+    description: Mark an entity suspicious when its MesmerAI threat score is at or
+        above this value (0 to 10). Leave empty for 7, or set "off" to never mark
+        entities.
+    is_mandatory: false
+    name: Suspicious Threshold
+    type: string
+-   default_value: true
+    description: Add an insight on each enriched entity with the verdict, the
+        summary and the link to the scan.
+    is_mandatory: false
+    name: Create Insight
+    type: boolean
 script_result_name: ScriptResult
