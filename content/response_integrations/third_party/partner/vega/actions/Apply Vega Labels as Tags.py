@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.base.action import Action
+
+from ..core.constants import APPLY_VEGA_LABELS_SCRIPT_NAME
+from ..core.mapping import pending_case_tags, tags_from_events
 
 
 def _alert_events(alert: Any) -> list[Any]:
@@ -22,7 +23,7 @@ def _alert_key(alert: Any) -> object:
     )
 
 
-def _case_alerts(siemplify: SiemplifyAction) -> list[Any]:
+def _case_alerts(siemplify: Any) -> list[Any]:
     alerts: list[Any] = []
     seen: set[object] = set()
 
@@ -57,7 +58,7 @@ def _case_alerts(siemplify: SiemplifyAction) -> list[Any]:
     return alerts
 
 
-def _case_events(siemplify: SiemplifyAction) -> list[Any]:
+def _case_events(siemplify: Any) -> list[Any]:
     events: list[Any] = []
     for alert in _case_alerts(siemplify):
         events.extend(_alert_events(alert))
@@ -72,7 +73,7 @@ def _tag_name(item: Any) -> str:
     return str(getattr(item, "name", None) or item).strip()
 
 
-def _existing_case_tags(siemplify: SiemplifyAction) -> list[str]:
+def _existing_case_tags(siemplify: Any) -> list[str]:
     blobs: list[Any] = []
     case = getattr(siemplify, "case", None)
     if case is not None:
@@ -98,60 +99,38 @@ def _existing_case_tags(siemplify: SiemplifyAction) -> list[str]:
     return names
 
 
-def _add_case_tag(siemplify: SiemplifyAction, name: str) -> None:
-    case = getattr(siemplify, "case", None)
-    case_id = getattr(case, "identifier", None) if case is not None else getattr(siemplify, "case_id", None)
-    try:
-        if case_id:
-            siemplify.add_tag(tag=name, case_id=case_id, alert_identifier=None)
-        else:
-            siemplify.add_tag(tag=name)
-    except TypeError as error:
-        siemplify.LOGGER.warning(
-            "add_tag keyword signature failed for %r (%s); retrying positional.",
-            name,
-            error,
-        )
-        siemplify.add_tag(name)
+class ApplyVegaLabelsAsTags(Action):
+    """Apply Vega label names from case events as SecOps case tags."""
 
+    def __init__(self) -> None:
+        super().__init__(APPLY_VEGA_LABELS_SCRIPT_NAME)
 
-@output_handler
-def main() -> None:
-    siemplify = SiemplifyAction()
-    from ..core.constants import APPLY_VEGA_LABELS_SCRIPT_NAME
-    from ..core.mapping import pending_case_tags, tags_from_events
-    from ..core.utils import format_user_facing_error
+    def _init_api_clients(self) -> None:
+        """No remote API client."""
 
-    siemplify.script_name = APPLY_VEGA_LABELS_SCRIPT_NAME
-    try:
-        events = _case_events(siemplify)
-        names = pending_case_tags(tags_from_events(events), _existing_case_tags(siemplify))
-        siemplify.LOGGER.info(
+    def _perform_action(self, _=None) -> None:
+        soar = self.soar_action
+        events = _case_events(soar)
+        names = pending_case_tags(tags_from_events(events), _existing_case_tags(soar))
+        self.logger.info(
             "Found %s event(s) and %s new Vega label tag(s) on this case.",
             len(events),
             len(names),
         )
         if not names:
-            siemplify.end(
-                "No new Vega label names were found on this case.",
-                False,
-                EXECUTION_STATE_COMPLETED,
-            )
+            self.result_value = False
+            self.output_message = "No new Vega label names were found on this case."
             return
         added: list[str] = []
         for name in names:
-            _add_case_tag(siemplify, name)
+            self._add_tag_to_case(name)
             added.append(name)
-        siemplify.result.add_result_json({"tags": added})
-        siemplify.end(
-            f"Created and assigned {len(added)} tag(s): {', '.join(added)}.",
-            True,
-            EXECUTION_STATE_COMPLETED,
-        )
-    except Exception as error:
-        message = f'Error executing action "Apply Vega Labels as Tags". Reason: {format_user_facing_error(error)}'
-        siemplify.LOGGER.error(message)
-        siemplify.end(message, False, EXECUTION_STATE_FAILED)
+        self.json_results = {"tags": added}
+        self.output_message = f"Created and assigned {len(added)} tag(s): {', '.join(added)}."
+
+
+def main() -> None:
+    ApplyVegaLabelsAsTags().run()
 
 
 if __name__ == "__main__":

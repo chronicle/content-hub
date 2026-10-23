@@ -1,43 +1,41 @@
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.base.action import Action
+from TIPCommon.extraction import extract_action_param
+
+from ..core.constants import ADD_CASE_COMMENT_SCRIPT_NAME
 
 
-def _add_case_comment(siemplify: SiemplifyAction, comment: str) -> None:
-    case = getattr(siemplify, "case", None)
-    case_id = getattr(case, "identifier", None) if case is not None else getattr(siemplify, "case_id", None)
-    try:
-        if case_id:
-            siemplify.add_comment(comment=comment, case_id=case_id)
-        else:
-            siemplify.add_comment(comment)
-    except TypeError:
-        try:
-            siemplify.add_comment(comment, case_id, None)
-        except TypeError:
-            siemplify.add_comment(comment)
+class AddCaseComment(Action):
+    """Add a comment on the current Google SecOps case."""
 
+    def __init__(self) -> None:
+        super().__init__(ADD_CASE_COMMENT_SCRIPT_NAME)
+        self.comment: str = ""
 
-@output_handler
-def main() -> None:
-    siemplify = SiemplifyAction()
-    from ..core.constants import ADD_CASE_COMMENT_SCRIPT_NAME
-    from ..core.utils import format_user_facing_error
+    def _init_api_clients(self) -> None:
+        """No remote API client — this action only uses the SOAR SDK."""
 
-    siemplify.script_name = ADD_CASE_COMMENT_SCRIPT_NAME
-    try:
-        comment = str(siemplify.extract_action_param("Comment", default_value="") or "").strip()
+    def _extract_action_parameters(self) -> None:
+        self.comment = extract_action_param(
+            self.soar_action,
+            param_name="Comment",
+            is_mandatory=True,
+            print_value=True,
+            default_value="",
+        )
+
+    def _perform_action(self, _=None) -> None:
+        comment = str(self.comment or "").strip()
         if not comment:
             raise ValueError("Comment is required.")
-        _add_case_comment(siemplify, comment)
-        siemplify.result.add_result_json({"comment": comment})
-        siemplify.end("Added a case comment.", True, EXECUTION_STATE_COMPLETED)
-    except Exception as error:
-        message = f'Error executing action "Add Case Comment". Reason: {format_user_facing_error(error)}'
-        siemplify.LOGGER.error(message)
-        siemplify.end(message, False, EXECUTION_STATE_FAILED)
+        self._add_comment_to_case(comment)
+        self.json_results = {"comment": comment}
+        self.output_message = "Added a case comment."
+
+
+def main() -> None:
+    AddCaseComment().run()
 
 
 if __name__ == "__main__":

@@ -1,82 +1,82 @@
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.extraction import extract_action_param
+
+from ..core.base_action import VegaApiAction, current_vega_id
+from ..core.constants import UPDATE_ALERT_SCRIPT_NAME
+from ..core.utils import parse_csv_list, to_graphql_enum
 
 
-def _current_vega_id(siemplify: SiemplifyAction) -> str:
-    try:
-        alert = siemplify.current_alert
-        events = getattr(alert, "security_events", None) or getattr(alert, "events", None) or []
-        for event in events:
-            additional = getattr(event, "additional_properties", None) or {}
-            value = additional.get("vega_id") if isinstance(additional, dict) else None
-            if value:
-                return str(value)
-    except Exception:
-        return ""
-    return ""
+class UpdateAlert(VegaApiAction):
+    """Update Vega alert status, severity, verdict, assignees, and/or comment."""
 
+    def __init__(self) -> None:
+        super().__init__(UPDATE_ALERT_SCRIPT_NAME)
+        self.alert_ids_raw: str = ""
+        self.status: str = ""
+        self.verdict: str = ""
+        self.severity: str = ""
+        self.reasoning: str = ""
+        self.comment: str = ""
+        self.assignees_raw: str = ""
 
-@output_handler
-def main() -> None:
-    siemplify = SiemplifyAction()
-    from ..core.constants import (
-        INTEGRATION_NAME,
-        PARAM_ACCESS_KEY,
-        PARAM_ACCESS_KEY_ID,
-        PARAM_API_ROOT,
-        UPDATE_ALERT_SCRIPT_NAME,
-    )
-    from ..core.utils import format_user_facing_error, parse_csv_list, to_graphql_enum
-    from ..core.VegaManager import VegaManager
+    def _extract_action_parameters(self) -> None:
+        self.alert_ids_raw = extract_action_param(
+            self.soar_action, param_name="Alert IDs", default_value="", print_value=True
+        )
+        self.status = extract_action_param(
+            self.soar_action, param_name="Status", default_value="", print_value=True
+        )
+        self.verdict = extract_action_param(
+            self.soar_action, param_name="Verdict", default_value="", print_value=True
+        )
+        self.severity = extract_action_param(
+            self.soar_action, param_name="Severity", default_value="", print_value=True
+        )
+        self.reasoning = extract_action_param(
+            self.soar_action, param_name="Verdict Reasoning", default_value="", print_value=True
+        )
+        self.comment = extract_action_param(
+            self.soar_action, param_name="Comment", default_value="", print_value=True
+        )
+        self.assignees_raw = extract_action_param(
+            self.soar_action, param_name="Assignees", default_value="", print_value=True
+        )
 
-    siemplify.script_name = UPDATE_ALERT_SCRIPT_NAME
-    alert_ids = parse_csv_list(siemplify.extract_action_param("Alert IDs", default_value=""))
-    if not alert_ids:
-        current = _current_vega_id(siemplify)
-        if current:
-            alert_ids = [current]
-    payload = {"alertIds": alert_ids}
-    status = str(siemplify.extract_action_param("Status", default_value="") or "").strip()
-    verdict = str(siemplify.extract_action_param("Verdict", default_value="") or "").strip()
-    severity = str(siemplify.extract_action_param("Severity", default_value="") or "").strip()
-    reasoning = str(siemplify.extract_action_param("Verdict Reasoning", default_value="") or "").strip()
-    comment = str(siemplify.extract_action_param("Comment", default_value="") or "").strip()
-    assignees = parse_csv_list(siemplify.extract_action_param("Assignees", default_value=""))
-    if status:
-        payload["status"] = to_graphql_enum(status)
-    if verdict:
-        payload["verdict"] = verdict
-    if severity:
-        payload["severity"] = severity
-    if reasoning:
-        payload["verdictReasoning"] = reasoning
-    if comment:
-        payload["comment"] = comment
-    if assignees:
-        payload["assignees"] = assignees
-    try:
+    def _perform_action(self, _=None) -> None:
+        alert_ids = parse_csv_list(self.alert_ids_raw)
+        if not alert_ids:
+            current = current_vega_id(self.soar_action)
+            if current:
+                alert_ids = [current]
         if not alert_ids:
             raise ValueError("Alert IDs are required.")
-        manager = VegaManager(
-            api_root=siemplify.extract_configuration_param(INTEGRATION_NAME, PARAM_API_ROOT),
-            access_key_id=siemplify.extract_configuration_param(INTEGRATION_NAME, PARAM_ACCESS_KEY_ID),
-            access_key=siemplify.extract_configuration_param(INTEGRATION_NAME, PARAM_ACCESS_KEY),
-            logger_instance=siemplify.LOGGER,
-        )
-        result = manager.update_alerts(payload)
-        siemplify.result.add_result_json(result)
-        siemplify.end(
-            f"Updated {len(alert_ids)} Vega alert(s).",
-            True,
-            EXECUTION_STATE_COMPLETED,
-        )
-    except Exception as error:
-        message = f'Error executing action "Update Alert". Reason: {format_user_facing_error(error)}'
-        siemplify.LOGGER.error(message)
-        siemplify.end(message, False, EXECUTION_STATE_FAILED)
+        payload = {"alertIds": alert_ids}
+        status = str(self.status or "").strip()
+        verdict = str(self.verdict or "").strip()
+        severity = str(self.severity or "").strip()
+        reasoning = str(self.reasoning or "").strip()
+        comment = str(self.comment or "").strip()
+        assignees = parse_csv_list(self.assignees_raw)
+        if status:
+            payload["status"] = to_graphql_enum(status)
+        if verdict:
+            payload["verdict"] = verdict
+        if severity:
+            payload["severity"] = severity
+        if reasoning:
+            payload["verdictReasoning"] = reasoning
+        if comment:
+            payload["comment"] = comment
+        if assignees:
+            payload["assignees"] = assignees
+        result = self.api_client.update_alerts(payload)
+        self.json_results = result
+        self.output_message = f"Updated {len(alert_ids)} Vega alert(s)."
+
+
+def main() -> None:
+    UpdateAlert().run()
 
 
 if __name__ == "__main__":
