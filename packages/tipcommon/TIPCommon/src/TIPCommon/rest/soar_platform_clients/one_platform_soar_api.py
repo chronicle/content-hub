@@ -1621,14 +1621,25 @@ class OnePlatformSoarApi(BaseSoarApi):
                     if p.get("mandatory") and not p.get("defaultValue"):
                         p["defaultValue"] = "{}"
 
+            if "timeoutSeconds" in data or "TimeoutSeconds" in data:
+                patch_payload["timeoutSeconds"] = int(data.get("timeoutSeconds") or data.get("TimeoutSeconds"))
+                update_mask.append("timeoutSeconds")
+            if collection == "actions" and ("scriptResultName" in data or "ScriptResultName" in data):
+                patch_payload["scriptResultName"] = data.get("scriptResultName") or data.get("ScriptResultName")
+                update_mask.append("scriptResultName")
+
             update_mask = ["script", "displayName", "description", "enabled"]
             if "parameters" in patch_payload:
                 update_mask.append("parameters")
+            if "timeoutSeconds" in patch_payload:
+                update_mask.append("timeoutSeconds")
+            if "scriptResultName" in patch_payload:
+                update_mask.append("scriptResultName")
 
             return self._make_request(
                 HttpMethod.PATCH,
                 get_endpoint,
-                params={"updateMask": ",".join(update_mask)},
+                params={"updateMask": ",".join(dict.fromkeys(update_mask))},
                 json_payload=patch_payload,
             )
 
@@ -1640,6 +1651,16 @@ class OnePlatformSoarApi(BaseSoarApi):
             "enabled": is_enabled,
             "custom": True,
         }
+
+        timeout = data.get("timeoutSeconds") or data.get("TimeoutSeconds") or 60
+        new_payload["timeoutSeconds"] = int(timeout)
+
+        if collection == "actions":
+            new_payload["scriptResultName"] = (
+                data.get("scriptResultName")
+                or data.get("ScriptResultName")
+                or "ScriptResult"
+            )
         legacy_params = data.get("Parameters") or data.get("parameters") or []
         converted_params = []
         for lp in legacy_params:
