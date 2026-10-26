@@ -148,8 +148,16 @@ def main() -> None:
             utc_yesterday = datetime.now(timezone.utc) - timedelta(days=1)
             utc_yesterday_str = utc_yesterday.strftime("%Y-%m-%d")
 
-            start_val = timeframe_start.strip() if timeframe_start else f"{utc_yesterday_str}T00:00:00"
-            stop_val = timeframe_stop.strip() if timeframe_stop else f"{utc_yesterday_str}T23:59:59"
+            start_val = (
+                timeframe_start.strip()
+                if (timeframe_start and timeframe_start.strip())
+                else f"{utc_yesterday_str}T00:00:00"
+            )
+            stop_val = (
+                timeframe_stop.strip()
+                if (timeframe_stop and timeframe_stop.strip())
+                else f"{utc_yesterday_str}T23:59:59"
+            )
 
             script_text = script_text.replace("__INTERVAL_START__", start_val).replace(
                 "__INTERVAL_STOP__", stop_val
@@ -159,13 +167,20 @@ def main() -> None:
         try:
             ET.fromstring(script_text)
         except ET.ParseError as xml_err:
-            if "unbound prefix" in str(xml_err) and "<script" in script_text:
+            if "unbound prefix" in str(xml_err) and ("<script " in script_text or "<script>" in script_text):
                 siemplify.LOGGER.info("Injecting missing XML schema namespaces (xsi, xsd) onto root <script> tag.")
-                script_text = script_text.replace(
-                    "<script",
-                    '<script xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"',
-                    1,
-                )
+                if "<script " in script_text:
+                    script_text = script_text.replace(
+                        "<script ",
+                        '<script xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ',
+                        1,
+                    )
+                elif "<script>" in script_text:
+                    script_text = script_text.replace(
+                        "<script>",
+                        '<script xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">',
+                        1,
+                    )
                 try:
                     ET.fromstring(script_text)
                 except ET.ParseError as retry_err:

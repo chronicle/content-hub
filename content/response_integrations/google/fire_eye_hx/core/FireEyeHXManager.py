@@ -910,11 +910,15 @@ class FireEyeHXManager:
 
         return [self.parser.build_siemplify_group_obj(group) for group in alert_groups]
 
-    def get_host_sets(self, name: str = None, limit: int = None) -> list[dict]:
+    def get_host_sets(self, name: str | None = None, limit: int | None = None) -> list[dict]:
         """Get list of host sets from FireEye HX.
-        :param name: {str} Optional host set name filter.
-        :param limit: {int} Optional max records to return.
-        :return: {list} List of host set entries.
+
+        Args:
+            name: Optional host set name filter.
+            limit: Optional maximum number of records to return.
+
+        Returns:
+            List of host set entries.
         """
         url = f"{self.api_root}/host_sets"
         params = {}
@@ -928,18 +932,22 @@ class FireEyeHXManager:
 
     def get_host_set_id_by_name(self, host_set_name: str) -> int | None:
         """Resolve host set ID by name.
-        :param host_set_name: {str} Name of host set (e.g. 'all_hosts').
-        :return: {int|None} Host set ID if found.
+
+        Args:
+            host_set_name: Name of host set (e.g. 'all_hosts').
+
+        Returns:
+            Host set numeric ID if found, or None.
         """
         if not host_set_name:
             return None
-        try:
-            entries = self.get_host_sets(name=host_set_name)
-            for hs in entries:
-                if hs.get("name", "").lower() == host_set_name.lower():
+        entries = self.get_host_sets(name=host_set_name)
+        for hs in entries:
+            try:
+                if str(hs.get("name", "")).lower() == host_set_name.lower():
                     return int(hs.get("_id"))
-        except Exception:
-            pass
+            except (ValueError, TypeError):
+                continue
         if host_set_name.strip().lower() == "all_hosts":
             return 9
         return None
@@ -947,16 +955,20 @@ class FireEyeHXManager:
     def create_bulk_acquisition(
         self,
         script_b64: str,
-        host_set_id: int = None,
-        agent_ids: list[str] = None,
-        comment: str = None,
+        host_set_id: int | None = None,
+        agent_ids: list[str] | None = None,
+        comment: str | None = None,
     ) -> dict:
         """Create a bulk acquisition across endpoints.
-        :param script_b64: {str} Base64-encoded XML script.
-        :param host_set_id: {int} Host set numeric ID (defaults to 9 if agent_ids not specified).
-        :param agent_ids: {list[str]} Optional list of target agent IDs.
-        :param comment: {str} Optional audit comment.
-        :return: {dict} Created bulk acquisition data object.
+
+        Args:
+            script_b64: Base64-encoded XML script.
+            host_set_id: Host set numeric ID (defaults to 9 if agent_ids not specified).
+            agent_ids: Optional list of target agent IDs.
+            comment: Optional audit comment.
+
+        Returns:
+            Created bulk acquisition data object.
         """
         url = f"{self.api_root}/acqs/bulk"
         payload = {
@@ -977,8 +989,12 @@ class FireEyeHXManager:
 
     def get_bulk_acquisition(self, bulk_acquisition_id: str | int) -> dict:
         """Get details and progress of a bulk acquisition.
-        :param bulk_acquisition_id: {str|int} Bulk acquisition ID.
-        :return: {dict} Bulk acquisition data object.
+
+        Args:
+            bulk_acquisition_id: Bulk acquisition ID.
+
+        Returns:
+            Bulk acquisition data object.
         """
         url = f"{self.api_root}/acqs/bulk/{bulk_acquisition_id}"
         response = self.session.get(url)
@@ -987,8 +1003,12 @@ class FireEyeHXManager:
 
     def stop_bulk_acquisition(self, bulk_acquisition_id: str | int) -> bool:
         """Stop an active bulk acquisition.
-        :param bulk_acquisition_id: {str|int} Bulk acquisition ID.
-        :return: {bool} True if successful.
+
+        Args:
+            bulk_acquisition_id: Bulk acquisition ID.
+
+        Returns:
+            True if successfully stopped.
         """
         url = f"{self.api_root}/acqs/bulk/{bulk_acquisition_id}/actions/stop"
         response = self.session.post(url)
@@ -997,8 +1017,12 @@ class FireEyeHXManager:
 
     def delete_bulk_acquisition(self, bulk_acquisition_id: str | int) -> bool:
         """Delete a bulk acquisition.
-        :param bulk_acquisition_id: {str|int} Bulk acquisition ID.
-        :return: {bool} True if successful.
+
+        Args:
+            bulk_acquisition_id: Bulk acquisition ID.
+
+        Returns:
+            True if successfully deleted.
         """
         url = f"{self.api_root}/acqs/bulk/{bulk_acquisition_id}"
         response = self.session.delete(url)
