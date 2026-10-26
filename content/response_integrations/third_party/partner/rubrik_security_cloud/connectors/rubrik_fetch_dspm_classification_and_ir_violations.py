@@ -44,7 +44,7 @@ connector_starting_time = unix_now()
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.000Z"
 
 
-def validate_search_time_period(days):
+def validate_search_time_period(days: str | int | None) -> int:
     """Validate 'Search Time Period In Days': must be a whole number within bounds."""
     if days is None or str(days).strip() == "":
         return MIN_SEARCH_TIME_PERIOD_DAYS
@@ -706,7 +706,7 @@ def main(is_test_run):
         param_name="Verify SSL",
         input_type=bool,
         is_mandatory=False,
-        default_value=False,
+        default_value=True,
         print_value=True,
     )
 

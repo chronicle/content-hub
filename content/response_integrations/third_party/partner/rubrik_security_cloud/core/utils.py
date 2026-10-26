@@ -1204,5 +1204,5 @@ def validate_date_order(start_value: Optional[str], end_value: Optional[str], er
 
     start_dt = datetime.strptime(start_value, "%Y-%m-%dT%H:%M:%SZ")
     end_dt = datetime.strptime(end_value, "%Y-%m-%dT%H:%M:%SZ")
-    if end_dt < start_dt:
+    if end_dt <= start_dt:
         raise InvalidValueException(error_message)

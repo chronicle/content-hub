@@ -81,11 +81,9 @@ def main():
             f"Identity: {details_model.display_name or 'N/A'} "
             f"({details_model.user_principal_name or 'N/A'})."
         )
-        siemplify.LOGGER.info(output_message)
-        siemplify.LOGGER.info(
-            f"userPrincipalName={details_model.user_principal_name} — "
-            "use as notification target in IR playbook."
-        )
+        # The identity (display name / UPN) stays in the case wall message only;
+        # the log line omits it so no PII is written to the logs.
+        siemplify.LOGGER.info(f"Successfully retrieved IR violation details for ID: {violation_id}.")
 
     except (InvalidValueException, ItemNotFoundException, ValueError) as e:
         output_message = str(e)

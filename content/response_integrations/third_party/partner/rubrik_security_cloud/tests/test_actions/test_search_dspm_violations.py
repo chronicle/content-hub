@@ -59,3 +59,22 @@ class TestSearchDSPMViolations:
 
         assert action_output.results.result_value is False
         assert action_output.results.execution_state.value == 2
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={
+            "Detection Start Date": "2026-01-01T00:00:00Z",
+            "Detection End Date": "2026-01-01T00:00:00Z",
+        },
+    )
+    def test_search_dspm_violations_equal_dates(
+        self,
+        script_session: RubrikSession,
+        action_output: MockActionOutput,
+        rubrik: RubrikSecurityCloud,
+    ) -> None:
+        search_dspm_violations.main()
+
+        assert "must be later than" in action_output.results.output_message
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2
