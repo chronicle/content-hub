@@ -158,6 +158,8 @@ def test_validate_where_filter_accepts_single_conditions(value: str) -> None:
         ("name = 'unclosed", "unclosed quote"),
         (r"name = 'escaped\' ; DROP TABLE users", "unclosed quote"),
         ('"Full Name = 1', "unclosed quote"),
+        ("", "it is empty"),
+        ("   ", "it is empty"),
     ],
 )
 def test_validate_where_filter_rejects_injection(value: str, reason: str) -> None:

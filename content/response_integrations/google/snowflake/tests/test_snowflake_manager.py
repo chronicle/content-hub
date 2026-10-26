@@ -80,6 +80,7 @@ def test_build_query_string_defaults_sort_order_to_asc(manager: SnowflakeManager
         ("table", "users; DROP TABLE users"),
         ("where_filter", "1=1; DROP TABLE users;--"),
         ("where_filter", "1=1) UNION SELECT * FROM secrets WHERE (1=1"),
+        ("where_filter", "   "),
         ("sort_field", "id; DROP TABLE users"),
         ("sort_order", "ASC; DROP TABLE users"),
     ],

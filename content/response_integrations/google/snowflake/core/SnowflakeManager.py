@@ -202,6 +202,7 @@ class SnowflakeManager:
         :param sort_order: {str} Sort order
         :param sort_field: {str} Field to sort with
         :return: {str}
+        :raises InvalidQueryParameterError: If any parameter can't be used safely in the query.
         """
         fields: str = validate_fields_to_return(fields_to_return) if fields_to_return else ALL_FIELDS_WILDCARD
         query_string = f"SELECT {fields}"

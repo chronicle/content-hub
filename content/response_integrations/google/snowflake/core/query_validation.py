@@ -126,7 +126,7 @@ def validate_where_filter(where_filter: str) -> str:
 
     """
     stripped_filter: str = where_filter.strip()
-    reason: str | None = _get_where_filter_violation(_QUOTED_TEXT.sub(" ", stripped_filter))
+    reason: str | None = _get_where_filter_violation(stripped_filter)
     if reason:
         msg: str = f'Invalid value was provided for "Where Filter": {where_filter}. Reason: {reason}.'
         raise InvalidQueryParameterError(msg)
@@ -134,16 +134,20 @@ def validate_where_filter(where_filter: str) -> str:
     return stripped_filter
 
 
-def _get_where_filter_violation(unquoted: str) -> str | None:
+def _get_where_filter_violation(stripped_filter: str) -> str | None:
     """Find why a WHERE filter is not allowed.
 
     Args:
-        unquoted: The filter with string literals and quoted identifiers removed.
+        stripped_filter: The filter without surrounding whitespace.
 
     Returns:
         The reason the filter is not allowed, or None if it is allowed.
 
     """
+    if not stripped_filter:
+        return "it is empty"
+
+    unquoted: str = _QUOTED_TEXT.sub(" ", stripped_filter)
     if "'" in unquoted or '"' in unquoted:
         return "it has an unclosed quote"
 
