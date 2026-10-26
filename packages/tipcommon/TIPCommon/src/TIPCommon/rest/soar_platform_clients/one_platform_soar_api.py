@@ -1430,46 +1430,283 @@ class OnePlatformSoarApi(BaseSoarApi):
         jobs_endpoint = "/integrations/{identifier}/jobs"
         managers_endpoint = "/integrations/{identifier}/managers"
 
-        cards: list[dict] = []
-
-        connectors_response = self._make_request(
-            HttpMethod.GET,
-            connectors_endpoint.format(identifier=self.params.integration_name),
+        # NOTE: Fix for b/577045937 - normalize 1P IDE items into cards with integer id, type, name, displayName, and isCustom
+        integration_identifier = (
+            getattr(self.params, "integration_name", None)
+            or getattr(self.params, "integration_identifier", None)
         )
-        connectors_data = safe_json_for_204(connectors_response, default_for_204={})
-        cards.extend(connectors_data.get("connectors", []))
+        if integration_identifier:
+            integrations_to_process = [integration_identifier]
+        else:
+            try:
+                installed = self.get_installed_integrations()
+                integrations_to_process = []
+                for item in installed:
+                    ident = (
+                        item.get("displayName")
+                        or item.get("identifier")
+                        or (item.get("name", "").split("/")[-1] if item.get("name") else None)
+                    )
+                    if ident and ident not in integrations_to_process:
+                        integrations_to_process.append(ident)
+            except Exception:
+                integrations_to_process = []
 
-        actions_response = self._make_request(
-            HttpMethod.GET,
-            actions_endpoint.format(identifier=self.params.integration_name),
-        )
-        actions_data = safe_json_for_204(actions_response, default_for_204={})
-        cards.extend(actions_data.get("actions", []))
+        def _normalize_item(raw_item: dict, item_type: int, int_id: str) -> dict:
+            card = dict(raw_item)
+            cid = card.get("id")
+            if cid is None and card.get("name"):
+                last_seg = card.get("name").split("/")[-1]
+                if last_seg.isdigit():
+                    cid = int(last_seg)
+            elif isinstance(cid, str) and cid.isdigit():
+                cid = int(cid)
 
-        jobs_response = self._make_request(
-            HttpMethod.GET,
-            jobs_endpoint.format(identifier=self.params.integration_name),
-        )
-        jobs_data = safe_json_for_204(jobs_response, default_for_204={})
-        cards.extend(jobs_data.get("jobs", []))
+            if not isinstance(cid, int):
+                try:
+                    cid = int(cid)
+                except (TypeError, ValueError):
+                    cid = abs(hash(card.get("displayName") or card.get("name") or "")) % (10**8)
 
-        managers_response = self._make_request(
-            HttpMethod.GET,
-            managers_endpoint.format(identifier=self.params.integration_name),
-        )
-        managers_data = safe_json_for_204(managers_response, default_for_204={})
-        cards.extend(managers_data.get("managers", []))
+            display_name = card.get("displayName") or card.get("name") or ""
+            card["id"] = cid
+            card["name"] = display_name
+            card["displayName"] = display_name
+            card["type"] = item_type
+            card["isCustom"] = bool(card.get("custom", False) or card.get("isCustom", False))
+            card["integrationIdentifier"] = int_id
+            return card
 
-        payload = {
-            "cards": [
+        all_cards_payload = []
+        for ident in integrations_to_process:
+            int_cards: list[dict] = []
+
+            connectors_response = self._make_request(
+                HttpMethod.GET,
+                connectors_endpoint.format(identifier=ident),
+            )
+            connectors_data = safe_json_for_204(connectors_response, default_for_204={})
+            for c in connectors_data.get("connectors", []):
+                int_cards.append(_normalize_item(c, 0, ident))
+
+            actions_response = self._make_request(
+                HttpMethod.GET,
+                actions_endpoint.format(identifier=ident),
+            )
+            actions_data = safe_json_for_204(actions_response, default_for_204={})
+            for a in actions_data.get("actions", []):
+                int_cards.append(_normalize_item(a, 1, ident))
+
+            jobs_response = self._make_request(
+                HttpMethod.GET,
+                jobs_endpoint.format(identifier=ident),
+            )
+            jobs_data = safe_json_for_204(jobs_response, default_for_204={})
+            for j in jobs_data.get("jobs", []):
+                int_cards.append(_normalize_item(j, 2, ident))
+
+            managers_response = self._make_request(
+                HttpMethod.GET,
+                managers_endpoint.format(identifier=ident),
+            )
+            managers_data = safe_json_for_204(managers_response, default_for_204={})
+            for m in managers_data.get("managers", []):
+                int_cards.append(_normalize_item(m, 4, ident))
+
+            all_cards_payload.append(
                 {
-                    "identifier": self.params.integration_name,
-                    "cards": cards,
+                    "identifier": ident,
+                    "name": ident,
+                    "displayName": ident,
+                    "cards": int_cards,
                 }
-            ]
-        }
+            )
 
+        payload = {"cards": all_cards_payload}
         return _DictResponse(payload)
+
+    # NOTE: Fix for b/577045937 - Implement missing update_ide_item for 1P SOAR API
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_ide_item(self) -> requests.Response:
+        """Update or create an IDE item using 1P API."""
+        data = self.params.input_json or {}
+
+        raw_type = (
+            data.get("type")
+            if data.get("type") is not None
+            else data.get("Type")
+            if data.get("Type") is not None
+            else data.get("ideItemType")
+        )
+        type_map = {
+            0: "connectors",
+            1: "actions",
+            2: "jobs",
+            4: "managers",
+            "0": "connectors",
+            "1": "actions",
+            "2": "jobs",
+            "4": "managers",
+            "CONNECTOR": "connectors",
+            "ACTION": "actions",
+            "JOB": "jobs",
+            "MANAGER": "managers",
+        }
+        collection = type_map.get(raw_type)
+        if not collection and (isinstance(raw_type, int) or (isinstance(raw_type, str) and raw_type.isdigit())):
+            collection = type_map.get(int(raw_type))
+        if not collection:
+            collection = "actions"
+
+        integration = (
+            data.get("integrationIdentifier")
+            or data.get("IntegrationIdentifier")
+            or data.get("integration")
+            or data.get("Integration")
+            or getattr(self.params, "integration_name", None)
+            or getattr(self.params, "integration_identifier", None)
+        )
+
+        display_name = (
+            data.get("name")
+            or data.get("Name")
+            or data.get("displayName")
+            or data.get("DisplayName")
+            or ""
+        )
+
+        item_id = data.get("id") if data.get("id") is not None else data.get("Id")
+        if item_id in (-1, "-1", 0, "0", None):
+            item_id = None
+
+        # If item_id is missing, search existing items by displayName
+        if not item_id and integration:
+            list_endpoint = f"/integrations/{integration}/{collection}"
+            list_res = self._make_request(HttpMethod.GET, list_endpoint)
+            list_data = safe_json_for_204(list_res, default_for_204={})
+            items = list_data.get(collection, [])
+            for existing in items:
+                if existing.get("displayName") == display_name or existing.get("name") == display_name:
+                    item_id = existing.get("id")
+                    if not item_id and existing.get("name"):
+                        item_id = existing.get("name").split("/")[-1]
+                    break
+
+        script_content = data.get("script") or data.get("Script") or ""
+        description = data.get("description") or data.get("Description") or ""
+        is_enabled = (
+            data.get("isEnabled")
+            if data.get("isEnabled") is not None
+            else data.get("enabled", True)
+        )
+
+        if item_id:
+            # Update existing item
+            get_endpoint = f"/integrations/{integration}/{collection}/{item_id}"
+            existing_resp = self._make_request(HttpMethod.GET, get_endpoint)
+            existing_data = safe_json_for_204(existing_resp, default_for_204={})
+
+            patch_payload = dict(existing_data)
+            patch_payload["script"] = script_content
+            if display_name:
+                patch_payload["displayName"] = display_name
+            if description:
+                patch_payload["description"] = description
+            if is_enabled is not None:
+                patch_payload["enabled"] = bool(is_enabled)
+
+            # Ensure mandatory parameters have defaultValue to avoid 1P empty parameter validation error
+            if "parameters" in patch_payload and isinstance(patch_payload["parameters"], list):
+                for p in patch_payload["parameters"]:
+                    if p.get("mandatory") and not p.get("defaultValue"):
+                        p["defaultValue"] = "{}"
+
+            update_mask = ["script", "displayName", "description", "enabled"]
+            if "parameters" in patch_payload:
+                update_mask.append("parameters")
+
+            return self._make_request(
+                HttpMethod.PATCH,
+                get_endpoint,
+                params={"updateMask": ",".join(update_mask)},
+                json_payload=patch_payload,
+            )
+
+        # Create new item
+        new_payload = {
+            "displayName": display_name,
+            "description": description,
+            "script": script_content,
+            "enabled": is_enabled,
+            "custom": True,
+        }
+        legacy_params = data.get("Parameters") or data.get("parameters") or []
+        converted_params = []
+        for lp in legacy_params:
+            p_name = lp.get("Name") or lp.get("name") or lp.get("displayName")
+            p_desc = lp.get("Description") or lp.get("description") or ""
+            p_mandatory = bool(lp.get("IsMandatory") or lp.get("mandatory", False))
+            p_default = (
+                lp.get("DefaultValue")
+                if lp.get("DefaultValue") is not None
+                else lp.get("defaultValue", "")
+            )
+            if p_mandatory and not p_default:
+                p_default = "{}"
+            p_type = lp.get("Type") if lp.get("Type") is not None else lp.get("type", 0)
+            converted_params.append(
+                {
+                    "name": p_name,
+                    "displayName": p_name,
+                    "description": p_desc,
+                    "mandatory": p_mandatory,
+                    "defaultValue": str(p_default),
+                    "type": p_type,
+                }
+            )
+        if converted_params:
+            new_payload["parameters"] = converted_params
+
+        post_endpoint = f"/integrations/{integration}/{collection}"
+        return self._make_request(HttpMethod.POST, post_endpoint, json_payload=new_payload)
+
+    # NOTE: Fix for b/577045937 - Implement missing get_ide_item for 1P SOAR API
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_ide_item(self) -> requests.Response:
+        """Get IDE item (1P compatible)."""
+        item_id = self.params.item_id
+        raw_type = self.params.item_type
+        type_map = {
+            0: "connectors",
+            1: "actions",
+            2: "jobs",
+            4: "managers",
+            "0": "connectors",
+            "1": "actions",
+            "2": "jobs",
+            "4": "managers",
+            "CONNECTOR": "connectors",
+            "ACTION": "actions",
+            "JOB": "jobs",
+            "MANAGER": "managers",
+        }
+        collection = type_map.get(raw_type)
+        if not collection and (isinstance(raw_type, int) or (isinstance(raw_type, str) and raw_type.isdigit())):
+            collection = type_map.get(int(raw_type))
+        if not collection:
+            collection = "actions"
+
+        if str(item_id).startswith("projects/") or "integrations/" in str(item_id):
+            clean_path = self._clean_resource_name(str(item_id))
+            endpoint = f"/{clean_path}"
+        else:
+            integration = (
+                getattr(self.params, "integration_name", None)
+                or getattr(self.params, "integration_identifier", None)
+            )
+            endpoint = f"/integrations/{integration}/{collection}/{item_id}"
+
+        return self._make_request(HttpMethod.GET, endpoint)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def set_mappings_visual_family(self) -> requests.Response:
