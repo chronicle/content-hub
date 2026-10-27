@@ -13,13 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-import abc
 
 import dataclasses
 
 
 @dataclasses.dataclass
-class UrlScanIo(abc.ABC):
+class UrlScanIo:
     """
     Imitates the UrlScanIo product backend state.
     """

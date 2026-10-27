@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from url_scan_io.tests.core.response import MockResponse
-from url_scan_io.tests.core.url_scan_io import UrlScanIo
+from .response import MockResponse
+from .url_scan_io import UrlScanIo
 
 
 class UrlScanIoSession:

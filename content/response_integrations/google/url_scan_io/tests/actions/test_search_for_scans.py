@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from unittest.mock import MagicMock
+
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from url_scan_io.actions import SearchForScans
-from url_scan_io.tests.conftest import LegacyActionOutput, LegacyJsonResults
-from url_scan_io.tests.core.url_scan_io import UrlScanIo
+
+from ..common import LegacyActionOutput, LegacyJsonResults
+from ..core.url_scan_io import UrlScanIo
 
 
 def create_mock_entity(

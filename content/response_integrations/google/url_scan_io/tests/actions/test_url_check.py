@@ -13,13 +13,18 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from unittest.mock import MagicMock
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_INPROGRESS, EXECUTION_STATE_COMPLETED
+from soar_sdk.ScriptResult import (
+    EXECUTION_STATE_COMPLETED,
+    EXECUTION_STATE_INPROGRESS,
+)
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from url_scan_io.tests.core.url_scan_io import UrlScanIo
-from url_scan_io.tests.core.session import UrlScanIoSession
 from url_scan_io.actions.UrlCheck import main
+
+from ..core.session import UrlScanIoSession
+from ..core.url_scan_io import UrlScanIo
 
 
 def test_url_check_success(monkeypatch, action_output, json_results, mock_siemplify):

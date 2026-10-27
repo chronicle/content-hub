@@ -14,25 +14,6 @@
 
 from __future__ import annotations
 
-import sys
-import os
-import pkgutil
-import importlib
-import soar_sdk
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
-
-import dataclasses
 import json
 import pathlib
 from typing import Any, Generator
@@ -40,55 +21,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from url_scan_io.tests.core.session import UrlScanIoSession
-from url_scan_io.tests.core.url_scan_io import UrlScanIo
-
-
-CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
-CONFIG: dict = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-
-
-@dataclasses.dataclass
-class LegacyActionOutput:
-    """
-    Local replacement for MockActionOutput.
-    Captures the output from siemplify.end().
-    """
-    output_message: str | None = None
-    result_value: bool | str | None = None
-    status: str | None = None
-    is_success: bool = False
-
-    def set_output(
-        self,
-        output_message: str,
-        result_value: bool | str,
-        status: str = "COMPLETED"
-    ) -> None:
-        """Mock implementation of siemplify.end()"""
-        self.output_message = output_message
-        self.result_value = result_value
-        self.status = status
-        self.is_success = result_value in [True, "true"]
+from .common import CONFIG, LegacyActionOutput, LegacyJsonResults
+from .core.session import UrlScanIoSession
+from .core.url_scan_io import UrlScanIo
 
 
 @pytest.fixture
 def action_output() -> Generator[LegacyActionOutput, Any, None]:
     """Fixture providing an instance of LegacyActionOutput."""
     yield LegacyActionOutput()
-
-
-@dataclasses.dataclass
-class LegacyJsonResults:
-    """
-    Local replacement for MockJsonResults.
-    Captures data from siemplify.result.add_result_json().
-    """
-    json_results: list | dict = dataclasses.field(default_factory=list)
-
-    def set_json_results(self, json_data: list | dict) -> None:
-        """Mock implementation of siemplify.result.add_result_json()"""
-        self.json_results = json_data
 
 
 @pytest.fixture

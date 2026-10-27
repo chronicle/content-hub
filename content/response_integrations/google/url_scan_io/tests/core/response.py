@@ -47,7 +47,7 @@ class MockResponse:
     def raise_for_status(self) -> None:
         """Raises an HTTPError if the status code is 4xx or 5xx."""
         if 400 <= self.status_code < 600:
-            raise HTTPError(f"Mock HTTP Error: {self.status_code}")
+            raise HTTPError(f"Mock HTTP Error: {self.status_code}", response=self)
 
     @property
     def content(self) -> bytes:

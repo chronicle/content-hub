@@ -17,7 +17,7 @@ from __future__ import annotations
 import importlib
 import pathlib
 
-from url_scan_io.tests import common
+from .. import common
 
 
 VALID_SUFFIXES = (".py",)
