@@ -12,17 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import copy
 import urllib.parse
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, call
 
 import pytest
 import requests
-from pytest_mock import MockerFixture
 
-from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
+from TIPCommon.exceptions import (
+    EmptyMandatoryValues,
+    InternalJSONDecoderError,
+    ParameterValidationError,
+)
 from TIPCommon.rest.soar_platform_clients.one_platform_soar_api import OnePlatformSoarApi
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 def test_get_case_insights_single_page(
@@ -515,4 +523,217 @@ def test_get_enabled_workflow_cards(
             "caseEnvironment": "Production",
             "executionScope": "CASE",
         },
+    )
+
+
+def _build_http_response(
+    status_code: int,
+    body: bytes,
+    url: str = "https://mock-soar-api.com/test",
+) -> requests.Response:
+    """Build a real requests.Response object for testing HTTP status and JSON validation."""
+    response = requests.Response()
+    response.status_code = status_code
+    response._content = body
+    response.encoding = "utf-8"
+    response.url = url
+    return response
+
+
+@pytest.mark.parametrize(
+    ("status_code", "error_body"),
+    [
+        (403, '{"error": {"code": 403, "message": "Permission chronicle.legacySoarUsers.get denied"}}'),
+        (404, '{"error": {"code": 404, "message": "Requested entity was not found"}}'),
+        (500, '{"error": {"code": 500, "message": "Internal server error"}}'),
+    ],
+)
+def test_get_users_profile_cards_http_errors_raise_with_body(
+    status_code: int,
+    error_body: str,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test get_users_profile_cards raises HTTPError with response body on 403, 404, and 500."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    mock_chronicle_soar.session.request.return_value = _build_http_response(
+        status_code, error_body.encode("utf-8")
+    )
+
+    with pytest.raises(requests.HTTPError) as exc_info:
+        client.get_users_profile_cards()
+
+    assert str(status_code) in str(exc_info.value)
+    assert error_body in str(exc_info.value)
+    assert exc_info.value.response is not None
+    assert exc_info.value.response.status_code == status_code
+
+
+@pytest.mark.parametrize(
+    ("status_code", "error_body"),
+    [
+        (403, '{"error": {"code": 403, "message": "Permission chronicle.legacySoarUsers.get denied"}}'),
+        (404, '{"error": {"code": 404, "message": "Users endpoint not found"}}'),
+        (500, '{"error": {"code": 500, "message": "Backend unavailable"}}'),
+    ],
+)
+def test_get_siemplify_user_details_http_errors_raise_with_body(
+    status_code: int,
+    error_body: str,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test get_siemplify_user_details raises HTTPError with response body on 403, 404, and 500."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    mock_chronicle_soar.session.request.return_value = _build_http_response(
+        status_code, error_body.encode("utf-8")
+    )
+
+    with pytest.raises(requests.HTTPError) as exc_info:
+        client.get_siemplify_user_details()
+
+    assert str(status_code) in str(exc_info.value)
+    assert error_body in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("status_code", "raw_body"),
+    [
+        (200, b"{}"),
+        (204, b""),
+    ],
+)
+def test_paginate_results_empty_proto3_or_204_returns_empty_without_warning(
+    status_code: int,
+    raw_body: bytes,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test legitimately empty 1P proto3 responses ({}) and 204 No Content return [] cleanly."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    mock_chronicle_soar.session.request.return_value = _build_http_response(status_code, raw_body)
+
+    users = client.get_users_profile_cards()
+
+    assert users == []
+    mock_chronicle_soar.LOGGER.warn.assert_not_called()
+
+
+def test_paginate_results_unexpected_root_key_logs_actual_top_level_keys(
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test 2xx response without expected root key logs actual top-level keys."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    mock_chronicle_soar.session.request.return_value = _build_http_response(
+        200,
+        b'{"users": [{"userName": "alice"}], "totalSize": 1}',
+    )
+
+    users = client.get_users_profile_cards()
+
+    assert users == []
+    mock_chronicle_soar.LOGGER.warn.assert_called_once()
+    warn_msg = mock_chronicle_soar.LOGGER.warn.call_args[0][0]
+    assert "legacySoarUsers" in warn_msg
+    assert "['users', 'totalSize']" in warn_msg
+
+
+def test_paginate_results_multi_page_http_error_propagates(
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test _paginate_results raises HTTPError when a later page fails instead of truncating."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    page_1 = _build_http_response(
+        200,
+        b'{"legacySoarUsers": [{"userName": "user1"}], "nextPageToken": "page_2_tok"}',
+    )
+    page_2 = _build_http_response(
+        500,
+        b'{"error": {"code": 500, "message": "Upstream timeout on page 2"}}',
+    )
+    mock_chronicle_soar.session.request.side_effect = [page_1, page_2]
+
+    with pytest.raises(requests.HTTPError) as exc_info:
+        client.get_users_profile_cards()
+
+    assert "Upstream timeout on page 2" in str(exc_info.value)
+
+
+def test_paginate_results_invalid_json_raises_decoder_error(
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test _paginate_results raises InternalJSONDecoderError on non-JSON 200 payload."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    mock_chronicle_soar.session.request.return_value = _build_http_response(
+        200,
+        b"<html>502 Bad Gateway</html>",
+    )
+
+    with pytest.raises(InternalJSONDecoderError):
+        client.get_users_profile_cards()
+
+
+@pytest.mark.parametrize("status_code", [403, 404, 500])
+def test_audited_1p_methods_raise_http_error_with_body(
+    status_code: int,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test audited OnePlatformSoarApi methods raise HTTPError with response body on 403/404/500."""
+    error_payload = f'{{"error": {{"code": {status_code}, "message": "API failure {status_code}"}}}}'.encode()
+
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.case_id = 101
+    params.alert_identifier = "alert_1"
+    params.message = "SLA pause"
+    params.integration_name = "Tools"
+    params.search_payload = {"query": "test"}
+
+    for method_call in (
+        client.get_case_overview_details,
+        client.get_all_case_overview_details,
+        client.pause_alert_sla,
+        client.resume_alert_sla,
+        client.get_investigator_data,
+        client.get_ide_cards,
+        client.get_simulated_cases,
+        client.get_case_insights,
+        client.search_cases_by_everything,
+    ):
+        mock_chronicle_soar.session.request.return_value = _build_http_response(status_code, error_payload)
+        with pytest.raises(requests.HTTPError) as exc_info:
+            method_call()
+        assert f"API failure {status_code}" in str(exc_info.value)
+
+
+def test_assign_case_to_user_ignores_alert_identifier_and_logs_info(
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test 1P assign_case_to_user posts case-level bulk assign and logs alert_identifier note."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.case_id = 123
+    params.assign_to = "secops_user_id"
+    params.alert_identifier = "ALERT_123"
+
+    ok_response = _build_http_response(200, b"{}")
+    mock_chronicle_soar.session.request.return_value = ok_response
+
+    res = client.assign_case_to_user()
+
+    assert res == ok_response
+    mock_chronicle_soar.session.request.assert_called_once_with(
+        "POST",
+        "https://mock-soar-api.com/cases:executeBulkAssign",
+        params=None,
+        json={"casesIds": [123], "userName": "secops_user_id"},
+    )
+    assert any(
+        "alert_identifier" in call_args[0][0]
+        for call_args in mock_chronicle_soar.LOGGER.info.call_args_list
     )
