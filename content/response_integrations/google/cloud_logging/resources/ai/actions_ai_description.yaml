@@ -1,0 +1,334 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Execute Query:
+  ai_description: >-
+    ### General Description
+
+    The **Execute Query** action allows users to run custom queries against Google
+    Cloud Logging to retrieve specific log entries. It supports scoping the search
+    to specific GCP Projects or Organizations and provides flexible time-range filtering,
+    including predefined intervals and custom ISO 8601 timestamps. The action handles
+    API authentication, query construction, and result pagination up to a user-defined
+    limit.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves user inputs including the query,
+    scope (Project/Org), and time constraints.
+
+    2. **Validation:** It validates that the 'Max Records' is a positive integer and
+    ensures 'Start Time' is provided and correctly formatted if 'Custom' time frame
+    is selected.
+
+    3. **Authentication:** Initializes the Google Cloud Logging API client using the
+    configured service account or workload identity.
+
+    4. **Query Construction:** Appends the appropriate timestamp filters (based on
+    the selected Time Frame) to the user-provided query string.
+
+    5. **API Execution:** Sends a POST request to the `v2/entries:list` endpoint of
+    the Google Cloud Logging API to fetch the logs.
+
+    6. **Pagination:** Iterates through result pages using the `nextPageToken` until
+    the `Max Records To Return` limit is reached or no more logs are found.
+
+    7. **Output:** Returns the retrieved log entries as a JSON array and sets the
+    action status.
+
+
+    ### Additional Notes
+
+    - Either a **Project ID** or an **Organization ID** must be available (either
+    via parameters or the integration configuration) for the action to execute successfully.
+
+    - When using the 'Custom' **Time Frame**, the **Start Time** must be provided
+    in a valid ISO 8601 format (e.g., `2023-10-01T12:00:00Z`).
+  ai_short_description: >-
+    Executes custom queries in Google Cloud Logging to retrieve specific log entries
+    based on project or organization scopes and time-range filters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a POST request to the `v2/entries:list` endpoint
+      of the Google Cloud Logging API to retrieve log entries. It does not mutate
+      external data (it only reads logs), nor does it mutate internal data, update
+      entities, create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or process any
+      entity-specific data. It executes a standalone query against Google Cloud Logging
+      based on the provided parameters. Therefore, all entity types and filters are
+      set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a query to retrieve historical logs and telemetry data from
+      Google Cloud Logging. This directly aligns with the 'Search Events' expected
+      outcome. It does not enrich specific IOCs/assets, mutate external state, or
+      interact with tickets/emails.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Project ID | String | No | The project ID to use in the integration. If you
+    don't set a value for this parameter, the integration retrieves the project ID
+    from your Google Cloud service account. |
+
+    | Organization ID | String | No | The organization ID to use in the integration.
+    If you don't set a value for this parameter, the integration retrieves the project
+    ID from your Google Cloud service account. |
+
+    | Query | String | Yes | A query to find the logs for. |
+
+    | Time Frame | Dropdown | No | A period to retrieve the results from. If you select
+    Custom, also configure the Start Time parameter. |
+
+    | Start Time | String | No | The start time to retrieve results. This parameter
+    is required if you selected the Custom option for the Time Frame parameter. To
+    configure this parameter, use the ISO 8601 format. |
+
+    | End Time | String | No | The end time to retrieve results. If you don't set
+    a value for this parameter and select the Custom option for the Time Frame parameter,
+    the action uses the current time as the end time. To configure this parameter,
+    use the ISO 8601 format. |
+
+    | Max Records To Return | Integer | No | The maximum number of results to return.
+    The default value is 50. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is used to verify the connectivity between Google SecOps and
+    the Google Cloud Logging service. It ensures that the integration is correctly
+    configured with valid credentials (such as a Service Account or Workload Identity)
+    and that the necessary permissions are in place to interact with the Cloud Logging
+    API.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the authentication manager using
+    the integration's configuration parameters, including the Service Account JSON
+    or Workload Identity Email.
+
+    2. **Client Initialization**: It sets up the `CloudLoggingApiManager` with an
+    authorized session and the target API root.
+
+    3. **Connectivity Test**: The action executes the `test_connectivity` method,
+    which sends a POST request to the Google Cloud Logging `entries:list` endpoint
+    with a `pageSize` of 1.
+
+    4. **Response Validation**: The action checks the response from the API. If the
+    request is successful, it returns a confirmation message. If it fails (e.g., due
+    to authentication or permission issues), it raises a descriptive error.
+
+
+    ### Additional Notes
+
+    To successfully execute this action, either a **Project ID** or an **Organization
+    ID** must be provided in the integration configuration. The action attempts to
+    list a single log entry to verify read permissions.
+  ai_short_description: >-
+    Verifies connectivity between Google SecOps and the Google Cloud Logging service
+    by attempting to list a single log entry.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only performs a POST request to the 'entries:list' endpoint with
+      a page size of 1 to test connectivity. It does not fetch enrichment data for
+      entities, mutate external or internal data, update entities, create insights,
+      modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It simply tests the
+      API connection using integration-level parameters. Therefore, all entity types
+      and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping). It does not enrich IOCs or
+      assets, update alerts, create tickets, modify blocklists/allowlists, manage
+      identities, contain hosts, search events (in a way that returns them to the
+      case), execute commands, download files, send emails, or submit files. Therefore,
+      it does not match any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
