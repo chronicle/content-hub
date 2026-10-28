@@ -11,18 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from __future__ import annotations
-
-import pathlib
-import sys
-
-import soar_sdk
-
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-
-parent_dir = str(pathlib.Path(__file__).resolve().parents[2])
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
