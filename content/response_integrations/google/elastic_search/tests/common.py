@@ -21,11 +21,9 @@ import pathlib
 from typing import Any
 
 INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
-CONFIG_PATH: pathlib.Path = INTEGRATION_PATH / "tests" / "config.json"
-PARAMETERS_DIR: pathlib.Path = INTEGRATION_PATH / "tests" / "parameters"
-
-
-def load_json_file(path: pathlib.Path) -> dict[str, Any]:
-    """Load a JSON file from a Path object."""
-    with path.open(mode="r", encoding="utf-8") as config_file:
-        return json.load(config_file)
+CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
+CONFIG: dict[str, Any] = (
+    json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    if CONFIG_PATH.exists()
+    else {}
+)
