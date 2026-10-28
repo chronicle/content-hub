@@ -30,18 +30,18 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import convert_comma_separated_to_list
 from TIPCommon.validation import ParameterValidator
 
-from crowd_strike_falcon.core.AsyncActionBaseClass import ActionResult, AsyncActionBaseClass
-from crowd_strike_falcon.core import constants
-from crowd_strike_falcon.core.CrowdStrikeManager import CrowdStrikeManager
-from crowd_strike_falcon.core.CrowdStrikeParser import CrowdStrikeParser
-from crowd_strike_falcon.core.datamodels import OnDemandScanData
-from crowd_strike_falcon.core.exceptions import (
+from ..core.AsyncActionBaseClass import ActionResult, AsyncActionBaseClass
+from ..core import constants
+from ..core.CrowdStrikeManager import CrowdStrikeManager
+from ..core.CrowdStrikeParser import CrowdStrikeParser
+from ..core.datamodels import OnDemandScanData
+from ..core.exceptions import (
     ODSDetectionLevelError,
     ODSInvalidFilePathError,
     CrowdStrikeBadRequestError,
     InvalidCidError,
 )
-from crowd_strike_falcon.core.utils import get_entity_original_identifier, validate_device_id
+from ..core.utils import get_entity_original_identifier, validate_device_id
 
 if TYPE_CHECKING:
     from typing import NoReturn
@@ -59,7 +59,6 @@ HostGroupIDsTuple = collections.namedtuple("HostGroupIDsTuple", ["valid_host_gro
 HostIDsTuple = collections.namedtuple("HostIDsTuple", ["valid_hosts_map", "invalid_hosts"])
 ScanMappingsTuple = collections.namedtuple("ScanMappingsTuple", ["host_group_scan_mapping", "host_scan_mapping"])
 ScanDetailsTuple = collections.namedtuple("ScanDetailsTuple", ["host_group_scan_details", "host_scan_details"])
-since_time: str = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 @dataclass
@@ -96,7 +95,7 @@ class HostValidationData:
 
 
 class OnDemandScanAction(AsyncActionBaseClass):
-    def __init__(self, siemplify):
+    def __init__(self, siemplify: SiemplifyAction) -> None:
         super().__init__(siemplify)
         self.parser = CrowdStrikeParser()
         self.results = ActionData(
@@ -110,7 +109,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
             invalid_hosts=[],
         )
 
-    def _extract_action_configuration(self):
+    def _extract_action_configuration(self) -> None:
         integration_cid = self.config.customer_id
         action_cid = extract_action_param(
             siemplify=self.siemplify,
@@ -247,7 +246,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
         if self.params.max_scan_duration and self.params.max_scan_duration < constants.DEFAULT_MAX_SCAN_DURATION:
             raise ValueError('Please provide positive number in parameter "Max Scan Duration".')
 
-    def _perform_action(self, manager: CrowdStrikeManager) -> tuple[int, bool]:
+    def _perform_action(self, manager: CrowdStrikeManager) -> ActionResult:
         action_params = self._get_action_params()
 
         self._validate_if_detection_level_is_higher_than_prevention_level(action_params)
@@ -628,6 +627,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
                 scan.endpoint_notification == self.params.create_endpoint_notification,
             ])
 
+        since_time: str = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
         active_scan_ids = manager.get_active_scan_ids(since_time=since_time)
 
         for scan_id in active_scan_ids:
@@ -833,6 +833,8 @@ class OnDemandScanAction(AsyncActionBaseClass):
             if self.results.invalid_host_groups or self.results.failed_host_group_scans:
                 self.output_messages.append(self._some_invalid_host_groups_err_msg)
 
+            return ActionResult(ExecutionState.COMPLETED, True)
+
         else:
             # case: no success and all invalid + failed hosts
             if self.results.invalid_hosts or self.results.failed_host_scans:
@@ -850,7 +852,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
             ):
                 self.output_messages.append(self._all_invalid_hosts_err_msg)
 
-        return ActionResult(ExecutionState.COMPLETED, False)
+            return ActionResult(ExecutionState.COMPLETED, False)
 
     def _finalize_action_on_success(self) -> ActionResult:
         if self.results.processed_host_scans:
@@ -861,7 +863,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
         return ActionResult(ExecutionState.COMPLETED, True)
 
     @property
-    def _success_host_scans_msg(self):
+    def _success_host_scans_msg(self) -> str:
         entities_csv = ", ".join(entities for entities in self.results.processed_host_scans.keys())
 
         message = f"Successfully scanned and returned results for the following hosts in Crowdstrike: {entities_csv}"
@@ -869,7 +871,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
         return message
 
     @property
-    def _some_invalid_hosts_err_msg(self):
+    def _some_invalid_hosts_err_msg(self) -> str:
         failed_entities = self.results.invalid_hosts + self.results.failed_host_scans
         failed_entities = list(set(failed_entities))
         entities_csv = ", ".join(entitiy for entitiy in failed_entities)
@@ -883,7 +885,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
         return message
 
     @property
-    def _all_invalid_hosts_err_msg(self):
+    def _all_invalid_hosts_err_msg(self) -> str:
         return (
             "None of the provided hosts were found or "
             "none of the hosts were Windows instances. "
@@ -891,7 +893,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
         )
 
     @property
-    def _success_host_group_scans_msg(self):
+    def _success_host_group_scans_msg(self) -> str:
         entities_csv = ", ".join(entities for entities in self.results.processed_host_group_scans.keys())
         message = (
             f"Successfully scanned and returned results for the following host groups in Crowdstrike: {entities_csv}"
@@ -900,7 +902,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
         return message
 
     @property
-    def _some_invalid_host_groups_err_msg(self):
+    def _some_invalid_host_groups_err_msg(self) -> str:
         failed_entities = self.results.invalid_host_groups + self.results.failed_host_group_scans
         failed_entities = list(set(failed_entities))
         entities_csv = ", ".join(entitiy for entitiy in failed_entities)
@@ -910,11 +912,11 @@ class OnDemandScanAction(AsyncActionBaseClass):
         return message
 
     @property
-    def _all_invalid_host_groups_err_msg(self):
+    def _all_invalid_host_groups_err_msg(self) -> str:
         return "None of the provided host groups were found in CrowdStrike."
 
     @property
-    def _in_progress_msg(self):
+    def _in_progress_msg(self) -> str:
         message = "Waiting for scan results for the following entities or host groups: "
 
         in_progress_host_groups = list(self.results.pending_host_group_scans.keys())
@@ -927,7 +929,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
         return message
 
     @property
-    def _detection_level_error_msg(self):
+    def _detection_level_error_msg(self) -> str:
         return (
             'Error executing action "On-Demand Scan". '
             "Reason: Detection level should be equal to or "
@@ -936,7 +938,7 @@ class OnDemandScanAction(AsyncActionBaseClass):
         )
 
     @property
-    def _invalid_file_path_schema_error_msg(self):
+    def _invalid_file_path_schema_error_msg(self) -> str:
         return (
             'Error executing action "On-Demand Scan". '
             'Reason: Invalid value provided in the parameter "File Path to Scan" or '
