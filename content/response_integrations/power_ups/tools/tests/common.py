@@ -46,10 +46,12 @@ ADD_ALERT_SCOPE_PARAMS = MOCK_DATA["add_additional_data_alert_scope_parameters"]
 ADD_ALERT_SCOPE_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
 ADD_CASE_SCOPE_PARAMS = MOCK_DATA["add_additional_data_case_scope_parameters"]
 ADD_CASE_SCOPE_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
+ADD_CASE_SCOPE_CONTEXT["execution_scope"] = 2
 
 ATTACH_PLAYBOOK_PARAMS = MOCK_DATA["attach_playbook_parameters"]
 ATTACH_PLAYBOOK_ALERT_SCOPE_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
 ATTACH_PLAYBOOK_CASE_SCOPE_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
+ATTACH_PLAYBOOK_CASE_SCOPE_CONTEXT["execution_scope"] = 2
 
 CHANGE_CASE_ALERT_FIRST_ALERT_PARAMS = MOCK_DATA[
     "change_case_name_alert_scope_parameters"
@@ -58,10 +60,12 @@ CHANGE_CASE_ALERT_FIRST_ALERT_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
 CHANGE_CASE_ALERT_NOT_FIRST_ALERT_CONTEXT = copy.deepcopy(ALERT_2_CONTEXT)
 CHANGE_CASE_CASE_SCOPE_PARAMS = MOCK_DATA["change_case_name_case_scope_parameters"]
 CHANGE_CASE_CASE_SCOPE_CONTEXT = copy.deepcopy(ALERT_2_CONTEXT)
+CHANGE_CASE_CASE_SCOPE_CONTEXT["execution_scope"] = 2
 
 CHECK_ENTITIES_PARAMS = MOCK_DATA["check_entities_parameters"]
 CHECK_ENTITIES_ALERT_SCOPE_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
 CHECK_ENTITIES_CASE_SCOPE_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
+CHECK_ENTITIES_CASE_SCOPE_CONTEXT["execution_scope"] = 2
 CHECK_ENTITIES_ALERT_SCOPE_ENTITIES = [
     MockEntity(identifier=TARGET_IP, additional_properties={"key1": "val1"})
 ]
