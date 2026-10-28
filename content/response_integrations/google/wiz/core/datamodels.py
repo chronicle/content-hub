@@ -91,6 +91,7 @@ class Issue(BaseModel):
     status: str | None = None
     severity: str | None = None
     updated_at: str | None = None
+    resolution_reason: str | None = None
     comments: list[WizIncidentComment] = dataclasses.field(default_factory=list)
     service_tickets: list[WizServiceTicket] = dataclasses.field(default_factory=list)
 
@@ -112,6 +113,7 @@ class Issue(BaseModel):
             status=json_data.get("status"),
             severity=json_data.get("severity"),
             updated_at=json_data.get("updatedAt"),
+            resolution_reason=json_data.get("resolutionReason"),
             comments=comments,
             service_tickets=service_tickets,
         )
