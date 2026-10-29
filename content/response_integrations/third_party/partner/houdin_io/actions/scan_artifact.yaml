@@ -1,9 +1,11 @@
 creator: Admin
 default_result_value: ''
-description: 'Launch a Houdin scan on a given artifact, and retrieve all results.
-    The action returns automatically when your scan is done. Compatible types are:
-    Public IPv4/IPv6, URL, Domain, MD5, SHA1, SHA256 Note: Action is running as async,
-    adjust script timeout value in Google SecOps IDE for action, as needed.'
+description: 'Launch a Houdin scan on one artifact and return the full scan document
+    once every source and the MesmerAI verdict are in. Supported artifacts: public
+    IPv4 and IPv6 addresses, URLs, domains, MD5, SHA1, SHA256 and SHA512 hashes;
+    defanged forms (hxxp://, [.]) are accepted. The action is asynchronous: it
+    returns at once and is re-run by the platform until the scan is done, so set
+    the action timeout to at least three minutes when URLScan is in the set.'
 dynamic_results_metadata:
 -   result_example_path: resources/scan_artifact_JsonResult_example.json
     result_name: JsonResult
@@ -12,23 +14,26 @@ integration_identifier: Houdin-io
 is_async: true
 name: Scan Artifact
 parameters:
--   default_value: test.com
-    description: 'An artifact to scan on the Houdin.io platform. Currently supported
-        types: IPv4, IPv6, URL, Domain, MD5, SHA1, SHA256'
+-   default_value: ''
+    description: The indicator to scan. Its type is detected by Houdin.
     is_mandatory: true
-    name: artifact
+    name: Artifact
     type: string
 -   default_value: ''
-    description: (Optional) An array of scanners you want Houdin to use.
+    description: Comma-separated Houdin scanner shortnames to run, for example
+        'vt, abuseipdb, urlscan'. Leave empty for the default set of your plan for
+        this artifact type. The MesmerAI verdict and summary are always included.
+        Available - vt, urlscan, abuseipdb, alienvault, triage, threatfox, urlhaus,
+        gtithreatactors, misp, netlas, rosti, mesmerdeepsearch, mesmerunmask. Enterprise
+        hunting connectors (servicenow, jira, elasticsearch, sentinel, mde, crowdstrike,
+        googlesecops) only run once configured on your Houdin account.
     is_mandatory: false
-    name: scanOn
-    optional_values:
-    - vt
-    - urlscan
-    - alienvault
-    - abuseipdb
-    - triage
-    - mesmer
-    - servicenow
-    type: multi_choice_parameter
+    name: Scanners
+    type: string
+-   default_value: false
+    description: Query every source again instead of answering from Houdin's scan
+        cache. A rescan counts against the monthly allowance.
+    is_mandatory: false
+    name: Force Rescan
+    type: boolean
 script_result_name: ScriptResult
