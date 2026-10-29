@@ -7,9 +7,9 @@ from importlib.metadata import PackageNotFoundError, version
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
 INTEGRATION_NAME = "XM Cyber"
-INTEGRATION_IDENTIFIER = "XMCyber"
+INTEGRATION_IDENTIFIER: str = "XMCyber"
 # Used only when package metadata is unavailable at runtime; pyproject.toml is the source of truth.
-FALLBACK_INTEGRATION_VERSION = "7.0"
+FALLBACK_INTEGRATION_VERSION: str = "7.0"
 
 
 def _get_integration_version() -> str:
@@ -20,8 +20,8 @@ def _get_integration_version() -> str:
         return FALLBACK_INTEGRATION_VERSION
 
 
-INTEGRATION_VERSION = _get_integration_version()
-CONNECTOR_NAME_VERSION_HEADER = "X-XMCYBER-CONNECTOR-NAME-VERSION"
+INTEGRATION_VERSION: str = _get_integration_version()
+CONNECTOR_NAME_VERSION_HEADER: str = "X-XMCYBER-CONNECTOR-NAME-VERSION"
 SUPPORTED_ENTITY_TYPES = [EntityTypes.USER, EntityTypes.HOSTNAME]
 # Action Names
 PING_SCRIPT_NAME = f"{INTEGRATION_NAME} - Ping"

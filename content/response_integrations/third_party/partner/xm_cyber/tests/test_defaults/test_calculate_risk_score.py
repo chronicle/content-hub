@@ -27,7 +27,7 @@ from xm_cyber.core.constants import (
     PREFIX_PARAMETER_FOR_LABELS,
 )
 
-CONFIGURED_PARAMS = {
+CONFIGURED_PARAMS: dict[str, str] = {
     "is_critical_asset": "Default",
     "is_predefined_admin": "Default",
     "is_highly_privileged": "Default",
@@ -54,7 +54,8 @@ def _entity_properties(choke_point_score: str, compromise_risk_score: str) -> di
 def test_non_numeric_scores_do_not_crash_and_count_as_zero(bad_value: str) -> None:
     """Non-numeric scores are treated as 0 instead of raising."""
     result = CalculateRiskScore.calculate_risk_score_for_entity(
-        _entity_properties(bad_value, bad_value), CONFIGURED_PARAMS
+        _entity_properties(bad_value, bad_value),
+        CONFIGURED_PARAMS,
     )
 
     assert result["compromised_choke_point_score"] == 0
@@ -63,9 +64,7 @@ def test_non_numeric_scores_do_not_crash_and_count_as_zero(bad_value: str) -> No
 
 def test_numeric_scores_are_preserved() -> None:
     """Numeric string scores are converted and reported."""
-    result = CalculateRiskScore.calculate_risk_score_for_entity(
-        _entity_properties("40", "25"), CONFIGURED_PARAMS
-    )
+    result = CalculateRiskScore.calculate_risk_score_for_entity(_entity_properties("40", "25"), CONFIGURED_PARAMS)
 
     assert result["compromised_choke_point_score"] == 40
     assert result["compromised_risk_score"] == 25
@@ -77,7 +76,8 @@ def test_flag_matches_true_in_any_case(flag_value: str | bool) -> None:
     components = [("Is Critical Asset", 0.2)]
 
     entity_score = CalculateRiskScore.calculate_score(
-        {PREFIX_PARAMETER_FOR_ENTITY_ID.format("Is Critical Asset"): flag_value}, components
+        {PREFIX_PARAMETER_FOR_ENTITY_ID.format("Is Critical Asset"): flag_value},
+        components,
     )
     event_score = CalculateRiskScore.calculate_score(
         {PREFIX_PARAMETER_FOR_LABELS.format("asset", "Is Critical Asset"): flag_value},
@@ -108,7 +108,8 @@ def test_flag_missing_adds_nothing() -> None:
 def test_custom_value_to_check_is_case_insensitive() -> None:
     """A component with an explicit value to match is compared case-insensitively."""
     score = CalculateRiskScore.calculate_score(
-        {PREFIX_PARAMETER_FOR_ENTITY_ID.format("Tier"): "gold"}, [("Tier", 0.5, "GOLD")]
+        {PREFIX_PARAMETER_FOR_ENTITY_ID.format("Tier"): "gold"},
+        [("Tier", 0.5, "GOLD")],
     )
 
     assert score == pytest.approx(1.5)
@@ -119,9 +120,7 @@ def _run_main(entities: list[MagicMock]) -> MagicMock:
     siemplify = MagicMock()
     siemplify.current_alert.security_events = []
     siemplify.target_entities = entities
-    siemplify.extract_action_param.side_effect = (
-        lambda _name, default_value=None, **_kwargs: default_value
-    )
+    siemplify.extract_action_param.side_effect = lambda _name, default_value=None, **_kwargs: default_value
 
     with patch.object(CalculateRiskScore, "SiemplifyAction", return_value=siemplify):
         CalculateRiskScore.main()

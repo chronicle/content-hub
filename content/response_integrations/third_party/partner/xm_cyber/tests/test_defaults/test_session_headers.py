@@ -31,7 +31,7 @@ from xm_cyber.core.constants import (
 
 from .. import common
 
-EXPECTED_HEADER_VALUE = f"{INTEGRATION_IDENTIFIER}-v{INTEGRATION_VERSION}"
+EXPECTED_HEADER_VALUE: str = f"{INTEGRATION_IDENTIFIER}-v{INTEGRATION_VERSION}"
 
 
 def _mock_siemplify() -> MagicMock:
