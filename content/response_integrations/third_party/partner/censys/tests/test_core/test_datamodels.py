@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 
+from TIPCommon.types import SingleJson
+
 from censys.core.datamodels import HostDatamodel, HostEnrichmentDatamodel, ReputationExtractor
 from censys.tests.common import REPUTATION_EDGE_CASES, REPUTATION_MULTI_IP_BATCH
 
-SAMPLE_REPUTATION = {
+SAMPLE_REPUTATION: SingleJson = {
     "score": 0.191,
     "model_version": "2.0.0",
     "label": "BENIGN",
@@ -113,15 +115,11 @@ class TestGetEntityEnrichmentFields:
         assert fields["Censys_reputation_score_percent"] == 19.1
         assert fields["Censys_reputation_score_suppressed"] is False
 
-        class_probabilities = json.loads(
-            fields["Censys_reputation_class_probabilities"]
-        )
+        class_probabilities = json.loads(fields["Censys_reputation_class_probabilities"])
         assert {"label": "BENIGN", "probability": 68.99} in class_probabilities
         # INACTIVE has no probability in the raw payload - must not crash and
         # must come through as None rather than being silently dropped.
-        inactive = next(
-            p for p in class_probabilities if p["label"] == "INACTIVE"
-        )
+        inactive = next(p for p in class_probabilities if p["label"] == "INACTIVE")
         assert inactive["probability"] is None
 
         evidence = json.loads(fields["Censys_reputation_evidence"])
@@ -134,9 +132,7 @@ class TestGetEntityEnrichmentFields:
         # The 6th/lowest-contribution entry must be dropped.
         assert all(e["feature"] != "Low Signal" for e in evidence)
         # max_port has no "value" key - must surface as None, not raise.
-        max_port_evidence = next(
-            e for e in evidence if e["feature"] == "Max Port"
-        )
+        max_port_evidence = next(e for e in evidence if e["feature"] == "Max Port")
         assert max_port_evidence["value"] is None
 
     def test_entity_evidence_json_is_smaller_than_full_table_shape(self) -> None:
@@ -160,9 +156,7 @@ class TestGetEntityEnrichmentFields:
         }
         fields = ReputationExtractor.get_entity_enrichment_fields(reputation)
         entity_evidence_json = fields["Censys_reputation_evidence"]
-        table_row_json = json.dumps(
-            ReputationExtractor.get_evidence_rows("1.1.1.1", reputation)
-        )
+        table_row_json = json.dumps(ReputationExtractor.get_evidence_rows("1.1.1.1", reputation))
         assert len(entity_evidence_json) < len(table_row_json)
 
         entry = json.loads(entity_evidence_json)[0]
@@ -175,17 +169,13 @@ class TestGetEntityEnrichmentFields:
         # score_suppressed=False is a meaningful, valid value - the shared
         # "drop falsy/None" filtering elsewhere in this module must not
         # accidentally swallow it (False is falsy but not None).
-        fields = ReputationExtractor.get_entity_enrichment_fields(
-            {"score_suppressed": False}
-        )
+        fields = ReputationExtractor.get_entity_enrichment_fields({"score_suppressed": False})
         assert fields["Censys_reputation_score_suppressed"] is False
 
     def test_missing_evidence_and_class_probabilities_keys(self) -> None:
         # Only label/score present - evidence/class_probabilities keys absent
         # entirely (not just empty lists).
-        fields = ReputationExtractor.get_entity_enrichment_fields(
-            {"label": "SUSPICIOUS", "score": 0.5}
-        )
+        fields = ReputationExtractor.get_entity_enrichment_fields({"label": "SUSPICIOUS", "score": 0.5})
         assert fields["Censys_reputation_label"] == "SUSPICIOUS"
         assert "Censys_reputation_class_probabilities" not in fields
         assert "Censys_reputation_evidence" not in fields
@@ -196,9 +186,12 @@ class TestGetEntityEnrichmentFields:
         # "evidence": [] / "class_probabilities": [] rather than omitting
         # the keys. Must behave the same as "absent" - no JSON property for
         # an empty list, not an empty "[]" string.
-        fields = ReputationExtractor.get_entity_enrichment_fields(
-            {"label": "BENIGN", "score": 0.05, "evidence": [], "class_probabilities": []}
-        )
+        fields = ReputationExtractor.get_entity_enrichment_fields({
+            "label": "BENIGN",
+            "score": 0.05,
+            "evidence": [],
+            "class_probabilities": [],
+        })
         assert fields["Censys_reputation_label"] == "BENIGN"
         assert "Censys_reputation_class_probabilities" not in fields
         assert "Censys_reputation_evidence" not in fields
@@ -267,9 +260,7 @@ class TestClassProbabilityRows:
         assert ReputationExtractor.get_class_probability_rows("1.1.1.1", None) == []
 
     def test_full_reputation_rows(self) -> None:
-        rows = ReputationExtractor.get_class_probability_rows(
-            "1.1.1.1", SAMPLE_REPUTATION
-        )
+        rows = ReputationExtractor.get_class_probability_rows("1.1.1.1", SAMPLE_REPUTATION)
         assert len(rows) == 5
         assert {"IP": "1.1.1.1", "Label": "BENIGN", "Probability (%)": 68.99} in rows
         inactive_row = next(r for r in rows if r["Label"] == "INACTIVE")
@@ -300,9 +291,7 @@ class TestEvidenceRows:
     def test_explicitly_empty_evidence_list_yields_no_rows(self) -> None:
         # A host can have a reputation score with zero contributing signals -
         # "evidence": [] is valid and distinct from the key being absent.
-        rows = ReputationExtractor.get_evidence_rows(
-            "1.1.1.1", {"label": "BENIGN", "score": 0.05, "evidence": []}
-        )
+        rows = ReputationExtractor.get_evidence_rows("1.1.1.1", {"label": "BENIGN", "score": 0.05, "evidence": []})
         assert rows == []
 
 
@@ -315,16 +304,14 @@ class TestHostDatamodelReputationIntegration:
     addition with no backward-compatibility constraint of its own."""
 
     def test_reputation_fields_present_in_enrichment_data(self) -> None:
-        model = HostDatamodel(
-            {
-                "result": {
-                    "resource": {
-                        "ip": "1.1.4.3",
-                        "reputation": SAMPLE_REPUTATION,
-                    }
+        model = HostDatamodel({
+            "result": {
+                "resource": {
+                    "ip": "1.1.4.3",
+                    "reputation": SAMPLE_REPUTATION,
                 }
             }
-        )
+        })
         enrichment = model.get_enrichment_data()
         assert enrichment["Censys_reputation_score"] == 0.191
         assert enrichment["Censys_reputation_label"] == "BENIGN"
@@ -332,24 +319,20 @@ class TestHostDatamodelReputationIntegration:
         assert "Censys_reputation_evidence" in enrichment
 
     def test_reputation_score_level_present_when_in_payload(self) -> None:
-        model = HostDatamodel(
-            {
-                "result": {
-                    "resource": {
-                        "ip": "1.1.4.3",
-                        "reputation": {**SAMPLE_REPUTATION, "score_level": "benign"},
-                    }
+        model = HostDatamodel({
+            "result": {
+                "resource": {
+                    "ip": "1.1.4.3",
+                    "reputation": {**SAMPLE_REPUTATION, "score_level": "benign"},
                 }
             }
-        )
+        })
         enrichment = model.get_enrichment_data()
         assert enrichment["Censys_reputation_score_level"] == "benign"
 
     def test_null_reputation_does_not_raise(self) -> None:
         # Censys can return explicit JSON null for unset sub-objects.
-        model = HostDatamodel(
-            {"result": {"resource": {"ip": "1.1.4.3", "reputation": None}}}
-        )
+        model = HostDatamodel({"result": {"resource": {"ip": "1.1.4.3", "reputation": None}}})
         enrichment = model.get_enrichment_data()
         assert "Censys_reputation_label" not in enrichment
         assert "Censys_reputation_score" not in enrichment
@@ -366,16 +349,14 @@ class TestHostEnrichmentDatamodelReputationIntegration:
     the new fields are added alongside them."""
 
     def test_existing_fields_unchanged_and_new_fields_added(self) -> None:
-        model = HostEnrichmentDatamodel(
-            {
-                "result": {
-                    "resource": {
-                        "ip": "1.1.4.3",
-                        "reputation": {**SAMPLE_REPUTATION, "score_level": "benign"},
-                    }
+        model = HostEnrichmentDatamodel({
+            "result": {
+                "resource": {
+                    "ip": "1.1.4.3",
+                    "reputation": {**SAMPLE_REPUTATION, "score_level": "benign"},
                 }
             }
-        )
+        })
         enrichment = model.get_enrichment_data()
 
         # Pre-existing, unchanged fields (raw score, not scaled).
@@ -390,9 +371,7 @@ class TestHostEnrichmentDatamodelReputationIntegration:
     def test_null_reputation_subobject_does_not_raise(self) -> None:
         # Regression guard for the null-safety bug flagged in prior review:
         # {"reputation": null} must not raise AttributeError.
-        model = HostEnrichmentDatamodel(
-            {"result": {"resource": {"ip": "1.1.4.3", "reputation": None}}}
-        )
+        model = HostEnrichmentDatamodel({"result": {"resource": {"ip": "1.1.4.3", "reputation": None}}})
         enrichment = model.get_enrichment_data()
         assert "Censys_reputation_score" not in enrichment
         assert "Censys_reputation_label" not in enrichment
@@ -438,9 +417,7 @@ class TestReputationEdgeCasesBothDatamodels:
 
     def test_no_reputation_tables_produced(self) -> None:
         for key in self.EDGE_CASE_KEYS:
-            reputation = REPUTATION_EDGE_CASES[key]["result"]["resource"].get(
-                "reputation"
-            )
+            reputation = REPUTATION_EDGE_CASES[key]["result"]["resource"].get("reputation")
             ip = REPUTATION_EDGE_CASES[key]["result"]["resource"]["ip"]
             assert ReputationExtractor.get_summary_row(ip, reputation) is None
             assert ReputationExtractor.get_class_probability_rows(ip, reputation) == []
@@ -571,7 +548,7 @@ class TestMultiIpMixedBatch:
         IP_D_NULL_REPUTATION,
     ]
 
-    def _reputation_and_ip(self, fixture: dict) -> tuple[dict | None, str]:
+    def _reputation_and_ip(self, fixture: SingleJson) -> tuple[SingleJson | None, str]:
         resource = fixture["result"]["resource"]
         return resource.get("reputation"), resource["ip"]
 
@@ -582,8 +559,7 @@ class TestMultiIpMixedBatch:
             model = HostDatamodel(fixture)
             enrichment = model.get_enrichment_data()
             assert enrichment.get("Censys_asn_name"), (
-                f"{fixture['result']['resource']['ip']} lost non-reputation "
-                "enrichment data"
+                f"{fixture['result']['resource']['ip']} lost non-reputation enrichment data"
             )
 
     def test_only_two_of_four_ips_get_reputation_entity_properties(self) -> None:
@@ -594,12 +570,8 @@ class TestMultiIpMixedBatch:
 
         assert "Censys_reputation_label" in model_a.get_enrichment_data()
         assert "Censys_reputation_score_percent" in model_b.get_enrichment_data()
-        assert not any(
-            "reputation" in k for k in model_c.get_enrichment_data()
-        )
-        assert not any(
-            "reputation" in k for k in model_d.get_enrichment_data()
-        )
+        assert not any("reputation" in k for k in model_c.get_enrichment_data())
+        assert not any("reputation" in k for k in model_d.get_enrichment_data())
 
     def test_combined_summary_table_has_exactly_two_rows(self) -> None:
         rows = []
@@ -646,9 +618,7 @@ class TestMultiIpMixedBatch:
             summary = ReputationExtractor.get_summary_row(ip, reputation)
             if summary:
                 all_rows.append(summary)
-            all_rows.extend(
-                ReputationExtractor.get_class_probability_rows(ip, reputation)
-            )
+            all_rows.extend(ReputationExtractor.get_class_probability_rows(ip, reputation))
             all_rows.extend(ReputationExtractor.get_evidence_rows(ip, reputation))
 
         referenced_ips = {row["IP"] for row in all_rows}

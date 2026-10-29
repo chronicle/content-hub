@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from TIPCommon.types import SingleJson
 
 from .base_model import BaseModel
@@ -39,38 +37,20 @@ class HostEnrichmentDatamodel(BaseModel):
 
         return {
             f"{ENRICHMENT_PREFIX}service_count": self.host_data.get("service_count"),
-            f"{ENRICHMENT_PREFIX}ports": self._get_top_values(
-                [str(s.get("port")) for s in services if s.get("port")]
-            ),
-            f"{ENRICHMENT_PREFIX}protocols": self._get_top_values(
-                [s.get("protocol") for s in services if s.get("protocol")]
-            ),
-            f"{ENRICHMENT_PREFIX}host_labels": self._get_top_values(
-                [
-                    label.get("value")
-                    for label in self.host_data.get("labels") or []
-                    if label.get("value")
-                ]
-            ),
-            f"{ENRICHMENT_PREFIX}service_labels": self._get_top_values(
-                [
-                    label.get("value")
-                    for s in services
-                    for label in s.get("labels") or []
-                    if label.get("value")
-                ]
-            ),
-            f"{ENRICHMENT_PREFIX}threat_names": self._get_top_values(
-                [
-                    threat.get("name")
-                    for s in services
-                    for threat in s.get("threats") or []
-                    if threat.get("name")
-                ]
-            ),
-            f"{ENRICHMENT_PREFIX}dns_names": self._get_top_values(
-                dns_data.get("names") or []
-            ),
+            f"{ENRICHMENT_PREFIX}ports": self._get_top_values([str(s.get("port")) for s in services if s.get("port")]),
+            f"{ENRICHMENT_PREFIX}protocols": self._get_top_values([
+                s.get("protocol") for s in services if s.get("protocol")
+            ]),
+            f"{ENRICHMENT_PREFIX}host_labels": self._get_top_values([
+                label.get("value") for label in self.host_data.get("labels") or [] if label.get("value")
+            ]),
+            f"{ENRICHMENT_PREFIX}service_labels": self._get_top_values([
+                label.get("value") for s in services for label in s.get("labels") or [] if label.get("value")
+            ]),
+            f"{ENRICHMENT_PREFIX}threat_names": self._get_top_values([
+                threat.get("name") for s in services for threat in s.get("threats") or [] if threat.get("name")
+            ]),
+            f"{ENRICHMENT_PREFIX}dns_names": self._get_top_values(dns_data.get("names") or []),
             f"{ENRICHMENT_PREFIX}reverse_dns": self._get_top_values(
                 (dns_data.get("reverse_dns") or {}).get("names") or []
             ),
@@ -86,9 +66,7 @@ class HostEnrichmentDatamodel(BaseModel):
 
         return {
             f"{ENRICHMENT_PREFIX}network_name": network_info.get("name"),
-            f"{ENRICHMENT_PREFIX}network_cidrs": self._get_top_values(
-                network_info.get("cidrs") or []
-            ),
+            f"{ENRICHMENT_PREFIX}network_cidrs": self._get_top_values(network_info.get("cidrs") or []),
             f"{ENRICHMENT_PREFIX}asn_name": asn.get("name"),
             f"{ENRICHMENT_PREFIX}asn_id": asn.get("asn"),
             f"{ENRICHMENT_PREFIX}location_city": location.get("city"),
@@ -112,17 +90,11 @@ class HostEnrichmentDatamodel(BaseModel):
 
         fields = {
             f"{ENRICHMENT_PREFIX}reputation_score": reputation.get("score"),
-            f"{ENRICHMENT_PREFIX}reputation_score_level": (
-                reputation.get("score_level") or None
-            ),
+            f"{ENRICHMENT_PREFIX}reputation_score_level": (reputation.get("score_level") or None),
             # GreyNoise Fields
             f"{ENRICHMENT_PREFIX}greynoise_actor": greynoise.get("actor") or None,
-            f"{ENRICHMENT_PREFIX}greynoise_classification": (
-                greynoise.get("classification") or None
-            ),
-            f"{ENRICHMENT_PREFIX}greynoise_last_observed": greynoise.get(
-                "last_observed_time"
-            ),
+            f"{ENRICHMENT_PREFIX}greynoise_classification": (greynoise.get("classification") or None),
+            f"{ENRICHMENT_PREFIX}greynoise_last_observed": greynoise.get("last_observed_time"),
             # IPInfo Fields
             f"{ENRICHMENT_PREFIX}privacy_tor": first_privacy.get("tor"),
             f"{ENRICHMENT_PREFIX}privacy_vpn": first_privacy.get("vpn"),
@@ -148,26 +120,23 @@ class HostEnrichmentDatamodel(BaseModel):
         return {
             f"{ENRICHMENT_PREFIX}mallory_name": first_observable.get("name"),
             f"{ENRICHMENT_PREFIX}mallory_type": first_observable.get("type"),
-            f"{ENRICHMENT_PREFIX}mallory_last_updated_at": self._get_latest_value(
-                [
-                    first_mallory.get("last_seen_at"),
-                    first_mallory.get("updated_at"),
-                    first_observable.get("updated_at"),
-                    first_opinion.get("updated_at"),
-                ]
-            ),
+            f"{ENRICHMENT_PREFIX}mallory_last_updated_at": self._get_latest_value([
+                first_mallory.get("last_seen_at"),
+                first_mallory.get("updated_at"),
+                first_observable.get("updated_at"),
+                first_opinion.get("updated_at"),
+            ]),
             f"{ENRICHMENT_PREFIX}mallory_description": (
-                first_observable.get("description")
-                or first_opinion.get("description")
+                first_observable.get("description") or first_opinion.get("description")
             ),
             f"{ENRICHMENT_PREFIX}mallory_verdict": first_opinion.get("verdict"),
             f"{ENRICHMENT_PREFIX}mallory_confidence": first_opinion.get("confidence"),
             f"{ENRICHMENT_PREFIX}mallory_source": (
-                first_opinion.get("source")
-                or first_opinion.get("reference_source_slug")
+                first_opinion.get("source") or first_opinion.get("reference_source_slug")
             ),
         }
 
-    def _get_latest_value(self, values: list[Any]) -> str | None:
-        values = [value for value in values if value]
-        return max(values) if values else None
+    def _get_latest_value(self, values: list[str | None]) -> str | None:
+        """Return the latest (greatest) non-empty timestamp string, or None."""
+        timestamps: list[str] = [value for value in values if value]
+        return max(timestamps) if timestamps else None

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
 from urllib.parse import quote
 
 from TIPCommon.types import SingleJson
@@ -415,7 +414,7 @@ class WebPropertyDatamodel(BaseModel):
 
         return {k: v for k, v in enrichment.items() if v is not None}
 
-    def _get_top_values(self, values: list[Any], max_count: int = 5) -> str | None:
+    def _get_top_values(self, values: list[object], max_count: int = 5) -> str | None:
         """
         Get top N unique values as comma-separated string.
 
@@ -452,7 +451,7 @@ class WebPropertyDatamodel(BaseModel):
 
         return ", ".join(unique_values) if unique_values else None
 
-    def _get_first_value(self, values: list[Any]) -> str | None:
+    def _get_first_value(self, values: list[object]) -> str | None:
         """
         Get first non-empty value from list.
 
@@ -517,7 +516,7 @@ class CertificateDatamodel(BaseModel):
 
         return enrichment
 
-    def _get_first_value(self, value_list: list[Any]) -> str | None:
+    def _get_first_value(self, value_list: list[object]) -> str | None:
         """
         Get first value from a list.
 

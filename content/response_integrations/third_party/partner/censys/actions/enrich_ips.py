@@ -127,7 +127,7 @@ def _build_output_message(
 
 
 @output_handler
-def main():
+def main() -> None:
     """
     Enrich IP entities with Censys host intelligence.
 

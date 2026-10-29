@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
+from TIPCommon.types import SingleJson
+
 from censys.core.constants import (
     REPUTATION_CLASS_PROBABILITIES_TABLE_NAME,
     REPUTATION_EVIDENCE_TABLE_NAME,
@@ -9,7 +11,7 @@ from censys.core.constants import (
 )
 from censys.core.reputation import ReputationTables
 
-SAMPLE_REPUTATION = {
+SAMPLE_REPUTATION: SingleJson = {
     "label": "SUSPICIOUS",
     "score": 0.666,
     "score_suppressed": False,
@@ -69,9 +71,7 @@ class TestReputationTables:
         tables.add_to_case_wall(mock_siemplify)
 
         assert mock_siemplify.result.add_data_table.call_count == 3
-        table_names = [
-            call.args[0] for call in mock_siemplify.result.add_data_table.call_args_list
-        ]
+        table_names = [call.args[0] for call in mock_siemplify.result.add_data_table.call_args_list]
         assert REPUTATION_SUMMARY_TABLE_NAME in table_names
         assert REPUTATION_CLASS_PROBABILITIES_TABLE_NAME in table_names
         assert REPUTATION_EVIDENCE_TABLE_NAME in table_names
@@ -94,7 +94,4 @@ class TestReputationTables:
         tables.add_to_case_wall(mock_siemplify)
 
         mock_siemplify.result.add_data_table.assert_called_once()
-        assert (
-            mock_siemplify.result.add_data_table.call_args.args[0]
-            == REPUTATION_SUMMARY_TABLE_NAME
-        )
+        assert mock_siemplify.result.add_data_table.call_args.args[0] == REPUTATION_SUMMARY_TABLE_NAME

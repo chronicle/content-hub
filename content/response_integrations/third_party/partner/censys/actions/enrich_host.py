@@ -35,7 +35,7 @@ from ..core.utils import (
     remove_ip_enrichment,
 )
 
-ACCOUNT_LEVEL_EXCEPTIONS = (
+ACCOUNT_LEVEL_EXCEPTIONS: tuple[type[Exception], ...] = (
     UnauthorizedErrorException,
     ForbiddenErrorException,
     FeatureNotEnabledException,
@@ -82,26 +82,21 @@ def _build_output_message(summary: EnrichmentSummary) -> str:
     message_parts: list[str] = []
 
     if summary.successful:
-        message_parts.append(
-            f"Successfully enriched {len(summary.successful)} host(s) from Censys."
-        )
+        message_parts.append(f"Successfully enriched {len(summary.successful)} host(s) from Censys.")
 
     if summary.invalid:
         message_parts.append(
-            f"{len(summary.invalid)} IP(s) skipped due to invalid format: "
-            f"{_format_entity_preview(summary.invalid)}"
+            f"{len(summary.invalid)} IP(s) skipped due to invalid format: {_format_entity_preview(summary.invalid)}"
         )
 
     if summary.not_found:
         message_parts.append(
-            f"{len(summary.not_found)} host(s) not found in Censys: "
-            f"{_format_entity_preview(summary.not_found)}"
+            f"{len(summary.not_found)} host(s) not found in Censys: {_format_entity_preview(summary.not_found)}"
         )
 
     if summary.failed:
         message_parts.append(
-            f"{len(summary.failed)} host(s) failed to process: "
-            f"{_format_entity_preview(summary.failed)}"
+            f"{len(summary.failed)} host(s) failed to process: {_format_entity_preview(summary.failed)}"
         )
 
     if not message_parts:
@@ -128,15 +123,10 @@ def _build_account_level_error_message(
     Returns:
         Formatted output message string
     """
-    message_parts: list[str] = [
-        COMMON_ACTION_ERROR_MESSAGE.format(ENRICH_HOST_SCRIPT_NAME, error)
-    ]
+    message_parts: list[str] = [COMMON_ACTION_ERROR_MESSAGE.format(ENRICH_HOST_SCRIPT_NAME, error)]
 
     if summary.successful:
-        message_parts.append(
-            f"{len(summary.successful)} host(s) were already enriched before this "
-            "occurred."
-        )
+        message_parts.append(f"{len(summary.successful)} host(s) were already enriched before this occurred.")
 
     if summary.skipped:
         message_parts.append(
@@ -182,9 +172,7 @@ class EnrichHost(Action):
 
     def __init__(self) -> None:
         super().__init__(ENRICH_HOST_SCRIPT_NAME)
-        self.error_output_message: str = (
-            f"Error while executing action {ENRICH_HOST_SCRIPT_NAME}."
-        )
+        self.error_output_message: str = f"Error while executing action {ENRICH_HOST_SCRIPT_NAME}."
         # The base class only sends the JSON result when it is non-empty, so
         # the disabled-toggle / no-entities / all-invalid paths send none. This
         # is intentional: the fallback condition in the Censys - Host Enrichment
@@ -214,9 +202,7 @@ class EnrichHost(Action):
         if not self.params.enable_new_api:
             return None
 
-        api_key, organization_id, verify_ssl = get_integration_params(
-            self.soar_action
-        )
+        api_key, organization_id, verify_ssl = get_integration_params(self.soar_action)
         return APIManager(
             api_key=api_key,
             organization_id=organization_id,
@@ -257,19 +243,13 @@ class EnrichHost(Action):
 
         if invalid_ips:
             self.summary.invalid.extend(invalid_ips)
-            self.logger.info(
-                f"Found {len(invalid_ips)} invalid IP(s): "
-                f"{_format_entity_preview(invalid_ips)}"
-            )
+            self.logger.info(f"Found {len(invalid_ips)} invalid IP(s): {_format_entity_preview(invalid_ips)}")
 
         return valid_ips
 
     def _fail_all_invalid(self) -> None:
         """Fail the action when none of the IP entities has a valid format."""
-        self.output_message = (
-            "No valid IP addresses to process. All "
-            f"{len(self.summary.invalid)} IP(s) are invalid."
-        )
+        self.output_message = f"No valid IP addresses to process. All {len(self.summary.invalid)} IP(s) are invalid."
         self.logger.error(self.output_message)
         self.result_value = False
         self.execution_state = ExecutionState.FAILED
@@ -301,9 +281,7 @@ class EnrichHost(Action):
             | set(self.summary.invalid)
         )
         self.summary.skipped.extend(
-            entity.identifier
-            for entity in self.ip_entities
-            if entity.identifier not in handled
+            entity.identifier for entity in self.ip_entities if entity.identifier not in handled
         )
 
     def _enrich_single_entity(self, entity: Entity) -> Exception | None:
@@ -342,21 +320,16 @@ class EnrichHost(Action):
             # step is configured with AutoSkipOnFailure, and result_value
             # stays false on this path, so the fallback condition to
             # Enrich Host - Get Host API still fires.
-            self.logger.error(
-                f"Account-level Censys API error on {identifier}: {e}"
-            )
+            self.logger.error(f"Account-level Censys API error on {identifier}: {e}")
             return e
 
         except Exception as e:
             self.logger.error(f"Failed to process {identifier}: {e}")
-            self.logger.exception(e)
             self.summary.failed.append(identifier)
 
         return None
 
-    def _apply_enrichment(
-        self, entity: Entity, host_model: HostEnrichmentDatamodel
-    ) -> None:
+    def _apply_enrichment(self, entity: Entity, host_model: HostEnrichmentDatamodel) -> None:
         """Apply enrichment data to an entity and record the outcome.
 
         Args:
@@ -382,17 +355,13 @@ class EnrichHost(Action):
             "Entity": identifier,
             "EntityResult": host_model.to_json(),
         })
-        self.reputation_tables.add(
-            identifier, host_model.host_data.get("reputation")
-        )
+        self.reputation_tables.add(identifier, host_model.host_data.get("reputation"))
         self.logger.info(f"Successfully enriched: {identifier}")
 
     def _set_final_result(self) -> None:
         """Set the output message, result value and execution state."""
         if self.account_level_error is not None:
-            self.output_message = _build_account_level_error_message(
-                self.account_level_error, self.summary
-            )
+            self.output_message = _build_account_level_error_message(self.account_level_error, self.summary)
             self.execution_state = ExecutionState.FAILED
             self.result_value = False
         else:

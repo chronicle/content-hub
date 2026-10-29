@@ -3,12 +3,13 @@ from __future__ import annotations
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
+from TIPCommon.types import SingleJson
 
 from censys.actions import enrich_host
 from censys.tests.common import CONFIG_PATH, REPUTATION_MULTI_IP_BATCH
 from censys.tests.conftest import CensysAPIManager
 
-SAMPLE_ENRICH_HOST_RESPONSE = {
+SAMPLE_ENRICH_HOST_RESPONSE: SingleJson = {
     "result": {
         "resource": {
             "ip": "8.8.8.8",
@@ -166,34 +167,32 @@ class TestEnrichHost:
         API response must flow through unchanged into the JSON case wall
         output (the full-fidelity surface alongside the new entity
         properties and data tables)."""
-        censys_manager.set_enrich_host_response(
-            {
-                "result": {
-                    "resource": {
-                        "ip": "1.1.4.3",
-                        "services": [],
-                        "reputation": {
-                            "label": "BENIGN",
-                            "score": 0.191,
-                            "score_suppressed": False,
-                            "class_probabilities": [
-                                {"label": "BENIGN", "probability": 0.6899},
-                            ],
-                            "evidence": [
-                                {
-                                    "feature": {
-                                        "id": "max_port",
-                                        "name": "Max Port",
-                                        "contribution": 0.047,
-                                        "category": "service_surface",
-                                    }
+        censys_manager.set_enrich_host_response({
+            "result": {
+                "resource": {
+                    "ip": "1.1.4.3",
+                    "services": [],
+                    "reputation": {
+                        "label": "BENIGN",
+                        "score": 0.191,
+                        "score_suppressed": False,
+                        "class_probabilities": [
+                            {"label": "BENIGN", "probability": 0.6899},
+                        ],
+                        "evidence": [
+                            {
+                                "feature": {
+                                    "id": "max_port",
+                                    "name": "Max Port",
+                                    "contribution": 0.047,
+                                    "category": "service_surface",
                                 }
-                            ],
-                        },
-                    }
+                            }
+                        ],
+                    },
                 }
             }
-        )
+        })
 
         enrich_host.main()
 
@@ -231,18 +230,16 @@ class TestEnrichHost:
         having no enrichment data at all, which would mask whether the null
         reputation itself was handled safely.
         """
-        censys_manager.set_enrich_host_response(
-            {
-                "result": {
-                    "resource": {
-                        "ip": "1.1.4.3",
-                        "location": {"country": "United States"},
-                        "services": [],
-                        "reputation": None,
-                    }
+        censys_manager.set_enrich_host_response({
+            "result": {
+                "resource": {
+                    "ip": "1.1.4.3",
+                    "location": {"country": "United States"},
+                    "services": [],
+                    "reputation": None,
                 }
             }
-        )
+        })
 
         enrich_host.main()
 
@@ -260,10 +257,7 @@ class TestEnrichHost:
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
-        assert (
-            "No ADDRESS type entities found in scope"
-            in action_output.results.output_message
-        )
+        assert "No ADDRESS type entities found in scope" in action_output.results.output_message
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -310,9 +304,7 @@ class TestEnrichHost:
 
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert (
-            "No valid IP addresses to process" in action_output.results.output_message
-        )
+        assert "No valid IP addresses to process" in action_output.results.output_message
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -330,9 +322,7 @@ class TestEnrichHost:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test host enrichment with API failure - reported as a per-entity failure."""
-        censys_manager.simulate_enrich_host_failure(
-            should_fail=True, exception_type="generic"
-        )
+        censys_manager.simulate_enrich_host_failure(should_fail=True, exception_type="generic")
 
         enrich_host.main()
 
@@ -357,9 +347,7 @@ class TestEnrichHost:
     ) -> None:
         """Test host enrichment with unauthorized error - broken credentials affect
         the whole integration, so this fails like every other action."""
-        censys_manager.simulate_enrich_host_failure(
-            should_fail=True, exception_type="unauthorized"
-        )
+        censys_manager.simulate_enrich_host_failure(should_fail=True, exception_type="unauthorized")
 
         enrich_host.main()
 
@@ -384,9 +372,7 @@ class TestEnrichHost:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test host enrichment when the account has no access to the new endpoint (403)."""
-        censys_manager.simulate_enrich_host_failure(
-            should_fail=True, exception_type="forbidden"
-        )
+        censys_manager.simulate_enrich_host_failure(should_fail=True, exception_type="forbidden")
 
         enrich_host.main()
 
@@ -411,9 +397,7 @@ class TestEnrichHost:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test host enrichment when the enrichment feature isn't enabled for the account tier (409)."""
-        censys_manager.simulate_enrich_host_failure(
-            should_fail=True, exception_type="feature_not_enabled"
-        )
+        censys_manager.simulate_enrich_host_failure(should_fail=True, exception_type="feature_not_enabled")
 
         enrich_host.main()
 
@@ -440,9 +424,7 @@ class TestEnrichHost:
         """Test host enrichment when the daily request quota is exhausted (429) -
         quota is integration-wide, not endpoint-specific, so this fails like
         every other action."""
-        censys_manager.simulate_enrich_host_failure(
-            should_fail=True, exception_type="rate_limit"
-        )
+        censys_manager.simulate_enrich_host_failure(should_fail=True, exception_type="rate_limit")
 
         enrich_host.main()
 
@@ -468,9 +450,7 @@ class TestEnrichHost:
     ) -> None:
         """A 404 from the API is 'not found', not a failure: result stays true so
         the playbook does not fall back and repeat the lookup."""
-        censys_manager.simulate_enrich_host_failure(
-            should_fail=True, exception_type="not_found"
-        )
+        censys_manager.simulate_enrich_host_failure(should_fail=True, exception_type="not_found")
 
         enrich_host.main()
 
@@ -594,9 +574,7 @@ class TestEnrichHost:
         # The IP that triggered the account-level error (1.1.1.1) and the one
         # after it (9.9.9.9, never attempted) both land in "skipped" - neither
         # got a clean success/not_found/failed outcome.
-        assert "2 host(s) were not attempted and were skipped" in (
-            action_output.results.output_message
-        )
+        assert "2 host(s) were not attempted and were skipped" in (action_output.results.output_message)
         assert "1.1.1.1" in action_output.results.output_message
         assert "9.9.9.9" in action_output.results.output_message
 
@@ -633,9 +611,7 @@ class TestEnrichHost:
                 }
             },
         )
-        censys_manager.set_enrich_host_response_for_ip(
-            "1.1.1.1", {"result": {"resource": {}}}
-        )
+        censys_manager.set_enrich_host_response_for_ip("1.1.1.1", {"result": {"resource": {}}})
 
         enrich_host.main()
 
@@ -665,9 +641,7 @@ class TestEnrichHost:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test that the action short-circuits when the new API is disabled for this instance."""
-        censys_manager.set_enrich_host_response(
-            {"result": {"resource": {"ip": "8.8.8.8", "services": []}}}
-        )
+        censys_manager.set_enrich_host_response({"result": {"resource": {"ip": "8.8.8.8", "services": []}}})
 
         enrich_host.main()
 
@@ -739,15 +713,9 @@ class TestEnrichHostMultiIpMixedReputationBatch:
         action_output: MockActionOutput,
         censys_manager: CensysAPIManager,
     ) -> None:
-        censys_manager.set_enrich_host_response_for_ip(
-            "198.51.100.1", REPUTATION_MULTI_IP_BATCH["ip_a_full"]
-        )
-        censys_manager.set_enrich_host_response_for_ip(
-            "198.51.100.2", REPUTATION_MULTI_IP_BATCH["ip_b_missing_fields"]
-        )
-        censys_manager.set_enrich_host_response_for_ip(
-            "198.51.100.3", REPUTATION_MULTI_IP_BATCH["ip_c_no_reputation"]
-        )
+        censys_manager.set_enrich_host_response_for_ip("198.51.100.1", REPUTATION_MULTI_IP_BATCH["ip_a_full"])
+        censys_manager.set_enrich_host_response_for_ip("198.51.100.2", REPUTATION_MULTI_IP_BATCH["ip_b_missing_fields"])
+        censys_manager.set_enrich_host_response_for_ip("198.51.100.3", REPUTATION_MULTI_IP_BATCH["ip_c_no_reputation"])
         censys_manager.set_enrich_host_response_for_ip(
             "198.51.100.4", REPUTATION_MULTI_IP_BATCH["ip_d_null_reputation"]
         )
@@ -759,10 +727,7 @@ class TestEnrichHostMultiIpMixedReputationBatch:
         assert "Successfully enriched 4 host(s)" in action_output.results.output_message
 
         json_result = action_output.results.json_output.json_result
-        entities_by_ip = {
-            entry["Entity"]: entry["EntityResult"]["result"]["resource"]
-            for entry in json_result
-        }
+        entities_by_ip = {entry["Entity"]: entry["EntityResult"]["result"]["resource"] for entry in json_result}
         assert set(entities_by_ip) == {
             "198.51.100.1",
             "198.51.100.2",

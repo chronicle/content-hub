@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Optional
 from unittest.mock import MagicMock
 
 import pytest
 import requests
+from TIPCommon.types import SingleJson
 
 pytest_plugins = ("integration_testing.conftest",)
 
@@ -102,12 +103,12 @@ class CensysAPIManager:
         """Set enrich hosts response."""
         self.enrich_hosts_response = response
 
-    def set_enrich_host_response(self, response: dict[str, Any]) -> None:
+    def set_enrich_host_response(self, response: SingleJson) -> None:
         """Set enrich host (single host enrichment endpoint) response."""
         self.enrich_host_response = response
 
     def set_enrich_host_response_for_ip(
-        self, ip: str, response: dict[str, Any]
+        self, ip: str, response: SingleJson
     ) -> None:
         """Set enrich host response for a specific IP address (per-IP endpoint)."""
         self.enrich_host_responses_by_ip[ip] = response
@@ -273,7 +274,7 @@ class CensysAPIManager:
             self._raise_exception()
         return self.enrich_hosts_response or {"result": []}
 
-    def get_host_enrichment(self, host_ip: str) -> dict[str, Any]:
+    def get_host_enrichment(self, host_ip: str) -> SingleJson:
         """Mock get_host_enrichment method."""
         if self.should_fail_enrich_host:
             self._raise_exception()
@@ -514,7 +515,7 @@ def convert_entities(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(autouse=True)
-def mock_siemplify_methods(monkeypatch: pytest.MonkeyPatch):
+def mock_siemplify_methods(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock Siemplify methods that are not provided by integration_testing framework."""
     mock_update = MagicMock(return_value=None)
     # Mock get_system_version to prevent API calls during APIManager initialization

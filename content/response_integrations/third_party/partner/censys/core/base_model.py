@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from TIPCommon.types import SingleJson
 
 
@@ -52,7 +50,7 @@ class BaseModel(object):
         """
         return [self.raw_data] if self.raw_data else []
 
-    def _get_top_values(self, values: list[Any], max_count: int = 5) -> str | None:
+    def _get_top_values(self, values: list[object], max_count: int = 5) -> str | None:
         """
         Get top N unique values as comma-separated string.
 
