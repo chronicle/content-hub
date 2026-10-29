@@ -63,7 +63,7 @@ def mock_siemplify(
     mock_api.target_entities = []
     mock_api.end.side_effect = action_output.set_output
 
-    actions = ["SearchForScans", "UrlCheck"]
+    actions = ["GetScanFullDetails", "Ping", "SearchForScans", "UrlCheck"]
     for action in actions:
         monkeypatch.setattr(
             f"url_scan_io.actions.{action}.SiemplifyAction",
@@ -72,8 +72,8 @@ def mock_siemplify(
 
     def mock_extract_conf_param(
         siemplify: Any,
-        provider_name: str,
-        **kwargs,
+        provider_name: str = "",
+        **kwargs: Any,
     ) -> Any:
         """
         Mock implementation of extract_configuration_param
@@ -91,8 +91,8 @@ def mock_siemplify(
 
     def mock_extract_action_param(
         siemplify: Any,
-        param_name: str,
-        **kwargs,
+        param_name: str = "",
+        **kwargs: Any,
     ) -> Any:
         _ = siemplify
         default_value = kwargs.get("default_value")
@@ -103,17 +103,17 @@ def mock_siemplify(
 
         return default_value
 
-    monkeypatch.setattr(
-        "url_scan_io.actions."
-        "SearchForScans.extract_configuration_param",
-        mock_extract_conf_param
-    )
+    for action in ["GetScanFullDetails", "Ping", "SearchForScans", "UrlCheck"]:
+        monkeypatch.setattr(
+            f"url_scan_io.actions.{action}.extract_configuration_param",
+            mock_extract_conf_param,
+        )
 
-    monkeypatch.setattr(
-        "url_scan_io.actions."
-        "SearchForScans.extract_action_param",
-        mock_extract_action_param
-    )
+    for action in ["GetScanFullDetails", "SearchForScans", "UrlCheck"]:
+        monkeypatch.setattr(
+            f"url_scan_io.actions.{action}.extract_action_param",
+            mock_extract_action_param,
+        )
 
     yield mock_api  # pylint: disable=W0101
 
