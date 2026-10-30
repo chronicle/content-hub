@@ -1632,6 +1632,30 @@ class OnePlatformSoarApi(BaseSoarApi):
             if collection == "actions" and ("scriptResultName" in data or "ScriptResultName" in data):
                 patch_payload["scriptResultName"] = data.get("scriptResultName") or data.get("ScriptResultName")
                 update_mask.append("scriptResultName")
+            elif collection == "connectors":
+                event_field = (
+                    data.get("eventFieldName")
+                    or data.get("EventFieldName")
+                    or data.get("eventNameField")
+                    or data.get("EventNameField")
+                )
+                if event_field:
+                    patch_payload["eventFieldName"] = event_field
+                    update_mask.append("eventFieldName")
+                product_field = (
+                    data.get("productFieldName")
+                    or data.get("ProductFieldName")
+                    or data.get("deviceProductField")
+                    or data.get("DeviceProductField")
+                )
+                if product_field:
+                    patch_payload["productFieldName"] = product_field
+                    update_mask.append("productFieldName")
+                if "rules" in data or "Rules" in data:
+                    patch_payload["rules"] = (
+                        data.get("rules") or data.get("Rules") or []
+                    )
+                    update_mask.append("rules")
 
             return self._make_request(
                 HttpMethod.PATCH,
@@ -1658,6 +1682,23 @@ class OnePlatformSoarApi(BaseSoarApi):
                 or data.get("ScriptResultName")
                 or "ScriptResult"
             )
+        elif collection == "connectors":
+            new_payload["eventFieldName"] = (
+                data.get("eventFieldName")
+                or data.get("EventFieldName")
+                or data.get("eventNameField")
+                or data.get("EventNameField")
+                or "name"
+            )
+            new_payload["productFieldName"] = (
+                data.get("productFieldName")
+                or data.get("ProductFieldName")
+                or data.get("deviceProductField")
+                or data.get("DeviceProductField")
+                or "device_product"
+            )
+            if "rules" in data or "Rules" in data:
+                new_payload["rules"] = data.get("rules") or data.get("Rules") or []
         legacy_params = data.get("Parameters") or data.get("parameters") or []
         converted_params = []
         for lp in legacy_params:
