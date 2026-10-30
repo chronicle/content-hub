@@ -116,9 +116,9 @@ def add_missing_schema_namespaces(script_text: str, logger: Any = None) -> str:
             try:
                 ET.fromstring(script_text)
             except ET.ParseError as retry_err:
-                raise ValueError(f"Script Content contains invalid XML: {retry_err}") from retry_err
+                raise ValueError(f"Script Content contains invalid XML: {retry_err}.") from retry_err
         else:
-            raise ValueError(f"Script Content contains invalid XML: {xml_err}") from xml_err
+            raise ValueError(f"Script Content contains invalid XML: {xml_err}.") from xml_err
 
     return script_text
 
@@ -231,7 +231,7 @@ def main() -> None:
             try:
                 host_set_id = int(str(host_set_id_param).strip())
             except ValueError as val_err:
-                raise ValueError(f"Host Set ID must be an integer, got: {host_set_id_param}") from val_err
+                raise ValueError(f"Host Set ID must be an integer, got: {host_set_id_param}.") from val_err
         elif host_set_name and host_set_name.strip():
             resolved_id = manager.get_host_set_id_by_name(host_set_name.strip())
             if resolved_id is None:
@@ -249,11 +249,11 @@ def main() -> None:
 
         bulk_id = acquisition_data.get("_id")
         if bulk_id is None:
-            raise FireEyeHXManagerError(f"Response missing '_id': {acquisition_data}")
+            raise FireEyeHXManagerError("FireEye HX did not return a bulk acquisition ID.")
         state = acquisition_data.get("state", "UNKNOWN")
         result_value = str(bulk_id)
         siemplify.result.add_result_json(acquisition_data)
-        output_message = f"Successfully created bulk acquisition {bulk_id}. State: {state}"
+        output_message = f"Successfully created bulk acquisition {bulk_id}. State: {state}."
 
     except Exception as err:
         output_message = f"Error executing {SCRIPT_NAME}: {err}"
