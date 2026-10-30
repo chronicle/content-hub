@@ -12,26 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pathlib
-import sys
-import soar_sdk
-
-for _path in (
-    pathlib.Path(__file__).parents[2],
-    pathlib.Path(soar_sdk.__file__).parent,
-):
-    if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
-
-from trend_micro_ddan.core import TrendMicroDDANExceptions
-from trend_micro_ddan.core.TrendMicroDDANManager import TrendMicroDDANManager
-from trend_micro_ddan.core.TrendMicroDDANExceptions import TrendMicroDDANException
 from unittest.mock import Mock
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 import requests
-
-sys.modules["TrendMicroDDANExceptions"] = TrendMicroDDANExceptions
+from trend_micro_ddan.core.TrendMicroDDANManager import TrendMicroDDANManager
+from trend_micro_ddan.core.TrendMicroDDANExceptions import TrendMicroDDANException
 
 
 @pytest.fixture
