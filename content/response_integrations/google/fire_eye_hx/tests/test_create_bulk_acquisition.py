@@ -14,8 +14,14 @@
 
 from __future__ import annotations
 
+from base64 import b64decode
 import unittest
 from unittest.mock import patch
+
+from soar_sdk.ScriptResult import (
+    EXECUTION_STATE_COMPLETED,
+    EXECUTION_STATE_FAILED,
+)
 
 from ..actions import CreateBulkAcquisition as create_module
 
@@ -72,7 +78,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_siemplify.end.assert_called_once_with(
             "Successfully created bulk acquisition 101. State: RUNNING",
             "101",
-            0,
+            EXECUTION_STATE_COMPLETED,
         )
 
     @patch.object(create_module, "FireEyeHXManager")
@@ -115,7 +121,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_siemplify.end.assert_called_once_with(
             "Successfully created bulk acquisition 102. State: QUEUED",
             "102",
-            0,
+            EXECUTION_STATE_COMPLETED,
         )
 
     @patch.object(create_module, "FireEyeHXManager")
@@ -148,7 +154,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         end_call = mock_siemplify.end.call_args[0]
         assert "Agent IDs must contain at least one agent ID" in end_call[0]
         assert end_call[1] == "false"
-        assert end_call[2] == 2
+        assert end_call[2] == EXECUTION_STATE_FAILED
 
     @patch.object(create_module, "FireEyeHXManager")
     @patch.object(create_module, "extract_action_param")
@@ -184,7 +190,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         end_call = mock_siemplify.end.call_args[0]
         assert "Provide Agent IDs, Host Set ID or Host Set Name" in end_call[0]
         assert end_call[1] == "false"
-        assert end_call[2] == 2
+        assert end_call[2] == EXECUTION_STATE_FAILED
 
     @patch.object(create_module, "FireEyeHXManager")
     @patch.object(create_module, "extract_action_param")
@@ -216,7 +222,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         end_call = mock_siemplify.end.call_args[0]
         assert "Timeframe Start must be a valid ISO timestamp" in end_call[0]
         assert end_call[1] == "false"
-        assert end_call[2] == 2
+        assert end_call[2] == EXECUTION_STATE_FAILED
 
     @patch.object(create_module, "FireEyeHXManager")
     @patch.object(create_module, "extract_action_param")
@@ -248,7 +254,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         end_call = mock_siemplify.end.call_args[0]
         assert "Timeframe Stop must be a valid ISO timestamp" in end_call[0]
         assert end_call[1] == "false"
-        assert end_call[2] == 2
+        assert end_call[2] == EXECUTION_STATE_FAILED
 
     @patch.object(create_module, "FireEyeHXManager")
     @patch.object(create_module, "extract_action_param")
@@ -261,8 +267,6 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_extract_action,
         mock_manager_cls,
     ) -> None:
-        from base64 import b64decode
-
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
         mock_manager.create_bulk_acquisition.return_value = {"_id": 103, "state": "RUNNING"}
@@ -317,7 +321,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         end_call = mock_siemplify.end.call_args[0]
         assert "invalid XML" in end_call[0]
         assert end_call[1] == "false"
-        assert end_call[2] == 2
+        assert end_call[2] == EXECUTION_STATE_FAILED
 
     @patch.object(create_module, "FireEyeHXManager")
     @patch.object(create_module, "extract_action_param")
@@ -330,8 +334,6 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_extract_action,
         mock_manager_cls,
     ) -> None:
-        from base64 import b64decode
-
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
         mock_manager.create_bulk_acquisition.return_value = {"_id": 104, "state": "RUNNING"}
@@ -355,7 +357,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_siemplify.end.assert_called_once_with(
             "Successfully created bulk acquisition 104. State: RUNNING",
             "104",
-            0,
+            EXECUTION_STATE_COMPLETED,
         )
 
     @patch.object(create_module, "FireEyeHXManager")
@@ -369,8 +371,6 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_extract_action,
         mock_manager_cls,
     ) -> None:
-        from base64 import b64decode
-
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
         mock_manager.create_bulk_acquisition.return_value = {"_id": 105, "state": "RUNNING"}
@@ -396,7 +396,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_siemplify.end.assert_called_once_with(
             "Successfully created bulk acquisition 105. State: RUNNING",
             "105",
-            0,
+            EXECUTION_STATE_COMPLETED,
         )
 
     @patch.object(create_module, "FireEyeHXManager")
@@ -427,7 +427,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         end_call = mock_siemplify.end.call_args[0]
         assert "Script Content must not be empty" in end_call[0]
         assert end_call[1] == "false"
-        assert end_call[2] == 2
+        assert end_call[2] == EXECUTION_STATE_FAILED
 
     @patch.object(create_module, "FireEyeHXManager")
     @patch.object(create_module, "extract_action_param")
@@ -460,7 +460,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         end_call = mock_siemplify.end.call_args[0]
         assert "Response missing '_id'" in end_call[0]
         assert end_call[1] == "false"
-        assert end_call[2] == 2
+        assert end_call[2] == EXECUTION_STATE_FAILED
 
 
 if __name__ == "__main__":

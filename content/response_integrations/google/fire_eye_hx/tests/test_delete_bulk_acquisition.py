@@ -17,6 +17,11 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
+from soar_sdk.ScriptResult import (
+    EXECUTION_STATE_COMPLETED,
+    EXECUTION_STATE_FAILED,
+)
+
 from ..actions import DeleteBulkAcquisition as delete_module
 
 
@@ -48,7 +53,7 @@ class TestDeleteBulkAcquisition(unittest.TestCase):
         mock_siemplify.end.assert_called_once_with(
             "Successfully deleted bulk acquisition 42.",
             "true",
-            0,
+            EXECUTION_STATE_COMPLETED,
         )
 
     @patch.object(delete_module, "FireEyeHXManager")
@@ -79,7 +84,7 @@ class TestDeleteBulkAcquisition(unittest.TestCase):
         end_call = mock_siemplify.end.call_args[0]
         assert "must not be empty" in end_call[0]
         assert end_call[1] == "false"
-        assert end_call[2] == 2
+        assert end_call[2] == EXECUTION_STATE_FAILED
 
     @patch.object(delete_module, "FireEyeHXManager")
     @patch.object(delete_module, "extract_action_param")
@@ -109,7 +114,7 @@ class TestDeleteBulkAcquisition(unittest.TestCase):
         end_call = mock_siemplify.end.call_args[0]
         assert "must be a number" in end_call[0]
         assert end_call[1] == "false"
-        assert end_call[2] == 2
+        assert end_call[2] == EXECUTION_STATE_FAILED
 
 
 if __name__ == "__main__":
