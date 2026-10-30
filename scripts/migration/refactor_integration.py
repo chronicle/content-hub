@@ -340,7 +340,7 @@ class ExpressionTransformer(cst.CSTTransformer):
         if isinstance(updated_node.value, cst.Name) and updated_node.value.value == "Integrations":
             if isinstance(updated_node.attr, cst.Name):
                 target_snake = str_to_snake_case(updated_node.attr.value)
-                if target_snake in ["akamai", "http", "twilio"]:
+                if target_snake in ["akamai", "csv", "http", "twilio"]:
                     target_snake += "_integration"
                 return cst.Name(target_snake)
 
@@ -355,7 +355,7 @@ class ExpressionTransformer(cst.CSTTransformer):
             ):
                 if isinstance(updated_node.attr, cst.Name):
                     target_snake = str_to_snake_case(updated_node.attr.value)
-                    if target_snake in ["akamai", "http", "twilio"]:
+                    if target_snake in ["akamai", "csv", "http", "twilio"]:
                         target_snake += "_integration"
                     return cst.parse_expression(f"{target_snake}.tests")
 
@@ -383,7 +383,7 @@ class ImportTransformer(cst.CSTTransformer):
                 int_name = parts[1]
                 target_snake = str_to_snake_case(int_name)
                 # Apply _integration suffix if it's one of the known collision cases
-                if target_snake in ["akamai", "http", "twilio"]:
+                if target_snake in ["akamai", "csv", "http", "twilio"]:
                     target_snake += "_integration"
                 
                 remaining = parts[2:]
@@ -398,7 +398,7 @@ class ImportTransformer(cst.CSTTransformer):
             if len(parts) > 2:
                 int_name = parts[2]
                 target_snake = str_to_snake_case(int_name)
-                if target_snake in ["akamai", "http", "twilio"]:
+                if target_snake in ["akamai", "csv", "http", "twilio"]:
                     target_snake += "_integration"
                 
                 return ".".join([target_snake, "tests"] + parts[3:])
@@ -947,7 +947,7 @@ class IntegrationRefactorer:
         
         # Only use folder suffix if absolutely necessary to avoid library collision
         # http and twilio are already in the marketplace with the suffix
-        if deconstructed_name in ["akamai", "http", "twilio"]:
+        if deconstructed_name in ["akamai", "csv", "http", "twilio"]:
              deconstructed_name += "_integration"
 
         deconstructed_path = self.dst_path / deconstructed_name

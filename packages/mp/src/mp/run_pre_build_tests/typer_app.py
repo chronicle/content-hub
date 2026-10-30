@@ -279,8 +279,16 @@ def _get_mp_paths_from_names(
 
     for path in marketplace_paths:
         for name in names:
-            if isinstance(name, str) and (p := path / name).exists():
-                results.add(p)
+            if isinstance(name, str):
+                if (p := path / name).exists():
+                    results.add(p)
+
+                suffixed_name: str = f"{name}_integration"
+                if (
+                    suffixed_name in mp.core.constants.INTEGRATIONS_WITH_INTEGRATION_SUFFIX
+                    and (p := path / suffixed_name).exists()
+                ):
+                    results.add(p)
 
             elif isinstance(name, pathlib.Path) and name.exists():
                 results.add(name)
