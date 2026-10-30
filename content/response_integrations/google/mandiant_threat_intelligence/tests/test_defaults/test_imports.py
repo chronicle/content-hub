@@ -17,7 +17,7 @@ from __future__ import annotations
 import importlib
 import pathlib
 
-from mandiant_threat_intelligence.tests import common
+INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent.parent
 
 
 VALID_SUFFIXES = (".py",)
@@ -54,4 +54,4 @@ def _get_import_string(integration: str, package: str, module: str) -> str:
 
 
 def test_imports() -> None:
-    import_all_integration_modules(common.INTEGRATION_PATH)
+    import_all_integration_modules(INTEGRATION_PATH)
