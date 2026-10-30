@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import get_siemplify_user_details
@@ -22,24 +23,41 @@ ACTION_NAME = "GetSiemplifyUsers"
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = ACTION_NAME
 
-    hide_disabled = siemplify.parameters.get("Hide Disabled Users").lower() == "true"
-    siemplify_users = get_siemplify_user_details(
-        chronicle_soar=siemplify,
-        search_term="",
-        filter_by_role=False,
-        requested_page=0,
-        page_size=1000,
-        should_hide_disabled_users=hide_disabled,
-    )
-    siemplify.result.add_result_json(
-        {"siemplifyUsers": [s_user.to_json() for s_user in siemplify_users]},
-    )
-    output_message = "Returned Siemplify Users."
-    siemplify.end(output_message, True)
+    status = EXECUTION_STATE_COMPLETED
+    result_value = True
+
+    try:
+        hide_disabled = siemplify.extract_action_param(
+            param_name="Hide Disabled Users",
+            default_value=True,
+            input_type=bool,
+            print_value=True,
+        )
+        siemplify_users = get_siemplify_user_details(
+            chronicle_soar=siemplify,
+            search_term="",
+            filter_by_role=False,
+            requested_page=0,
+            page_size=1000,
+            should_hide_disabled_users=hide_disabled,
+        )
+        siemplify.result.add_result_json(
+            {"siemplifyUsers": [s_user.to_json() for s_user in siemplify_users]},
+        )
+        output_message = "Returned Siemplify Users."
+
+    except Exception as e:
+        output_message = f"Error executing action '{ACTION_NAME}'. Reason: {e}"
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
+        result_value = False
+        status = EXECUTION_STATE_FAILED
+
+    siemplify.end(output_message, result_value, status)
 
 
 if __name__ == "__main__":
