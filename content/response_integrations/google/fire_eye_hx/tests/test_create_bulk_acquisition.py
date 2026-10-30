@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from base64 import b64decode
+import json
 import unittest
 from unittest.mock import patch
 
@@ -459,6 +460,156 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_siemplify.end.assert_called_once()
         end_call = mock_siemplify.end.call_args[0]
         assert "FireEye HX did not return a bulk acquisition ID." in end_call[0]
+        assert end_call[1] == "false"
+        assert end_call[2] == EXECUTION_STATE_FAILED
+
+    @patch.object(create_module, "FireEyeHXManager")
+    @patch.object(create_module, "extract_action_param")
+    @patch.object(create_module, "extract_configuration_param")
+    @patch.object(create_module, "SiemplifyAction")
+    def test_create_bulk_acquisition_json_script_success(
+        self,
+        mock_siemplify_action,
+        mock_extract_config,
+        mock_extract_action,
+        mock_manager_cls,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+        mock_manager.create_bulk_acquisition.return_value = {"_id": 201, "state": "RUNNING"}
+
+        json_script = '{"commands": [{"type": "fileCollection", "path": "/tmp/test"}]}'
+
+        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+            if param_name == "Script Content":
+                return json_script
+            if param_name == "Agent IDs":
+                return "agent-100"
+            return kwargs.get("default_value")
+
+        mock_extract_action.side_effect = extract_action_param_side_effect
+
+        create_module.main()
+
+        mock_manager.create_bulk_acquisition.assert_called_once()
+        call_kwargs = mock_manager.create_bulk_acquisition.call_args[1]
+        decoded = b64decode(call_kwargs["script_b64"]).decode("utf-8")
+        assert json.loads(decoded) == {"commands": [{"type": "fileCollection", "path": "/tmp/test"}]}
+        mock_siemplify.end.assert_called_once_with(
+            "Successfully created bulk acquisition 201. State: RUNNING.",
+            "201",
+            EXECUTION_STATE_COMPLETED,
+        )
+
+    @patch.object(create_module, "FireEyeHXManager")
+    @patch.object(create_module, "extract_action_param")
+    @patch.object(create_module, "extract_configuration_param")
+    @patch.object(create_module, "SiemplifyAction")
+    def test_create_bulk_acquisition_json_script_with_interval_macros(
+        self,
+        mock_siemplify_action,
+        mock_extract_config,
+        mock_extract_action,
+        mock_manager_cls,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+        mock_manager.create_bulk_acquisition.return_value = {"_id": 202, "state": "RUNNING"}
+
+        json_script = '{"timeframe": {"start": "__INTERVAL_START__", "stop": "__INTERVAL_STOP__"}}'
+
+        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+            if param_name == "Script Content":
+                return json_script
+            if param_name == "Agent IDs":
+                return "agent-100"
+            if param_name == "Timeframe Start":
+                return "2026-10-25T01:00:00"
+            if param_name == "Timeframe Stop":
+                return "2026-10-25T23:00:00"
+            return kwargs.get("default_value")
+
+        mock_extract_action.side_effect = extract_action_param_side_effect
+
+        create_module.main()
+
+        call_kwargs = mock_manager.create_bulk_acquisition.call_args[1]
+        decoded = b64decode(call_kwargs["script_b64"]).decode("utf-8")
+        parsed = json.loads(decoded)
+        assert parsed["timeframe"]["start"] == "2026-10-25T01:00:00"
+        assert parsed["timeframe"]["stop"] == "2026-10-25T23:00:00"
+        mock_siemplify.end.assert_called_once_with(
+            "Successfully created bulk acquisition 202. State: RUNNING.",
+            "202",
+            EXECUTION_STATE_COMPLETED,
+        )
+
+    @patch.object(create_module, "FireEyeHXManager")
+    @patch.object(create_module, "extract_action_param")
+    @patch.object(create_module, "extract_configuration_param")
+    @patch.object(create_module, "SiemplifyAction")
+    def test_create_bulk_acquisition_json_script_python_wrapper_cleanup(
+        self,
+        mock_siemplify_action,
+        mock_extract_config,
+        mock_extract_action,
+        mock_manager_cls,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+        mock_manager.create_bulk_acquisition.return_value = {"_id": 203, "state": "RUNNING"}
+
+        wrapped_json = 'SCRIPT_JSON = """{"commands": [{"type": "processList"}]}"""'
+
+        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+            if param_name == "Script Content":
+                return wrapped_json
+            if param_name == "Agent IDs":
+                return "agent-100"
+            return kwargs.get("default_value")
+
+        mock_extract_action.side_effect = extract_action_param_side_effect
+
+        create_module.main()
+
+        call_kwargs = mock_manager.create_bulk_acquisition.call_args[1]
+        decoded = b64decode(call_kwargs["script_b64"]).decode("utf-8")
+        assert json.loads(decoded) == {"commands": [{"type": "processList"}]}
+        mock_siemplify.end.assert_called_once_with(
+            "Successfully created bulk acquisition 203. State: RUNNING.",
+            "203",
+            EXECUTION_STATE_COMPLETED,
+        )
+
+    @patch.object(create_module, "FireEyeHXManager")
+    @patch.object(create_module, "extract_action_param")
+    @patch.object(create_module, "extract_configuration_param")
+    @patch.object(create_module, "SiemplifyAction")
+    def test_create_bulk_acquisition_invalid_json_failure(
+        self,
+        mock_siemplify_action,
+        mock_extract_config,
+        mock_extract_action,
+        mock_manager_cls,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+
+        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+            if param_name == "Script Content":
+                return '{"commands": [invalid_json'
+            if param_name == "Agent IDs":
+                return "agent-100"
+            return kwargs.get("default_value")
+
+        mock_extract_action.side_effect = extract_action_param_side_effect
+
+        create_module.main()
+
+        mock_manager.create_bulk_acquisition.assert_not_called()
+        mock_siemplify.end.assert_called_once()
+        end_call = mock_siemplify.end.call_args[0]
+        assert "Script Content contains invalid JSON" in end_call[0]
         assert end_call[1] == "false"
         assert end_call[2] == EXECUTION_STATE_FAILED
 

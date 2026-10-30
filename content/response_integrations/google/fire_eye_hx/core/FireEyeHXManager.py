@@ -959,7 +959,7 @@ class FireEyeHXManager:
         """Create a bulk acquisition across endpoints.
 
         Args:
-            script_b64: Base64-encoded XML script.
+            script_b64: Base64-encoded XML or JSON script.
             host_set_id: Optional host set numeric ID.
             agent_ids: Optional list of target agent IDs.
             comment: Optional audit comment.

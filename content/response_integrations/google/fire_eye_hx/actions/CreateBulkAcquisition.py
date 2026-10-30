@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from base64 import b64encode
 from datetime import datetime, timedelta, timezone
+import json
 from typing import Any
 import xml.etree.ElementTree as ET
 
@@ -42,6 +43,53 @@ SCRIPT_NAME = "Create Bulk Acquisition"
 DEFAULT_HOST_SET_NAME = "all_hosts"
 DEFAULT_COMMENT = "Created by Google SecOps"
 SCHEMA_NAMESPACES = 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"'
+
+
+def is_json_script(script_content: str) -> bool:
+    """Check if script content appears to be a JSON script."""
+    stripped = script_content.strip()
+    if stripped.startswith(("{", "[")):
+        return True
+    if "<script" not in stripped and "<?xml" not in stripped and not stripped.startswith("<"):
+        if ("{" in stripped and "}" in stripped) or ("[" in stripped and "]" in stripped):
+            return True
+    return False
+
+
+def extract_script_json(script_content: str, logger: Any = None) -> str:
+    """Extract JSON script from string, trimming Python assignment/wrapper if present."""
+    if not script_content or not script_content.strip():
+        raise ValueError("Script Content must not be empty.")
+
+    script_text = script_content.strip()
+    if script_text.startswith(("{", "[")):
+        return script_text
+
+    if "{" in script_text and "}" in script_text:
+        start_idx = script_text.find("{")
+        end_idx = script_text.rfind("}")
+        candidate = script_text[start_idx : end_idx + 1]
+        if logger and len(candidate) < len(script_text):
+            logger.info("Trimmed Python wrapper / assignment from Script Content JSON.")
+        return candidate
+    elif "[" in script_text and "]" in script_text:
+        start_idx = script_text.find("[")
+        end_idx = script_text.rfind("]")
+        candidate = script_text[start_idx : end_idx + 1]
+        if logger and len(candidate) < len(script_text):
+            logger.info("Trimmed Python wrapper / assignment from Script Content JSON.")
+        return candidate
+
+    return script_text
+
+
+def validate_json_script(script_text: str) -> str:
+    """Validate JSON script syntax."""
+    try:
+        json.loads(script_text)
+    except Exception as json_err:
+        raise ValueError(f"Script Content contains invalid JSON: {json_err}.") from json_err
+    return script_text
 
 
 def extract_script_xml(script_content: str, logger: Any = None) -> str:
@@ -205,9 +253,17 @@ def main() -> None:
     manager = None
 
     try:
-        script_text = extract_script_xml(script_content, siemplify.LOGGER)
-        script_text = substitute_interval_macros(script_text, timeframe_start, timeframe_stop)
-        script_text = add_missing_schema_namespaces(script_text, siemplify.LOGGER)
+        if not script_content or not script_content.strip():
+            raise ValueError("Script Content must not be empty.")
+
+        if is_json_script(script_content):
+            script_text = extract_script_json(script_content, siemplify.LOGGER)
+            script_text = substitute_interval_macros(script_text, timeframe_start, timeframe_stop)
+            script_text = validate_json_script(script_text)
+        else:
+            script_text = extract_script_xml(script_content, siemplify.LOGGER)
+            script_text = substitute_interval_macros(script_text, timeframe_start, timeframe_stop)
+            script_text = add_missing_schema_namespaces(script_text, siemplify.LOGGER)
 
         script_b64 = b64encode(script_text.encode("utf-8")).decode("utf-8")
 
