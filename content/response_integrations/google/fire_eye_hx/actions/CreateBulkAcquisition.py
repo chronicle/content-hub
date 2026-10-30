@@ -32,6 +32,7 @@ from TIPCommon import (
 
 from ..core.FireEyeHXManager import (
     FireEyeHXManager,
+    FireEyeHXManagerError,
     FireEyeHXNotFoundError,
 )
 from ..core.UtilsManager import convert_comma_separated_to_list
@@ -247,8 +248,10 @@ def main() -> None:
         )
 
         bulk_id = acquisition_data.get("_id")
+        if bulk_id is None:
+            raise FireEyeHXManagerError(f"Response missing '_id': {acquisition_data}")
         state = acquisition_data.get("state", "UNKNOWN")
-        result_value = str(bulk_id) if bulk_id is not None else "true"
+        result_value = str(bulk_id)
         siemplify.result.add_result_json(acquisition_data)
         output_message = f"Successfully created bulk acquisition {bulk_id}. State: {state}"
 

@@ -397,6 +397,39 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         assert end_call[1] == "false"
         assert end_call[2] == 2
 
+    @patch.object(create_module, "FireEyeHXManager")
+    @patch.object(create_module, "extract_action_param")
+    @patch.object(create_module, "extract_configuration_param")
+    @patch.object(create_module, "SiemplifyAction")
+    def test_create_bulk_acquisition_missing_id_in_response_failure(
+        self,
+        mock_siemplify_action,
+        mock_extract_config,
+        mock_extract_action,
+        mock_manager_cls,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+        mock_manager.create_bulk_acquisition.return_value = {"state": "QUEUED"}
+
+        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+            if param_name == "Script Content":
+                return "<script><commands/></script>"
+            if param_name == "Agent IDs":
+                return "agent-1"
+            return kwargs.get("default_value")
+
+        mock_extract_action.side_effect = extract_action_param_side_effect
+
+        create_module.main()
+
+        mock_manager.create_bulk_acquisition.assert_called_once()
+        mock_siemplify.end.assert_called_once()
+        end_call = mock_siemplify.end.call_args[0]
+        assert "Response missing '_id'" in end_call[0]
+        assert end_call[1] == "false"
+        assert end_call[2] == 2
+
 
 if __name__ == "__main__":
     unittest.main()
