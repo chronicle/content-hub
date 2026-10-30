@@ -111,12 +111,12 @@ class VegaManager:
         self.session = session or _requests().Session()
         self.session.trust_env = False
         self.session.verify = self.verify_ssl
-        self.rate_limiter = rate_limiter or RateLimitController(sleeper=sleeper or __import__("time").sleep)
-        self._sleeper = sleeper or __import__("time").sleep
+        self.rate_limiter = rate_limiter or RateLimitController(sleeper=sleeper or time.sleep)
+        self._sleeper = sleeper or time.sleep
         self._jwt: str | None = None
         self.last_fetch_truncated = False
 
-    def _log(self, level: str, msg: str, *args) -> None:
+    def _log(self, level: str, msg: str, *args: Any) -> None:
         safe_log(self.logger, level, msg, *args)
 
     def _url(self, path: str) -> str:
@@ -167,7 +167,7 @@ class VegaManager:
             raise VegaException(MSG_SERVER_ERROR)
         raise VegaException("Vega request failed. Please try again.")
 
-    def _send(self, method: str, path: str, **kwargs):
+    def _send(self, method: str, path: str, **kwargs: Any) -> Any:
         requests = _requests()
         kwargs.setdefault("timeout", self.timeout)
         kwargs.setdefault("verify", self.verify_ssl)
@@ -191,8 +191,8 @@ class VegaManager:
         path: str,
         allow_relogin: bool = True,
         apply_success: bool = True,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> Any:
         server_attempts = 0
         while True:
             response = self._send(method, path, **kwargs)

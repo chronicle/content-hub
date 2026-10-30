@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 def _unwrap_json(value: Any, *, depth: int = 3) -> Any:
@@ -24,7 +27,7 @@ def _unwrap_json(value: Any, *, depth: int = 3) -> Any:
     return current
 
 
-def _rows_to_event_dicts(fields: list, rows: list) -> list[dict]:
+def _rows_to_event_dicts(fields: list, rows: list) -> list[SingleJson]:
     """Convert Splunk-style `{fields, rows}` tables into event dicts."""
     colnames: list[str] = []
     for field in fields:
@@ -34,7 +37,7 @@ def _rows_to_event_dicts(fields: list, rows: list) -> list[dict]:
             colnames.append(str(field).strip())
     if not colnames:
         return []
-    parsed: list[dict] = []
+    parsed: list[SingleJson] = []
     for row in rows:
         if not isinstance(row, list):
             continue
@@ -44,7 +47,7 @@ def _rows_to_event_dicts(fields: list, rows: list) -> list[dict]:
     return parsed
 
 
-def parse_alert_events_results(results: Any) -> list[dict]:
+def parse_alert_events_results(results: Any) -> list[SingleJson]:
     """Normalize getAlertsEvents `results` (list, dict, or JSON string) into event dicts."""
     if results is None or results == "":
         return []
@@ -65,7 +68,7 @@ def parse_alert_events_results(results: Any) -> list[dict]:
             results = [results]
     if not isinstance(results, list):
         return []
-    parsed: list[dict] = []
+    parsed: list[SingleJson] = []
     for item in results:
         item = _unwrap_json(item)
         if isinstance(item, dict):
@@ -96,7 +99,7 @@ def _same_alert_id(left: str, right: str) -> bool:
     return False
 
 
-def _event_owner_id(event: dict) -> str:
+def _event_owner_id(event: SingleJson) -> str:
     """Alert id stamped on a getAlertsEvents row, when the row has one."""
     for key in ("alertId", "alert_id", "vegaAlertId"):
         value = str(event.get(key) or "").strip()
@@ -105,7 +108,7 @@ def _event_owner_id(event: dict) -> str:
     return ""
 
 
-def events_for_alert_bucket(results: Any, alert_id: str) -> tuple[list[dict], int]:
+def events_for_alert_bucket(results: Any, alert_id: str) -> tuple[list[SingleJson], int]:
     """Keep rows for `alert_id` and count rows that belong to some other alert.
 
     Rows with no alert id stay in the parent `alerts[].alertId` bucket. Rows
@@ -113,7 +116,7 @@ def events_for_alert_bucket(results: Any, alert_id: str) -> tuple[list[dict], in
     onto the wrong alert.
     """
     alert_id = str(alert_id or "").strip()
-    kept: list[dict] = []
+    kept: list[SingleJson] = []
     dropped = 0
     for event in parse_alert_events_results(results):
         owner = _event_owner_id(event)

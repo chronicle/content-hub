@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 from .constants import ENTITY_TYPE_ALERT, ENTITY_TYPE_INCIDENT, VENDOR_NAME
 
@@ -54,7 +58,7 @@ def _normalize_vega_identifier(value: str) -> str:
     return text
 
 
-def _event_vega_id(event: dict) -> str:
+def _event_vega_id(event: SingleJson) -> str:
     """Own Vega ID for this event. GraphQL UUID wins over VINC-/vegaAlertId."""
     if not isinstance(event, dict):
         return ""
@@ -76,7 +80,7 @@ def _event_vega_id(event: dict) -> str:
     return pool[0] if pool else ""
 
 
-def _event_entity_type(event: dict) -> str:
+def _event_entity_type(event: SingleJson) -> str:
     """Incident, Alert, or empty when SOAR omitted the type fields."""
     if not isinstance(event, dict):
         return ""
@@ -93,7 +97,7 @@ def _is_child_event_id(identifier: str) -> bool:
     return ":event:" in identifier
 
 
-def _is_alert_event(payload: dict) -> bool:
+def _is_alert_event(payload: SingleJson) -> bool:
     if not isinstance(payload, dict):
         return False
     for key in _ENTITY_TYPE_KEYS:
@@ -102,7 +106,7 @@ def _is_alert_event(payload: dict) -> bool:
     return False
 
 
-def _as_dict(value) -> dict:
+def _as_dict(value: Any) -> SingleJson:
     if isinstance(value, dict):
         return value
     if isinstance(value, str) and value.strip().startswith("{"):
@@ -114,8 +118,8 @@ def _as_dict(value) -> dict:
     return {}
 
 
-def _fields_from_event_card(card: dict) -> dict:
-    payload: dict = {}
+def _fields_from_event_card(card: SingleJson) -> SingleJson:
+    payload: SingleJson = {}
     for group in card.get("fields") or []:
         if not isinstance(group, dict):
             continue
@@ -128,7 +132,7 @@ def _fields_from_event_card(card: dict) -> dict:
     return payload
 
 
-def _flatten_event(event: dict) -> dict:
+def _flatten_event(event: SingleJson) -> SingleJson:
     payload = dict(event) if isinstance(event, dict) else {}
     extra = _as_dict(
         payload.get("additional_properties")
@@ -142,14 +146,14 @@ def _flatten_event(event: dict) -> dict:
     return merged
 
 
-def _iter_case_events(case_payload: dict) -> list[dict]:
+def _iter_case_events(case_payload: SingleJson) -> list[SingleJson]:
     """Events from a case dict (SDK ticket payload or GetCaseFullDetails)."""
     if not isinstance(case_payload, dict):
         return []
     direct = (
         case_payload.get("events") or case_payload.get("security_events") or case_payload.get("securityEvents") or []
     )
-    events: list[dict] = [item for item in direct if isinstance(item, dict)]
+    events: list[SingleJson] = [item for item in direct if isinstance(item, dict)]
     alerts = (
         case_payload.get("cyber_alerts")
         or case_payload.get("cyberAlerts")
@@ -193,7 +197,7 @@ def _iter_case_events(case_payload: dict) -> list[dict]:
     return events
 
 
-def _walk_vega_targets(payload, entity_hint: str = "") -> list[tuple[str, str]]:
+def _walk_vega_targets(payload: Any, entity_hint: str = "") -> list[tuple[str, str]]:
     """Find Vega IDs anywhere in a GetCaseFullDetails payload."""
     found: list[tuple[str, str]] = []
     if isinstance(payload, list):
@@ -217,7 +221,7 @@ def _walk_vega_targets(payload, entity_hint: str = "") -> list[tuple[str, str]]:
     return found
 
 
-def extract_sync_targets(case_payload: dict) -> dict:
+def extract_sync_targets(case_payload: SingleJson) -> SingleJson:
     """Classify a closed case as incident-only or alerts-only.
 
     Incident case → resolve the Vega incident only.

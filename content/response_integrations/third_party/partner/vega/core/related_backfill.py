@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
 from .constants import (
     ENTITY_TYPE_ALERT,
     ENTITY_TYPE_INCIDENT,
@@ -20,25 +25,25 @@ from .mapping import (
 )
 
 
-def _drop_none(payload: dict) -> dict:
+def _drop_none(payload: SingleJson) -> SingleJson:
     return {key: value for key, value in payload.items() if value is not None}
 
 
 class RelatedBackfillMixin:
-    def _incident_time_window(self, incident: dict) -> tuple[str, str]:
+    def _incident_time_window(self, incident: SingleJson) -> tuple[str, str]:
         """Shared createdAt / lastUpdated so related alerts stay one group."""
         start = str((incident or {}).get("createdAt") or "").strip()
         end = str((incident or {}).get("lastUpdated") or (incident or {}).get("updatedAt") or start).strip()
         return start, end
 
-    def _incident_log_label(self, incident: dict) -> str:
+    def _incident_log_label(self, incident: SingleJson) -> str:
         identifier = record_id(incident, ENTITY_TYPE_INCIDENT)
         display_id = record_display_id(incident, ENTITY_TYPE_INCIDENT)
         if display_id and display_id != identifier:
             return f"{display_id} ({identifier})"
         return identifier or display_id or "(unknown incident)"
 
-    def _log_nested_counts(self, incidents: list[dict], step: str, note: str) -> None:
+    def _log_nested_counts(self, incidents: list[SingleJson], step: str, note: str) -> None:
         self._log("info", "%s: %s incident(s). %s", step, len(incidents), note)
         for incident in incidents:
             nested = len(incident_alert_ids(incident))
@@ -54,23 +59,23 @@ class RelatedBackfillMixin:
                 gap,
             )
 
-    def _incident_alerts_count(self, incident: dict) -> int:
+    def _incident_alerts_count(self, incident: SingleJson) -> int:
         try:
             return max(int((incident or {}).get("alertsCount") or 0), 0)
         except (TypeError, ValueError):
             return 0
 
-    def _nested_alerts_are_short(self, incident: dict) -> bool:
+    def _nested_alerts_are_short(self, incident: SingleJson) -> bool:
         expected = self._incident_alerts_count(incident)
         return expected > len(incident_alert_ids(incident))
 
-    def _expand_nested_alert_ids(self, incidents: list[dict]) -> list[dict]:
+    def _expand_nested_alert_ids(self, incidents: list[SingleJson]) -> list[SingleJson]:
         """Replace a short nested alerts page with the by-id getIncidents list.
 
         The incident list returns alertsCount in full and only a page of nested
         alert ids. getIncidents(incidentIds) for that one incident returns every id.
         """
-        expanded: list[dict] = []
+        expanded: list[SingleJson] = []
         for incident in incidents:
             if not isinstance(incident, dict):
                 continue
@@ -117,7 +122,7 @@ class RelatedBackfillMixin:
             expanded.append(merged)
         return expanded
 
-    def _needs_related_scan(self, incident: dict) -> bool:
+    def _needs_related_scan(self, incident: SingleJson) -> bool:
         """True until a full related-alert scan has run for this alertsCount."""
         identifier = record_id(incident, ENTITY_TYPE_INCIDENT)
         if not identifier:
@@ -130,7 +135,7 @@ class RelatedBackfillMixin:
             return False
         return self._nested_alerts_are_short(incident)
 
-    def _remember_open_incident(self, incident: dict, have: int) -> None:
+    def _remember_open_incident(self, incident: SingleJson, have: int) -> None:
         identifier = record_id(incident, ENTITY_TYPE_INCIDENT)
         if not identifier:
             return
@@ -140,7 +145,7 @@ class RelatedBackfillMixin:
             "have": max(int(have or 0), 0),
         }
 
-    def _backfill_variables(self, window: dict) -> dict:
+    def _backfill_variables(self, window: SingleJson) -> SingleJson:
         """Related-alert scan with no severity, status, or verdict filter.
 
         getAlerts has no incident-id argument. Pages are limited to alerts that
@@ -157,10 +162,10 @@ class RelatedBackfillMixin:
 
     def _backfill_related_index(
         self,
-        incidents: list[dict],
-        related_index: dict[str, dict],
-        window: dict,
-    ) -> dict[str, dict]:
+        incidents: list[SingleJson],
+        related_index: dict[str, SingleJson],
+        window: SingleJson,
+    ) -> dict[str, SingleJson]:
         """Page related alerts until each short incident reaches alertsCount.
 
         A timeout saves the scan offset. The next run continues from there
@@ -191,7 +196,7 @@ class RelatedBackfillMixin:
             len(tracked),
             self._related_scan_offset,
         )
-        matched: list[dict] = []
+        matched: list[SingleJson] = []
         seen_match: set[str] = set()
         offset = self._related_scan_offset
         page_size = max(1, int(GRAPHQL_PAGE_SIZE))
@@ -250,11 +255,11 @@ class RelatedBackfillMixin:
         )
         return merged
 
-    def _incident_ingested_key(self, incident: dict) -> str:
+    def _incident_ingested_key(self, incident: SingleJson) -> str:
         identifier = record_id(incident, ENTITY_TYPE_INCIDENT)
         return f"incident:{identifier}" if identifier else ""
 
-    def _new_related_alert_ids(self, incident: dict, ingested_set: set[str]) -> list[str]:
+    def _new_related_alert_ids(self, incident: SingleJson, ingested_set: set[str]) -> list[str]:
         """Alert IDs from this incident that are not already in the checkpoint."""
         ids: list[str] = []
         seen: set[str] = set()
@@ -268,7 +273,7 @@ class RelatedBackfillMixin:
                     ids.append(key)
         return ids
 
-    def _load_related_backfill(self, state: dict) -> None:
+    def _load_related_backfill(self, state: SingleJson) -> None:
         saved = state.get("related_backfill")
         if not isinstance(saved, dict):
             saved = {}
@@ -315,7 +320,7 @@ class RelatedBackfillMixin:
             offset = 0
         self._related_scan_offset = max(offset, 0)
         self._related_scan_incomplete = False
-        open_related: dict[str, dict] = {}
+        open_related: dict[str, SingleJson] = {}
         for key, value in dict(saved.get("open") or {}).items():
             if isinstance(value, dict):
                 open_related[str(key)] = dict(value)
@@ -329,7 +334,7 @@ class RelatedBackfillMixin:
         self._settled_related = {} if self._replay_related else settled
         self._open_ids_at_start = set(self._open_related)
 
-    def _include_open_incidents(self, incidents: list[dict]) -> list[dict]:
+    def _include_open_incidents(self, incidents: list[SingleJson]) -> list[SingleJson]:
         """Re-read incidents whose related-alert scan stopped early."""
         present = {record_id(item, ENTITY_TYPE_INCIDENT) for item in incidents if record_id(item, ENTITY_TYPE_INCIDENT)}
         pending_ids = list(self._open_related) + [
@@ -360,7 +365,7 @@ class RelatedBackfillMixin:
 
     def _release_oversized_related(
         self,
-        incident: dict,
+        incident: SingleJson,
         ingested: list[str],
         ingested_set: set[str],
     ) -> None:
@@ -386,7 +391,7 @@ class RelatedBackfillMixin:
             len(release),
         )
 
-    def _note_related_progress(self, incident: dict, added: int) -> None:
+    def _note_related_progress(self, incident: SingleJson, added: int) -> None:
         """Keep an incident open until every known related alert is packaged."""
         identifier = record_id(incident, ENTITY_TYPE_INCIDENT)
         if not identifier:

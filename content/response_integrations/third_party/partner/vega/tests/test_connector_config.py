@@ -72,7 +72,7 @@ def test_validate_connector_fields_lists_every_invalid_field() -> None:
     assert "API Root" in text
     assert "Access Key ID" in text
     assert "Vega Entities to Fetch" in text
-    assert "Fetch Lookback (minutes)" in text
+    assert "Fetch Lookback Minutes" in text
     assert "Alert Severities to Fetch" in text
     assert "Has Related Incidents" in text
     assert "PythonProcessTimeout" in text

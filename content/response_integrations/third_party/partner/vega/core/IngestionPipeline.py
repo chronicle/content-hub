@@ -34,6 +34,7 @@ Connector flow
 
 4. Records are packaged into SOAR AlertInfo objects by AlertPackager.
 """
+
 from __future__ import annotations
 
 import logging

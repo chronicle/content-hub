@@ -26,9 +26,7 @@ class VegaApiAction(Action):
                 access_key_id=soar.extract_configuration_param(INTEGRATION_NAME, PARAM_ACCESS_KEY_ID),
                 access_key=soar.extract_configuration_param(INTEGRATION_NAME, PARAM_ACCESS_KEY),
                 verify_ssl=truthy(
-                    soar.extract_configuration_param(
-                        INTEGRATION_NAME, PARAM_VERIFY_SSL, default_value=True
-                    )
+                    soar.extract_configuration_param(INTEGRATION_NAME, PARAM_VERIFY_SSL, default_value=True)
                 ),
             ),
             logger_instance=soar.LOGGER,

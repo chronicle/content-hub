@@ -437,7 +437,7 @@ def _iso_ms(millis: int) -> str:
     return datetime.fromtimestamp(max(0, int(millis)) / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
-def _time_to_ms(value) -> int:
+def _time_to_ms(value: Any) -> int:
     if value in (None, ""):
         return 0
     if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -753,7 +753,7 @@ class SoarRemediator:
         )
         return cases, remember_ids
 
-    def _search_closed_case_summaries(self, session, root: str, since_ms: int, until_ms: int) -> list[SingleJson]:
+    def _search_closed_case_summaries(self, session: Any, root: str, since_ms: int, until_ms: int) -> list[SingleJson]:
         url = f"{root}/{SOAR_CASE_SEARCH_PATH}?format=camel"
         environment = _environment(self.siemplify)
         payload = {
@@ -778,7 +778,7 @@ class SoarRemediator:
             return []
         return [row for row in rows if isinstance(row, dict)]
 
-    def _get_case_details(self, session, root: str, case_id: str) -> SingleJson:
+    def _get_case_details(self, session: Any, root: str, case_id: str) -> SingleJson:
         path = SOAR_CASE_DETAILS_PATH.format(case_id=case_id)
         url = f"{root}/{path}?format=camel"
         try:

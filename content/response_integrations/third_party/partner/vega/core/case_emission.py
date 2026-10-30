@@ -37,7 +37,7 @@ from .mapping import (
 
 
 class CaseEmissionMixin:
-    def _fetch_alert_metadata_index(self, alert_ids: list[str], window: dict) -> dict[str, dict]:
+    def _fetch_alert_metadata_index(self, alert_ids: list[str], window: SingleJson) -> dict[str, SingleJson]:
         """Load full getAlerts rows for incident alert ids.
 
         UUID ids go in alertIds, at most 1000 per request. getAlerts pages
@@ -52,7 +52,7 @@ class CaseEmissionMixin:
         batch_size = max(1, int(ALERT_METADATA_ID_BATCH))
         lookup_window = self._id_lookup_window(window)
 
-        def _lookup(batch: list[str], *, use_alert_ids: bool) -> list[dict]:
+        def _lookup(batch: list[str], *, use_alert_ids: bool) -> list[SingleJson]:
             key = "alertIds" if use_alert_ids else "vegaAlertIds"
             try:
                 if use_alert_ids:
@@ -98,7 +98,7 @@ class CaseEmissionMixin:
         )
         return index_alert_records(collected)
 
-    def _vega_alerts_payload(self, incident: dict, window: dict) -> list[dict]:
+    def _vega_alerts_payload(self, incident: SingleJson, window: SingleJson) -> list[SingleJson]:
         """Related alerts for the incident vega_alerts property.
 
         Checkbox off: getIncidents stubs (alertId, name, createdAt).
@@ -130,12 +130,12 @@ class CaseEmissionMixin:
                 payload.append(summary)
         return payload
 
-    def _attach_vega_alerts(self, incident: dict, window: dict) -> dict:
+    def _attach_vega_alerts(self, incident: SingleJson, window: SingleJson) -> SingleJson:
         incident = dict(incident)
         incident["vega_alerts"] = self._vega_alerts_payload(incident, window)
         return incident
 
-    def _fetch_alerts_by_ids(self, alert_ids: list[str], window: dict) -> dict[str, dict]:
+    def _fetch_alerts_by_ids(self, alert_ids: list[str], window: SingleJson) -> dict[str, SingleJson]:
         """Resolve full alert records (including labels) for incident alertIds.
 
         Vega getAlerts often returns 0 rows for alertIds without a time bound,
@@ -161,7 +161,7 @@ class CaseEmissionMixin:
         batch_size = max(1, int(ALERT_ID_LOOKUP_BATCH))
         lookup_window = self._id_lookup_window(window)
 
-        def _lookup(batch: list[str], *, use_alert_ids: bool) -> list[dict]:
+        def _lookup(batch: list[str], *, use_alert_ids: bool) -> list[SingleJson]:
             key = "alertIds" if use_alert_ids else "vegaAlertIds"
             try:
                 if use_alert_ids:
@@ -287,14 +287,14 @@ class CaseEmissionMixin:
             return None
         return max(self.max_fetch * 10, self.max_fetch)
 
-    def _resolve_related_alerts(self, incident: dict, related_index: dict[str, dict]) -> list[dict]:
+    def _resolve_related_alerts(self, incident: SingleJson, related_index: dict[str, SingleJson]) -> list[SingleJson]:
         """Match incident.alerts stubs to full getAlerts records (stub if missing)."""
         incident_id = record_id(incident, ENTITY_TYPE_INCIDENT)
         display_id = record_display_id(incident, ENTITY_TYPE_INCIDENT)
         seen: set[str] = set()
         resolved: list[dict] = []
 
-        def _add(alert: dict) -> None:
+        def _add(alert: SingleJson) -> None:
             identifier = record_id(alert, ENTITY_TYPE_ALERT)
             if not identifier or identifier in seen:
                 return
@@ -340,11 +340,11 @@ class CaseEmissionMixin:
 
     def _apply_incident_context(
         self,
-        alert: dict,
-        incident: dict,
+        alert: SingleJson,
+        incident: SingleJson,
         case_tags: list[str | None] = None,
         batch: int = 1,
-    ) -> dict:
+    ) -> SingleJson:
         incident_id = record_id(incident, ENTITY_TYPE_INCIDENT)
         display_id = record_display_id(incident, ENTITY_TYPE_INCIDENT)
         alert = dict(alert)
@@ -381,8 +381,8 @@ class CaseEmissionMixin:
 
     def _append_incident_alert(
         self,
-        incident: dict,
-        records: list[tuple[str, dict]],
+        incident: SingleJson,
+        records: list[tuple[str, SingleJson]],
         ingested: list[str],
         ingested_set: set[str],
         case_tags: list[str | None] = None,
@@ -415,9 +415,9 @@ class CaseEmissionMixin:
 
     def _append_related_alert(
         self,
-        alert: dict,
-        incident: dict,
-        records: list[tuple[str, dict]],
+        alert: SingleJson,
+        incident: SingleJson,
+        records: list[tuple[str, SingleJson]],
         ingested: list[str],
         ingested_set: set[str],
         case_tags: list[str | None] = None,
@@ -455,10 +455,10 @@ class CaseEmissionMixin:
         self._note_progress(packaged)
         return True
 
-    def _ordered_stubs(self, incident: dict) -> list[dict]:
+    def _ordered_stubs(self, incident: SingleJson) -> list[SingleJson]:
         return self._sort_by_timestamp(incident_alert_stubs(incident))
 
-    def _pending_stubs(self, incident: dict, ingested_set: set[str]) -> list[dict]:
+    def _pending_stubs(self, incident: SingleJson, ingested_set: set[str]) -> list[SingleJson]:
         pending: list[dict] = []
         for stub in self._ordered_stubs(incident):
             keys = record_alert_ids(stub)
@@ -467,7 +467,7 @@ class CaseEmissionMixin:
             pending.append(stub)
         return pending
 
-    def _stub_lookup_ids(self, stubs: list[dict]) -> list[str]:
+    def _stub_lookup_ids(self, stubs: list[SingleJson]) -> list[str]:
         ids: list[str] = []
         seen: set[str] = set()
         for stub in stubs:
@@ -501,9 +501,9 @@ class CaseEmissionMixin:
 
     def _emit_incident_cases(
         self,
-        incident: dict,
-        related: list[dict],
-        records: list[tuple[str, dict]],
+        incident: SingleJson,
+        related: list[SingleJson],
+        records: list[tuple[str, SingleJson]],
         ingested: list[str],
         ingested_set: set[str],
     ) -> None:

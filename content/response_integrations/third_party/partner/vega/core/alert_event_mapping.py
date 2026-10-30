@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, Iterator
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 from .constants import DEVICE_PRODUCT, ENTITY_TYPE_ALERT, SOAR_ALERT_TYPE_ALERT_EVENT, VENDOR_NAME
 from .mapping import (
@@ -28,7 +31,7 @@ def _is_flat_dict(value: dict) -> bool:
     return all(not isinstance(item, (dict, list)) for item in value.values())
 
 
-def _iter_dynamic_fields(payload: dict):
+def _iter_dynamic_fields(payload: SingleJson) -> Iterator[tuple[str, Any]]:
     """Yield API keys/values from getAlertsEvents, flattening one-level dicts."""
     for key, value in payload.items():
         if _is_skipped_payload_key(key):
@@ -47,12 +50,12 @@ def _iter_dynamic_fields(payload: dict):
 
 
 def build_vega_alert_event_dict(
-    parent: dict,
+    parent: SingleJson,
     vega_event: Any,
     start_time: int,
     end_time: int,
     index: int,
-) -> dict:
+) -> SingleJson:
     """Map one Vega getAlertsEvents result onto a SOAR event for a Vega Alert case.
 
     Child events must use a unique product_log_id and only string field values.
