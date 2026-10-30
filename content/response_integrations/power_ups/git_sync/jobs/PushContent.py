@@ -114,15 +114,15 @@ def main():
             for job in [
                 x
                 for x in gitsync.api.get_jobs(chronicle_soar=siemplify)
-                if x.get("displayName", x.get("name")) not in IGNORED_JOBS
+                if (x.get("displayName") or x.get("name") or "") not in IGNORED_JOBS
                 and x.get("integration") != INTEGRATION_NAME
-                and not x.get("displayName", x.get("name")).startswith(
+                and not (x.get("displayName") or x.get("name") or "").startswith(
                     "Cases Collector DB"
                 )
-                and not x.get("displayName", x.get("name")).startswith("Logs Collector")
+                and not (x.get("displayName") or x.get("name") or "").startswith("Logs Collector")
             ]:
                 siemplify.LOGGER.info(
-                    f"Pushing {job.get('displayName', job.get('name'))}"
+                    f"Pushing {job.get('displayName') or job.get('name')}"
                 )
                 gitsync.content.push_job(Job(job))
 

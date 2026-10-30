@@ -171,7 +171,7 @@ class GitContentManager:
                 if pathlib.Path(playbook.path).name == f"{playbook_name}.json":
                     return Workflow(json.loads(playbook.content))
             for block in self.git.get_file_objects_from_path(BLOCKS_PATH):
-                if block.path.endswith(f"/{playbook_name}.json"):
+                if pathlib.Path(block.path).name == f"{playbook_name}.json":
                     return Workflow(json.loads(block.content))
         except KeyError:
             return None
@@ -182,7 +182,7 @@ class GitContentManager:
                 if pathlib.Path(playbook.path).suffix == ".json":
                     yield Workflow(json.loads(playbook.content))
             for block in self.git.get_file_objects_from_path(BLOCKS_PATH):
-                if block.path.endswith(".json"):
+                if pathlib.Path(block.path).suffix == ".json":
                     yield Workflow(json.loads(block.content))
         except KeyError:
             return []

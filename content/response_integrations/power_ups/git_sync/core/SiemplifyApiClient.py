@@ -338,10 +338,11 @@ class SiemplifyApiClient:
             and not str(item_id).startswith("projects/")
             and "integrations/" not in str(item_id)
         ):
+            params = getattr(self.siemplify_soar, "params", None)
             integration_name = (
-                getattr(self.siemplify_soar.params, "integration_name", None)
-                or getattr(self.siemplify_soar.params, "integration_identifier", None)
-            )
+                getattr(params, "integration_name", None)
+                or getattr(params, "integration_identifier", None)
+            ) if params else None
             if integration_name:
                 type_map = {0: "connectors", 1: "actions", 2: "jobs", 4: "managers"}
                 col = type_map.get(item_type, "actions")
@@ -399,7 +400,7 @@ class SiemplifyApiClient:
             list[SingleJson]: List of ontology records.
         """
         res = get_ontology_records(chronicle_soar=chronicle_soar)
-        return res if isinstance(res, list) else res.get("ontologyRecords", [])
+        return res if isinstance(res, list) else (res.get("ontologyRecords", []) if isinstance(res, dict) else [])
 
     def get_mapping_rules(self, source, mr_id, product, event_name):
         return get_mapping_rules(
@@ -644,7 +645,7 @@ class SiemplifyApiClient:
             list[SingleJson]: List of installed jobs.
         """
         res = get_installed_jobs(chronicle_soar=chronicle_soar)
-        jobs = res if isinstance(res, list) else res.get("job_instances", [])
+        jobs = res if isinstance(res, list) else (res.get("job_instances", []) if isinstance(res, dict) else [])
 
         if not platform_supports_1p_api() or not enrich:
             return jobs

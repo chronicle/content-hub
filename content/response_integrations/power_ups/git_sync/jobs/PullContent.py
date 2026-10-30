@@ -293,7 +293,7 @@ def main():
                 ):
                     for item in case_title_settings.get("items", []):
                         val = item.get("value")
-                        if not val or not val.strip():
+                        if val is None or (isinstance(val, str) and not val.strip()):
                             continue
 
                         gitsync.api.save_case_title_settings(
@@ -607,8 +607,8 @@ def main():
                         if val is None or (isinstance(val, str) and not val.strip()):
                             item["value"] = "False"
                         elif item.get("displayName") == "CompanyLogo":
-                            val = item["value"]
-                            if not val.startswith("data:image/png;base64,"):
+                            val = item.get("value")
+                            if isinstance(val, str) and not val.startswith("data:image/png;base64,"):
                                 item["value"] = "data:image/png;base64," + val
 
                         payload = item

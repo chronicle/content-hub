@@ -293,8 +293,16 @@ class GitSyncManager:
                 raw_type = script.get("type") if script.get("type") is not None else script.get("Type")
                 if raw_type is None:
                     continue
-                type_val = raw_type.value if isinstance(raw_type, ScriptType) else int(raw_type)
-                type_enum = raw_type if isinstance(raw_type, ScriptType) else ScriptType(type_val)
+                if isinstance(raw_type, ScriptType):
+                    type_val = raw_type.value
+                    type_enum = raw_type
+                else:
+                    try:
+                        type_val = int(raw_type)
+                        type_enum = ScriptType(type_val)
+                    except (ValueError, TypeError):
+                        self.logger.warning(f"Invalid script type: {raw_type}")
+                        continue
 
                 item_card = next(
                     (

@@ -64,7 +64,7 @@ def get_fields(rule: Any) -> list[Any]:
         return rule
     if isinstance(rule, dict):
         if "familyFields" in rule or "systemFields" in rule:
-            return rule.get("familyFields", []) + rule.get("systemFields", [])
+            return (rule.get("familyFields") or []) + (rule.get("systemFields") or [])
         if "mapping_rules" in rule:
             return rule.get("mapping_rules", [])
         if "mappingRules" in rule:
@@ -670,7 +670,7 @@ class Integration(Content):
                 definition = None
                 if api:
                     try:
-                        res = api.get_ide_item(item_ref, card.get("type") or type_val)
+                        res = api.get_ide_item(item_ref, type_val)
                         if isinstance(res, dict):
                             definition = dict(res)
                             definition["id"] = 0

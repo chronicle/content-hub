@@ -56,7 +56,7 @@ def main():
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
         for job in gitsync.api.get_jobs(chronicle_soar=siemplify):
-            job_name = job.get("displayName", job.get("name", "")).strip()
+            job_name = (job.get("displayName") or job.get("name") or "").strip()
 
             if (
                 job_name in jobs
