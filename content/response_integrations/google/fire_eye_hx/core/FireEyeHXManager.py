@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+from typing import Any
 
 import requests
 
@@ -780,14 +781,10 @@ class FireEyeHXManager:
             content = response.content.decode("utf-8", errors="ignore").lower()
             if "host not found" in content:
                 msg = f"HTTP Error 404: Host with the specified agent id ({agent_id}) was not found"
-                raise FireEyeHXNotFoundError(
-                    msg
-                )
+                raise FireEyeHXNotFoundError(msg)
             if "device not found" in content:
                 msg = "HTTP Error 404: The specified device was not found by device-proxy. It may have a non-Operational status."
-                raise FireEyeHXNotFoundError(
-                    msg
-                )
+                raise FireEyeHXNotFoundError(msg)
             msg = f"HTTP Error 404: The URL {getattr(response, 'url', '')} was not found."
             raise FireEyeHXNotFoundError(msg)
 
@@ -921,7 +918,7 @@ class FireEyeHXManager:
             List of host set entries.
         """
         url = f"{self.api_root}/host_sets"
-        params = {}
+        params: dict[str, str | int] = {}
         if name:
             params["name"] = name
         if limit:
@@ -943,13 +940,13 @@ class FireEyeHXManager:
             return None
         entries = self.get_host_sets(name=host_set_name)
         for hs in entries:
+            if "_id" not in hs or hs["_id"] is None:
+                continue
             try:
                 if str(hs.get("name", "")).lower() == host_set_name.lower():
-                    return int(hs.get("_id"))
+                    return int(hs["_id"])
             except (ValueError, TypeError):
                 continue
-        if host_set_name.strip().lower() == "all_hosts":
-            return 9
         return None
 
     def create_bulk_acquisition(
@@ -963,7 +960,7 @@ class FireEyeHXManager:
 
         Args:
             script_b64: Base64-encoded XML script.
-            host_set_id: Host set numeric ID (defaults to 9 if agent_ids not specified).
+            host_set_id: Optional host set numeric ID.
             agent_ids: Optional list of target agent IDs.
             comment: Optional audit comment.
 
@@ -971,7 +968,7 @@ class FireEyeHXManager:
             Created bulk acquisition data object.
         """
         url = f"{self.api_root}/acqs/bulk"
-        payload = {
+        payload: dict[str, Any] = {
             "script": {"b64": script_b64},
         }
         if comment:
@@ -979,9 +976,10 @@ class FireEyeHXManager:
 
         if agent_ids:
             payload["hosts"] = [{"_id": aid.strip()} for aid in agent_ids]
+        elif host_set_id is not None:
+            payload["host_set"] = {"_id": host_set_id}
         else:
-            target_hs_id = host_set_id if host_set_id is not None else 9
-            payload["host_set"] = {"_id": target_hs_id}
+            raise ValueError("Either agent_ids or host_set_id must be provided.")
 
         response = self.session.post(url, json=payload)
         self.validate_response(response, "Error creating bulk acquisition")

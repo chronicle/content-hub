@@ -25,11 +25,7 @@ from TIPCommon import (
     extract_configuration_param,
 )
 
-from ..core.FireEyeHXManager import (
-    FireEyeHXManager,
-    FireEyeHXManagerError,
-    FireEyeHXNotFoundError,
-)
+from ..core.FireEyeHXManager import FireEyeHXManager
 
 INTEGRATION_NAME = "FireEyeHX"
 SCRIPT_NAME = "Get Bulk Acquisition"
@@ -74,14 +70,17 @@ def main() -> None:
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     status = EXECUTION_STATE_COMPLETED
-    result_value = False
+    result_value = "false"
     manager = None
 
     try:
         if not bulk_id or not str(bulk_id).strip():
             raise ValueError("Bulk Acquisition ID must not be empty.")
 
-        clean_bulk_id = str(bulk_id).strip()
+        try:
+            clean_bulk_id = int(str(bulk_id).strip())
+        except ValueError as value_error:
+            raise ValueError(f"Bulk Acquisition ID must be a number, got: {bulk_id}.") from value_error
 
         manager = FireEyeHXManager(
             api_root=api_root,
@@ -100,7 +99,7 @@ def main() -> None:
         output_message = f"Error executing {SCRIPT_NAME}: {err}"
         siemplify.LOGGER.exception(output_message)
         status = EXECUTION_STATE_FAILED
-        result_value = False
+        result_value = "false"
 
     finally:
         if manager:
