@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+from typing import Any
 
 import requests
 
@@ -780,14 +781,10 @@ class FireEyeHXManager:
             content = response.content.decode("utf-8", errors="ignore").lower()
             if "host not found" in content:
                 msg = f"HTTP Error 404: Host with the specified agent id ({agent_id}) was not found"
-                raise FireEyeHXNotFoundError(
-                    msg
-                )
+                raise FireEyeHXNotFoundError(msg)
             if "device not found" in content:
                 msg = "HTTP Error 404: The specified device was not found by device-proxy. It may have a non-Operational status."
-                raise FireEyeHXNotFoundError(
-                    msg
-                )
+                raise FireEyeHXNotFoundError(msg)
             msg = f"HTTP Error 404: The URL {getattr(response, 'url', '')} was not found."
             raise FireEyeHXNotFoundError(msg)
 
@@ -909,6 +906,126 @@ class FireEyeHXManager:
             alert_groups = self.paginate(url, url_params, "Unable to get alert groups")
 
         return [self.parser.build_siemplify_group_obj(group) for group in alert_groups]
+
+    def get_host_sets(self, name: str | None = None, limit: int | None = None) -> list[dict]:
+        """Get list of host sets from FireEye HX.
+
+        Args:
+            name: Optional host set name filter.
+            limit: Optional maximum number of records to return.
+
+        Returns:
+            List of host set entries.
+        """
+        url = f"{self.api_root}/host_sets"
+        params: dict[str, str | int] = {}
+        if name:
+            params["name"] = name
+        if limit:
+            params["limit"] = limit
+        response = self.session.get(url, params=params)
+        self.validate_response(response, "Error getting host sets")
+        return response.json().get("data", {}).get("entries", [])
+
+    def get_host_set_id_by_name(self, host_set_name: str) -> int | None:
+        """Resolve host set ID by name.
+
+        Args:
+            host_set_name: Name of host set (e.g. 'all_hosts').
+
+        Returns:
+            Host set numeric ID if found, or None.
+        """
+        if not host_set_name:
+            return None
+        entries = self.get_host_sets(name=host_set_name)
+        for hs in entries:
+            if "_id" not in hs or hs["_id"] is None:
+                continue
+            try:
+                if str(hs.get("name", "")).lower() == host_set_name.lower():
+                    return int(hs["_id"])
+            except (ValueError, TypeError):
+                continue
+        return None
+
+    def create_bulk_acquisition(
+        self,
+        script_b64: str,
+        host_set_id: int | None = None,
+        agent_ids: list[str] | None = None,
+        comment: str | None = None,
+    ) -> dict:
+        """Create a bulk acquisition across endpoints.
+
+        Args:
+            script_b64: Base64-encoded XML or JSON script.
+            host_set_id: Optional host set numeric ID.
+            agent_ids: Optional list of target agent IDs.
+            comment: Optional audit comment.
+
+        Returns:
+            Created bulk acquisition data object.
+        """
+        url = f"{self.api_root}/acqs/bulk"
+        payload: dict[str, Any] = {
+            "script": {"b64": script_b64},
+        }
+        if comment:
+            payload["comment"] = comment
+
+        if agent_ids:
+            payload["hosts"] = [{"_id": aid.strip()} for aid in agent_ids]
+        elif host_set_id is not None:
+            payload["host_set"] = {"_id": host_set_id}
+        else:
+            raise ValueError("Either agent_ids or host_set_id must be provided.")
+
+        response = self.session.post(url, json=payload)
+        self.validate_response(response, "Error creating bulk acquisition")
+        return response.json().get("data", {})
+
+    def get_bulk_acquisition(self, bulk_acquisition_id: str | int) -> dict:
+        """Get details and progress of a bulk acquisition.
+
+        Args:
+            bulk_acquisition_id: Bulk acquisition ID.
+
+        Returns:
+            Bulk acquisition data object.
+        """
+        url = f"{self.api_root}/acqs/bulk/{bulk_acquisition_id}"
+        response = self.session.get(url)
+        self.validate_response(response, f"Unable to fetch status for bulk acquisition {bulk_acquisition_id}")
+        return response.json().get("data", {})
+
+    def stop_bulk_acquisition(self, bulk_acquisition_id: str | int) -> bool:
+        """Stop an active bulk acquisition.
+
+        Args:
+            bulk_acquisition_id: Bulk acquisition ID.
+
+        Returns:
+            True if successfully stopped.
+        """
+        url = f"{self.api_root}/acqs/bulk/{bulk_acquisition_id}/actions/stop"
+        response = self.session.post(url)
+        self.validate_response(response, f"Unable to stop bulk acquisition {bulk_acquisition_id}")
+        return True
+
+    def delete_bulk_acquisition(self, bulk_acquisition_id: str | int) -> bool:
+        """Delete a bulk acquisition.
+
+        Args:
+            bulk_acquisition_id: Bulk acquisition ID.
+
+        Returns:
+            True if successfully deleted.
+        """
+        url = f"{self.api_root}/acqs/bulk/{bulk_acquisition_id}"
+        response = self.session.delete(url)
+        self.validate_response(response, f"Unable to delete bulk acquisition {bulk_acquisition_id}")
+        return True
 
     @staticmethod
     def validate_response(response, error_msg="An error occurred") -> None:
