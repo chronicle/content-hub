@@ -222,6 +222,38 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "extract_action_param")
     @patch.object(create_module, "extract_configuration_param")
     @patch.object(create_module, "SiemplifyAction")
+    def test_create_bulk_acquisition_timeframe_stop_invalid_failure(
+        self,
+        mock_siemplify_action,
+        mock_extract_config,
+        mock_extract_action,
+        mock_manager_cls,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+
+        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+            if param_name == "Script Content":
+                return '<script time="__INTERVAL_STOP__"><commands/></script>'
+            if param_name == "Timeframe Stop":
+                return "invalid_stop_date"
+            return kwargs.get("default_value")
+
+        mock_extract_action.side_effect = extract_action_param_side_effect
+
+        create_module.main()
+
+        mock_manager.create_bulk_acquisition.assert_not_called()
+        mock_siemplify.end.assert_called_once()
+        end_call = mock_siemplify.end.call_args[0]
+        assert "Timeframe Stop must be a valid ISO timestamp" in end_call[0]
+        assert end_call[1] == "false"
+        assert end_call[2] == 2
+
+    @patch.object(create_module, "FireEyeHXManager")
+    @patch.object(create_module, "extract_action_param")
+    @patch.object(create_module, "extract_configuration_param")
+    @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_date_macro_substitution(
         self,
         mock_siemplify_action,

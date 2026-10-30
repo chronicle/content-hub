@@ -17,6 +17,8 @@ from __future__ import annotations
 import unittest
 from unittest.mock import MagicMock, patch
 
+import requests
+
 from ..core.FireEyeHXManager import FireEyeHXManager
 
 
@@ -188,6 +190,73 @@ class TestFireEyeHXManagerBulk(unittest.TestCase):
 
         self.mock_session.delete.assert_called_once_with(f"{self.api_root}/acqs/bulk/42")
         self.assertTrue(result)
+
+    @patch.object(requests.Session, "request")
+    def test_manager_methods_intercepted_by_session_request(self, mock_request) -> None:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "_id": 42,
+                "state": "RUNNING",
+                "entries": [{"_id": 15, "name": "target_set"}],
+            }
+        }
+        mock_request.return_value = mock_response
+
+        with patch.object(FireEyeHXManager, "get_token", return_value="fake_token"):
+            manager = FireEyeHXManager(
+                api_root=self.raw_api_root,
+                username="test_user",
+                password="test_password",
+                verify_ssl=False,
+            )
+
+        # 1. create_bulk_acquisition with agent_ids
+        manager.create_bulk_acquisition(script_b64="c2NyaXB0", agent_ids=["agent-1"])
+        method, url = mock_request.call_args[0][:2]
+        self.assertEqual(method, "POST")
+        self.assertEqual(url, f"{manager.api_root}/acqs/bulk")
+        self.assertEqual(
+            mock_request.call_args[1]["json"],
+            {"script": {"b64": "c2NyaXB0"}, "hosts": [{"_id": "agent-1"}]},
+        )
+
+        # 2. create_bulk_acquisition with host_set_id
+        manager.create_bulk_acquisition(script_b64="c2NyaXB0", host_set_id=12)
+        method, url = mock_request.call_args[0][:2]
+        self.assertEqual(method, "POST")
+        self.assertEqual(url, f"{manager.api_root}/acqs/bulk")
+        self.assertEqual(
+            mock_request.call_args[1]["json"],
+            {"script": {"b64": "c2NyaXB0"}, "host_set": {"_id": 12}},
+        )
+
+        # 3. get_bulk_acquisition
+        manager.get_bulk_acquisition(42)
+        method, url = mock_request.call_args[0][:2]
+        self.assertEqual(method, "GET")
+        self.assertEqual(url, f"{manager.api_root}/acqs/bulk/42")
+
+        # 4. stop_bulk_acquisition
+        manager.stop_bulk_acquisition(42)
+        method, url = mock_request.call_args[0][:2]
+        self.assertEqual(method, "POST")
+        self.assertEqual(url, f"{manager.api_root}/acqs/bulk/42/actions/stop")
+
+        # 5. delete_bulk_acquisition
+        manager.delete_bulk_acquisition(42)
+        method, url = mock_request.call_args[0][:2]
+        self.assertEqual(method, "DELETE")
+        self.assertEqual(url, f"{manager.api_root}/acqs/bulk/42")
+
+        # 6. get_host_set_id_by_name lookup
+        hs_id = manager.get_host_set_id_by_name("target_set")
+        self.assertEqual(hs_id, 15)
+        method, url = mock_request.call_args[0][:2]
+        self.assertEqual(method, "GET")
+        self.assertEqual(url, f"{manager.api_root}/host_sets")
+        self.assertEqual(mock_request.call_args[1]["params"], {"name": "target_set"})
 
 
 if __name__ == "__main__":
