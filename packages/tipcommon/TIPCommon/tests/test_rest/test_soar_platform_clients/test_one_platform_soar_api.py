@@ -620,7 +620,7 @@ def test_get_ide_cards(
     client = OnePlatformSoarApi(mock_chronicle_soar)
     client.params.integration_name = "VirusTotal"
 
-    def mock_request(method, url, **kwargs):
+    def mock_request(method: str, url: str, **kwargs: Any) -> MagicMock:
         resp = mocker.MagicMock()
         resp.status_code = 200
         if "connectors" in url:
@@ -679,7 +679,7 @@ def test_update_ide_item_patch(
     patch_resp = mocker.MagicMock()
     patch_resp.status_code = 200
 
-    def mock_req(method, url, **kwargs):
+    def mock_req(method: str, url: str, **kwargs: Any) -> MagicMock:
         if method == "GET":
             return get_resp
         return patch_resp

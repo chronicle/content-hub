@@ -1449,7 +1449,8 @@ class OnePlatformSoarApi(BaseSoarApi):
                     )
                     if ident and ident not in integrations_to_process:
                         integrations_to_process.append(ident)
-            except Exception:
+            except Exception as e:
+                self.chronicle_soar.LOGGER.warning(f"Failed to fetch installed integrations: {e}")
                 integrations_to_process = []
 
         def _normalize_item(raw_item: dict, item_type: int, int_id: str) -> dict:
@@ -1465,7 +1466,8 @@ class OnePlatformSoarApi(BaseSoarApi):
             if not isinstance(cid, int):
                 try:
                     cid = int(cid)
-                except (TypeError, ValueError):
+                except (TypeError, ValueError) as e:
+                    self.chronicle_soar.LOGGER.debug(f"Could not convert card id to int: {e}")
                     cid = abs(hash(card.get("displayName") or card.get("name") or "")) % (10**8)
 
             display_name = card.get("displayName") or card.get("name") or ""
@@ -1615,25 +1617,20 @@ class OnePlatformSoarApi(BaseSoarApi):
             if is_enabled is not None:
                 patch_payload["enabled"] = bool(is_enabled)
 
+            update_mask = ["script", "displayName", "description", "enabled"]
+
             # Ensure mandatory parameters have defaultValue to avoid 1P empty parameter validation error
             if "parameters" in patch_payload and isinstance(patch_payload["parameters"], list):
                 for p in patch_payload["parameters"]:
-                    if p.get("mandatory") and not p.get("defaultValue"):
+                    if isinstance(p, dict) and p.get("mandatory") and not p.get("defaultValue"):
                         p["defaultValue"] = "{}"
+                update_mask.append("parameters")
 
             if "timeoutSeconds" in data or "TimeoutSeconds" in data:
                 patch_payload["timeoutSeconds"] = int(data.get("timeoutSeconds") or data.get("TimeoutSeconds"))
                 update_mask.append("timeoutSeconds")
             if collection == "actions" and ("scriptResultName" in data or "ScriptResultName" in data):
                 patch_payload["scriptResultName"] = data.get("scriptResultName") or data.get("ScriptResultName")
-                update_mask.append("scriptResultName")
-
-            update_mask = ["script", "displayName", "description", "enabled"]
-            if "parameters" in patch_payload:
-                update_mask.append("parameters")
-            if "timeoutSeconds" in patch_payload:
-                update_mask.append("timeoutSeconds")
-            if "scriptResultName" in patch_payload:
                 update_mask.append("scriptResultName")
 
             return self._make_request(
@@ -1664,6 +1661,8 @@ class OnePlatformSoarApi(BaseSoarApi):
         legacy_params = data.get("Parameters") or data.get("parameters") or []
         converted_params = []
         for lp in legacy_params:
+            if not isinstance(lp, dict):
+                continue
             p_name = lp.get("Name") or lp.get("name") or lp.get("displayName")
             p_desc = lp.get("Description") or lp.get("description") or ""
             p_mandatory = bool(lp.get("IsMandatory") or lp.get("mandatory", False))
