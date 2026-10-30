@@ -14,68 +14,33 @@
 
 from __future__ import annotations
 
-from typing import Any
-
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import assign_case_to_user
 
 ACTION_NAME = "AssignCaseToUser"
+TRUE = "true"
 
 
 @output_handler
-def main() -> None:
+def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = ACTION_NAME
 
-    status = EXECUTION_STATE_COMPLETED
-    result_value = True
+    case_id = siemplify.parameters["Case Id"]
+    assign_to = siemplify.parameters["Assign To"]
+    alert_id = siemplify.parameters["Alert Id"]
 
-    try:
-        case_id = siemplify.extract_action_param(
-            param_name="Case Id",
-            is_mandatory=True,
-            print_value=True,
-        )
-        assign_to = siemplify.extract_action_param(
-            param_name="Assign To",
-            default_value="@Admin",
-            is_mandatory=True,
-            print_value=True,
-        )
-        alert_id = siemplify.extract_action_param(
-            param_name="Alert Id",
-            default_value="id",
-            print_value=True,
-        )
+    add_task = assign_case_to_user(
+        chronicle_soar=siemplify,
+        case_id=case_id,
+        assign_to=assign_to,
+        alert_identifier=alert_id,
+    )
 
-        response = assign_case_to_user(
-            chronicle_soar=siemplify,
-            case_id=case_id,
-            assign_to=assign_to,
-            alert_identifier=alert_id,
-        )
-        siemplify.LOGGER.info(f"Assign case response: {response}")
+    siemplify.LOGGER.info(add_task)
 
-        json_result: dict[str, Any] = {
-            "caseId": case_id,
-            "assignedTo": assign_to,
-        }
-        if response:
-            json_result["response"] = response
-
-        siemplify.result.add_result_json(json_result)
-        output_message = f"Successfully assigned case {case_id} to {assign_to}."
-
-    except Exception as e:
-        output_message = f"Error executing action '{ACTION_NAME}'. Reason: {e}"
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-        result_value = False
-        status = EXECUTION_STATE_FAILED
-
-    siemplify.end(output_message, result_value, status)
+    siemplify.end(TRUE, True)
 
 
 if __name__ == "__main__":
