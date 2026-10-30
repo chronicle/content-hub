@@ -76,7 +76,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
             "comment": "Created by Google SecOps",
         })
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 101. State: RUNNING",
+            "Successfully created bulk acquisition 101. State: RUNNING.",
             "101",
             EXECUTION_STATE_COMPLETED,
         )
@@ -119,7 +119,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         call_kwargs = mock_manager.create_bulk_acquisition.call_args[1]
         assert call_kwargs["agent_ids"] == ["agent-1", "agent-2"]
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 102. State: QUEUED",
+            "Successfully created bulk acquisition 102. State: QUEUED.",
             "102",
             EXECUTION_STATE_COMPLETED,
         )
@@ -355,7 +355,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         decoded = b64decode(call_kwargs["script_b64"]).decode("utf-8")
         assert decoded == '<?xml version="1.0"?><script><commands/></script>'
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 104. State: RUNNING",
+            "Successfully created bulk acquisition 104. State: RUNNING.",
             "104",
             EXECUTION_STATE_COMPLETED,
         )
@@ -394,7 +394,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         assert 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' in decoded
         assert 'xmlns:xsd="http://www.w3.org/2001/XMLSchema"' in decoded
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 105. State: RUNNING",
+            "Successfully created bulk acquisition 105. State: RUNNING.",
             "105",
             EXECUTION_STATE_COMPLETED,
         )
@@ -458,7 +458,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_manager.create_bulk_acquisition.assert_called_once()
         mock_siemplify.end.assert_called_once()
         end_call = mock_siemplify.end.call_args[0]
-        assert "Response missing '_id'" in end_call[0]
+        assert "FireEye HX did not return a bulk acquisition ID." in end_call[0]
         assert end_call[1] == "false"
         assert end_call[2] == EXECUTION_STATE_FAILED
 
