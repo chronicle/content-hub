@@ -15,13 +15,9 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from ..actions import CreateBulkAcquisition as create_module
-from ..core.FireEyeHXManager import (
-    FireEyeHXManagerError,
-    FireEyeHXNotFoundError,
-)
 
 
 class TestCreateBulkAcquisition(unittest.TestCase):
@@ -126,6 +122,106 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "extract_action_param")
     @patch.object(create_module, "extract_configuration_param")
     @patch.object(create_module, "SiemplifyAction")
+    def test_create_bulk_acquisition_agent_ids_whitespace_only_failure(
+        self,
+        mock_siemplify_action,
+        mock_extract_config,
+        mock_extract_action,
+        mock_manager_cls,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+
+        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+            if param_name == "Script Content":
+                return "<script><commands/></script>"
+            if param_name == "Agent IDs":
+                return " , "
+            return kwargs.get("default_value")
+
+        mock_extract_action.side_effect = extract_action_param_side_effect
+
+        create_module.main()
+
+        mock_manager.create_bulk_acquisition.assert_not_called()
+        mock_siemplify.end.assert_called_once()
+        end_call = mock_siemplify.end.call_args[0]
+        assert "Agent IDs must contain at least one agent ID" in end_call[0]
+        assert end_call[1] == "false"
+        assert end_call[2] == 2
+
+    @patch.object(create_module, "FireEyeHXManager")
+    @patch.object(create_module, "extract_action_param")
+    @patch.object(create_module, "extract_configuration_param")
+    @patch.object(create_module, "SiemplifyAction")
+    def test_create_bulk_acquisition_no_target_failure(
+        self,
+        mock_siemplify_action,
+        mock_extract_config,
+        mock_extract_action,
+        mock_manager_cls,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+
+        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+            if param_name == "Script Content":
+                return "<script><commands/></script>"
+            if param_name == "Agent IDs":
+                return ""
+            if param_name == "Host Set Name":
+                return ""
+            if param_name == "Host Set ID":
+                return ""
+            return kwargs.get("default_value")
+
+        mock_extract_action.side_effect = extract_action_param_side_effect
+
+        create_module.main()
+
+        mock_manager.create_bulk_acquisition.assert_not_called()
+        mock_siemplify.end.assert_called_once()
+        end_call = mock_siemplify.end.call_args[0]
+        assert "Provide Agent IDs, Host Set ID or Host Set Name" in end_call[0]
+        assert end_call[1] == "false"
+        assert end_call[2] == 2
+
+    @patch.object(create_module, "FireEyeHXManager")
+    @patch.object(create_module, "extract_action_param")
+    @patch.object(create_module, "extract_configuration_param")
+    @patch.object(create_module, "SiemplifyAction")
+    def test_create_bulk_acquisition_invalid_timeframe_failure(
+        self,
+        mock_siemplify_action,
+        mock_extract_config,
+        mock_extract_action,
+        mock_manager_cls,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+
+        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+            if param_name == "Script Content":
+                return '<script time="__INTERVAL_START__"><commands/></script>'
+            if param_name == "Timeframe Start":
+                return "yesterday_bad_date"
+            return kwargs.get("default_value")
+
+        mock_extract_action.side_effect = extract_action_param_side_effect
+
+        create_module.main()
+
+        mock_manager.create_bulk_acquisition.assert_not_called()
+        mock_siemplify.end.assert_called_once()
+        end_call = mock_siemplify.end.call_args[0]
+        assert "Timeframe Start must be a valid ISO timestamp" in end_call[0]
+        assert end_call[1] == "false"
+        assert end_call[2] == 2
+
+    @patch.object(create_module, "FireEyeHXManager")
+    @patch.object(create_module, "extract_action_param")
+    @patch.object(create_module, "extract_configuration_param")
+    @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_date_macro_substitution(
         self,
         mock_siemplify_action,
@@ -134,6 +230,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_manager_cls,
     ) -> None:
         from base64 import b64decode
+
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
         mock_manager.create_bulk_acquisition.return_value = {"_id": 103, "state": "RUNNING"}
@@ -187,8 +284,8 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_siemplify.end.assert_called_once()
         end_call = mock_siemplify.end.call_args[0]
         assert "invalid XML" in end_call[0]
-        assert end_call[1] is False
-        assert end_call[2] == 2  # EXECUTION_STATE_FAILED
+        assert end_call[1] == "false"
+        assert end_call[2] == 2
 
     @patch.object(create_module, "FireEyeHXManager")
     @patch.object(create_module, "extract_action_param")
@@ -202,11 +299,14 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_manager_cls,
     ) -> None:
         from base64 import b64decode
+
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
         mock_manager.create_bulk_acquisition.return_value = {"_id": 104, "state": "RUNNING"}
 
-        wrapped_script = '# Some legacy python comment\nSCRIPT_XML = r"""<?xml version="1.0"?><script><commands/></script>"""\n'
+        wrapped_script = (
+            '# Some legacy python comment\nSCRIPT_XML = r"""<?xml version="1.0"?><script><commands/></script>"""\n'
+        )
 
         def extract_action_param_side_effect(siemplify, param_name, **kwargs):
             if param_name == "Script Content":
@@ -238,11 +338,15 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_manager_cls,
     ) -> None:
         from base64 import b64decode
+
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
         mock_manager.create_bulk_acquisition.return_value = {"_id": 105, "state": "RUNNING"}
 
-        unbound_prefix_script = '<script><commands><command xsi:type="ExecuteModuleCommand"><module name="test"/></command></commands></script>'
+        unbound_prefix_script = (
+            '<script><commands><command xsi:type="ExecuteModuleCommand">'
+            '<module name="test"/></command></commands></script>'
+        )
 
         def extract_action_param_side_effect(siemplify, param_name, **kwargs):
             if param_name == "Script Content":
@@ -290,6 +394,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_siemplify.end.assert_called_once()
         end_call = mock_siemplify.end.call_args[0]
         assert "Script Content must not be empty" in end_call[0]
+        assert end_call[1] == "false"
         assert end_call[2] == 2
 
 

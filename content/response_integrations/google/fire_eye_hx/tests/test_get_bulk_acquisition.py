@@ -50,7 +50,7 @@ class TestGetBulkAcquisition(unittest.TestCase):
 
         get_module.main()
 
-        mock_manager.get_bulk_acquisition.assert_called_once_with("42")
+        mock_manager.get_bulk_acquisition.assert_called_once_with(42)
         mock_siemplify.result.add_result_json.assert_called_once()
         mock_siemplify.end.assert_called_once_with(
             "Successfully retrieved bulk acquisition 42. State: COMPLETE",
@@ -85,6 +85,37 @@ class TestGetBulkAcquisition(unittest.TestCase):
         mock_siemplify.end.assert_called_once()
         end_call = mock_siemplify.end.call_args[0]
         assert "must not be empty" in end_call[0]
+        assert end_call[1] == "false"
+        assert end_call[2] == 2
+
+    @patch.object(get_module, "FireEyeHXManager")
+    @patch.object(get_module, "extract_action_param")
+    @patch.object(get_module, "extract_configuration_param")
+    @patch.object(get_module, "SiemplifyAction")
+    def test_get_bulk_acquisition_non_numeric_id_failure(
+        self,
+        mock_siemplify_action,
+        mock_extract_config,
+        mock_extract_action,
+        mock_manager_cls,
+    ) -> None:
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_manager = mock_manager_cls.return_value
+
+        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+            if param_name == "Bulk Acquisition ID":
+                return "bad_input_abc"
+            return kwargs.get("default_value")
+
+        mock_extract_action.side_effect = extract_action_param_side_effect
+
+        get_module.main()
+
+        mock_manager.get_bulk_acquisition.assert_not_called()
+        mock_siemplify.end.assert_called_once()
+        end_call = mock_siemplify.end.call_args[0]
+        assert "must be a number" in end_call[0]
+        assert end_call[1] == "false"
         assert end_call[2] == 2
 
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from base64 import b64encode
 from datetime import datetime, timedelta, timezone
+from typing import Any
 import xml.etree.ElementTree as ET
 
 from soar_sdk.ScriptResult import (
@@ -31,15 +32,94 @@ from TIPCommon import (
 
 from ..core.FireEyeHXManager import (
     FireEyeHXManager,
-    FireEyeHXManagerError,
     FireEyeHXNotFoundError,
 )
+from ..core.UtilsManager import convert_comma_separated_to_list
 
 INTEGRATION_NAME = "FireEyeHX"
 SCRIPT_NAME = "Create Bulk Acquisition"
 DEFAULT_HOST_SET_NAME = "all_hosts"
-DEFAULT_HOST_SET_ID = 9
 DEFAULT_COMMENT = "Created by Google SecOps"
+SCHEMA_NAMESPACES = 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"'
+
+
+def extract_script_xml(script_content: str, logger: Any = None) -> str:
+    if not script_content or not script_content.strip():
+        raise ValueError("Script Content must not be empty.")
+
+    script_text = script_content.strip()
+
+    if "<?xml" in script_text:
+        start_idx = script_text.find("<?xml")
+        end_idx = script_text.rfind("</script>")
+        if end_idx != -1:
+            script_text = script_text[start_idx : end_idx + len("</script>")]
+        else:
+            script_text = script_text[start_idx:]
+    elif "<script" in script_text:
+        start_idx = script_text.find("<script")
+        end_idx = script_text.rfind("</script>")
+        if end_idx != -1:
+            script_text = script_text[start_idx : end_idx + len("</script>")]
+
+    if logger and len(script_text) < len(script_content.strip()):
+        logger.info("Trimmed Python wrapper / assignment from Script Content XML.")
+
+    return script_text
+
+
+def validate_iso_timestamp(timestamp_str: str, param_name: str) -> str:
+    cleaned = timestamp_str.strip()
+    try:
+        datetime.fromisoformat(cleaned)
+    except ValueError as val_err:
+        raise ValueError(f"{param_name} must be a valid ISO timestamp, got: {timestamp_str}.") from val_err
+    return cleaned
+
+
+def substitute_interval_macros(
+    script_text: str,
+    timeframe_start: str | None,
+    timeframe_stop: str | None,
+) -> str:
+    if "__INTERVAL_START__" in script_text or "__INTERVAL_STOP__" in script_text:
+        utc_yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+        utc_yesterday_str = utc_yesterday.strftime("%Y-%m-%d")
+
+        if timeframe_start and timeframe_start.strip():
+            start_val = validate_iso_timestamp(timeframe_start, "Timeframe Start")
+        else:
+            start_val = f"{utc_yesterday_str}T00:00:00"
+
+        if timeframe_stop and timeframe_stop.strip():
+            stop_val = validate_iso_timestamp(timeframe_stop, "Timeframe Stop")
+        else:
+            stop_val = f"{utc_yesterday_str}T23:59:59"
+
+        script_text = script_text.replace("__INTERVAL_START__", start_val).replace("__INTERVAL_STOP__", stop_val)
+
+    return script_text
+
+
+def add_missing_schema_namespaces(script_text: str, logger: Any = None) -> str:
+    try:
+        ET.fromstring(script_text)
+    except ET.ParseError as xml_err:
+        if "unbound prefix" in str(xml_err) and ("<script " in script_text or "<script>" in script_text):
+            if logger:
+                logger.info("Injecting missing XML schema namespaces (xsi, xsd) onto root <script> tag.")
+            if "<script " in script_text:
+                script_text = script_text.replace("<script ", f"<script {SCHEMA_NAMESPACES} ", 1)
+            elif "<script>" in script_text:
+                script_text = script_text.replace("<script>", f"<script {SCHEMA_NAMESPACES}>", 1)
+            try:
+                ET.fromstring(script_text)
+            except ET.ParseError as retry_err:
+                raise ValueError(f"Script Content contains invalid XML: {retry_err}") from retry_err
+        else:
+            raise ValueError(f"Script Content contains invalid XML: {xml_err}") from xml_err
+
+    return script_text
 
 
 @output_handler
@@ -120,73 +200,13 @@ def main() -> None:
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     status = EXECUTION_STATE_COMPLETED
-    result_value = False
+    result_value = "false"
     manager = None
 
     try:
-        if not script_content or not script_content.strip():
-            raise ValueError("Script Content must not be empty.")
-
-        script_text = script_content.strip()
-
-        # Clean XML if wrapped in python string or assignments (e.g. SCRIPT_XML = r"""...""")
-        if "<?xml" in script_text:
-            start_idx = script_text.find("<?xml")
-            end_idx = script_text.rfind("</script>")
-            if end_idx != -1:
-                script_text = script_text[start_idx : end_idx + len("</script>")]
-            else:
-                script_text = script_text[start_idx:]
-        elif "<script" in script_text:
-            start_idx = script_text.find("<script")
-            end_idx = script_text.rfind("</script>")
-            if end_idx != -1:
-                script_text = script_text[start_idx : end_idx + len("</script>")]
-
-        # Date Macro Substitution if placeholders exist
-        if "__INTERVAL_START__" in script_text or "__INTERVAL_STOP__" in script_text:
-            utc_yesterday = datetime.now(timezone.utc) - timedelta(days=1)
-            utc_yesterday_str = utc_yesterday.strftime("%Y-%m-%d")
-
-            start_val = (
-                timeframe_start.strip()
-                if (timeframe_start and timeframe_start.strip())
-                else f"{utc_yesterday_str}T00:00:00"
-            )
-            stop_val = (
-                timeframe_stop.strip()
-                if (timeframe_stop and timeframe_stop.strip())
-                else f"{utc_yesterday_str}T23:59:59"
-            )
-
-            script_text = script_text.replace("__INTERVAL_START__", start_val).replace(
-                "__INTERVAL_STOP__", stop_val
-            )
-
-        # Pre-flight XML validation with auto-repair for standard schema namespaces
-        try:
-            ET.fromstring(script_text)
-        except ET.ParseError as xml_err:
-            if "unbound prefix" in str(xml_err) and ("<script " in script_text or "<script>" in script_text):
-                siemplify.LOGGER.info("Injecting missing XML schema namespaces (xsi, xsd) onto root <script> tag.")
-                if "<script " in script_text:
-                    script_text = script_text.replace(
-                        "<script ",
-                        '<script xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ',
-                        1,
-                    )
-                elif "<script>" in script_text:
-                    script_text = script_text.replace(
-                        "<script>",
-                        '<script xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">',
-                        1,
-                    )
-                try:
-                    ET.fromstring(script_text)
-                except ET.ParseError as retry_err:
-                    raise ValueError(f"Script Content contains invalid XML: {retry_err}") from retry_err
-            else:
-                raise ValueError(f"Script Content contains invalid XML: {xml_err}") from xml_err
+        script_text = extract_script_xml(script_content, siemplify.LOGGER)
+        script_text = substitute_interval_macros(script_text, timeframe_start, timeframe_stop)
+        script_text = add_missing_schema_namespaces(script_text, siemplify.LOGGER)
 
         script_b64 = b64encode(script_text.encode("utf-8")).decode("utf-8")
 
@@ -201,7 +221,9 @@ def main() -> None:
         host_set_id = None
 
         if agent_ids_param and agent_ids_param.strip():
-            agent_ids = [aid.strip() for aid in agent_ids_param.split(",") if aid.strip()]
+            agent_ids = [aid for aid in convert_comma_separated_to_list(agent_ids_param) if aid]
+            if not agent_ids:
+                raise ValueError("Agent IDs must contain at least one agent ID.")
             if host_set_id_param and str(host_set_id_param).strip():
                 siemplify.LOGGER.warning("Both Agent IDs and Host Set ID were provided; targeting specific Agent IDs.")
         elif host_set_id_param and str(host_set_id_param).strip():
@@ -215,7 +237,7 @@ def main() -> None:
                 raise FireEyeHXNotFoundError(f"Host set '{host_set_name}' was not found.")
             host_set_id = resolved_id
         else:
-            host_set_id = DEFAULT_HOST_SET_ID
+            raise ValueError("Provide Agent IDs, Host Set ID or Host Set Name to target the bulk acquisition.")
 
         acquisition_data = manager.create_bulk_acquisition(
             script_b64=script_b64,
@@ -234,7 +256,7 @@ def main() -> None:
         output_message = f"Error executing {SCRIPT_NAME}: {err}"
         siemplify.LOGGER.exception(output_message)
         status = EXECUTION_STATE_FAILED
-        result_value = False
+        result_value = "false"
 
     finally:
         if manager:
