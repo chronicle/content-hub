@@ -14,13 +14,12 @@
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
 from requests import HTTPError, Response
 
-from TIPCommon.consts import DEFAULT_ENVIRONMENT
+from TIPCommon.consts import DEFAULT_ENVIRONMENT, NO_CONTENT_STATUS_CODE
 from TIPCommon.data_models import (
     AlertEvent,
     AttachmentMetadata,
@@ -47,6 +46,7 @@ from TIPCommon.exceptions import InternalJSONDecoderError
 from TIPCommon.utils import get_sdk_api_uri, none_to_default_value, safe_json_for_204
 
 from .soar_platform_clients.api_client_factory import get_soar_client
+from .soar_platform_clients.base_soar_api import validate_response
 from .soar_platform_clients.legacy_soar_api import LegacySoarApi
 
 if TYPE_CHECKING:
@@ -73,37 +73,6 @@ def _validate_expand_parameters(**kwargs) -> None:
         if expand_list and "*" in expand_list:
             msg = f"Using '*' for '{param_name}' is not allowed. Please specify the exact fields to expand."
             raise ValueError(msg)
-
-
-def validate_response(
-    response: Response,
-    validate_json: bool = False,
-) -> None:
-    """Validate response and get it as a JSON.
-
-    Args:
-        response (requests.Response): The response to validate
-
-    Raises:
-        HTTPError: If the response status code is pointing on some failure
-        InternalJSONDecoderError: If the response failed to be parsed as JSON
-
-    """
-    try:
-        response.raise_for_status()
-
-        if validate_json:
-            response.json()
-
-    except HTTPError as he:
-        msg = f"An error happened while requesting API, {he}"
-        raise HTTPError(msg, response=he.response) from he
-
-    except json.JSONDecodeError as je:
-        msg = f"Failed to parse response as JSON.\nError: {je}\nRaw response: {response.text}"
-        raise InternalJSONDecoderError(
-            msg,
-        ) from je
 
 
 # ==== GET ==== #
@@ -498,7 +467,7 @@ def get_user_profile_cards(
     result = api_client.get_users_profile_cards()
 
     if isinstance(api_client, LegacySoarApi):
-        validate_response(result)
+        validate_response(result, validate_json=True)
         return result.json()
 
     return {"objectsList": result}
@@ -1419,8 +1388,10 @@ def get_traking_list_record(
     api_client.params.entity_id = entity_id
 
     response = api_client.get_traking_list_record()
-
-    return {"custom_lists": response if isinstance(response, list) else response.json()}
+    if isinstance(response, list):
+        return {"custom_lists": response}
+    validate_response(response, validate_json=True)
+    return {"custom_lists": response.json()}
 
 
 def get_traking_list_records_filtered(
@@ -1437,8 +1408,10 @@ def get_traking_list_records_filtered(
     api_client.params.environment = environment
 
     response = api_client.get_traking_list_records_filtered()
-
-    return {"custom_lists": response if isinstance(response, list) else response.json()}
+    if isinstance(response, list):
+        return {"custom_lists": response}
+    validate_response(response, validate_json=True)
+    return {"custom_lists": response.json()}
 
 
 def execute_bulk_assign(
@@ -1499,7 +1472,8 @@ def get_security_events(
 
     else:
         alerts_response = api_client.get_full_case_details()
-        alert_ids = [alert["id"] for alert in alerts_response.json()["caseAlerts"]]
+        validate_response(alerts_response, validate_json=True)
+        alert_ids = [alert["id"] for alert in alerts_response.json().get("caseAlerts", [])]
         for alert_id in alert_ids:
             api_client.params.alert_id = alert_id
             response = api_client.get_security_events()
@@ -1637,12 +1611,19 @@ def assign_case_to_user(
     assign_to: str,
     alert_identifier: str | None = None,
 ) -> SingleJson:
-    """Assign case to user
+    """Assign case to user.
+
+    Note:
+        On 1P (`OnePlatformSoarApi`), case assignment uses
+        `POST /cases:executeBulkAssign`, which operates at the case level and
+        ignores `alert_identifier`. `alert_identifier` is only used on legacy SOAR.
+
     Args:
-        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
-        case_id (int): Chronicle SOAR case ID
-        assign_to (str): Chronicle SOAR assign to
-        alert_identifier (str): Chronicle SOAR Alert Identifier.
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+        case_id (int): Chronicle SOAR case ID.
+        assign_to (str): Chronicle SOAR user identifier (`userName`) or role.
+        alert_identifier (str | None): Chronicle SOAR Alert Identifier (legacy SOAR only;
+            ignored on 1P).
     """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.case_id = case_id
@@ -1695,7 +1676,7 @@ def get_siemplify_user_details(
     filter_by_role: bool,
     requested_page: int,
     page_size: int,
-    should_hide_disabled_users: str,
+    should_hide_disabled_users: bool | str,
 ) -> list[UserDetails]:
     """Get siemplify user details.
 
@@ -1705,10 +1686,10 @@ def get_siemplify_user_details(
         filter_by_role (bool): Chronicle SOAR filter by role.
         requested_page (int): Chronicle SOAR requested page.
         page_size (int): Chronicle SOAR page size.
-        should_hide_disabled_users (str): Chronicle SOAR should hide disabled users.
+        should_hide_disabled_users (bool | str): Chronicle SOAR should hide disabled users.
 
     Returns:
-        UserDetails: A UserDetails object.
+        list[UserDetails]: A list of UserDetails objects.
 
     """
     api_client = get_soar_client(chronicle_soar)
@@ -1735,6 +1716,7 @@ def get_domain_alias(chronicle_soar: ChronicleSOAR, page_count: int = 0) -> Sing
     api_client.params.page_count = page_count
 
     response = api_client.get_domain_alias()
+    validate_response(response, validate_json=True)
     return response.json()
 
 
@@ -1805,7 +1787,8 @@ def get_case_wall_records(
     p.wall_expand = wall_expand
 
     response = api_client.get_case_wall_records()
-    return response.json()
+    validate_response(response, validate_json=response.status_code != NO_CONTENT_STATUS_CODE)
+    return safe_json_for_204(response, default_for_204={})
 
 
 def get_entity_expand_cards(
@@ -1829,7 +1812,8 @@ def get_entity_expand_cards(
     p.entity_expand = entity_expand
 
     response = api_client.get_entity_expand_cards()
-    return response.json()
+    validate_response(response, validate_json=response.status_code != NO_CONTENT_STATUS_CODE)
+    return safe_json_for_204(response, default_for_204={})
 
 
 def get_attachments_metadata(
@@ -2119,6 +2103,7 @@ def add_dynamic_env_param(
     api_client.params.optional_json = param.get("optionalValuesJson", []) or param.get("optionalValues", [])
 
     response = api_client.add_dynamic_env_param()
+    validate_response(response, validate_json=True)
     return response.json()
 
 
@@ -2536,6 +2521,12 @@ def save_playbook(
     api_client = get_soar_client(chronicle_soar)
     api_client.params.playbook_data = playbook_data
     response = api_client.save_playbook()
+    validate_response(response, validate_json=False)
+    raw_text = getattr(response, "text", None)
+    if response.status_code == NO_CONTENT_STATUS_CODE or (
+        isinstance(raw_text, str) and not raw_text.strip()
+    ):
+        return {}
     return response.json()
 
 
@@ -2704,14 +2695,14 @@ def get_ontology_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
         list[SingleJson]: Response JSON."""
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_ontology_records()
-    if not response:
-        return []
     if isinstance(response, list):
         records = response
-    elif isinstance(response.json(), dict):
-        records = response.json().get("ontology_records", [])
     else:
-        records = []
+        if response is None:
+            return []
+        validate_response(response, validate_json=True)
+        res_json = response.json()
+        records = res_json.get("ontology_records", []) if isinstance(res_json, dict) else []
     return [OntologyRecord.from_json(item).to_json() for item in records]
 
 
@@ -2728,12 +2719,12 @@ def get_case_tags(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     response = api_client.get_case_tags()
 
     if isinstance(response, list):
-        records = response
-    elif isinstance(response.json(), dict):
-        return response.json().get("case_tag_definitions", [])
-    else:
-        records = []
-    return records
+        return response
+    validate_response(response, validate_json=True)
+    res_json = response.json()
+    if isinstance(res_json, dict):
+        return res_json.get("case_tag_definitions", [])
+    return res_json if isinstance(res_json, list) else []
 
 
 def get_case_stages(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
@@ -2747,18 +2738,18 @@ def get_case_stages(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_case_stages()
+    if isinstance(response, list):
+        return response
+    if response is None:
+        return []
     try:
-        raw_data = response
-        if not raw_data:
-            return []
-        if isinstance(response, list):
-            return response
-        elif isinstance(raw_data.json(), dict):
-            return raw_data.json().get("case_stage_definitions", [])
+        validate_response(response, validate_json=True)
     except InternalJSONDecoderError:
         return []
-
-    return raw_data.json()
+    res_json = response.json()
+    if isinstance(res_json, dict):
+        return res_json.get("case_stage_definitions", [])
+    return res_json
 
 
 def get_case_close_reasons(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
@@ -3204,6 +3195,7 @@ def get_denylists(
     response = api_client.get_denylists()
     if isinstance(response, list):
         return response
+    validate_response(response, validate_json=response.status_code != NO_CONTENT_STATUS_CODE)
     return safe_json_for_204(response, default_for_204={})
 
 
@@ -3223,6 +3215,7 @@ def get_simulated_cases(
                 if item
             ]
         return response
+    validate_response(response, validate_json=response.status_code != NO_CONTENT_STATUS_CODE)
     raw_data = safe_json_for_204(response, default_for_204=[])
     if isinstance(raw_data, list):
         if raw_data and isinstance(raw_data[0], dict):
@@ -3279,6 +3272,7 @@ def get_mapping_rules(
     api_client.params.product = product
     api_client.params.event_name = event_name
     response = api_client.get_mapping_rules()
+    validate_response(response, validate_json=response.status_code != NO_CONTENT_STATUS_CODE)
     return safe_json_for_204(response, default_for_204={})
 
 

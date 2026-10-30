@@ -12,40 +12,55 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock
 
 import pytest
-from pytest_mock import MockerFixture
+import requests
 
 from TIPCommon.data_models import InstalledIntegrationInstance, UserDetails
 from TIPCommon.rest.soar_api import (
+    add_dynamic_env_param,
+    assign_case_to_user,
     attach_case_playbook_to_case,
     attach_workflow_to_case,
     create_integrations_instance,
     export_package,
     get_case_insights,
+    get_case_overview_details,
+    get_case_wall_records,
+    get_domain_alias,
     get_enabled_workflow_cards,
+    get_entity_expand_cards,
     get_environment_group_names,
     get_installed_connectors,
     get_installed_integrations_of_environment,
+    get_mapping_rules,
+    get_security_events,
     get_siemplify_user_details,
     get_sla_records,
     get_system_version,
     get_user_profile_cards,
     install_integration,
     save_or_update_job,
+    save_playbook,
     search_cases_by_everything,
+    validate_response,
 )
 
 if TYPE_CHECKING:
+    from unittest.mock import MagicMock
+
+    from pytest_mock import MockerFixture
+
     from TIPCommon.rest.soar_platform_clients.legacy_soar_api import LegacySoarApi
     from TIPCommon.rest.soar_platform_clients.one_platform_soar_api import OnePlatformSoarApi
 
 
 @pytest.fixture
 def mock_get_soar_client_one_platform(
-    mocker: MockerFixture, mock_oneplatform_client: "OnePlatformSoarApi"
+    mocker: MockerFixture, mock_oneplatform_client: OnePlatformSoarApi
 ) -> MagicMock:
     mock_get_client = mocker.patch("TIPCommon.rest.soar_api.get_soar_client")
     mock_get_client.return_value = mock_oneplatform_client
@@ -53,7 +68,7 @@ def mock_get_soar_client_one_platform(
 
 
 @pytest.fixture
-def mock_get_soar_client_legacy(mocker: MockerFixture, mock_legacy_client: "LegacySoarApi") -> MagicMock:
+def mock_get_soar_client_legacy(mocker: MockerFixture, mock_legacy_client: LegacySoarApi) -> MagicMock:
     mock_get_client = mocker.patch("TIPCommon.rest.soar_api.get_soar_client")
     mock_get_client.return_value = mock_legacy_client
     return mock_get_client
@@ -63,7 +78,7 @@ def test_get_user_profile_cards_one_platform(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_user_profile_cards wrapper function formats output under One Platform API client."""
     mock_oneplatform_client.get_users_profile_cards = mocker.MagicMock(return_value=[{"username": "user1"}])
@@ -79,7 +94,7 @@ def test_get_user_profile_cards_legacy(
     mocker: MockerFixture,
     mock_get_soar_client_legacy: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_legacy_client: "LegacySoarApi",
+    mock_legacy_client: LegacySoarApi,
 ) -> None:
     """Test get_user_profile_cards wrapper function validates and returns JSON under Legacy client."""
     mock_response = mocker.MagicMock()
@@ -96,7 +111,7 @@ def test_get_installed_integrations_of_environment_one_platform(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_installed_integrations_of_environment formats instances under One Platform client."""
     mock_oneplatform_client.get_installed_integrations_of_environment = mocker.MagicMock(
@@ -124,7 +139,7 @@ def test_get_installed_integrations_of_environment_legacy(
     mocker: MockerFixture,
     mock_get_soar_client_legacy: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_legacy_client: "LegacySoarApi",
+    mock_legacy_client: LegacySoarApi,
 ) -> None:
     """Test get_installed_integrations_of_environment validates and handles 204 JSON under Legacy client."""
     mock_response = mocker.MagicMock()
@@ -152,7 +167,7 @@ def test_get_case_insights_one_platform(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_case_insights wrapper function formats list output under One Platform client."""
     mock_oneplatform_client.get_case_insights = mocker.MagicMock(return_value=[{"title": "Insight 1"}])
@@ -167,7 +182,7 @@ def test_get_case_insights_legacy(
     mocker: MockerFixture,
     mock_get_soar_client_legacy: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_legacy_client: "LegacySoarApi",
+    mock_legacy_client: LegacySoarApi,
 ) -> None:
     """Test get_case_insights wrapper function validates and aggregates results under Legacy client."""
     mock_response = mocker.MagicMock()
@@ -185,7 +200,7 @@ def test_get_siemplify_user_details_one_platform(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_siemplify_user_details formats user profile cards output under One Platform client."""
     mock_oneplatform_client.get_siemplify_user_details = mocker.MagicMock(
@@ -203,7 +218,7 @@ def test_get_siemplify_user_details_legacy(
     mocker: MockerFixture,
     mock_get_soar_client_legacy: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_legacy_client: "LegacySoarApi",
+    mock_legacy_client: LegacySoarApi,
 ) -> None:
     """Test get_siemplify_user_details validates and extracts objectsList under Legacy client."""
     mock_response = mocker.MagicMock()
@@ -222,7 +237,7 @@ def test_search_cases_by_everything_one_platform(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test search_cases_by_everything formats aggregated search output under One Platform client."""
     mock_oneplatform_client.search_cases_by_everything = mocker.MagicMock(return_value=[{"id": 1}, {"id": 2}])
@@ -236,7 +251,7 @@ def test_search_cases_by_everything_legacy(
     mocker: MockerFixture,
     mock_get_soar_client_legacy: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_legacy_client: "LegacySoarApi",
+    mock_legacy_client: LegacySoarApi,
 ) -> None:
     """Test search_cases_by_everything validates and returns json output under Legacy client."""
     mock_response = mocker.MagicMock()
@@ -253,7 +268,7 @@ def test_save_or_update_job_one_platform(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test save_or_update_job wrapper function validates and returns JSON under One Platform client."""
     mock_response = mocker.MagicMock()
@@ -273,7 +288,7 @@ def test_save_or_update_job_legacy(
     mocker: MockerFixture,
     mock_get_soar_client_legacy: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_legacy_client: "LegacySoarApi",
+    mock_legacy_client: LegacySoarApi,
 ) -> None:
     """Test save_or_update_job wrapper function validates and returns JSON under Legacy client."""
     mock_response = mocker.MagicMock()
@@ -293,7 +308,7 @@ def test_attach_case_playbook_to_case_one_platform(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test attach_case_playbook_to_case wrapper function sets params and calls OnePlatform client."""
     mock_response = mocker.MagicMock()
@@ -320,7 +335,7 @@ def test_get_enabled_workflow_cards_one_platform_dict_payload(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_enabled_workflow_cards extracts payload from dict response under OnePlatform client."""
     mock_response = mocker.MagicMock()
@@ -339,7 +354,7 @@ def test_get_enabled_workflow_cards_one_platform_list_response(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_enabled_workflow_cards returns list response directly if not wrapped in dict."""
     mock_response = mocker.MagicMock()
@@ -357,7 +372,7 @@ def test_get_installed_connectors_list_response(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_installed_connectors returns list directly when client returns list of connectors."""
     mock_oneplatform_client.get_installed_connectors = mocker.MagicMock(
@@ -375,7 +390,7 @@ def test_get_installed_connectors_response_object(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_installed_connectors validates and returns JSON when client returns a Response object."""
     mock_response = mocker.MagicMock()
@@ -395,7 +410,7 @@ def test_install_integration(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test install_integration sets params, validates response, and returns JSON."""
     mock_response = mocker.MagicMock()
@@ -427,7 +442,7 @@ def test_export_package(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test export_package validates response without json check and returns binary content."""
     mock_response = mocker.MagicMock()
@@ -446,7 +461,7 @@ def test_create_integrations_instance(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test create_integrations_instance validates response and returns instance JSON."""
     mock_response = mocker.MagicMock()
@@ -471,7 +486,7 @@ def test_get_sla_records_one_platform_list(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_sla_records returns list directly when OnePlatform returns a list."""
     mock_oneplatform_client.get_sla_records = mocker.MagicMock(
@@ -487,7 +502,7 @@ def test_get_sla_records_legacy_dict_response(
     mocker: MockerFixture,
     mock_get_soar_client_legacy: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_legacy_client: "LegacySoarApi",
+    mock_legacy_client: LegacySoarApi,
 ) -> None:
     """Test get_sla_records extracts slaDefinitions from response dict under Legacy client."""
     mock_response = mocker.MagicMock()
@@ -504,7 +519,7 @@ def test_attach_workflow_to_case(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test attach_workflow_to_case sets parameters and returns parsed JSON response."""
     mock_response = mocker.MagicMock()
@@ -534,7 +549,7 @@ def test_get_system_version(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_system_version validates and returns system version JSON."""
     mock_response = mocker.MagicMock()
@@ -551,7 +566,7 @@ def test_get_environment_group_names(
     mocker: MockerFixture,
     mock_get_soar_client_one_platform: MagicMock,
     mock_chronicle_soar: MagicMock,
-    mock_oneplatform_client: "OnePlatformSoarApi",
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> None:
     """Test get_environment_group_names validates and returns environment group names JSON."""
     mock_response = mocker.MagicMock()
@@ -562,3 +577,148 @@ def test_get_environment_group_names(
     res = get_environment_group_names(mock_chronicle_soar)
 
     assert res == {"environmentGroups": ["Group1", "Group2"]}
+
+
+def _make_response(
+    status_code: int,
+    body: bytes,
+    url: str = "https://mock-soar-api.com/test",
+) -> requests.Response:
+    """Create a real requests.Response instance with status code and raw payload."""
+    resp = requests.Response()
+    resp.status_code = status_code
+    resp._content = body
+    resp.encoding = "utf-8"
+    resp.url = url
+    return resp
+
+
+@pytest.mark.parametrize(
+    ("status_code", "body_text"),
+    [
+        (403, '{"error": {"code": 403, "message": "Permission chronicle.legacySoarUsers.get denied"}}'),
+        (404, '{"error": {"code": 404, "message": "Resource not found"}}'),
+        (500, '{"error": {"code": 500, "message": "Internal server error"}}'),
+    ],
+)
+def test_validate_response_includes_error_body(status_code: int, body_text: str) -> None:
+    """Test validate_response includes the API response body in the raised HTTPError."""
+    response = _make_response(status_code, body_text.encode())
+
+    with pytest.raises(requests.HTTPError) as exc_info:
+        validate_response(response, validate_json=True)
+
+    assert str(status_code) in str(exc_info.value)
+    assert f"Response body: {body_text}" in str(exc_info.value)
+    assert exc_info.value.response is response
+
+
+def test_validate_response_empty_error_body_omits_suffix() -> None:
+    """Test validate_response omits the response body suffix when the error body is empty."""
+    response = _make_response(500, b"")
+
+    with pytest.raises(requests.HTTPError) as exc_info:
+        validate_response(response)
+
+    assert "500" in str(exc_info.value)
+    assert "Response body:" not in str(exc_info.value)
+
+
+@pytest.mark.parametrize("status_code", [403, 404, 500])
+def test_get_user_profile_cards_one_platform_propagates_http_errors(
+    status_code: int,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test get_user_profile_cards raises HTTPError with response body instead of empty objectsList."""
+    body = f'{{"error": {{"code": {status_code}, "message": "Lookup failed {status_code}"}}}}'.encode()
+    mock_chronicle_soar.session.request.return_value = _make_response(status_code, body)
+
+    with pytest.raises(requests.HTTPError) as exc_info:
+        get_user_profile_cards(mock_chronicle_soar)
+
+    assert f"Lookup failed {status_code}" in str(exc_info.value)
+
+
+def test_get_user_profile_cards_one_platform_empty_proto3_dict(
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test get_user_profile_cards returns empty objectsList cleanly on legitimate empty 1P {} response."""
+    mock_chronicle_soar.session.request.return_value = _make_response(200, b"{}")
+
+    res = get_user_profile_cards(mock_chronicle_soar)
+
+    assert res == {"objectsList": []}
+    mock_chronicle_soar.LOGGER.warn.assert_not_called()
+
+
+@pytest.mark.parametrize("status_code", [403, 404, 500])
+def test_get_siemplify_user_details_one_platform_propagates_http_errors(
+    status_code: int,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test get_siemplify_user_details raises HTTPError with response body instead of returning []."""
+    body = f'{{"error": {{"code": {status_code}, "message": "User details error {status_code}"}}}}'.encode()
+    mock_chronicle_soar.session.request.return_value = _make_response(status_code, body)
+
+    with pytest.raises(requests.HTTPError) as exc_info:
+        get_siemplify_user_details(mock_chronicle_soar, "", False, 0, 100, True)
+
+    assert f"User details error {status_code}" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("status_code", [400, 403, 404, 500])
+def test_assign_case_to_user_one_platform_propagates_http_error_with_body(
+    status_code: int,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test assign_case_to_user raises HTTPError including backend error body on failure."""
+    body = (
+        f'{{"error": {{"code": {status_code}, "message": "Cannot assign case ({status_code})"}}}}'
+    ).encode()
+    mock_chronicle_soar.session.request.return_value = _make_response(status_code, body)
+
+    with pytest.raises(requests.HTTPError) as exc_info:
+        assign_case_to_user(
+            chronicle_soar=mock_chronicle_soar,
+            case_id=101,
+            assign_to="user@example.com",
+            alert_identifier="ALERT_1",
+        )
+
+    assert f"Cannot assign case ({status_code})" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("status_code", [403, 404, 500])
+def test_audited_soar_api_wrappers_propagate_http_errors(
+    status_code: int,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test audited soar_api wrappers validate HTTP status and include response body on 403/404/500."""
+    body = f'{{"error": {{"code": {status_code}, "message": "Wrapper failure {status_code}"}}}}'.encode()
+
+    calls = [
+        lambda: get_case_overview_details(mock_chronicle_soar, 123),
+        lambda: get_domain_alias(mock_chronicle_soar),
+        lambda: get_case_wall_records(mock_chronicle_soar, 123),
+        lambda: get_entity_expand_cards(mock_chronicle_soar, 123),
+        lambda: add_dynamic_env_param(mock_chronicle_soar, {"name": "p1"}),
+        lambda: save_playbook(mock_chronicle_soar, {"name": "pb1"}),
+        lambda: get_mapping_rules(mock_chronicle_soar, mr_id="1"),
+        lambda: get_security_events(mock_chronicle_soar, 123),
+    ]
+
+    for fn in calls:
+        mock_chronicle_soar.session.request.return_value = _make_response(status_code, body)
+        with pytest.raises(requests.HTTPError) as exc_info:
+            fn()
+        assert f"Wrapper failure {status_code}" in str(exc_info.value)

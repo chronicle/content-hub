@@ -21,18 +21,17 @@ import re
 import urllib.parse
 from typing import TYPE_CHECKING
 
+import requests
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
-from TIPCommon.consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE
+from TIPCommon.consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE, NO_CONTENT_STATUS_CODE
 from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
 from TIPCommon.rest.custom_types import HttpMethod
 from TIPCommon.utils import escape_odata_literal, get_sdk_api_uri, safe_json_for_204, temporarily_remove_header
 
-from .base_soar_api import BaseSoarApi
+from .base_soar_api import BaseSoarApi, validate_response
 
 if TYPE_CHECKING:
-    import requests
-
     from TIPCommon.types import SingleJson
 
 
@@ -150,7 +149,9 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def pause_alert_sla(self) -> requests.Response:
         """Pause alert sla."""
-        alert = self.get_case_alerts().json()
+        alerts_response = self.get_case_alerts()
+        validate_response(alerts_response, validate_json=True)
+        alert = alerts_response.json()
         alert_id = alert.get("caseAlerts")[0].get("id")
         endpoint = f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:pauseSla"
         payload = {
@@ -160,7 +161,9 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     def resume_alert_sla(self) -> requests.Response:
         """Resume alert sla."""
-        alert = self.get_case_alerts().json()
+        alerts_response = self.get_case_alerts()
+        validate_response(alerts_response, validate_json=True)
+        alert = alerts_response.json()
         alert_id = alert.get("caseAlerts")[0].get("id")
         endpoint = f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:resumeSla"
         payload = {
@@ -173,11 +176,13 @@ class OnePlatformSoarApi(BaseSoarApi):
         params = self._build_expand_params(getattr(self.params, "case_expand", None))
         case_id = self.params.case_id
         endpoint = f"/cases/{case_id}"
-        return self._make_request(
+        response = self._make_request(
             HttpMethod.GET,
             endpoint,
             params=params,
-        ).json()
+        )
+        validate_response(response, validate_json=True)
+        return response.json()
 
     def _get_case_alerts(self) -> list:
         """Fetch case alert cards using explicit alert_expand."""
@@ -188,9 +193,19 @@ class OnePlatformSoarApi(BaseSoarApi):
             HttpMethod.GET,
             endpoint,
             params=params,
-        ).json()
+        )
+        if response.status_code == NO_CONTENT_STATUS_CODE:
+            validate_response(response, validate_json=False)
+            return []
 
-        return response.get("caseAlerts", [])
+        validate_response(response, validate_json=True)
+        response_data = response.json()
+        if isinstance(response_data, dict) and response_data and "caseAlerts" not in response_data:
+            self.chronicle_soar.LOGGER.warn(
+                f"Expected root key 'caseAlerts' not found in response from "
+                f"'{endpoint}'. Actual top-level keys: {list(response_data.keys())}"
+            )
+        return response_data.get("caseAlerts") or []
 
     def get_case_overview_details(self) -> SingleJson:
         """Get full case overview including case details and alert cards.
@@ -283,10 +298,11 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Get investigator data."""
         case_id = self.params.case_id
         alert_data = self.get_alert_id_by_alert_identifier()
-        if alert_data.status_code == 204:
+        if alert_data.status_code == NO_CONTENT_STATUS_CODE:
             alert_data._content = b"{}"
             return alert_data
 
+        validate_response(alert_data, validate_json=True)
         alert_id = alert_data.json()["caseAlerts"][0].get("id")
         endpoint = f"/cases/{case_id}/caseAlerts/{alert_id}/involvedEvents:formatted"
         return self._make_request(HttpMethod.GET, endpoint)
@@ -323,23 +339,40 @@ class OnePlatformSoarApi(BaseSoarApi):
         Returns:
             list[SingleJson]: A list of all records retrieved across paginated responses.
 
+        Raises:
+            requests.HTTPError: If any page returns a non-success HTTP status code.
+            InternalJSONDecoderError: If a non-204 response body is not valid JSON.
+
         """
-        all_records = []
+        all_records: list[SingleJson] = []
         next_token = None
         current_endpoint = initial_endpoint
 
         while True if next_token is None else bool(next_token):
             endpoint_with_token = f"{current_endpoint}&pageToken={next_token}" if next_token else current_endpoint
 
-            response_data = {}
-            try:
-                response = self._make_request(HttpMethod.GET, endpoint_with_token)
-                response.raise_for_status()
-                response_data = response.json()
-            except Exception:
+            response = self._make_request(HttpMethod.GET, endpoint_with_token)
+            if response.status_code == NO_CONTENT_STATUS_CODE:
+                validate_response(response, validate_json=False)
                 break
 
-            current_records = response_data.get(root_response_key, [])
+            validate_response(response, validate_json=True)
+            response_data = response.json()
+
+            if not isinstance(response_data, dict):
+                self.chronicle_soar.LOGGER.warn(
+                    f"Expected JSON object with root key '{root_response_key}' from "
+                    f"'{endpoint_with_token}', got {type(response_data).__name__}."
+                )
+                break
+
+            if response_data and root_response_key not in response_data:
+                self.chronicle_soar.LOGGER.warn(
+                    f"Expected root key '{root_response_key}' not found in response from "
+                    f"'{endpoint_with_token}'. Actual top-level keys: {list(response_data.keys())}"
+                )
+
+            current_records = response_data.get(root_response_key) or []
             all_records.extend(current_records)
 
             next_token = response_data.get("nextPageToken")
@@ -498,7 +531,18 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def assign_case_to_user(self) -> requests.Response:
-        """Assign case to user."""
+        """Assign case to user at the case level using 1P `/cases:executeBulkAssign`.
+
+        Note:
+            1P `/cases:executeBulkAssign` operates at the case level and does not
+            accept `alert_identifier`. If `self.params.alert_identifier` is set,
+            it is ignored on 1P.
+        """
+        if getattr(self.params, "alert_identifier", None):
+            self.chronicle_soar.LOGGER.info(
+                "Note: 'alert_identifier' is ignored on 1P; "
+                "'/cases:executeBulkAssign' assigns at the case level."
+            )
         endpoint = "/cases:executeBulkAssign"
         payload = {"casesIds": [self.params.case_id], "userName": self.params.assign_to}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
@@ -676,9 +720,14 @@ class OnePlatformSoarApi(BaseSoarApi):
         """
         case_data = self.get_case_overview_details()
 
-        security_events = self._make_request(
+        security_events_response = self._make_request(
             HttpMethod.GET, f"/cases/{self.params.case_id}/caseAlerts/-/involvedEvents:formatted"
-        ).json()
+        )
+        validate_response(
+            security_events_response,
+            validate_json=security_events_response.status_code != NO_CONTENT_STATUS_CODE,
+        )
+        security_events = safe_json_for_204(security_events_response, default_for_204=[])
 
         events_by_alert: SingleJson = {}
         for event in security_events:
@@ -690,14 +739,26 @@ class OnePlatformSoarApi(BaseSoarApi):
             alert["securityEventCards"] = events_by_alert.get(alert.get("identifier"), [])
 
         wall_response = self.get_case_wall_records()
+        validate_response(
+            wall_response,
+            validate_json=wall_response.status_code != NO_CONTENT_STATUS_CODE,
+        )
         wall_data = safe_json_for_204(wall_response, default_for_204={})
         case_data["wallData"] = wall_data.get("caseWallRecords", [])
 
         entity_response = self.get_entity_expand_cards()
+        validate_response(
+            entity_response,
+            validate_json=entity_response.status_code != NO_CONTENT_STATUS_CODE,
+        )
         entity_data = safe_json_for_204(entity_response, default_for_204={})
         case_data["involvedEntities"] = entity_data.get("involvedEntities", [])
 
         entity_cards_response = self.get_entity_cards()
+        validate_response(
+            entity_cards_response,
+            validate_json=entity_cards_response.status_code != NO_CONTENT_STATUS_CODE,
+        )
         entity_cards_data = safe_json_for_204(entity_cards_response, default_for_204={})
         case_data["entityCards"] = entity_cards_data.get("cards", [])
 
@@ -839,10 +900,12 @@ class OnePlatformSoarApi(BaseSoarApi):
                     json_payload=request_payload,
                     params={"format": "camel"},
                 )
-                response.raise_for_status()
+                validate_response(response, validate_json=True)
                 payload = response.json()
             except Exception as e:
                 self.chronicle_soar.LOGGER.error(f"Request failed at page {page_number}: {e}")
+                if page_number == 0:
+                    raise
                 return all_cases
 
             results = payload.get("results", [])
@@ -1167,7 +1230,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             "/connectors/-/connectorInstances"
         )
         response = self._make_request(HttpMethod.GET, endpoint)
-        response.raise_for_status()
+        validate_response(response, validate_json=True)
         response_json = response.json()
 
         instances = (
@@ -1436,12 +1499,20 @@ class OnePlatformSoarApi(BaseSoarApi):
             HttpMethod.GET,
             connectors_endpoint.format(identifier=self.params.integration_name),
         )
+        validate_response(
+            connectors_response,
+            validate_json=connectors_response.status_code != NO_CONTENT_STATUS_CODE,
+        )
         connectors_data = safe_json_for_204(connectors_response, default_for_204={})
         cards.extend(connectors_data.get("connectors", []))
 
         actions_response = self._make_request(
             HttpMethod.GET,
             actions_endpoint.format(identifier=self.params.integration_name),
+        )
+        validate_response(
+            actions_response,
+            validate_json=actions_response.status_code != NO_CONTENT_STATUS_CODE,
         )
         actions_data = safe_json_for_204(actions_response, default_for_204={})
         cards.extend(actions_data.get("actions", []))
@@ -1450,12 +1521,20 @@ class OnePlatformSoarApi(BaseSoarApi):
             HttpMethod.GET,
             jobs_endpoint.format(identifier=self.params.integration_name),
         )
+        validate_response(
+            jobs_response,
+            validate_json=jobs_response.status_code != NO_CONTENT_STATUS_CODE,
+        )
         jobs_data = safe_json_for_204(jobs_response, default_for_204={})
         cards.extend(jobs_data.get("jobs", []))
 
         managers_response = self._make_request(
             HttpMethod.GET,
             managers_endpoint.format(identifier=self.params.integration_name),
+        )
+        validate_response(
+            managers_response,
+            validate_json=managers_response.status_code != NO_CONTENT_STATUS_CODE,
         )
         managers_data = safe_json_for_204(managers_response, default_for_204={})
         cards.extend(managers_data.get("managers", []))
@@ -1605,35 +1684,59 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Get simulated cases."""
         endpoint = f"/legacyCases:getCustomCases?pageSize={_PAGE_SIZE}"
         response = self._make_request(HttpMethod.GET, endpoint)
-        response.raise_for_status()
-        try:
-            response_data = response.json()
-        except Exception:
+        if response.status_code == NO_CONTENT_STATUS_CODE:
+            validate_response(response, validate_json=False)
             return []
+
+        validate_response(response, validate_json=True)
+        response_data = response.json()
 
         if isinstance(response_data, list):
             return response_data
 
+        if (
+            isinstance(response_data, dict)
+            and response_data
+            and "custom_cases" not in response_data
+            and "customCases" not in response_data
+        ):
+            self.chronicle_soar.LOGGER.warn(
+                f"Expected root key 'custom_cases' or 'customCases' not found in response from "
+                f"'{endpoint}'. Actual top-level keys: {list(response_data.keys())}"
+            )
+
         all_records = []
         current_records = response_data.get("custom_cases")
         if current_records is None:
-            current_records = response_data.get("customCases", [])
-        all_records.extend(current_records)
+            current_records = response_data.get("customCases")
+        all_records.extend(current_records or [])
 
         next_token = response_data.get("nextPageToken")
         while next_token:
             endpoint_with_token = f"{endpoint}&pageToken={next_token}"
-            try:
-                page_response = self._make_request(HttpMethod.GET, endpoint_with_token)
-                page_response.raise_for_status()
-                page_data = page_response.json()
-            except Exception:
+            page_response = self._make_request(HttpMethod.GET, endpoint_with_token)
+            if page_response.status_code == NO_CONTENT_STATUS_CODE:
+                validate_response(page_response, validate_json=False)
                 break
+
+            validate_response(page_response, validate_json=True)
+            page_data = page_response.json()
+
+            if (
+                isinstance(page_data, dict)
+                and page_data
+                and "custom_cases" not in page_data
+                and "customCases" not in page_data
+            ):
+                self.chronicle_soar.LOGGER.warn(
+                    f"Expected root key 'custom_cases' or 'customCases' not found in response from "
+                    f"'{endpoint_with_token}'. Actual top-level keys: {list(page_data.keys())}"
+                )
 
             current_records = page_data.get("custom_cases")
             if current_records is None:
-                current_records = page_data.get("customCases", [])
-            all_records.extend(current_records)
+                current_records = page_data.get("customCases")
+            all_records.extend(current_records or [])
             next_token = page_data.get("nextPageToken")
 
         return all_records
@@ -1717,7 +1820,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             last_response = self._make_request(
                 HttpMethod.POST, endpoint, json_payload=payload
             )
-            last_response.raise_for_status()
+            validate_response(last_response, validate_json=False)
 
         return last_response
 
