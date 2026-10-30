@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 import json
 import re
+
 from .constants import (
     DEVICE_PRODUCT,
     ENTITY_TYPE_ALERT,
@@ -58,14 +59,18 @@ _SKIP_PAYLOAD_KEYS = {
     "vega_labels",
     "vega_incident_label_names",
 }
-# Vega/Splunk payloads use mixed-case time keys. SecOps ontology maps StartTime
-# from the event; extra time fields overwrite it or show as 1970/invalid.
+# Vega/Splunk payloads use mixed-case time keys. SecOps ontology maps only
+# StartTime/EndTime (unix ms); extra time aliases confuse mapping or show 1970.
 _SKIP_TIME_NORMALIZED = {
     "starttime",
     "endtime",
     "time",
     "timestamp",
     "eventtime",
+    "eventtimestamp",
+    "udmeventtimestamp",
+    "eventtimerfc3339",
+    "metadataeventtimestamp",
     "datetime",
     "date",
     "occurredat",
@@ -179,8 +184,8 @@ def case_display_name(record: SingleJson, entity_type: str) -> str:
     display_id = record_display_id(record, entity_type)
     name = record_name(record)
     if display_id:
-        return f"Vega {entity_type} - {display_id} - {name} FEEDBACK TEST 15"
-    return f"Vega {entity_type} - {name} FEEDBACK TEST 15"
+        return f"Vega {entity_type} - {display_id} - {name}"
+    return f"Vega {entity_type} - {name}"
 
 
 # Marks the related-alert case so close-sync does not treat it as the incident.
@@ -586,12 +591,36 @@ def _is_skipped_payload_key(key: Any) -> bool:
     return _normalized_field_name(text) in _SKIP_TIME_NORMALIZED
 
 
+def _unix_epoch_ms(value: int) -> int:
+    """SecOps ontology maps StartTime/EndTime as unix ms (same as AlertInfo)."""
+    millis = max(0, int(value))
+    return millis if millis >= 1_000_000_000_000 else millis * 1000
+
+
 def _apply_event_times(event: SingleJson, start_time: int, end_time: int) -> None:
-    """Keep a single StartTime/EndTime pair so SecOps does not repeat dates."""
-    event["StartTime"] = start_time
-    event["EndTime"] = end_time
-    event.pop("start_time", None)
-    event.pop("end_time", None)
+    """Set only StartTime/EndTime as unix ms (BloodHound/Doppel style).
+
+    Flat ``metadata.event_timestamp`` poisons UDM GENERIC_EVENT time to epoch 0.
+    SecOps derives metadata.event_timestamp.seconds from these fields instead.
+    """
+    event["StartTime"] = _unix_epoch_ms(start_time)
+    event["EndTime"] = _unix_epoch_ms(end_time)
+    for key in (
+        "metadata",
+        "metadata.event_timestamp",
+        "udm_event_timestamp",
+        "event_time_rfc3339",
+        "start_time",
+        "end_time",
+        "time",
+        "Time",
+        "_time",
+        "timestamp",
+        "event_timestamp",
+        "eventTime",
+        "event_time",
+    ):
+        event.pop(key, None)
 
 
 def _soar_value(value: Any, *, limit: int = _MAX_EVENT_FIELD_CHARS) -> str:
@@ -805,14 +834,13 @@ def build_event_dict(record: SingleJson, entity_type: str, start_time: int, end_
         "device_vendor": VENDOR_NAME,
         "device_product": DEVICE_PRODUCT,
         "product": DEVICE_PRODUCT,
-        "event_type": entity_type,
+        "event_type": soar_alert_type,
         "product_log_id": identifier,
         "vega_id": identifier,
         "event_class_id": identifier,
         "DeviceEventClassID": identifier,
         "Severity": severity,
-        "vega_entity_type": entity_type,
-        "vega_soar_alert_type": soar_alert_type,
+        "vega_entity_type": entity_type
     }
     if entity_type == ENTITY_TYPE_INCIDENT:
         # Sit next to vega_entity_type so Default shows them without scrolling

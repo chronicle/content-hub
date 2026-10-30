@@ -659,12 +659,17 @@ def test_child_event_overwrites_invalid_payload_times() -> None:
     )
     assert event["StartTime"] == 1_700_000_000_000
     assert event["EndTime"] == 1_700_000_000_000
+    assert "metadata" not in event
+    assert "metadata.event_timestamp" not in event
+    assert "udm_event_timestamp" not in event
+    assert "event_time_rfc3339" not in event
     assert "start_time" not in event
     assert "end_time" not in event
     assert "starttime" not in event
     assert "Time" not in event
     assert "_time" not in event
     assert "timestamp" not in event
+    assert "event_timestamp" not in event
 
 
 def test_parent_event_keeps_single_start_and_end_time() -> None:
@@ -676,8 +681,15 @@ def test_parent_event_keeps_single_start_and_end_time() -> None:
     )
     assert event["StartTime"] == 1_700_000_000_000
     assert event["EndTime"] == 1_700_000_000_000
+    assert "metadata" not in event
+    assert "metadata.event_timestamp" not in event
+    assert "udm_event_timestamp" not in event
+    assert "event_time_rfc3339" not in event
     assert "start_time" not in event
     assert "end_time" not in event
+    assert "time" not in event
+    assert "timestamp" not in event
+    assert "event_timestamp" not in event
 
 
 def test_extract_sync_targets_incident_case_ignores_related_alerts() -> None:

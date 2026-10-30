@@ -122,10 +122,11 @@ def test_packager_related_alerts_share_case_title_not_alert_type() -> None:
     assert incident_alert.source_grouping_identifier == "Vega:incident:inc-1"
     assert related_alert.source_grouping_identifier == "Vega:incident:inc-1:related"
     assert standalone.source_grouping_identifier == "Vega:alert:alert-3"
-    assert incident_alert.start_time == incident_alert.events[0]["StartTime"]
-    assert incident_alert.end_time == incident_alert.events[0]["EndTime"]
-    assert related_alert.start_time == related_alert.events[0]["StartTime"]
-    assert related_alert.end_time == related_alert.events[0]["EndTime"]
+    # AlertInfo and event StartTime/EndTime both use unix ms for SecOps ontology.
+    assert incident_alert.events[0]["StartTime"] == incident_alert.start_time
+    assert incident_alert.events[0]["EndTime"] == incident_alert.end_time
+    assert related_alert.events[0]["StartTime"] == related_alert.start_time
+    assert related_alert.events[0]["EndTime"] == related_alert.end_time
     assert related_alert.start_time != incident_alert.start_time
     assert related_alert.events[1]["StartTime"] == related_alert.start_time
     assert related_alert.events[1]["EndTime"] == related_alert.end_time
