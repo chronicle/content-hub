@@ -34,27 +34,23 @@ Connector flow
 
 4. Records are packaged into SOAR AlertInfo objects by AlertPackager.
 """
-
 from __future__ import annotations
 
+import logging
+import time
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
-
-import logging
-import time
-from datetime import datetime
-
+from .case_emission import CaseEmissionMixin
 from .constants import (
     ALERT_EVENTS_ID_BATCH,
     ALERT_ID_LOOKUP_BATCH,
     ALERT_ID_LOOKUP_FROM,
-    ALERT_METADATA_ID_BATCH,
     ENTITY_TYPE_ALERT,
     ENTITY_TYPE_INCIDENT,
-    GRAPHQL_PAGE_SIZE,
     INGESTED_ID_CAP,
     MAX_ALERTS_PER_CASE,
     RELATED_BATCH_VERSION,
@@ -68,21 +64,17 @@ from .mapping import (
     collect_label_tags,
     incident_alert_ids,
     incident_alert_stubs,
-    incident_alert_summary,
     incident_case_title,
     incident_grouping_id,
-    index_alert_records,
     is_graphql_alert_id,
-    merge_related_alert,
     record_alert_ids,
     record_display_id,
     record_id,
-    record_label_tags,
     record_name,
     record_timestamp,
-    related_incident_ids,
     set_soar_meta,
 )
+from .related_backfill import RelatedBackfillMixin, _drop_none
 from .utils import (
     compute_time_window,
     parse_backfill_days,
@@ -95,11 +87,7 @@ from .utils import (
     to_iso,
 )
 
-from .case_emission import CaseEmissionMixin
-from .related_backfill import RelatedBackfillMixin, _drop_none
-
 logger = logging.getLogger(__name__)
-
 
 
 class IngestionPipeline(CaseEmissionMixin, RelatedBackfillMixin):

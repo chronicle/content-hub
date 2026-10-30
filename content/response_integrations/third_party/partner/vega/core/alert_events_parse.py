@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+
 def _unwrap_json(value: Any, *, depth: int = 3) -> Any:
     """Decode JSON strings, including double-encoded payloads."""
     current = value
@@ -121,5 +122,3 @@ def events_for_alert_bucket(results: Any, alert_id: str) -> tuple[list[dict], in
             continue
         kept.append(event)
     return kept, dropped
-
-

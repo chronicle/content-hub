@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
-
+from .alert_event_mapping import build_vega_alert_event_dict
 from .constants import (
     DEVICE_PRODUCT,
     ENTITY_TYPE_ALERT,
@@ -18,7 +18,6 @@ from .mapping import (
     alert_grouping_id,
     alert_priority,
     build_event_dict,
-    build_vega_alert_event_dict,
     case_display_name,
     normalize_alert_event,
     record_id,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+from core.alert_event_mapping import build_vega_alert_event_dict
 from core.constants import (
     ENTITY_TYPE_ALERT,
     ENTITY_TYPE_INCIDENT,
@@ -17,7 +18,6 @@ from core.constants import (
 from core.mapping import (
     alert_grouping_id,
     build_event_dict,
-    build_vega_alert_event_dict,
     case_display_name,
     collect_label_tags,
     incident_alert_ids,
@@ -349,7 +349,7 @@ def test_summary_event_carries_incident_id_and_alert_type() -> None:
         incident_display_id="VINC-1",
     )
     event = build_event_dict(record, ENTITY_TYPE_ALERT, 1, 1)
-    assert event["vega_soar_alert_type"] == SOAR_ALERT_TYPE_INCIDENT
+    assert event["event_type"] == SOAR_ALERT_TYPE_INCIDENT
     assert event["vega_incident_id"] == "inc-1"
     assert event["vega_unique_incident_id"] == "VINC-1"
     assert "_soar_meta" not in event["details"]

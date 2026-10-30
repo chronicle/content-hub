@@ -24,21 +24,15 @@ class UpdateAlert(VegaApiAction):
         self.alert_ids_raw = extract_action_param(
             self.soar_action, param_name="Alert IDs", default_value="", print_value=True
         )
-        self.status = extract_action_param(
-            self.soar_action, param_name="Status", default_value="", print_value=True
-        )
-        self.verdict = extract_action_param(
-            self.soar_action, param_name="Verdict", default_value="", print_value=True
-        )
+        self.status = extract_action_param(self.soar_action, param_name="Status", default_value="", print_value=True)
+        self.verdict = extract_action_param(self.soar_action, param_name="Verdict", default_value="", print_value=True)
         self.severity = extract_action_param(
             self.soar_action, param_name="Severity", default_value="", print_value=True
         )
         self.reasoning = extract_action_param(
             self.soar_action, param_name="Verdict Reasoning", default_value="", print_value=True
         )
-        self.comment = extract_action_param(
-            self.soar_action, param_name="Comment", default_value="", print_value=True
-        )
+        self.comment = extract_action_param(self.soar_action, param_name="Comment", default_value="", print_value=True)
         self.assignees_raw = extract_action_param(
             self.soar_action, param_name="Assignees", default_value="", print_value=True
         )

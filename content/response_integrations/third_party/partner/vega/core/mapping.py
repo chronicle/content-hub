@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
+import json
+import re
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
-
-
-import json
-import re
 
 from .constants import (
     DEVICE_PRODUCT,
@@ -840,7 +838,7 @@ def build_event_dict(record: SingleJson, entity_type: str, start_time: int, end_
         "event_class_id": identifier,
         "DeviceEventClassID": identifier,
         "Severity": severity,
-        "vega_entity_type": entity_type
+        "vega_entity_type": entity_type,
     }
     if entity_type == ENTITY_TYPE_INCIDENT:
         # Sit next to vega_entity_type so Default shows them without scrolling
@@ -986,9 +984,6 @@ def normalize_alert_event(vega_event: Any) -> SingleJson:
     return merged
 
 
-
 def alert_priority(severity: str) -> int:
     """Map a Vega severity string to a SecOps alert priority integer."""
     return SEVERITY_TO_ALERT_PRIORITY.get(str(severity).upper(), 60)
-
-from .alert_event_mapping import build_vega_alert_event_dict

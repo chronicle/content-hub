@@ -6,16 +6,20 @@ Does not import the SecOps SDK.
 
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
-
-import json
-import logging
-import time
+from .alert_events_parse import (
+    _graphql_alert_id,
+    _optional_int,
+    _same_alert_id,
+    events_for_alert_bucket,
+)
 from .constants import (
     ALERT_EVENTS_ID_BATCH,
     ALERT_EVENTS_PAGE_SIZE,
@@ -57,13 +61,6 @@ from .exceptions import (
     VegaValidationException,
 )
 from .rate_limit import RateLimitController
-from .alert_events_parse import (
-    _graphql_alert_id,
-    _optional_int,
-    _same_alert_id,
-    events_for_alert_bucket,
-    parse_alert_events_results,
-)
 from .utils import classify_credential_error, normalize_api_root, require_secret, safe_log
 
 logger = logging.getLogger(__name__)

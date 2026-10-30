@@ -49,6 +49,7 @@ from ..core.constants import (
     PARAM_LOOKBACK,
     PARAM_PYTHON_TIMEOUT,
     PARAM_SYNC,
+    PARAM_VERIFY_SSL,
     PYTHON_PROCESS_TIMEOUT_DEFAULT,
     PYTHON_TIMEOUT_MAX,
     PYTHON_TIMEOUT_MIN,
@@ -147,6 +148,7 @@ def _read_params(siemplify: SiemplifyConnectorExecution) -> dict[str, Any]:
         "api_root": siemplify.extract_connector_param(param_name=PARAM_API_ROOT),
         "access_key_id": siemplify.extract_connector_param(param_name=PARAM_ACCESS_KEY_ID),
         "access_key": siemplify.extract_connector_param(param_name=PARAM_ACCESS_KEY),
+        "verify_ssl": siemplify.extract_connector_param(param_name=PARAM_VERIFY_SSL, default_value="true"),
         "entities_raw": siemplify.extract_connector_param(param_name=PARAM_ENTITIES, default_value="Alerts,Incidents"),
         "lookback_minutes": siemplify.extract_connector_param(param_name=PARAM_LOOKBACK, default_value="5"),
         "backfill_days": siemplify.extract_connector_param(param_name=PARAM_BACKFILL, default_value="30"),
@@ -208,6 +210,7 @@ def _build_manager_and_pipeline(
             api_root=params["api_root"],
             access_key_id=params["access_key_id"],
             access_key=params["access_key"],
+            verify_ssl=truthy(params.get("verify_ssl", True)),
         ),
         logger_instance=siemplify.LOGGER,
     )

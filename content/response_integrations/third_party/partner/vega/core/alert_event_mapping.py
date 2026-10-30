@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .constants import DEVICE_PRODUCT, ENTITY_TYPE_ALERT, VENDOR_NAME
+from .constants import DEVICE_PRODUCT, ENTITY_TYPE_ALERT, SOAR_ALERT_TYPE_ALERT_EVENT, VENDOR_NAME
 from .mapping import (
     _MAX_DETAILS_CHARS,
     _MAX_EXTRA_FIELDS,
@@ -22,6 +22,7 @@ from .mapping import (
     record_severity,
     soar_meta,
 )
+
 
 def _is_flat_dict(value: dict) -> bool:
     return all(not isinstance(item, (dict, list)) for item in value.values())
@@ -79,7 +80,7 @@ def build_vega_alert_event_dict(
         "device_vendor": VENDOR_NAME,
         "device_product": DEVICE_PRODUCT,
         "product": DEVICE_PRODUCT,
-        "event_type": "Alert Event",
+        "event_type": SOAR_ALERT_TYPE_ALERT_EVENT,
         "product_log_id": event_key,
         "vega_id": identifier,
         "event_class_id": event_key,
@@ -108,4 +109,3 @@ def build_vega_alert_event_dict(
     _apply_entity_aliases(event, payload)
     _apply_event_times(event, start_time, end_time)
     return event
-

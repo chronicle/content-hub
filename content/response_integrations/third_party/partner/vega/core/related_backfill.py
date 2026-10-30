@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import time
-
 from .constants import (
     ENTITY_TYPE_ALERT,
     ENTITY_TYPE_INCIDENT,

@@ -30,15 +30,11 @@ class UpdateIncident(VegaApiAction):
         self.severity = extract_action_param(
             self.soar_action, param_name="Severity", default_value="", print_value=True
         )
-        self.verdict = extract_action_param(
-            self.soar_action, param_name="Verdict", default_value="", print_value=True
-        )
+        self.verdict = extract_action_param(self.soar_action, param_name="Verdict", default_value="", print_value=True)
         self.reasoning = extract_action_param(
             self.soar_action, param_name="Verdict Reasoning", default_value="", print_value=True
         )
-        self.comment = extract_action_param(
-            self.soar_action, param_name="Comment", default_value="", print_value=True
-        )
+        self.comment = extract_action_param(self.soar_action, param_name="Comment", default_value="", print_value=True)
         self.emails_raw = extract_action_param(
             self.soar_action, param_name="Assignee Emails", default_value="", print_value=True
         )

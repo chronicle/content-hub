@@ -267,5 +267,3 @@ def extract_sync_targets(case_payload: dict) -> dict:
         "incident_ids": [],
         "alert_ids": alert_ids,
     }
-
-

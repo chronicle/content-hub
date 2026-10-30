@@ -11,8 +11,10 @@ from ..core.constants import (
     PARAM_ACCESS_KEY,
     PARAM_ACCESS_KEY_ID,
     PARAM_API_ROOT,
+    PARAM_VERIFY_SSL,
     PING_SCRIPT_NAME,
 )
+from ..core.utils import truthy
 from ..core.VegaManager import VegaClientConfig, VegaManager
 
 
@@ -58,8 +60,7 @@ class Ping(Action):
     def __init__(self) -> None:
         super().__init__(PING_SCRIPT_NAME)
         self.output_message = (
-            f"Successfully connected to the {INTEGRATION_NAME} server with "
-            "the provided connection parameters!"
+            f"Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters!"
         )
         self.error_output_message = f"Failed to connect to the {INTEGRATION_NAME} server!"
 
@@ -73,6 +74,7 @@ class Ping(Action):
                 api_root=conf.get(PARAM_API_ROOT),
                 access_key_id=conf.get(PARAM_ACCESS_KEY_ID),
                 access_key=conf.get(PARAM_ACCESS_KEY),
+                verify_ssl=truthy(conf.get(PARAM_VERIFY_SSL, True)),
             )
         )
 

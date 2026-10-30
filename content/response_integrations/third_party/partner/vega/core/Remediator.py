@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
-
-
-import json
-from datetime import datetime, timezone
 
 from .constants import (
     ENTITY_TYPE_ALERT,
@@ -25,11 +23,12 @@ from .constants import (
     SOAR_TIME_RANGE_MODIFIED,
     VENDOR_NAME,
 )
-from .sync_targets import SYNC_MODE_ALERTS, SYNC_MODE_INCIDENT, extract_sync_targets
+from .sync_targets import SYNC_MODE_INCIDENT, extract_sync_targets
+from .utils import parse_iso_timestamp, safe_log, utc_now
 
 _SOAR_TIMEOUT = 30
 _TRACKED_CAP = 5000
-from .utils import parse_iso_timestamp, safe_log, utc_now
+
 
 def ingest_skip_ids(records: list[tuple[str, SingleJson]] | None) -> set[str]:
     """Vega IDs packaged this poll must not be resolved on the same run."""
@@ -357,7 +356,9 @@ def _normalize_ref(item: Any) -> SingleJson:
     return {"ticket": ticket, "tokens": [ticket, body], "title": ""}
 
 
-def _merge_tracked_refs(state: SingleJson, ingest_refs: list | None, ingest_tickets: list[str] | None) -> list[SingleJson]:
+def _merge_tracked_refs(
+    state: SingleJson, ingest_refs: list | None, ingest_tickets: list[str] | None
+) -> list[SingleJson]:
     ordered: list[SingleJson] = []
     by_ticket: dict[str, SingleJson] = {}
     raw = list(state.get("tracked_refs") or []) + list(state.get("tracked_tickets") or [])
