@@ -28,7 +28,7 @@ from mp.core.data_models.integrations.script.parameter import ScriptParamType
 class BuiltIntegrationParameter(TypedDict):
     PropertyName: str
     PropertyDisplayName: str
-    Value: str | bool | float | int | None
+    Value: NotRequired[str | bool | float | int | None]
     PropertyDescription: NotRequired[str]
     IsMandatory: bool
     PropertyType: int | str
@@ -85,7 +85,7 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
         return cls(
             name=property_name,
             display_name=display_name,
-            default_value=built["Value"],
+            default_value=built.get("Value"),
             description=v if (v := built.get("PropertyDescription")) is not None else "",
             is_mandatory=built.get("IsMandatory", False),
             type_=ScriptParamType(int(built["PropertyType"])),
