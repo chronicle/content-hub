@@ -1621,17 +1621,111 @@ class OnePlatformSoarApi(BaseSoarApi):
 
             # Ensure mandatory parameters have defaultValue to avoid 1P empty parameter validation error
             if "parameters" in patch_payload and isinstance(patch_payload["parameters"], list):
+                incoming_map = {}
+                for p in (data.get("parameters") or data.get("Parameters") or []):
+                    if isinstance(p, dict):
+                        k1 = p.get("displayName") or p.get("DisplayName")
+                        k2 = p.get("name") or p.get("Name")
+                        if k1:
+                            incoming_map[k1] = p
+                        if k2:
+                            incoming_map[k2] = p
+
                 for p in patch_payload["parameters"]:
-                    if isinstance(p, dict) and p.get("mandatory") and not p.get("defaultValue"):
-                        p["defaultValue"] = "{}"
+                    if isinstance(p, dict):
+                        p_name = (
+                            p.get("displayName")
+                            or p.get("DisplayName")
+                            or p.get("name")
+                            or p.get("Name")
+                        )
+                        inc = incoming_map.get(p_name, {})
+                        if p.get("mandatory") and not p.get("defaultValue"):
+                            p["defaultValue"] = "{}"
+
+                        if collection == "actions" and inc:
+                            if "optionalValues" in inc or "OptionalValues" in inc:
+                                p["optionalValues"] = (
+                                    inc.get("optionalValues")
+                                    if inc.get("optionalValues") is not None
+                                    else inc.get("OptionalValues", [])
+                                )
+                            if inc.get("defaultValue") is not None or inc.get("DefaultValue") is not None:
+                                val = inc.get("defaultValue") if inc.get("defaultValue") is not None else inc.get("DefaultValue")
+                                if val != "" or not p.get("mandatory"):
+                                    p["defaultValue"] = str(val)
+                            if inc.get("description") is not None or inc.get("Description") is not None:
+                                p["description"] = inc.get("description") or inc.get("Description")
+                            if inc.get("type") is not None or inc.get("Type") is not None:
+                                p["type"] = inc.get("type") if inc.get("type") is not None else inc.get("Type")
+                            if inc.get("mandatory") is not None or inc.get("IsMandatory") is not None:
+                                p["mandatory"] = bool(inc.get("mandatory") if inc.get("mandatory") is not None else inc.get("IsMandatory"))
+                        elif collection == "connectors" and inc:
+                            adv = (
+                                inc.get("advanced")
+                                if inc.get("advanced") is not None
+                                else inc.get("isAdvanced")
+                            )
+                            if adv is not None:
+                                p["advanced"] = bool(adv)
+                            if "mode" in inc:
+                                p["mode"] = inc["mode"]
+
+                if collection == "actions":
+                    existing_names = {
+                        p.get("displayName") or p.get("DisplayName") or p.get("name") or p.get("Name")
+                        for p in patch_payload["parameters"]
+                        if isinstance(p, dict)
+                    }
+                    for p_raw in (data.get("parameters") or data.get("Parameters") or []):
+                        if not isinstance(p_raw, dict):
+                            continue
+                        name = p_raw.get("displayName") or p_raw.get("DisplayName") or p_raw.get("name") or p_raw.get("Name")
+                        if name and name not in existing_names:
+                            new_p = {
+                                "name": name,
+                                "displayName": name,
+                                "description": p_raw.get("description") or p_raw.get("Description") or "",
+                                "mandatory": bool(p_raw.get("mandatory") if p_raw.get("mandatory") is not None else p_raw.get("IsMandatory", False)),
+                                "defaultValue": str(p_raw.get("defaultValue") if p_raw.get("defaultValue") is not None else p_raw.get("DefaultValue", "")),
+                                "type": p_raw.get("type") if p_raw.get("type") is not None else p_raw.get("Type", 0),
+                            }
+                            if new_p["mandatory"] and not new_p["defaultValue"]:
+                                new_p["defaultValue"] = "{}"
+                            if "optionalValues" in p_raw or "OptionalValues" in p_raw:
+                                new_p["optionalValues"] = (
+                                    p_raw.get("optionalValues")
+                                    if p_raw.get("optionalValues") is not None
+                                    else p_raw.get("OptionalValues", [])
+                                )
+                            patch_payload["parameters"].append(new_p)
+
                 update_mask.append("parameters")
 
             if "timeoutSeconds" in data or "TimeoutSeconds" in data:
                 patch_payload["timeoutSeconds"] = int(data.get("timeoutSeconds") or data.get("TimeoutSeconds"))
                 update_mask.append("timeoutSeconds")
-            if collection == "actions" and ("scriptResultName" in data or "ScriptResultName" in data):
-                patch_payload["scriptResultName"] = data.get("scriptResultName") or data.get("ScriptResultName")
-                update_mask.append("scriptResultName")
+            if collection == "actions":
+                action_fields = [
+                    ("actionType", ["actionType", "ActionType"]),
+                    ("hasJsonResult", ["hasJsonResult", "HasJsonResult"]),
+                    ("async", ["async", "Async", "isAsync"]),
+                    ("scriptResultName", ["scriptResultName", "ScriptResultName"]),
+                    ("asyncPollingIntervalSeconds", ["asyncPollingIntervalSeconds", "AsyncPollingIntervalSeconds"]),
+                    ("asyncTotalTimeoutSeconds", ["asyncTotalTimeoutSeconds", "AsyncTotalTimeoutSeconds"]),
+                    ("defaultResultValue", ["defaultResultValue", "DefaultResultValue"]),
+                    ("aiGenerated", ["aiGenerated", "AiGenerated"]),
+                    ("dynamicResults", ["dynamicResults", "DynamicResults"]),
+                    ("aiCategories", ["aiCategories", "AiCategories"]),
+                    ("entityTypes", ["entityTypes", "EntityTypes"]),
+                    ("outcomeCategories", ["outcomeCategories", "OutcomeCategories"]),
+                ]
+                for target_field, candidates in action_fields:
+                    for cand in candidates:
+                        if cand in data and data[cand] is not None:
+                            patch_payload[target_field] = data[cand]
+                            update_mask.append(target_field)
+                            break
             elif collection == "connectors":
                 event_field = (
                     data.get("eventFieldName")
@@ -1682,6 +1776,24 @@ class OnePlatformSoarApi(BaseSoarApi):
                 or data.get("ScriptResultName")
                 or "ScriptResult"
             )
+            action_fields = [
+                ("actionType", ["actionType", "ActionType"]),
+                ("hasJsonResult", ["hasJsonResult", "HasJsonResult"]),
+                ("async", ["async", "Async", "isAsync"]),
+                ("asyncPollingIntervalSeconds", ["asyncPollingIntervalSeconds", "AsyncPollingIntervalSeconds"]),
+                ("asyncTotalTimeoutSeconds", ["asyncTotalTimeoutSeconds", "AsyncTotalTimeoutSeconds"]),
+                ("defaultResultValue", ["defaultResultValue", "DefaultResultValue"]),
+                ("aiGenerated", ["aiGenerated", "AiGenerated"]),
+                ("dynamicResults", ["dynamicResults", "DynamicResults"]),
+                ("aiCategories", ["aiCategories", "AiCategories"]),
+                ("entityTypes", ["entityTypes", "EntityTypes"]),
+                ("outcomeCategories", ["outcomeCategories", "OutcomeCategories"]),
+            ]
+            for target_field, candidates in action_fields:
+                for cand in candidates:
+                    if cand in data and data[cand] is not None:
+                        new_payload[target_field] = data[cand]
+                        break
         elif collection == "connectors":
             new_payload["eventFieldName"] = (
                 data.get("eventFieldName")
@@ -1704,9 +1816,9 @@ class OnePlatformSoarApi(BaseSoarApi):
         for lp in legacy_params:
             if not isinstance(lp, dict):
                 continue
-            p_name = lp.get("Name") or lp.get("name") or lp.get("displayName")
+            p_name = lp.get("Name") or lp.get("name") or lp.get("displayName") or lp.get("DisplayName")
             p_desc = lp.get("Description") or lp.get("description") or ""
-            p_mandatory = bool(lp.get("IsMandatory") or lp.get("mandatory", False))
+            p_mandatory = bool(lp.get("IsMandatory") if lp.get("IsMandatory") is not None else lp.get("mandatory", False))
             p_default = (
                 lp.get("DefaultValue")
                 if lp.get("DefaultValue") is not None
@@ -1715,16 +1827,30 @@ class OnePlatformSoarApi(BaseSoarApi):
             if p_mandatory and not p_default:
                 p_default = "{}"
             p_type = lp.get("Type") if lp.get("Type") is not None else lp.get("type", 0)
-            converted_params.append(
-                {
-                    "name": p_name,
-                    "displayName": p_name,
-                    "description": p_desc,
-                    "mandatory": p_mandatory,
-                    "defaultValue": str(p_default),
-                    "type": p_type,
-                }
-            )
+            param_dict = {
+                "name": p_name,
+                "displayName": p_name,
+                "description": p_desc,
+                "mandatory": p_mandatory,
+                "defaultValue": str(p_default),
+                "type": p_type,
+            }
+            if collection == "actions":
+                if "optionalValues" in lp or "OptionalValues" in lp:
+                    param_dict["optionalValues"] = (
+                        lp.get("optionalValues")
+                        if lp.get("optionalValues") is not None
+                        else lp.get("OptionalValues", [])
+                    )
+            elif collection == "connectors":
+                param_dict["advanced"] = bool(
+                    lp.get("advanced")
+                    if lp.get("advanced") is not None
+                    else lp.get("isAdvanced", False)
+                )
+                if "mode" in lp:
+                    param_dict["mode"] = lp["mode"]
+            converted_params.append(param_dict)
         if converted_params:
             new_payload["parameters"] = converted_params
 
