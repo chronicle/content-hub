@@ -22,11 +22,15 @@ import requests
 from pytest_mock import MockerFixture
 
 from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
-from TIPCommon.rest.soar_platform_clients.one_platform_soar_api import OnePlatformSoarApi
+from TIPCommon.rest.soar_platform_clients.one_platform_soar_api import (
+    OnePlatformSoarApi,
+)
 
 
 def test_get_case_insights_single_page(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test get_case_insights returns insights from a single page response."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -35,7 +39,10 @@ def test_get_case_insights_single_page(
 
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"activities": [{"insight_id": "i1"}], "nextPageToken": None}
+    mock_response.json.return_value = {
+        "activities": [{"insight_id": "i1"}],
+        "nextPageToken": None,
+    }
     mock_chronicle_soar.session.request.return_value = mock_response
 
     insights = client.get_case_insights()
@@ -50,7 +57,9 @@ def test_get_case_insights_single_page(
 
 
 def test_get_case_insights_multi_page(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test get_case_insights aggregates insights from multiple page responses."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -59,11 +68,17 @@ def test_get_case_insights_multi_page(
 
     mock_response_1 = mocker.MagicMock()
     mock_response_1.status_code = 200
-    mock_response_1.json.return_value = {"activities": [{"insight_id": "i1"}], "nextPageToken": "token_abc"}
+    mock_response_1.json.return_value = {
+        "activities": [{"insight_id": "i1"}],
+        "nextPageToken": "token_abc",
+    }
 
     mock_response_2 = mocker.MagicMock()
     mock_response_2.status_code = 200
-    mock_response_2.json.return_value = {"activities": [{"insight_id": "i2"}], "nextPageToken": None}
+    mock_response_2.json.return_value = {
+        "activities": [{"insight_id": "i2"}],
+        "nextPageToken": None,
+    }
 
     mock_chronicle_soar.session.request.side_effect = [mock_response_1, mock_response_2]
 
@@ -71,24 +86,28 @@ def test_get_case_insights_multi_page(
 
     assert insights == [{"insight_id": "i1"}, {"insight_id": "i2"}]
     assert mock_chronicle_soar.session.request.call_count == 2
-    mock_chronicle_soar.session.request.assert_has_calls([
-        call(
-            "GET",
-            "https://mock-soar-api.com/cases/123/activities?$filter=activityType eq 'CaseInsight'&pageSize=1000",
-            params=None,
-            json=None,
-        ),
-        call(
-            "GET",
-            "https://mock-soar-api.com/cases/123/activities?$filter=activityType eq 'CaseInsight'&pageSize=1000&pageToken=token_abc",
-            params=None,
-            json=None,
-        ),
-    ])
+    mock_chronicle_soar.session.request.assert_has_calls(
+        [
+            call(
+                "GET",
+                "https://mock-soar-api.com/cases/123/activities?$filter=activityType eq 'CaseInsight'&pageSize=1000",
+                params=None,
+                json=None,
+            ),
+            call(
+                "GET",
+                "https://mock-soar-api.com/cases/123/activities?$filter=activityType eq 'CaseInsight'&pageSize=1000&pageToken=token_abc",
+                params=None,
+                json=None,
+            ),
+        ]
+    )
 
 
 def test_get_installed_integrations_of_environment_shared_instances(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test get_installed_integrations_of_environment with Shared Instances environment query."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -98,7 +117,10 @@ def test_get_installed_integrations_of_environment_shared_instances(
 
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"integrationInstances": [{"id": "inst_1"}], "nextPageToken": None}
+    mock_response.json.return_value = {
+        "integrationInstances": [{"id": "inst_1"}],
+        "nextPageToken": None,
+    }
     mock_chronicle_soar.session.request.return_value = mock_response
 
     instances = client.get_installed_integrations_of_environment()
@@ -115,7 +137,9 @@ def test_get_installed_integrations_of_environment_shared_instances(
 
 
 def test_get_installed_integrations_of_environment_specific_env(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test get_installed_integrations_of_environment with a specific environment query."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -125,7 +149,10 @@ def test_get_installed_integrations_of_environment_specific_env(
 
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"integrationInstances": [{"id": "inst_1"}], "nextPageToken": None}
+    mock_response.json.return_value = {
+        "integrationInstances": [{"id": "inst_1"}],
+        "nextPageToken": None,
+    }
     mock_chronicle_soar.session.request.return_value = mock_response
 
     instances = client.get_installed_integrations_of_environment()
@@ -142,26 +169,36 @@ def test_get_installed_integrations_of_environment_specific_env(
 
 
 def test_get_users_profile_cards_default(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test get_users_profile_cards with default page size settings."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
 
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"legacySoarUsers": [{"username": "user1"}], "nextPageToken": None}
+    mock_response.json.return_value = {
+        "legacySoarUsers": [{"username": "user1"}],
+        "nextPageToken": None,
+    }
     mock_chronicle_soar.session.request.return_value = mock_response
 
     users = client.get_users_profile_cards()
 
     assert users == [{"username": "user1"}]
     mock_chronicle_soar.session.request.assert_called_once_with(
-        "GET", "https://mock-soar-api.com/legacySoarUsers?pageSize=1000", params=None, json=None
+        "GET",
+        "https://mock-soar-api.com/legacySoarUsers?pageSize=1000",
+        params=None,
+        json=None,
     )
 
 
 def test_get_users_profile_cards_custom_page_size(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test get_users_profile_cards with a custom page size setting."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -170,19 +207,27 @@ def test_get_users_profile_cards_custom_page_size(
 
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"legacySoarUsers": [{"username": "user1"}], "nextPageToken": None}
+    mock_response.json.return_value = {
+        "legacySoarUsers": [{"username": "user1"}],
+        "nextPageToken": None,
+    }
     mock_chronicle_soar.session.request.return_value = mock_response
 
     users = client.get_users_profile_cards()
 
     assert users == [{"username": "user1"}]
     mock_chronicle_soar.session.request.assert_called_once_with(
-        "GET", "https://mock-soar-api.com/legacySoarUsers?pageSize=50", params=None, json=None
+        "GET",
+        "https://mock-soar-api.com/legacySoarUsers?pageSize=50",
+        params=None,
+        json=None,
     )
 
 
 def test_get_siemplify_user_details(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test get_siemplify_user_details returns user profile cards under One Platform client."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -191,19 +236,27 @@ def test_get_siemplify_user_details(
 
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"legacySoarUsers": [{"username": "user1"}], "nextPageToken": None}
+    mock_response.json.return_value = {
+        "legacySoarUsers": [{"username": "user1"}],
+        "nextPageToken": None,
+    }
     mock_chronicle_soar.session.request.return_value = mock_response
 
     users = client.get_siemplify_user_details()
 
     assert users == [{"username": "user1"}]
     mock_chronicle_soar.session.request.assert_called_once_with(
-        "GET", "https://mock-soar-api.com/legacySoarUsers?pageSize=20", params=None, json=None
+        "GET",
+        "https://mock-soar-api.com/legacySoarUsers?pageSize=20",
+        params=None,
+        json=None,
     )
 
 
 def test_search_cases_by_everything_single_page(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test search_cases_by_everything executes search successfully on a single page of results."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -212,7 +265,10 @@ def test_search_cases_by_everything_single_page(
 
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"results": [{"id": 1}, {"id": 2}], "totalCount": 2}
+    mock_response.json.return_value = {
+        "results": [{"id": 1}, {"id": 2}],
+        "totalCount": 2,
+    }
     mock_chronicle_soar.session.request.return_value = mock_response
 
     cases = client.search_cases_by_everything()
@@ -227,7 +283,9 @@ def test_search_cases_by_everything_single_page(
 
 
 def test_search_cases_by_everything_multi_page(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test search_cases_by_everything aggregates results across multiple search page POST requests."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -236,7 +294,10 @@ def test_search_cases_by_everything_multi_page(
 
     mock_response_1 = mocker.MagicMock()
     mock_response_1.status_code = 200
-    mock_response_1.json.return_value = {"results": [{"id": 1}, {"id": 2}], "totalCount": 3}
+    mock_response_1.json.return_value = {
+        "results": [{"id": 1}, {"id": 2}],
+        "totalCount": 3,
+    }
 
     mock_response_2 = mocker.MagicMock()
     mock_response_2.status_code = 200
@@ -245,7 +306,9 @@ def test_search_cases_by_everything_multi_page(
     recorded_calls: list[tuple] = []
 
     def mock_request(method: str, url: str, **kwargs: Any) -> MagicMock:
-        recorded_calls.append((method, url, copy.deepcopy(kwargs.get("json")), kwargs.get("params")))
+        recorded_calls.append(
+            (method, url, copy.deepcopy(kwargs.get("json")), kwargs.get("params"))
+        )
         if len(recorded_calls) == 1:
             return mock_response_1
         return mock_response_2
@@ -273,7 +336,9 @@ def test_search_cases_by_everything_multi_page(
 
 
 def test_search_cases_by_everything_error_stops_pagination(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test search_cases_by_everything stops pagination and returns accumulated results on error."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -282,13 +347,18 @@ def test_search_cases_by_everything_error_stops_pagination(
 
     mock_response_1 = mocker.MagicMock()
     mock_response_1.status_code = 200
-    mock_response_1.json.return_value = {"results": [{"id": 1}, {"id": 2}], "totalCount": 4}
+    mock_response_1.json.return_value = {
+        "results": [{"id": 1}, {"id": 2}],
+        "totalCount": 4,
+    }
 
     mock_response_2 = mocker.MagicMock()
     mock_response_2.status_code = 500
 
     # raise_for_status will raise requests.HTTPError
-    mock_response_2.raise_for_status.side_effect = requests.HTTPError("Internal Server Error")
+    mock_response_2.raise_for_status.side_effect = requests.HTTPError(
+        "Internal Server Error"
+    )
 
     mock_chronicle_soar.session.request.side_effect = [mock_response_1, mock_response_2]
 
@@ -299,7 +369,9 @@ def test_search_cases_by_everything_error_stops_pagination(
 
 
 def test_save_or_update_job_success(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test save_or_update_job makes the correct PATCH request to One Platform API on success."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -326,7 +398,9 @@ def test_save_or_update_job_success(
     )
 
 
-def test_save_or_update_job_missing_name(mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock) -> None:
+def test_save_or_update_job_missing_name(
+    mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
     """Test save_or_update_job raises EmptyMandatoryValues if 'name' is missing."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
     params: Any = client.params
@@ -340,7 +414,9 @@ def test_save_or_update_job_missing_name(mock_chronicle_soar: MagicMock, mock_ge
     assert "Job data must include a 'name' field" in str(exc_info.value)
 
 
-def test_save_or_update_job_missing_parameters(mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock) -> None:
+def test_save_or_update_job_missing_parameters(
+    mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
     """Test save_or_update_job raises EmptyMandatoryValues if 'parameters' is missing."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
     params: Any = client.params
@@ -373,7 +449,9 @@ def test_save_or_update_job_invalid_resource_path(
 
 
 def test_get_traking_list_records_filtered_url_encoded(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
 
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -384,7 +462,10 @@ def test_get_traking_list_records_filtered_url_encoded(
 
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"customLists": [{"id": "list_1"}], "nextPageToken": None}
+    mock_response.json.return_value = {
+        "customLists": [{"id": "list_1"}],
+        "nextPageToken": None,
+    }
     mock_chronicle_soar.session.request.return_value = mock_response
 
     records = client.get_traking_list_records_filtered()
@@ -403,7 +484,9 @@ def test_get_traking_list_records_filtered_url_encoded(
 
 
 def test_get_traking_list_record_url_encoded(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test get_traking_list_record URL-encodes special characters in OData filter."""
 
@@ -414,13 +497,18 @@ def test_get_traking_list_record_url_encoded(
 
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"customLists": [{"id": "list_2"}], "nextPageToken": None}
+    mock_response.json.return_value = {
+        "customLists": [{"id": "list_2"}],
+        "nextPageToken": None,
+    }
     mock_chronicle_soar.session.request.return_value = mock_response
 
     records = client.get_traking_list_record()
 
     assert records == [{"id": "list_2"}]
-    expected_filter = client._build_tracking_list_filter_string(params.category_name, params.entity_id)
+    expected_filter = client._build_tracking_list_filter_string(
+        params.category_name, params.entity_id
+    )
     expected_url = f"https://mock-soar-api.com/system/settings/customLists?$filter={urllib.parse.quote(expected_filter)}&pageSize=1000"
     mock_chronicle_soar.session.request.assert_called_once_with(
         "GET",
@@ -431,7 +519,9 @@ def test_get_traking_list_record_url_encoded(
 
 
 def test_attach_case_playbook_to_case_without_original_identifier(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test attach_case_playbook_to_case sends correct payload when original_workflow_definition_identifier is not set."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -461,7 +551,9 @@ def test_attach_case_playbook_to_case_without_original_identifier(
 
 
 def test_attach_case_playbook_to_case_with_original_identifier(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test attach_case_playbook_to_case sends originalWorkflowDefinitionIdentifier when provided."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -492,7 +584,9 @@ def test_attach_case_playbook_to_case_with_original_identifier(
 
 
 def test_get_enabled_workflow_cards(
-    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
 ) -> None:
     """Test get_enabled_workflow_cards sends correct request payload and parameters."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
@@ -516,3 +610,100 @@ def test_get_enabled_workflow_cards(
             "executionScope": "CASE",
         },
     )
+
+
+def test_get_ide_cards(
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    client.params.integration_name = "VirusTotal"
+
+    def mock_request(method: str, url: str, **kwargs: Any) -> MagicMock:
+        resp = mocker.MagicMock()
+        resp.status_code = 200
+        if "connectors" in url:
+            resp.json.return_value = {"connectors": []}
+        elif "actions" in url:
+            resp.json.return_value = {
+                "actions": [
+                    {
+                        "name": "projects/p/locations/l/instances/i/integrations/VirusTotal/actions/696",
+                        "displayName": "Ping",
+                    }
+                ]
+            }
+        elif "jobs" in url:
+            resp.json.return_value = {"jobs": []}
+        elif "managers" in url:
+            resp.json.return_value = {"managers": []}
+        return resp
+
+    mock_chronicle_soar.session.request.side_effect = mock_request
+
+    res = client.get_ide_cards()
+    cards = res.json()
+    assert len(cards) == 1
+    assert cards[0]["identifier"] == "VirusTotal"
+    assert len(cards[0]["cards"]) == 1
+    card = cards[0]["cards"][0]
+    assert card["id"] == 696
+    assert card["name"] == "Ping"
+    assert card["type"] == 1
+
+
+def test_update_ide_item_patch(
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    client.params.input_json = {
+        "id": 696,
+        "type": 1,
+        "integrationIdentifier": "VirusTotal",
+        "name": "Ping",
+        "script": "def main(): pass",
+    }
+
+    get_resp = mocker.MagicMock()
+    get_resp.status_code = 200
+    get_resp.json.return_value = {
+        "id": 696,
+        "displayName": "Ping",
+        "script": "old",
+        "parameters": [{"mandatory": True}],
+    }
+
+    patch_resp = mocker.MagicMock()
+    patch_resp.status_code = 200
+
+    def mock_req(method: str, url: str, **kwargs: Any) -> MagicMock:
+        if method == "GET":
+            return get_resp
+        return patch_resp
+
+    mock_chronicle_soar.session.request.side_effect = mock_req
+
+    res = client.update_ide_item()
+    assert res == patch_resp
+
+
+def test_get_ide_item(
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    client.params.item_id = 696
+    client.params.item_type = 1
+    client.params.integration_name = "VirusTotal"
+
+    mock_resp = mocker.MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"id": 696, "displayName": "Ping"}
+    mock_chronicle_soar.session.request.return_value = mock_resp
+
+    res = client.get_ide_item()
+    assert res == mock_resp
