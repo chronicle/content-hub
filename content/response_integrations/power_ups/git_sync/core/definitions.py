@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
+import pathlib
 import re
 from typing import TYPE_CHECKING, Any
 import uuid
@@ -24,6 +26,7 @@ from zipfile import ZipFile
 from jinja2 import Environment as JinjaEnvironment
 from jinja2 import Template
 from requests.exceptions import HTTPError
+from TIPCommon.utils import platform_supports_1p_api
 
 from .constants import (
     ACTION_PARAMETER_TYPES,
@@ -35,12 +38,46 @@ from .constants import (
     JOB_README,
     MAPPING_README,
     PLAYBOOK_README_TEMPLATE,
+    STEP_TYPE,
     TRIGGER_TYPES,
     VISUAL_FAMILY_README,
     ScriptType,
     WorkflowTypes,
-    STEP_TYPE
 )
+
+LOGGER = logging.getLogger(__name__)
+
+DEFAULT_README_ADDONS: dict[str, dict[str, Any]] = {
+    "Integration": {},
+    "Mappings": {},
+    "Visual Family": {},
+    "Playbook": {},
+    "Connector": {},
+    "Job": {},
+    "Block": {},
+}
+
+
+def get_fields(rule: Any) -> list[Any]:
+    """Extract iterable fields from either response format."""
+    if isinstance(rule, list):
+        return rule
+    if isinstance(rule, dict):
+        if "familyFields" in rule or "systemFields" in rule:
+            return (rule.get("familyFields") or []) + (rule.get("systemFields") or [])
+        if "mapping_rules" in rule:
+            return rule.get("mapping_rules", [])
+        if "mappingRules" in rule:
+            return rule.get("mappingRules", [])
+    return []
+
+
+def get_mapping_rule(r: Any) -> Any:
+    """Get the mappingRule dict from either format."""
+    if isinstance(r, dict) and "mappingRule" in r:
+        return r["mappingRule"]
+    return r
+
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -88,15 +125,12 @@ class Metadata:
         self.readme_addons = _get_arg_with_multiple_names(
             kwargs,
             ["readme_addons", "readmeAddons"],
-            {
-                "Integration": {},
-                "Mappings": {},
-                "Visual Family": {},
-                "Playbook": {},
-                "Connector": {},
-                "Job": {},
-            },
+            {k: {} for k in DEFAULT_README_ADDONS},
         )
+        # Ensure all expected keys exist
+        for k in DEFAULT_README_ADDONS:
+            self.readme_addons.setdefault(k, {})
+
         self.settings = kwargs.get("settings", {"update_root_readme": True})
 
     def get_readme_addon(self, content_type: str, content_name: str) -> str | None:
@@ -191,12 +225,27 @@ class Mapping(Content):
             rec["id"] = 0
             rec["familyId"] = 0
         for rule in self.rules:
-            for fam_fields in rule["familyFields"] + rule["systemFields"]:
-                fam_fields["mappingRule"]["id"] = 0
-                fam_fields["mappingRule"]["creationTimeUnixTimeInMs"] = 0
-                fam_fields["mappingRule"]["modificationTimeUnixTimeInMs"] = 0
-                fam_fields["creationTimeUnixTimeInMs"] = 0
-                fam_fields["modificationTimeUnixTimeInMs"] = 0
+            if isinstance(rule, dict) and (
+                "familyFields" in rule or "systemFields" in rule
+            ):
+                for fam_fields in rule.get("familyFields", []) + rule.get(
+                    "systemFields", []
+                ):
+                    if isinstance(fam_fields, dict) and isinstance(
+                        fam_fields.get("mappingRule"), dict
+                    ):
+                        fam_fields["mappingRule"]["id"] = 0
+                        fam_fields["mappingRule"]["creationTimeUnixTimeInMs"] = 0
+                        fam_fields["mappingRule"]["modificationTimeUnixTimeInMs"] = 0
+                    if isinstance(fam_fields, dict):
+                        fam_fields["creationTimeUnixTimeInMs"] = 0
+                        fam_fields["modificationTimeUnixTimeInMs"] = 0
+            elif isinstance(rule, dict):
+                rule["id"] = 0
+                if "creationTimeUnixTimeInMs" in rule:
+                    rule["creationTimeUnixTimeInMs"] = 0
+                if "modificationTimeUnixTimeInMs" in rule:
+                    rule["modificationTimeUnixTimeInMs"] = 0
 
     def iter_files(self) -> Iterator[File]:
         yield File("README.md", self.readme)
@@ -217,6 +266,35 @@ class Mapping(Content):
         self.readme = readme.render(mappings=self.__dict__)
 
 
+def _determine_card_name(card: dict) -> str | None:
+    raw_name = card.get("name")
+    display_name = card.get("displayName")
+    if raw_name and str(raw_name).startswith("projects/"):
+        return display_name or str(raw_name)
+    return display_name or raw_name
+
+
+def _determine_card_type(card: dict) -> int | None:
+    card_type = card.get("type")
+    if isinstance(card_type, ScriptType):
+        return card_type.value
+    if card_type is not None:
+        try:
+            return int(card_type)
+        except (ValueError, TypeError):
+            pass
+    name_str = str(card.get("name", "")).lower()
+    if "actiontype" in card or "/actions/" in name_str or "/actions" in name_str:
+        return ScriptType.ACTION.value
+    if "jobtype" in card or "/jobs/" in name_str or "/jobs" in name_str:
+        return ScriptType.JOB.value
+    if "connectortype" in card or "/connectors/" in name_str or "/connectors" in name_str:
+        return ScriptType.CONNECTOR.value
+    if "managertype" in card or "/managers/" in name_str or "/managers" in name_str:
+        return ScriptType.MANAGER.value
+    return None
+
+
 class Integration(Content):
     def __init__(self, integration_card: dict, zip_buffer):
         super().__init__()
@@ -225,10 +303,41 @@ class Integration(Content):
 
         self.zipfile = ZipFile(zip_buffer)
         self.identifier = self.integration_card.get("identifier")
-        self.isCustom = self.integration_card.get("isCustomIntegration")
-        self.definition = json.loads(
-            self.zipfile.read(f"Integration-{self.identifier}.def"),
+        self.staging = self.integration_card.get("Staging")
+        custom_card_val = next(
+            (
+                self.integration_card[k]
+                for k in ("isCustomIntegration", "custom", "Custom", "IsCustom")
+                if self.integration_card.get(k) is not None
+            ),
+            None,
         )
+        has_def = False
+        try:
+            self.definition = json.loads(
+                self.zipfile.read(f"Integration-{self.identifier}.def"),
+            )
+            has_def = True
+        except KeyError:
+            self.definition = json.loads(
+                self.zipfile.read(f"Integration-{self.identifier}.json"),
+            )
+        if custom_card_val is not None:
+            self.isCustom = bool(custom_card_val)
+        else:
+            custom_def_val = next(
+                (
+                    self.definition[k]
+                    for k in ("isCustomIntegration", "custom", "Custom", "IsCustom")
+                    if self.definition.get(k) is not None
+                ),
+                None,
+            )
+            if custom_def_val is not None:
+                self.isCustom = bool(custom_def_val)
+            else:
+                self.isCustom = not has_def
+
         self.version = self.definition.get("Version")
         if not self.isCustom:
             self.definition["IsCustom"] = False
@@ -240,45 +349,108 @@ class Integration(Content):
         self.dependencies = []
         self.has_resources = False
         for file in [x for x in self.zipfile.namelist() if not x.endswith("/")]:
-            if file.startswith("ActionsDefinitions"):
-                self.actions.append(json.loads(self.zipfile.read(file)))
-            elif file.startswith("Jobs") and not file.startswith("JobsScrips"):
-                self.jobs.append(json.loads(self.zipfile.read(file)))
-            elif file.startswith("Connectors") and not file.startswith(
-                "ConnectorsScripts",
-            ):
-                self.connectors.append(json.loads(self.zipfile.read(file)))
-            elif (
-                not self.isCustom
-                and file.startswith("Managers")
-                and file.endswith(".managerdef")
-            ):
-                self.managers.append(json.loads(self.zipfile.read(file)))
-            elif self.isCustom and file.startswith("Managers"):
-                self.managers.append(file)
-            elif file.startswith("Dependencies"):
-                self.dependencies.append(file)
-            elif file.startswith("Resources/" + self.identifier + ".svg"):
-                self.has_resources = True
+            try:
+                if file.endswith(".py"):
+                    continue
+                file_lower = file.lower()
+                if file_lower.startswith("actions") and not file_lower.startswith("actionsscripts"):
+                    item = json.loads(self.zipfile.read(file))
+                    if isinstance(item, dict):
+                        item_name = item.get("name") or item.get("Name") or pathlib.Path(file).stem
+                        item.setdefault("name", item_name)
+                        item.setdefault("displayName", item.get("DisplayName", item_name))
+                        item.setdefault("type", ScriptType.ACTION.value)
+                        item.setdefault("integrationIdentifier", self.identifier)
+                        self.actions.append(item)
+                elif file_lower.startswith("jobs") and not file_lower.startswith(("jobsscrips", "jobsscripts")):
+                    item = json.loads(self.zipfile.read(file))
+                    if isinstance(item, dict):
+                        item_name = item.get("name") or item.get("Name") or pathlib.Path(file).stem
+                        item.setdefault("name", item_name)
+                        item.setdefault("displayName", item.get("DisplayName", item_name))
+                        item.setdefault("type", ScriptType.JOB.value)
+                        item.setdefault("integrationIdentifier", self.identifier)
+                        self.jobs.append(item)
+                elif file_lower.startswith("connectors") and not file_lower.startswith("connectorsscripts"):
+                    item = json.loads(self.zipfile.read(file))
+                    if isinstance(item, dict):
+                        item_name = item.get("name") or item.get("Name") or pathlib.Path(file).stem
+                        item.setdefault("name", item_name)
+                        item.setdefault("displayName", item.get("DisplayName", item_name))
+                        item.setdefault("type", ScriptType.CONNECTOR.value)
+                        item.setdefault("integrationIdentifier", self.identifier)
+                        self.connectors.append(item)
+                elif (
+                    not self.isCustom
+                    and file_lower.startswith("managers")
+                    and file.endswith((".managerdef", ".json"))
+                ):
+                    item = json.loads(self.zipfile.read(file))
+                    if isinstance(item, dict):
+                        item_name = item.get("name") or item.get("Name") or pathlib.Path(file).stem
+                        item.setdefault("name", item_name)
+                        item.setdefault("displayName", item.get("DisplayName", item_name))
+                        item.setdefault("type", ScriptType.MANAGER.value)
+                        item.setdefault("integrationIdentifier", self.identifier)
+                        self.managers.append(item)
+                elif self.isCustom and file.startswith("Managers"):
+                    self.managers.append(file)
+                elif file.startswith("Dependencies"):
+                    self.dependencies.append(file)
+                elif file.startswith("Resources/" + self.identifier + ".svg"):
+                    self.has_resources = True
+            except json.JSONDecodeError:
+                LOGGER.warning("Skipping %s - not valid JSON.", file)
 
     def get_all_items(self):
-        return self.actions + self.jobs + self.connectors + self.managers
+        items = []
+        for x in self.actions + self.jobs + self.connectors + self.managers:
+            if isinstance(x, dict):
+                items.append(x)
+        return items
 
     def get_script(self, name: str, script_type: ScriptType) -> str:
-        path = ""
+        candidates = []
         if script_type == ScriptType.JOB:
-            path += "JobsScrips/"
+            candidates = [
+                f"JobsScripts/{name}.py",
+                f"JobsScrips/{name}.py",
+                f"Jobs/{name}.py",
+                f"jobs/{name}.py",
+            ]
         elif script_type == ScriptType.ACTION:
-            path += "ActionsScripts/"
+            candidates = [
+                f"ActionsScripts/{name}.py",
+                f"ActionsDefinitions/{name}.py",
+                f"Actions/{name}.py",
+                f"actions/{name}.py",
+            ]
         elif script_type == ScriptType.CONNECTOR:
-            path += "ConnectorsScripts/"
+            candidates = [
+                f"ConnectorsScripts/{name}.py",
+                f"Connectors/{name}.py",
+                f"connectors/{name}.py",
+            ]
         elif script_type == ScriptType.MANAGER:
-            path += "Managers/"
-        path += f"{name}.py"
-        return self.zipfile.read(path).decode("utf-8")
+            candidates = [
+                f"Managers/{name}.py",
+                f"managers/{name}.py",
+            ]
+        for path in candidates:
+            try:
+                return self.zipfile.read(path).decode("utf-8")
+            except KeyError:
+                continue
+        for item in self.zipfile.namelist():
+            if item.endswith(f"/{name}.py") or item == f"{name}.py":
+                return self.zipfile.read(item).decode("utf-8")
+        raise KeyError(f"Script for {name} ({script_type}) not found in archive.")
 
     def get_zip_as_base64(self):
         return base64.b64encode(self.zip_buffer.getvalue()).decode("utf-8")
+
+    def get_zip_binary(self):
+        return self.zip_buffer.getvalue()
 
     def generate_readme(self, additional_info: str = None):
         env = JinjaEnvironment()
@@ -293,12 +465,109 @@ class Integration(Content):
             template += additional_info
         readme = env.from_string(template)
         if not self.isCustom:
+            cards = self.integration_card.get("cards") or []
+            if (
+                isinstance(cards, list)
+                and cards
+                and isinstance(cards[0], dict)
+                and "cards" in cards[0]
+            ):
+                matched = next(
+                    (x for x in cards if x.get("identifier") == self.identifier),
+                    cards[0],
+                )
+                cards = matched.get("cards", [])
+
+            if cards:
+                custom_action_names = set()
+                custom_job_names = set()
+                custom_connector_names = set()
+
+                for c in cards:
+                    is_custom = bool(
+                        c.get("custom") is True
+                        or c.get("isCustom") is True
+                        or c.get("IsCustom") is True
+                        or c.get("Custom") is True
+                    )
+                    if not is_custom:
+                        continue
+                    c_name = _determine_card_name(c)
+                    if not c_name:
+                        continue
+                    t_val = _determine_card_type(c)
+                    if t_val == ScriptType.ACTION.value:
+                        custom_action_names.add(c_name)
+                    elif t_val == ScriptType.JOB.value:
+                        custom_job_names.add(c_name)
+                    elif t_val == ScriptType.CONNECTOR.value:
+                        custom_connector_names.add(c_name)
+
+                custom_actions = [
+                    x
+                    for x in self.actions
+                    if (
+                        x.get("displayName") in custom_action_names
+                        or x.get("name") in custom_action_names
+                        or x.get("Name") in custom_action_names
+                    )
+                ]
+                custom_jobs = [
+                    x
+                    for x in self.jobs
+                    if (
+                        x.get("displayName") in custom_job_names
+                        or x.get("name") in custom_job_names
+                        or x.get("Name") in custom_job_names
+                    )
+                ]
+                custom_connectors = [
+                    x
+                    for x in self.connectors
+                    if (
+                        x.get("displayName") in custom_connector_names
+                        or x.get("name") in custom_connector_names
+                        or x.get("Name") in custom_connector_names
+                    )
+                ]
+            else:
+                custom_actions = [
+                    x
+                    for x in self.actions
+                    if (
+                        x.get("Custom") is True
+                        or x.get("custom") is True
+                        or x.get("IsCustom") is True
+                        or x.get("isCustom") is True
+                    )
+                ]
+                custom_jobs = [
+                    x
+                    for x in self.jobs
+                    if (
+                        x.get("Custom") is True
+                        or x.get("custom") is True
+                        or x.get("IsCustom") is True
+                        or x.get("isCustom") is True
+                    )
+                ]
+                custom_connectors = [
+                    x
+                    for x in self.connectors
+                    if (
+                        x.get("Custom") is True
+                        or x.get("custom") is True
+                        or x.get("IsCustom") is True
+                        or x.get("isCustom") is True
+                    )
+                ]
+
             integration = {
                 "dependencies": self.dependencies,
                 "definition": self.definition,
-                "actions": [x for x in self.actions if x["IsCustom"]],
-                "jobs": [x for x in self.jobs if x["IsCustom"]],
-                "connectors": [x for x in self.connectors if x["IsCustom"]],
+                "actions": custom_actions,
+                "jobs": custom_jobs,
+                "connectors": custom_connectors,
                 "has_resources": self.has_resources,
             }
             self.readme = readme.render(integration=integration)
@@ -323,6 +592,7 @@ class Integration(Content):
         """
         yield File("README.md", self.readme)
         if not self.isCustom:
+            self.definition["Custom"] = False
             yield File(
                 f"Integration-{self.identifier}.def",
                 json.dumps(self.definition, indent=4),
@@ -333,59 +603,223 @@ class Integration(Content):
                     if file.startswith("Resources/") and not file.endswith("/"):
                         yield File(file, self.zipfile.read(file))
 
-            for card in self.integration_card["cards"]:
-                if card["isCustom"]:
-                    definition = api.get_ide_item(card["id"], card["type"])
-                    definition["id"] = 0
+            cards = self.integration_card.get("cards")
+            if not cards and api:
+                try:
+                    response = api.get_ide_cards(self.identifier)
+                    if isinstance(response, dict) and "cards" in response:
+                        cards = response.get("cards", [])
+                    elif isinstance(response, list):
+                        cards = response
+                except (KeyError, AttributeError, TypeError, ValueError) as e:
+                    LOGGER.warning(
+                        "Could not fetch ide cards for %s: %s", self.identifier, e
+                    )
 
-                    if card["type"] == ScriptType.ACTION.value:
-                        yield File(
-                            f"ActionsDefinitions/{card['name']}.actiondef",
-                            json.dumps(definition, indent=4),
-                        )
-                        yield File(
-                            f"ActionsScripts/{card['name']}.py",
-                            self.zipfile.read(
-                                f"ActionsScripts/{card['name']}.py",
-                            ).decode("utf-8"),
+            if (
+                isinstance(cards, list)
+                and cards
+                and isinstance(cards[0], dict)
+                and "cards" in cards[0]
+            ):
+                matched = next(
+                    (
+                        x
+                        for x in cards
+                        if x.get("identifier") == self.identifier
+                    ),
+                    cards[0],
+                )
+                cards = matched.get("cards", [])
+
+            for card in cards or []:
+                is_custom = bool(
+                    card.get("custom") is True
+                    or card.get("isCustom") is True
+                    or card.get("IsCustom") is True
+                    or card.get("Custom") is True
+                )
+                if not is_custom:
+                    continue
+
+                card_name = _determine_card_name(card)
+                if not card_name:
+                    continue
+
+                type_val = _determine_card_type(card)
+                if type_val is None:
+                    continue
+
+                collection_map = {
+                    ScriptType.ACTION.value: "actions",
+                    ScriptType.JOB.value: "jobs",
+                    ScriptType.CONNECTOR.value: "connectors",
+                    ScriptType.MANAGER.value: "managers",
+                }
+                col = collection_map.get(type_val, "actions")
+                raw_name = str(card.get("name", ""))
+                item_ref = raw_name if raw_name.startswith("projects/") else card.get("id")
+                if (
+                    platform_supports_1p_api()
+                    and item_ref is not None
+                    and not str(item_ref).startswith("projects/")
+                    and "integrations/" not in str(item_ref)
+                ):
+                    item_ref = f"integrations/{self.identifier}/{col}/{item_ref}"
+
+                definition = None
+                if api:
+                    try:
+                        res = api.get_ide_item(item_ref, type_val)
+                        if isinstance(res, dict):
+                            definition = dict(res)
+                            definition["id"] = 0
+                            if "name" in definition and str(definition["name"]).startswith("projects/"):
+                                definition["name"] = card_name
+                            definition.setdefault("Name", card_name)
+                            definition.setdefault("displayName", card_name)
+                            definition.setdefault("DisplayName", card_name)
+                    except Exception as e:
+                        LOGGER.warning(
+                            "Could not get ide item for %s: %s", card_name, e
                         )
 
-                    elif card["type"] == ScriptType.JOB.value:
-                        try:
-                            script_path = f"JobsScripts/{card['name']}.py"
-                            script = self.zipfile.read(script_path).decode("utf-8")
-                        except KeyError:
-                            script_path = f"JobsScrips/{card['name']}.py"
-                            script = self.zipfile.read(script_path).decode("utf-8")
-                        yield File(script_path, script)
-                        yield File(
-                            f"Jobs/{card['name']}.jobdef",
-                            json.dumps(definition, indent=4),
-                        )
-
-                    elif card["type"] == ScriptType.CONNECTOR.value:
-                        yield File(
-                            f"Connectors/{card['name']}.connectordef",
-                            json.dumps(definition, indent=4),
-                        )
-                        yield File(
-                            f"ConnectorsScripts/{card['name']}.py",
-                            self.zipfile.read(
-                                f"ConnectorsScripts/{card['name']}.py",
-                            ).decode("utf-8"),
-                        )
-
-                    elif card["type"] == ScriptType.MANAGER.value:
-                        yield File(
-                            f"Managers/{card['name']}.managerdef",
-                            json.dumps(definition, indent=4),
-                        )
-                        yield File(
-                            f"Managers/{card['name']}.py",
-                            self.zipfile.read(f"Managers/{card['name']}.py").decode(
-                                "utf-8",
+                if type_val == ScriptType.ACTION.value:
+                    if not definition:
+                        matched = next(
+                            (
+                                x
+                                for x in self.actions
+                                if (
+                                    x.get("name") == card_name
+                                    or x.get("Name") == card_name
+                                    or x.get("displayName") == card_name
+                                    or x.get("DisplayName") == card_name
+                                )
                             ),
+                            None,
                         )
+                        definition = dict(matched) if matched else {"name": card_name}
+                        definition["id"] = 0
+                    yield File(
+                        f"ActionsDefinitions/{card_name}.actiondef",
+                        json.dumps(definition, indent=4),
+                    )
+                    script = None
+                    if isinstance(definition, dict):
+                        script = definition.get("script") or definition.get("Script")
+                    if not script:
+                        try:
+                            script = self.get_script(card_name, ScriptType.ACTION)
+                        except (KeyError, FileNotFoundError):
+                            pass
+                    yield File(
+                        f"ActionsScripts/{card_name}.py",
+                        script or "",
+                    )
+
+                elif type_val == ScriptType.JOB.value:
+                    if not definition:
+                        matched = next(
+                            (
+                                x
+                                for x in self.jobs
+                                if (
+                                    x.get("name") == card_name
+                                    or x.get("Name") == card_name
+                                    or x.get("displayName") == card_name
+                                    or x.get("DisplayName") == card_name
+                                )
+                            ),
+                            None,
+                        )
+                        definition = dict(matched) if matched else {"name": card_name}
+                        definition["id"] = 0
+                    yield File(
+                        f"Jobs/{card_name}.jobdef",
+                        json.dumps(definition, indent=4),
+                    )
+                    script = None
+                    if isinstance(definition, dict):
+                        script = definition.get("script") or definition.get("Script")
+                    if not script:
+                        try:
+                            script = self.get_script(card_name, ScriptType.JOB)
+                        except (KeyError, FileNotFoundError):
+                            pass
+                    yield File(
+                        f"JobsScripts/{card_name}.py",
+                        script or "",
+                    )
+
+                elif type_val == ScriptType.CONNECTOR.value:
+                    if not definition:
+                        matched = next(
+                            (
+                                x
+                                for x in self.connectors
+                                if (
+                                    x.get("name") == card_name
+                                    or x.get("Name") == card_name
+                                    or x.get("displayName") == card_name
+                                    or x.get("DisplayName") == card_name
+                                )
+                            ),
+                            None,
+                        )
+                        definition = dict(matched) if matched else {"name": card_name}
+                        definition["id"] = 0
+                    yield File(
+                        f"Connectors/{card_name}.connectordef",
+                        json.dumps(definition, indent=4),
+                    )
+                    script = None
+                    if isinstance(definition, dict):
+                        script = definition.get("script") or definition.get("Script")
+                    if not script:
+                        try:
+                            script = self.get_script(card_name, ScriptType.CONNECTOR)
+                        except (KeyError, FileNotFoundError):
+                            pass
+                    yield File(
+                        f"ConnectorsScripts/{card_name}.py",
+                        script or "",
+                    )
+
+                elif type_val == ScriptType.MANAGER.value:
+                    if not definition:
+                        matched = next(
+                            (
+                                x
+                                for x in self.managers
+                                if isinstance(x, dict)
+                                and (
+                                    x.get("name") == card_name
+                                    or x.get("Name") == card_name
+                                    or x.get("displayName") == card_name
+                                    or x.get("DisplayName") == card_name
+                                )
+                            ),
+                            None,
+                        )
+                        definition = dict(matched) if matched else {"name": card_name}
+                        definition["id"] = 0
+                    yield File(
+                        f"Managers/{card_name}.managerdef",
+                        json.dumps(definition, indent=4),
+                    )
+                    script = None
+                    if isinstance(definition, dict):
+                        script = definition.get("script") or definition.get("Script")
+                    if not script:
+                        try:
+                            script = self.get_script(card_name, ScriptType.MANAGER)
+                        except (KeyError, FileNotFoundError):
+                            pass
+                    yield File(
+                        f"Managers/{card_name}.py",
+                        script or "",
+                    )
         else:
             for file in self.zipfile.namelist():
                 content = self.zipfile.read(file)
@@ -398,19 +832,22 @@ class Workflow(Content):
         super().__init__()
         self.raw_data = raw_data
         self.raw_data["id"] = 0
-        self.raw_data["trigger"]["id"] = 0
+        if "trigger" in self.raw_data and self.raw_data["trigger"] is not None:
+            self.raw_data["trigger"]["id"] = 0
         self.name = self.raw_data.get("name")
         self.description = self.raw_data.get("description")
-        self.type = WorkflowTypes(self.raw_data.get("playbookType"))
+        self.type = WorkflowTypes(
+            self.raw_data.get("playbookType", WorkflowTypes.PLAYBOOK.value)
+        )
         self.priority = self.raw_data.get("priority")
         self.isDebugMode = self.raw_data.get("isDebugMode", None)
         self.version = self.raw_data.get("version")
         self.trigger = self.raw_data.get("trigger")
-        self.steps = self.raw_data.get("steps")
+        self.steps = self.raw_data.get("steps") or []
         self.isEnabled = self.raw_data.get("isEnabled")
         self.category = self.raw_data.get("categoryName", "Default")
         self.environments = self.raw_data.get("environments")
-        self.modification_time = self.raw_data["modificationTimeUnixTimeInMs"]
+        self.modification_time = self.raw_data.get("modificationTimeUnixTimeInMs", 0)
 
     def __hash__(self):
         """Used to remove duplicates in workflow lists"""
@@ -507,7 +944,7 @@ class Workflow(Content):
                         param["FallbackInstanceDisplayName"] = display_name
             except HTTPError as e:
                 # ignoring 404 errors as they expected in migrations between instances.
-                if e.response is not None and hasattr(e.response, 'status_code'):
+                if e.response is not None and hasattr(e.response, "status_code"):
                     status_code = e.response.status_code
                     if status_code != 404:
                         raise e
@@ -515,7 +952,7 @@ class Workflow(Content):
                     # TIPCommon is re-raising HTTPError without response object
                     # Try to extract status code from the error message itself
                     error_msg = str(e)
-                    status_code_match = re.search(r'(\d{3})\s+Client Error', error_msg)
+                    status_code_match = re.search(r"(\d{3})\s+Client Error", error_msg)
                     if status_code_match:
                         status_code = int(status_code_match.group(1))
                         if status_code != 404:
@@ -540,10 +977,17 @@ class Job(Content):
         raw_data["id"] = 0
         self.raw_data = raw_data
         self.name = self.raw_data.get("name")
+        display_name = self.raw_data.get("displayName") or self.raw_data.get("name")
+        if isinstance(display_name, str):
+            display_name = " ".join(display_name.split())
+        self.displayName = display_name
+        self.raw_data["displayName"] = display_name
         self.integration = self.raw_data.get("integration")
         self.description = self.raw_data.get("description")
         self.parameters = self.raw_data.get("parameters")
-        self.runIntervalInSeconds = self.raw_data.get("runIntervalInSeconds")
+        self.runIntervalInSeconds = self.raw_data.get(
+            "runIntervalInSeconds"
+        ) or self.raw_data.get("intervalSeconds")
 
     def generate_readme(self, additional_info: str = None) -> None:
         env = JinjaEnvironment()
@@ -555,4 +999,48 @@ class Job(Content):
         self.readme = readme.render(job=self.__dict__)
 
     def iter_files(self) -> Iterator[File]:
-        yield File(f"Jobs/{self.name}.json", json.dumps(self.raw_data, indent=4))
+        name = self.displayName or self.name
+        name = name.replace("/", "_")
+        yield File(f"Jobs/{name}.json", json.dumps(self.raw_data, indent=4))
+
+
+class IntegrationInstance(Content):
+    """Represents an integration instance configuration."""
+
+    def __init__(self, raw_data: dict[str, Any]):
+        super().__init__()
+        self.raw_data = raw_data
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> IntegrationInstance:
+        """Creates an IntegrationInstance from a dictionary."""
+        return cls(data)
+
+    def to_1p(self, identifier: str) -> dict[str, Any]:
+        """Converts instance configuration to 1P payload shape."""
+        settings_payload = self.raw_data.get("settings", {})
+        params = []
+        for setting in settings_payload.get("settings", []):
+            params.append(
+                {
+                    "description": setting.get("propertyDescription") or None,
+                    "mandatory": setting.get("isMandatory") or False,
+                    "type": setting.get("propertyType"),
+                    "id": setting.get("id"),
+                    "displayName": setting.get("propertyDisplayName"),
+                    "propertyName": setting.get("propertyName"),
+                    "value": setting.get("value"),
+                }
+            )
+
+        return {
+            "name": f"projects/project/locations/location/instances/instance/integrations/{self.raw_data.get('integrationIdentifier')}/integrationInstances/{identifier}",
+            "environment": self.raw_data.get("environment"),
+            "identifier": identifier,
+            "configured": True,
+            "remote": None,
+            "parameters": params,
+            "integrationIdentifier": self.raw_data.get("integrationIdentifier"),
+            "description": settings_payload.get("instanceDescription") or None,
+            "displayName": settings_payload.get("instanceName"),
+        }
