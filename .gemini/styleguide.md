@@ -23,29 +23,29 @@ The target user of every integration is a security analyst working through playb
   file is renamed to snake_case without the old script being kept — unless the release note says the change is
   regressive.
 - Flag when a shared helper's return type changes (e.g. `SingleJson` → `list[SingleJson]`) or when a legacy
-  fallback is dropped (`param.Name or param.DisplayName`, legacy-API branch next to the 1P branch,
-  `installedVersion` falsy check). Both legacy and 1P platform paths must keep working.
-- Flag use of private SDK/TIPCommon members (`siemplify._…`, `settings._id`); they are not a stable contract.
-- Flag changed `default_value`, `is_enable`, `entity_types`, `simulation_data_json` or parameter `type` in an
-  existing YAML when the PR description does not explain it.
+  fallback is dropped (a legacy-API branch next to the 1P branch, a version check that guards a newer API).
+  Both legacy and 1P platform paths must keep working.
+- Flag new uses of private SDK/TIPCommon members (`siemplify._…`); they are not a stable contract.
+- Flag changed `default_value`, `enabled`, `entity_types` / `supported_entity_types`, `simulation_data_json` or
+  parameter `type` in an existing YAML when the PR description does not explain it.
 
 ## 2. Release hygiene (blocking)
 
 - Any change inside an integration directory requires: `version` in `pyproject.toml` incremented by exactly
-  `+1.0`, the same version in `definition.yaml`, a new `release_notes.yaml` entry with that `version:`, and an
-  updated `uv.lock` (`uv lock`). Flag when any of the four is missing. New integrations start at `1.0` with a
-  single release-note entry.
-- Release-note entry: `version:` (not `integration_version:`); `publish_time: 'YYYY-MM-DD'` equal to the planned
-  release date — flag when it is earlier than the previous entry or in the past; `item_type` is one of
-  Integration/Action/Connector/Job/Widget; `item_name` is that component's display name (for an Action, the
-  action name, not the integration); newest entry last; omit `new: false`/`deprecated: false`; one
-  customer-facing sentence, no code identifiers.
-- `pyproject.toml`: description explains what the integration does and (partner integrations) ends with the
-  support-contact sentence; `requires-python = "==3.11.*"`; dependencies added with `uv add` (flag
-  `requirements.txt`); direct imports such as `requests` declared even if TIPCommon pulls them; latest
-  `TIPCommon` / `integration_testing` wheel from `packages/`; no `environmentcommon` (merged into TIPCommon);
-  `soar-sdk` only as a dev dependency.
-- Images live in `resources/`; flag inline `svg_image` / `image_base64` in `definition.yaml` and legacy keys.
+  `+1.0`, a new `release_notes.yaml` entry with that `version:`, and an updated `uv.lock` (`uv lock`). Flag when
+  any of the three is missing. New integrations start at `1.0` with a single release-note entry.
+- Release-note entry: new entries use `version:` (existing legacy entries with `integration_version:` are fine);
+  `publish_time: 'YYYY-MM-DD'` equal to the planned release date — flag when it is earlier than the previous
+  entry or in the past; `item_type` is exactly one of Integration/Action/Connector/Job/Widget (not `action`,
+  `Jobs`); `item_name` is that component's display name (for an Action, the action name, not the integration);
+  newest entry last; do not add `new: false` / `deprecated: false` (they are the defaults); one customer-facing
+  sentence, no code identifiers.
+- `pyproject.toml`: description explains what the integration does; `requires-python = ">=3.11,<3.12"`;
+  dependencies added with `uv add` (flag `requirements.txt`); direct imports such as `requests` declared even if
+  TIPCommon pulls them; when a PR touches dependencies, use the latest `TIPCommon` / `integration_testing` wheel
+  from `packages/`; no `environmentcommon` (merged into TIPCommon); `soar-sdk` only in the `dev` dependency group.
+- Images are files under `resources/` referenced by `svg_logo_path:` / `image_path:` in `definition.yaml`; flag
+  inline base64 image data (`image_base64`) and legacy keys.
 - Flag changes outside the integration the PR is about (other integrations, index files, file-mode changes,
   reformat-only hunks) and ask whether they are intentional.
 
@@ -56,7 +56,8 @@ The target user of every integration is a security analyst working through playb
   `*Error`) and re-raise with `raise X(...) from e`.
 - Flag branching on error-message text (`"deletedfolder" in str(e)`); branch on status codes or typed
   exceptions.
-- Flag manager/API-client methods whose HTTP call does not go through `validate_response`, and `except`
+- Flag manager/API-client methods whose HTTP call does not go through a response-validation helper
+  (`validate_response`, or at least `raise_for_status()` with the error body surfaced), and `except`
   branches that can never run because the validator already raised.
 - Flag an action that returns `EXECUTION_STATE_COMPLETED` after an exception, or an `output_message` that does
   not say what happened.
@@ -73,27 +74,30 @@ The target user of every integration is a security analyst working through playb
   `datetime.now(timezone.utc)`), Python 2 remnants (`super(Cls, self)`, `.encode()` inside f-strings).
 - Logging: `siemplify.LOGGER.exception(e)` for exceptions (not `print`, and not `LOGGER.error(msg)` plus
   `LOGGER.exception(e)` for the same error); failures at `error` level, not `debug`; never silently skip
-  malformed items — log them. The SDK logger exposes `warn`, not `warning`.
+  malformed items — log them. The TIPCommon base-class logger exposes `warn`, not `warning`.
 
 ## 4. TIPCommon, content design and definition ↔ code consistency
 
-- Flag `siemplify.parameters.get(...)` / `siemplify.get_configuration(...)`; use `extract_action_param`,
-  `extract_configuration_param`, `extract_connector_param` (with `input_type`, `is_mandatory`, `default_value`).
-- Flag hand-rolled helpers that exist in TIPCommon: parameter validation (`TIPCommon.validation`,
-  `validate_params`), `string_to_multi_value` and other `TIPCommon.transformation` functions, time constants,
-  pagination (`_paginate_results`), `SingleJson` / `JSON` types. New managers should build on `TIPCommon.base`
-  (`Action`, `Job`, `Connector`, `Apiable`, `Authable`).
+- Flag `siemplify.parameters.get(...)` / `siemplify.get_configuration(...)` in new or changed code; use
+  `extract_action_param`, `extract_configuration_param`, `extract_connector_param` (with `input_type`,
+  `is_mandatory`, `default_value`).
+- Flag hand-rolled helpers that exist in TIPCommon: parameter validation (`TIPCommon.validation`, the base
+  connector's `validate_params`), `string_to_multi_value` and other `TIPCommon.transformation` functions, time
+  constants, `SingleJson` / `JSON` types from `TIPCommon.types`; and re-implementations of pagination or response
+  handling that the integration's own manager or TIPCommon client already provides. New managers should build on
+  `TIPCommon.base` (`Action`, `Job`, `Connector`, `Apiable`, `Authable`).
 - Flag a parameter extracted in Python that has no matching entry in the component YAML (and vice-versa), or
   whose YAML `type` / `default_value` / `is_mandatory` disagrees with the code (`input_type=int` vs
   `type: string`, code default `False` vs YAML `'true'`, `is_mandatory: true` plus a redundant emptiness check).
-- Integration configuration: an **API Root** parameter (except SDK-based integrations such as boto3) and a
-  **Verify SSL** boolean parameter defaulting to `true`. Parameter and action names are 2–4 capitalised words
-  without special characters ("Organization ID", not "org_id"; `Contain Host`, `Add IP to Hotlist`), matching the
-  product's own UI terminology.
+- Integration configuration: new integrations have an **API Root** parameter (except SDK-based integrations such
+  as boto3) and a **Verify SSL** boolean parameter defaulting to `true`. Parameter and action names are 2–4
+  capitalised words without special characters ("Organization ID", not "org_id"; `Contain Host`,
+  `Add IP to Hotlist`), matching the product's own UI terminology.
 - JSON results use one of the four standard shapes: generic `{"field": "value"}`, list `[{...}, ...]`, entity
   `[{"Entity": id, "EntityResult": {...}}]`, or entity list `[{"Entity": id, "EntityResult": [{...}]}]`. Flag
-  dynamic top-level keys (`{"1": {...}, "2": {...}}`) — they break playbook placeholders. An action that sets a
-  JSON result needs a matching `resources/<action_file>_JsonResult_example.json`.
+  dynamic top-level keys (`{"1": {...}, "2": {...}}`) — they break playbook placeholders. When an action's JSON
+  result changes, its `resources/<action_file>_JsonResult_example.json` must change with it (file presence
+  itself is checked by `mp validate`).
 - Flag action descriptions that list entity types the code does not handle (`SUPPORTED_ENTITY_TYPES`,
   `simulation_data_json`), and parameter descriptions that merely repeat the parameter name.
 - Flag code copied verbatim from `base_action.py` / another script instead of calling it, and repeated literals
@@ -101,13 +105,14 @@ The target user of every integration is a security analyst working through playb
 
 ## 5. Security and secrets
 
-- Flag real-looking hostnames, internal IPs, e-mails, serial numbers or customer IDs in `tests/mock_data.json`,
-  `resources/*_JsonResult_example.json`, sample payloads and YAML defaults — they must be masked or generic.
+- Flag real-looking hostnames, internal IPs, e-mails, serial numbers or customer IDs in test fixtures
+  (`tests/config.json`, `tests/mocks/**`, `mock_data.json`), `resources/*_JsonResult_example.json`, sample
+  payloads and YAML defaults — they must be masked or generic.
 - Flag credentials in URLs (`https://user:pass@…`), in log or output messages, in exception text that includes
   `response.content`, and secrets written to JsonResult or rendered by widgets with `safe_rendering: false`.
-- `Verify SSL` must exist in `definition.yaml` (default true) **and** `verify_ssl` must reach every client or
-  session, including SDK-built clients (boto3/STS). Flag `verify=False` and a `verify_ssl` that is read but never
-  used.
+- The `Verify SSL` value (`verify_ssl`) must reach every client or session, including SDK-built clients
+  (boto3/STS). Flag `verify=False` and a `verify_ssl` that is read but never used. (Presence of the parameter in
+  `definition.yaml` is checked by `mp validate`.)
 - Flag per-request credentials or e-mails written into a shared `requests.Session.headers`; pass `headers=` per
   call.
 - Flag archive extraction without path-traversal guards, `subprocess` with `shell=True`, `eval` / `exec` /
@@ -115,12 +120,14 @@ The target user of every integration is a security analyst working through playb
 
 ## 6. Tests
 
-- New or changed action/connector/job without a test under `tests/` is a blocking finding. Tests use the
-  `integration_testing` black-box framework (`product.py`, `session.py`, `MockSession`, fixtures from
-  `conftest.py`), modelled on `content/response_integrations/third_party/telegram/tests/` and
-  `third_party/sample_integration/tests/` — never real HTTP.
+- New or changed action/connector/job without a test under `tests/` is a blocking finding. New tests use the
+  `integration_testing` black-box framework (`MockSession`, `MockActionOutput`, `set_metadata`) with the
+  per-integration `tests/core/product.py`, `tests/core/session.py` and `tests/conftest.py`, modelled on
+  `content/response_integrations/third_party/community/telegram/tests/` — never real HTTP. Do not ask existing
+  older-style test suites to be rewritten.
 - Each component needs at least one failure-path test (API error, missing entity, invalid parameter) in addition
-  to the success path; keep `tests/test_defaults/test_imports.py` and `tests/test_actions/test_ping.py`.
+  to the success path. Keep `tests/test_defaults/test_imports.py`; new integrations also ship a Ping test under
+  `tests/test_actions/`.
 - Flag asserts that cannot fail (`assert result` for a value that should be `""`), unused fixture parameters, and
   test names that do not state the scenario and expected outcome.
 
@@ -128,19 +135,19 @@ The target user of every integration is a security analyst working through playb
 
 (Google integrations run ruff `ALL`; third-party, partner and power-up integrations run only `E,F,FA102,I`.)
 
-- File names of actions, connectors, jobs and `core/` modules: `lower_snake_case.py` with the matching `.yaml`.
+- New action, connector, job and `core/` files: `lower_snake_case.py` with the matching `.yaml`. Existing
+  CamelCase files stay as they are (renaming them is a regression, see §1).
 - `from __future__ import annotations` is the first import of every module; imports at top level only (no
-  function-local imports, no `try: import … except ImportError: pass`); groups stdlib → third-party → `soar_sdk`
-  → `TIPCommon` → relative `.core`; SDK imports via the `soar_sdk.*` namespace; TIPCommon 2.x imports from
-  submodules (`from TIPCommon.extraction import extract_action_param`); local core imports relative; no wildcard
-  imports.
+  function-local imports, no `try: import … except ImportError: pass`); order as ruff's isort produces it:
+  stdlib, then third-party (which includes `soar_sdk` and `TIPCommon`), then relative `.core` imports; SDK
+  imports via the `soar_sdk.*` namespace; TIPCommon 2.x imports from submodules
+  (`from TIPCommon.extraction import extract_action_param`); local core imports relative; no wildcard imports.
 - Type hints on every parameter and return (`-> None` included); parametrised generics (`dict[str, Any]`, never
   bare `dict` / `list`); `X | None` not `Optional`; `SingleJson` from `TIPCommon.types` for JSON dicts;
   annotation-only imports under `if TYPE_CHECKING:`; `slots=True` on dataclasses. Do not annotate attributes
   already annotated in the base class.
 - Flag commented-out code, template or placeholder comments, `#wip`-style markers, unused variables, imports and
-  constants, non-empty `__init__.py` (license header only), stray files (`requirements.txt`, wheels, scratch
-  files).
+  constants, and stray files (`requirements.txt`, wheels, scratch files).
 - Keep `main()` and manager methods readable: extract repeated conditions into named helpers, return early
   instead of nesting, no static methods where a module function will do; functions above ~50 lines or 7 levels of
   nesting get a comment, not a blocker.
@@ -158,4 +165,6 @@ The target user of every integration is a security analyst working through playb
 - Missing `Raises:` sections, docstrings on tests, `pathlib` for one-off paths, `Enum` for test-only constants,
   pinning the SOAR SDK git dependency — maintainers have rejected these.
 - Legacy modules the PR does not modify; CamelCase ↔ snake_case renames of existing files (that is a regression,
-  see §1); `Verify SSL` defaults on per-action parameters.
+  see §1); `Verify SSL` defaults on per-action parameters; `safe_rendering: false` on widgets by itself (it is
+  the repo default — only flag secrets rendered through it); `integration_version:` in existing release-note
+  entries.
