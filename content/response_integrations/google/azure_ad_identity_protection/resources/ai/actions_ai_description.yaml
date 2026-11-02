@@ -1,0 +1,442 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    The **Enrich Entities** action retrieves detailed risk information for User entities
+    from Azure AD Identity Protection. It identifies whether a user is considered
+    "at risk" by Microsoft's identity protection services, providing context such
+    as risk level, risk state, and the reason for the risk. This information is used
+    to enrich the entity's profile within Google SecOps, helping analysts prioritize
+    investigations involving potentially compromised accounts.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Azure AD Identity Protection
+    manager using provided credentials and authenticates with the Microsoft Graph
+    API.
+
+    2. **Entity Filtering**: It identifies all `USER` entities within the current
+    context.
+
+    3. **Data Retrieval**: For each user, it determines if the identifier is an email
+    (Principal Name) or a Display Name and queries the Azure AD Graph API endpoint
+    for risky users (`/v1.0/identityProtection/riskyUsers/`).
+
+    4. **Enrichment**: If a matching risky user is found, the action:
+        * Updates the entity's `additional_properties` with risk details (prefixed
+    with `AzureADIP`).
+        * Marks the entity as enriched (`is_enriched = True`).
+        * Adds a data table to the entity containing risk status and a link to the
+    Azure Portal.
+        * Optionally creates a formatted Insight if the `Create Insights` parameter
+    is enabled.
+    5. **Finalization**: Updates all processed entities in the system and returns
+    a JSON summary of the results.
+
+
+    ### Additional Notes
+
+    - The action uses the entity's original identifier to determine if it's an email
+    address. If it matches an email regex, it queries by `userPrincipalName`; otherwise,
+    it queries by `userDisplayName`.
+  ai_short_description: >-
+    Retrieves detailed risk information for User entities from Azure AD Identity Protection,
+    updating the entity's profile with risk level, state, and details to help analysts
+    prioritize investigations.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to Azure AD Graph API to fetch user risk data
+      (fetches_data=true). It does not mutate external data. It updates internal entities
+      with the retrieved data and can create insights if configured to do so.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES` contains `EntityTypes.USER`.
+      Therefore, it targets USER entities and filters strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches risk information for User entities from Azure AD Identity
+      Protection. This matches the 'Enrich Asset' expected outcome, as it returns
+      contextual metadata (risk level, state) for a user. It does not mutate external
+      data.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Create Insights | Boolean | No | If enabled, action will create an insight containing
+    all of the retrieved information about the entity. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the Azure AD Identity Protection instance. It ensures that the provided credentials
+    and API endpoints are correct and that the system can successfully authenticate
+    and communicate with the external service.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the connection details (such
+    as Client ID, Client Secret, and Tenant ID) from the integration configuration.
+
+    2. **Authentication**: The action attempts to obtain an OAuth2 Bearer token by
+    sending a POST request to the Azure AD login endpoint.
+
+    3. **Connectivity Test**: Upon successful authentication, the action performs
+    a GET request to the `riskDetections` endpoint (limited to 1 result) to verify
+    that the API is reachable and responding correctly.
+
+    4. **Result Reporting**: If the request is successful, the action completes with
+    a success message. Otherwise, it catches the exception and reports a failure.
+
+
+    ### Additional Notes
+
+    - This action does not process any entities.
+
+    - It is used primarily for troubleshooting and initial setup of the integration.
+  ai_short_description: >-
+    Verifies connectivity between Google SecOps and the Azure AD Identity Protection
+    instance.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to test connectivity to the Azure AD Identity
+      Protection API. It does not fetch contextual data for alerts/entities, nor does
+      it mutate any external or internal data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It solely tests connectivity
+      to the external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not perform any enrichment,
+      containment, ticketing, or other operations that match the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Update User State:
+  ai_description: >-
+    ### General Description
+
+    Updates the risk state of user entities in Azure AD Identity Protection. This
+    action allows security analysts to programmatically confirm a user as compromised
+    or dismiss their risk state based on investigation results.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves Azure AD configuration and the target 'State'
+    parameter.
+
+    2. **Entity Filtering**: Identifies all User entities within the current context.
+
+    3. **User Identification**: For each entity, the action determines if the identifier
+    is an email or a display name. It then queries Azure AD's 'riskyUsers' endpoint
+    via a GET request to find the matching user object.
+
+    4. **State Update**: If a matching risky user is found, the action sends a POST
+    request to either the `confirmCompromised` or `dismiss` endpoint in Azure AD,
+    passing the user's ID.
+
+    5. **Reporting**: Tracks successful and failed updates and provides a summary
+    message to the Google SecOps case wall.
+  ai_short_description: >-
+    Updates the risk state of user entities in Azure AD Identity Protection to either
+    confirmed compromised or dismissed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the risk state of a user in Azure AD Identity Protection to either compromised
+      or dismissed.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches user data from Azure AD via a GET request to resolve the
+      user ID (fetches_data=true). It then mutates external data by sending a POST
+      request to update the user's risk state to either compromised or dismissed (can_mutate_external_data=true).
+      It does not mutate internal data, update entities, create insights, modify alerts,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` contains only `EntityTypes.USER`.
+      Therefore, it targets User entities and filters strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the risk state (Compromised or Dismissed) of a user in Azure
+      AD Identity Protection. This aligns with the 'Update Identity' category, as
+      it modifies account metadata and security state. It does not disable the identity
+      directly, nor does it enrich, contain, or perform other categorized outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | State | String | No | Specify the state for the users. Options are 'Compromised'
+    or 'Dismissed'. |
