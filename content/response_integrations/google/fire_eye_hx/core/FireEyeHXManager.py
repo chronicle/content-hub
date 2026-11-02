@@ -907,7 +907,7 @@ class FireEyeHXManager:
 
         return [self.parser.build_siemplify_group_obj(group) for group in alert_groups]
 
-    def get_host_sets(self, name: str | None = None, limit: int | None = None) -> list[dict]:
+    def get_host_sets(self, name: str | None = None, limit: int | None = None) -> list[dict[str, Any]]:
         """Get list of host sets from FireEye HX.
 
         Args:
@@ -955,7 +955,7 @@ class FireEyeHXManager:
         host_set_id: int | None = None,
         agent_ids: list[str] | None = None,
         comment: str | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Create a bulk acquisition across endpoints.
 
         Args:
@@ -966,6 +966,9 @@ class FireEyeHXManager:
 
         Returns:
             Created bulk acquisition data object.
+
+        Raises:
+            ValueError: If neither agent_ids nor host_set_id is provided.
         """
         url = f"{self.api_root}/acqs/bulk"
         payload: dict[str, Any] = {
@@ -985,7 +988,7 @@ class FireEyeHXManager:
         self.validate_response(response, "Error creating bulk acquisition")
         return response.json().get("data", {})
 
-    def get_bulk_acquisition(self, bulk_acquisition_id: str | int) -> dict:
+    def get_bulk_acquisition(self, bulk_acquisition_id: str | int) -> dict[str, Any]:
         """Get details and progress of a bulk acquisition.
 
         Args:

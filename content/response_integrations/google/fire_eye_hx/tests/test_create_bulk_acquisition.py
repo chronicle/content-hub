@@ -14,10 +14,12 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from base64 import b64decode
 import json
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -34,10 +36,10 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_host_set_success(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
@@ -49,7 +51,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
             "comment": "Created by Google SecOps",
         }
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return '<script><commands><command type="test"/></commands></script>'
             if param_name == "Host Set Name":
@@ -88,10 +90,10 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_agent_ids_success(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
@@ -101,7 +103,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
             "state": "QUEUED",
         }
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return "<script><commands/></script>"
             if param_name == "Agent IDs":
@@ -131,15 +133,15 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_agent_ids_whitespace_only_failure(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return "<script><commands/></script>"
             if param_name == "Agent IDs":
@@ -163,15 +165,15 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_no_target_failure(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return "<script><commands/></script>"
             if param_name == "Agent IDs":
@@ -199,15 +201,15 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_invalid_timeframe_failure(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return '<script time="__INTERVAL_START__"><commands/></script>'
             if param_name == "Timeframe Start":
@@ -231,15 +233,15 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_timeframe_stop_invalid_failure(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return '<script time="__INTERVAL_STOP__"><commands/></script>'
             if param_name == "Timeframe Stop":
@@ -263,10 +265,10 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_date_macro_substitution(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
@@ -274,7 +276,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
 
         raw_script = '<script time_start="__INTERVAL_START__" time_stop="__INTERVAL_STOP__"><commands/></script>'
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return raw_script
             if param_name == "Timeframe Start":
@@ -300,15 +302,15 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_invalid_xml_failure(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return "<script><unclosed_tag></script>"
             return kwargs.get("default_value")
@@ -330,10 +332,10 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_python_wrapper_cleanup(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
@@ -343,7 +345,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
             '# Some legacy python comment\nSCRIPT_XML = r"""<?xml version="1.0"?><script><commands/></script>"""\n'
         )
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return wrapped_script
             return kwargs.get("default_value")
@@ -367,10 +369,10 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_unbound_prefix_namespace_injection(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
@@ -381,7 +383,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
             '<module name="test"/></command></commands></script>'
         )
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return unbound_prefix_script
             return kwargs.get("default_value")
@@ -406,15 +408,15 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_empty_script_failure(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return "   "
             return kwargs.get("default_value")
@@ -436,16 +438,16 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_missing_id_in_response_failure(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
         mock_manager.create_bulk_acquisition.return_value = {"state": "QUEUED"}
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return "<script><commands/></script>"
             if param_name == "Agent IDs":
@@ -469,10 +471,10 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_json_script_success(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
@@ -480,7 +482,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
 
         json_script = '{"commands": [{"type": "fileCollection", "path": "/tmp/test"}]}'
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return json_script
             if param_name == "Agent IDs":
@@ -507,10 +509,10 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_json_script_with_interval_macros(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
@@ -518,7 +520,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
 
         json_script = '{"timeframe": {"start": "__INTERVAL_START__", "stop": "__INTERVAL_STOP__"}}'
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return json_script
             if param_name == "Agent IDs":
@@ -550,10 +552,10 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_json_script_python_wrapper_cleanup(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
@@ -561,7 +563,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
 
         wrapped_json = 'SCRIPT_JSON = """{"commands": [{"type": "processList"}]}"""'
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return wrapped_json
             if param_name == "Agent IDs":
@@ -587,15 +589,15 @@ class TestCreateBulkAcquisition(unittest.TestCase):
     @patch.object(create_module, "SiemplifyAction")
     def test_create_bulk_acquisition_invalid_json_failure(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Script Content":
                 return '{"commands": [invalid_json'
             if param_name == "Agent IDs":

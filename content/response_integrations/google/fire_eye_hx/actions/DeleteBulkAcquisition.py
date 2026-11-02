@@ -26,35 +26,37 @@ from TIPCommon import (
 )
 
 from ..core.FireEyeHXManager import FireEyeHXManager
+from ..core.UtilsManager import parse_bulk_acquisition_id
 
-INTEGRATION_NAME = "FireEyeHX"
-SCRIPT_NAME = "Delete Bulk Acquisition"
+INTEGRATION_NAME: str = "FireEyeHX"
+SCRIPT_NAME: str = "Delete Bulk Acquisition"
 
 
 @output_handler
 def main() -> None:
+    """Delete a bulk acquisition job from FireEye HX."""
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
 
-    api_root = extract_configuration_param(
+    api_root: str = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
         param_name="API Root",
         is_mandatory=True,
     )
-    username = extract_configuration_param(
+    username: str = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
         param_name="Username",
         is_mandatory=True,
     )
-    password = extract_configuration_param(
+    password: str = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
         param_name="Password",
         is_mandatory=True,
     )
-    verify_ssl = extract_configuration_param(
+    verify_ssl: bool = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
         param_name="Verify SSL",
@@ -62,32 +64,17 @@ def main() -> None:
         input_type=bool,
     )
 
-    bulk_id = extract_action_param(
-        siemplify,
-        param_name="Bulk Acquisition ID",
-        is_mandatory=True,
-    )
+    bulk_id: str = extract_action_param(siemplify, param_name="Bulk Acquisition ID", is_mandatory=True)
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     status = EXECUTION_STATE_COMPLETED
     result_value = "false"
-    manager = None
+    manager: FireEyeHXManager | None = None
 
     try:
-        if not bulk_id or not str(bulk_id).strip():
-            raise ValueError("Bulk Acquisition ID must not be empty.")
+        clean_bulk_id: int = parse_bulk_acquisition_id(bulk_id)
 
-        try:
-            clean_bulk_id = int(str(bulk_id).strip())
-        except ValueError as value_error:
-            raise ValueError(f"Bulk Acquisition ID must be a number, got: {bulk_id}.") from value_error
-
-        manager = FireEyeHXManager(
-            api_root=api_root,
-            username=username,
-            password=password,
-            verify_ssl=verify_ssl,
-        )
+        manager = FireEyeHXManager(api_root=api_root, username=username, password=password, verify_ssl=verify_ssl)
 
         manager.delete_bulk_acquisition(clean_bulk_id)
         result_value = "true"
@@ -104,7 +91,7 @@ def main() -> None:
             try:
                 manager.logout()
             except Exception as logout_err:
-                siemplify.LOGGER.warning(f"Failed to log out: {logout_err}")
+                siemplify.LOGGER.warn(f"Failed to log out: {logout_err}")
 
     siemplify.LOGGER.info(f"Status: {status}")
     siemplify.LOGGER.info(f"Result Value: {result_value}")

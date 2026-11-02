@@ -14,8 +14,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -32,10 +34,10 @@ class TestGetBulkAcquisition(unittest.TestCase):
     @patch.object(get_module, "SiemplifyAction")
     def test_get_bulk_acquisition_success(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
@@ -46,7 +48,7 @@ class TestGetBulkAcquisition(unittest.TestCase):
             "progress": {"total": 100, "complete": 100},
         }
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Bulk Acquisition ID":
                 return "42"
             return kwargs.get("default_value")
@@ -69,15 +71,15 @@ class TestGetBulkAcquisition(unittest.TestCase):
     @patch.object(get_module, "SiemplifyAction")
     def test_get_bulk_acquisition_empty_id_failure(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Bulk Acquisition ID":
                 return ""
             return kwargs.get("default_value")
@@ -99,15 +101,15 @@ class TestGetBulkAcquisition(unittest.TestCase):
     @patch.object(get_module, "SiemplifyAction")
     def test_get_bulk_acquisition_non_numeric_id_failure(
         self,
-        mock_siemplify_action,
-        mock_extract_config,
-        mock_extract_action,
-        mock_manager_cls,
+        mock_siemplify_action: MagicMock,
+        mock_extract_config: MagicMock,
+        mock_extract_action: MagicMock,
+        mock_manager_cls: MagicMock,
     ) -> None:
         mock_siemplify = mock_siemplify_action.return_value
         mock_manager = mock_manager_cls.return_value
 
-        def extract_action_param_side_effect(siemplify, param_name, **kwargs):
+        def extract_action_param_side_effect(siemplify: Any, param_name: str, **kwargs: Any) -> Any:
             if param_name == "Bulk Acquisition ID":
                 return "bad_input_abc"
             return kwargs.get("default_value")

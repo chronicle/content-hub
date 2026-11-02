@@ -192,7 +192,7 @@ class TestFireEyeHXManagerBulk(unittest.TestCase):
         self.assertTrue(result)
 
     @patch.object(requests.Session, "request")
-    def test_manager_methods_intercepted_by_session_request(self, mock_request) -> None:
+    def test_manager_methods_intercepted_by_session_request(self, mock_request: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
