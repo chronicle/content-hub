@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: var(--background, #f8fafc);
+            color: var(--foreground, #0f172a);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+        }
+        .surface-card {
+            background-color: var(--card, #ffffff);
+            color: var(--foreground, #0f172a);
+            border: 1px solid var(--border, #e2e8f0);
+        }
+        .surface-subtle {
+            background-color: var(--secondary, rgba(148, 163, 184, 0.12));
+            border: 1px solid var(--border, #e2e8f0);
+        }
+        .text-muted {
+            color: var(--muted-foreground, #64748b);
+        }
+        .summary-clamp {
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6">
+
+    <!-- SOAR DATA BINDING -->
+    <script type="application/json" id="soar-gemini-brief">[Summarize Threat with Gemini.JsonResult]</script>
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        <div id="brief-card" class="surface-card rounded-2xl p-6 shadow-sm space-y-5">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-[var(--border)]">
+                <div>
+                    <h1 id="brief-title" class="text-2xl font-bold tracking-tight text-[var(--foreground)]">Threat: Analyzing...</h1>
+                </div>
+                <div id="brief-source-badge" class="shrink-0"></div>
+            </div>
+
+            <!-- BODY / PENDING STATE CONTAINER -->
+            <div id="brief-body">
+                <div class="flex flex-col items-center justify-center p-12 surface-subtle rounded-2xl text-center space-y-4">
+                    <div class="animate-spin rounded-full h-9 w-9 border-2 border-blue-500 border-t-transparent"></div>
+                    <div class="space-y-1">
+                        <h3 class="text-base font-bold text-[var(--foreground)]">Waiting for "Ask Gemini" Step to Complete...</h3>
+                        <p class="text-xs text-muted">The threat title and executive summary will appear here automatically once analyzed.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function extractSourceUrl(rawText) {
+            const srcMatch = rawText.match(/Analyze the following threat description:\s*([\s\S]*?)(?:\\n|\n)+Output your response strictly/i);
+            if (!srcMatch || !srcMatch[1]) return '';
+            const inputSection = srcMatch[1].replace(/\\n/g, ' ').trim();
+            const urlMatch = inputSection.match(/https?:\/\/[^\s"'<>\\]+/i);
+            return urlMatch ? urlMatch[0].replace(/[.,;)]+$/, '') : '';
+        }
+
+        function extractThreatBriefFromElement(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return null;
+            const rawText = (el.textContent || '').trim();
+            if (!rawText || rawText.includes('.JsonResult') || rawText.startsWith('[GoogleChronicle_') || rawText.startsWith('[Alert.')) {
+                return null;
+            }
+
+            const sourceUrl = extractSourceUrl(rawText);
+
+            // 1. Try parsing the outer JSON if valid
+            try {
+                const rawObj = JSON.parse(rawText);
+                if (rawObj && typeof rawObj === 'object') {
+                    if (rawObj.title || rawObj.summary) {
+                        return {
+                            title: String(rawObj.title || 'Identified Threat').trim(),
+                            summary: String(rawObj.summary || '').trim(),
+                            sourceUrl
+                        };
+                    }
+                    const htmlWrapped = rawObj?.responses?.[0]?.blocks?.[0]?.htmlContent?.privateDoNotAccessOrElseSafeHtmlWrappedValue || '';
+                    if (htmlWrapped) {
+                        const parsedInner = parseInnerHtmlJson(htmlWrapped, sourceUrl);
+                        if (parsedInner) return parsedInner;
+                    }
+                }
+            } catch (e) {
+                // Fall through to resilient raw extraction if &quot; was decoded inside the HTML widget
+            }
+
+            // 2. Resilient extraction directly from the "privateDoNotAccessOrElseSafeHtmlWrappedValue" / "responses" section
+            let targetSection = rawText;
+            const wrapIdx = rawText.indexOf('privateDoNotAccessOrElseSafeHtmlWrappedValue');
+            if (wrapIdx !== -1) {
+                targetSection = rawText.slice(wrapIdx);
+            } else {
+                const respIdx = rawText.indexOf('"responses"');
+                if (respIdx !== -1) {
+                    targetSection = rawText.slice(respIdx);
+                }
+            }
+
+            return parseInnerHtmlJson(targetSection, sourceUrl);
+        }
+
+        function parseInnerHtmlJson(sectionStr, sourceUrl) {
+            if (!sectionStr) return null;
+
+            let inner = sectionStr;
+            const pMatch = sectionStr.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+            if (pMatch && pMatch[1]) {
+                inner = pMatch[1];
+            }
+
+            const decoded = inner
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/\\n/g, '\n')
+                .replace(/\\"/g, '"')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;|&apos;/g, "'")
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&amp;/g, '&')
+                .replace(/```(?:json)?/gi, '')
+                .replace(/```/g, '')
+                .trim();
+
+            const jsonBlock = decoded.match(/\{[\s\S]*?\}/);
+            if (jsonBlock) {
+                try {
+                    const parsed = JSON.parse(jsonBlock[0].replace(/\r?\n/g, ' '));
+                    if (parsed.title || parsed.summary) {
+                        return {
+                            title: String(parsed.title || 'Identified Threat').trim(),
+                            summary: String(parsed.summary || '').trim(),
+                            sourceUrl
+                        };
+                    }
+                } catch (e) {}
+            }
+
+            const titleMatch = decoded.match(/"title"\s*:\s*"([^"]+)"/i);
+            const summaryMatch = decoded.match(/"summary"\s*:\s*"([\s\S]+?)"\s*\}/i);
+            if (titleMatch || summaryMatch) {
+                return {
+                    title: (titleMatch ? titleMatch[1] : 'Identified Threat').trim(),
+                    summary: (summaryMatch ? summaryMatch[1] : '').trim(),
+                    sourceUrl
+                };
+            }
+
+            return null;
+        }
+
+        function renderThreatBrief(brief) {
+            const titleEl = document.getElementById('brief-title');
+            const sourceEl = document.getElementById('brief-source-badge');
+            const bodyEl = document.getElementById('brief-body');
+
+            titleEl.innerHTML = `<span class="text-muted font-semibold">Threat:</span> ${escapeHtml(brief.title)}`;
+
+            if (brief.sourceUrl) {
+                sourceEl.innerHTML = `
+                    <a href="${escapeHtml(brief.sourceUrl)}" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-all">
+                        <span>Source Threat Report</span>
+                        <span>↗</span>
+                    </a>`;
+            } else {
+                sourceEl.innerHTML = '';
+            }
+
+            bodyEl.innerHTML = `
+                <div class="p-5 rounded-xl surface-subtle border-l-4 border-l-blue-500 space-y-2">
+                    <p class="text-xs font-bold uppercase tracking-wider text-muted">Executive Threat Summary</p>
+                    <p class="text-sm leading-relaxed font-medium text-[var(--foreground)] summary-clamp">
+                        ${escapeHtml(brief.summary)}
+                    </p>
+                </div>
+            `;
+        }
+
+        // SOAR Host Theme Listener
+        const soarThemes = {
+            light: { '--background': '#f8fafc', '--foreground': '#0f172a', '--card': '#ffffff', '--secondary': '#f1f5f9', '--muted-foreground': '#64748b', '--border': '#e2e8f0' },
+            dark: { '--background': '#020817', '--foreground': '#f8fafc', '--card': '#0f172a', '--secondary': '#1e293b', '--muted-foreground': '#94a3b8', '--border': '#1e293b' }
+        };
+        function isColorDark(hexColor) {
+            if (!hexColor || hexColor.length < 4) return false;
+            let hex = hexColor.replace('#', '');
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            const r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16);
+            return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+        }
+        window.addEventListener('message', evt => {
+            if (evt.data && evt.data.background) {
+                const dark = isColorDark(evt.data.background);
+                const t = dark ? soarThemes.dark : soarThemes.light;
+                for (const [k, v] of Object.entries(t)) document.documentElement.style.setProperty(k, v);
+                document.documentElement.classList.toggle('dark', dark);
+            }
+        });
+
+        const brief = extractThreatBriefFromElement('soar-gemini-brief');
+        if (brief) {
+            renderThreatBrief(brief);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google SecOps SOAR - Threat Detection Opportunities</title>
+    <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: var(--background, #f8fafc);
+            color: var(--foreground, #0f172a);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+        }
+        .surface-card {
+            background-color: var(--card, #ffffff);
+            color: var(--foreground, #0f172a);
+            border: 1px solid var(--border, #e2e8f0);
+        }
+        .surface-subtle {
+            background-color: var(--secondary, rgba(148, 163, 184, 0.12));
+            border: 1px solid var(--border, #e2e8f0);
+        }
+        .text-muted {
+            color: var(--muted-foreground, #64748b);
+        }
+    </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6">
+
+    <!-- SOAR DATA BINDING -->
+    <script type="application/json" id="soar-tdo-data">[Generate TDO.JsonResult]</script>
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        <!-- HEADER & KPI SCOREBOARD -->
+        <div class="surface-card rounded-2xl p-6 shadow-sm space-y-6">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-[var(--border)]">
+                <div class="space-y-1.5">
+                    <div id="step-status-badge" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                        Step 1 · Threat Intelligence Decomposition
+                    </div>
+                    <h1 class="text-2xl font-bold tracking-tight text-[var(--foreground)]">Threat Detection Opportunities (TDOs)</h1>
+                    <p class="text-sm text-muted">AI-extracted detection strategies, MITRE ATT&amp;CK mappings, and target telemetry observables.</p>
+                </div>
+
+                <!-- SEARCH INPUT -->
+                <div class="relative w-full lg:w-80">
+                    <svg class="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    <input id="tdo-search" type="text" placeholder="Filter by keyword, process, file..." oninput="applyFilters()"
+                        class="w-full pl-10 pr-4 py-2 text-xs rounded-xl surface-subtle text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all">
+                </div>
+            </div>
+
+            <!-- KPI METRICS -->
+            <div id="tdo-kpis" class="grid grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
+            <!-- TACTIC FILTER PILLS -->
+            <div id="tactic-filters" class="flex flex-wrap items-center gap-2 pt-1"></div>
+        </div>
+
+        <!-- TDO CARDS GRID -->
+        <div id="tdo-container" class="grid grid-cols-1 xl:grid-cols-2 gap-5"></div>
+    </div>
+
+    <script>
+        let allTdos = [];
+        let activeTactic = 'ALL';
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function loadSoarJson(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return null;
+            const raw = el.textContent.trim();
+            if (!raw || raw.startsWith('[Generate ') || raw.startsWith('[Alert.')) {
+                return null;
+            }
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function extractTdos(rawObj) {
+            if (!rawObj) return [];
+            try {
+                const res = rawObj.response_data?.result || rawObj.result || rawObj;
+                if (res.structuredContent?.threatDetectionOpportunities) {
+                    return res.structuredContent.threatDetectionOpportunities;
+                }
+                if (res.content?.[0]?.text) {
+                    const parsed = JSON.parse(res.content[0].text);
+                    if (parsed.threatDetectionOpportunities) return parsed.threatDetectionOpportunities;
+                }
+                if (rawObj.threatDetectionOpportunities) return rawObj.threatDetectionOpportunities;
+            } catch (e) {}
+            return [];
+        }
+
+        function collectObservables(obsObj) {
+            const items = [];
+            if (!obsObj) return items;
+            const labelMap = {
+                domains: { label: 'Domain', cls: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/25' },
+                urls: { label: 'URL', cls: 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/25' },
+                ipAddresses: { label: 'IP', cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25' },
+                parentProcesses: { label: 'Parent Process', cls: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25' },
+                processes: { label: 'Process', cls: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25' },
+                files: { label: 'File', cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25' },
+                userAccounts: { label: 'Account', cls: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/25' }
+            };
+            ['atomics', 'procedures'].forEach(group => {
+                const section = obsObj[group] || {};
+                Object.entries(section).forEach(([key, arr]) => {
+                    if (Array.isArray(arr)) {
+                        const meta = labelMap[key] || { label: key, cls: 'surface-subtle text-[var(--foreground)]' };
+                        arr.forEach(val => items.push({ value: val, typeLabel: meta.label, cls: meta.cls }));
+                    }
+                });
+            });
+            return items;
+        }
+
+        function renderPendingState() {
+            document.getElementById('tdo-kpis').innerHTML = '';
+            document.getElementById('tactic-filters').innerHTML = '';
+            document.getElementById('tdo-container').innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center p-16 surface-card rounded-2xl text-center space-y-4">
+                    <div class="animate-spin rounded-full h-9 w-9 border-2 border-blue-500 border-t-transparent"></div>
+                    <div class="space-y-1">
+                        <h3 class="text-base font-bold text-[var(--foreground)]">Waiting for "Generate TDO" Step to Complete...</h3>
+                        <p class="text-xs text-muted">Threat Detection Opportunities will appear here automatically once extracted.</p>
+                    </div>
+                </div>`;
+        }
+
+        function renderKpisAndFilters(tdos) {
+            const kpiEl = document.getElementById('tdo-kpis');
+            const filterEl = document.getElementById('tactic-filters');
+
+            const platforms = [...new Set(tdos.map(t => t.mitreInfo?.platform).filter(Boolean))];
+            const tactics = [...new Set(tdos.flatMap(t => t.mitreInfo?.tactics || []))];
+            const techniques = [...new Set(tdos.flatMap(t => t.mitreInfo?.techniques || []))];
+            const logSources = [...new Set(tdos.flatMap(t => t.logTypes || []))];
+
+            kpiEl.innerHTML = `
+                <div class="p-4 rounded-xl surface-subtle">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-muted">Total Opportunities</p>
+                    <p class="text-2xl font-bold text-[var(--foreground)] mt-1">${tdos.length}</p>
+                </div>
+                <div class="p-4 rounded-xl surface-subtle">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-muted">Target Platform</p>
+                    <p class="text-lg font-bold text-[var(--foreground)] mt-1.5 truncate">${escapeHtml(platforms.join(', ') || 'Multi-Platform')}</p>
+                </div>
+                <div class="p-4 rounded-xl surface-subtle">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-muted">MITRE Techniques</p>
+                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">${techniques.length}</p>
+                </div>
+                <div class="p-4 rounded-xl surface-subtle">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-muted">Telemetry Sources</p>
+                    <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">${logSources.length}</p>
+                </div>
+            `;
+
+            const allPills = ['ALL', ...tactics];
+            filterEl.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider text-muted mr-1">Filter by Tactic:</span>` +
+                allPills.map(tac => {
+                    const isActive = activeTactic === tac;
+                    const cls = isActive
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'surface-subtle text-[var(--foreground)] hover:opacity-80';
+                    return `<button onclick="setTacticFilter('${escapeHtml(tac)}')" class="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${cls}">
+                        ${tac === 'ALL' ? 'All (' + tdos.length + ')' : escapeHtml(tac)}
+                    </button>`;
+                }).join('');
+        }
+
+        function setTacticFilter(tac) {
+            activeTactic = tac;
+            renderKpisAndFilters(allTdos);
+            applyFilters();
+        }
+
+        function copyText(btn, text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = btn.innerHTML;
+                btn.innerHTML = '✓ Copied';
+                setTimeout(() => { btn.innerHTML = orig; }, 1500);
+            });
+        }
+
+        function applyFilters() {
+            if (!allTdos.length) return;
+            const q = (document.getElementById('tdo-search')?.value || '').toLowerCase().trim();
+            const filtered = allTdos.filter((tdo, idx) => {
+                const tdoId = tdo.id || `t0${idx + 1}`;
+                const matchesTactic = activeTactic === 'ALL' || (tdo.mitreInfo?.tactics || []).includes(activeTactic);
+                if (!matchesTactic) return false;
+                if (!q) return true;
+                const hay = JSON.stringify(tdo).toLowerCase() + ' ' + tdoId.toLowerCase();
+                return hay.includes(q);
+            });
+            renderTDOs(filtered);
+        }
+
+        function renderTDOs(tdos) {
+            const container = document.getElementById('tdo-container');
+            if (!tdos || tdos.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center p-12 surface-card text-muted rounded-2xl">
+                        No Threat Detection Opportunities match the current filter.
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = tdos.map((tdo, index) => {
+                const tdoId = (tdo.id || `t0${index + 1}`).toUpperCase();
+                const mitre = tdo.mitreInfo || {};
+                const observables = collectObservables(tdo.observables);
+                const logTypes = tdo.logTypes || [];
+                const evidence = tdo.supportingEvidence || [];
+
+                return `
+                <div class="surface-card rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden">
+                    <div class="p-6 space-y-5">
+                        <div class="space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-bold font-mono bg-blue-600 text-white shadow-sm">
+                                        ${escapeHtml(tdoId)}
+                                    </span>
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-semibold surface-subtle">
+                                        ${escapeHtml(mitre.platform || 'Unknown Platform')}
+                                    </span>
+                                    ${mitre.detectionStrategy ? `
+                                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+                                            ${escapeHtml(mitre.detectionStrategy)}
+                                        </span>
+                                    ` : ''}
+                                </div>
+                                ${mitre.procedure ? `
+                                    <button onclick="copyText(this, '${escapeHtml(mitre.procedure)}')" title="Click to copy procedure ID"
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono surface-subtle text-muted hover:text-blue-600 transition-colors">
+                                        <span>${escapeHtml(mitre.procedure)}</span>
+                                    </button>
+                                ` : ''}
+                            </div>
+                            <h3 class="text-base font-bold leading-snug text-[var(--foreground)]">${escapeHtml(tdo.summary)}</h3>
+                        </div>
+
+                        <div class="p-4 rounded-xl surface-subtle space-y-2.5">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-muted">Tactics:</span>
+                                ${(mitre.tactics || []).map(t => `
+                                    <span class="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">${escapeHtml(t)}</span>
+                                `).join('')}
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-muted">Techniques:</span>
+                                ${(mitre.techniques || []).map(tech => `
+                                    <span class="px-2.5 py-0.5 rounded-md text-xs font-mono font-medium surface-card">${escapeHtml(tech)}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        ${observables.length > 0 ? `
+                        <div class="space-y-2">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-muted">Target Observables (${observables.length})</h4>
+                            <div class="flex flex-wrap gap-2">
+                                ${observables.map(o => `
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border ${o.cls}">
+                                        <span class="font-semibold opacity-80">${escapeHtml(o.typeLabel)}:</span>
+                                        <code class="font-mono font-bold">${escapeHtml(o.value)}</code>
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${logTypes.length > 0 ? `
+                        <div class="space-y-2">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-muted">Compatible Log Sources (${logTypes.length})</h4>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${logTypes.map(lt => `
+                                    <span class="px-2.5 py-1 text-xs font-mono font-semibold rounded-md surface-subtle text-[var(--foreground)]">
+                                        ${escapeHtml(lt)}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${evidence.length > 0 ? `
+                        <div class="pt-4 border-t border-[var(--border)] space-y-2">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-muted">Supporting Intelligence Evidence</h4>
+                            <ul class="space-y-2">
+                                ${evidence.map(ev => `
+                                    <li class="flex items-start gap-2.5 text-xs text-muted surface-subtle p-3 rounded-xl">
+                                        <span class="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></span>
+                                        <span class="leading-relaxed italic">"${escapeHtml(ev)}"</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // SOAR Host Theme Listener
+        const soarThemes = {
+            light: { '--background': '#f8fafc', '--foreground': '#0f172a', '--card': '#ffffff', '--secondary': '#f1f5f9', '--muted-foreground': '#64748b', '--border': '#e2e8f0' },
+            dark: { '--background': '#020817', '--foreground': '#f8fafc', '--card': '#0f172a', '--secondary': '#1e293b', '--muted-foreground': '#94a3b8', '--border': '#1e293b' }
+        };
+        function isColorDark(hexColor) {
+            if (!hexColor || hexColor.length < 4) return false;
+            let hex = hexColor.replace('#', '');
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            const r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16);
+            return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+        }
+        window.addEventListener('message', evt => {
+            if (evt.data && evt.data.background) {
+                const dark = isColorDark(evt.data.background);
+                const t = dark ? soarThemes.dark : soarThemes.light;
+                for (const [k, v] of Object.entries(t)) document.documentElement.style.setProperty(k, v);
+                document.documentElement.classList.toggle('dark', dark);
+            }
+        });
+
+        const rawSource = loadSoarJson('soar-tdo-data');
+        if (!rawSource) {
+            renderPendingState();
+        } else {
+            allTdos = extractTdos(rawSource);
+            renderKpisAndFilters(allTdos);
+            renderTDOs(allTdos);
+        }
+    </script>
+</body>
+</html>
