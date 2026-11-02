@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import json
 from typing import TYPE_CHECKING
 
@@ -38,8 +38,8 @@ if TYPE_CHECKING:
 
 
 THREAT_ID: str = "786ec97b-51e9-428a-b237-03452ef17de4"
-SCRIPT_DEADLINE_TIME: datetime.datetime = (
-    datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=10)
+SCRIPT_DEADLINE_TIME: dt.datetime = (
+    dt.datetime.now(dt.UTC) + dt.timedelta(minutes=10)
 )
 
 ANALYSIS_COMPLETED: SingleJson = {
