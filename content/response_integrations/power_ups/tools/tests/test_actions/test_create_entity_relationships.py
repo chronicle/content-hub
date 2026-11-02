@@ -23,8 +23,9 @@ from ...actions.CreateEntityRelationships import CreateEntityRelationshipsAction
 
 
 class MockedCreateEntityRelationshipsAction(CreateEntityRelationshipsAction):
-    def __init__(self, mock_siemplify):
-        super().__init__()
+    def __init__(self, mock_siemplify: MagicMock) -> None:
+        with patch("TIPCommon.base.action.base_action.create_soar_action", return_value=mock_siemplify):
+            super().__init__()
         self._soar_action = mock_siemplify
 
 
