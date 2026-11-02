@@ -42,12 +42,11 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        for visualFamily in gitsync.api.get_custom_families(chronicle_soar=siemplify):
+        for visualFamily in gitsync.api.get_custom_families():
             if visualFamily["family"] in family_names:
                 if readme_addon:
                     siemplify.LOGGER.info(
-                        "Readme addon found - "
-                        "adding to GitSync metadata file (GitSync.json)",
+                        "Readme addon found - adding to GitSync metadata file (GitSync.json)",
                     )
                     gitsync.content.metadata.set_readme_addon(
                         "Visual Family",
@@ -59,11 +58,7 @@ def main():
                     f"Pushing Visual Family - {visualFamily.get('family')}",
                 )
                 gitsync.content.push_visual_family(
-                    VisualFamily(
-                        gitsync.api.get_custom_family(
-                            chronicle_soar=siemplify, family_id=visualFamily["id"]
-                        ),
-                    ),
+                    VisualFamily(gitsync.api.get_custom_family(visualFamily["id"])),
                 )
 
         gitsync.commit_and_push(commit_msg)
