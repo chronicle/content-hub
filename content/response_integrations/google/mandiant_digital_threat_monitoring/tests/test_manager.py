@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-import os
+import pathlib
 
 from unittest.mock import patch
 import pytest
@@ -23,16 +23,16 @@ import pytest
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from TIPCommon.transformation import dict_to_flat
 
-from mandiant_digital_threat_monitoring.core.datamodels import Alert, Topic
-from mandiant_digital_threat_monitoring.core.exceptions import MandiantDTMException
-from mandiant_digital_threat_monitoring.core import (
+from ..core.datamodels import Alert, Topic
+from ..core.exceptions import MandiantDTMException
+from ..core import (
     MandiantDTMManager,
     AuthenticationManager,
 )
 
 
 with open(
-    os.path.join(os.path.dirname(__file__), "mock_data.json"), encoding="UTF-8"
+    pathlib.Path(__file__).parent / "mock_data.json", encoding="UTF-8"
 ) as wf:
     MOCK_DATA = json.load(wf)
 

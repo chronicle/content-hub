@@ -13,39 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-import sys
-import os
-import pathlib
-import pkgutil
-import importlib
-import logging
-import soar_sdk
-
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-parent_dir = str(pathlib.Path(__file__).resolve().parents[2])
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
-
-from typing import Any
 import json
+import logging
+import pathlib
+from typing import Any
 
 import pytest
 from pytest_mock import MockFixture
 
-from mandiant_digital_threat_monitoring.core import AuthenticationManager
-from mandiant_digital_threat_monitoring.core import MandiantDTMManager
-sys.modules["MandiantDTMManager"] = MandiantDTMManager
+from ..core import AuthenticationManager
+from ..core import MandiantDTMManager
 
 
 class Logger:
