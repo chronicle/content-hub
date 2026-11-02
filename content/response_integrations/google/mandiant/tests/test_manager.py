@@ -14,50 +14,30 @@
 
 """Unit tests for Mandiant Integration."""
 import json
-import logging
-import os
+import pathlib
 import unittest
 from unittest.mock import Mock, patch
-from mandiant.core.MandiantManager import MandiantManager
+from ..core.MandiantManager import MandiantManager
 
 # Constants
 LIMIT = 5
 
-ACTION_MOCK_DATA = json.load(
-    open(
-        os.path.join(os.path.dirname(__file__), "mock_data/actor_details.json")
-    )
-)
-MALWARE_MOCK_DATA = json.load(
-    open(
-        os.path.join(os.path.dirname(__file__),
-                     "mock_data/malware_details.json")
-    )
-)
-VULERABILITY_MOCK_DATA = json.load(
-    open(
-        os.path.join(os.path.dirname(__file__),
-                     "mock_data/vulerability_details.json")
-    )
-)
-INDICATOR_MOCK_DATA = json.load(
-    open(
-        os.path.join(os.path.dirname(__file__),
-                     "mock_data/indicator_details.json")
-    )
-)
-THREAT_ACTOR_INDICATOR_MOCK_DATA = json.load(
-    open(
-        os.path.join(os.path.dirname(__file__),
-                     "mock_data/threat_actor_indicators.json")
-    )
-)
-MALWARE_INDICATORS_MOCK_DATA = json.load(
-    open(
-        os.path.join(os.path.dirname(__file__),
-                     "mock_data/malware_indicators.json")
-    )
-)
+
+def _load_mock(filename: str):
+    with open(
+        pathlib.Path(__file__).parent / "mock_data" / filename,
+        "r",
+        encoding="utf-8",
+    ) as f:
+        return json.load(f)
+
+
+ACTION_MOCK_DATA = _load_mock("actor_details.json")
+MALWARE_MOCK_DATA = _load_mock("malware_details.json")
+VULERABILITY_MOCK_DATA = _load_mock("vulerability_details.json")
+INDICATOR_MOCK_DATA = _load_mock("indicator_details.json")
+THREAT_ACTOR_INDICATOR_MOCK_DATA = _load_mock("threat_actor_indicators.json")
+MALWARE_INDICATORS_MOCK_DATA = _load_mock("malware_indicators.json")
 
 GET_INDICATOR_DETAILS = INDICATOR_MOCK_DATA.get("raw_data")
 GET_ACTOR_DETAILS = ACTION_MOCK_DATA.get("raw_data")
@@ -71,8 +51,12 @@ class TestMandiantManager(unittest.TestCase):
     """Unit tests for Mandiant Integration."""
 
     def setUp(self) -> None:
-        self.logger = logging.getLogger(__name__)
-        with open(os.path.join(os.path.dirname(__file__), "config.json"), "r") as f:
+        self.logger = Mock()
+        with open(
+            pathlib.Path(__file__).parent / "config.json",
+            "r",
+            encoding="utf-8",
+        ) as f:
             data = f.read()
 
         config = json.loads(data)
