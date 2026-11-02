@@ -17,12 +17,12 @@ import pathlib
 import unittest
 from unittest.mock import Mock, patch
 import pytest
-from phishrod.core.datamodels import (
+from ..core.datamodels import (
     MarkIncidentData,
     UpdateIncidentData
 )
-from phishrod.core.PhishrodExceptions import PhishrodException
-from phishrod.core.PhishrodManager import PhishrodManager
+from ..core.PhishrodExceptions import PhishrodException
+from ..core.PhishrodManager import PhishrodManager
 
 Logger = Mock
 
