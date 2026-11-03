@@ -35,7 +35,7 @@ def test_add_comment(
     mock_post = mocker.Mock()
     mocker.patch(
         (
-            "tests.core.session."
+            "microsoft_graph_security.tests.core.session."
             "MicrosoftGraphSecuritySession.post"
         ),
         return_value=mock_post,
@@ -60,7 +60,7 @@ def test_get_ticket(
     mock_get.json.return_value = mock_data
     mocker.patch(
         (
-            "tests.core.session."
+            "microsoft_graph_security.tests.core.session."
             "MicrosoftGraphSecuritySession.get"
         ),
         return_value=mock_get,
@@ -108,7 +108,7 @@ def test_list_ticket(
     mock_get.json.return_value = mock_data
     mocker.patch(
         (
-            "tests.core.session."
+            "microsoft_graph_security.tests.core.session."
             "MicrosoftGraphSecuritySession.get"
         ),
         return_value=mock_get,

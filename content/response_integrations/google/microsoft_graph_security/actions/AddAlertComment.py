@@ -17,9 +17,9 @@ from __future__ import annotations
 from typing import NoReturn
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
-from microsoft_graph_security.core import constants
-from microsoft_graph_security.core import exceptions
-from microsoft_graph_security.core.MicrosoftGraphSecurityManager import MicrosoftGraphSecurityManager
+from ..core import constants
+from ..core import exceptions
+from ..core.MicrosoftGraphSecurityManager import MicrosoftGraphSecurityManager
 
 
 class AddAlertComment(Action):

@@ -18,7 +18,8 @@ import uuid
 
 from datetime import timedelta, datetime
 
-from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo, SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
 from soar_sdk.SiemplifyUtils import output_handler, utc_now
 
 from EnvironmentCommon import GetEnvironmentCommonFactory
@@ -29,14 +30,14 @@ from TIPCommon.smp_time import validate_timestamp
 from TIPCommon.transformation import convert_comma_separated_to_list, dict_to_flat
 from TIPCommon.utils import is_overflowed
 
-from microsoft_graph_security.core.constants import (
+from ..core.constants import (
     DEFAULT_API_ROOT,
     DEFAULT_LOGIN_API_ROOT,
     DEVICE_PRODUCT,
     VENDOR,
 )
-from microsoft_graph_security.core.datamodels import Alert
-from microsoft_graph_security.core.utils import GraphSecurityManagerConfig, init_graph_security_manager
+from ..core.datamodels import Alert
+from ..core.utils import GraphSecurityManagerConfig, init_graph_security_manager
 
 
 CONNECTOR_NAME = "Microsoft Graph Alerts"

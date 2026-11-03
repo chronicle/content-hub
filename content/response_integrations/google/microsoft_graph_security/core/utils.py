@@ -17,8 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from TIPCommon.types import ChronicleSOAR
-from microsoft_graph_security.core import constants
-from microsoft_graph_security.core.MicrosoftGraphSecurityManager import (
+from . import constants
+from .MicrosoftGraphSecurityManager import (
     MicrosoftGraphSecurityManager,
     MicrosoftGraphSecurityManagerV2,
 )

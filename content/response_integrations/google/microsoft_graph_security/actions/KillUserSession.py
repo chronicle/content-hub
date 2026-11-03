@@ -19,13 +19,13 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from microsoft_graph_security.core.constants import (
+from ..core.constants import (
     DEFAULT_API_ROOT,
     DEFAULT_LOGIN_API_ROOT,
     INTEGRATION_NAME,
     KILL_USER_SESSION,
 )
-from microsoft_graph_security.core.MicrosoftGraphSecurityManager import MicrosoftGraphSecurityManager
+from ..core.MicrosoftGraphSecurityManager import MicrosoftGraphSecurityManager
 
 
 @output_handler

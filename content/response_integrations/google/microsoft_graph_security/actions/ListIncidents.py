@@ -20,13 +20,13 @@ from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from TIPCommon.transformation import construct_csv
 from TIPCommon.validation import ParameterValidator
-from microsoft_graph_security.core import constants
-from microsoft_graph_security.core.datamodels import Incident
-from microsoft_graph_security.core.exceptions import (
+from ..core import constants
+from ..core.datamodels import Incident
+from ..core.exceptions import (
     ActionParameterValidationError,
     MicrosoftGraphSecurityManagerError,
 )
-from microsoft_graph_security.core.MicrosoftGraphSecurityManager import MicrosoftGraphSecurityManager
+from ..core.MicrosoftGraphSecurityManager import MicrosoftGraphSecurityManager
 
 
 class ListIncidents(Action):

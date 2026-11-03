@@ -23,7 +23,7 @@ from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 
 from TIPCommon.transformation import convert_list_to_comma_string, dict_to_flat
 from TIPCommon.types import SingleJson
-from microsoft_graph_security.core import constants
+from . import constants
 
 
 class Alert:

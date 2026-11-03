@@ -22,15 +22,15 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from TIPCommon.transformation import construct_csv
 
-from microsoft_graph_security.core.constants import (
+from ..core.constants import (
     DEFAULT_API_PAGINATION_LIMIT,
     DEFAULT_API_ROOT,
     DEFAULT_LOGIN_API_ROOT,
     INTEGRATION_NAME,
     LIST_ALERTS_SCRIPT_NAME,
 )
-from microsoft_graph_security.core.exceptions import ActionParameterValidationError
-from microsoft_graph_security.core.utils import GraphSecurityManagerConfig, init_graph_security_manager
+from ..core.exceptions import ActionParameterValidationError
+from ..core.utils import GraphSecurityManagerConfig, init_graph_security_manager
 
 
 @output_handler

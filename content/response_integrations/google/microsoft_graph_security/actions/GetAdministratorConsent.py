@@ -19,7 +19,7 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 
 from TIPCommon.extraction import extract_configuration_param
 
-from microsoft_graph_security.core.constants import (
+from ..core.constants import (
     ADMIN_CONSENT_PATH,
     DEFAULT_LOGIN_API_ROOT,
     GET_ADMINISTRATOR_CONSENT_SCRIPT_NAME,

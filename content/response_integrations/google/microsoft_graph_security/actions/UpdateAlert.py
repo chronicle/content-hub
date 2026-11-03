@@ -20,8 +20,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
-from microsoft_graph_security.core import constants
-from microsoft_graph_security.core.utils import GraphSecurityManagerConfig, init_graph_security_manager
+from ..core import constants
+from ..core.utils import GraphSecurityManagerConfig, init_graph_security_manager
 
 
 SPLIT_CHAR = ","

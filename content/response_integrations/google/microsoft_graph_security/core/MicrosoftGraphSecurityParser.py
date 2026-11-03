@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from microsoft_graph_security.core.datamodels import Alert, Incident
+from .datamodels import Alert, Incident
 from TIPCommon.types import SingleJson
 
 

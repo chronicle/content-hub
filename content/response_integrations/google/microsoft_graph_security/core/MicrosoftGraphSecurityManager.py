@@ -26,13 +26,13 @@ from OpenSSL import crypto
 
 from TIPCommon.filters import filter_old_alerts
 from TIPCommon.types import SingleJson
-from microsoft_graph_security.core import constants
-from microsoft_graph_security.core.datamodels import Alert, Incident
-from microsoft_graph_security.core.exceptions import (
+from . import constants
+from .datamodels import Alert, Incident
+from .exceptions import (
     MicrosoftGraphSecurityFileNotFound,
     MicrosoftGraphSecurityManagerError,
 )
-from microsoft_graph_security.core.MicrosoftGraphSecurityParser import MicrosoftGraphSecurityParser
+from .MicrosoftGraphSecurityParser import MicrosoftGraphSecurityParser
 
 
 class MicrosoftGraphSecurityManager:

@@ -19,10 +19,10 @@ from typing import NoReturn
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from TIPCommon.transformation import flat_dict_to_csv
-from microsoft_graph_security.core import constants
-from microsoft_graph_security.core.datamodels import Incident
-from microsoft_graph_security.core.exceptions import IncidentNotFoundException, MicrosoftGraphSecurityManagerError
-from microsoft_graph_security.core.MicrosoftGraphSecurityManager import MicrosoftGraphSecurityManager
+from ..core import constants
+from ..core.datamodels import Incident
+from ..core.exceptions import IncidentNotFoundException, MicrosoftGraphSecurityManagerError
+from ..core.MicrosoftGraphSecurityManager import MicrosoftGraphSecurityManager
 
 
 class GetIncident(Action):
