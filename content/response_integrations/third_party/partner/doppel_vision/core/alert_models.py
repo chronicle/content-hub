@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 
-def _as_list(value: Any) -> list[Any]:
+def _as_list(value: object) -> list[object]:
     if value is None:
         return []
     if isinstance(value, list):
