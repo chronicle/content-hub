@@ -92,7 +92,7 @@ class HttpClient:
             try:
                 payload = response.json() if response.content else {}
             except ValueError:
-                payload = {}
+                payload: SingleJson = {}
 
             if (
                 response.status_code == 401
