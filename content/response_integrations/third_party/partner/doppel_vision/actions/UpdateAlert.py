@@ -31,7 +31,8 @@ def main():
             param_name="Entity_State",
         ),
     )
-    comment = _clean(siemplify.extract_action_param(param_name="Comment", default_value=None))
+    queue_state: str | None = _clean(siemplify.extract_action_param("Queue State", print_value=True))
+    entity_state: str | None = _clean(siemplify.extract_action_param("Entity State", print_value=True))
 
     status = EXECUTION_STATE_COMPLETED
     output_message = "Alert updated successfully."
