@@ -16,7 +16,7 @@ def test_v1_headers_match_existing_auth() -> None:
         api_key="org-key",
         user_api_key="user-key",
         org_code="ACM",
-    ).get_auth_headers()
+    provider = AuthProviderV1(api_key="org-key", user_api_key="user-key")
     assert headers == {
         "accept": "application/json",
         "x-api-key": "org-key",
