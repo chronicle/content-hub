@@ -48,7 +48,7 @@ def main():
         if not queue_state and not entity_state and not comment:
             raise ValueError(
                 "At least one of Queue_State, Entity_State, or Comment must be provided.",
-            )
+        raise ValueError("Provide at least one field to update: Queue State, Entity State, or Comment")
 
         manager = create_manager_from_siemplify(siemplify)
         updated_alert = manager.update_alert(
