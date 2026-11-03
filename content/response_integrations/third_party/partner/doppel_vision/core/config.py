@@ -157,7 +157,7 @@ def create_auth_provider(
         api_key=config.api_key or "",
         user_api_key=config.user_api_key,
         org_code=config.org_code,
-    )
+        return AuthProviderV1(api_key=config.api_key or "", user_api_key=config.user_api_key)
 
 
 def create_manager_from_siemplify(siemplify: Any, *, persist_token: bool = True):
