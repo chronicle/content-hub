@@ -16,9 +16,19 @@ from __future__ import annotations
 
 from typing import Any
 
+import requests
+
 
 class BulkAcquisitionMixin:
     """Mixin providing bulk acquisition operations for FireEyeHXManager."""
+
+    api_root: str
+    session: requests.Session
+
+    @staticmethod
+    def validate_response(response: requests.Response, error_msg: str = "An error occurred") -> None:
+        """Validate an HTTP response; FireEyeHXManager provides the implementation."""
+        raise NotImplementedError
 
     def get_host_sets(self, name: str | None = None, limit: int | None = None) -> list[dict[str, Any]]:
         """Get list of host sets from FireEye HX.

@@ -781,10 +781,14 @@ class FireEyeHXManager(BulkAcquisitionMixin):
             content = response.content.decode("utf-8", errors="ignore").lower()
             if "host not found" in content:
                 msg = f"HTTP Error 404: Host with the specified agent id ({agent_id}) was not found"
-                raise FireEyeHXNotFoundError(msg)
+                raise FireEyeHXNotFoundError(
+                    msg
+                )
             if "device not found" in content:
                 msg = "HTTP Error 404: The specified device was not found by device-proxy. It may have a non-Operational status."
-                raise FireEyeHXNotFoundError(msg)
+                raise FireEyeHXNotFoundError(
+                    msg
+                )
             msg = f"HTTP Error 404: The URL {getattr(response, 'url', '')} was not found."
             raise FireEyeHXNotFoundError(msg)
 

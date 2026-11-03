@@ -63,8 +63,11 @@ def is_json_script(script_content: str) -> bool:
     stripped = script_content.strip()
     if stripped.startswith(("{", "[")):
         return True
-    if "<script" not in stripped and "<?xml" not in stripped and not stripped.startswith("<"):
-        if ("{" in stripped and "}" in stripped) or ("[" in stripped and "]" in stripped):
+    openers = [idx for idx in (stripped.find("{"), stripped.find("[")) if idx != -1]
+    if openers and not stripped.startswith("<") and "<script" not in stripped:
+        start_idx = min(openers)
+        prefix = stripped[:start_idx].strip().rstrip("\"'").strip()
+        if prefix.endswith("=") and prefix[:-1].strip().isidentifier():
             return True
     return False
 
@@ -86,25 +89,17 @@ def extract_script_json(script_content: str, logger: SiemplifyLogger | None = No
         raise ValueError("Script Content must not be empty.")
 
     script_text = script_content.strip()
-    if script_text.startswith(("{", "[")):
+    openers = [index for index in (script_text.find("{"), script_text.find("[")) if index != -1]
+    if not openers:
         return script_text
-
-    if "{" in script_text and "}" in script_text:
-        start_idx = script_text.find("{")
-        end_idx = script_text.rfind("}")
-        candidate = script_text[start_idx : end_idx + 1]
-        if logger and len(candidate) < len(script_text):
-            logger.info("Trimmed Python wrapper / assignment from Script Content JSON.")
-        return candidate
-    elif "[" in script_text and "]" in script_text:
-        start_idx = script_text.find("[")
-        end_idx = script_text.rfind("]")
-        candidate = script_text[start_idx : end_idx + 1]
-        if logger and len(candidate) < len(script_text):
-            logger.info("Trimmed Python wrapper / assignment from Script Content JSON.")
-        return candidate
-
-    return script_text
+    start_idx = min(openers)
+    try:
+        _, end_idx = json.JSONDecoder().raw_decode(script_text, start_idx)
+    except json.JSONDecodeError:
+        return script_text[start_idx:]
+    if logger and (start_idx > 0 or end_idx < len(script_text)):
+        logger.info("Trimmed Python wrapper / assignment from Script Content JSON.")
+    return script_text[start_idx:end_idx]
 
 
 def validate_json_script(script_text: str) -> str:
