@@ -1,0 +1,127 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+from soar_sdk.SiemplifyUtils import output_handler
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from TIPCommon import extract_configuration_param, extract_action_param
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+
+from threat_q.core.ThreatQManager import ThreatQManager
+from threat_q.core.custom_exceptions import ThreatQManagerException, ObjectCreateException
+from threat_q.core.constants import (
+    INTEGRATION_NAME,
+    CREATE_EVENT_SCRIPT,
+    HAPPENED_AT_DATETIME_DEFAULT_FORMAT,
+)
+from datetime import datetime
+from threat_q.core.ThreatQUtils import *
+
+
+@output_handler
+def main():
+    siemplify = SiemplifyAction()
+    siemplify.script_name = CREATE_EVENT_SCRIPT
+
+    siemplify.LOGGER.info("=" * 10 + " Main - Param Init " + "=" * 10)
+
+    server_address = extract_configuration_param(
+        siemplify, provider_name=INTEGRATION_NAME, param_name="ServerAddress"
+    )
+
+    client_id = extract_configuration_param(
+        siemplify, provider_name=INTEGRATION_NAME, param_name="ClientId"
+    )
+
+    username = extract_configuration_param(
+        siemplify, provider_name=INTEGRATION_NAME, param_name="Username"
+    )
+
+    password = extract_configuration_param(
+        siemplify, provider_name=INTEGRATION_NAME, param_name="Password"
+    )
+
+    event_type = extract_action_param(
+        siemplify,
+        param_name="Event Type",
+        default_value="Spearphish",
+        is_mandatory=True,
+        print_value=True,
+    )
+
+    title = extract_action_param(
+        siemplify, param_name="Title", is_mandatory=True, print_value=True
+    )
+    dateTimeObj = datetime.now()
+    happened_at_default = dateTimeObj.strftime(
+        HAPPENED_AT_DATETIME_DEFAULT_FORMAT.encode("utf-8")
+    ).decode("utf-8")
+
+    happened_at = extract_action_param(
+        siemplify,
+        param_name="Happened At",
+        is_mandatory=False,
+        print_value=True,
+        default_value=happened_at_default,
+    )
+
+    siemplify.LOGGER.info("=" * 10 + " Main - Started " + "=" * 10)
+
+    try:
+        # Check if happened_at param is in correct format
+        validate_time_format(happened_at)
+        threatq_manager = ThreatQManager(server_address, client_id, username, password)
+
+        event_object = threatq_manager.create_event(
+            event_type=event_type, title=title, happened_at=happened_at
+        )
+
+        siemplify.result.add_result_json(event_object.to_json())
+
+        output_message = f"Successfully created new {event_type} event in ThreatQ"
+        result_value = True
+        execution_status = EXECUTION_STATE_COMPLETED
+
+    except ObjectCreateException as e:
+        output_message = (
+            f"Action was not able to create new {event_type} event in ThreatQ."
+        )
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
+        result_value = False
+        execution_status = EXECUTION_STATE_FAILED
+
+    except ValueError as e:
+        # Incorrect happent_at param format
+        output_message = f'Error executing action "Create Event". Reason: {e}'
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
+        result_value = False
+        execution_status = EXECUTION_STATE_FAILED
+    except (ThreatQManagerException, Exception) as e:
+        output_message = f'Error executing action "Create Event". Reason: {e}'
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
+        result_value = False
+        execution_status = EXECUTION_STATE_FAILED
+
+    siemplify.LOGGER.info("=" * 10 + " Main - Finished " + "=" * 10)
+    siemplify.LOGGER.info(
+        f"Status: {execution_status}, Result Value: {result_value}, Output Message: {output_message}"
+    )
+    siemplify.end(output_message, result_value, execution_status)
+
+
+if __name__ == "__main__":
+    main()

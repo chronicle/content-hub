@@ -1,0 +1,31 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+from datetime import datetime
+from threat_q.core.constants import HAPPENED_AT_DATETIME_DEFAULT_FORMAT
+
+
+def validate_time_format(date_text):
+    """
+    Check of time format
+    @param date_text: Specified date as string
+    @return None or Exception
+    """
+    try:
+        datetime.strptime(date_text, HAPPENED_AT_DATETIME_DEFAULT_FORMAT)
+    except ValueError:
+        raise ValueError(
+            "Incorrect time format was passed to 'Happened At' action parameter. Should be YYYY-MM-DD hh:mm:ss."
+        )
