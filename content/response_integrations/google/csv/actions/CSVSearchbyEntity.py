@@ -20,15 +20,15 @@ from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_han
 from TIPCommon.transformation import add_prefix_to_dict, construct_csv
 from TIPCommon.extraction import extract_action_param
 
-from csv.core.constants import (
+from ..core.constants import (
     SEARCH_BY_ENTITY_SCRIPT_NAME,
     RECORDS_TABLE_NAME,
     ENRICHMENT_PREFIX,
     FOUND_IN_CSV_INSIGHT_NAME,
 )
-from csv.core.CSVManager import CSVManager, FILE_ENCODINGS_DEFAULT
-from csv.core.exceptions import CSVEncodingException
-from csv.core.utils import (
+from ..core.CSVManager import CSVManager, FILE_ENCODINGS_DEFAULT
+from ..core.exceptions import CSVEncodingException
+from ..core.utils import (
     get_encodings_or_raise,
     get_value_for_search,
     list_of_dict_to_single_dict,

@@ -23,9 +23,9 @@ import pandas as pandas
 
 from TIPCommon.transformation import construct_csv, dict_to_flat
 
-from csv.core.datamodels import CSVItem
-from csv.core.exceptions import CSVEncodingException, CSVJsonIsInvalidError
-from csv.core.utils import (
+from .datamodels import CSVItem
+from .exceptions import CSVEncodingException, CSVJsonIsInvalidError
+from .utils import (
     flatten_json_vertically,
     get_file_path,
     get_value_for_search,

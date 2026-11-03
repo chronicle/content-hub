@@ -17,16 +17,17 @@ import os
 import shutil
 import sys
 
-from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo, SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
 from soar_sdk.SiemplifyUtils import output_handler
 
 from TIPCommon.extraction import extract_connector_param
 from TIPCommon.transformation import dict_to_flat
 
-from csv.core.constants import CSV_CONNECTOR_SCRIPT_NAME, DEFAULT_PRODUCT, DEFAULT_VENDOR
-from csv.core.CSVManager import CSVManager, FILE_ENCODINGS_DEFAULT
-from csv.core.exceptions import CSVConnectorException, CSVEncodingException
-from csv.core.utils import (
+from ..core.constants import CSV_CONNECTOR_SCRIPT_NAME, DEFAULT_PRODUCT, DEFAULT_VENDOR
+from ..core.CSVManager import CSVManager, FILE_ENCODINGS_DEFAULT
+from ..core.exceptions import CSVConnectorException, CSVEncodingException
+from ..core.utils import (
     CUSTOM_CONFIGURATION_FILE_NAME,
     calculate_row_time,
     get_encodings_or_raise,

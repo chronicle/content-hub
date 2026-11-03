@@ -32,7 +32,24 @@ for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
         pass
 sys.stdout = original_stdout
 
+import importlib.util
+import pathlib
+import sysconfig
 import pytest
+
+_integration_root = str(pathlib.Path(__file__).resolve().parent.parent)
+_stdlib_csv_path = pathlib.Path(sysconfig.get_path("stdlib")) / "csv.py"
+_spec = importlib.util.spec_from_file_location("_stdlib_csv", _stdlib_csv_path)
+if _spec and _spec.loader:
+    _stdlib_csv = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_stdlib_csv)
+    _csv_pkg = importlib.import_module("csv")
+    _csv_pkg.__dict__.update(
+        {k: v for k, v in vars(_stdlib_csv).items() if not k.startswith("__")}
+    )
+    _csv_pkg.__path__ = [_integration_root]
+    if _csv_pkg.__spec__ is not None:
+        _csv_pkg.__spec__.submodule_search_locations = [_integration_root]
 
 from csv.tests.core.csv import CSV
 from integration_testing.common import use_live_api

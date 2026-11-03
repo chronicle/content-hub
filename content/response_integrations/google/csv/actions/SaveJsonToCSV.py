@@ -18,9 +18,9 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param
 
-from csv.core.constants import SAVE_JSON_TO_CSV_SCRIPT_NAME
+from ..core.constants import SAVE_JSON_TO_CSV_SCRIPT_NAME
 
-from csv.core.CSVManager import CSVManager
+from ..core.CSVManager import CSVManager
 
 
 @output_handler

@@ -24,9 +24,9 @@ from typing import Any, Iterator
 
 from soar_sdk.SiemplifyUtils import convert_datetime_to_unix_time, convert_string_to_datetime
 
-from csv.core.constants import DEFAULT_PATH
+from .constants import DEFAULT_PATH
 from EnvironmentCommon.EnvironmentHandle import GetEnvironmentCommonFactory
-from csv.core.exceptions import (
+from .exceptions import (
     CSVAbsolutePathNotFoundError,
     CSVDirectoryFoundError,
     CSVEncodingException,

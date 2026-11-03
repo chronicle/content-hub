@@ -19,11 +19,11 @@ from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_han
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import construct_csv
 
-from csv.core.constants import RECORDS_TABLE_NAME, SEARCH_BY_STRING_SCRIPT_NAME
-from csv.core.CSVManager import CSVManager, FILE_ENCODINGS_DEFAULT
-from csv.core.exceptions import CSVEncodingException
+from ..core.constants import RECORDS_TABLE_NAME, SEARCH_BY_STRING_SCRIPT_NAME
+from ..core.CSVManager import CSVManager, FILE_ENCODINGS_DEFAULT
+from ..core.exceptions import CSVEncodingException
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from csv.core.utils import get_encodings_or_raise, get_value_for_search, string_to_multi_value
+from ..core.utils import get_encodings_or_raise, get_value_for_search, string_to_multi_value
 
 
 @output_handler
