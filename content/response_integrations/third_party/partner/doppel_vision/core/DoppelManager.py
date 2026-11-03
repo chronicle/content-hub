@@ -129,7 +129,16 @@ class DoppelManager:
             "GET",
             f"{self.base_url}/alerts",
             params=filters or None,
-        )
+    def get_alerts(self, params: SingleJson | None = None) -> list[SingleJson]:
+        """Fetch a page of alerts matching the query parameters.
+
+        Args:
+            params: Query filter parameters.
+
+        Returns:
+            List of raw alert dictionaries.
+        """
+        data = self.http_client.request("GET", ENDPOINTS["alerts"], params=params or {})
         alerts = payload.get("alerts", []) if isinstance(payload, dict) else []
         return alerts
 
