@@ -14,19 +14,18 @@
 
 from __future__ import annotations
 
+from integration_testing.platform.script_output import MockActionOutput
+from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from Integrations.SysdigSecure.ActionsScripts.Ping import (
-    Ping,
+import sysdig_secure.core.SysdigSecureConstants as Constants
+from sysdig_secure.actions.Ping import (
     SUCCESS_MESSAGE,
+    Ping,
 )
-import Integrations.SysdigSecure.Managers.SysdigSecureConstants as Constants
-
-from Tests.integrations.SysdigSecure.common import CONFIG
-from Tests.integrations.SysdigSecure.core.session import ApiSession
-from Tests.mocks.platform.script_output import MockActionOutput
-from Tests.mocks.set_meta import set_metadata
+from sysdig_secure.tests.common import CONFIG
+from sysdig_secure.tests.core.session import ApiSession
 
 
 class TestPing:

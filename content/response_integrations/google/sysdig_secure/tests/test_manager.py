@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
-from Integrations.SysdigSecure.Managers.SysdigSecureManager import ApiManager
+from integration_testing.request import HttpMethod
 
-from Tests.integrations.SysdigSecure.core.session import ApiSession
-from Tests.mocks.request import HttpMethod
+from sysdig_secure.core.SysdigSecureManager import ApiManager
+from sysdig_secure.tests.core.session import ApiSession
 
 
 class TestApiManager:

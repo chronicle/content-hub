@@ -16,7 +16,7 @@ import pathlib
 
 from TIPCommon.types import SingleJson
 
-from Tests.mocks.common import get_json_file_content
+from integration_testing.common import get_def_file_content as get_json_file_content
 
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"

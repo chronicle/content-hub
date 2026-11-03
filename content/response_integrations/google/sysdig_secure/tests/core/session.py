@@ -16,11 +16,11 @@ from __future__ import annotations
 
 import pathlib
 
-from Tests.mocks import router
-from Tests.mocks.request import MockRequest
-from Tests.mocks.response import MockResponse
-from Tests.mocks.session import MockSession, RouteFunction
-from Tests.mocks.common import get_json_file_content
+from integration_testing import router
+from integration_testing.common import get_def_file_content as get_json_file_content
+from integration_testing.request import MockRequest
+from integration_testing.requests.response import MockResponse
+from integration_testing.requests.session import MockSession, RouteFunction
 
 MOCK_DATA_PATH = pathlib.Path(__file__).parent / "mock_data.json"
 MOCK_DATA = get_json_file_content(MOCK_DATA_PATH)
