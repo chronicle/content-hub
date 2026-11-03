@@ -20,7 +20,7 @@ from __future__ import annotations
 from typing import Any
 
 from TIPCommon import dict_to_flat
-from atlassian_confluence_server.core.utils import rec_mask_sensitive_values
+from .utils import rec_mask_sensitive_values
 
 
 class BaseModel:

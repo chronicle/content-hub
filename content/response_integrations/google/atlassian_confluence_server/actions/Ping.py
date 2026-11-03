@@ -19,10 +19,10 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from atlassian_confluence_server.core.ConfluenceManager import ConfluenceManager
-from atlassian_confluence_server.core.constants import PING_SCRIPT_NAME
-from atlassian_confluence_server.core.exceptions import ConfluenceValidationError
-from atlassian_confluence_server.core.utils import get_configuration_params
+from ..core.ConfluenceManager import ConfluenceManager
+from ..core.constants import PING_SCRIPT_NAME
+from ..core.exceptions import ConfluenceValidationError
+from ..core.utils import get_configuration_params
 
 
 @output_handler

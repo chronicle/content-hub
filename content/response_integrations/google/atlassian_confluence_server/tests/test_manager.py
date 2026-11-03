@@ -26,7 +26,6 @@ from atlassian_confluence_server.core.exceptions import (
     ConfluencePATAuthenticationError,
     ConfluenceValidationError,
 )
-from integration_testing.logger import Logger
 
 
 # Constants
@@ -95,8 +94,9 @@ class TestConfluenceManager(unittest.TestCase):
     """Unit tests for Atlassian Confluence Server Integration."""
 
     def setUp(self) -> None:
-        self.logger = Logger()
-        with open("config.json", "r") as f:
+        self.logger = Mock()
+        config_path = os.path.join(os.path.dirname(__file__), "config.json")
+        with open(config_path, encoding="utf-8") as f:
             data = f.read()
 
         config = json.loads(data)

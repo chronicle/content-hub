@@ -21,23 +21,23 @@ from typing import Any
 from urllib import parse
 import requests
 
-from atlassian_confluence_server.core.ConfluenceParser import ConfluenceParser
+from .ConfluenceParser import ConfluenceParser
 from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
-from atlassian_confluence_server.core.constants import (
+from .constants import (
     API_BAD_REQUEST,
     API_NOT_FOUND,
     API_SERVER_ERROR,
     API_UNAUTHORIZED_ERROR,
     ENDPOINTS,
 )
-from atlassian_confluence_server.core.exceptions import (
+from .exceptions import (
     ConfluenceBadRequestError,
     ConfluenceHTTPError,
     ConfluencePATAuthenticationError,
     ConfluenceValidationError,
 )
-from atlassian_confluence_server.core.utils import filter_items
+from .utils import filter_items
 
 
 class ConfluenceManager:

@@ -20,16 +20,16 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_action_param
 
-from atlassian_confluence_server.core.ConfluenceManager import ConfluenceManager
-from atlassian_confluence_server.core.constants import (
+from ..core.ConfluenceManager import ConfluenceManager
+from ..core.constants import (
     FILTER_KEY_VALUES,
     FILTER_STRATEGY_MAPPING,
     INTEGRATION_IDENTIFIER,
     LIST_PAGES_SCRIPT_NAME,
     TABLE_NAME,
 )
-from atlassian_confluence_server.core.exceptions import ConfluenceFilterKeyParamError, ConfluenceInvalidLimitError
-from atlassian_confluence_server.core.utils import construct_ordered_csv, get_configuration_params
+from ..core.exceptions import ConfluenceFilterKeyParamError, ConfluenceInvalidLimitError
+from ..core.utils import construct_ordered_csv, get_configuration_params
 
 
 @output_handler

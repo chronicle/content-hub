@@ -20,10 +20,10 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_action_param
 
-from atlassian_confluence_server.core.ConfluenceManager import ConfluenceManager
-from atlassian_confluence_server.core.constants import GET_PAGE_COMMENTS_SCRIPT_NAME
-from atlassian_confluence_server.core.exceptions import ConfluenceInvalidLimitError
-from atlassian_confluence_server.core.utils import get_configuration_params
+from ..core.ConfluenceManager import ConfluenceManager
+from ..core.constants import GET_PAGE_COMMENTS_SCRIPT_NAME
+from ..core.exceptions import ConfluenceInvalidLimitError
+from ..core.utils import get_configuration_params
 
 
 @output_handler

@@ -28,7 +28,7 @@ from TIPCommon import (
     none_to_default_value,
 )
 
-from atlassian_confluence_server.core.constants import (
+from .constants import (
     FILTER_KEY_VALUES,
     FILTER_STRATEGY_MAPPING,
     INTEGRATION_IDENTIFIER,

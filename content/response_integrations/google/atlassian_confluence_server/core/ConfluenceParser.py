@@ -15,7 +15,7 @@
 """Module: [ConfluenceParser] defined parser class."""
 from __future__ import annotations
 
-from atlassian_confluence_server.core.datamodels import ChildPages, ListPages, PageByID, PageComments
+from .datamodels import ChildPages, ListPages, PageByID, PageComments
 
 
 class ConfluenceParser:
