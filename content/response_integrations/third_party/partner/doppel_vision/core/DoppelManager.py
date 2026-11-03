@@ -183,7 +183,7 @@ class DoppelManager:
             f"{self.base_url}/alert",
             params=params,
             json_body=body,
-        )
+        return self.http_client.request("PUT", ENDPOINTS["alert"], params=params, json_body=body)
         if not payload:
             raise ValueError("Empty response or update failed.")
         return payload
