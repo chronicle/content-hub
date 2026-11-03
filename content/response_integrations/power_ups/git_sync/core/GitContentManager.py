@@ -130,13 +130,21 @@ class GitContentManager:
             )
             return None
 
-        is_custom = None
-        for k in ("isCustomIntegration", "custom", "Custom", "IsCustom"):
-            if k in definition and definition.get(k) is not None:
-                is_custom = bool(definition[k])
-                break
-        if is_custom is None:
-            is_custom = not is_def_file
+        is_certified = bool(
+            definition.get("Certified")
+            or definition.get("isCertified")
+            or definition.get("certified")
+        )
+        if is_certified:
+            is_custom = False
+        else:
+            is_custom = None
+            for k in ("isCustomIntegration", "custom", "Custom", "IsCustom"):
+                if k in definition and definition.get(k) is not None:
+                    is_custom = bool(definition[k])
+                    break
+            if is_custom is None:
+                is_custom = not is_def_file
 
         return Integration(
             {

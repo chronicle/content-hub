@@ -322,7 +322,15 @@ class Integration(Content):
             self.definition = json.loads(
                 self.zipfile.read(f"Integration-{self.identifier}.json"),
             )
-        if custom_card_val is not None:
+        is_certified = bool(
+            self.integration_card.get("certified")
+            or self.integration_card.get("isCertified")
+            or self.definition.get("Certified")
+            or self.definition.get("IsCertified")
+        )
+        if is_certified:
+            self.isCustom = False
+        elif custom_card_val is not None:
             self.isCustom = bool(custom_card_val)
         else:
             custom_def_val = next(
