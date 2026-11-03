@@ -168,4 +168,9 @@ def create_manager_from_siemplify(siemplify: Any, *, persist_token: bool = True)
         config,
         siemplify=siemplify,
         persist_token=persist_token,
-    )
+def create_manager_from_siemplify(
+    siemplify: ChronicleSOAR, persist_token: bool = True
+) -> DoppelManager:
+    """Create a configured DoppelManager instance from a SOAR SDK object."""
+    config = load_integration_config(siemplify)
+    return DoppelManager.from_config(config, siemplify=siemplify, persist_token=persist_token)
