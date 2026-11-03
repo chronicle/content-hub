@@ -66,7 +66,7 @@ _PARAM_NAMES = (
     PARAM_ORG_CODE,
     PARAM_CLIENT_ID,
     PARAM_CLIENT_SECRET,
-)
+_PARAM_NAMES: tuple[str, ...] = (
 
 
 def validate_config(config: IntegrationConfig) -> IntegrationConfig:
