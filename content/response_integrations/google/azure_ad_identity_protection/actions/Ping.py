@@ -17,8 +17,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon import extract_configuration_param
-from azure_ad_identity_protection.core.AzureADIdentityProtectionManager import AzureADIdentityProtectionManager
-from azure_ad_identity_protection.core.constants import (
+from ..core.AzureADIdentityProtectionManager import AzureADIdentityProtectionManager
+from ..core.constants import (
     INTEGRATION_NAME,
     INTEGRATION_DISPLAY_NAME,
     PING_SCRIPT_NAME,

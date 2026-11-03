@@ -13,4 +13,4 @@
 # limitations under the License.
 
 from __future__ import annotations
-from azure_ad_identity_protection.core.AzureADIdentityProtectionManager import AzureADIdentityProtectionManager
+from .AzureADIdentityProtectionManager import AzureADIdentityProtectionManager

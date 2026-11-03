@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from azure_ad_identity_protection.core.datamodels import *
+from .datamodels import *
 
 
 class AzureADIdentityProtectionParser:

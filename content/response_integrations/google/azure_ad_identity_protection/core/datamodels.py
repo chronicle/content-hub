@@ -17,7 +17,7 @@ import uuid
 import copy
 import json
 from TIPCommon import dict_to_flat, add_prefix_to_dict
-from azure_ad_identity_protection.core.constants import DEVICE_VENDOR, DEVICE_PRODUCT, SEVERITY_MAP, RISK_COLOR_MAP
+from .constants import DEVICE_VENDOR, DEVICE_PRODUCT, SEVERITY_MAP, RISK_COLOR_MAP
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 
 

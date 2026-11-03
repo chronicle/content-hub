@@ -17,9 +17,9 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from azure_ad_identity_protection.core.AzureADIdentityProtectionManager import AzureADIdentityProtectionManager
+from ..core.AzureADIdentityProtectionManager import AzureADIdentityProtectionManager
 from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
-from azure_ad_identity_protection.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     INTEGRATION_DISPLAY_NAME,
     ENRICH_ENTITIES_SCRIPT_NAME,
@@ -28,7 +28,7 @@ from azure_ad_identity_protection.core.constants import (
     DEFAULT_API_ROOT,
     LOGIN_API_ROOT_DEFAULT,
 )
-from azure_ad_identity_protection.core.UtilsManager import get_entity_original_identifier, is_valid_email
+from ..core.UtilsManager import get_entity_original_identifier, is_valid_email
 
 
 SUPPORTED_ENTITY_TYPES = [EntityTypes.USER]

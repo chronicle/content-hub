@@ -17,7 +17,7 @@ import re
 
 import requests
 
-from azure_ad_identity_protection.core.AzureADIdentityProtectionExceptions import (
+from .AzureADIdentityProtectionExceptions import (
     AzureADIdentityProtectionGeneralException,
 )
 

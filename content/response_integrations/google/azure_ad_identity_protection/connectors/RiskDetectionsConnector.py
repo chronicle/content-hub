@@ -32,7 +32,7 @@ from TIPCommon import (
 )
 from EnvironmentCommon import GetEnvironmentCommonFactory
 
-from azure_ad_identity_protection.core.constants import (
+from ..core.constants import (
     CONNECTOR_NAME,
     DEFAULT_LIMIT,
     DEFAULT_TIME_FRAME,
@@ -40,7 +40,7 @@ from azure_ad_identity_protection.core.constants import (
     DEFAULT_API_ROOT,
     LOGIN_API_ROOT_DEFAULT,
 )
-from azure_ad_identity_protection.core.AzureADIdentityProtectionManager import AzureADIdentityProtectionManager
+from ..core.AzureADIdentityProtectionManager import AzureADIdentityProtectionManager
 
 
 connector_starting_time = unix_now()

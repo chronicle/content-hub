@@ -18,14 +18,14 @@ from urllib.parse import urljoin
 
 from TIPCommon import filter_old_alerts
 
-from azure_ad_identity_protection.core.constants import (
+from .constants import (
     API_TIME_FORMAT,
     AUTH_TOKEN_PATH,
     ENDPOINTS,
     RISK_DETECTION_ID_FIELD,
 )
-from azure_ad_identity_protection.core.AzureADIdentityProtectionParser import AzureADIdentityProtectionParser
-from azure_ad_identity_protection.core.UtilsManager import validate_response
+from .AzureADIdentityProtectionParser import AzureADIdentityProtectionParser
+from .UtilsManager import validate_response
 
 
 class AzureADIdentityProtectionManager:

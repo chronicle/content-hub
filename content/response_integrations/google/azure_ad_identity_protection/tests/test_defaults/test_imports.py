@@ -14,10 +14,21 @@
 
 from __future__ import annotations
 
-from integration_testing.default_tests.import_test import import_all_integration_modules
+import importlib
 
 from azure_ad_identity_protection.tests import common
 
 
 def test_imports() -> None:
-    import_all_integration_modules(common.INTEGRATION_PATH)
+    integration_name = common.INTEGRATION_PATH.name
+    for subdir in ("core", "actions", "connectors", "jobs"):
+        folder = common.INTEGRATION_PATH / subdir
+        if not folder.is_dir():
+            continue
+        for py_file in folder.rglob("*.py"):
+            if py_file.stem == "__init__":
+                continue
+            rel = py_file.relative_to(common.INTEGRATION_PATH).with_suffix("")
+            mod_name = ".".join((integration_name, *rel.parts))
+            importlib.import_module(mod_name)
+
