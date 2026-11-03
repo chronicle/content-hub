@@ -418,6 +418,13 @@ def main():
             current_domains = gitsync.api.get_domains(chronicle_soar=siemplify)
             for domain in gitsync.content.get_domains():
                 current_domain = id_validator(domain, "domain", "id", current_domains)
+                if isinstance(current_domain.get("environments"), str):
+                    try:
+                        current_domain["environments"] = json.loads(
+                            current_domain["environments"],
+                        )
+                    except Exception:
+                        current_domain["environments"] = []
                 current_domain = (
                     Domain.from_legacy_or_1p(current_domain).to_1p()
                     if platform_supports_1p_api()
