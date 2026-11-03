@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import re
 import urllib.parse
+import zlib
 from typing import TYPE_CHECKING
 
 from requests_toolbelt.multipart.encoder import MultipartEncoder
@@ -1430,7 +1431,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         jobs_endpoint = "/integrations/{identifier}/jobs"
         managers_endpoint = "/integrations/{identifier}/managers"
 
-        # NOTE: Fix for b/577045937 - normalize 1P IDE items into cards with integer id, type, name, displayName, and isCustom
         integration_identifier = (
             getattr(self.params, "integration_name", None)
             or getattr(self.params, "integration_identifier", None)
@@ -1468,7 +1468,8 @@ class OnePlatformSoarApi(BaseSoarApi):
                     cid = int(cid)
                 except (TypeError, ValueError) as e:
                     self.chronicle_soar.LOGGER.debug(f"Could not convert card id to int: {e}")
-                    cid = abs(hash(card.get("displayName") or card.get("name") or "")) % (10**8)
+                    name_str = str(card.get("displayName") or card.get("name") or "")
+                    cid = zlib.crc32(name_str.encode("utf-8")) % (10**8)
 
             display_name = card.get("displayName") or card.get("name") or ""
             card["id"] = cid
@@ -1527,7 +1528,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         payload = {"cards": all_cards_payload}
         return _DictResponse(payload)
 
-    # NOTE: Fix for b/577045937 - Implement missing update_ide_item for 1P SOAR API
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_ide_item(self) -> requests.Response:
         """Update or create an IDE item using 1P API."""
@@ -1640,7 +1640,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                             or p.get("Name")
                         )
                         inc = incoming_map.get(p_name, {})
-                        if p.get("mandatory") and not p.get("defaultValue"):
+                        if p.get("mandatory") and (p.get("defaultValue") is None or p.get("defaultValue") == ""):
                             p["defaultValue"] = "{}"
 
                         if collection == "actions" and inc:
@@ -1687,10 +1687,10 @@ class OnePlatformSoarApi(BaseSoarApi):
                                 "displayName": name,
                                 "description": p_raw.get("description") or p_raw.get("Description") or "",
                                 "mandatory": bool(p_raw.get("mandatory") if p_raw.get("mandatory") is not None else p_raw.get("IsMandatory", False)),
-                                "defaultValue": str(p_raw.get("defaultValue") if p_raw.get("defaultValue") is not None else p_raw.get("DefaultValue", "")),
+                                "defaultValue": str(p_raw.get("defaultValue") if p_raw.get("defaultValue") is not None else (p_raw.get("DefaultValue") if p_raw.get("DefaultValue") is not None else "")),
                                 "type": p_raw.get("type") if p_raw.get("type") is not None else p_raw.get("Type", 0),
                             }
-                            if new_p["mandatory"] and not new_p["defaultValue"]:
+                            if new_p["mandatory"] and (new_p["defaultValue"] is None or new_p["defaultValue"] == ""):
                                 new_p["defaultValue"] = "{}"
                             if "optionalValues" in p_raw or "OptionalValues" in p_raw:
                                 new_p["optionalValues"] = (
@@ -1702,7 +1702,9 @@ class OnePlatformSoarApi(BaseSoarApi):
 
                 update_mask.append("parameters")
 
-            if "timeoutSeconds" in data or "TimeoutSeconds" in data:
+            if collection in ("actions", "connectors", "jobs") and (
+                "timeoutSeconds" in data or "TimeoutSeconds" in data
+            ):
                 patch_payload["timeoutSeconds"] = int(data.get("timeoutSeconds") or data.get("TimeoutSeconds"))
                 update_mask.append("timeoutSeconds")
             if collection == "actions":
@@ -1767,8 +1769,9 @@ class OnePlatformSoarApi(BaseSoarApi):
             "custom": True,
         }
 
-        timeout = data.get("timeoutSeconds") or data.get("TimeoutSeconds") or 60
-        new_payload["timeoutSeconds"] = int(timeout)
+        if collection in ("actions", "connectors", "jobs"):
+            timeout = data.get("timeoutSeconds") or data.get("TimeoutSeconds") or 60
+            new_payload["timeoutSeconds"] = int(timeout)
 
         if collection == "actions":
             new_payload["scriptResultName"] = (
@@ -1824,7 +1827,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                 if lp.get("DefaultValue") is not None
                 else lp.get("defaultValue", "")
             )
-            if p_mandatory and not p_default:
+            if p_mandatory and (p_default is None or p_default == ""):
                 p_default = "{}"
             p_type = lp.get("Type") if lp.get("Type") is not None else lp.get("type", 0)
             param_dict = {
@@ -1832,7 +1835,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                 "displayName": p_name,
                 "description": p_desc,
                 "mandatory": p_mandatory,
-                "defaultValue": str(p_default),
+                "defaultValue": str(p_default) if p_default is not None else "",
                 "type": p_type,
             }
             if collection == "actions":
@@ -1857,7 +1860,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         post_endpoint = f"/integrations/{integration}/{collection}"
         return self._make_request(HttpMethod.POST, post_endpoint, json_payload=new_payload)
 
-    # NOTE: Fix for b/577045937 - Implement missing get_ide_item for 1P SOAR API
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_ide_item(self) -> requests.Response:
         """Get IDE item (1P compatible)."""
