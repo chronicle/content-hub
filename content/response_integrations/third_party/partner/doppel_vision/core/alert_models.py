@@ -45,7 +45,15 @@ def normalize_alert(raw_alert: Any) -> dict[str, Any] | None:
     }
 
 
-def normalize_alert_list(raw_alerts: Any) -> list[dict[str, Any]]:
+def normalize_alert_list(raw_alerts: object) -> list[SingleJson]:
+    """Normalize a raw alerts collection into a list of canonical alert dictionaries.
+
+    Args:
+        raw_alerts: Raw alerts list from the API response.
+
+    Returns:
+        List of normalized alert dictionaries.
+    """
     if not isinstance(raw_alerts, list):
         return []
     return [alert for alert in (normalize_alert(item) for item in raw_alerts) if alert]
