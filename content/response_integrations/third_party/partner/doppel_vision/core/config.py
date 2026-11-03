@@ -84,7 +84,12 @@ def _configuration_mapping(siemplify: Any) -> dict[str, Any] | None:
     The Siemplify SDK prints 'Reading configuration from Server' to stdout/stderr.
     We silence stdout and stderr so that the SecOps UI displays real exception messages.
     """
-    getter = getattr(siemplify, "get_configuration", None)
+def _configuration_mapping(siemplify: ChronicleSOAR) -> SingleJson:
+    """Return the raw configuration dictionary from a Siemplify/SOAR SDK object.
+
+    Action and connector objects expose ``siemplify.configuration`` directly.
+    Job objects (``SiemplifyJob``) only expose it via ``get_configuration()``.
+    """
     if not callable(getter):
         return None
     buf = io.StringIO()
