@@ -36,7 +36,7 @@ class TokenCache:
         self._memory: dict[str, Any] | None = None
 
     def _identifier(self) -> str:
-        identifier = getattr(self.siemplify, "integration_instance", None)
+        identifier: object = getattr(self.siemplify, "integration_instance", None)
         if identifier:
             return str(identifier)
         return INTEGRATION_NAME
