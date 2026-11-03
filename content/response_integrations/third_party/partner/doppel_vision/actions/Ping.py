@@ -29,7 +29,7 @@ def main():
         siemplify.end(
             f"Failed to connect to the Doppel Vision server: {e!s}",
             False,
-        )
+        siemplify.end(output_message, False, EXECUTION_STATE_FAILED)
 
 
 if __name__ == "__main__":
