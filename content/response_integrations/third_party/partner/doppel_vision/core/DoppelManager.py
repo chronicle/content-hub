@@ -88,7 +88,12 @@ class DoppelManager:
             "GET",
             f"{self.base_url}/alerts",
             params={"page": 0, "page_size": 1},
-        )
+        """Validate credentials by fetching a single alert.
+
+        Returns:
+            True if the connection succeeds.
+        """
+        self.http_client.request("GET", ENDPOINTS["alerts"], params={"page": 1, "count": 1})
         return True
 
     def get_alert(self, entity: str | None = None, alert_id: str | None = None) -> dict[str, Any]:
