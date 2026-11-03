@@ -51,7 +51,7 @@ def test_validate_v2_requires_client_credentials() -> None:
 def test_existing_v1_config_without_new_fields_still_loads() -> None:
     siemplify = MagicMock()
 
-    def extract(provider_name: str, param_name: str, **_kwargs):
+    def extract(param_name: str, **_kwargs: object) -> str | None:
         del provider_name
         return {
             "API Version": None,
