@@ -21,14 +21,14 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_FAILED,
     EXECUTION_STATE_TIMEDOUT,
 )
-from cb_cloud.core.CBCloudManager import CBCloudManager
+from ..core.CBCloudManager import CBCloudManager
 from TIPCommon.extraction import extract_configuration_param
-from cb_cloud.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     CREATE_DISABLE_BYPASS_MODE_SCRIPT_NAME,
     PROVIDER_NAME,
 )
-from cb_cloud.core.utils import get_entity_original_identifier
+from ..core.utils import get_entity_original_identifier
 
 ENTITIES_MAPPER = {
     EntityTypes.ADDRESS: "query",

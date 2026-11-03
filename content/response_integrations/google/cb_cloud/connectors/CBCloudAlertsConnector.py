@@ -32,9 +32,9 @@ from TIPCommon.smp_io import (
     write_ids_with_timestamp,
 )
 
-from cb_cloud.core.exceptions import CBCloudConnectorValidationException
-from cb_cloud.core.CBCloudManager import CBCloudManager
-from cb_cloud.core.constants import DEFAULT_VENDOR, PROVIDER_NAME, ALERTS_CONNECTOR_NAME
+from ..core.exceptions import CBCloudConnectorValidationException
+from ..core.CBCloudManager import CBCloudManager
+from ..core.constants import DEFAULT_VENDOR, PROVIDER_NAME, ALERTS_CONNECTOR_NAME
 
 TIMESTAMP_FILE = "timestamp.stmp"
 MAP_FILE = "map.json"

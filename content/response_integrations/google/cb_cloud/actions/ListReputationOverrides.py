@@ -18,11 +18,11 @@ from itertools import groupby
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 from TIPCommon.transformation import construct_csv
 
-from cb_cloud.core.CBCloudManager import CBCloudManager
+from ..core.CBCloudManager import CBCloudManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from cb_cloud.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     LIST_REPUTATION_OVERRIDES_SCRIPT_NAME,
     NOT_SPECIFIED,

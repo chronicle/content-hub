@@ -15,7 +15,7 @@
 from __future__ import annotations
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
-from cb_cloud.core.CBCloudManager import CBCloudManager
+from ..core.CBCloudManager import CBCloudManager
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_FAILED,
@@ -29,13 +29,13 @@ from soar_sdk.SiemplifyUtils import (
     output_handler,
     convert_dict_to_json_result_dict,
 )
-from cb_cloud.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     CREATE_REPUTATION_OVERRIDE_FOR_IT_TOOL_SCRIPT_NAME,
     NOT_SPECIFIED,
     NEW_LINE,
 )
-from cb_cloud.core.utils import get_entity_original_identifier
+from ..core.utils import get_entity_original_identifier
 
 
 @output_handler

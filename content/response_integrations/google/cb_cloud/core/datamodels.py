@@ -17,7 +17,7 @@ from TIPCommon.transformation import dict_to_flat, add_prefix_to_dict, flat_dict
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 import uuid
-from cb_cloud.core.constants import (
+from .constants import (
     EMPTY_LEGACY_ID,
     WATCHLIST_TYPE,
     ALERT_TYPES_WITHOUT_ENRICHED_EVENTS,
@@ -27,7 +27,7 @@ from cb_cloud.core.constants import (
     SIEMPLIFY_RULE_GENERATOR,
     CHARACTERS_LIMIT,
 )
-from cb_cloud.core.utils import transform_template_string
+from .utils import transform_template_string
 
 
 ENRICHMENT_PREFIX = "CB_CLOUD"

@@ -18,15 +18,15 @@ import time
 from typing import Optional
 from urllib.parse import urljoin
 import requests
-from cb_cloud.core.CBCloudParser import CBCloudParser
+from .CBCloudParser import CBCloudParser
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from cb_cloud.core.utils import LOGGER, remove_none_values
-from cb_cloud.core.exceptions import (
+from .utils import LOGGER, remove_none_values
+from .exceptions import (
     CBCloudException,
     CBCloudUnauthorizedError,
     CBCloudTimeoutException,
 )
-from cb_cloud.core.constants import (
+from .constants import (
     HTTP_STATUS_CODE_BAD_REQUEST,
     HTTP_STATUS_CODE_UNAUTHORIZED,
     SEVERITY_FILTER_MAPPING,

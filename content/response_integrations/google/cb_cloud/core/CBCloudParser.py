@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from cb_cloud.core.datamodels import *
+from .datamodels import *
 
 
 class CBCloudParser:

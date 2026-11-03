@@ -26,8 +26,8 @@ from TIPCommon.smp_time import (
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.utils import is_overflowed
 
-from cb_cloud.core.CBCloudManager import CBCloudManager
-from cb_cloud.core.constants import (
+from ..core.CBCloudManager import CBCloudManager
+from ..core.constants import (
     DEFAULT_ALERT_FIELD_FOR_RULE_GENERATOR,
     DEFAULT_ALERT_FIELD_FOR_RULE_NAME,
     DEFAULT_EVENTS_LIMIT_TO_INGEST_PER_ALERT,
@@ -45,7 +45,7 @@ from cb_cloud.core.constants import (
     TRACKING_CONNECTOR_NAME,
 )
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
-from cb_cloud.core.utils import (
+from ..core.utils import (
     add_alert_to_backlog,
     add_events_to_alert_info,
     backlog_ids_exists,
@@ -62,7 +62,7 @@ from cb_cloud.core.utils import (
     validate_alert_name_field_name,
     validate_rule_generator_field_name,
 )
-from cb_cloud.core.exceptions import CBCloudException
+from ..core.exceptions import CBCloudException
 
 EMPTY_EVENTS_JSON_FILE = {KEY_FOR_SAVED_ALERTS: {}}
 CONNECTOR_STARTING_TIME = unix_now()

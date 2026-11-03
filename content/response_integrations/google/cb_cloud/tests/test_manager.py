@@ -41,7 +41,8 @@ JOB_ID = 'c9933283-2b61-4433-9f73-13d58941a41a-sqs'
 def cbmanager():
     """Return CBCloudManager manager instance"""
     logger = Logger()
-    with open("config.json", "r") as f:
+    config_path = os.path.join(os.path.dirname(__file__), "config.json")
+    with open(config_path) as f:
         data = f.read()
 
     config = json.loads(data)

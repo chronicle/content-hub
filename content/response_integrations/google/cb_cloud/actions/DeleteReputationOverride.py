@@ -15,11 +15,11 @@
 from __future__ import annotations
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
-from cb_cloud.core.CBCloudManager import CBCloudManager
+from ..core.CBCloudManager import CBCloudManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from cb_cloud.core.constants import INTEGRATION_NAME, DELETE_REPUTATION_OVERRIDE_SCRIPT_NAME
+from ..core.constants import INTEGRATION_NAME, DELETE_REPUTATION_OVERRIDE_SCRIPT_NAME
 
 
 @output_handler

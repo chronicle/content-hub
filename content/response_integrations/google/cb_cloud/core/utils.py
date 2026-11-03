@@ -17,7 +17,7 @@ from __future__ import annotations
 import copy
 from soar_sdk.SiemplifyUtils import unix_now
 from TIPCommon.smp_io import read_content, write_content
-from cb_cloud.core.constants import (
+from .constants import (
     ALERT_NAME_ALLOWED_VALUE,
     BACKLOG_FILE,
     BACKLOG_DB_KEY,
@@ -35,8 +35,8 @@ from cb_cloud.core.constants import (
     PLACEHOLDER_END,
 )
 import arrow
-from cb_cloud.core import datamodels
-from cb_cloud.core.exceptions import ParameterValidationException, CBCloudException
+from . import datamodels
+from .exceptions import ParameterValidationException, CBCloudException
 
 
 class LOGGER:

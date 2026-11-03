@@ -15,17 +15,17 @@
 from __future__ import annotations
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 from TIPCommon.transformation import construct_csv
-from cb_cloud.core.CBCloudManager import CBCloudManager
+from ..core.CBCloudManager import CBCloudManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
-from cb_cloud.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     LIST_HOST_VULNERABILITIES_SCRIPT_NAME,
     SEVERITY_FILTER_MAPPING,
 )
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from cb_cloud.core.utils import (
+from ..core.utils import (
     get_entity_original_identifier,
     convert_comma_separated_to_list,
     convert_list_to_comma_string,

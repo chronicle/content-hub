@@ -17,8 +17,8 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
-from cb_cloud.core.CBCloudManager import CBCloudManager
-from cb_cloud.core.constants import (
+from ..core.CBCloudManager import CBCloudManager
+from ..core.constants import (
     ALERT_CLOSE_REASON,
     ALERT_DETERMINATION,
     DISMISS_ALERT_SCRIPT_NAME,

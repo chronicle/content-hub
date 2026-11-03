@@ -26,10 +26,10 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_FAILED,
     EXECUTION_STATE_TIMEDOUT,
 )
-from cb_cloud.core.CBCloudManager import CBCloudManager
+from ..core.CBCloudManager import CBCloudManager
 from TIPCommon.extraction import extract_configuration_param
-from cb_cloud.core.constants import INTEGRATION_NAME, ENRICH_ENTITIES_SCRIPT_NAME, PROVIDER_NAME
-from cb_cloud.core.utils import get_entity_original_identifier
+from ..core.constants import INTEGRATION_NAME, ENRICH_ENTITIES_SCRIPT_NAME, PROVIDER_NAME
+from ..core.utils import get_entity_original_identifier
 
 SUPPORTED_ENTITIES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]
 ENTITIES_MAPPER = {

@@ -17,15 +17,15 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from cb_cloud.core.CBCloudManager import CBCloudManager
+from ..core.CBCloudManager import CBCloudManager
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 from TIPCommon.transformation import construct_csv
-from cb_cloud.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     EXECUTE_ENTITY_PROCESSES_SEARCH_SCRIPT_NAME,
     PROCESS_SEARCH_RESULTS_TABLE_NAME,
 )
-from cb_cloud.core.utils import get_entity_original_identifier
+from ..core.utils import get_entity_original_identifier
 
 SUPPORTED_ENTITIES = [
     EntityTypes.ADDRESS,

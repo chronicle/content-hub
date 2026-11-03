@@ -27,9 +27,9 @@ from TIPCommon.smp_time import (
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.utils import is_overflowed
 
-from cb_cloud.core.exceptions import CBCloudException
-from cb_cloud.core.CBCloudManager import CBCloudManager
-from cb_cloud.core.constants import (
+from ..core.exceptions import CBCloudException
+from ..core.CBCloudManager import CBCloudManager
+from ..core.constants import (
     BASELINE_CONNECTOR_NAME,
     DEFAULT_ALERT_FIELD_FOR_RULE_GENERATOR,
     DEFAULT_ALERT_FIELD_FOR_RULE_NAME,
@@ -39,7 +39,7 @@ from cb_cloud.core.constants import (
     KEY_FOR_SAVED_ALERTS,
     MAP_FILE,
 )
-from cb_cloud.core.utils import (
+from ..core.utils import (
     TIMEOUT_THRESHOLD,
     is_approaching_timeout,
     validate_alert_name_field_name,
