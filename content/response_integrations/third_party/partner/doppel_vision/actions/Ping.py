@@ -24,7 +24,7 @@ def main():
         siemplify.end(
             f"Failed to connect to the Doppel Vision server: {e}",
             False,
-        )
+        siemplify.end(output_message, True, EXECUTION_STATE_COMPLETED)
     except Exception as e:
         siemplify.end(
             f"Failed to connect to the Doppel Vision server: {e!s}",
