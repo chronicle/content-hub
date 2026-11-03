@@ -81,7 +81,7 @@ class AuthProviderV2:
         try:
             payload = response.json() if response.content else {}
         except ValueError:
-            payload = {}
+        payload: SingleJson = {}
 
         if not response.ok:
             raise DoppelHttpError(response.status_code, _oauth_error_message(payload, response.status_code))
