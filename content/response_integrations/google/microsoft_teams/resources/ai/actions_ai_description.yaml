@@ -1,0 +1,2847 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Add Users To Channel:
+  ai_description: >-
+    ### General Description
+
+    The **Add Users To Channel** action allows security teams to automatically add
+    users to a specific private channel within Microsoft Teams. This is particularly
+    useful for incident response scenarios where a dedicated, restricted communication
+    channel needs to be populated with relevant stakeholders or investigators based
+    on user entities identified in a case.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action retrieves integration configuration and the
+    target Team and Channel names.
+
+    2. **Team & Channel Resolution:** It queries the Microsoft Graph API to find the
+    unique ID for the specified Team and then retrieves the Channel details to ensure
+    it exists and is private.
+
+    3. **User Directory Mapping:** The action fetches a list of users to create a
+    mapping between identifiers (names/emails) and Microsoft User IDs.
+
+    4. **Entity Processing:** For each User entity provided in the context, the action
+    looks up the corresponding User ID.
+
+    5. **Membership Update:** If a match is found, it performs a POST request to the
+    Microsoft Graph API to add the user as a member of the private channel.
+
+    6. **Reporting:** The action tracks successful additions, missing users, and failures,
+    providing a detailed summary in the output message.
+
+
+    ### Additional Notes
+
+    * **Private Channels Only:** This action is specifically designed for channels
+    with a `membershipType` of 'private'. It will fail if the target channel is public.
+
+    * **Team Membership Requirement:** Users must already be members of the parent
+    Team to be successfully added to a private channel within that team.
+
+    * **Entity Matching:** The action attempts to match User entities by their display
+    name or email address against the Microsoft Teams user directory.
+  ai_short_description: >-
+    Adds specified user entities to a private Microsoft Teams channel.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds users as members to a private Microsoft Teams channel.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches team, channel, and user data from the Microsoft Graph API
+      (fetches_data=true). It then makes a POST request to add the users to the specified
+      private channel, which mutates external data (can_mutate_external_data=true).
+      It does not update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` is defined as `[EntityTypes.USER]`.
+      Therefore, it targets User entities and filters strictly by the entity_type
+      attribute.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds users to a Microsoft Teams channel. This does not directly align
+      with any of the predefined outcome categories such as updating an identity in
+      an IdP, enriching an IOC, or sending a message. Therefore, all outcome categories
+      are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Team Name | String | Yes | Specify the name of the team in which you want to
+    search for the channel. |
+
+    | Channel Name | String | Yes | Specify the name of the channel to which you want
+    to add users. |
+Create Channel:
+  ai_description: >-
+    ### General Description
+
+    Creates a new channel within a specified Microsoft Teams team. This action allows
+    for the automated setup of communication channels for incident response, collaboration,
+    or notification purposes directly from a Google SecOps playbook.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Initializes the Microsoft Teams manager using the provided
+    integration configuration.
+
+    2. **Team Identification**: Retrieves the unique Team ID by searching for the
+    provided 'Team Name' via a GET request to the Microsoft Graph API.
+
+    3. **Channel Creation**: Sends a POST request to the Microsoft Graph API to create
+    a new channel with the specified name, membership type, and description.
+
+    4. **Result Processing**: Returns the metadata of the newly created channel as
+    a JSON result and provides a success message.
+
+
+    ### Additional Notes
+
+    - The action will fail if the specified 'Team Name' cannot be found in the Microsoft
+    Teams environment.
+
+    - 'Standard' and 'Private' are the only supported channel types.
+  ai_short_description: >-
+    Creates a new channel within a specified Microsoft Teams team to facilitate automated
+    communication and incident response collaboration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new channel in the specified Microsoft Teams team.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Microsoft Graph API to create a new channel,
+      which mutates external data. It does not fetch contextual data for alerts/entities,
+      nor does it mutate internal SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over `siemplify.target_entities`. It
+      relies entirely on action parameters (Team Name, Channel Name, etc.) to perform
+      its operations. Therefore, all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new channel in Microsoft Teams. This does not align with
+      any of the predefined outcome categories such as Enrich IOC, Contain Host, Create
+      Ticket, or Send Message (as it creates a channel rather than sending a message).
+      Therefore, all outcome category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Team Name | String | Yes | Specify the name of the team in which you need to
+    create the channel. |
+
+    | Channel Name | String | Yes | Specify a unique name of the channel. |
+
+    | Channel Type | String | Yes | Specify the type of the channel that needs to
+    be created. Standard channel is accessible to all members of the team, while private
+    channel will require users to be added to it. |
+
+    | Description | String | No | Specify a description for the channel. |
+Create Chat:
+  ai_description: >-
+    ### General Description
+
+    Creates a one-on-one chat conversation in Microsoft Teams between the authenticated
+    service account and specified User entities. This action is useful for initiating
+    direct communication with users during an incident response process, such as for
+    verification or notification purposes.
+
+
+    ### Flow Description
+
+    1. Initializes the Microsoft Teams Manager and authenticates using the provided
+    integration credentials.
+
+    2. Retrieves a list of users from the Microsoft Teams tenant matching the target
+    entities' identifiers.
+
+    3. Identifies the unique ID of the authenticated service account.
+
+    4. Iterates over the target User entities.
+
+    5. For each entity, checks if a matching user was found in the tenant.
+
+    6. If a match is found, sends a POST request to the Microsoft Graph API to create
+    a new one-on-one chat.
+
+    7. Aggregates the chat details and returns them as JSON results.
+
+
+    ### Additional Notes
+
+    Requires Microsoft Teams integration to be configured with appropriate permissions.
+    Matches entities against display names and email addresses.
+  ai_short_description: >-
+    Creates a one-on-one chat conversation in Microsoft Teams between the authenticated
+    service account and specified User entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new one-on-one chat conversation in Microsoft Teams.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Microsoft Graph API to create a new
+      chat conversation, which mutates external data. It does not update internal
+      entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and filters them using
+      `if entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      contains `EntityTypes.USER`. Thus, it strictly filters by entity type and operates
+      on User entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new chat in Microsoft Teams, a communication app. This
+      aligns with the 'Send Message' category, which covers interactions with communication
+      apps like Microsoft Teams.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: true
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Delete Channel:
+  ai_description: >-
+    ### General Description
+
+    The **Delete Channel** action programmatically removes a specific channel from
+    a Microsoft Teams team. This action is primarily used for automated lifecycle
+    management of communication channels, such as cleaning up temporary incident response
+    channels after a case is closed.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the Microsoft Graph API using
+    the provided integration credentials.
+
+    2. **Team Identification**: It retrieves the unique Team ID by searching for the
+    provided `Team Name`.
+
+    3. **Channel Identification**: It retrieves the unique Channel ID within the identified
+    team by searching for the provided `Channel Name`.
+
+    4. **Deletion Execution**: If the channel is found, the action sends a DELETE
+    request to the Microsoft Teams API to remove the channel.
+
+    5. **Error Handling**: If the channel already does not exist, the action completes
+    successfully. If the team is not found or an API error occurs, the action fails
+    with a descriptive error message.
+
+
+    ### Additional Notes
+
+    - This action does not run on entities; it relies entirely on the provided string
+    parameters for the Team and Channel names.
+  ai_short_description: >-
+    Deletes a specific channel from a Microsoft Teams team.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a specific channel from a Microsoft Teams team.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a DELETE request to the Microsoft Teams API to remove a channel,
+      which mutates external data. It does not fetch contextual data for enrichment,
+      nor does it mutate internal SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It relies entirely
+      on the provided string parameters for the Team and Channel names.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a channel in Microsoft Teams. This operation does not align
+      with any of the predefined outcome categories such as enriching data, managing
+      tickets, blocking IOCs, or sending messages.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Team Name | String | Yes | Specify the name of the team in which you need to
+    delete the channel. |
+
+    | Channel Name | String | Yes | Specify a name of the channel that needs to be
+    deleted. |
+Generate Token:
+  ai_description: >-
+    ### General Description
+
+    The 'Generate Token' action is a utility task for the Microsoft Teams integration
+    designed to complete the OAuth 2.0 authorization flow. It extracts an authorization
+    code from a provided URL and exchanges it for a long-lived refresh token. This
+    refresh token is then used by the integration to maintain persistent access to
+    the Microsoft Graph API.
+
+
+    ### Flow Description
+
+    1. Retrieves the user-provided `Authorization URL` parameter.
+
+    2. Parses the URL to locate and extract the `code` query parameter.
+
+    3. Performs a POST request to the Microsoft identity platform's token endpoint
+    using the extracted code and the `authorization_code` grant type.
+
+    4. Extracts the `refresh_token` from the successful API response.
+
+    5. Returns the refresh token in the output message, instructing the user to copy
+    it into the integration settings.
+
+
+    ### Additional Notes
+
+    * This action does not run on entities.
+
+    * The generated refresh token is typically valid for 90 days.
+
+    * This is a setup/configuration action rather than a security investigation or
+    response action.
+  ai_short_description: >-
+    The 'Generate Token' action is a utility task designed to complete the OAuth 2.0
+    authorization flow by extracting an authorization code from a provided URL and
+    exchanging it for a long-lived refresh token.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Microsoft identity platform to exchange
+      an authorization code for a refresh token. This is an authentication/authorization
+      step and does not fetch contextual data for alerts, nor does it mutate external
+      business data, internal data, entities, insights, or case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates solely on the provided Authorization URL parameter.
+      Therefore, it does not run on any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a utility for OAuth 2.0 token generation. It does not enrich IOCs
+      or assets, update alerts, manage tickets, modify blocklists, manage identities,
+      search events, execute commands, or interact with emails/files. Thus, it does
+      not match any of the expected outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Authorization URL | String | Yes | Use the authorization URL received in the
+    previous step to request an access token. |
+Get Authorization:
+  ai_description: >-
+    ### General Description
+
+    Generates a Microsoft OAuth 2.0 authorization URL to initiate the authentication
+    process for the Microsoft Teams integration. This action is the first step in
+    a two-step manual OAuth flow, providing a link that the user must visit to grant
+    permissions and obtain an authorization code.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the Client ID, Tenant ID, and
+    optional URL overrides from the integration configuration.
+
+    2. **URL Generation:** It constructs a formatted OAuth 2.0 authorization URL incorporating
+    the required scopes (e.g., `https://graph.microsoft.com/.default`).
+
+    3. **Result Attachment:** The generated URL is added to the Google SecOps action
+    results as a clickable link labeled 'Browse to this authorization link'.
+
+    4. **Instructional Output:** The action provides a success message instructing
+    the user on how to proceed with the 'Generate Token' action to complete the authentication
+    setup.
+
+
+    ### Additional Notes
+
+    - This action does not perform any API calls to Microsoft; it only constructs
+    a URL string based on the provided parameters.
+
+    - After running this action, the user must manually browse to the generated link,
+    log in, and then copy the resulting URL (containing the code) to use in the 'Generate
+    Token' action.
+  ai_short_description: >-
+    Generates a Microsoft OAuth 2.0 authorization URL to initiate the authentication
+    process for the Microsoft Teams integration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action locally constructs an OAuth 2.0 authorization URL using string manipulation.
+      It does not make any HTTP requests to fetch data, does not mutate external data,
+      and does not mutate internal case data (such as updating entities or creating
+      insights). It only adds a link to the action's result.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or process any
+      entity data. It solely generates an authorization URL based on integration configuration
+      parameters. Therefore, all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action generates a local URL string for OAuth 2.0 authorization and does
+      not interact with external systems, enrich data, mutate alerts, or perform any
+      operations that match the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get Team Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the full properties and details of a specific Microsoft Team based on
+    its display name. This action is useful for gathering context about a team's configuration,
+    such as its visibility, description, and internal ID, which can be used in subsequent
+    automation steps.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the Microsoft Graph API using
+    the provided credentials.
+
+    2. **Team ID Lookup**: It searches for the unique Team ID by filtering the list
+    of teams by the provided `Team Name`.
+
+    3. **Data Retrieval**: Once the ID is found, it makes a GET request to fetch the
+    complete set of properties for that specific team.
+
+    4. **Output Generation**: The retrieved details are flattened and added to the
+    case as a data table and a JSON result for use in the playbook.
+
+
+    ### Additional Notes
+
+    This action does not operate on entities. It requires the `Team Name` to be provided
+    as a direct input parameter.
+  ai_short_description: >-
+    Retrieves the full properties and details of a specific Microsoft Team based on
+    its display name.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Microsoft Graph API to fetch details about
+      a specific Microsoft Team. It does not mutate external data, update internal
+      entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It relies entirely on the 'Team Name'
+      action parameter to fetch data, and does not reference `siemplify.target_entities`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration details about a Microsoft Team. It does not
+      enrich an IOC or Asset, mutate any state, send messages, or interact with alerts/tickets.
+      Therefore, it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Team Name | String | Yes | The exact display name of the Microsoft Team to retrieve
+    details for. |
+Get User Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get User Details** action retrieves the comprehensive properties and relationships
+    of a specific user from Microsoft Teams using the Microsoft Graph API. This action
+    is primarily used for identity enrichment, allowing security analysts to gather
+    context such as job titles, department affiliations, account status, and contact
+    details for a given identifier.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a connection to the Microsoft Graph
+    API using the integration's configured credentials.
+
+    2. **User Resolution**: It searches for the user's unique Microsoft ID by querying
+    the Graph API and matching the provided `Username` against display names, UPNs,
+    and email addresses.
+
+    3. **Data Retrieval**: Upon finding a valid ID, the action performs a secondary
+    GET request to fetch the full user profile and associated metadata.
+
+    4. **Result Processing**: The retrieved data is flattened and output as a Data
+    Table in the action results. The raw JSON response is also attached for use in
+    subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - This action does not automatically iterate over entities in the Google SecOps
+    case; it relies strictly on the value provided in the `Username` parameter.
+
+    - If no matching user is found, the action will complete successfully but will
+    report that no details were found.
+  ai_short_description: >-
+    Retrieves the comprehensive properties and relationships of a specific user from
+    Microsoft Teams using the Microsoft Graph API for identity enrichment.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the Microsoft Graph API to fetch user details
+      (fetches_data=true). It does not perform any state-changing operations on external
+      systems (can_mutate_external_data=false) and does not update internal entities,
+      create insights, or modify case data (can_mutate_internal_data=false).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It relies entirely on the `Username` action parameter. Therefore,
+      it does not run on entities, and all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches detailed properties and relationships for a specific user
+      from Microsoft Teams. This matches the 'Enrich Asset' expected outcome, which
+      includes returning contextual metadata for a user. It does not modify any data,
+      so mutation categories are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Username | String | Yes | The identifier of the user to retrieve. This can be
+    the user's Display Name, User Principal Name (UPN), or Email Address. |
+List Channels:
+  ai_description: >-
+    ### General Description
+
+    The **List Channels** action retrieves detailed information about all channels
+    within a specific Microsoft Teams team. This action is primarily used for discovery
+    and auditing, allowing users to see the structure of a team, including channel
+    names, IDs, and descriptions. It is a read-only operation that does not modify
+    any data in Microsoft Teams or Google SecOps.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the 'Team Name' and the optional
+    'Max Channels To Return' limit from the input.
+
+    2. **Validation:** It verifies that the 'Max Channels To Return' is greater than
+    0.
+
+    3. **Team Identification:** The action calls the Microsoft Graph API to resolve
+    the provided 'Team Name' into a unique Team ID.
+
+    4. **Channel Retrieval:** Using the Team ID, the action fetches the list of all
+    associated channels from the Microsoft Teams environment.
+
+    5. **Data Output:** The retrieved channel details are formatted as a JSON object
+    and returned as the action's result for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - This action does not process or interact with entities (such as IPs, Hostnames,
+    or Users) present in the Google SecOps case. It relies solely on the provided
+    'Team Name' parameter.
+
+    - If the specified team is not found or has no channels, the action will report
+    that no results were found.
+  ai_short_description: >-
+    Retrieves detailed information about all channels within a specific Microsoft
+    Teams team.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Microsoft Graph API (list of channels). It
+      does not mutate external data (only performs GET requests), nor does it mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or process any
+      entity-specific identifiers. It relies entirely on the provided 'Team Name'
+      parameter to fetch data. Therefore, all entity type flags and filter flags are
+      set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of channels for a specific Microsoft Teams team.
+      It does not enrich IOCs or assets, update alerts, create tickets, modify blocklists/allowlists,
+      manage identities, search events, execute commands, or send messages. Therefore,
+      it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Team Name | String | Yes | The display name of the Microsoft Team from which
+    to retrieve the channels. |
+
+    | Max Channels To Return | Integer | No | Specify how many channels to return.
+    Default: 50. |
+List Chats:
+  ai_description: >-
+    ### General Description
+
+    The **List Chats** action retrieves a list of available chat conversations from
+    Microsoft Teams for the authenticated user. This action is designed to provide
+    visibility into existing communication channels, allowing analysts to find specific
+    group chats, meeting chats, or one-on-one conversations based on various criteria.
+    It supports both server-side filtering for chat types and client-side filtering
+    for specific attributes like topics or member details.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts Microsoft Graph API credentials and
+    user-defined filter parameters.
+
+    2. **Validation**: It ensures the `Max Records To Return` is a positive integer
+    and checks for valid filter configurations.
+
+    3. **API Request**: It makes a GET request to the Microsoft Graph `/me/chats`
+    endpoint. If a `Chat Type` is specified, it applies an OData `$filter` (e.g.,
+    `chatType eq 'group'`). It also uses `$expand=members` to retrieve participant
+    details.
+
+    4. **Local Filtering**: The script iterates through the retrieved chats and applies
+    the user-defined `Filter Key` and `Filter Logic` (Equal or Contains) against the
+    chat's topic or member list.
+
+    5. **Result Generation**: The filtered list of chats is converted into a JSON
+    result and a formatted data table for display in the Google SecOps case wall.
+
+
+    ### Additional Notes
+
+    - **Filter Dependencies**: If `Filter Logic` is set to `Equal` or `Contains`,
+    the `Filter Key` must be set to something other than `Select One`. If a `Filter
+    Value` is missing when logic is applied, the filter is ignored.
+
+    - **Entity Support**: This action does not run on specific SOAR entities; it retrieves
+    data globally for the configured user account.
+
+    - **Pagination**: The action handles API pagination automatically to reach the
+    requested `Max Records To Return` limit.
+  ai_short_description: >-
+    Retrieves a list of available chat conversations from Microsoft Teams for the
+    authenticated user, with options to filter by chat type, topic, or member details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (chat lists) from the Microsoft Teams API via a GET
+      request. It does not mutate external data (no POST/PUT/DELETE operations are
+      performed). It does not mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It retrieves chat data globally for the authenticated user account.
+      Therefore, all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of chats from Microsoft Teams. It does not enrich
+      specific IOCs or assets, update alerts, create tickets, modify blocklists, manage
+      identities, search events/emails, or send messages. Therefore, it does not match
+      any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Chat Type | Dropdown | No | Specify what type of chat should\
+    \ be returned. Options include All, Group Chat, Meeting Chat, and One on One Chat.\
+    \ |\n| Filter Key | Dropdown | No | Specify the key that needs to be used to filter\
+    \ chats. Options include Topic, Member Display Name, and Member Email. |\n| Filter\
+    \ Logic | Dropdown | No | Specify what filter logic should be applied. Filtering\
+    \ logic is working based on the value provided in the Filter Key parameter. Options\
+    \ include Equal and Contains. |\n| Filter Value | String | No | Specify what value\
+    \ should be used in the filter. If \u201CEqual\u201C is selected, action will\
+    \ try to find the exact match among results and if \u201CContains\u201C is selected,\
+    \ action will try to find results that contain that substring. |\n| Max Records\
+    \ To Return | Integer | No | Specify how many records to return. If nothing is\
+    \ provided, action will return 50 records. |"
+List Teams:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of all teams within the Microsoft Teams environment. This action
+    is primarily used for discovery and visibility, allowing users to fetch metadata
+    such as team IDs, display names, descriptions, and visibility settings for all
+    teams associated with the configured tenant.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the integration configuration and the
+    action parameter `Max Teams To Return`.
+
+    2. **Validation**: It ensures that the `Max Teams To Return` parameter is a positive
+    integer.
+
+    3. **API Interaction**: The action uses the `MicrosoftTeamsManager` to send a
+    GET request to the Microsoft Graph API `/groups` endpoint, applying a filter to
+    only include objects where `resourceProvisioningOptions` contains 'Team'.
+
+    4. **Pagination**: The logic automatically handles API pagination (`@odata.nextLink`)
+    to continue fetching results until the specified limit is reached or all teams
+    are retrieved.
+
+    5. **Result Processing**: The retrieved list of team objects is converted to a
+    JSON string and attached to the action's execution results for use in downstream
+    playbook steps.
+
+
+    ### Additional Notes
+
+    This action does not require or process any specific entities from the Google
+    SecOps case. It performs a global lookup against the Microsoft Graph API.
+  ai_short_description: >-
+    Retrieves a list of all teams within the Microsoft Teams environment, fetching
+    metadata such as team IDs, display names, and descriptions for discovery and visibility
+    purposes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to the Microsoft Graph API to
+      list teams. It does not mutate external data (no POST/PUT/DELETE operations
+      are performed). It also does not mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The script does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It performs a global API lookup to list teams, meaning it does
+      not run on or filter any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of teams from Microsoft Teams. This is a general
+      discovery/listing operation and does not match any of the specific expected
+      outcomes such as enriching IOCs/assets, sending messages, modifying alerts,
+      or managing identities.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Teams To Return | Integer | No | Specify how many teams to return. Default:
+    50. |
+List Users:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of user details from the Microsoft Teams (Microsoft Graph) environment.
+    This action is designed to provide visibility into the user accounts within a
+    tenant, fetching comprehensive metadata for each user including display names,
+    email addresses, and account status.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Microsoft Teams manager using
+    the provided integration configuration.
+
+    2. **Parameter Extraction**: It retrieves the 'Max Users To Return' parameter
+    and validates that it is a positive integer.
+
+    3. **API Request**: The action sends a GET request to the Microsoft Graph `/users`
+    endpoint.
+
+    4. **Pagination Handling**: If the initial response contains a next-page link
+    and the requested limit has not been reached, the action continues to fetch subsequent
+    pages of user data.
+
+    5. **Result Processing**: The collected list of user objects is converted to a
+    JSON string and attached to the action's execution result for use in downstream
+    playbook steps.
+
+
+    ### Additional Notes
+
+    - The action utilizes the Microsoft Graph API and supports automatic pagination
+    via the `@odata.nextLink` attribute to ensure the requested number of users is
+    retrieved even if they span multiple API response pages.
+
+    - If no users are found in the environment, the action will return an empty list
+    and report that no results were found.
+  ai_short_description: >-
+    Retrieves a list of user details from the Microsoft Teams environment, fetching
+    comprehensive metadata for each user.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Microsoft Graph API to fetch a list of
+      users (fetches_data=true). It does not mutate external data, update internal
+      entities, create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It works globally to list users in the environment without referencing
+      specific entities, so all entity type and filter flags must be false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a general list of users from the environment. It does not
+      enrich a specific IOC or Asset entity, nor does it mutate any state, search
+      events, or interact with alerts/tickets. Thus, it does not match any of the
+      predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Users To Return | Integer | No | Specify how many users to return. Default:
+    50. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Verifies the connectivity between Google SecOps and the Microsoft Teams instance
+    using the provided OAuth2 credentials. This action ensures that the integration
+    is correctly configured and can successfully communicate with the Microsoft Graph
+    API by attempting to refresh the authentication token.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the integration configuration
+    parameters, including credentials and API endpoint roots.
+
+    2. **Manager Initialization**: It initializes the `MicrosoftTeamsManager` class
+    using the provided configuration.
+
+    3. **Connectivity Test**: During the initialization of the manager, a `refresh_token`
+    call is automatically executed. This sends a POST request to the Microsoft identity
+    platform to exchange the refresh token for a new access token.
+
+    4. **Validation**: If the API returns a valid access token, the connectivity is
+    confirmed, and the action completes successfully. If the API returns an error,
+    the action catches the exception and reports a failure.
+
+
+    ### Additional Notes
+
+    - This action does not process or require any entities.
+
+    - It specifically tests the OAuth2 token refresh flow, which is the primary authentication
+    mechanism for the Microsoft Teams integration.
+  ai_short_description: >-
+    Verifies the connectivity between Google SecOps and the Microsoft Teams instance
+    by testing the OAuth2 token refresh flow.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only tests connectivity by attempting to refresh an OAuth2 token.
+      It does not fetch contextual data for alerts, mutate external system state (beyond
+      requesting a token), mutate internal SecOps data, update entities, create insights,
+      or add case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It solely performs
+      a connectivity check using integration-level configuration parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      This action is a simple connectivity test (Ping) that verifies authentication
+      credentials. It does not enrich data, mutate alerts, interact with tickets,
+      modify blocklists, or perform any of the specific operations defined in the
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Remove Users From Channel:
+  ai_description: >-
+    ### General Description
+
+    Removes users from a specific private channel within a Microsoft Team. This action
+    manages channel membership by identifying users based on their display names or
+    email addresses and removing them from the target private channel.
+
+
+    ### Flow Description
+
+    1. Connects to the Microsoft Graph API using the provided integration credentials.
+
+    2. Retrieves the unique ID for the specified Team Name.
+
+    3. Fetches the details for the specified Channel Name and verifies that the channel's
+    membership type is 'private'. If it is not, the action terminates with an error.
+
+    4. Fetches the current list of members in the channel to create a mapping of display
+    names and emails to internal Microsoft User IDs.
+
+    5. Iterates through the provided User entities. If a user is found in the channel's
+    member list, the action sends a DELETE request to the Microsoft Graph API to remove
+    that user.
+
+    6. Aggregates the results and provides a summary of users successfully removed,
+    users not found in the channel, and any users that failed to be removed due to
+    API errors.
+
+
+    ### Additional Notes
+
+    - **Private Channels Only**: This action explicitly checks if the channel's membership
+    type is 'private'. It will fail if the specified channel is a standard (public)
+    channel.
+
+    - **Entity Matching**: The action attempts to match entities against current channel
+    members using both display names and email addresses (case-insensitive).
+  ai_short_description: >-
+    Removes users from a specific private channel within a Microsoft Team by matching
+    user entities to channel members and issuing a removal request via the Microsoft
+    Graph API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes a user from a private Microsoft Teams channel by sending a DELETE request
+      to the Microsoft Graph API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (team ID, channel details, and channel members) via
+      GET requests to the Microsoft Graph API. It mutates external data by sending
+      a DELETE request to remove a user from a channel. It does not mutate internal
+      SecOps data, update entities, create insights, modify alert data, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` is defined as `[EntityTypes.USER]`.
+      It then uses `entity.identifier` to match against the channel's user names and
+      emails.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes a user from a specific Microsoft Teams channel. This modifies
+      the user's group memberships and permissions within the external application,
+      which aligns with the 'Update Identity' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Team Name | String | Yes | Specify the name of the team in which you want to
+    search for the channel. |
+
+    | Channel Name | String | Yes | Specify a name of the channel in which you want
+    to remove users. |
+Send Chat Message:
+  ai_description: "### General Description\nSends a chat message to a specific Microsoft\
+    \ Teams chat. This action allows for direct communication within Teams and can\
+    \ optionally wait for a reply from another user, making it suitable for interactive\
+    \ workflows or manual confirmations within a SOAR playbook.\n\n### Flow Description\n\
+    1. **Initialization:** The action initializes the Microsoft Teams manager using\
+    \ the provided integration configuration.\n2. **Message Dispatch:** In the first\
+    \ run, it sends the specified text to the target Chat ID using the Microsoft Graph\
+    \ API.\n3. **Conditional Async State:** \n    - If \"Wait For Reply\" is **False**,\
+    \ the action completes immediately after sending the message.\n    - If \"Wait\
+    \ For Reply\" is **True**, the action saves the original message metadata and\
+    \ enters an asynchronous state.\n4. **Polling (Async Mode):** In subsequent runs,\
+    \ the action fetches the latest messages from the chat.\n5. **Reply Detection:**\
+    \ It searches for the first message appearing after the original message's timestamp\
+    \ that was sent by a different user.\n6. **Completion:** Once a reply is detected,\
+    \ the reply data is added to the action results, and the action completes successfully.\n\
+    \n### Additional Notes\n- **Async Execution:** If \"Wait For Reply\" is enabled,\
+    \ the action will enter an 'In Progress' state after sending the message. It will\
+    \ periodically poll the chat for a response.\n- **Timeout:** Users should adjust\
+    \ the script timeout in the Google SecOps IDE if waiting for a reply, as the default\
+    \ might be too short for human response times. If a timeout occurs while waiting,\
+    \ the action will fail gracefully with a notification.\n- **Reply Logic:** The\
+    \ action identifies a reply as the first message sent in the chat after the original\
+    \ message that has a different sender ID."
+  ai_short_description: >-
+    Sends a chat message to a specific Microsoft Teams chat, with an option to run
+    asynchronously and wait for a reply from another user.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a new chat message to a specified Microsoft Teams chat.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Microsoft Graph API to send a chat message,
+      which mutates external data. It does not fetch contextual data for entities,
+      nor does it update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use entity-specific identifiers.
+      It operates solely on the provided Chat ID parameter.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action sends a message to a Microsoft Teams chat, which directly aligns
+      with the 'Send Message' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: true
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Chat ID | String | Yes | Specify the ID of the chat to which you want to send
+    a message. |
+
+    | Text | String | Yes | Specify the content of the message. |
+
+    | Wait For Reply | Boolean | No | If enabled, action will wait until reply. |
+Send Message:
+  ai_description: >-
+    ### General Description
+
+    Sends a message to a specific Microsoft Teams channel within a designated team.
+    This action is used to automate notifications, alerts, or general communication
+    directly from Google SecOps into Microsoft Teams environments.
+
+
+    ### Flow Description
+
+    1. Initializes the Microsoft Teams Manager using configuration credentials.
+
+    2. Queries the Microsoft Graph API to find the unique ID associated with the provided
+    `Team Name`.
+
+    3. Queries the Microsoft Graph API to find the unique ID associated with the provided
+    `Channel Name` within the identified team.
+
+    4. Executes a POST request to the Microsoft Teams API to create a new message
+    in the resolved channel with the provided content.
+
+    5. Captures the API response and reports the success or failure of the operation
+    back to the SOAR platform.
+
+
+    ### Additional Notes
+
+    The action resolves the Team and Channel names to their respective internal Microsoft
+    IDs before attempting to post the message.
+  ai_short_description: >-
+    Sends a message to a specific Microsoft Teams channel within a designated team.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a new message to a specific channel in Microsoft Teams.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to Microsoft Teams to send a message, which
+      mutates external data. It does not fetch enrichment data, update internal entities,
+      create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use entity-specific identifiers.
+      It operates solely on the provided action parameters (Team Name, Channel Name,
+      Message). Therefore, all entity type and filtering flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a POST request to the Microsoft Teams API to send a message
+      to a specific channel. This directly aligns with the 'Send Message' expected
+      outcome. It does not enrich data, update alerts, or interact with other external
+      systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: true
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Team Name | String | Yes | The display name of the Microsoft Team where the
+    message should be sent. |
+
+    | Channel Name | String | Yes | The display name of the specific channel within
+    the team where the message should be posted. |
+
+    | Message | String | Yes | The content of the message to be sent. |
+Send Message Reply:
+  ai_description: >-
+    ### General Description
+
+    Sends a reply to a specific message within a Microsoft Teams channel. This action
+    allows for automated threaded communication by targeting a parent message ID within
+    a specific team and channel.
+
+
+    ### Flow Description
+
+    1. Extracts the Team Name, Channel Name, Message ID, Content Type, and Text from
+    the action parameters.
+
+    2. Initializes the Microsoft Teams API manager.
+
+    3. Resolves the Team Name to a Team ID via a GET request to the Microsoft Graph
+    API.
+
+    4. Resolves the Channel Name to a Channel ID via a GET request to the Microsoft
+    Graph API.
+
+    5. Executes a POST request to the Microsoft Graph API to send the reply to the
+    specified message.
+
+    6. Returns the API response and adds it to the action's JSON results.
+
+
+    ### Additional Notes
+
+    - If the team or channel is not found, the action will fail with a descriptive
+    error message.
+  ai_short_description: >-
+    Sends a reply to a specific message within a Microsoft Teams channel.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a reply to a specific message in a Microsoft Teams channel.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Microsoft Graph API to send a message
+      reply, which mutates external data. It does not fetch contextual data for entities,
+      mutate internal SecOps data, update entities, create insights, modify alerts,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It relies entirely
+      on the provided action parameters to send a message reply.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action sends a reply to a message in Microsoft Teams, which directly aligns
+      with the 'Send Message' category. It does not enrich IOCs, update alerts, or
+      perform any other categorized operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: true
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Team Name | String | Yes | Specify the team to which you want to send the reply.
+    |
+
+    | Channel Name | String | Yes | Specify the channel to which you want to send
+    the reply. |
+
+    | Message ID | String | Yes | Specify the ID of the message to which you want
+    to send the reply. |
+
+    | Content Type | String | No | Specify the content type for the message. |
+
+    | Text | String | Yes | Specify the content of the message. |
+Send User Message:
+  ai_description: >-
+    ### General Description
+
+    Sends a chat message to specific users in Microsoft Teams. This action can target
+    users derived from Google SecOps entities, manually provided identifiers, or both.
+    It supports sending messages in either plain text or HTML format. A key feature
+    is the asynchronous 'Wait For Reply' mode, which allows the action to pause and
+    poll for a response from the recipient before finalizing the execution result.
+
+
+    ### Flow Description
+
+    1. **Recipient Identification:** The action identifies target users based on the
+    'User Selection' logic, filtering Google SecOps entities for User types and/or
+    parsing the 'User Identifiers' parameter.
+
+    2. **Session Management:** For each recipient, the action checks for an existing
+    1:1 chat. If none exists, it searches for the user's ID and creates a new chat
+    session.
+
+    3. **Message Dispatch:** The message is sent to the identified chat using the
+    specified content type.
+
+    4. **Async Polling (Optional):** If 'Wait For Reply' is enabled, the action enters
+    an 'In Progress' state. It periodically polls the Microsoft Graph API to check
+    for new messages in the chat sent by the recipient after the initial message.
+
+    5. **Completion:** Once replies are received (or the action times out), the results
+    are aggregated and returned to the SOAR platform.
+
+
+    ### Additional Notes
+
+    - The action runs asynchronously if "Wait For Reply" is enabled. Ensure the script
+    timeout value in the IDE is adjusted as needed.
+  ai_short_description: >-
+    Sends a chat message to specific users in Microsoft Teams, optionally waiting
+    for a reply.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a chat message to users in Microsoft Teams and can create new 1:1 chat
+      sessions if they don't exist.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes POST requests to Microsoft Teams to send messages and potentially
+      create new chats. It does not fetch data for enrichment, nor does it mutate
+      internal SecOps data like entities or insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES
+      = [EntityTypes.USER]`. Thus, it targets USER entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action sends a message to a user in Microsoft Teams. This directly aligns
+      with the 'Send Message' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: true
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | User Identifiers | String | No | Specify a comma-separated list of user identifiers
+    to whom you want to send a message. |
+
+    | Text | String | Yes | Specify the content of the message. |
+
+    | Wait For Reply | Boolean | No | If enabled, action will wait until replies from
+    all entities are available. |
+
+    | Content Type | Dropdown | No | Specify the content type for the message. |
+
+    | User Selection | Dropdown | No | Specify what selection should be used for users.
+    If "From Entities & User Identifiers" is selected, then action will search in
+    both relevant entities and values provided in the "User Identifiers" parameters.
+    If "From Entities" is provided, action will only work with relevant entities and
+    ignore values provided in the "User Identifiers". If "From User Identifiers" is
+    selected, then action will only work with values from "User Identifiers" and "User
+    Identifiers" parameter becomes mandatory. |
+Wait For Reply:
+  ai_description: >-
+    ### General Description
+
+    Waits for a reply to a specific message in a Microsoft Teams channel. This asynchronous
+    action polls for new replies and compares them against an optional expected string.
+    It is highly useful for automated workflows that require human intervention, approval,
+    or confirmation via Microsoft Teams.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Authenticates with the Microsoft Graph API using the provided
+    credentials and resolves the Team and Channel names to their respective unique
+    IDs.
+
+    2. **Data Retrieval**: Periodically fetches all replies associated with the specified
+    `Message ID` from the target channel via an API GET request.
+
+    3. **Evaluation**: Processes the retrieved replies based on the selected `Wait
+    Method`:
+        * **Check First Reply**: Evaluates only the most recent reply. If it matches
+    the `Expected Reply` (or if no expected reply is defined), the action completes
+    successfully.
+        * **Wait Till Timeout**: Scans all replies received since the action started.
+    If any reply matches the `Expected Reply`, the action completes. If no match is
+    found, it continues polling until the global timeout is reached.
+    4. **Completion**: Returns the matching message(s) in the JSON result and updates
+    the action status to completed or timed out.
+
+
+    ### Additional Notes
+
+    * This action is **Async**, meaning it will run in the background and poll the
+    API until the condition is met or the SOAR script timeout is reached.
+
+    * Ensure the integration user has the necessary permissions to read messages in
+    the specified team and channel.
+  ai_short_description: >-
+    Waits for a reply to a specific message in a Microsoft Teams channel, optionally
+    checking for a specific expected reply string.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to the Microsoft Graph API to
+      retrieve message replies. It does not mutate external data (it only reads replies),
+      nor does it mutate internal data, update entities, create insights, or add case
+      comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on explicit input parameters (Team Name, Channel Name, Message
+      ID) to fetch data. Therefore, it does not run on entities and all entity-related
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action waits for a reply to a message in Microsoft Teams. It does not send
+      a message, enrich an IOC/Asset, update an alert, or perform any of the other
+      specific outcome categories listed. Therefore, all outcome category flags are
+      false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Team Name | String | Yes | Specify name of the team. |
+
+    | Channel Name | String | Yes | Specify name of the channel. |
+
+    | Message ID | String | Yes | Specify ID of the message that is expected to have
+    a reply. |
+
+    | Expected Reply | String | No | Specify text of the expected reply. If this value
+    is not provided, then action will stop execution on any reply. |
+
+    | Wait Method | Dropdown | No | Specify the wait method for the action. If "Check
+    First Reply" is selected, action will either return the first reply or compare
+    the first reply with expected value. If "Wait Till Timeout" is selected, action
+    will either wait for the expected value until timeout is reached or return all
+    of the messages that were sent during the timeout period. |

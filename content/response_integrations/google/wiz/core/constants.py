@@ -16,6 +16,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from TIPCommon.base.action.data_models import (
+    CloseCaseOrAlertInconclusiveRootCauses,
+    CloseCaseOrAlertMaintenanceRootCauses,
+    CloseCaseOrAlertMaliciousRootCauses,
+    CloseCaseOrAlertNotMaliciousRootCauses,
+)
+
 if TYPE_CHECKING:
     from collections.abc import AbstractSet, Mapping, Sequence
 
@@ -105,20 +112,76 @@ WIZ_CLOSED_STATUSES: AbstractSet[str] = {
     STATUS_REJECTED,
 }
 
+REASON_UNSPECIFIED: str = "REASON_UNSPECIFIED"
+
 WIZ_REASON_FALSE_POSITIVE: str = "FALSE_POSITIVE"
 WIZ_REASON_MALICIOUS_THREAT: str = "MALICIOUS_THREAT"
+WIZ_REASON_NOT_MALICIOUS_THREAT: str = "NOT_MALICIOUS_THREAT"
+WIZ_REASON_SECURITY_TEST_THREAT: str = "SECURITY_TEST_THREAT"
 WIZ_REASON_PLANNED_ACTION_THREAT: str = "PLANNED_ACTION_THREAT"
 WIZ_REASON_INCONCLUSIVE_THREAT: str = "INCONCLUSIVE_THREAT"
 
 CLOSE_REASON_TO_WIZ_REASON: Mapping[str, str] = {
     "REASON_MALICIOUS": WIZ_REASON_MALICIOUS_THREAT,
-    "REASON_NOT_MALICIOUS": WIZ_REASON_FALSE_POSITIVE,
+    "MALICIOUS": WIZ_REASON_MALICIOUS_THREAT,
+    "0": WIZ_REASON_MALICIOUS_THREAT,
+    "REASON_NOT_MALICIOUS": WIZ_REASON_NOT_MALICIOUS_THREAT,
+    "NOTMALICIOUS": WIZ_REASON_NOT_MALICIOUS_THREAT,
+    "NOT_MALICIOUS": WIZ_REASON_NOT_MALICIOUS_THREAT,
+    "NOT MALICIOUS": WIZ_REASON_NOT_MALICIOUS_THREAT,
+    "1": WIZ_REASON_NOT_MALICIOUS_THREAT,
     "REASON_MAINTENANCE": WIZ_REASON_PLANNED_ACTION_THREAT,
+    "MAINTENANCE": WIZ_REASON_PLANNED_ACTION_THREAT,
+    "2": WIZ_REASON_PLANNED_ACTION_THREAT,
+    "REASON_INCONCLUSIVE": WIZ_REASON_INCONCLUSIVE_THREAT,
+    "INCONCLUSIVE": WIZ_REASON_INCONCLUSIVE_THREAT,
+    "3": WIZ_REASON_INCONCLUSIVE_THREAT,
+    "UNKNOWN": WIZ_REASON_INCONCLUSIVE_THREAT,
+    "4": WIZ_REASON_INCONCLUSIVE_THREAT,
 }
 
 CLOSE_VERDICT_TO_WIZ_REASON: Mapping[int, str] = {
     1: WIZ_REASON_MALICIOUS_THREAT,
-    2: WIZ_REASON_FALSE_POSITIVE,
+    2: WIZ_REASON_NOT_MALICIOUS_THREAT,
+    3: WIZ_REASON_PLANNED_ACTION_THREAT,
+    4: WIZ_REASON_INCONCLUSIVE_THREAT,
+}
+
+DEFAULT_SECOPS_CLOSURE: tuple[str, str] = (
+    "Inconclusive",
+    CloseCaseOrAlertInconclusiveRootCauses.NO_CLEAR_CONCLUSION.value,
+)
+
+WIZ_REASON_TO_SECOPS_CLOSURE: Mapping[str, tuple[str, str]] = {
+    WIZ_REASON_MALICIOUS_THREAT: (
+        "Malicious",
+        CloseCaseOrAlertMaliciousRootCauses.OTHER.value,
+    ),
+    WIZ_REASON_NOT_MALICIOUS_THREAT: (
+        "NotMalicious",
+        CloseCaseOrAlertNotMaliciousRootCauses.OTHER.value,
+    ),
+    WIZ_REASON_FALSE_POSITIVE: (
+        "NotMalicious",
+        CloseCaseOrAlertNotMaliciousRootCauses.OTHER.value,
+    ),
+    "EXCEPTION": (
+        "NotMalicious",
+        CloseCaseOrAlertNotMaliciousRootCauses.OTHER.value,
+    ),
+    "WONT_FIX": (
+        "NotMalicious",
+        CloseCaseOrAlertNotMaliciousRootCauses.OTHER.value,
+    ),
+    WIZ_REASON_PLANNED_ACTION_THREAT: (
+        "Maintenance",
+        CloseCaseOrAlertMaintenanceRootCauses.OTHER.value,
+    ),
+    WIZ_REASON_SECURITY_TEST_THREAT: (
+        "Maintenance",
+        CloseCaseOrAlertMaintenanceRootCauses.OTHER.value,
+    ),
+    WIZ_REASON_INCONCLUSIVE_THREAT: DEFAULT_SECOPS_CLOSURE,
 }
 
 SYNC_COMMENT_PREFIX: str = "[SecOps & Wiz Sync Job]"
