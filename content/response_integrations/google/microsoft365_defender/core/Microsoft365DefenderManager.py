@@ -26,7 +26,7 @@ from soar_sdk.SiemplifyUtils import utc_now
 from TIPCommon.smp_time import is_approaching_timeout
 from TIPCommon.filters import filter_old_alerts
 
-from microsoft365_defender.core.constants import (
+from .constants import (
     ALERT_ID_KEY,
     ALERT_UNIQUE_ID_KEY,
     ALERTS_LIMIT_PER_REQUEST,
@@ -46,15 +46,15 @@ from microsoft365_defender.core.constants import (
     PREFER_HEADER_FOR_CONNECTOR,
     RETRY_SLEEP,
 )
-from microsoft365_defender.core.datamodels import Alert, AlertWithEvidence, Incident
-from microsoft365_defender.core.Microsoft365DefenderExceptions import (
+from .datamodels import Alert, AlertWithEvidence, Incident
+from .Microsoft365DefenderExceptions import (
     NotFoundItemException,
     Microsoft365DefenderException,
     APIPermissionError,
     TooManyRequestsError,
 )
-from microsoft365_defender.core.Microsoft365DefenderParser import Microsoft365DefenderParser
-from microsoft365_defender.core.UtilsManager import validate_response
+from .Microsoft365DefenderParser import Microsoft365DefenderParser
+from .UtilsManager import validate_response
 
 
 class Microsoft365DefenderManager:

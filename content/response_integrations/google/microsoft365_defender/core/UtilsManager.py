@@ -39,7 +39,7 @@ from TIPCommon.smp_io import (
 )
 from TIPCommon.types import SingleJson
 
-from microsoft365_defender.core.constants import (
+from .constants import (
     ALERT_ID_KEY,
     ALERT_KEYS_DATETIME_SUFFIX,
     ALERT_UNIQUE_ID_KEY,
@@ -49,7 +49,7 @@ from microsoft365_defender.core.constants import (
     M365_INCIDENT_ID_CONTEXT_KEY,
     ENTITY_TYPE,
 )
-from microsoft365_defender.core.Microsoft365DefenderExceptions import (
+from .Microsoft365DefenderExceptions import (
     APIPermissionError,
     Microsoft365DefenderException,
     NotEnoughEntitiesException,

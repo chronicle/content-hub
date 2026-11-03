@@ -39,7 +39,7 @@ from TIPCommon.smp_time import (
 from TIPCommon.transformation import convert_comma_separated_to_list
 from TIPCommon.utils import is_overflowed
 
-from microsoft365_defender.core.constants import (
+from ..core.constants import (
     ALERT_NAME_FILTER,
     API_ROOT,
     CONNECTOR_NAME,
@@ -56,8 +56,8 @@ from microsoft365_defender.core.constants import (
     POSSIBLE_STATUSES,
     TOO_MANY_REQUEST_TIMEOUT,
 )
-from microsoft365_defender.core.Microsoft365DefenderManager import Microsoft365DefenderManager
-from microsoft365_defender.core.UtilsManager import (
+from ..core.Microsoft365DefenderManager import Microsoft365DefenderManager
+from ..core.UtilsManager import (
     pass_severity_filter,
     validate_end_time,
     read_existing_incidents,

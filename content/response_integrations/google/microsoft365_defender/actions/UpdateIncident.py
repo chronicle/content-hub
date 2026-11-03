@@ -19,7 +19,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
-from microsoft365_defender.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     INTEGRATION_DISPLAY_NAME,
     UPDATE_INCIDENT_SCRIPT_NAME,
@@ -29,7 +29,7 @@ from microsoft365_defender.core.constants import (
     LOGIN_API_ROOT_DEFAULT,
     GRAPH_API_ROOT_DEFAULT,
 )
-from microsoft365_defender.core.Microsoft365DefenderManager import Microsoft365DefenderManager
+from ..core.Microsoft365DefenderManager import Microsoft365DefenderManager
 
 
 @output_handler

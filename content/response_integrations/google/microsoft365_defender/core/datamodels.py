@@ -23,7 +23,7 @@ from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from TIPCommon.transformation import dict_to_flat, add_prefix_to_dict
 from TIPCommon.types import SingleJson
 
-from microsoft365_defender.core.constants import (
+from .constants import (
     ADDITIONAL_DATA_ALLOWLIST,
     ALERT_KEYS_TO_IGNORE,
     DEVICE_VENDOR,
@@ -32,8 +32,8 @@ from microsoft365_defender.core.constants import (
     DEVICES_KEY,
     MAX_EVIDENCES_PER_ALERT,
 )
-from microsoft365_defender.core.Microsoft365DefenderExceptions import Microsoft365DefenderNotImplementedException
-from microsoft365_defender.core.UtilsManager import dict_to_md5_hash, severity_to_priority
+from .Microsoft365DefenderExceptions import Microsoft365DefenderNotImplementedException
+from .UtilsManager import dict_to_md5_hash, severity_to_priority
 
 
 def _filter_additional_data(alert_data: SingleJson) -> SingleJson:

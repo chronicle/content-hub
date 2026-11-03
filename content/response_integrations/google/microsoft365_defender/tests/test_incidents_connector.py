@@ -41,23 +41,24 @@ def mock_siemplify():
 
 def test_incidents_connector_connectordef_has_api_root_parameter():
     """
-    Test that IncidentsConnector.connectordef defines the 'API Root' parameter.
+    Test that IncidentsConnector.yaml defines the 'API Root' parameter.
     """
-    connectordef_path = os.path.join(
-        os.path.dirname(__file__),
-        "../../../Integrations/Microsoft365Defender/Connectors/IncidentsConnector.yaml",
-    )
-    with open(connectordef_path, "r") as f:
-        data = json.load(f)
+    from pathlib import Path
+    from integration_testing.common import get_def_file_content
 
-    parameters = data.get("Parameters", [])
-    api_root_param = next((p for p in parameters if p.get("Name") == "API Root"), None)
+    connectordef_path = (
+        Path(__file__).parent.parent / "connectors" / "IncidentsConnector.yaml"
+    )
+    data = get_def_file_content(connectordef_path)
+
+    parameters = data.get("parameters", [])
+    api_root_param = next((p for p in parameters if p.get("name") == "API Root"), None)
 
     assert (
         api_root_param is not None
     ), "API Root' parameter is missing in IncidentsConnector.yaml"
-    assert api_root_param.get("DefaultValue") == "https://api.security.microsoft.com"
-    assert api_root_param.get("IsMandatory") is True
+    assert api_root_param.get("default_value") == "https://api.security.microsoft.com"
+    assert api_root_param.get("is_mandatory") is True
 
 
 def test_incidents_connector_gcc_high_configuration():

@@ -34,14 +34,14 @@ from TIPCommon.base.job.job_case import (
 )
 from TIPCommon.data_models import CaseDataStatus, AlertCard
 from TIPCommon.rest.soar_api import rename_case
-from microsoft365_defender.core import constants
-from microsoft365_defender.core.datamodels import AlertWithEvidence, Incident
-from microsoft365_defender.core.Microsoft365DefenderExceptions import (
+from ..core import constants
+from ..core.datamodels import AlertWithEvidence, Incident
+from ..core.Microsoft365DefenderExceptions import (
     Microsoft365DefenderException,
     NotFoundItemException,
 )
-from microsoft365_defender.core.Microsoft365DefenderManager import Microsoft365DefenderManager
-from microsoft365_defender.core.UtilsManager import (
+from ..core.Microsoft365DefenderManager import Microsoft365DefenderManager
+from ..core.UtilsManager import (
     get_m365_alert_id_from_soar_alert,
     get_m365_alert_id_from_soar_alerts,
     parse_iso_datetime,

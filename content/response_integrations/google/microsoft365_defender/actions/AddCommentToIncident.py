@@ -19,14 +19,14 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
-from microsoft365_defender.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     ADD_COMMENT_TO_INCIDENT_SCRIPT_NAME,
     INTEGRATION_DISPLAY_NAME,
     LOGIN_API_ROOT_DEFAULT,
     GRAPH_API_ROOT_DEFAULT,
 )
-from microsoft365_defender.core.Microsoft365DefenderManager import (
+from ..core.Microsoft365DefenderManager import (
     Microsoft365DefenderManager,
     NotFoundItemException,
 )

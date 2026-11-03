@@ -728,7 +728,7 @@ def test_paginate_results_breaks_on_timeout_in_next_link(manager):
     mock_resp1.status_code = 200
 
     with patch.object(manager.session, "request", return_value=mock_resp1), \
-         patch("Microsoft365DefenderManager.is_approaching_timeout", return_value=True):
+         patch("microsoft365_defender.core.Microsoft365DefenderManager.is_approaching_timeout", return_value=True):
         results = manager._paginate_results(
             method="GET",
             url="http://test/incidents",
@@ -749,7 +749,7 @@ def test_paginate_results_breaks_on_timeout_in_skip_loop(manager):
     mock_resp1.status_code = 200
 
     with patch.object(manager.session, "request", return_value=mock_resp1), \
-         patch("Microsoft365DefenderManager.is_approaching_timeout", side_effect=[False, True]):
+         patch("microsoft365_defender.core.Microsoft365DefenderManager.is_approaching_timeout", return_value=True):
         results = manager._paginate_results(
             method="GET",
             url="http://test/incidents",

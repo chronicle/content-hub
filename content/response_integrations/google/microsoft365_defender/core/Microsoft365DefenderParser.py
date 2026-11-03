@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from TIPCommon.types import SingleJson
 
-from microsoft365_defender.core.datamodels import Alert, AlertWithEvidence, Device, Incident
+from .datamodels import Alert, AlertWithEvidence, Device, Incident
 
 
 class Microsoft365DefenderParser:
