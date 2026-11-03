@@ -18,11 +18,11 @@ import requests
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
-from mandiant_digital_threat_monitoring.core import api_utils
-from mandiant_digital_threat_monitoring.core import constants
-from mandiant_digital_threat_monitoring.core import AuthenticationManager as auth_manager
-from mandiant_digital_threat_monitoring.core import MandiantDTMManager as api_manager
-from mandiant_digital_threat_monitoring.core.exceptions import MandiantDTMBadRequestException
+from ..core import api_utils
+from ..core import constants
+from ..core import AuthenticationManager as auth_manager
+from ..core import MandiantDTMManager as api_manager
+from ..core.exceptions import MandiantDTMBadRequestException
 
 
 class UpdateAlert(Action):

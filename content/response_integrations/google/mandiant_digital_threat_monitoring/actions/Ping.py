@@ -17,10 +17,10 @@ from __future__ import annotations
 from typing import Any
 
 from TIPCommon.base.action import Action
-from mandiant_digital_threat_monitoring.core import api_utils
-from mandiant_digital_threat_monitoring.core import constants
-from mandiant_digital_threat_monitoring.core import AuthenticationManager as auth_manager
-from mandiant_digital_threat_monitoring.core import MandiantDTMManager as api_manager
+from ..core import api_utils
+from ..core import constants
+from ..core import AuthenticationManager as auth_manager
+from ..core import MandiantDTMManager as api_manager
 
 
 class Ping(Action):

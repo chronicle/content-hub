@@ -23,10 +23,10 @@ from requests.structures import CaseInsensitiveDict
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon.extraction import extract_configuration_param
-from mandiant_digital_threat_monitoring.core import constants
-from mandiant_digital_threat_monitoring.core import AuthenticationManager as auth_manager
-from mandiant_digital_threat_monitoring.core import MandiantDTMManager as api_manager
-from mandiant_digital_threat_monitoring.core.exceptions import MandiantDTMException
+from . import constants
+from . import AuthenticationManager as auth_manager
+from . import MandiantDTMManager as api_manager
+from .exceptions import MandiantDTMException
 
 
 IntegrationParams = collections.namedtuple(

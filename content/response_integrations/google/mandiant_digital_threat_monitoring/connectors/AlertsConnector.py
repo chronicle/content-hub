@@ -31,11 +31,11 @@ from TIPCommon.transformation import (
 )
 from TIPCommon.utils import is_empty_string_or_none, is_test_run
 from TIPCommon.base.connector import Connector
-from mandiant_digital_threat_monitoring.core import constants
-from mandiant_digital_threat_monitoring.core.datamodels import Alert
-from mandiant_digital_threat_monitoring.core import AuthenticationManager as auth_manager
-from mandiant_digital_threat_monitoring.core.MandiantDTMManager import ApiManager, ApiParameters
-from mandiant_digital_threat_monitoring.core.constants import EVENTS_LIMIT
+from ..core import constants
+from ..core.datamodels import Alert
+from ..core import AuthenticationManager as auth_manager
+from ..core.MandiantDTMManager import ApiManager, ApiParameters
+from ..core.constants import EVENTS_LIMIT
 
 
 class AlertsConnector(Connector):

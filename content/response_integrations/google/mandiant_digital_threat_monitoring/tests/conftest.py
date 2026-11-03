@@ -13,12 +13,18 @@
 # limitations under the License.
 
 from __future__ import annotations
-pytest_plugins = ("integration_testing.conftest",)
-import sys
+
+import importlib
+import json
 import os
 import pkgutil
-import importlib
+import sys
+from typing import Any
+
+import pytest
+from pytest_mock import MockFixture
 import soar_sdk
+
 sdk_dir = soar_sdk.__path__[0]
 if sdk_dir not in sys.path:
     sys.path.insert(0, sdk_dir)
@@ -26,22 +32,16 @@ original_stdout = sys.stdout
 for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
     try:
         flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
+        sys.modules[f"soar_sdk.{name}"] = flat_mod
         setattr(soar_sdk, name, flat_mod)
     except Exception:
         pass
 sys.stdout = original_stdout
 
-from typing import Any
-import json
-
-import pytest
-from pytest_mock import MockFixture
-
-import MandiantDTMManager
-from mandiant_digital_threat_monitoring.core import AuthenticationManager
-from mandiant_digital_threat_monitoring.core import MandiantDTMManager
-from integration_testing.logger import Logger
+from mandiant_digital_threat_monitoring.core import (
+    AuthenticationManager,
+    MandiantDTMManager,
+)
 
 
 @pytest.fixture(name="load_config")
@@ -52,7 +52,8 @@ def fixture_load_config() -> dict[str, Any]:
         dict[str, Any]: dictionary object for create auth and api params object
     """
     integration_config = {}
-    with open("config.json", "r", encoding="UTF-8") as f:
+    config_path = os.path.join(os.path.dirname(__file__), "config.json")
+    with open(config_path, encoding="UTF-8") as f:
         data = f.read()
 
     config = json.loads(data)
@@ -65,14 +66,14 @@ def fixture_load_config() -> dict[str, Any]:
 
 @pytest.fixture(name="auth_params")
 def fixture_auth_params(
-    load_config: dict[str, Any]
+    load_config: dict[str, Any],
 ) -> AuthenticationManager.SessionAuthenticationParameters:
     return AuthenticationManager.SessionAuthenticationParameters(**load_config)
 
 
 @pytest.fixture(name="api_params")
 def fixture_api_params(
-    load_config: dict[str, Any]
+    load_config: dict[str, Any],
 ) -> MandiantDTMManager.ApiParameters:
     """Create api params object.
 
@@ -82,7 +83,9 @@ def fixture_api_params(
     Returns:
         MandiantDTMManager.ApiParameters: api params object
     """
-    return MandiantDTMManager.ApiParameters(**{"api_root": load_config.get("api_root")})
+    return MandiantDTMManager.ApiParameters(
+        **{"api_root": load_config.get("api_root")}
+    )
 
 
 @pytest.fixture(name="session")
@@ -112,6 +115,7 @@ def fixture_session(
 def api_manager(
     session: MockFixture.Mock,
     api_params: MandiantDTMManager.ApiParameters,
+    mocker: MockFixture,
 ) -> MandiantDTMManager.ApiManager:
     """Return ApiManager manager instance
 
@@ -122,13 +126,8 @@ def api_manager(
     Returns:
         MandiantDTMManager.ApiManager: MandiantDTMManager.ApiManager object
     """
-    logger = Logger()
     return MandiantDTMManager.ApiManager(
         session=session,
         api_params=api_params,
-        logger=logger,
+        logger=mocker.Mock(),
     )
-
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
-    return script_session

@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import dataclasses
 import requests
-from mandiant_digital_threat_monitoring.core import api_utils
-from mandiant_digital_threat_monitoring.core.constants import ENDPOINTS
-from mandiant_digital_threat_monitoring.core.exceptions import (
+from . import api_utils
+from .constants import ENDPOINTS
+from .exceptions import (
     MandiantDTMException,
     MandiantDTMInvalidParameters,
     MandiantDTMInvalidUnicodeKeyError,

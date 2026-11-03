@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from TIPCommon.types import SingleJson
-from mandiant_digital_threat_monitoring.core import datamodels
+from . import datamodels
 
 
 def build_base_object(raw_data: SingleJson) -> datamodels.BaseObject:

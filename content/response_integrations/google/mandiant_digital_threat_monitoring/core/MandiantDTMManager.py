@@ -21,8 +21,8 @@ from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
 from TIPCommon.filters import filter_old_alerts
-from mandiant_digital_threat_monitoring.core import api_utils
-from mandiant_digital_threat_monitoring.core.constants import (
+from . import api_utils
+from .constants import (
     ALERT_STATUSES,
     ENDPOINTS,
     GTI_ENDPOINTS,
@@ -31,8 +31,8 @@ from mandiant_digital_threat_monitoring.core.constants import (
     MAX_LIMIT,
     SEVERITIES,
 )
-from mandiant_digital_threat_monitoring.core.datamodels import Alert
-from mandiant_digital_threat_monitoring.core import MandiantDTMParser as parser
+from .datamodels import Alert
+from . import MandiantDTMParser as parser
 
 
 @dataclasses.dataclass
