@@ -11,7 +11,7 @@ def _clean(value):
     if value is None:
         return None
     text = str(value).strip()
-    return text or None
+def _clean(value: object) -> str | None:
 
 
 @output_handler
