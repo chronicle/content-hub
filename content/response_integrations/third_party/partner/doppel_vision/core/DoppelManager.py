@@ -80,7 +80,7 @@ class DoppelManager:
             auth_provider=self.auth_provider,
             session=session,
             sleep=sleep,
-        )
+        self.http_client = HttpClient(self.api_root, self.auth_provider, session=session, sleep=sleep)
 
     def connection_test(self) -> bool:
         """Tests connectivity and credentials against GET /alerts."""
