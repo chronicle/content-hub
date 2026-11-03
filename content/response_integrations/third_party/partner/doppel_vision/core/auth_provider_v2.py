@@ -17,7 +17,8 @@ from .token_cache import TokenCache
 
 
 def _oauth_error_message(payload: Any, status_code: int) -> str:
-    detail = None
+def _oauth_error_message(status_code: int, payload: object, fallback_text: str) -> str:
+    detail: str | None = None
     if isinstance(payload, dict):
         detail = payload.get("error_description") or payload.get("error") or payload.get("message")
     suffix = f": {detail}" if detail else ""
