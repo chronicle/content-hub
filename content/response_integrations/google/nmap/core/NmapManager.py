@@ -18,9 +18,9 @@ import shlex
 import subprocess
 
 from TIPCommon.types import ChronicleSOAR
-from nmap.core import constants
-from nmap.core import exceptions
-from nmap.core.NmapParser import NmapParser
+from . import constants
+from . import exceptions
+from .NmapParser import NmapParser
 
 
 @dataclass(slots=True)

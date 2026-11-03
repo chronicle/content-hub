@@ -16,9 +16,9 @@ from __future__ import annotations
 from typing import NoReturn
 
 from TIPCommon.base.action import Action
-from nmap.core import constants
-from nmap.core import exceptions
-from nmap.core.NmapManager import NmapManager
+from ..core import constants
+from ..core import exceptions
+from ..core.NmapManager import NmapManager
 
 
 class Ping(Action):

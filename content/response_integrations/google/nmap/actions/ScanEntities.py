@@ -22,9 +22,9 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value, convert_list_to_comma_string
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import get_entity_original_identifier
-from nmap.core import constants
-from nmap.core.NmapManager import NmapManager, NmapScanResult
-from nmap.core import utils
+from ..core import constants
+from ..core.NmapManager import NmapManager, NmapScanResult
+from ..core import utils
 
 
 class ScanEntities(Action):
