@@ -97,7 +97,21 @@ class DoppelManager:
         return True
 
     def get_alert(self, entity: str | None = None, alert_id: str | None = None) -> dict[str, Any]:
-        """Fetches an alert using either the entity or the alert ID, but not both."""
+    def get_alert(
+        self, id: str | None = None, entity: str | None = None
+    ) -> SingleJson:
+        """Fetch a single alert by ID or entity.
+
+        Args:
+            id: Alert ID.
+            entity: Entity value.
+
+        Returns:
+            Raw alert payload dictionary.
+
+        Raises:
+            ValueError: If neither `id` nor `entity` is provided.
+        """
         if entity and alert_id:
             raise ValueError("Only one of 'entity' or 'alert_id' can be provided, not both.")
         if not entity and not alert_id:
