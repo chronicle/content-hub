@@ -1,0 +1,870 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Create Scan:
+  ai_description: >-
+    ### General Description
+
+    Creates a new vulnerability scan in Nessus using a specified template and target
+    entities (IP Addresses and Hostnames). This action automates the setup of scans
+    by resolving template titles to UUIDs and submitting the scan configuration to
+    the Nessus API.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the Nessus API using provided credentials.
+
+    2. **Target Identification**: Collects all IP Address and Hostname entities from
+    the current context to serve as scan targets.
+
+    3. **Template Resolution**: Queries Nessus to find the unique identifier (UUID)
+    associated with the provided 'Scan Template Title'.
+
+    4. **Scan Creation**: Sends a POST request to the Nessus `/scans` endpoint with
+    the scan name, targets, description, and template UUID.
+
+    5. **Result Handling**: Returns the details of the newly created scan as a JSON
+    result.
+
+
+    ### Additional Notes
+
+    The action requires a valid scan template title that exists in the Nessus instance.
+  ai_short_description: >-
+    Creates a new vulnerability scan in Nessus using a specified template and target
+    entities (IP Addresses and Hostnames).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new vulnerability scan configuration in the Nessus scanner.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Nessus API to create a new scan configuration.
+      It does not fetch data for enrichment, nor does it mutate internal SecOps data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == ADDRESS or entity.entity_type == HOSTNAME`. This means it targets ADDRESS
+      and HOSTNAME entities, filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a vulnerability scan in Nessus. This does not match any of
+      the predefined outcome categories such as enriching IOCs/assets, updating alerts,
+      creating tickets, blocking IOCs, or submitting files to a sandbox.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Scan Name | String | Yes | Scan display name. |
+
+    | Scan Template Title | String | Yes | Scan template title value. |
+
+    | Description | String | No | Description content. |
+Get Scan Report:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a comprehensive scan report from Nessus Scanner for a specified scan
+    name. This action checks the current status of a scan and, if finished, triggers
+    the generation of an HTML report, downloads it, and attaches it to the action
+    results. If the scan is still running, the action remains in an 'In Progress'
+    state to allow for asynchronous polling.
+
+
+    ### Flow Description
+
+    1. Initializes the Nessus client using the provided API keys and root URL.
+
+    2. Retrieves the list of all scans to find the unique identifier (ID) associated
+    with the provided 'Scan Name'.
+
+    3. Fetches the specific details of the scan to check its status.
+
+    4. If the status is 'completed', sends a POST request to Nessus to export the
+    scan results into an HTML format.
+
+    5. Monitors the export status until the file is marked as 'ready'.
+
+    6. Downloads the generated HTML file, encodes it in base64, and attaches it to
+    the action results as 'ScanReport.html'.
+
+    7. If the status is not 'completed', the action returns an 'In Progress' state
+    for later re-execution.
+
+
+    ### Additional Notes
+
+    This action is marked as asynchronous. It will continue to poll the Nessus API
+    until the scan is completed or an error occurs. Note that the export process itself
+    involves a POST request to the external system to create the report file.
+  ai_short_description: >-
+    Retrieves a comprehensive scan report from Nessus Scanner for a specified scan
+    name, exporting and attaching the results as an HTML file once the scan is completed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates an export process on the Nessus server by making a POST request to
+      generate an HTML report file.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches scan details and downloads a report (fetches_data=true).
+      To download the report, it must first export it by making a POST request to
+      the Nessus API, which creates an export file on the server (can_mutate_external_data=true).
+      It does not mutate internal SecOps data, update entities, create insights, modify
+      alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use entity-specific identifiers.
+      It operates solely based on the provided 'Scan Name' parameter. Therefore, all
+      entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a vulnerability scan report from Nessus based on a scan
+      name. It does not enrich specific IOCs or assets, nor does it modify alerts,
+      tickets, blocklists, or identities. It also does not download a file from a
+      remote endpoint for forensics (it downloads a report from the scanner). Therefore,
+      it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Scan Name | String | Yes | Scan display name. |
+Get Scan Templates:
+  ai_description: >-
+    ### General Description
+
+    The **Get Scan Templates** action retrieves a comprehensive list of all available
+    scan templates from the Nessus Scanner server. This action is primarily used for
+    discovery, allowing users to identify the specific policies and templates (such
+    as 'WannaCry Ransomware' or 'Advanced Scan') available on the Nessus instance.
+    The retrieved information includes template titles, names, and unique identifiers
+    (UUIDs), which are often required as inputs for creating or launching new scans.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action establishes a session with the Nessus Scanner
+    API using the integration configuration credentials.
+
+    2. **Data Retrieval**: It executes a GET request to the Nessus endpoint `/editor/policy/templates`
+    to fetch the complete list of scan templates.
+
+    3. **Data Formatting**: The action processes the raw API response into a structured
+    JSON object and a CSV-formatted list containing the Title, Name, and UUID for
+    each template.
+
+    4. **Output Generation**: If templates are found, a data table titled 'Nessus
+    Scan Templates' is added to the action output, and the JSON result is populated
+    with the template data.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities and is generally used as a prerequisite
+    step to gather template UUIDs for subsequent scan creation actions.
+  ai_short_description: >-
+    Retrieves a comprehensive list of all available scan templates from the Nessus
+    Scanner server.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Nessus API to fetch scan templates (fetches_data=true).
+      It does not perform any state-changing operations on the external system (can_mutate_external_data=false)
+      and does not modify internal case data, entities, alerts, or create insights/comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It simply retrieves
+      a global list of scan templates from the Nessus server without referencing specific
+      entity identifiers or types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration data (scan templates) from the Nessus server.
+      It does not enrich specific IOCs or assets, mutate external state, or interact
+      with alerts, tickets, or emails. Therefore, it does not match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get Scans:
+  ai_description: >-
+    ### General Description
+
+    The **Get Scans** action retrieves a comprehensive list of all existing scans
+    from a Nessus Scanner instance. It provides high-level visibility into the scanning
+    environment by fetching details such as scan names, unique identifiers (UUIDs),
+    and current execution statuses (e.g., completed, running, or pending).
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action connects to the Nessus Scanner API using the
+    integration configuration credentials.
+
+    2. **Data Retrieval**: It executes a GET request to the Nessus `/scans` endpoint
+    to retrieve the full list of available scans.
+
+    3. **Data Processing**: The action processes the raw scan data to extract names
+    and statuses for reporting.
+
+    4. **Output Generation**: A data table named "Nessus Scans" is created and attached
+    to the action results. The full list of scan objects is returned as a JSON payload.
+
+
+    ### Additional Notes
+
+    This action is a global query and does not target or filter by specific entities.
+  ai_short_description: >-
+    Retrieves a comprehensive list of all existing scans from a Nessus Scanner instance,
+    including scan names, UUIDs, and execution statuses.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Nessus API to fetch a list of scans (fetches_data=true).
+      It does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It performs a global query to fetch all scans, so all entity type
+      flags and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a list of scans from Nessus Scanner. This does not match
+      any of the specific outcome categories such as enriching an IOC/asset, updating
+      alerts, managing tickets, or modifying blocklists.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Launch Scan:
+  ai_description: >-
+    ### General Description
+
+    The **Launch Scan** action triggers a pre-configured vulnerability scan on a Nessus
+    server. It identifies the target scan by its display name, retrieves the internal
+    scan ID, and initiates the execution. This action is primarily used to automate
+    the start of security assessments within a SOAR workflow.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Nessus API using the provided Access Key,
+    Secret Key, and API Root.
+
+    2. **Scan Lookup**: Queries the Nessus server via a GET request to the `/scans`
+    endpoint to find the scan matching the provided **Scan Name** and retrieves its
+    unique `object_id`.
+
+    3. **Execution**: Sends a POST request to the Nessus `/scans/{scan_id}/launch`
+    endpoint using the identified scan ID to start the scan.
+
+    4. **Verification**: Retrieves the updated scan details via another GET request
+    to identify the targets associated with the scan and confirms whether the initiation
+    was successful.
+
+    5. **Reporting**: Returns a success message containing the scan name and targets,
+    or a failure message if the scan could not be started.
+
+
+    ### Additional Notes
+
+    * This action does not create new scans; it only launches existing ones already
+    defined in the Nessus environment.
+
+    * The action does not wait for the scan to complete; it only confirms that the
+    launch command was accepted.
+  ai_short_description: >-
+    Triggers a pre-configured vulnerability scan on a Nessus server by its display
+    name and retrieves the associated targets.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a vulnerability scan on the external Nessus server by sending a POST
+      request to the launch endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making GET requests to retrieve scan details and
+      targets. It mutates external data by making a POST request to launch the scan
+      on the Nessus server. It does not mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities (e.g., `siemplify.target_entities`).
+      It relies entirely on the provided 'Scan Name' parameter to execute its logic.
+      Therefore, all entity type and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a vulnerability scan on a Nessus server. This operation
+      does not match any of the predefined outcome categories such as enriching an
+      IOC/Asset, updating an alert, containing a host, or managing tickets. Therefore,
+      all outcome category flags are set to false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Scan Name | String | Yes | Scan display name. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the Nessus Scanner instance. It validates that the integration's
+    configuration parameters, such as the Access Key, Secret Key, and API Root, are
+    correct and that the Nessus server is operational and reachable.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the 'Access Key', 'Secret Key',
+    and 'Api Root' from the NessusScanner integration settings.
+
+    2. **Manager Initialization**: It initializes the NessusScanner manager using
+    the retrieved credentials.
+
+    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
+    performs a GET request to the `/server/status` endpoint of the Nessus API.
+
+    4. **Status Verification**: It evaluates the response to determine if the server
+    status is 'ready'.
+
+    5. **Action Conclusion**: The action ends with a success message ('Connection
+    Established') and a result value of 'true' if the connection is successful, or
+    a failure message ('Connection Failed') and 'false' otherwise.
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the Nessus Scanner
+    integration or for troubleshooting communication issues.
+
+    - It specifically checks for a 'ready' status from the Nessus server's status
+    endpoint.
+  ai_short_description: >-
+    Tests connectivity between Google SecOps and the Nessus Scanner instance to verify
+    configuration parameters and server availability.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Nessus API to check the server status.
+      It does not fetch contextual data for entities or alerts, nor does it mutate
+      any external or internal data. It simply tests connectivity.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It is a generic connectivity
+      test that operates independently of case or entity data. Therefore, all entity
+      types and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) to verify integration settings.
+      It does not enrich IOCs/assets, update alerts, manage tickets, modify blocklists/allowlists,
+      manage identities, contain hosts, search events/emails, or submit files. Thus,
+      it does not match any of the specified outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
