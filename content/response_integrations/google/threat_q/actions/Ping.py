@@ -16,7 +16,7 @@ from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon import extract_configuration_param
-from threat_q.core.ThreatQManager import ThreatQManager
+from ..core.ThreatQManager import ThreatQManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
 # =====================================

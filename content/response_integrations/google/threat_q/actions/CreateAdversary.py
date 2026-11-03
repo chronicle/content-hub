@@ -23,9 +23,9 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon import extract_configuration_param
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
-from threat_q.core.ThreatQManager import ThreatQManager
-from threat_q.core.custom_exceptions import ThreatQManagerException
-from threat_q.core.constants import INTEGRATION_NAME, INTEGRATION_PREFIX, CREATE_ADVERSARY_SCRIPT
+from ..core.ThreatQManager import ThreatQManager
+from ..core.custom_exceptions import ThreatQManagerException
+from ..core.constants import INTEGRATION_NAME, INTEGRATION_PREFIX, CREATE_ADVERSARY_SCRIPT
 
 
 @output_handler

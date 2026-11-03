@@ -14,25 +14,43 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import pathlib
+import pkgutil
+import sys
 from collections.abc import Generator
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 import requests
+import soar_sdk
 
-from threat_q.core.ThreatQManager import ThreatQManager, ApiToken
+sdk_dir = soar_sdk.__path__[0]
+if sdk_dir not in sys.path:
+    sys.path.insert(0, sdk_dir)
+original_stdout = sys.stdout
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    try:
+        flat_mod = importlib.import_module(name)
+        sys.modules[f"soar_sdk.{name}"] = flat_mod
+        setattr(soar_sdk, name, flat_mod)
+    except Exception:
+        pass
+sys.stdout = original_stdout
+
+from threat_q.core.ThreatQManager import ApiToken, ThreatQManager  # noqa: E402
 
 
-def get_json_file_content(path: pathlib.Path) -> dict:
-    """Loads JSON file content."""
+def get_json_file_content(path: pathlib.Path) -> dict[str, Any]:
+    """Load JSON file content."""
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
-CONFIG: dict = get_def_file_content(CONFIG_PATH)
+CONFIG: dict[str, Any] = get_json_file_content(CONFIG_PATH)
 
 
 @pytest.fixture

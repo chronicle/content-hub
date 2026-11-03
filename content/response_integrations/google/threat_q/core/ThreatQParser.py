@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from threat_q.core.datamodels import (
+from .datamodels import (
     Indicator,
     Comment,
     Attribute,

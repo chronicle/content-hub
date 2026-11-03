@@ -28,15 +28,15 @@ from typing import Any
 
 import requests
 from urllib.parse import urljoin
-from threat_q.core.ThreatQParser import ThreatQParser
-from threat_q.core.constants import (
+from .ThreatQParser import ThreatQParser
+from .constants import (
     INDICATOR_TYPE_MAPPING,
     OBJECT_TYPE_MAPPING,
     STATUS_MAPPING,
     SCORE_MAPPING,
     ASCENDING_SORT,
 )
-from threat_q.core.custom_exceptions import (
+from .custom_exceptions import (
     ThreatQManagerException,
     ObjectNotFoundException,
     ListRelatedObjectsException,

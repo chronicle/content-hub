@@ -18,15 +18,15 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon import extract_configuration_param, extract_action_param
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
-from threat_q.core.ThreatQManager import ThreatQManager
-from threat_q.core.custom_exceptions import ThreatQManagerException, ObjectCreateException
-from threat_q.core.constants import (
+from ..core.ThreatQManager import ThreatQManager
+from ..core.custom_exceptions import ThreatQManagerException, ObjectCreateException
+from ..core.constants import (
     INTEGRATION_NAME,
     CREATE_EVENT_SCRIPT,
     HAPPENED_AT_DATETIME_DEFAULT_FORMAT,
 )
 from datetime import datetime
-from threat_q.core.ThreatQUtils import *
+from ..core.ThreatQUtils import *
 
 
 @output_handler

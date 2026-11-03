@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 from datetime import datetime
-from threat_q.core.constants import HAPPENED_AT_DATETIME_DEFAULT_FORMAT
+from .constants import HAPPENED_AT_DATETIME_DEFAULT_FORMAT
 
 
 def validate_time_format(date_text):

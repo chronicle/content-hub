@@ -18,17 +18,17 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon import extract_configuration_param, extract_action_param
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from threat_q.core.ThreatQManager import ThreatQManager
+from ..core.ThreatQManager import ThreatQManager
 import re
 
-from threat_q.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     LINK_ENTITIES_TO_OBJECTS_SCRIPT,
     EMAIL_REGEX,
     OBJECT_TYPE_MAPPING,
 )
 
-from threat_q.core.custom_exceptions import ObjectNotFoundException
+from ..core.custom_exceptions import ObjectNotFoundException
 
 ENTITY_INDICATORS = [
     EntityTypes.CVE,

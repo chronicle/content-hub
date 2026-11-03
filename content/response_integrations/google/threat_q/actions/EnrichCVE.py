@@ -20,10 +20,10 @@ from soar_sdk.SiemplifyUtils import (
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon import extract_configuration_param, construct_csv, extract_action_param
-from threat_q.core.ThreatQManager import ThreatQManager
+from ..core.ThreatQManager import ThreatQManager
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from threat_q.core.constants import STATUS_MAPPING
+from ..core.constants import STATUS_MAPPING
 
 # =====================================
 #             CONSTANTS               #

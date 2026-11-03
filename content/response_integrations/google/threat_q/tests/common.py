@@ -13,8 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-import pathlib
+
 import json
+import pathlib
+from typing import Any
+
 INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
-CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / 'config.json'
-CONFIG: dict = json.loads(CONFIG_PATH.read_text()) if CONFIG_PATH.exists() else {}
+CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
+CONFIG: dict[str, Any] = json.loads(CONFIG_PATH.read_text(encoding="utf-8")) if CONFIG_PATH.exists() else {}

@@ -19,11 +19,11 @@ import pathlib
 
 from threat_q.tests import common
 
-
 VALID_SUFFIXES = (".py",)
 
 
 def import_all_integration_modules(integration: pathlib.Path) -> None:
+    """Import all Python modules across all subpackages of the integration."""
     if not integration.exists():
         msg: str = f"Cannot find integration {integration.name}"
         raise AssertionError(msg)
@@ -54,4 +54,5 @@ def _get_import_string(integration: str, package: str, module: str) -> str:
 
 
 def test_imports() -> None:
+    """Test that all integration modules can be imported."""
     import_all_integration_modules(common.INTEGRATION_PATH)

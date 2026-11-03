@@ -18,13 +18,13 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from TIPCommon import extract_configuration_param, extract_action_param
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
-from threat_q.core.ThreatQManager import ThreatQManager
-from threat_q.core.custom_exceptions import (
+from ..core.ThreatQManager import ThreatQManager
+from ..core.custom_exceptions import (
     ThreatQManagerException,
     ObjectNotFoundException,
     ObjectCreateException,
 )
-from threat_q.core.constants import INTEGRATION_NAME, ADD_ATTRIBUTE_SCRIPT
+from ..core.constants import INTEGRATION_NAME, ADD_ATTRIBUTE_SCRIPT
 
 
 @output_handler
