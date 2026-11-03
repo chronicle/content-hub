@@ -20,9 +20,9 @@ from typing import TYPE_CHECKING, Any
 
 from TIPCommon.extraction import extract_script_param
 from TIPCommon.types import SingleJson
-from cyber_ark_credential_provider.core import constants
-from cyber_ark_credential_provider.core import exceptions
-from cyber_ark_credential_provider.core.datamodels import ConfigurationParameters
+from . import constants
+from . import exceptions
+from .datamodels import ConfigurationParameters
 
 
 if TYPE_CHECKING:

@@ -30,7 +30,7 @@ from TIPCommon.rest.async_soar_platform_clients.soar_api_client import (
 )
 from TIPCommon.rest.async_soar_platform_clients.secops_soar import AsyncChronicleSOAR
 
-from cyber_ark_credential_provider.core.constants import (
+from ..core.constants import (
     LIST_ALL_RESULTS_VALUE,
     CONNECTORS_KEY,
     INTEGRATION_INSTANCES_KEY,
@@ -44,10 +44,10 @@ from cyber_ark_credential_provider.core.constants import (
     USERNAME_JOB_PARAM,
     PASSWORD_JOB_PARAM,
 )
-from cyber_ark_credential_provider.core.credential_provider_manager import CommandResult, CredentialProviderManager
-from cyber_ark_credential_provider.core.datamodels import ConfigurationParameters
-from cyber_ark_credential_provider.core import exceptions
-from cyber_ark_credential_provider.core.utils import (
+from ..core.credential_provider_manager import CommandResult, CredentialProviderManager
+from ..core.datamodels import ConfigurationParameters
+from ..core import exceptions
+from ..core.utils import (
     validate_ip_address,
     build_instance_name_lookup,
     build_connector_name_lookup,

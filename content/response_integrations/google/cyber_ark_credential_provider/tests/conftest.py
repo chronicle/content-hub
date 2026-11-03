@@ -57,9 +57,7 @@ for _mod in [
     if _mod not in sys.modules:
         sys.modules[_mod] = MagicMock()
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "Integrations" / "CyberArkCredentialProvider" / 'jobs'))
-
-import constants
+from cyber_ark_credential_provider.core import constants
 import pytest
 from cyber_ark_credential_provider.core.credential_provider_manager import (
     CredentialProviderManager,

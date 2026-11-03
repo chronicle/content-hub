@@ -26,7 +26,9 @@ from cyber_ark_credential_provider.core.constants import (
     SUCCESS_EXIT_CODE,
 )
 from cyber_ark_credential_provider.core.credential_provider_manager import CommandResult
-from sync_integration_credentials_job import SyncIntegrationCredentialJob
+from cyber_ark_credential_provider.jobs.sync_integration_credentials_job import (
+    SyncIntegrationCredentialJob,
+)
 
 
 @pytest.fixture
@@ -89,7 +91,7 @@ class TestValidateParams:
             "_get_configuration_parameters",
             return_value=MagicMock(docker_gateway_ip="127.0.0.1"),
         )
-        mocker.patch("sync_integration_credentials_job.validate_ip_address")
+        mocker.patch("cyber_ark_credential_provider.jobs.sync_integration_credentials_job.validate_ip_address")
 
         job._validate_params()
 
@@ -105,7 +107,7 @@ class TestValidateParams:
             "_get_configuration_parameters",
             return_value=MagicMock(docker_gateway_ip="127.0.0.1"),
         )
-        mocker.patch("sync_integration_credentials_job.validate_ip_address")
+        mocker.patch("cyber_ark_credential_provider.jobs.sync_integration_credentials_job.validate_ip_address")
 
         job._validate_params()
 
@@ -346,11 +348,11 @@ class TestInvalidEnvironmentHandling:
         job._prefetch_all_secrets = AsyncMock()
 
         mocker.patch(
-            "sync_integration_credentials_job.AsyncChronicleSOAR",
+            "cyber_ark_credential_provider.jobs.sync_integration_credentials_job.AsyncChronicleSOAR",
             return_value=AsyncMock(),
         )
         mocker.patch(
-            "sync_integration_credentials_job.AsyncMarketplaceApi",
+            "cyber_ark_credential_provider.jobs.sync_integration_credentials_job.AsyncMarketplaceApi",
             return_value=mock_api,
         )
 

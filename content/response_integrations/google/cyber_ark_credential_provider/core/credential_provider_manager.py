@@ -19,9 +19,9 @@ import binascii
 from collections import namedtuple
 from pathlib import Path
 import shlex
-from cyber_ark_credential_provider.core import constants
-from cyber_ark_credential_provider.core.datamodels import ConfigurationParameters
-from cyber_ark_credential_provider.core import exceptions
+from . import constants
+from .datamodels import ConfigurationParameters
+from . import exceptions
 
 import paramiko
 from paramiko.ssh_exception import NoValidConnectionsError, SSHException

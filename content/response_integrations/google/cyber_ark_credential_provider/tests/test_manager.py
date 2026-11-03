@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-import exceptions
+from cyber_ark_credential_provider.core import exceptions
 import pytest
 from cyber_ark_credential_provider.core.credential_provider_manager import (
     CommandResult,
@@ -43,6 +43,7 @@ class TestCredentialProviderManager:
             manager.docker_gateway_ip,
             username=manager.username,
             key_filename=str(manager.ssh_private_key_path),
+            timeout=30.0,
         )
 
     def test_create_ssh_client_with_password(
@@ -275,7 +276,7 @@ class TestCredentialProviderManager:
         expected_command = (
             f"{manager.sdk_path} GetPassword "
             f"-p AppDescs.AppID={app_id} "
-            f'-p Query="Safe={safe_name};Object={object_name}" '
+            f"-p Query='Safe={safe_name};Object={object_name}' "
             f"-o Password"
         )
         mock_client_instance.exec_command.assert_called_once_with(expected_command)
@@ -318,9 +319,9 @@ class TestCredentialProviderManager:
         expected_command = (
             f"{manager.sdk_path} GetPassword "
             f"-p AppDescs.AppID={app_id} "
-            f'-p Query="Safe={safe_name};'
+            f"-p Query='Safe={safe_name};"
             f"Folder={folder_name};"
-            f'Object={object_name}" '
+            f"Object={object_name}' "
             f"-o Password"
         )
         mock_client_instance.exec_command.assert_called_once_with(expected_command)
@@ -486,7 +487,7 @@ class TestCredentialProviderManager:
         expected_command = (
             f"{manager.sdk_path} GetPassword "
             f"-p AppDescs.AppID=test_app "
-            f'-p Query="Safe=test_safe;Object=test_object" '
+            f"-p Query='Safe=test_safe;Object=test_object' "
             f"-o Password"
         )
         mock_client_instance.exec_command.assert_called_once_with(expected_command)
@@ -528,7 +529,7 @@ class TestCredentialProviderManager:
         expected_command = (
             f"{manager.sdk_path} GetPassword "
             f"-p AppDescs.AppID=test_app "
-            f'-p Query="Safe=test_safe;Object=test_object;Folder=test_folder" '
+            f"-p Query='Safe=test_safe;Object=test_object;Folder=test_folder' "
             f"-o Pass"
         )
         mock_client_instance.exec_command.assert_called_once_with(expected_command)
@@ -616,4 +617,4 @@ class TestCredentialProviderManager:
         assert "AppDescs.AppID='App 123'" in command_arg
         assert "Safe=Safe-Prod" in command_arg
         assert "Object=Obj_Name/01" in command_arg
-        assert r"Folder='Root\Sub'" in command_arg
+        assert r"Folder=Root\Sub" in command_arg

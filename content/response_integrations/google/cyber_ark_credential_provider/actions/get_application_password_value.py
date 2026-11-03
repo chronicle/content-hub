@@ -20,14 +20,14 @@ from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import convert_list_to_comma_string
 from TIPCommon.validation import ParameterValidator
-from cyber_ark_credential_provider.core import constants
-from cyber_ark_credential_provider.core.credential_provider_manager import (
+from ..core import constants
+from ..core.credential_provider_manager import (
     CredentialProviderManager,
     CommandResult,
 )
-from cyber_ark_credential_provider.core.datamodels import ConfigurationParameters
-from cyber_ark_credential_provider.core import exceptions
-from cyber_ark_credential_provider.core import utils
+from ..core.datamodels import ConfigurationParameters
+from ..core import exceptions
+from ..core import utils
 
 
 class GetApplicationPasswordValue(Action):
