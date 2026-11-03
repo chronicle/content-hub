@@ -140,10 +140,7 @@ class TestFireEyeHXManagerBulk(unittest.TestCase):
         mock_response.status_code = 200
         self.mock_session.post.return_value = mock_response
 
-        result = self.manager.create_bulk_acquisition(
-            script_b64="PHNjcmlwdD48L3NjcmlwdD4=",
-            host_set_id=42,
-        )
+        result = self.manager.create_bulk_acquisition(script_b64="PHNjcmlwdD48L3NjcmlwdD4=", host_set_id=42)
 
         self.mock_session.post.assert_called_once_with(
             f"{self.api_root}/acqs/bulk",
@@ -227,10 +224,7 @@ class TestFireEyeHXManagerBulk(unittest.TestCase):
         method, url = mock_request.call_args[0][:2]
         self.assertEqual(method, "POST")
         self.assertEqual(url, f"{manager.api_root}/acqs/bulk")
-        self.assertEqual(
-            mock_request.call_args[1]["json"],
-            {"script": {"b64": "c2NyaXB0"}, "host_set": {"_id": 12}},
-        )
+        self.assertEqual(mock_request.call_args[1]["json"], {"script": {"b64": "c2NyaXB0"}, "host_set": {"_id": 12}})
 
         # 3. get_bulk_acquisition
         manager.get_bulk_acquisition(42)

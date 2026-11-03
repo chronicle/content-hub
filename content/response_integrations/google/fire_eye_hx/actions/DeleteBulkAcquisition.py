@@ -32,12 +32,8 @@ INTEGRATION_NAME: str = "FireEyeHX"
 SCRIPT_NAME: str = "Delete Bulk Acquisition"
 
 
-@output_handler
-def main() -> None:
-    """Delete a bulk acquisition job from FireEye HX."""
-    siemplify = SiemplifyAction()
-    siemplify.script_name = SCRIPT_NAME
-
+def _init_manager(siemplify: SiemplifyAction) -> FireEyeHXManager:
+    """Initialize and return a FireEyeHXManager instance using action configuration."""
     api_root: str = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
@@ -63,6 +59,19 @@ def main() -> None:
         default_value=True,
         input_type=bool,
     )
+    return FireEyeHXManager(
+        api_root=api_root,
+        username=username,
+        password=password,
+        verify_ssl=verify_ssl,
+    )
+
+
+@output_handler
+def main() -> None:
+    """Delete a bulk acquisition job from FireEye HX."""
+    siemplify = SiemplifyAction()
+    siemplify.script_name = SCRIPT_NAME
 
     bulk_id: str = extract_action_param(siemplify, param_name="Bulk Acquisition ID", is_mandatory=True)
 
@@ -73,9 +82,7 @@ def main() -> None:
 
     try:
         clean_bulk_id: int = parse_bulk_acquisition_id(bulk_id)
-
-        manager = FireEyeHXManager(api_root=api_root, username=username, password=password, verify_ssl=verify_ssl)
-
+        manager = _init_manager(siemplify)
         manager.delete_bulk_acquisition(clean_bulk_id)
         result_value = "true"
         output_message = f"Successfully deleted bulk acquisition {clean_bulk_id}."

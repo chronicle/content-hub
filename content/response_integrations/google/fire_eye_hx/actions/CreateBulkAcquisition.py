@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from base64 import b64encode
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
 from typing import TYPE_CHECKING
@@ -246,18 +247,106 @@ def add_missing_schema_namespaces(script_text: str, logger: SiemplifyLogger | No
     return script_text
 
 
+@dataclass(slots=True)
+class CreateBulkAcquisitionParams:
+    """Action parameters for CreateBulkAcquisition."""
+
+    script_content: str
+    host_set_name: str
+    host_set_id_param: str | None
+    agent_ids_param: str | None
+    comment: str
+    timeframe_start: str | None
+    timeframe_stop: str | None
+
+
+def _init_manager(siemplify: SiemplifyAction) -> FireEyeHXManager:
+    """Initialize and return a FireEyeHXManager instance using action configuration."""
+    api_root: str = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="API Root",
+        is_mandatory=True,
+    )
+    username: str = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Username",
+        is_mandatory=True,
+    )
+    password: str = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Password",
+        is_mandatory=True,
+    )
+    verify_ssl: bool = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Verify SSL",
+        default_value=True,
+        input_type=bool,
+    )
+    return FireEyeHXManager(
+        api_root=api_root,
+        username=username,
+        password=password,
+        verify_ssl=verify_ssl,
+    )
+
+
+def _extract_action_params(siemplify: SiemplifyAction) -> CreateBulkAcquisitionParams:
+    """Extract action parameters from SiemplifyAction."""
+    return CreateBulkAcquisitionParams(
+        script_content=extract_action_param(
+            siemplify,
+            param_name="Script Content",
+            is_mandatory=True,
+            print_value=False,
+        ),
+        host_set_name=extract_action_param(
+            siemplify,
+            param_name="Host Set Name",
+            is_mandatory=False,
+            default_value=DEFAULT_HOST_SET_NAME,
+        ),
+        host_set_id_param=extract_action_param(
+            siemplify,
+            param_name="Host Set ID",
+            is_mandatory=False,
+        ),
+        agent_ids_param=extract_action_param(
+            siemplify,
+            param_name="Agent IDs",
+            is_mandatory=False,
+        ),
+        comment=extract_action_param(
+            siemplify,
+            param_name="Comment",
+            is_mandatory=False,
+            default_value=DEFAULT_COMMENT,
+        ),
+        timeframe_start=extract_action_param(
+            siemplify,
+            param_name="Timeframe Start",
+            is_mandatory=False,
+        ),
+        timeframe_stop=extract_action_param(
+            siemplify,
+            param_name="Timeframe Stop",
+            is_mandatory=False,
+        ),
+    )
+
+
 def _prepare_script_b64(
-    script_content: str,
-    timeframe_start: str | None,
-    timeframe_stop: str | None,
+    params: CreateBulkAcquisitionParams,
     logger: SiemplifyLogger | None = None,
 ) -> str:
     """Process, validate, macro-substitute, and base64-encode acquisition script.
 
     Args:
-        script_content: Raw script content (XML or JSON).
-        timeframe_start: Optional timeframe start timestamp.
-        timeframe_stop: Optional timeframe stop timestamp.
+        params: Extracted action parameters containing script and timeframes.
         logger: Optional logger for diagnostic messages.
 
     Returns:
@@ -266,16 +355,16 @@ def _prepare_script_b64(
     Raises:
         ValueError: If script content is empty or malformed.
     """
-    if not script_content or not script_content.strip():
+    if not params.script_content or not params.script_content.strip():
         raise ValueError("Script Content must not be empty.")
 
-    if is_json_script(script_content):
-        script_text = extract_script_json(script_content, logger)
-        script_text = substitute_interval_macros(script_text, timeframe_start, timeframe_stop)
+    if is_json_script(params.script_content):
+        script_text = extract_script_json(params.script_content, logger)
+        script_text = substitute_interval_macros(script_text, params.timeframe_start, params.timeframe_stop)
         script_text = validate_json_script(script_text)
     else:
-        script_text = extract_script_xml(script_content, logger)
-        script_text = substitute_interval_macros(script_text, timeframe_start, timeframe_stop)
+        script_text = extract_script_xml(params.script_content, logger)
+        script_text = substitute_interval_macros(script_text, params.timeframe_start, params.timeframe_stop)
         script_text = add_missing_schema_namespaces(script_text, logger)
 
     return b64encode(script_text.encode("utf-8")).decode("utf-8")
@@ -283,18 +372,14 @@ def _prepare_script_b64(
 
 def _resolve_acquisition_targets(
     manager: FireEyeHXManager,
-    host_set_name: str,
-    host_set_id_param: str | None,
-    agent_ids_param: str | None,
+    params: CreateBulkAcquisitionParams,
     logger: SiemplifyLogger | None = None,
 ) -> tuple[int | None, list[str] | None]:
     """Resolve target host set ID or agent ID list for bulk acquisition.
 
     Args:
         manager: Authenticated FireEyeHXManager instance.
-        host_set_name: Host set name string (e.g. 'all_hosts').
-        host_set_id_param: Optional raw Host Set ID string.
-        agent_ids_param: Optional raw comma-separated Agent IDs string.
+        params: Extracted action parameters containing target specifications.
         logger: Optional logger for warnings.
 
     Returns:
@@ -304,24 +389,24 @@ def _resolve_acquisition_targets(
         ValueError: If targeting parameters are invalid or empty.
         FireEyeHXNotFoundError: If named host set cannot be found.
     """
-    if agent_ids_param and agent_ids_param.strip():
-        agent_ids = [aid for aid in convert_comma_separated_to_list(agent_ids_param) if aid]
+    if params.agent_ids_param and params.agent_ids_param.strip():
+        agent_ids = [aid for aid in convert_comma_separated_to_list(params.agent_ids_param) if aid]
         if not agent_ids:
             raise ValueError("Agent IDs must contain at least one agent ID.")
-        if host_set_id_param and str(host_set_id_param).strip() and logger:
+        if params.host_set_id_param and str(params.host_set_id_param).strip() and logger:
             logger.warn("Both Agent IDs and Host Set ID were provided; targeting specific Agent IDs.")
         return None, agent_ids
 
-    if host_set_id_param and str(host_set_id_param).strip():
+    if params.host_set_id_param and str(params.host_set_id_param).strip():
         try:
-            return int(str(host_set_id_param).strip()), None
+            return int(str(params.host_set_id_param).strip()), None
         except ValueError as val_err:
-            raise ValueError(f"Host Set ID must be an integer, got: {host_set_id_param}.") from val_err
+            raise ValueError(f"Host Set ID must be an integer, got: {params.host_set_id_param}.") from val_err
 
-    if host_set_name and host_set_name.strip():
-        resolved_id = manager.get_host_set_id_by_name(host_set_name.strip())
+    if params.host_set_name and params.host_set_name.strip():
+        resolved_id = manager.get_host_set_id_by_name(params.host_set_name.strip())
         if resolved_id is None:
-            raise FireEyeHXNotFoundError(f"Host set '{host_set_name}' was not found.")
+            raise FireEyeHXNotFoundError(f"Host set '{params.host_set_name}' was not found.")
         return resolved_id, None
 
     raise ValueError("Provide Agent IDs, Host Set ID or Host Set Name to target the bulk acquisition.")
@@ -333,54 +418,27 @@ def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
 
-    api_root: str = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="API Root", is_mandatory=True
-    )
-    username: str = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="Username", is_mandatory=True
-    )
-    password: str = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="Password", is_mandatory=True
-    )
-    verify_ssl: bool = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", default_value=True, input_type=bool
-    )
-
-    script_content: str = extract_action_param(
-        siemplify, param_name="Script Content", is_mandatory=True, print_value=False
-    )
-    host_set_name: str = extract_action_param(
-        siemplify, param_name="Host Set Name", is_mandatory=False, default_value=DEFAULT_HOST_SET_NAME
-    )
-    host_set_id_param: str | None = extract_action_param(siemplify, param_name="Host Set ID", is_mandatory=False)
-    agent_ids_param: str | None = extract_action_param(siemplify, param_name="Agent IDs", is_mandatory=False)
-    comment: str = extract_action_param(
-        siemplify, param_name="Comment", is_mandatory=False, default_value=DEFAULT_COMMENT
-    )
-    timeframe_start: str | None = extract_action_param(siemplify, param_name="Timeframe Start", is_mandatory=False)
-    timeframe_stop: str | None = extract_action_param(siemplify, param_name="Timeframe Stop", is_mandatory=False)
+    params = _extract_action_params(siemplify)
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     status: int = EXECUTION_STATE_COMPLETED
     result_value: str = "false"
     manager: FireEyeHXManager | None = None
-    agent_ids: list[str] | None = None
-    host_set_id: int | None = None
 
     try:
-        script_b64: str = _prepare_script_b64(script_content, timeframe_start, timeframe_stop, siemplify.LOGGER)
-
-        manager = FireEyeHXManager(api_root=api_root, username=username, password=password, verify_ssl=verify_ssl)
-
+        script_b64: str = _prepare_script_b64(params, siemplify.LOGGER)
+        manager = _init_manager(siemplify)
         host_set_id, agent_ids = _resolve_acquisition_targets(
-            manager, host_set_name, host_set_id_param, agent_ids_param, siemplify.LOGGER
+            manager,
+            params,
+            siemplify.LOGGER,
         )
 
         acquisition_data = manager.create_bulk_acquisition(
             script_b64=script_b64,
             host_set_id=host_set_id,
             agent_ids=agent_ids,
-            comment=comment,
+            comment=params.comment,
         )
 
         bulk_id = acquisition_data.get("_id")
