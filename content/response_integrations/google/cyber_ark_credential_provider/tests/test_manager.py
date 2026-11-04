@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import shlex
+
 from cyber_ark_credential_provider.core import exceptions
 import pytest
 from cyber_ark_credential_provider.core.credential_provider_manager import (
@@ -274,7 +276,7 @@ class TestCredentialProviderManager:
         assert result.exit_code == expected_exit_code
 
         expected_command = (
-            f"{manager.sdk_path} GetPassword "
+            f"{shlex.quote(str(manager.sdk_path))} GetPassword "
             f"-p AppDescs.AppID={app_id} "
             f"-p Query='Safe={safe_name};Object={object_name}' "
             f"-o Password"
@@ -317,7 +319,7 @@ class TestCredentialProviderManager:
         )
 
         expected_command = (
-            f"{manager.sdk_path} GetPassword "
+            f"{shlex.quote(str(manager.sdk_path))} GetPassword "
             f"-p AppDescs.AppID={app_id} "
             f"-p Query='Safe={safe_name};"
             f"Folder={folder_name};"
@@ -395,7 +397,7 @@ class TestCredentialProviderManager:
         assert result.error == ""
         assert result.exit_code == 0
 
-        expected_full_command = f"{manager.sdk_path} {custom_command}"
+        expected_full_command = f"{shlex.quote(str(manager.sdk_path))} {custom_command}"
         mock_client_instance.exec_command.assert_called_once_with(expected_full_command)
         mock_client_instance.close.assert_called_once()
 
@@ -428,7 +430,7 @@ class TestCredentialProviderManager:
 
         assert result.error == expected_error
         assert result.exit_code == 1
-        expected_full_command = f"{manager.sdk_path} {custom_command}"
+        expected_full_command = f"{shlex.quote(str(manager.sdk_path))} {custom_command}"
         mock_client_instance.exec_command.assert_called_once_with(expected_full_command)
         mock_client_instance.close.assert_called_once()
 
@@ -446,7 +448,7 @@ class TestCredentialProviderManager:
             manager.execute_custom_sdk_command(custom_command)
 
         assert "Connection lost" in str(exc_info.value)
-        expected_full_command = f"{manager.sdk_path} {custom_command}"
+        expected_full_command = f"{shlex.quote(str(manager.sdk_path))} {custom_command}"
         mock_client_instance.exec_command.assert_called_once_with(expected_full_command)
         mock_client_instance.close.assert_not_called()
 
@@ -485,7 +487,7 @@ class TestCredentialProviderManager:
         assert result.exit_code == 0
 
         expected_command = (
-            f"{manager.sdk_path} GetPassword "
+            f"{shlex.quote(str(manager.sdk_path))} GetPassword "
             f"-p AppDescs.AppID=test_app "
             f"-p Query='Safe=test_safe;Object=test_object' "
             f"-o Password"
@@ -527,7 +529,7 @@ class TestCredentialProviderManager:
         assert result.output == expected_output
 
         expected_command = (
-            f"{manager.sdk_path} GetPassword "
+            f"{shlex.quote(str(manager.sdk_path))} GetPassword "
             f"-p AppDescs.AppID=test_app "
             f"-p Query='Safe=test_safe;Object=test_object;Folder=test_folder' "
             f"-o Pass"

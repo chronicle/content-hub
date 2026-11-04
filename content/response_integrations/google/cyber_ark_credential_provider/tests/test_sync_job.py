@@ -290,7 +290,7 @@ class TestGetConfigurationParameters:
 
         config_params = job._get_configuration_parameters()
 
-        assert str(config_params.sdk_path) == "/opt/CARKaim/sdk/clipasswordsdk"
+        assert config_params.sdk_path.as_posix() == "/opt/CARKaim/sdk/clipasswordsdk"
         assert config_params.username == "secopsuser"
         assert config_params.password == "secret_pass"
         assert config_params.docker_gateway_ip == "172.17.0.1"
