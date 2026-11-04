@@ -17,7 +17,7 @@ from urllib.parse import urljoin
 from datetime import datetime
 
 from azure_ad_identity_protection.tests.conftest import CONFIG
-from azure_ad_identity_protection.core import (
+from azure_ad_identity_protection.core.AzureADIdentityProtectionManager import (
     AzureADIdentityProtectionManager,
 )
 
