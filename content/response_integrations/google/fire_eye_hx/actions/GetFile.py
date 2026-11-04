@@ -20,6 +20,7 @@ import pathlib
 import sys
 import uuid
 import zipfile
+from functools import partial
 
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -39,12 +40,33 @@ from ..core.FireEyeHXManager import (
     FireEyeHXManagerError,
     FireEyeHXNotFoundError,
 )
+from ..core.UtilsManager import (
+    AGENT_LOOKUP_ENTITY_TYPES,
+    ErrorType,
+    classify_exception,
+    count_skipped_entities,
+    get_agent_lookup_failure_counts,
+    log_action_result_summary,
+    log_timeout_marker_once,
+)
 
 INTEGRATION_NAME = "FireEyeHX"
 SCRIPT_NAME = "Get File"
 SUPPORTED_ENTITIES = [EntityTypes.HOSTNAME, EntityTypes.ADDRESS]
 MAX_FILE_SIZE_MB = 100
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+ACQUISITION_MODULES = (
+    "file-acquisition-api",
+    "file-acquisition-raw",
+    "w32apifile-acquisition",
+    "w32rawfile-acquisition",
+)
+ACQUISITION_FAILED_STATE_ERROR_TYPES = {
+    "FAILED": ErrorType.VENDOR_ERROR,
+    "EXPIRED": ErrorType.TIMEOUT,
+    "DELETED": ErrorType.CANCELLED,
+    "CANCELLED": ErrorType.CANCELLED,
+}
 
 
 def extract_zip_metadata(temp_filename, zip_passphrase=None, siemplify=None):
@@ -79,24 +101,83 @@ def split_file_path(file_path):
     return file_name, file_dir
 
 
-def start_file_acquisition(
-    siemplify, hx_manager, agent_id_param, file_path_param, use_api_mode_param, external_id_param
-):
-    """Start the file acquisition process."""
-    file_name, file_path = split_file_path(file_path_param)
+def has_acquired_file(manifest):
+    """Check if the manifest of an acquisition package lists an acquired file.
 
+    Args:
+        manifest: The manifest.json content of the acquisition package.
+
+    Returns:
+        True or False, or None if the manifest is missing or has no list of audits. Never raises.
+    """
+    audits = manifest.get("audits") if isinstance(manifest, dict) else None
+    if not isinstance(audits, list):
+        return None
+
+    return any(
+        isinstance(result, dict) and result.get("payload") and result.get("type") == "application/octet-stream"
+        for audit in audits
+        if isinstance(audit, dict) and audit.get("generator") in ACQUISITION_MODULES
+        for result in (audit.get("results") if isinstance(audit.get("results"), list) else [])
+    )
+
+
+def get_single_target_counts(failure=None, skipped: int = 0):
+    """Count the one target of the action for the summary line.
+
+    Args:
+        failure: The error type or the exception of the target, or None if it succeeded.
+        skipped: The number of unsupported entities skipped.
+
+    Returns:
+        The target count, the success count, the failed target error types, and the skipped count.
+    """
+    if failure is None:
+        return 1, 1, [], skipped
+
+    return 1, 0, [classify_exception(failure)[0] if isinstance(failure, Exception) else failure], skipped
+
+
+def start_file_acquisition(
+    siemplify,
+    hx_manager,
+    agent_id_param,
+    file_path_param,
+    use_api_mode_param,
+    external_id_param,
+    skipped: int = 0,
+):
+    """Start the file acquisition process.
+
+    Args:
+        siemplify: The action object.
+        hx_manager: The FireEye HX manager.
+        agent_id_param: Explicit Agent Id parameter, if provided.
+        file_path_param: Full file path on the endpoint to acquire.
+        use_api_mode_param: Whether to acquire the file using API mode.
+        external_id_param: Optional external correlation identifier.
+        skipped: The number of unsupported entities skipped.
+
+    Returns:
+        The output message, result value, execution state, and summary count callable.
+    """
+    file_name, file_path = split_file_path(file_path_param)
     agent_id = hx_manager.resolve_agent_id_from_entities(
         target_entities=siemplify.target_entities,
         agent_id_param=agent_id_param,
     )
-
     if not agent_id:
         output_message = "No valid agent_id was supplied or found across target entities."
         siemplify.LOGGER.error(output_message)
-        return output_message, "false", EXECUTION_STATE_FAILED
+        return (
+            output_message,
+            "false",
+            EXECUTION_STATE_FAILED,
+            lambda: (*get_agent_lookup_failure_counts(siemplify.target_entities, hx_manager.lookup_errors), skipped),
+        )
 
     siemplify.LOGGER.info(f"Target Agent ID: {agent_id}")
-
+    count_target = partial(get_single_target_counts, skipped=skipped)
     try:
         data = hx_manager.create_file_acquisition(
             agent_id=agent_id,
@@ -106,38 +187,47 @@ def start_file_acquisition(
             use_api_mode=use_api_mode_param,
             comment="Acquiring file through Chronicle SOAR",
         )
-    except FireEyeHXNotFoundError as not_found_err:
-        siemplify.LOGGER.exception(str(not_found_err))
-        return str(not_found_err), "false", EXECUTION_STATE_FAILED
-    except FireEyeHXManagerError as mgr_err:
+    except (FireEyeHXNotFoundError, FireEyeHXManagerError) as mgr_err:
         siemplify.LOGGER.exception(str(mgr_err))
-        return str(mgr_err), "false", EXECUTION_STATE_FAILED
+        return str(mgr_err), "false", EXECUTION_STATE_FAILED, partial(count_target, mgr_err)
     except Exception as e:
         siemplify.LOGGER.exception(f"Unexpected error creating file acquisition: {e}")
-        return f"Unable to create file acquisition: {e}", "false", EXECUTION_STATE_FAILED
+        return f"Unable to create file acquisition: {e}", "false", EXECUTION_STATE_FAILED, partial(count_target, e)
 
     acquisition_id = data.get("_id") or data.get("id") or data.get("acquisition_id")
     if not acquisition_id:
         output_message = f"Failed to acquire file: No acquisition ID in response data: {data}"
         siemplify.LOGGER.error(output_message)
-        return output_message, "false", EXECUTION_STATE_FAILED
+        return output_message, "false", EXECUTION_STATE_FAILED, partial(count_target, ErrorType.VENDOR_ERROR)
 
-    status = EXECUTION_STATE_INPROGRESS
     result_value = json.dumps({
         "acquisition_id": acquisition_id,
         "agent_id": agent_id,
         "file_name": file_name,
         "file_path": file_path,
+        "skipped_count": skipped,
     })
     output_message = f"File acquisition {acquisition_id} requested for file '{file_name}' on agent {agent_id}."
-    return output_message, result_value, status
+
+    return output_message, result_value, EXECUTION_STATE_INPROGRESS, count_target
 
 
-def poll_file_acquisition(siemplify, hx_manager, acq_context):
-    """Poll the file acquisition status until complete or failed."""
+def poll_file_acquisition(siemplify, hx_manager, acq_context, skipped: int = 0):
+    """Poll the file acquisition status until complete or failed.
+
+    Args:
+        siemplify: The action object.
+        hx_manager: The FireEye HX manager.
+        acq_context: Deserialized async polling state.
+        skipped: Fallback unsupported entity count when state lacks skipped_count.
+
+    Returns:
+        The output message, result value, execution state, and summary count callable.
+    """
     acquisition_id = acq_context.get("acquisition_id")
     agent_id = acq_context.get("agent_id")
     file_name = acq_context.get("file_name")
+    count_target = partial(get_single_target_counts, skipped=acq_context.get("skipped_count", skipped))
 
     siemplify.LOGGER.info(f"Polling status for acquisition ID: {acquisition_id}")
 
@@ -146,7 +236,7 @@ def poll_file_acquisition(siemplify, hx_manager, acq_context):
     except Exception as e:
         output_message = f"Failed fetching status for acquisition {acquisition_id}: {e}"
         siemplify.LOGGER.exception(output_message)
-        return output_message, "false", EXECUTION_STATE_FAILED
+        return output_message, "false", EXECUTION_STATE_FAILED, partial(count_target, e)
 
     current_state = data.get("state")
     siemplify.LOGGER.info(f"Acquisition state is: {current_state}")
@@ -162,7 +252,7 @@ def poll_file_acquisition(siemplify, hx_manager, acq_context):
                 hx_manager.delete_file_acquisition(acquisition_id)
             except Exception as del_err:
                 siemplify.LOGGER.exception(f"Failed deleting oversized acquisition: {del_err}")
-            return output_message, "false", EXECUTION_STATE_FAILED
+            return output_message, "false", EXECUTION_STATE_FAILED, partial(count_target, ErrorType.FILE_RESTRICTED)
 
         execution_folder = (
             getattr(siemplify, "run_folder", None) or getattr(siemplify, "execution_folder", None) or "/tmp"
@@ -175,7 +265,7 @@ def poll_file_acquisition(siemplify, hx_manager, acq_context):
         except Exception as dl_err:
             output_message = f"Failed to download acquisition zip for ID {acquisition_id}: {dl_err}"
             siemplify.LOGGER.exception(output_message)
-            return output_message, "false", EXECUTION_STATE_FAILED
+            return output_message, "false", EXECUTION_STATE_FAILED, partial(count_target, dl_err)
 
         zip_passphrase = data.get("zip_passphrase")
         zip_metadata = extract_zip_metadata(temp_filename, zip_passphrase, siemplify)
@@ -185,20 +275,29 @@ def poll_file_acquisition(siemplify, hx_manager, acq_context):
             json_result.update(zip_metadata)
 
         json_result["download_path"] = temp_filename
+        file_acquired = has_acquired_file(zip_metadata)
+        error_type = None if file_acquired else ErrorType.VENDOR_ERROR
+        if file_acquired is not None:
+            json_result["file_acquired"] = file_acquired
+        if file_acquired is False:
+            error_type = json_result["error_type"] = ErrorType.FILE_NOT_FOUND
 
         siemplify.result.add_result_json(json_result)
         output_message = f"File '{file_name}' was successfully acquired from host {agent_id}."
-        return output_message, "true", EXECUTION_STATE_COMPLETED
+        return output_message, "true", EXECUTION_STATE_COMPLETED, partial(count_target, error_type)
 
-    if current_state in {"FAILED", "EXPIRED", "DELETED", "CANCELLED"}:
+    if current_state in ACQUISITION_FAILED_STATE_ERROR_TYPES:
         err_msg = data.get("error_message") or f"Acquisition ended in state {current_state}"
         output_message = f"File acquisition {acquisition_id} failed: {err_msg}"
         siemplify.LOGGER.error(output_message)
-        return output_message, "false", EXECUTION_STATE_FAILED
+        get_counts = partial(count_target, ACQUISITION_FAILED_STATE_ERROR_TYPES[current_state])
+        return output_message, "false", EXECUTION_STATE_FAILED, get_counts
 
     output_message = f"Acquisition {acquisition_id} is still {current_state}."
     siemplify.LOGGER.info(output_message)
-    return output_message, json.dumps(acq_context), EXECUTION_STATE_INPROGRESS
+    log_timeout_marker_once(siemplify, acq_context, partial(count_target, ErrorType.TIMEOUT))
+
+    return output_message, json.dumps(acq_context), EXECUTION_STATE_INPROGRESS, count_target
 
 
 @output_handler
@@ -269,6 +368,15 @@ def main(is_first_run=True) -> None:
     status = EXECUTION_STATE_COMPLETED
     output_message = ""
     result_value = "false"
+    hx_manager = None
+    get_counts = None
+    has_agent_id = bool(isinstance(agent_id_param, str) and agent_id_param.strip())
+    has_supported_entity = any(
+        getattr(entity, "entity_type", "") in AGENT_LOOKUP_ENTITY_TYPES for entity in siemplify.target_entities
+    )
+    targets = int(not is_first_run or has_agent_id or has_supported_entity)
+    skipped = count_skipped_entities(siemplify.target_entities, AGENT_LOOKUP_ENTITY_TYPES, has_agent_id=has_agent_id)
+    error = None
 
     try:
         hx_manager = FireEyeHXManager(
@@ -279,13 +387,14 @@ def main(is_first_run=True) -> None:
         )
 
         if is_first_run:
-            output_message, result_value, status = start_file_acquisition(
+            output_message, result_value, status, get_counts = start_file_acquisition(
                 siemplify,
                 hx_manager,
                 agent_id_param,
                 file_path_param,
                 use_api_mode_param,
                 external_id_param,
+                skipped=skipped,
             )
         else:
             acq_context_raw = extract_action_param(
@@ -296,13 +405,15 @@ def main(is_first_run=True) -> None:
                 input_type=str,
             )
             acq_context = json.loads(acq_context_raw)
-            output_message, result_value, status = poll_file_acquisition(
+            output_message, result_value, status, get_counts = poll_file_acquisition(
                 siemplify,
                 hx_manager,
                 acq_context,
+                skipped=skipped,
             )
 
     except Exception as e:
+        error = e
         siemplify.LOGGER.exception(f"Failed to execute action! Error is {e}")
         status = EXECUTION_STATE_FAILED
         result_value = "false"
@@ -310,7 +421,8 @@ def main(is_first_run=True) -> None:
 
     finally:
         try:
-            hx_manager.logout()
+            if hx_manager is not None:
+                hx_manager.logout()
         except Exception as e:
             siemplify.LOGGER.exception(f"Logging out failed. Error: {e}")
 
@@ -318,6 +430,13 @@ def main(is_first_run=True) -> None:
     siemplify.LOGGER.info(f"Status: {status}:")
     siemplify.LOGGER.info(f"Result Value: {result_value}")
     siemplify.LOGGER.info(f"Output Message: {output_message}")
+    log_action_result_summary(
+        siemplify,
+        status,
+        get_counts or (lambda: (targets, 0, [], skipped)),
+        error=error,
+        fallback_error_type=ErrorType.INVALID_INPUT,
+    )
     siemplify.end(output_message, result_value, status)
 
 
