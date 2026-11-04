@@ -60,7 +60,8 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def mock_get_soar_client_one_platform(
-    mocker: MockerFixture, mock_oneplatform_client: OnePlatformSoarApi
+    mocker: MockerFixture,
+    mock_oneplatform_client: OnePlatformSoarApi,
 ) -> MagicMock:
     mock_get_client = mocker.patch("TIPCommon.rest.soar_api.get_soar_client")
     mock_get_client.return_value = mock_oneplatform_client
@@ -594,14 +595,30 @@ def _make_response(
 
 
 @pytest.mark.parametrize(
-    ("status_code", "body_text"),
+    ("status_code", "body_text", "expected_message"),
     [
-        (403, '{"error": {"code": 403, "message": "Permission chronicle.legacySoarUsers.get denied"}}'),
-        (404, '{"error": {"code": 404, "message": "Resource not found"}}'),
-        (500, '{"error": {"code": 500, "message": "Internal server error"}}'),
+        (
+            403,
+            '{"error": {"code": 403, "message": "Permission chronicle.legacySoarUsers.get denied"}}',
+            "Permission chronicle.legacySoarUsers.get denied",
+        ),
+        (
+            404,
+            '{"error": {"code": 404, "message": "Resource not found"}}',
+            "Resource not found",
+        ),
+        (
+            500,
+            '{"error": {"code": 500, "message": "Internal server error"}}',
+            "Internal server error",
+        ),
     ],
 )
-def test_validate_response_includes_error_body(status_code: int, body_text: str) -> None:
+def test_validate_response_includes_error_body(
+    status_code: int,
+    body_text: str,
+    expected_message: str,
+) -> None:
     """Test validate_response includes the API response body in the raised HTTPError."""
     response = _make_response(status_code, body_text.encode())
 
@@ -609,7 +626,7 @@ def test_validate_response_includes_error_body(status_code: int, body_text: str)
         validate_response(response, validate_json=True)
 
     assert str(status_code) in str(exc_info.value)
-    assert f"Response body: {body_text}" in str(exc_info.value)
+    assert f"Response body: {expected_message}" in str(exc_info.value)
     assert exc_info.value.response is response
 
 

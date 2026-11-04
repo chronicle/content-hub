@@ -151,7 +151,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Pause alert sla."""
         alerts_response = self.get_case_alerts()
         validate_response(alerts_response, validate_json=True)
-        alert = alerts_response.json()
+        alert: SingleJson = alerts_response.json()
         alert_id = alert.get("caseAlerts")[0].get("id")
         endpoint = f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:pauseSla"
         payload = {
@@ -163,7 +163,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Resume alert sla."""
         alerts_response = self.get_case_alerts()
         validate_response(alerts_response, validate_json=True)
-        alert = alerts_response.json()
+        alert: SingleJson = alerts_response.json()
         alert_id = alert.get("caseAlerts")[0].get("id")
         endpoint = f"/cases/{self.params.case_id}/caseAlerts/{alert_id}:resumeSla"
         payload = {
@@ -176,11 +176,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         params = self._build_expand_params(getattr(self.params, "case_expand", None))
         case_id = self.params.case_id
         endpoint = f"/cases/{case_id}"
-        response = self._make_request(
-            HttpMethod.GET,
-            endpoint,
-            params=params,
-        )
+        response = self._make_request(HttpMethod.GET, endpoint, params=params)
         validate_response(response, validate_json=True)
         return response.json()
 
@@ -199,8 +195,14 @@ class OnePlatformSoarApi(BaseSoarApi):
             return []
 
         validate_response(response, validate_json=True)
-        response_data = response.json()
-        if isinstance(response_data, dict) and response_data and "caseAlerts" not in response_data:
+        response_data: SingleJson = response.json()
+        if not isinstance(response_data, dict):
+            self.chronicle_soar.LOGGER.warn(
+                f"Expected JSON object with root key 'caseAlerts' from "
+                f"'{endpoint}', got {type(response_data).__name__}."
+            )
+            return []
+        if response_data and "caseAlerts" not in response_data:
             self.chronicle_soar.LOGGER.warn(
                 f"Expected root key 'caseAlerts' not found in response from "
                 f"'{endpoint}'. Actual top-level keys: {list(response_data.keys())}"
@@ -357,7 +359,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                 break
 
             validate_response(response, validate_json=True)
-            response_data = response.json()
+            response_data: SingleJson = response.json()
 
             if not isinstance(response_data, dict):
                 self.chronicle_soar.LOGGER.warn(
@@ -537,6 +539,9 @@ class OnePlatformSoarApi(BaseSoarApi):
             1P `/cases:executeBulkAssign` operates at the case level and does not
             accept `alert_identifier`. If `self.params.alert_identifier` is set,
             it is ignored on 1P.
+
+        Returns:
+            The HTTP response from the bulk assign endpoint.
         """
         if getattr(self.params, "alert_identifier", None):
             self.chronicle_soar.LOGGER.info(
@@ -739,18 +744,12 @@ class OnePlatformSoarApi(BaseSoarApi):
             alert["securityEventCards"] = events_by_alert.get(alert.get("identifier"), [])
 
         wall_response = self.get_case_wall_records()
-        validate_response(
-            wall_response,
-            validate_json=wall_response.status_code != NO_CONTENT_STATUS_CODE,
-        )
+        validate_response(wall_response, validate_json=wall_response.status_code != NO_CONTENT_STATUS_CODE)
         wall_data = safe_json_for_204(wall_response, default_for_204={})
         case_data["wallData"] = wall_data.get("caseWallRecords", [])
 
         entity_response = self.get_entity_expand_cards()
-        validate_response(
-            entity_response,
-            validate_json=entity_response.status_code != NO_CONTENT_STATUS_CODE,
-        )
+        validate_response(entity_response, validate_json=entity_response.status_code != NO_CONTENT_STATUS_CODE)
         entity_data = safe_json_for_204(entity_response, default_for_204={})
         case_data["involvedEntities"] = entity_data.get("involvedEntities", [])
 
@@ -1495,49 +1494,19 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         cards: list[dict] = []
 
-        connectors_response = self._make_request(
-            HttpMethod.GET,
-            connectors_endpoint.format(identifier=self.params.integration_name),
-        )
-        validate_response(
-            connectors_response,
-            validate_json=connectors_response.status_code != NO_CONTENT_STATUS_CODE,
-        )
-        connectors_data = safe_json_for_204(connectors_response, default_for_204={})
-        cards.extend(connectors_data.get("connectors", []))
-
-        actions_response = self._make_request(
-            HttpMethod.GET,
-            actions_endpoint.format(identifier=self.params.integration_name),
-        )
-        validate_response(
-            actions_response,
-            validate_json=actions_response.status_code != NO_CONTENT_STATUS_CODE,
-        )
-        actions_data = safe_json_for_204(actions_response, default_for_204={})
-        cards.extend(actions_data.get("actions", []))
-
-        jobs_response = self._make_request(
-            HttpMethod.GET,
-            jobs_endpoint.format(identifier=self.params.integration_name),
-        )
-        validate_response(
-            jobs_response,
-            validate_json=jobs_response.status_code != NO_CONTENT_STATUS_CODE,
-        )
-        jobs_data = safe_json_for_204(jobs_response, default_for_204={})
-        cards.extend(jobs_data.get("jobs", []))
-
-        managers_response = self._make_request(
-            HttpMethod.GET,
-            managers_endpoint.format(identifier=self.params.integration_name),
-        )
-        validate_response(
-            managers_response,
-            validate_json=managers_response.status_code != NO_CONTENT_STATUS_CODE,
-        )
-        managers_data = safe_json_for_204(managers_response, default_for_204={})
-        cards.extend(managers_data.get("managers", []))
+        for endpoint_template, key in (
+            (connectors_endpoint, "connectors"),
+            (actions_endpoint, "actions"),
+            (jobs_endpoint, "jobs"),
+            (managers_endpoint, "managers"),
+        ):
+            response = self._make_request(
+                HttpMethod.GET,
+                endpoint_template.format(identifier=self.params.integration_name),
+            )
+            validate_response(response, validate_json=response.status_code != NO_CONTENT_STATUS_CODE)
+            data = safe_json_for_204(response, default_for_204={})
+            cards.extend(data.get(key, []))
 
         payload = {
             "cards": [
@@ -1694,9 +1663,14 @@ class OnePlatformSoarApi(BaseSoarApi):
         if isinstance(response_data, list):
             return response_data
 
+        if not isinstance(response_data, dict):
+            self.chronicle_soar.LOGGER.warn(
+                f"Expected JSON object from '{endpoint}', got {type(response_data).__name__}."
+            )
+            return []
+
         if (
-            isinstance(response_data, dict)
-            and response_data
+            response_data
             and "custom_cases" not in response_data
             and "customCases" not in response_data
         ):
@@ -1722,9 +1696,14 @@ class OnePlatformSoarApi(BaseSoarApi):
             validate_response(page_response, validate_json=True)
             page_data = page_response.json()
 
+            if not isinstance(page_data, dict):
+                self.chronicle_soar.LOGGER.warn(
+                    f"Expected JSON object from '{endpoint_with_token}', got {type(page_data).__name__}."
+                )
+                break
+
             if (
-                isinstance(page_data, dict)
-                and page_data
+                page_data
                 and "custom_cases" not in page_data
                 and "customCases" not in page_data
             ):

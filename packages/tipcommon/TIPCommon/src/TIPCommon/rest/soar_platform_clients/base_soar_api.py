@@ -38,8 +38,8 @@ def validate_response(
     """Validate response HTTP status and optionally JSON body.
 
     Args:
-        response (requests.Response): The response to validate.
-        validate_json (bool): Whether to validate that the response body is valid JSON.
+        response: The response to validate.
+        validate_json: Whether to validate that the response body is valid JSON.
 
     Raises:
         requests.HTTPError: If the response status code indicates a failure, including
@@ -55,18 +55,31 @@ def validate_response(
 
     except requests.HTTPError as he:
         err_response = he.response if he.response is not None else response
-        raw_body = getattr(err_response, "text", None)
+        raw_body: str | None = getattr(err_response, "text", None)
         body = raw_body.strip() if isinstance(raw_body, str) else ""
         msg = f"An error happened while requesting API, {he}"
         if body:
-            msg = f"{msg} | Response body: {body}"
+            error_message = body
+            try:
+                error_json = json.loads(body)
+                if isinstance(error_json, dict):
+                    error_obj = error_json.get("error")
+                    if isinstance(error_obj, dict) and "message" in error_obj:
+                        error_message = str(error_obj["message"])
+                    elif "errorMessage" in error_json:
+                        error_message = str(error_json["errorMessage"])
+                    elif "message" in error_json:
+                        error_message = str(error_json["message"])
+            except Exception:
+                pass
+            if len(error_message) > 1000:
+                error_message = error_message[:1000] + "..."
+            msg = f"{msg} | Response body: {error_message}"
         raise requests.HTTPError(msg, response=err_response) from he
 
     except json.JSONDecodeError as je:
         msg = f"Failed to parse response as JSON.\nError: {je}\nRaw response: {response.text}"
-        raise InternalJSONDecoderError(
-            msg,
-        ) from je
+        raise InternalJSONDecoderError(msg) from je
 
 
 class BaseSoarApi:

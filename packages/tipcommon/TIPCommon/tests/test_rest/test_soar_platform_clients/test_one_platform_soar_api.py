@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, call
@@ -556,15 +557,13 @@ def test_get_users_profile_cards_http_errors_raise_with_body(
 ) -> None:
     """Test get_users_profile_cards raises HTTPError with response body on 403, 404, and 500."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
-    mock_chronicle_soar.session.request.return_value = _build_http_response(
-        status_code, error_body.encode("utf-8")
-    )
+    mock_chronicle_soar.session.request.return_value = _build_http_response(status_code, error_body.encode("utf-8"))
 
     with pytest.raises(requests.HTTPError) as exc_info:
         client.get_users_profile_cards()
 
     assert str(status_code) in str(exc_info.value)
-    assert error_body in str(exc_info.value)
+    assert json.loads(error_body)["error"]["message"] in str(exc_info.value)
     assert exc_info.value.response is not None
     assert exc_info.value.response.status_code == status_code
 
@@ -585,15 +584,13 @@ def test_get_siemplify_user_details_http_errors_raise_with_body(
 ) -> None:
     """Test get_siemplify_user_details raises HTTPError with response body on 403, 404, and 500."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
-    mock_chronicle_soar.session.request.return_value = _build_http_response(
-        status_code, error_body.encode("utf-8")
-    )
+    mock_chronicle_soar.session.request.return_value = _build_http_response(status_code, error_body.encode("utf-8"))
 
     with pytest.raises(requests.HTTPError) as exc_info:
         client.get_siemplify_user_details()
 
     assert str(status_code) in str(exc_info.value)
-    assert error_body in str(exc_info.value)
+    assert json.loads(error_body)["error"]["message"] in str(exc_info.value)
 
 
 @pytest.mark.parametrize(
@@ -645,14 +642,8 @@ def test_paginate_results_multi_page_http_error_propagates(
 ) -> None:
     """Test _paginate_results raises HTTPError when a later page fails instead of truncating."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
-    page_1 = _build_http_response(
-        200,
-        b'{"legacySoarUsers": [{"userName": "user1"}], "nextPageToken": "page_2_tok"}',
-    )
-    page_2 = _build_http_response(
-        500,
-        b'{"error": {"code": 500, "message": "Upstream timeout on page 2"}}',
-    )
+    page_1 = _build_http_response(200, b'{"legacySoarUsers": [{"userName": "user1"}], "nextPageToken": "page_2_tok"}')
+    page_2 = _build_http_response(500, b'{"error": {"code": 500, "message": "Upstream timeout on page 2"}}')
     mock_chronicle_soar.session.request.side_effect = [page_1, page_2]
 
     with pytest.raises(requests.HTTPError) as exc_info:
@@ -667,10 +658,7 @@ def test_paginate_results_invalid_json_raises_decoder_error(
 ) -> None:
     """Test _paginate_results raises InternalJSONDecoderError on non-JSON 200 payload."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
-    mock_chronicle_soar.session.request.return_value = _build_http_response(
-        200,
-        b"<html>502 Bad Gateway</html>",
-    )
+    mock_chronicle_soar.session.request.return_value = _build_http_response(200, b"<html>502 Bad Gateway</html>")
 
     with pytest.raises(InternalJSONDecoderError):
         client.get_users_profile_cards()

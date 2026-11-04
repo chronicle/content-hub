@@ -1619,11 +1619,14 @@ def assign_case_to_user(
         ignores `alert_identifier`. `alert_identifier` is only used on legacy SOAR.
 
     Args:
-        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
-        case_id (int): Chronicle SOAR case ID.
-        assign_to (str): Chronicle SOAR user identifier (`userName`) or role.
-        alert_identifier (str | None): Chronicle SOAR Alert Identifier (legacy SOAR only;
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        assign_to: Chronicle SOAR user identifier (`userName`) or role.
+        alert_identifier: Chronicle SOAR Alert Identifier (legacy SOAR only;
             ignored on 1P).
+
+    Returns:
+        The API response payload as a JSON dictionary.
     """
     api_client = get_soar_client(chronicle_soar)
     api_client.params.case_id = case_id
@@ -1681,15 +1684,15 @@ def get_siemplify_user_details(
     """Get siemplify user details.
 
     Args:
-        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
-        search_term (str): Chronicle SOAR search term.
-        filter_by_role (bool): Chronicle SOAR filter by role.
-        requested_page (int): Chronicle SOAR requested page.
-        page_size (int): Chronicle SOAR page size.
-        should_hide_disabled_users (bool | str): Chronicle SOAR should hide disabled users.
+        chronicle_soar: A chronicle soar SDK object.
+        search_term: Chronicle SOAR search term.
+        filter_by_role: Chronicle SOAR filter by role.
+        requested_page: Chronicle SOAR requested page.
+        page_size: Chronicle SOAR page size.
+        should_hide_disabled_users: Chronicle SOAR should hide disabled users.
 
     Returns:
-        list[UserDetails]: A list of UserDetails objects.
+        A list of UserDetails objects.
 
     """
     api_client = get_soar_client(chronicle_soar)
@@ -2521,13 +2524,8 @@ def save_playbook(
     api_client = get_soar_client(chronicle_soar)
     api_client.params.playbook_data = playbook_data
     response = api_client.save_playbook()
-    validate_response(response, validate_json=False)
-    raw_text = getattr(response, "text", None)
-    if response.status_code == NO_CONTENT_STATUS_CODE or (
-        isinstance(raw_text, str) and not raw_text.strip()
-    ):
-        return {}
-    return response.json()
+    validate_response(response, validate_json=response.status_code != NO_CONTENT_STATUS_CODE)
+    return safe_json_for_204(response, default_for_204={})
 
 
 def get_playbooks_workflow_menu_cards(
@@ -2701,7 +2699,7 @@ def get_ontology_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
         if response is None:
             return []
         validate_response(response, validate_json=True)
-        res_json = response.json()
+        res_json: SingleJson | list[SingleJson] = response.json()
         records = res_json.get("ontology_records", []) if isinstance(res_json, dict) else []
     return [OntologyRecord.from_json(item).to_json() for item in records]
 
@@ -2721,7 +2719,7 @@ def get_case_tags(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     if isinstance(response, list):
         return response
     validate_response(response, validate_json=True)
-    res_json = response.json()
+    res_json: SingleJson | list[SingleJson] = response.json()
     if isinstance(res_json, dict):
         return res_json.get("case_tag_definitions", [])
     return res_json if isinstance(res_json, list) else []
@@ -2746,10 +2744,10 @@ def get_case_stages(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
         validate_response(response, validate_json=True)
     except InternalJSONDecoderError:
         return []
-    res_json = response.json()
+    res_json: SingleJson | list[SingleJson] = response.json()
     if isinstance(res_json, dict):
         return res_json.get("case_stage_definitions", [])
-    return res_json
+    return res_json if isinstance(res_json, list) else []
 
 
 def get_case_close_reasons(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
