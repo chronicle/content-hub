@@ -25,6 +25,13 @@ from soar_sdk.SiemplifyUtils import convert_unixtime_to_datetime, output_handler
 from TIPCommon import extract_action_param, extract_configuration_param
 
 from ..core.FireEyeHXManager import FireEyeHXManager, FireEyeHXNotFoundError
+from ..core.UtilsManager import (
+    ErrorType,
+    classify_exception,
+    count_skipped_entities,
+    get_operation_summary_counts,
+    log_action_result_summary,
+)
 
 INTEGRATION_NAME = "FireEyeHX"
 SCRIPT_NAME = "Contain Host"
@@ -64,6 +71,7 @@ def _contain_by_agent_id(hx_manager, agent_id_param, approve):
             "result": "failure",
             "status": "failed",
             "reason": str(e),
+            "error_type": classify_exception(e)[0],
         }
 
     json_result = {
@@ -123,6 +131,7 @@ def _contain_by_entities(siemplify, hx_manager, approve):
                     "result": "failure",
                     "status": "failed",
                     "reason": "Host not found",
+                    "error_type": ErrorType.ENDPOINT_NOT_FOUND,
                 }
                 continue
 
@@ -149,6 +158,7 @@ def _contain_by_entities(siemplify, hx_manager, approve):
                 "result": "failure",
                 "status": "failed",
                 "reason": str(e),
+                "error_type": classify_exception(e)[0],
             }
             siemplify.LOGGER.exception(f"An error occurred on entity {entity.identifier}: {e}")
 
@@ -247,6 +257,15 @@ def main() -> None:
     output_message = ""
     result_value = "false"
     json_result = {}
+    hx_manager = None
+    has_agent_id = bool(isinstance(agent_id_param, str) and agent_id_param.strip())
+    targets = (
+        1
+        if has_agent_id
+        else sum(getattr(entity, "entity_type", "") in SUPPORTED_ENTITIES for entity in siemplify.target_entities)
+    )
+    skipped = count_skipped_entities(siemplify.target_entities, SUPPORTED_ENTITIES, has_agent_id=has_agent_id)
+    error = None
 
     try:
         hx_manager = FireEyeHXManager(
@@ -256,7 +275,7 @@ def main() -> None:
             verify_ssl=verify_ssl,
         )
 
-        if agent_id_param and agent_id_param.strip():
+        if has_agent_id:
             output_message, result_value, status, json_result = _contain_by_agent_id(
                 hx_manager, agent_id_param, approve
             )
@@ -267,6 +286,7 @@ def main() -> None:
             siemplify.result.add_result_json(json_result)
 
     except Exception as e:
+        error = e
         siemplify.LOGGER.exception(f"Failed to execute action! Error is {e}")
         status = EXECUTION_STATE_FAILED
         result_value = "false"
@@ -274,7 +294,8 @@ def main() -> None:
 
     finally:
         try:
-            hx_manager.logout()
+            if hx_manager is not None:
+                hx_manager.logout()
         except Exception as e:
             siemplify.LOGGER.exception(f"Logging out failed. Error: {e}")
 
@@ -282,6 +303,20 @@ def main() -> None:
     siemplify.LOGGER.info(f"Status: {status}:")
     siemplify.LOGGER.info(f"Result Value: {result_value}")
     siemplify.LOGGER.info(f"Output Message: {output_message}")
+    log_action_result_summary(
+        siemplify,
+        status,
+        lambda: (
+            *get_operation_summary_counts(
+                json_result.get("operation_results", {}),
+                targets,
+                ErrorType.TIMEOUT if status == EXECUTION_STATE_TIMEDOUT else None,
+            ),
+            skipped,
+        ),
+        error=error,
+        fallback_error_type=ErrorType.INVALID_INPUT,
+    )
     siemplify.end(output_message, result_value, status)
 
 

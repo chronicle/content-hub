@@ -33,7 +33,7 @@ import requests
 
 from .BulkAcquisitionMixin import BulkAcquisitionMixin
 from .FireEyeHXParser import FireEyeHXParser
-from .UtilsManager import get_earliest_event_at_datetime
+from .UtilsManager import ErrorType, get_earliest_event_at_datetime
 
 # ============================== CONSTS ===================================== #
 BASE_PATH = "{}/hx/api/{}"
@@ -45,13 +45,27 @@ LIMIT = 1000
 
 SEARCH_LIMIT_HAS_BEEN_REACHED_STATUS_CODE = 409
 
+HOST_NOT_FOUND_MESSAGE = "host not found"
+
 
 # ============================= CLASSES ===================================== #
 class FireEyeHXManagerError(Exception):
     """General Exception for FireEye HX manager."""
 
+    def __init__(self, message: str = "", status_code: int | None = None, error_type: str | None = None) -> None:
+        """Create the error.
 
-class FireEyeHXNotFoundError(Exception):
+        Args:
+            message: The error message.
+            status_code: The HTTP status code of the failed request, if any.
+            error_type: The failure reason, if the manager knows it.
+        """
+        super().__init__(message)
+        self.status_code = status_code
+        self.error_type = error_type
+
+
+class FireEyeHXNotFoundError(FireEyeHXManagerError):
     """Not Found Exception for FireEye HX manager."""
 
 
@@ -67,6 +81,7 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         self.session.headers["X-FeApi-Token"] = self.get_token()
         self.parser = FireEyeHXParser()
         self.loaded_hosts = {}
+        self.lookup_errors = []
 
     def get_token(self):
         """Get a token (equals to login)."""
@@ -77,7 +92,7 @@ class FireEyeHXManager(BulkAcquisitionMixin):
 
         if not token:
             msg = "Authentication failed. No X-FeApi-Token found."
-            raise FireEyeHXManagerError(msg)
+            raise FireEyeHXManagerError(msg, error_type=ErrorType.AUTHENTICATION_FAILED)
 
         return token
 
@@ -159,12 +174,12 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         :param host_name: {str} The host name
         :return: {dict} The host.
         """
-        try:
-            # Return the first host that matches the host name
-            return self.get_hosts(host_name=host_name, limit=1)[0]
-        except Exception:
+        # Return the first host that matches the host name
+        hosts = self.get_hosts(host_name=host_name, limit=1)
+        if not hosts:
             msg = f"Host {host_name} was not found."
-            raise FireEyeHXNotFoundError(msg)
+            raise FireEyeHXNotFoundError(msg, error_type=ErrorType.ENDPOINT_NOT_FOUND)
+        return hosts[0]
 
     def get_hosts_by_ip(self, ip_address):
         """Get hosts by IP Address
@@ -283,8 +298,8 @@ class FireEyeHXManager(BulkAcquisitionMixin):
                 agent_id = self.get_agent_id(hostname)
                 if agent_id:
                     return agent_id
-            except FireEyeHXNotFoundError:
-                continue
+            except Exception as error:
+                self.lookup_errors.append(error)
 
         ip_entities = [e.identifier for e in target_entities if getattr(e, "entity_type", "") == "ADDRESS"]
         for ip in ip_entities:
@@ -293,8 +308,8 @@ class FireEyeHXManager(BulkAcquisitionMixin):
                 if hosts:
                     latest_host = max(hosts, key=lambda h: h.last_poll_timestamp)
                     return latest_host._id
-            except FireEyeHXNotFoundError:
-                continue
+            except FireEyeHXNotFoundError as error:
+                self.lookup_errors.append(error)
 
         return None
 
@@ -779,22 +794,18 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         response = self.session.post(url, json=payload)
         if response.status_code == 404:
             content = response.content.decode("utf-8", errors="ignore").lower()
-            if "host not found" in content:
+            if HOST_NOT_FOUND_MESSAGE in content:
                 msg = f"HTTP Error 404: Host with the specified agent id ({agent_id}) was not found"
-                raise FireEyeHXNotFoundError(
-                    msg
-                )
+                raise FireEyeHXNotFoundError(msg, status_code=404, error_type=ErrorType.ENDPOINT_NOT_FOUND)
             if "device not found" in content:
                 msg = "HTTP Error 404: The specified device was not found by device-proxy. It may have a non-Operational status."
-                raise FireEyeHXNotFoundError(
-                    msg
-                )
+                raise FireEyeHXNotFoundError(msg, status_code=404, error_type=ErrorType.ENDPOINT_UNAVAILABLE)
             msg = f"HTTP Error 404: The URL {getattr(response, 'url', '')} was not found."
-            raise FireEyeHXNotFoundError(msg)
+            raise FireEyeHXNotFoundError(msg, status_code=404)
 
         if response.status_code == 405:
             msg = "HTTP Error 405: File acquisitions are not supported by the target host"
-            raise FireEyeHXManagerError(msg)
+            raise FireEyeHXManagerError(msg, status_code=405, error_type=ErrorType.UNSUPPORTED_ENDPOINT)
 
         self.validate_response(response, f"Unable to create file acquisition for agent {agent_id}")
         return response.json().get("data", {})
@@ -923,7 +934,7 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         except requests.HTTPError as error:
             if response.status_code == SEARCH_LIMIT_HAS_BEEN_REACHED_STATUS_CODE:
                 msg = "Search limit have been reached"
-                raise FireEyeHXManagerError(msg)
+                raise FireEyeHXManagerError(msg, status_code=response.status_code)
 
             try:
                 error_messages = ", ".join([err.get("message") for err in response.json().get("details", [])])
@@ -933,10 +944,12 @@ class FireEyeHXManager(BulkAcquisitionMixin):
 
                 if response.status_code == 404:
                     msg = f"{error_msg}: {error_messages}"
-                    raise FireEyeHXNotFoundError(msg)
+                    host_not_found = HOST_NOT_FOUND_MESSAGE in str(error_messages).lower()
+                    error_type = ErrorType.ENDPOINT_NOT_FOUND if host_not_found else None
+                    raise FireEyeHXNotFoundError(msg, status_code=404, error_type=error_type)
 
                 msg = f"{error_msg}: {error_messages}"
-                raise FireEyeHXManagerError(msg)
+                raise FireEyeHXManagerError(msg, status_code=response.status_code)
 
             except (FireEyeHXManagerError, FireEyeHXNotFoundError):
                 raise
@@ -944,4 +957,4 @@ class FireEyeHXManager(BulkAcquisitionMixin):
             except Exception:
                 # Unable to parse JSON - return content of response
                 msg = f"{error_msg}: {error} {response.content}"
-                raise FireEyeHXManagerError(msg)
+                raise FireEyeHXManagerError(msg, status_code=response.status_code)

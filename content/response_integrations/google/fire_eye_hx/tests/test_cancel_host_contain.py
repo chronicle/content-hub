@@ -18,6 +18,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from ..actions import CancelHostContain as cancel_host_module
+from ..core.FireEyeHXManager import FireEyeHXManagerError
+from .common import get_summary_lines, make_entity, run_action
 
 
 class TestCancelHostContain(unittest.TestCase):
@@ -139,6 +141,119 @@ class TestCancelHostContain(unittest.TestCase):
         assert json_result["operation_results"]["TEST-ENDPOINT-01"]["result"] == "success"
         assert json_result["operation_results"]["TEST-ENDPOINT-01"]["status"] == "uncontained"
         mock_siemplify.end.assert_called_once()
+
+
+class TestCancelHostContainSummary(unittest.TestCase):
+    """Tests for the failure reason and the summary line of Cancel Host Contain."""
+
+    def test_agent_id_permission_denied(self) -> None:
+        """Verifies PERMISSION_DENIED in the failure entry and the summary line."""
+        error = FireEyeHXManagerError("Unable to cancel containment for host a: Forbidden", 403)
+
+        def setup(mock_manager):
+            mock_manager.cancel_containment_by_id.side_effect = error
+
+        mock_siemplify = run_action(cancel_host_module, {"Agent Id": "a"}, setup)
+
+        json_result = mock_siemplify.result.add_result_json.call_args[0][0]
+        assert json_result["operation_results"]["a"]["error_type"] == "PERMISSION_DENIED"
+        mock_siemplify.end.assert_called_once_with(
+            f"Failed to cancel contain host with Agent ID: a. Error: {error}",
+            "false",
+            2,
+        )
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["error_type"] == "PERMISSION_DENIED"
+        assert summary["exc_type"] == "NONE"
+
+    def test_entity_host_not_found(self) -> None:
+        """Verifies ENDPOINT_NOT_FOUND for an entity without a matching host."""
+
+        def setup(mock_manager):
+            mock_manager.get_hosts.return_value = []
+
+        mock_siemplify = run_action(cancel_host_module, {"Agent Id": ""}, setup, [make_entity("h", "HOSTNAME")])
+
+        results = mock_siemplify.result.add_result_json.call_args[0][0]["operation_results"]
+        assert results["h"]["error_type"] == "ENDPOINT_NOT_FOUND"
+        assert mock_siemplify.end.call_args[0][1:] == ("false", 0)
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["outcome"] == "FAILURE"
+        assert summary["error_type"] == "ENDPOINT_NOT_FOUND"
+        assert summary["execution_state"] == "COMPLETED"
+
+    def test_success_line(self) -> None:
+        """Verifies a SUCCESS summary line for a cancelled containment."""
+        mock_siemplify = run_action(cancel_host_module, {"Agent Id": "a"}, lambda mock_manager: None)
+
+        [summary] = get_summary_lines(mock_siemplify)
+        assert (summary["outcome"], summary["error_type"], summary["targets"]) == ("SUCCESS", "NONE", "1")
+
+    def test_setup_error_skips_logout(self) -> None:
+        """Verifies that a failed login does not call logout on a missing manager."""
+        with (
+            patch.object(cancel_host_module, "SiemplifyAction") as mock_siemplify_action,
+            patch.object(cancel_host_module, "extract_configuration_param"),
+            patch.object(cancel_host_module, "extract_action_param"),
+            patch.object(cancel_host_module, "FireEyeHXManager", side_effect=FireEyeHXManagerError("x", 401)),
+        ):
+            cancel_host_module.main()
+
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_siemplify.LOGGER.exception.assert_called_once_with("Failed to execute action! Error is x")
+        assert get_summary_lines(mock_siemplify)[0]["error_type"] == "AUTHENTICATION_FAILED"
+
+    def test_only_unsupported_entity_reports_skipped(self) -> None:
+        """Verify unsupported entities report skipped=1 when no Agent Id is provided."""
+        mock_siemplify = run_action(
+            cancel_host_module,
+            {"Agent Id": ""},
+            lambda mock_manager: None,
+            [make_entity("user", "USERUNIQNAME")],
+        )
+
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["error_type"] == "INVALID_INPUT"
+        assert (summary["targets"], summary["failed"], summary["skipped"]) == ("0", "0", "1")
+
+    def test_unsupported_entity_skipped_vs_agent_id_override(self) -> None:
+        """Verify unsupported entities increment skipped unless Agent Id overrides target entities."""
+        host = MagicMock(_id="agent-1", last_poll_timestamp=1, raw_data={})
+        entities = [make_entity("host-1", "HOSTNAME"), make_entity("user", "USERUNIQNAME")]
+
+        def setup(mock_manager):
+            mock_manager.get_hosts.return_value = [host]
+
+        entity_run = run_action(cancel_host_module, {"Agent Id": ""}, setup, entities)
+        override_run = run_action(cancel_host_module, {"Agent Id": "a"}, lambda mock_manager: None, entities)
+
+        [entity_summary] = get_summary_lines(entity_run)
+        [override_summary] = get_summary_lines(override_run)
+        assert (entity_summary["outcome"], entity_summary["targets"], entity_summary["skipped"]) == (
+            "SUCCESS",
+            "1",
+            "1",
+        )
+        assert (override_summary["outcome"], override_summary["targets"], override_summary["skipped"]) == (
+            "SUCCESS",
+            "1",
+            "0",
+        )
+
+    def test_setup_error_preserves_targets_and_skipped(self) -> None:
+        """Verify setup error marks supported entities failed and keeps unsupported entities skipped."""
+        entities = [make_entity("host-1", "HOSTNAME"), make_entity("user", "USERUNIQNAME")]
+        with (
+            patch.object(cancel_host_module, "SiemplifyAction") as mock_siemplify_action,
+            patch.object(cancel_host_module, "extract_configuration_param"),
+            patch.object(cancel_host_module, "extract_action_param", return_value=""),
+            patch.object(cancel_host_module, "FireEyeHXManager", side_effect=FireEyeHXManagerError("x", 401)),
+        ):
+            mock_siemplify_action.return_value.target_entities = entities
+            cancel_host_module.main()
+
+        [summary] = get_summary_lines(mock_siemplify_action.return_value)
+        assert (summary["targets"], summary["failed"], summary["skipped"]) == ("1", "1", "1")
 
 
 if __name__ == "__main__":
