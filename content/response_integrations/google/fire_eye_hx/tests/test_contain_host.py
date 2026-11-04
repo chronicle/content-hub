@@ -17,7 +17,11 @@ from __future__ import annotations
 import unittest
 from unittest.mock import MagicMock, patch
 
+import requests
+
 from ..actions import ContainHost as contain_host_module
+from ..core.FireEyeHXManager import FireEyeHXNotFoundError
+from .common import get_summary_lines, make_entity, run_action
 
 
 class TestContainHost(unittest.TestCase):
@@ -145,6 +149,158 @@ class TestContainHost(unittest.TestCase):
         assert json_result["operation_results"]["TEST-ENDPOINT-01"]["result"] == "success"
         assert json_result["operation_results"]["TEST-ENDPOINT-01"]["status"] == "contained"
         mock_siemplify.end.assert_called_once()
+
+
+class TestContainHostSummary(unittest.TestCase):
+    """Tests for the failure reason and the summary line of Contain Host."""
+
+    def test_agent_id_not_found(self) -> None:
+        """Verifies ENDPOINT_NOT_FOUND in the failure entry and the summary line for an unknown agent ID."""
+        error = FireEyeHXNotFoundError("Unable to contain host bad: Host not found", 404, "ENDPOINT_NOT_FOUND")
+
+        def setup(mock_manager):
+            mock_manager.contain_host_by_id.side_effect = error
+
+        mock_siemplify = run_action(contain_host_module, {"Agent Id": "bad"}, setup)
+
+        json_result = mock_siemplify.result.add_result_json.call_args[0][0]
+        assert json_result["operation_results"]["bad"]["error_type"] == "ENDPOINT_NOT_FOUND"
+        assert json_result["operation_results"]["bad"]["reason"] == str(error)
+        mock_siemplify.end.assert_called_once_with(
+            f"Failed to contain host with Agent ID: bad. Error: {error}",
+            "false",
+            2,
+        )
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["outcome"] == "FAILURE"
+        assert summary["error_type"] == "ENDPOINT_NOT_FOUND"
+        assert summary["execution_state"] == "FAILED"
+        assert summary["targets"] == "1"
+
+    def test_entities_partial_success(self) -> None:
+        """Verifies the error type of each failed entity and a PARTIAL_SUCCESS summary line."""
+        host = MagicMock(_id="agent-1", last_poll_timestamp=1, raw_data={})
+        entities = [
+            make_entity("found", "HOSTNAME"),
+            make_entity("missing", "HOSTNAME"),
+            make_entity("10.0.0.1", "ADDRESS"),
+            make_entity("user", "USERUNIQNAME"),
+        ]
+
+        def setup(mock_manager):
+            mock_manager.get_hosts.side_effect = [[host], []]
+            mock_manager.get_hosts_by_ip.side_effect = requests.ConnectionError("refused")
+
+        mock_siemplify = run_action(contain_host_module, {"Agent Id": ""}, setup, entities)
+
+        results = mock_siemplify.result.add_result_json.call_args[0][0]["operation_results"]
+        assert "error_type" not in results["found"]
+        assert results["missing"]["error_type"] == "ENDPOINT_NOT_FOUND"
+        assert results["10.0.0.1"]["error_type"] == "CONNECTION_ERROR"
+        assert mock_siemplify.end.call_args[0][1:] == ("true", 0)
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["outcome"] == "PARTIAL_SUCCESS"
+        assert summary["error_type"] == "CONNECTION_ERROR"
+        assert (summary["targets"], summary["failed"], summary["skipped"]) == ("3", "2", "1")
+
+    def test_no_supported_entities(self) -> None:
+        """Verify a zero-target INVALID_INPUT line with skipped=1 when only unsupported entities are passed."""
+        mock_siemplify = run_action(
+            contain_host_module,
+            {"Agent Id": ""},
+            lambda mock_manager: None,
+            [make_entity("user", "USERUNIQNAME")],
+        )
+
+        mock_siemplify.end.assert_called_once_with("No tasks were created.", "false", 0)
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["error_type"] == "INVALID_INPUT"
+        assert (summary["targets"], summary["failed"], summary["skipped"]) == ("0", "0", "1")
+
+    def test_agent_id_overrides_unsupported_entities(self) -> None:
+        """Verify explicit Agent Id overrides target entities and sets skipped to 0."""
+        mock_siemplify = run_action(
+            contain_host_module,
+            {"Agent Id": "agent-1"},
+            lambda mock_manager: None,
+            [make_entity("user", "USERUNIQNAME")],
+        )
+
+        [summary] = get_summary_lines(mock_siemplify)
+        assert (summary["outcome"], summary["targets"], summary["failed"], summary["skipped"]) == (
+            "SUCCESS",
+            "1",
+            "0",
+            "0",
+        )
+
+    def test_setup_error_preserves_targets_and_skipped(self) -> None:
+        """Verify setup error marks in-scope targets failed while keeping unsupported entities skipped."""
+        entities = [make_entity("host-1", "HOSTNAME"), make_entity("user", "USERUNIQNAME")]
+        with (
+            patch.object(contain_host_module, "SiemplifyAction") as mock_siemplify_action,
+            patch.object(contain_host_module, "extract_configuration_param"),
+            patch.object(contain_host_module, "extract_action_param", return_value=""),
+            patch.object(contain_host_module, "FireEyeHXManager", side_effect=requests.ConnectionError("refused")),
+        ):
+            mock_siemplify_action.return_value.target_entities = entities
+            contain_host_module.main()
+
+        [summary] = get_summary_lines(mock_siemplify_action.return_value)
+        assert (summary["targets"], summary["failed"], summary["skipped"]) == ("1", "1", "1")
+
+        with (
+            patch.object(contain_host_module, "SiemplifyAction") as mock_override_action,
+            patch.object(contain_host_module, "extract_configuration_param"),
+            patch.object(
+                contain_host_module,
+                "extract_action_param",
+                side_effect=lambda siemplify, param_name, **kwargs: "agent-1" if param_name == "Agent Id" else False,
+            ),
+            patch.object(contain_host_module, "FireEyeHXManager", side_effect=requests.ConnectionError("refused")),
+        ):
+            mock_override_action.return_value.target_entities = entities
+            contain_host_module.main()
+
+        [override_summary] = get_summary_lines(mock_override_action.return_value)
+        assert (override_summary["targets"], override_summary["failed"], override_summary["skipped"]) == (
+            "1",
+            "1",
+            "0",
+        )
+
+    def test_timeout_reports_pending_targets(self) -> None:
+        """Verifies that entities not processed before the deadline count as TIMEOUT failures."""
+        with patch.object(contain_host_module, "unix_now", return_value=99999999999999):
+            mock_siemplify = run_action(
+                contain_host_module,
+                {"Agent Id": ""},
+                lambda mock_manager: None,
+                [make_entity("host-1", "HOSTNAME")],
+            )
+
+        assert mock_siemplify.end.call_args[0][1:] == ("false", 3)
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["error_type"] == "TIMEOUT"
+        assert summary["execution_state"] == "TIMEDOUT"
+        assert summary["failed"] == "1"
+
+    def test_setup_error_skips_logout(self) -> None:
+        """Verifies that a failed login does not call logout on a missing manager."""
+        with (
+            patch.object(contain_host_module, "SiemplifyAction") as mock_siemplify_action,
+            patch.object(contain_host_module, "extract_configuration_param"),
+            patch.object(contain_host_module, "extract_action_param"),
+            patch.object(contain_host_module, "FireEyeHXManager", side_effect=requests.ConnectionError("refused")),
+        ):
+            contain_host_module.main()
+
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_siemplify.end.assert_called_once_with("Failed to execute action! Error is refused", "false", 2)
+        mock_siemplify.LOGGER.exception.assert_called_once_with("Failed to execute action! Error is refused")
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["error_type"] == "CONNECTION_ERROR"
+        assert summary["exc_type"] == "ConnectionError"
 
 
 if __name__ == "__main__":
