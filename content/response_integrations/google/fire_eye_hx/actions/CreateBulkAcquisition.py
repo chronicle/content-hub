@@ -66,7 +66,7 @@ def is_json_script(script_content: str) -> bool:
     openers = [idx for idx in (stripped.find("{"), stripped.find("[")) if idx != -1]
     if openers and not stripped.startswith("<") and "<script" not in stripped:
         start_idx = min(openers)
-        prefix = stripped[:start_idx].strip().rstrip("\"'").strip()
+        prefix = stripped[:start_idx].strip().rstrip("\"'").rstrip("rRbBuUfF").strip()
         if prefix.endswith("=") and prefix[:-1].strip().isidentifier():
             return True
     return False
