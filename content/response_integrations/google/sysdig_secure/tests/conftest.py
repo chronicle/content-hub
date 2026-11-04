@@ -14,39 +14,12 @@
 
 from __future__ import annotations
 
-pytest_plugins = ("integration_testing.conftest",)
-
-import importlib
 import pathlib
-import pkgutil
-import sys
-
-import soar_sdk
-
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f"soar_sdk.{name}"] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
 
 import pytest
 import requests
 from requests import Session
-
-from TIPCommon.types import SingleJson
-
-from integration_testing.common import (
-    get_def_file_content as get_json_file_content,
-    use_live_api,
-)
-from integration_testing.logger import Logger
+import soar_sdk  # noqa: F401
 
 import sysdig_secure.core.SysdigSecureAuthManager
 from sysdig_secure.core.SysdigSecureAuthManager import (
@@ -55,10 +28,17 @@ from sysdig_secure.core.SysdigSecureAuthManager import (
 )
 from sysdig_secure.core.SysdigSecureManager import ApiManager
 from sysdig_secure.tests.core.session import ApiSession
+from integration_testing.common import (
+    get_def_file_content as get_json_file_content,
+    use_live_api,
+)
+from integration_testing.logger import Logger
+from TIPCommon.types import SingleJson
+
+pytest_plugins = ("integration_testing.conftest",)
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
 CONFIG: SingleJson = get_json_file_content(CONFIG_PATH)
-
 
 @pytest.fixture(autouse=True)
 def sysdig_script_session(
@@ -84,11 +64,9 @@ def sysdig_script_session(
 
     yield session
 
-
 @pytest.fixture(name="sdk_session", autouse=True)
 def sdk_session_fixture(sysdig_script_session: ApiSession) -> ApiSession:
     return sysdig_script_session
-
 
 # pylint: disable=redefined-outer-name
 @pytest.fixture

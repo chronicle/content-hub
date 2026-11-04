@@ -13,64 +13,22 @@
 # limitations under the License.
 
 from __future__ import annotations
-pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
-import importlib
-import soar_sdk
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
 
-import pathlib
-import sys
-from unittest.mock import MagicMock
-
-for _mod in [
-    "Siemplify",
-    "SiemplifyAction",
-    "SiemplifyLogger",
-    "SiemplifyUtils",
-    "SiemplifyBase",
-    "SiemplifyConnectors",
-    "SiemplifyJob",
-    "SiemplifyAddressProvider",
-    "SiemplifyDataModel",
-    "SiemplifyConnectorsDataModel",
-    "SiemplifyJobDataModel",
-    "SiemplifyCaseDataModel",
-    "SiemplifyVault",
-    "SiemplifyVaultUtils",
-    "ScriptResult",
-    "OverflowManager",
-]:
-    if _mod not in sys.modules:
-        sys.modules[_mod] = MagicMock()
+import pytest
+from pytest_mock import MockerFixture
 
 from cyber_ark_credential_provider.core import constants
-import pytest
 from cyber_ark_credential_provider.core.credential_provider_manager import (
     CredentialProviderManager,
 )
-from pytest_mock import MockerFixture
-from cyber_ark_credential_provider.tests.test_utils import read_config
-
 from cyber_ark_credential_provider.core.datamodels import (
     ConfigurationParameters,
 )
+from cyber_ark_credential_provider.tests.test_utils import read_config
+
+pytest_plugins = ("integration_testing.conftest",)
 
 integration_params: ConfigurationParameters = read_config()
-
 
 @pytest.fixture
 def manager() -> CredentialProviderManager:
@@ -80,7 +38,6 @@ def manager() -> CredentialProviderManager:
         CredentialProviderManager: CredentialProviderManager instance.
     """
     return CredentialProviderManager(configuration_parameters=integration_params)
-
 
 @pytest.fixture
 def ssh_components_mock(mocker: MockerFixture):
@@ -96,7 +53,6 @@ def ssh_components_mock(mocker: MockerFixture):
     mocker.patch.dict(constants.KEY_CLASSES, {"ssh-rsa": mock_rsa_key_class})
 
     return mock_ssh_client_class, mock_client_instance, mock_key_instance
-
 
 @pytest.fixture
 def anyio_backend() -> str:

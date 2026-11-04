@@ -14,24 +14,6 @@
 
 from __future__ import annotations
 pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
-import importlib
-import soar_sdk
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
-
 import pytest
 from soar_sdk.SiemplifyBase import SiemplifyBase
 import requests
@@ -49,11 +31,9 @@ from microsoft_defender_atp.tests.core.session import (
     MicrosoftDefenderATPSession,
 )
 
-
 @pytest.fixture(name="microsoft_defender_atp")
 def microsoft_defender_atp_product() -> MicrosoftDefenderATP:
     yield MicrosoftDefenderATP()
-
 
 @pytest.fixture(name="script_session", autouse=True)
 def microsoft_defender_atp_script_session(
@@ -71,16 +51,12 @@ def microsoft_defender_atp_script_session(
         monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
     yield session
 
-
-
-
 @pytest.fixture(name="_script_session")
 def microsoft_defender_atp_script_session_alias(
     script_session: MicrosoftDefenderATPSession,
 ) -> MicrosoftDefenderATPSession:
     """Alias for script_session used by tests that discard the session object."""
     return script_session
-
 
 @pytest.fixture(name="_microsoft_defender_atp")
 def microsoft_defender_atp_product_alias(

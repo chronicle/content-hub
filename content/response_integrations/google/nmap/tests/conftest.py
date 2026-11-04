@@ -13,27 +13,9 @@
 # limitations under the License.
 
 pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
-import importlib
-import soar_sdk
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
 import pytest
 
 from nmap.core.NmapManager import NmapManager
-
 
 @pytest.fixture
 def mock_soar_action(mocker):
@@ -41,7 +23,6 @@ def mock_soar_action(mocker):
     action = mocker.MagicMock()
     action.is_remote = True
     return action
-
 
 @pytest.fixture
 def manager(mock_soar_action):  # pylint: disable=redefined-outer-name

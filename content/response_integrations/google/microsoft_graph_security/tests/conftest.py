@@ -17,26 +17,8 @@ from __future__ import annotations
 pytest_plugins = ("integration_testing.conftest",)
 
 from collections import namedtuple
-import importlib
 import json
 import os
-import pkgutil
-import sys
-
-import soar_sdk
-
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f"soar_sdk.{name}"] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
 
 import pytest
 import requests
@@ -53,7 +35,6 @@ from microsoft_graph_security.tests.core.session import (
 )
 from integration_testing.common import use_live_api
 
-
 # pylint: disable=redefined-outer-name
 INTEGRATION_NAME = "MicrosoftGraphSecurity"
 IntegrationParameters = namedtuple(
@@ -67,7 +48,6 @@ IntegrationParameters = namedtuple(
         "verify_ssl",
     ],
 )
-
 
 def read_config() -> IntegrationParameters:
     """Read config.json to get the integration credentials.
@@ -96,7 +76,6 @@ def read_config() -> IntegrationParameters:
         verify_ssl,
     )
 
-
 @pytest.fixture(scope="module")
 def mock_data() -> dict:
     return json.load(
@@ -106,11 +85,9 @@ def mock_data() -> dict:
         )
     )
 
-
 @pytest.fixture
 def microsoft_graph_security() -> MicrosoftGraphSecurity:
     yield MicrosoftGraphSecurity()
-
 
 @pytest.fixture(autouse=True)
 def script_session(
@@ -127,11 +104,9 @@ def script_session(
 
     yield session
 
-
 @pytest.fixture(name="sdk_session", autouse=True)
 def sdk_session_fixture(script_session):
     return script_session
-
 
 @pytest.fixture
 def microsoft_graph_security_manager() -> MicrosoftGraphSecurityManager:

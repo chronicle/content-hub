@@ -14,24 +14,7 @@
 
 from __future__ import annotations
 pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
 import importlib
-import soar_sdk
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
-
 import importlib.util
 import pathlib
 import sysconfig
@@ -52,14 +35,13 @@ if _spec and _spec.loader:
         _csv_pkg.__spec__.submodule_search_locations = [_integration_root]
 
 from csv.tests.core.csv import CSV
+import soar_sdk  # noqa: F401
 from integration_testing.common import use_live_api
-
 
 @pytest.fixture
 def mock_csv_product() -> CSV:
     """Provides a mock CSV product (a simulated file system)."""
     yield CSV()
-
 
 @pytest.fixture(autouse=True)
 def mock_filesystem( # pylint: disable=redefined-outer-name
