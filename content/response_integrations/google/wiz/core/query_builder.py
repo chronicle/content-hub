@@ -48,6 +48,7 @@ class IssueQueryBuilder:
             "type",
             "description",
             "resolvedAt",
+            "resolutionReason",
             Field(
                 name="entitySnapshot",
                 fields=[
@@ -462,6 +463,7 @@ class IssuesQueryBuilder:
                     fields=[
                         "id",
                         "status",
+                        "resolutionReason",
                         "updatedAt",
                         "severity",
                         Field(
