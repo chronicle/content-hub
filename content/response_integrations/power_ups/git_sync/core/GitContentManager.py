@@ -455,4 +455,4 @@ class GitContentManager:
 
     @staticmethod
     def _json_encoder(d: dict) -> str:
-        return json.dumps(d, indent=4)
+        return json.dumps(d, indent=4, sort_keys=True)
