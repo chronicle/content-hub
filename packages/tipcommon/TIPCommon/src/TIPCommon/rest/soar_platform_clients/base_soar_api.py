@@ -31,10 +31,7 @@ if TYPE_CHECKING:
     from TIPCommon.types import ChronicleSOAR, SingleJson
 
 
-def validate_response(
-    response: requests.Response,
-    validate_json: bool = False,
-) -> None:
+def validate_response(response: requests.Response, validate_json: bool = False) -> None:
     """Validate response HTTP status and optionally JSON body.
 
     Args:
@@ -61,7 +58,7 @@ def validate_response(
         if body:
             error_message = body
             try:
-                error_json = json.loads(body)
+                error_json: SingleJson = json.loads(body)
                 if isinstance(error_json, dict):
                     error_obj = error_json.get("error")
                     if isinstance(error_obj, dict) and "message" in error_obj:
@@ -70,7 +67,7 @@ def validate_response(
                         error_message = str(error_json["errorMessage"])
                     elif "message" in error_json:
                         error_message = str(error_json["message"])
-            except Exception:
+            except json.JSONDecodeError:
                 pass
             if len(error_message) > 1000:
                 error_message = error_message[:1000] + "..."

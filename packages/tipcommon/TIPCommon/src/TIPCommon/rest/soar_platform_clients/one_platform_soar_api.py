@@ -1658,7 +1658,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             return []
 
         validate_response(response, validate_json=True)
-        response_data = response.json()
+        response_data: SingleJson | list[SingleJson] = response.json()
 
         if isinstance(response_data, list):
             return response_data
@@ -1694,7 +1694,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                 break
 
             validate_response(page_response, validate_json=True)
-            page_data = page_response.json()
+            page_data: SingleJson = page_response.json()
 
             if not isinstance(page_data, dict):
                 self.chronicle_soar.LOGGER.warn(

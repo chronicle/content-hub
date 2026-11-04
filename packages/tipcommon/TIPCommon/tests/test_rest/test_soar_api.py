@@ -580,11 +580,7 @@ def test_get_environment_group_names(
     assert res == {"environmentGroups": ["Group1", "Group2"]}
 
 
-def _make_response(
-    status_code: int,
-    body: bytes,
-    url: str = "https://mock-soar-api.com/test",
-) -> requests.Response:
+def _make_response(status_code: int, body: bytes, url: str = "https://mock-soar-api.com/test") -> requests.Response:
     """Create a real requests.Response instance with status code and raw payload."""
     resp = requests.Response()
     resp.status_code = status_code
@@ -614,11 +610,7 @@ def _make_response(
         ),
     ],
 )
-def test_validate_response_includes_error_body(
-    status_code: int,
-    body_text: str,
-    expected_message: str,
-) -> None:
+def test_validate_response_includes_error_body(status_code: int, body_text: str, expected_message: str) -> None:
     """Test validate_response includes the API response body in the raised HTTPError."""
     response = _make_response(status_code, body_text.encode())
 

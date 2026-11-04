@@ -593,13 +593,7 @@ def test_get_siemplify_user_details_http_errors_raise_with_body(
     assert json.loads(error_body)["error"]["message"] in str(exc_info.value)
 
 
-@pytest.mark.parametrize(
-    ("status_code", "raw_body"),
-    [
-        (200, b"{}"),
-        (204, b""),
-    ],
-)
+@pytest.mark.parametrize(("status_code", "raw_body"), [(200, b"{}"), (204, b"")])
 def test_paginate_results_empty_proto3_or_204_returns_empty_without_warning(
     status_code: int,
     raw_body: bytes,
@@ -721,7 +715,4 @@ def test_assign_case_to_user_ignores_alert_identifier_and_logs_info(
         params=None,
         json={"casesIds": [123], "userName": "secops_user_id"},
     )
-    assert any(
-        "alert_identifier" in call_args[0][0]
-        for call_args in mock_chronicle_soar.LOGGER.info.call_args_list
-    )
+    assert any("alert_identifier" in call_args[0][0] for call_args in mock_chronicle_soar.LOGGER.info.call_args_list)
