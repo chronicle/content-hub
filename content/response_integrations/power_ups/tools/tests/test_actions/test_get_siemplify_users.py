@@ -69,11 +69,23 @@ def test_get_siemplify_users_success(
 
 
 @pytest.mark.parametrize(
-    ("status_code", "error_body"),
+    ("status_code", "error_body", "expected_error_message"),
     [
-        (403, '{"error":{"code":403,"message":"Permission chronicle.legacySoarUsers.get denied"}}'),
-        (404, '{"error":{"code":404,"message":"Not found"}}'),
-        (500, '{"error":{"code":500,"message":"Internal error"}}'),
+        (
+            403,
+            '{"error":{"code":403,"message":"Permission chronicle.legacySoarUsers.get denied"}}',
+            "Permission chronicle.legacySoarUsers.get denied",
+        ),
+        (
+            404,
+            '{"error":{"code":404,"message":"Not found"}}',
+            "Not found",
+        ),
+        (
+            500,
+            '{"error":{"code":500,"message":"Internal error"}}',
+            "Internal error",
+        ),
     ],
 )
 @set_metadata(
@@ -87,9 +99,10 @@ def test_get_siemplify_users_1p_http_error_fails_action(
     _mock_factory_1p: MagicMock,
     status_code: int,
     error_body: str,
+    expected_error_message: str,
     action_output: MockActionOutput,
 ) -> None:
-    """Verify 1P 403/404/500 responses fail GetSiemplifyUsers and surface the API error body."""
+    """Verify 1P 403/404/500 responses fail GetSiemplifyUsers and surface the API error message."""
     err_resp = requests.Response()
     err_resp.status_code = status_code
     err_resp.reason = "API Error"
@@ -107,5 +120,5 @@ def test_get_siemplify_users_1p_http_error_fails_action(
     assert "Returned Siemplify Users." not in action_output.results.output_message
     assert "Error executing action 'GetSiemplifyUsers'." in action_output.results.output_message
     assert str(status_code) in action_output.results.output_message
-    assert error_body in action_output.results.output_message
+    assert expected_error_message in action_output.results.output_message
     assert action_output.results.json_output is None

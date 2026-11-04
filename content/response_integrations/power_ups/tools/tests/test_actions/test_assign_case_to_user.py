@@ -89,11 +89,23 @@ def test_assign_case_to_user_success_with_api_payload(
 
 
 @pytest.mark.parametrize(
-    ("status_code", "error_body"),
+    ("status_code", "error_body", "expected_error_message"),
     [
-        (400, '{"errorCode":2000,"errorMessage":"Cannot assign case to disabled user account."}'),
-        (403, '{"error":{"code":403,"message":"Permission chronicle.cases.update denied"}}'),
-        (500, '{"error":{"code":500,"message":"Internal error"}}'),
+        (
+            400,
+            '{"errorCode":2000,"errorMessage":"Cannot assign case to disabled user account."}',
+            "Cannot assign case to disabled user account.",
+        ),
+        (
+            403,
+            '{"error":{"code":403,"message":"Permission chronicle.cases.update denied"}}',
+            "Permission chronicle.cases.update denied",
+        ),
+        (
+            500,
+            '{"error":{"code":500,"message":"Internal error"}}',
+            "Internal error",
+        ),
     ],
 )
 @set_metadata(
@@ -111,9 +123,10 @@ def test_assign_case_to_user_1p_http_error_fails_cleanly_with_body(
     _mock_factory_1p: MagicMock,
     status_code: int,
     error_body: str,
+    expected_error_message: str,
     action_output: MockActionOutput,
 ) -> None:
-    """Verify 1P HTTP errors set FAILED state, False result, and include the API error body."""
+    """Verify 1P HTTP errors set FAILED state, False result, and include the API error message."""
     err_resp = requests.Response()
     err_resp.status_code = status_code
     err_resp.reason = "Error"
@@ -133,5 +146,5 @@ def test_assign_case_to_user_1p_http_error_fails_cleanly_with_body(
     assert action_output.results.result_value is False
     assert "Error executing action 'AssignCaseToUser'." in action_output.results.output_message
     assert str(status_code) in action_output.results.output_message
-    assert error_body in action_output.results.output_message
+    assert expected_error_message in action_output.results.output_message
     assert action_output.results.json_output is None

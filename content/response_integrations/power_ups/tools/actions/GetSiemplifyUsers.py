@@ -24,6 +24,7 @@ ACTION_NAME = "GetSiemplifyUsers"
 
 @output_handler
 def main() -> None:
+    """Main execution flow for retrieving Siemplify users."""
     siemplify = SiemplifyAction()
     siemplify.script_name = ACTION_NAME
 

@@ -26,6 +26,7 @@ ACTION_NAME = "AssignCaseToUser"
 
 @output_handler
 def main() -> None:
+    """Main execution flow for assigning a case to a user."""
     siemplify = SiemplifyAction()
     siemplify.script_name = ACTION_NAME
 
