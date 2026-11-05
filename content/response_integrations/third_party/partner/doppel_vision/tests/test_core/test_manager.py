@@ -4,42 +4,41 @@ from unittest.mock import MagicMock
 
 import pytest
 from core.DoppelManager import DoppelManager
+from core.config import IntegrationConfig
+from core.constants import API_VERSION_V1, API_VERSION_V2
 from core.exceptions import DoppelConfigError, DoppelHttpError
 
 
 class FakeResponse:
-    def __init__(self, status_code: int, payload: dict | None = None) -> None:
+    def __init__(self, status_code: int, payload: dict[str, object] | None = None) -> None:
         self.status_code = status_code
         self._payload = payload if payload is not None else {}
         self.headers = {}
         self.content = b"{}"
         self.ok = 200 <= status_code < 300
 
-    def json(self):
+    def json(self) -> dict[str, object]:
         return self._payload
 
 
 def _manager(api_version: str = "v1", session: MagicMock | None = None) -> DoppelManager:
     session = session or MagicMock()
     if api_version == "v1":
-        return DoppelManager(api_key="key", session=session, sleep=lambda _seconds: None)
+        config = IntegrationConfig(api_version=API_VERSION_V1, api_key="key")
+        return DoppelManager(config, session=session, sleep=lambda _seconds: None)
     session.post.return_value = MagicMock(
         ok=True,
         status_code=200,
         content=b"{}",
         json=lambda: {"access_token": "tok", "expires_in": 86400},
     )
-    return DoppelManager(
-        api_version="v2",
-        client_id="id",
-        client_secret="secret",
-        session=session,
-        sleep=lambda _seconds: None,
-    )
+    config = IntegrationConfig(api_version=API_VERSION_V2, client_id="id", client_secret="secret")
+    return DoppelManager(config, session=session, sleep=lambda _seconds: None)
 
 
-def test_v1_constructor_backward_compatible() -> None:
-    manager = DoppelManager(api_key="key", user_api_key="user", org_code="ACM")
+def test_v1_constructor_sets_auth_headers() -> None:
+    config = IntegrationConfig(api_version=API_VERSION_V1, api_key="key", user_api_key="user", org_code="ACM")
+    manager = DoppelManager(config)
     assert manager.api_version == "v1"
     assert manager.base_url == "https://api.doppel.com/v1"
     headers = manager.auth_provider.get_auth_headers()
@@ -131,7 +130,7 @@ def test_update_requires_at_least_one_field() -> None:
 
 def test_v2_without_credentials_fails() -> None:
     with pytest.raises(DoppelConfigError):
-        DoppelManager(api_version="v2")
+        DoppelManager(IntegrationConfig(api_version=API_VERSION_V2))
 
 
 def test_http_error_on_failed_fetch() -> None:

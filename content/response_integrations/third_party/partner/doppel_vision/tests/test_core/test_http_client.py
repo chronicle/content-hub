@@ -12,14 +12,19 @@ from core.token_cache import TokenCache
 
 
 class FakeResponse:
-    def __init__(self, status_code: int, payload: dict | None = None, headers: dict | None = None) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        payload: dict[str, object] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.status_code = status_code
         self._payload = payload if payload is not None else {}
         self.headers = headers or {}
         self.content = b"{}" if payload is not None else b""
         self.ok = 200 <= status_code < 300
 
-    def json(self):
+    def json(self) -> dict[str, object]:
         return self._payload
 
 

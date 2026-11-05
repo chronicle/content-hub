@@ -3,8 +3,12 @@ from __future__ import annotations
 import io
 import json
 import time
+from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from TIPCommon.types import ChronicleSOAR, SingleJson
 
 from .constants import (
     GLOBAL_CONTEXT_SCOPE,
@@ -14,7 +18,7 @@ from .constants import (
 )
 
 
-def _invoke(fn: Any, positional: tuple[Any, ...], named: dict[str, Any]) -> Any:
+def _invoke(fn: Callable[..., object], positional: tuple[object, ...], named: SingleJson) -> object:
     try:
         return fn(*positional)
     except TypeError:
@@ -25,15 +29,18 @@ class TokenCache:
     """In-process plus SOAR-context cache for v2 OAuth access tokens."""
 
     def __init__(
-        self,
-        siemplify: Any | None = None,
-        now: Any | None = None,
-        *,
-        use_context: bool = True,
+        self, siemplify: ChronicleSOAR | None = None, now: Callable[[], float] | None = None, use_context: bool = True
     ) -> None:
+        """Initialize the cache, optionally backed by SOAR context.
+
+        Args:
+            siemplify: Optional SOAR SDK object used to persist tokens.
+            now: Optional clock used for expiry checks. Defaults to time.time.
+            use_context: When False, skip SOAR context reads and writes.
+        """
         self.siemplify = siemplify if use_context else None
         self._now = now or time.time
-        self._memory: dict[str, Any] | None = None
+        self._memory: SingleJson | None = None
 
     def _identifier(self) -> str:
         identifier: object = getattr(self.siemplify, "integration_instance", None)
@@ -42,18 +49,29 @@ class TokenCache:
         return INTEGRATION_NAME
 
     def get_token(self) -> str | None:
+        """Return a cached access token when it is still valid.
+
+        Returns:
+            The access token, or None when no fresh token is available.
+        """
         cached = self._memory if self._is_fresh(self._memory) else None
         if cached:
-            return cached["access_token"]
+            return str(cached["access_token"])
 
         stored = self._read_context()
         if self._is_fresh(stored):
             self._memory = stored
-            return stored["access_token"]
+            return str(stored["access_token"])
         return None
 
     def set_token(self, access_token: str, expires_in: int) -> None:
-        record = {
+        """Store an access token in memory and, when available, SOAR context.
+
+        Args:
+            access_token: OAuth access token.
+            expires_in: Token lifetime in seconds.
+        """
+        record: SingleJson = {
             "access_token": access_token,
             "expires_at": self._now() + expires_in,
         }
@@ -61,15 +79,16 @@ class TokenCache:
         self._write_context(record)
 
     def invalidate(self) -> None:
+        """Clear the in-memory token and any persisted SOAR context value."""
         self._memory = None
         self._write_context(None)
 
-    def _is_fresh(self, record: dict[str, Any] | None) -> bool:
+    def _is_fresh(self, record: SingleJson | None) -> bool:
         if not record or not record.get("access_token") or not record.get("expires_at"):
             return False
         return self._now() < float(record["expires_at"]) - TOKEN_EXPIRY_BUFFER_SECONDS
 
-    def _read_context(self) -> dict[str, Any] | None:
+    def _read_context(self) -> SingleJson | None:
         raw = self._call_context(
             ("get_context_property",),
             (GLOBAL_CONTEXT_SCOPE, self._identifier(), TOKEN_CACHE_PROPERTY_KEY),
@@ -87,7 +106,7 @@ class TokenCache:
             return None
         return data if isinstance(data, dict) else None
 
-    def _write_context(self, record: dict[str, Any] | None) -> None:
+    def _write_context(self, record: SingleJson | None) -> None:
         value = "" if record is None else json.dumps(record)
         self._call_context(
             ("try_set_context_property", "set_context_property"),
@@ -108,15 +127,15 @@ class TokenCache:
     def _call_context(
         self,
         method_names: tuple[str, ...],
-        positional: tuple[Any, ...],
-        named: dict[str, Any],
-    ) -> Any:
+        positional: tuple[object, ...],
+        named: SingleJson,
+    ) -> object:
         if self.siemplify is None:
             return None
         buf = io.StringIO()
         with redirect_stdout(buf), redirect_stderr(buf):
             for name in method_names:
-                fn = getattr(self.siemplify, name, None)
+                fn: object = getattr(self.siemplify, name, None)
                 if not callable(fn):
                     continue
                 try:

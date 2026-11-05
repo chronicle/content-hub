@@ -42,11 +42,7 @@ def main():
         input_type=str,
         default_value=0,
     )
-    page_size = siemplify.extract_action_param(
-        param_name="Page Size",
-        input_type=str,
-        default_value="30",
-    page_size: str = siemplify.extract_action_param("Page Size", print_value=True, default_value="") or ""
+    page_size: str = siemplify.extract_action_param("Page Size", print_value=True, default_value="30") or ""
     tags = siemplify.extract_action_param(param_name="Tags", default_value=None)
 
     tags_list = tags.split(",") if tags else None

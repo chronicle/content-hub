@@ -16,10 +16,16 @@ class ContextStore:
         self.integration_instance = instance
         self.store: dict[tuple[object, ...], str] = {}
 
-    def get_context_property(self, context_type, identifier, property_key):
+    def get_context_property(self, context_type: object, identifier: object, property_key: object) -> str | None:
         return self.store.get((context_type, identifier, property_key))
 
-    def try_set_context_property(self, context_type, identifier, property_key, property_value):
+    def try_set_context_property(
+        self,
+        context_type: object,
+        identifier: object,
+        property_key: object,
+        property_value: str,
+    ) -> None:
         self.store[(context_type, identifier, property_key)] = property_value
 
 
@@ -28,19 +34,23 @@ class SetOnlyContextStore:
         self.integration_instance = instance
         self.store: dict[tuple[object, ...], str] = {}
 
-    def get_context_property(self, context_type, identifier, property_key):
+    def get_context_property(self, context_type: object, identifier: object, property_key: object) -> str | None:
         return self.store.get((context_type, identifier, property_key))
 
-    def set_context_property(self, context_type, identifier, property_key, property_value):
+    def set_context_property(
+        self,
+        context_type: object,
+        identifier: object,
+        property_key: object,
+        property_value: str,
+    ) -> None:
         self.store[(context_type, identifier, property_key)] = property_value
 
 
 def test_token_cache_uses_memory_then_context() -> None:
     siemplify = MagicMock()
     siemplify.integration_instance = "instance-1"
-    siemplify.get_context_property.return_value = json.dumps(
-        {"access_token": "ctx-token", "expires_at": 10_000},
-    )
+    siemplify.get_context_property.return_value = json.dumps({"access_token": "ctx-token", "expires_at": 10_000})
     cache = TokenCache(siemplify=siemplify, now=lambda: 1_000)
     assert cache.get_token() == "ctx-token"
 
@@ -136,7 +146,5 @@ def test_v2_auth_reuses_token_across_playbook_runs() -> None:
 
 
 def test_ping_does_not_disable_token_persist() -> None:
-    source = (Path(__file__).resolve().parents[2] / "actions" / "Ping.py").read_text(
-        encoding="utf-8",
-    )
+    source = (Path(__file__).resolve().parents[2] / "actions" / "Ping.py").read_text(encoding="utf-8")
     assert "persist_token=False" not in source

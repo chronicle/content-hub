@@ -4,14 +4,7 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.config import create_manager_from_siemplify
-
-
-def _clean(value):
-    if value is None:
-        return None
-    text = str(value).strip()
-def _clean(value: object) -> str | None:
+from ..core.config import _clean, create_manager_from_siemplify
 
 
 @output_handler
@@ -19,20 +12,11 @@ def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = "Update Alert Action"
 
-    entity = _clean(siemplify.extract_action_param(param_name="Entity", default_value=None))
-    alert_id = _clean(siemplify.extract_action_param(param_name="Alert_ID", default_value=None))
-    queue_state = _clean(
-        siemplify.extract_action_param(
-            param_name="Queue_State",
-        ),
-    )
-    entity_state = _clean(
-        siemplify.extract_action_param(
-            param_name="Entity_State",
-        ),
-    )
-    queue_state: str | None = _clean(siemplify.extract_action_param("Queue State", print_value=True))
-    entity_state: str | None = _clean(siemplify.extract_action_param("Entity State", print_value=True))
+    entity: str | None = _clean(siemplify.extract_action_param(param_name="Entity", default_value=None))
+    alert_id: str | None = _clean(siemplify.extract_action_param(param_name="Alert_ID", default_value=None))
+    queue_state: str | None = _clean(siemplify.extract_action_param(param_name="Queue_State"))
+    entity_state: str | None = _clean(siemplify.extract_action_param(param_name="Entity_State"))
+    comment: str | None = _clean(siemplify.extract_action_param(param_name="Comment", default_value=None))
 
     status = EXECUTION_STATE_COMPLETED
     output_message = "Alert updated successfully."
@@ -46,9 +30,7 @@ def main():
         if not entity and not alert_id:
             raise ValueError("Either 'Entity' or 'Alert_ID' must be provided.")
         if not queue_state and not entity_state and not comment:
-            raise ValueError(
-                "At least one of Queue_State, Entity_State, or Comment must be provided.",
-        raise ValueError("Provide at least one field to update: Queue State, Entity State, or Comment")
+            raise ValueError("At least one of Queue_State, Entity_State, or Comment must be provided.")
 
         manager = create_manager_from_siemplify(siemplify)
         updated_alert = manager.update_alert(

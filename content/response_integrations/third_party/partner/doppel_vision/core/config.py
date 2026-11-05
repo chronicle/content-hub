@@ -3,7 +3,9 @@ from __future__ import annotations
 import io
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING
+
+import requests
 
 from .auth_provider_v1 import AuthProviderV1
 from .auth_provider_v2 import AuthProviderV2
@@ -22,9 +24,25 @@ from .constants import (
 from .exceptions import DoppelConfigError
 from .token_cache import TokenCache
 
+if TYPE_CHECKING:
+    from TIPCommon.types import ChronicleSOAR, SingleJson
 
-@dataclass(frozen=True)
+    from .DoppelManager import DoppelManager
+
+
+@dataclass(frozen=True, slots=True)
 class IntegrationConfig:
+    """Validated Doppel Vision instance configuration.
+
+    Attributes:
+        api_version: Resolved API version (`v1` or `v2`).
+        api_key: Organization API key used by v1.
+        user_api_key: Optional user API key used by v1.
+        org_code: Optional organization code used by v1.
+        client_id: OAuth client ID used by v2.
+        client_secret: OAuth client secret used by v2.
+    """
+
     api_version: str
     api_key: str | None = None
     user_api_key: str | None = None
@@ -40,10 +58,19 @@ def _clean(value: object) -> str | None:
     return text or None
 
 
-def resolve_api_version(raw_value: Any) -> str:
+def resolve_api_version(raw_value: object) -> str:
     """Resolve a user-entered API version to v1 or v2.
 
     Missing/blank values default to v1 so existing installs keep working.
+
+    Args:
+        raw_value: Raw API version value from configuration.
+
+    Returns:
+        Canonical API version (`v1` or `v2`).
+
+    Raises:
+        DoppelConfigError: If the value is present but not a supported version.
     """
     cleaned = _clean(raw_value)
     if not cleaned:
@@ -59,17 +86,28 @@ def resolve_api_version(raw_value: Any) -> str:
     )
 
 
-_PARAM_NAMES = (
+_PARAM_NAMES: tuple[str, ...] = (
     PARAM_API_VERSION,
     PARAM_API_KEY,
     PARAM_USER_API_KEY,
     PARAM_ORG_CODE,
     PARAM_CLIENT_ID,
     PARAM_CLIENT_SECRET,
-_PARAM_NAMES: tuple[str, ...] = (
+)
 
 
 def validate_config(config: IntegrationConfig) -> IntegrationConfig:
+    """Validate that the selected API version has the required credentials.
+
+    Args:
+        config: Integration configuration to validate.
+
+    Returns:
+        The same configuration when it is valid.
+
+    Raises:
+        DoppelConfigError: If required credentials for the selected version are missing.
+    """
     if config.api_version == API_VERSION_V2:
         if not config.client_id or not config.client_secret:
             raise DoppelConfigError("Client ID and Client Secret are required for API v2")
@@ -79,17 +117,13 @@ def validate_config(config: IntegrationConfig) -> IntegrationConfig:
     return config
 
 
-def _configuration_mapping(siemplify: Any) -> dict[str, Any] | None:
-    """Return the instance config dict without per-parameter extract logs.
-    The Siemplify SDK prints 'Reading configuration from Server' to stdout/stderr.
-    We silence stdout and stderr so that the SecOps UI displays real exception messages.
-    """
-def _configuration_mapping(siemplify: ChronicleSOAR) -> SingleJson:
+def _configuration_mapping(siemplify: ChronicleSOAR) -> SingleJson | None:
     """Return the raw configuration dictionary from a Siemplify/SOAR SDK object.
 
     Action and connector objects expose ``siemplify.configuration`` directly.
     Job objects (``SiemplifyJob``) only expose it via ``get_configuration()``.
     """
+    getter = getattr(siemplify, "get_configuration", None)
     if not callable(getter):
         return None
     buf = io.StringIO()
@@ -103,11 +137,11 @@ def _configuration_mapping(siemplify: ChronicleSOAR) -> SingleJson:
     return None
 
 
-def _extract_param(siemplify: Any, param_name: str) -> str | None:
+def _extract_param(siemplify: ChronicleSOAR, param_name: str) -> str | None:
     buf = io.StringIO()
     try:
         with redirect_stdout(buf), redirect_stderr(buf):
-            val = siemplify.extract_configuration_param(
+            val: object = siemplify.extract_configuration_param(
                 provider_name=INTEGRATION_NAME,
                 param_name=param_name,
                 default_value="",
@@ -119,14 +153,22 @@ def _extract_param(siemplify: Any, param_name: str) -> str | None:
     return _clean(val)
 
 
-def _read_params(siemplify: Any) -> dict[str, str | None]:
+def _read_params(siemplify: ChronicleSOAR) -> dict[str, str | None]:
     mapping = _configuration_mapping(siemplify)
     if mapping is not None:
         return {name: _clean(mapping.get(name)) for name in _PARAM_NAMES}
     return {name: _extract_param(siemplify, name) for name in _PARAM_NAMES}
 
 
-def load_integration_config(siemplify: Any) -> IntegrationConfig:
+def load_integration_config(siemplify: ChronicleSOAR) -> IntegrationConfig:
+    """Load and validate Doppel Vision configuration from a SOAR SDK object.
+
+    Args:
+        siemplify: SOAR SDK object exposing instance configuration.
+
+    Returns:
+        Validated integration configuration.
+    """
     params = _read_params(siemplify)
     config = IntegrationConfig(
         api_version=resolve_api_version(params[PARAM_API_VERSION]),
@@ -141,11 +183,22 @@ def load_integration_config(siemplify: Any) -> IntegrationConfig:
 
 def create_auth_provider(
     config: IntegrationConfig,
-    siemplify: Any | None = None,
-    session: Any | None = None,
+    siemplify: ChronicleSOAR | None = None,
+    session: requests.Session | None = None,
     *,
     persist_token: bool = True,
 ) -> AuthProviderV1 | AuthProviderV2:
+    """Create the auth provider that matches the selected API version.
+
+    Args:
+        config: Validated integration configuration.
+        siemplify: Optional SOAR SDK object used to persist v2 tokens.
+        session: Optional shared requests session.
+        persist_token: Whether v2 tokens should be stored in SOAR context.
+
+    Returns:
+        Configured v1 or v2 authentication provider.
+    """
     if config.api_version == API_VERSION_V2:
         return AuthProviderV2(
             client_id=config.client_id or "",
@@ -153,24 +206,16 @@ def create_auth_provider(
             token_cache=TokenCache(siemplify=siemplify, use_context=persist_token),
             session=session,
         )
-    return AuthProviderV1(
-        api_key=config.api_key or "",
-        user_api_key=config.user_api_key,
-        org_code=config.org_code,
-        return AuthProviderV1(api_key=config.api_key or "", user_api_key=config.user_api_key)
+    return AuthProviderV1(api_key=config.api_key or "", user_api_key=config.user_api_key, org_code=config.org_code)
 
 
-def create_manager_from_siemplify(siemplify: Any, *, persist_token: bool = True):
-    from .DoppelManager import DoppelManager
-
-    config = load_integration_config(siemplify)
-    return DoppelManager.from_config(
-        config,
-        siemplify=siemplify,
-        persist_token=persist_token,
 def create_manager_from_siemplify(
-    siemplify: ChronicleSOAR, persist_token: bool = True
+    siemplify: ChronicleSOAR,
+    *,
+    persist_token: bool = True,
 ) -> DoppelManager:
     """Create a configured DoppelManager instance from a SOAR SDK object."""
+    from .DoppelManager import DoppelManager
+
     config = load_integration_config(siemplify)
     return DoppelManager.from_config(config, siemplify=siemplify, persist_token=persist_token)

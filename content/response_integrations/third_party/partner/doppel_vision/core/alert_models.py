@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 def _as_list(value: object) -> list[object]:
@@ -11,11 +14,17 @@ def _as_list(value: object) -> list[object]:
     return []
 
 
-def normalize_alert(raw_alert: Any) -> dict[str, Any] | None:
+def normalize_alert(raw_alert: object) -> SingleJson | None:
     """Normalize a v1 or v2 alert payload into a common internal model.
 
     Actions still return the raw API JSON to playbooks. This helper is used
     internally so v1/v2 field aliases stay consistent.
+
+    Args:
+        raw_alert: Raw alert payload from the API response.
+
+    Returns:
+        Canonical alert dictionary, or None when the payload is not a mapping.
     """
     if not isinstance(raw_alert, dict):
         return None
@@ -23,7 +32,9 @@ def normalize_alert(raw_alert: Any) -> dict[str, Any] | None:
     return {
         "id": raw_alert.get("id") or None,
         "entity": raw_alert.get("entity"),
-        "entity_content": raw_alert.get("entity_content") if isinstance(raw_alert.get("entity_content"), dict) else {},
+        "entity_content": (
+            raw_alert.get("entity_content") if isinstance(raw_alert.get("entity_content"), dict) else {}
+        ),
         "severity": raw_alert.get("severity"),
         "tags": _as_list(raw_alert.get("tags")),
         "audit_logs": _as_list(raw_alert.get("audit_logs")),

@@ -12,11 +12,7 @@ from core.token_cache import TokenCache
 
 
 def test_v1_headers_match_existing_auth() -> None:
-    headers = AuthProviderV1(
-        api_key="org-key",
-        user_api_key="user-key",
-        org_code="ACM",
-    provider = AuthProviderV1(api_key="org-key", user_api_key="user-key")
+    headers = AuthProviderV1(api_key="org-key", user_api_key="user-key", org_code="ACM").get_auth_headers()
     assert headers == {
         "accept": "application/json",
         "x-api-key": "org-key",
@@ -39,12 +35,7 @@ def test_v2_mints_and_caches_token() -> None:
         content=b"{}",
         json=lambda: {"access_token": "tok-1", "expires_in": 86400},
     )
-    provider = AuthProviderV2(
-        client_id="id",
-        client_secret="secret",
-        token_cache=cache,
-        session=session,
-    )
+    provider = AuthProviderV2(client_id="id", client_secret="secret", token_cache=cache, session=session)
     headers = provider.get_auth_headers()
     assert headers["Authorization"] == "Bearer tok-1"
     session.post.assert_called_once()
