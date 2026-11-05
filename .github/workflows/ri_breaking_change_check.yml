@@ -1,0 +1,82 @@
+name: RI Breaking-Change Check
+
+# Deterministic check that a pull request does not break customers who already
+# use a Response Integration (removed/renamed components, removed or newly
+# mandatory parameters, parameter type changes, removed JSON result keys).
+# Works for fork PRs with a read-only token: results are reported through
+# workflow annotations and the job summary only. See
+# .github/scripts/ri_breaking_change_check.py for the rules and escape hatches.
+
+on:
+  pull_request:
+    # labeled/unlabeled let authors apply the `breaking-change` escape hatch
+    # without pushing a new commit.
+    types: [ opened, synchronize, reopened, labeled, unlabeled ]
+    paths:
+      - 'content/response_integrations/**'
+      - '.github/workflows/ri_breaking_change_check.yml'
+      - '.github/scripts/ri_breaking_change_check.py'
+      - '.github/scripts/test_ri_breaking_change_check.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  breaking-change-check:
+    name: Check for breaking changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        # language=bash
+        run: python -m pip install --quiet pyyaml
+
+      - name: Detect changes to the check itself
+        id: self
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        # language=bash
+        run: |
+          changed=$(git diff --name-only "$(git merge-base "$BASE_SHA" "$HEAD_SHA")" "$HEAD_SHA" -- \
+            .github/workflows/ri_breaking_change_check.yml \
+            .github/scripts/ri_breaking_change_check.py \
+            .github/scripts/test_ri_breaking_change_check.py)
+          if [ -n "$changed" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run unit tests for the check
+        if: steps.self.outputs.changed == 'true'
+        # language=bash
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest .github/scripts/test_ri_breaking_change_check.py -q -p no:cacheprovider
+
+      - name: Run breaking-change check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        # language=bash
+        run: |
+          python .github/scripts/ri_breaking_change_check.py \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --labels "$PR_LABELS"
