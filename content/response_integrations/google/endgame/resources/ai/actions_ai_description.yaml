@@ -1,0 +1,4260 @@
+Add IP Subnet to Host Isolation Config:
+  ai_description: >-
+    ### General Description
+
+    Adds a specific IPv4 subnet to the Host Isolation configuration whitelist in Endgame.
+    This action is used to ensure that specific network ranges are excluded from host
+    isolation operations, preventing accidental network disconnection for critical
+    infrastructure or known safe subnets.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves Endgame API credentials and action parameters
+    (Subnet, Description, and Insight preference).
+
+    2. **Configuration Check**: Connects to the Endgame manager and retrieves the
+    current Host Isolation whitelist via a GET request to check if the subnet already
+    exists.
+
+    3. **External Mutation**: If the subnet is not already present, it performs a
+    PUT request to the Endgame API to add the specified IPv4 subnet to the whitelist.
+
+    4. **Internal Mutation**: If the 'Create Insight' parameter is enabled, it generates
+    a General Insight in the current SecOps case detailing the added subnet.
+
+    5. **Cleanup**: Logs out of the Endgame session and reports the execution status.
+
+
+    ### Additional Notes
+
+    This action operates independently of case entities and relies entirely on the
+    explicitly provided IP Subnet parameter.
+  ai_short_description: >-
+    Adds a specific IPv4 subnet to the Host Isolation configuration whitelist in Endgame
+    to prevent it from being isolated.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a specified IPv4 subnet to the Host Isolation whitelist configuration in
+      Endgame via a PUT request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action mutates external data by making a PUT request to Endgame to add an
+      IP subnet to the host isolation whitelist. It does not fetch contextual data
+      for enrichment, nor does it update entities. It can create an insight in Google
+      SecOps if the 'Create Insight' parameter is enabled.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the explicitly provided 'IP Subnet' parameter. Therefore,
+      it does not run on entities and all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: true
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds an IP subnet to the Host Isolation Config whitelist in Endgame.
+      This prevents the subnet from being blocked or isolated by security controls,
+      which aligns with the 'Add IOC To Allowlist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | IP Subnet | String | Yes | Enter the IPv4 Subnet that you want to add to Host
+    Isolation Config. |
+
+    | Description | String | No | Enter the description to the IP Subnet. |
+
+    | Create Insight | Boolean | No | If enabled, creates Insight after successful
+    execution of this action. |
+Collect Autoruns:
+  ai_description: >-
+    ### General Description
+
+    Collects autorun information from Windows endpoints managed by Endgame. This action
+    is designed to identify persistence mechanisms on target systems by querying the
+    Endgame API for various autorun categories such as services, drivers, scheduled
+    tasks, and registry keys.
+
+
+    ### Flow Description
+
+    1. **Endpoint Identification**: The action iterates through the provided Hostname
+    and IP Address entities to find matching monitored endpoints in the Endgame environment.
+
+    2. **OS Verification**: It filters the identified endpoints to ensure they are
+    running a Windows operating system, as autorun collection is specific to Windows.
+
+    3. **Task Initiation**: For all valid endpoints, it creates an asynchronous 'Autorun
+    Collection' task and a corresponding investigation in Endgame, using the specified
+    category and metadata filters.
+
+    4. **Status Monitoring (Async)**: The action enters an asynchronous state, periodically
+    checking the Endgame API to determine if the investigation has completed.
+
+    5. **Data Retrieval and Mapping**: Once the investigation is finished, the action
+    retrieves the results, maps the findings back to the original SecOps entities
+    using machine IDs, and attaches the data to the case.
+
+
+    ### Additional Notes
+
+    - This action only supports Windows endpoints. Non-Windows endpoints identified
+    from entities will be skipped.
+
+    - The action runs asynchronously; it initiates the collection and then waits for
+    Endgame to process the request before fetching results.
+  ai_short_description: >-
+    Collects autorun information from Windows endpoints managed by Endgame to identify
+    persistence mechanisms.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new autorun collection task and investigation in the Endgame platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches autorun data from Endgame (fetches_data=true). It creates
+      a new investigation and task in the Endgame platform to perform this collection
+      (can_mutate_external_data=true). It does not mutate internal SecOps data, update
+      entities, create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity_type`
+      (specifically ADDRESS and HOSTNAME). It then uses the `entity.identifier` to
+      query Endgame for matching endpoints.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a task on an endpoint to collect autorun data. This does
+      not strictly match any of the predefined outcome categories such as enriching
+      an asset with standard metadata, executing a raw command that returns STDOUT,
+      or containing a host.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Items to Return | Integer | No | Specify how many autoruns to return. |
+
+    | Category "All" | Boolean | No | If enabled, search for all autorun categories
+    |
+
+    | Category "Network Provider" | Boolean | No | If enabled, search for "Network
+    Provider" autorun category |
+
+    | Category "Office" | Boolean | No | If enabled, search for "Office" autorun category
+    |
+
+    | Category "Driver" | Boolean | No | If enabled, search for "Driver" autorun category
+    |
+
+    | Category "App Init" | Boolean | No | If enabled, search for "App Init" autorun
+    category |
+
+    | Category "Winlogon" | Boolean | No | If enabled, search for "Winlogon" autorun
+    category |
+
+    | Category "Print Monitor" | Boolean | No | If enabled, search for "Print Monitor"
+    autorun category |
+
+    | Category "Ease of Access" | Boolean | No | If enabled, search for "Ease of Access"
+    autorun category |
+
+    | Category "WMI" | Boolean | No | If enabled, search for "WMI" autorun category
+    |
+
+    | Category "LSA Provider" | Boolean | No | If enabled, search for "LSA Provider"
+    autorun category |
+
+    | Category "Service" | Boolean | No | If enabled, search for "Service" autorun
+    category |
+
+    | Category "Bits" | Boolean | No | If enabled, search for "Bits" autorun category
+    |
+
+    | Category "Known dll" | Boolean | No | If enabled, search for "Known dll" autorun
+    category |
+
+    | Category "Print Provider" | Boolean | No | If enabled, search for "Print Provider"
+    autorun category |
+
+    | Category "Image Hijack" | Boolean | No | If enabled, search for "Image Hijack"
+    autorun category |
+
+    | Category "Startup Folder" | Boolean | No | If enabled, search for "Startup Folder"
+    autorun category |
+
+    | Category "Internet Explorer" | Boolean | No | If enabled, search for "Internet
+    Explorer" autorun category |
+
+    | Category "Codec" | Boolean | No | If enabled, search for "Codec" autorun category
+    |
+
+    | Category "Logon" | Boolean | No | If enabled, search for "Logon" autorun category
+    |
+
+    | Category "Search Order Hijack" | Boolean | No | If enabled, search for "Search
+    Order Hijack" autorun category |
+
+    | Category "Winsock Provider" | Boolean | No | If enabled, search for "Winsock
+    Provider" autorun category |
+
+    | Category "Boot Execute" | Boolean | No | If enabled, search for "Boot Execute"
+    autorun category |
+
+    | Category "Phantom dll" | Boolean | No | If enabled, search for "Phantom dll"
+    autorun category |
+
+    | Category "Com Hijack" | Boolean | No | If enabled, search for "Com Hijack" autorun
+    category |
+
+    | Category "Explorer" | Boolean | No | If enabled, search for "Explorer" autorun
+    category |
+
+    | Category "Scheduled Task" | Boolean | No | If enabled, search for "Scheduled
+    Task" autorun category |
+
+    | Include All Metadata | Boolean | No | If enabled, provides all available data
+    |
+
+    | Include Malware Classification Metadata | Boolean | No | If enabled, provides
+    information about MalwareScore |
+
+    | Include Authenticode Metadata | Boolean | No | If enabled, provides Signer Information
+    |
+
+    | Include MD5 Hash | Boolean | No | If enabled, provides MD5 hash in the response
+    |
+
+    | Include SHA-1 Hash | Boolean | No | If enabled, provides SHA-1 hash in the response
+    |
+
+    | Include SHA-256 Hash | Boolean | No | If enabled, provides SHA-256 hash in the
+    response |
+Delete File:
+  ai_description: >-
+    ### General Description
+
+    Deletes a specified file from a remote endpoint managed by the Endgame platform.
+    This action is designed for remediation, allowing security analysts to remove
+    malicious or unauthorized files directly from hosts identified by their Hostname
+    or IP Address.
+
+
+    ### Flow Description
+
+    1. Extracts the target file path from the input parameters.
+
+    2. Iterates over the provided Hostname and IP Address entities.
+
+    3. Queries the Endgame API to locate the corresponding managed endpoint for each
+    entity.
+
+    4. Initiates a `deleteFileRequest` task via the Endgame API for the specified
+    file path on the active endpoints.
+
+    5. Periodically polls the Endgame API asynchronously to check the completion status
+    of the deletion tasks.
+
+    6. Returns a summary of successful deletions, failed attempts, and skipped entities.
+
+
+    ### Additional Notes
+
+    - The action only operates on endpoints that are in a 'monitored' (active) state
+    within Endgame.
+
+    - If multiple endpoints match a single entity, the first matching endpoint is
+    used.
+  ai_short_description: >-
+    Deletes a specified file from a remote endpoint managed by the Endgame platform
+    based on Hostname or IP Address entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a task in Endgame to delete a specified file on the target endpoint.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes POST requests to the Endgame API to create and initialize a
+      file deletion task on remote endpoints, which mutates external data. It does
+      not fetch data for enrichment, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them by checking
+      `if entity.entity_type not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. It then processes
+      each entity based on its specific type to fetch the corresponding endpoint.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a specific file on a remote endpoint. While it performs a
+      remediation action, it does not match the specific expected outcomes of the
+      available categories, such as executing a general command (which expects STDOUT),
+      containing a host, or modifying blocklists.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Path | String | Yes | Enter the path to the file |
+Download File:
+  ai_description: >-
+    ### General Description
+
+    This action downloads a specific file from a remote endpoint managed by Endgame.
+    It supports Hostname and IP Address entities. The action operates asynchronously:
+    it first initiates a download task on the Endgame platform and then periodically
+    checks for completion. Once the task is finished, the action retrieves the file
+    content, saves it to a specified local directory on the SOAR runner, and attaches
+    the file to the corresponding entity within the Google SecOps case. It also provides
+    a data table containing metadata about the downloaded file, such as size, hashes
+    (MD5/SHA-256), and endpoint details.
+
+
+    ### Flow Description
+
+    1. **Endpoint Identification**: The action searches for a matching endpoint in
+    Endgame using the entity's Hostname or IP Address.
+
+    2. **Task Initiation**: If an active endpoint is found, it creates a 'downloadFileRequest'
+    task in Endgame for the specified file path via a POST request.
+
+    3. **Asynchronous Wait**: The action enters an 'In Progress' state, waiting for
+    the Endgame task to reach a 'success' or 'failure' status.
+
+    4. **Data Retrieval**: Upon successful task completion, the action fetches the
+    file content (UUID-based) from Endgame.
+
+    5. **Internal Mutation**: The file is saved to the local filesystem, attached
+    to the SOAR entity, and a summary data table is added to the case wall.
+
+
+    ### Additional Notes
+
+    This is an asynchronous action. Ensure that the SOAR execution environment has
+    the necessary permissions and disk space to save the downloaded files to the specified
+    local folder path.
+  ai_short_description: >-
+    Downloads a specific file from a remote endpoint managed by Endgame and attaches
+    it to the corresponding entity in the case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a 'downloadFileRequest' task on the Endgame platform to initiate the
+      file download from the endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Attaches the downloaded file to the target entity and adds a data table with
+      file metadata to the case.
+    reasoning: >-
+      The action fetches data by downloading the file content and metadata from Endgame.
+      It mutates external data by creating a new 'downloadFileRequest' task on the
+      Endgame platform via a POST request. It mutates internal data by attaching the
+      downloaded file to the entity and adding a data table to the case. It does not
+      update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` is
+      `[EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`. Therefore, it targets Address
+      and Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a task to download a file from a remote endpoint and retrieves
+      it for local storage and attachment. This directly aligns with the 'Download
+      File' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Full File Path | String | Yes | Enter the path to the file on the target remote
+    endpoint that you wish to download. |
+
+    | Full Download Folder Path | String | Yes | Enter the path to the folder on the
+    SOAR execution environment where you want to store this file. |
+
+    | Expected SHA-256 Hash | String | No | Enter the expected SHA-256 hash used to
+    verify the integrity of the file being downloaded. |
+Drivers Survey (Windows only):
+  ai_description: >-
+    ### General Description
+
+    The **Drivers Survey (Windows only)** action initiates a kernel module (driver)
+    survey on specific Windows endpoints managed by Endgame. It is an asynchronous
+    action that first triggers an investigation task on the target host and then polls
+    for the results. Once the survey is complete, it retrieves details about the loaded
+    drivers, including file paths, descriptions, and modification dates, providing
+    visibility into the drivers currently active on the system.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action validates the input entities (Hostname or IP
+    Address) and checks if the corresponding Endgame endpoint is running a Windows
+    operating system.
+
+    2. **Task Creation**: For each valid endpoint, it creates a new investigation
+    in Endgame using the `kernelModulesSurveyRequest` task via a POST request to the
+    Endgame API. This initiates the collection process on the remote host.
+
+    3. **Asynchronous Polling**: The action enters an "In Progress" state, periodically
+    checking the status of the created investigations until they are marked as complete.
+
+    4. **Data Retrieval**: Once the investigations are finished, the action fetches
+    the driver data (kernel modules) from the Endgame collection via a GET request.
+
+    5. **Output**: The results are formatted into data tables (one per entity) and
+    attached as a JSON result to the action for further analysis.
+
+
+    ### Additional Notes
+
+    - This action only supports Windows endpoints. Non-Windows endpoints will be skipped.
+
+    - The action requires the endpoint to be in a "monitored" status within Endgame
+    to successfully initiate the survey.
+  ai_short_description: >-
+    Initiates a kernel module (driver) survey on specific Windows endpoints managed
+    by Endgame and retrieves details about the loaded drivers.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation task in Endgame to survey kernel modules on the
+      target endpoints.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving the results of the driver survey. It mutates
+      external data by creating a new investigation task in Endgame via a POST request.
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them based
+      on `entity.entity_type in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes
+      `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a specific EDR task to survey drivers on a host. It does
+      not enrich IOCs or assets with standard contextual metadata, nor does it execute
+      a raw script returning STDOUT. Therefore, it does not strictly match any of
+      the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Items to Return | Integer | No | Specify how many items to return. Defaults
+    to 50. |
+Enrich Entities:
+  ai_description: "### General Description\nEnriches Hostname and IP Address entities\
+    \ using endpoint data retrieved from the Endgame platform. This action identifies\
+    \ matching endpoints in Endgame and retrieves comprehensive metadata, including\
+    \ operating system details, MAC addresses, monitoring status, sensor information,\
+    \ and group memberships. The retrieved data is used to update entity attributes\
+    \ and provide a detailed data table within the case for better context during\
+    \ investigations.\n\n### Flow Description\n1. **Authentication**: Connects to\
+    \ the Endgame API using the integration's credentials.\n2. **Entity Processing**:\
+    \ Iterates through the target entities in the current Google SecOps scope.\n3.\
+    \ **Type Validation**: Filters entities to ensure they are either Hostnames or\
+    \ IP Addresses.\n4. **Endgame Query**: \n    - For **HOSTNAME** entities: Makes\
+    \ a GET request to the Endgame API (`/endpoints`) to find endpoints matching the\
+    \ hostname.\n    - For **ADDRESS** entities: Makes a GET request to the Endgame\
+    \ API (`/endpoints`) to find endpoints matching the IP address.\n5. **Data Extraction**:\
+    \ Retrieves endpoint details such as OS, MAC address, status, and associated sensors/groups\
+    \ from the first matching result.\n6. **Internal Enrichment**: \n    - Updates\
+    \ the entity's additional properties with the retrieved metadata.\n    - Adds\
+    \ a detailed CSV table to the entity's results in the case.\n    - Sets the entity's\
+    \ enrichment status to true.\n7. **Finalization**: Updates the modified entities\
+    \ in Google SecOps and logs out of the Endgame session.\n\n### Additional Notes\n\
+    - The action supports **HOSTNAME** and **ADDRESS** (IP) entity types.\n- If multiple\
+    \ endpoints match a single entity in Endgame, the action will use the first matching\
+    \ record for enrichment.\n- Successfully enriched entities will have their 'is_enriched'\
+    \ property set to true."
+  ai_short_description: >-
+    Enriches Hostname and IP Address entities by retrieving comprehensive endpoint
+    metadata from the Endgame platform, updating entity attributes, and attaching
+    a detailed data table to the case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the Endgame API to fetch endpoint data. It
+      does not mutate external data. It updates internal entities with the fetched
+      metadata and adds a data table, but does not create insights, modify alert data,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      not in SUPPORTED_ENTITIES` where SUPPORTED_ENTITIES are ADDRESS and HOSTNAME.
+      This means it targets ADDRESS and HOSTNAME entities, filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches endpoint metadata (such as OS, MAC address, and sensor status)
+      from Endgame for IP and Hostname entities. This matches the 'Enrich Asset' expected
+      outcome, as it returns contextual metadata for a resource. It does not return
+      threat intelligence or reputation, so it is not 'Enrich IOC'.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Firewall Survey (Windows only):
+  ai_description: >-
+    ### General Description
+
+    Initiates and retrieves a firewall survey for Windows-based endpoints using the
+    Endgame EDR platform. This action identifies endpoints corresponding to Hostname
+    or IP Address entities, triggers a remote firewall rule collection task, and retrieves
+    the results once the investigation is complete.
+
+
+    ### Flow Description
+
+    1. **Endpoint Identification:** The action searches for Endgame endpoints matching
+    the provided Hostname or IP Address entities.
+
+    2. **OS Verification:** It filters for endpoints running the Windows operating
+    system, as the survey is Windows-only.
+
+    3. **Investigation Creation:** For each supported endpoint, it creates a new investigation
+    and initiates a 'firewallSurveyRequest' task in Endgame.
+
+    4. **Asynchronous Monitoring:** The action enters an 'In Progress' state, periodically
+    checking the status of the investigation in Endgame.
+
+    5. **Data Retrieval:** Once the investigation is finished, it fetches the firewall
+    rules, including rule name, application, direction, action, and port details.
+
+    6. **Reporting:** The results are attached to the case as data tables for each
+    entity and provided as a JSON result.
+
+
+    ### Additional Notes
+
+    This action runs asynchronously.
+  ai_short_description: >-
+    Initiates and retrieves a firewall survey for Windows-based endpoints using the
+    Endgame EDR platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation and initiates a 'firewallSurveyRequest' task in
+      the Endgame platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving the results of the firewall survey. It
+      mutates external data by creating a new investigation task in the Endgame platform.
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      not in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES = [EntityTypes.ADDRESS,
+      EntityTypes.HOSTNAME]`. Therefore, it targets ADDRESS and HOSTNAME entities
+      and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a firewall survey on an endpoint and retrieves the results.
+      This does not directly align with standard enrichment (which focuses on metadata/reputation),
+      nor does it execute a generic command, contain a host, or modify alerts/tickets.
+      Therefore, it does not match any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Items to Return | Integer | No | Specify how many items to return. |
+Get Endpoints:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves a comprehensive list of all endpoints managed within the
+    Endgame platform. It is primarily used for visibility and inventory purposes,
+    allowing users to see the status, operating system, and network details of all
+    sensors connected to the Endgame instance.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action starts by authenticating with the Endgame API
+    using the configured integration credentials.
+
+    2. **Data Retrieval**: It makes a GET request to the Endgame API's endpoint listing
+    service to fetch all registered sensors/endpoints.
+
+    3. **Data Processing**: The retrieved raw data is parsed into internal data models
+    to ensure consistency.
+
+    4. **Output Generation**: The action calculates the total count of endpoints and
+    prepares a JSON array containing the raw data for each endpoint, which is attached
+    to the action results.
+
+    5. **Session Termination**: Finally, the action explicitly logs out of the Endgame
+    session to ensure security and resource management.
+
+
+    ### Additional Notes
+
+    * This action does not require or process specific entities from the Google SecOps
+    case; it performs a global fetch of all endpoints from the external system.
+
+    * The action returns the total count of endpoints found as the main result value
+    and provides detailed JSON data for each endpoint.
+  ai_short_description: >-
+    Retrieves a comprehensive list of all endpoints managed within the Endgame platform
+    for visibility and inventory purposes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to the Endgame API to list endpoints.
+      It does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It performs a global fetch of all endpoints from the external system,
+      so all entity type and filter flags must be false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of all endpoints from the Endgame platform. It does
+      not enrich specific IOCs or assets, mutate alerts, create tickets, or perform
+      any containment or blocklist operations. Therefore, it does not match any of
+      the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get Host Isolation Config:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the Host Isolation configuration from the Endgame platform. This configuration
+    contains the list of IPv4 subnets that are whitelisted, meaning they are excluded
+    from host isolation operations. This action is primarily used for administrative
+    auditing and to ensure that critical network segments are correctly configured
+    within the endpoint security policy.
+
+
+    ### Flow Description
+
+    1. Initializes the Endgame manager and authenticates using the integration's API
+    credentials.
+
+    2. Calls the Endgame API (`GET /api/v1/host-isolation-whitelist/ipv4`) to retrieve
+    the current IPv4 host isolation whitelist.
+
+    3. Processes the retrieved data into a structured format, including IP subnets
+    and associated comments.
+
+    4. Adds a table to the action results showing the whitelisted IP subnets and their
+    descriptions.
+
+    5. Attaches the full raw configuration as a JSON file named `List_HostIsolationConfig.json`.
+
+    6. Returns the raw data as a JSON object for use in playbooks.
+
+
+    ### Additional Notes
+
+    This action does not require any specific input parameters as it utilizes the
+    global integration configuration for connectivity and authentication.
+  ai_short_description: >-
+    Retrieves the Host Isolation configuration (whitelisted IPv4 subnets) from the
+    Endgame platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Endgame API to fetch the host isolation
+      configuration. It does not mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It fetches a global configuration from the Endgame platform. Therefore,
+      all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a global configuration (host isolation whitelist) from
+      the Endgame platform. It does not enrich specific IOCs or assets, mutate alerts,
+      contain hosts, or perform any of the other specific expected outcomes listed
+      in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get Investigation Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get Investigation Details** action retrieves comprehensive information about
+    a specific investigation within the Elastic Endgame platform. It is used to track
+    the progress of hunts, check task completion status, and gather metadata about
+    the investigation's scope, creator, and associated sensors.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action connects to the Endgame API using the provided
+    integration credentials.
+
+    2. **Data Retrieval**: It makes a GET request to the Endgame API to fetch the
+    details for the specific `Investigation ID` provided in the parameters.
+
+    3. **Data Processing**: The response is parsed into a structured format, including
+    details like hunt counts, endpoint counts, core OS, and task completion percentages.
+
+    4. **Output Generation**: A data table named "Endgame Investigation List" is added
+    to the case containing a detailed summary of the investigation. The full raw JSON
+    response is also provided as the action result for use in subsequent playbook
+    steps.
+
+    5. **Cleanup**: The session is terminated by logging out of the Endgame manager.
+
+
+    ### Additional Notes
+
+    This action does not operate on entities; it requires a direct ID input. It is
+    primarily used for monitoring the status of automated or manual hunts initiated
+    in Endgame.
+  ai_short_description: >-
+    Retrieves comprehensive information about a specific investigation within the
+    Elastic Endgame platform using the investigation ID.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to the Endgame API to retrieve
+      investigation details. It does not mutate external data, mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the 'Investigation ID' parameter provided by the user or
+      playbook. Therefore, it does not run on any entities, and all entity-related
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves details about an Endgame investigation (a hunt or task
+      collection). It does not enrich specific IOCs or assets, update alerts, manage
+      tickets, modify blocklists/allowlists, control identities, contain hosts, or
+      perform any other operations that match the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Investigation ID | String | Yes | Specify Endgame Investigation ID to search
+    for. |
+Hunt File:
+  ai_description: >-
+    ### General Description
+
+    Searches for specific files on endpoints managed by Endgame. This action allows
+    users to hunt for files by name (supporting regex) or by MD5, SHA1, and SHA256
+    hashes within a designated directory. It targets Hostname and IP Address entities,
+    identifies corresponding endpoints in Endgame, and initiates an asynchronous investigation
+    to retrieve the search results.
+
+
+    ### Flow Description
+
+    1. Extracts action parameters including the target OS, hashes, directory, and
+    filename.
+
+    2. Iterates through the provided Hostname and IP Address entities, querying Endgame
+    via API to find matching managed endpoints.
+
+    3. Validates that the discovered endpoints match the specified 'Endpoints Core
+    OS'.
+
+    4. Creates a file search task and starts a new investigation in Endgame for the
+    matching endpoints via API.
+
+    5. The action runs asynchronously, waiting for the investigation to complete in
+    Endgame.
+
+    6. Once completed, it retrieves the investigation results via API and outputs
+    them as a JSON result.
+
+
+    ### Additional Notes
+
+    Either a filename/regex or at least one hash type must be provided along with
+    the directory for the action to execute successfully. The action runs asynchronously,
+    meaning it triggers the hunt and then waits for Endgame to complete the investigation
+    before retrieving results.
+  ai_short_description: >-
+    Searches for specific files on endpoints managed by Endgame by initiating an asynchronous
+    file hunt investigation.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new file search task and investigation in the Endgame platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving the investigation results from Endgame.
+      It mutates external data by creating a new file search task and investigation
+      in the Endgame platform. It does not mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `if entity.entity_type not in SUPPORTED_ENTITIES:`, where SUPPORTED_ENTITIES
+      includes ADDRESS and HOSTNAME. Therefore, it targets Address and Hostname entities
+      and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a file search task on endpoints and retrieves the results.
+      This does not match any of the specific outcome categories such as Enrich IOC,
+      Enrich Asset, Execute Command on the Host (as it uses a specific product task
+      rather than a raw command), or Search Events (as it searches files on disk,
+      not historical logs). Therefore, all outcome categories are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Endpoints Core OS | String | No | Select an operating system (i.e., Windows,
+    Linux, or Mac) to filter the Endpoints list. Note: You can only create a single
+    investigation for endpoints that run on the same operating system. |
+
+    | MD5 Hashes | String | No | ADVANCED CONFIGURATION for this hunt. Enter MD5 Hashes,
+    separated by comma |
+
+    | SHA1 Hashes | String | No | ADVANCED CONFIGURATION for this hunt. Enter SHA1
+    Hashes, separated by comma |
+
+    | SHA256 Hashes | String | No | ADVANCED CONFIGURATION for this hunt. Enter SHA256
+    Hashes, separated by comma |
+
+    | Directory | String | No | The starting directory path e.g. C:\windows\system32
+    |
+
+    | Find File | String | No | Enter the filename(s) to search. TIP: Enter a regex
+    to narrow search results. |
+Hunt IP:
+  ai_description: >-
+    ### General Description
+
+    Searches for network connections on endpoints associated with Hostname or IP Address
+    entities using Elastic Endgame. This action initiates an 'IOC Hunt' by creating
+    a network search task within a new investigation in the Endgame platform. It is
+    an asynchronous action that polls for the investigation's completion and retrieves
+    detailed connection data, including local/remote addresses, ports, protocols,
+    and associated process information (names, PIDs, and file hashes).
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Endgame manager and extracts
+    user-defined filters such as IP addresses, protocols, and ports.
+
+    2. **Endpoint Identification**: It iterates through the target entities, querying
+    Endgame to find matching endpoints by Hostname or IP Address.
+
+    3. **OS Filtering**: It filters the identified endpoints to ensure their operating
+    system matches the 'Endpoints Core OS' parameter.
+
+    4. **Investigation Creation**: If matching endpoints are found, it creates a 'Network
+    Search' task and wraps it in a new Endgame investigation via a POST request.
+
+    5. **Asynchronous Polling**: The action enters an asynchronous loop, periodically
+    checking the status of the investigation in Endgame.
+
+    6. **Data Retrieval**: Once the investigation is complete, it retrieves the network
+    connection results and returns them as a JSON object for use in the playbook.
+
+
+    ### Additional Notes
+
+    - This action is **asynchronous**. It first creates an investigation in Endgame
+    and then enters an 'In Progress' state, polling until results are ready.
+
+    - Only entities of type **HOSTNAME** and **ADDRESS** are supported. Entities that
+    do not match an active endpoint in Endgame or do not match the specified 'Endpoints
+    Core OS' will be skipped.
+  ai_short_description: >-
+    Searches for network connections on endpoints associated with Hostname or IP Address
+    entities by creating a network search investigation in Elastic Endgame.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation and network search task in the Endgame platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches endpoint data and investigation results from Endgame. It
+      mutates external data by creating a new investigation and network search task
+      in the Endgame platform. It does not mutate internal data, update entities,
+      create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `[EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`.
+      Therefore, it targets Address and Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a network search task to find network connections matching
+      specific parameters (IP, port, protocol) and returns the results. This aligns
+      with the 'Search Events' category, as it retrieves historical network telemetry
+      data.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Endpoints Core OS | String | No | Select an operating system (i.e., Windows,
+    Linux, or Mac) to filter the Endpoints list. Note: You can only create a single
+    investigation for endpoints that run on the same operating system. |
+
+    | Remote IP Address | String | No | Remote IP address - separated by comma. |
+
+    | Local IP Address | String | No | Local IP address - separated by comma. |
+
+    | State | String | No | Enter state to return. Ex. ANY. |
+
+    | Protocol | String | No | Ex. ANY, UDP, TCP. |
+
+    | Network Port | Integer | No | Network Port. |
+
+    | Network Remote | String | No | Network Remote or Local. |
+Hunt Process:
+  ai_description: >-
+    ### General Description
+
+    The **Hunt Process** action searches for running processes across endpoints managed
+    by Endgame. It enables security analysts to perform broad "hunts" for specific
+    malicious activity by searching for file hashes (MD5, SHA1, SHA256) or specific
+    process names.
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction:** The action retrieves the search criteria and endpoint
+    filters.
+
+    2.  **Input Validation:** It verifies that at least one search identifier (hash
+    or name) is present.
+
+    3.  **Endpoint Identification:** For each input entity (Hostname or IP), the action
+    queries Endgame to find the corresponding endpoint and its active sensors, ensuring
+    the OS matches the `Endpoints Core OS` parameter.
+
+    4.  **Investigation Creation:** It creates a new investigation in Endgame and
+    attaches an `iocSearchRequest` task configured with the provided hashes and process
+    names.
+
+    5.  **Asynchronous Monitoring:** The action transitions to an "In Progress" state.
+
+    6.  **Result Retrieval:** Once the Endgame investigation is marked as complete,
+    the action fetches the process results and returns them as a JSON object.
+
+
+    ### Additional Notes
+
+    *   **Requirement:** At least one search field (**MD5 Hashes**, **SHA1 Hashes**,
+    **SHA256 Hashes**, or **Process Name**) must be provided for the action to execute.
+
+    *   **Async Execution:** This action runs asynchronously. It initiates the investigation
+    in Endgame and then periodically checks for completion before retrieving the final
+    results.
+  ai_short_description: >-
+    Searches for running processes across endpoints managed by Endgame using file
+    hashes or process names.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation and process search task in Endgame.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches endpoint details and investigation results from Endgame (fetches_data=true).
+      It creates a new investigation and process search task in Endgame (can_mutate_external_data=true).
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      not in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES = [EntityTypes.ADDRESS,
+      EntityTypes.HOSTNAME]`. Thus, it targets ADDRESS and HOSTNAME entities, filtering
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for running processes on endpoints based on hashes or process
+      names, returning telemetry data matching specific search parameters. This aligns
+      with the 'Search Events' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Endpoints Core OS | String | No | Select an operating system (i.e., Windows,
+    Linux, or Mac) to filter the Endpoints list. Note: You can only create a single
+    investigation for endpoints that run on the same operating system. |
+
+    | MD5 Hashes | String | No | ADVANCED CONFIGURATION for this hunt. Enter MD5 Hashes,
+    separated by comma |
+
+    | SHA1 Hashes | String | No | ADVANCED CONFIGURATION for this hunt. Enter SHA1
+    Hashes, separated by comma |
+
+    | SHA256 Hashes | String | No | ADVANCED CONFIGURATION for this hunt. Enter SHA256
+    Hashes, separated by comma |
+
+    | Process Name | String | No | ADVANCED CONFIGURATION for this hunt. Enter Process
+    Name ex. iss.exe |
+Hunt Registry:
+  ai_description: >-
+    ### General Description
+
+    The **Hunt Registry** action allows users to search for specific registry keys
+    or value names across endpoints managed by the Endgame EDR platform. It is designed
+    to identify persistence mechanisms, configuration changes, or indicators of compromise
+    (IOCs) stored within the Windows Registry. The action operates asynchronously,
+    first initiating an investigation and a search task in Endgame, and then periodically
+    checking for completion to retrieve the final results.
+
+
+    ### Flow Description
+
+    1. **Endpoint Identification**: The action iterates through the provided Hostname
+    and IP Address entities, querying the Endgame API to find matching managed endpoints.
+
+    2. **OS Validation**: It filters the discovered endpoints to ensure their operating
+    system matches the 'Endpoints Core OS' parameter.
+
+    3. **Task Creation**: If suitable endpoints are found, the action generates a
+    registry search task (IOC Search) based on the provided Hive, Keys, and size constraints.
+
+    4. **Investigation Initiation**: A new investigation is created in Endgame, grouping
+    the identified sensors and the search task. The action then saves the investigation
+    ID and transitions to an 'In Progress' state.
+
+    5. **Asynchronous Monitoring**: In the background, the action checks the status
+    of the investigation. Once Endgame reports that all tasks are finished, the action
+    retrieves the collection of registry events.
+
+    6. **Result Reporting**: The retrieved registry data is attached to the case as
+    a JSON result, and the action completes.
+
+
+    ### Additional Notes
+
+    - This action is **Async**, meaning it will run in the background until the Endgame
+    investigation is finished.
+
+    - It specifically targets **HOSTNAME** and **ADDRESS** (IP) entities to identify
+    the corresponding sensors in the Endgame environment.
+
+    - Only endpoints matching the 'Endpoints Core OS' parameter will be included in
+    the hunt.
+  ai_short_description: >-
+    Searches for specific registry keys or value names across endpoints managed by
+    the Endgame EDR platform to identify persistence mechanisms, configuration changes,
+    or indicators of compromise (IOCs).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation and registry search task in the Endgame platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches endpoint data and investigation results from Endgame (fetches_data=true).
+      It also creates a new investigation and task in the Endgame platform via a POST
+      request (can_mutate_external_data=true). It does not update internal entities,
+      create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (which includes ADDRESS and
+      HOSTNAME). Therefore, it targets Address and Hostname entities and filters by
+      entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a registry hunt on endpoints via an EDR platform. It does
+      not enrich IOCs or assets, nor does it execute a generic command, search historical
+      events, or perform containment. Therefore, it does not match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Hive | String | No | One of the following: HKEY_CLASSES_ROOT, HKEY_CURRENT_CONFIG,
+    HKEY_USERS, HKEY_LOCAL_MACHINE, ALL |
+
+    | Keys | String | No | Registry Key or Value Name |
+
+    | Min Size | String | No | Min byte size |
+
+    | Max Size | String | No | Max byte size |
+
+    | Endpoints Core OS | String | No | Select an operating system (i.e., Windows,
+    Linux, or Mac) to filter the Endpoints list. Note: You can only create a single
+    investigation for endpoints that run on the same operating system. |
+Hunt User:
+  ai_description: >-
+    ### General Description
+
+    Searches for logged-in users across the network using the Endgame EDR platform.
+    This action identifies endpoints associated with Hostname or IP Address entities,
+    filters them by a specified Operating System, and initiates a hunt investigation
+    to find specific usernames or domain-related sessions.
+
+
+    ### Flow Description
+
+    1. **Endpoint Identification**: The action iterates through the provided entities
+    (Hostname or IP Address) and queries Endgame to find matching managed endpoints.
+
+    2. **OS Filtering**: It validates that the identified endpoints match the `Endpoints
+    Core OS` parameter (e.g., Windows, Linux, or Mac) to ensure compatibility with
+    the hunt task.
+
+    3. **Investigation Creation**: For all valid endpoints found, it creates a new
+    'Investigation' in Endgame and generates a specific 'IOC Username Search' task.
+
+    4. **Asynchronous Execution**: The action enters an 'In Progress' state, providing
+    an Investigation ID. It then periodically polls Endgame to check if the hunt has
+    completed.
+
+    5. **Data Retrieval**: Once the investigation is finished, it retrieves the results
+    (logged-in user details) and attaches them as a JSON result to the action.
+
+
+    ### Additional Notes
+
+    - This is an asynchronous action. It initiates a task and waits for Endgame to
+    process the hunt before returning results.
+
+    - Only entities of type Hostname and IP Address are supported.
+  ai_short_description: >-
+    Initiates an asynchronous hunt investigation in Endgame to search for specific
+    logged-in users or domain sessions on endpoints associated with Hostname or IP
+    Address entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation and initiates an IOC username search task in the
+      Endgame platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches endpoint data and investigation results from Endgame (fetches_data=true).
+      It mutates external data by creating a new investigation and task in the Endgame
+      platform via a POST request (can_mutate_external_data=true). It does not mutate
+      internal SecOps data, update entities, create insights, or add case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters them
+      using `if entity.entity_type not in SUPPORTED_ENTITIES:`, where `SUPPORTED_ENTITIES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets
+      Address and Hostname entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates an active hunt (investigation) for logged-in users on specific
+      endpoints via an EDR platform. This does not strictly align with enriching an
+      IOC/Asset with static threat intel or contextual metadata, nor does it match
+      containment, blocklisting, or ticketing. It is a custom EDR hunt operation,
+      so no specific outcome category perfectly matches this action's expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Endpoints Core OS | String | No | Select an operating system (i.e., Windows,
+    Linux, or Mac) to filter the Endpoints list. Note: You can only create a single
+    investigation for endpoints that run on the same operating system. |
+
+    | Find Username | String | No | ADVANCED CONFIGURATION for this hunt. Enter username(s),
+    separate multiple entries with a semicolon. |
+
+    | Domain Name | String | No | ADVANCED CONFIGURATION for this hunt. Enter Domain
+    Name |
+Isolate Host:
+  ai_description: >-
+    ### General Description
+
+    Initiates endpoint isolation for Windows and MacOS hosts using Endgame. This action
+    is designed to contain compromised endpoints by disconnecting them from the network
+    while maintaining a connection to the Endgame sensor for management and remediation
+    purposes.
+
+
+    ### Flow Description
+
+    1. Connects to the Endgame API.
+
+    2. Iterates through the target entities (Hostname or IP Address).
+
+    3. Queries Endgame to find matching endpoints based on the entity identifier.
+
+    4. Checks if the endpoint's operating system is supported (Windows or MacOS).
+
+    5. Retrieves the specific `task_id` for host isolation corresponding to the endpoint's
+    OS.
+
+    6. Sends a POST request to the Endgame API to initialize the isolation task for
+    the identified sensors.
+
+    7. Confirms that the isolation status has changed to `isolation_requested`.
+
+    8. If the `Create Insight` parameter is enabled and the isolation is successful,
+    adds an insight to the entity in Google SecOps.
+
+
+    ### Additional Notes
+
+    - This action strictly supports only Windows and MacOS endpoints.
+
+    - If multiple endpoints match a single entity identifier, the action will only
+    attempt to isolate the first matching endpoint found.
+  ai_short_description: >-
+    Initiates endpoint isolation for Windows and MacOS hosts using Endgame to contain
+    compromised endpoints.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates an endpoint isolation task in Endgame to disconnect the host from
+      the network.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action queries the Endgame API to find endpoints but does not return this
+      as enrichment data. It performs a POST request to initialize an isolation task
+      on the endpoint, mutating external data. It does not update internal entities
+      but can create an insight if configured.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `[EntityTypes.ADDRESS, EntityTypes.HOSTNAME]`.
+      Therefore, it targets Address and Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates an endpoint isolation task in Endgame, which disconnects
+      the host from the network. This directly aligns with the 'Contain Host' expected
+      outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Create Insight | Boolean | No | If enabled, creates Insight after successful
+    execution of this action. |
+Kill Process:
+  ai_description: >-
+    ### General Description
+
+    The **Kill Process** action enables security responders to terminate a specific
+    running process on remote endpoints managed by the Endgame platform. This action
+    is designed to stop malicious execution or unauthorized software across systems
+    by initiating a kill task via the Endgame API.
+
+
+    ### Flow Description
+
+    1. **Endpoint Lookup**: The action iterates through the provided Hostname and
+    IP Address entities, querying the Endgame API to find matching managed endpoints.
+
+    2. **Activity Verification**: It checks the status of each discovered endpoint;
+    only endpoints in a 'Monitored' (active) state are processed.
+
+    3. **Task Creation**: For each active endpoint, the action generates a `killProcessRequest`
+    task containing the process name and optional PID.
+
+    4. **Asynchronous Execution**: The action initiates the task and transitions into
+    an asynchronous state, returning a set of task IDs to the Google SecOps platform.
+
+    5. **Status Polling**: In the async phase, the script periodically polls the Endgame
+    API to check if the process termination tasks have succeeded or failed.
+
+    6. **Reporting**: Once tasks are complete, the action provides a summary of successful
+    terminations, failed attempts, and any entities that were skipped.
+
+
+    ### Additional Notes
+
+    - This action is asynchronous and may take time to complete depending on endpoint
+    connectivity.
+
+    - If multiple endpoints match a single entity identifier, the action will target
+    the first one returned by the Endgame API.
+  ai_short_description: >-
+    Terminates a specific running process on remote endpoints managed by the Endgame
+    platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a task on the Endgame platform to terminate a specific running process
+      on the target endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches endpoint data from Endgame to locate the sensor ID (fetches_data=true).
+      It then creates and initializes a task on the Endgame platform to kill a process,
+      which mutates external state (can_mutate_external_data=true). It does not update
+      internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES` includes
+      `ADDRESS` and `HOSTNAME`. It processes these specific entity types to find matching
+      endpoints in Endgame.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a task on a remote endpoint via the Endgame API to terminate
+      a specific process. This aligns with the 'Execute Command on the Host' category
+      as it runs a system-level command (kill process) on the remote host.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Process Name | String | Yes | Enter the process name. |
+
+    | PID | Integer | No | Enter ID of the process. |
+List Investigations:
+  ai_description: >-
+    ### General Description
+
+    Lists investigations from the Endgame platform based on specified filters. This
+    action allows security analysts to query historical or active investigations,
+    filtering them by operating system and creation time. The results are presented
+    as a data table within the Google SecOps case and as raw JSON for further automation.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action connects to the Endgame API using the provided
+    integration configuration.
+
+    2. **Parameter Processing**: It parses the OS filter string into a list and calculates
+    the 'created from' timestamp if a lookback window (hours) is provided.
+
+    3. **Data Retrieval**: It calls the Endgame API to fetch investigations matching
+    the OS, time, and limit criteria.
+
+    4. **Internal Mutation**: If investigations are found, the action constructs a
+    CSV-formatted data table and attaches it to the case wall under the name 'Endgame
+    Investigation List'.
+
+    5. **Output**: The action returns the raw JSON data of the investigations and
+    completes with a success message.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities within the case. It retrieves
+    global investigation data from the Endgame platform.
+  ai_short_description: >-
+    Lists investigations from the Endgame platform based on specified filters such
+    as operating system and creation time.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Endgame API to fetch investigations (fetches_data=true).
+      It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It fetches investigations globally based on action parameters,
+      so it does not run on entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of investigations from the Endgame platform. It
+      does not enrich specific IOCs or assets, nor does it modify alerts, tickets,
+      or perform containment actions. Therefore, it does not match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | OS | String | No | Specify for which OS you want to list investigations. Parameter
+    can take multiple values as a comma separated string. |
+
+    | Fetch investigations for the last X hours | Integer | No | Return investigations
+    created for the specified time frame in hours. |
+
+    | Max Investigation to Return | Integer | No | Specify how many investigation
+    you want to query. |
+Network Survey:
+  ai_description: >-
+    ### General Description
+
+    The **Network Survey** action initiates and retrieves a comprehensive network
+    diagnostic survey from endpoints managed by Endgame. It allows analysts to gather
+    real-time telemetry regarding active network connections, routing tables, DNS
+    caches, ARP tables, and NetBIOS information. This action is asynchronous, meaning
+    it triggers an investigation in Endgame and waits for the results to be generated
+    before attaching them to the Google SecOps case.
+
+
+    ### Flow Description
+
+    1. Identifies the target Endgame endpoint by matching the provided Hostname or
+    IP Address entity.
+
+    2. Verifies if the endpoint's operating system is supported (Windows, Linux, or
+    Solaris).
+
+    3. Initiates an investigation by creating a `systemNetworkSurveyRequest` task
+    within Endgame for the target endpoint.
+
+    4. Enters an asynchronous monitoring state, periodically polling Endgame to check
+    if the investigation has completed.
+
+    5. Once complete, retrieves the results for active connections and any optional
+    survey categories (ARP, DNS, NetBIOS, Routes) requested via parameters.
+
+    6. Formats the retrieved data into CSV-style data tables and attaches them to
+    the case, while returning the full raw data as a JSON result.
+
+
+    ### Additional Notes
+
+    - This action is asynchronous and its duration depends on the responsiveness of
+    the target endpoint sensor.
+
+    - Active connection data is always retrieved by default; other categories are
+    optional toggles.
+  ai_short_description: >-
+    Initiates and retrieves a comprehensive network diagnostic survey from endpoints
+    managed by Endgame, gathering real-time telemetry such as active connections,
+    routing tables, and DNS caches.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation and network survey task in the Endgame platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches network survey data from Endgame (fetches_data=true). It
+      also creates a new investigation and task in the Endgame platform to initiate
+      the survey, which mutates external data (can_mutate_external_data=true). It
+      does not update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES`, where supported entities are
+      ADDRESS and HOSTNAME. Therefore, it filters strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches real-time network telemetry (connections, ARP, DNS, etc.)
+      for a specific endpoint. This aligns with the 'Enrich Asset' category as it
+      returns contextual metadata and state information for a host resource. It does
+      not search historical events or execute arbitrary commands.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Items to Return | Integer | No | Specify how many items to return. |
+
+    | Include Route Entries Information | Boolean | No | Specify to get information
+    about the Route Entries. |
+
+    | Include Net Bios Information | Boolean | No | Specify to get information about
+    Net Bios. |
+
+    | Include DNS Cache Information | Boolean | No | Specify to get information about
+    the DNS Cache. |
+
+    | Include ARP Table Information | Boolean | No | Specify to get information about
+    the ARP table. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the Endgame platform. It ensures that the provided API Root,
+    Username, and Password are correct and that the network path is open. The action
+    works by attempting a full authentication cycle (login followed by logout).
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the integration's global configuration,
+    including the API Root, Username, Password, and SSL verification settings.
+
+    2. **Authentication**: It initializes the `EndgameManager`, which automatically
+    performs a login request to the Endgame API to obtain a JWT token.
+
+    3. **Session Termination**: Once authenticated, the action immediately calls the
+    logout method to invalidate the session token and clean up resources.
+
+    4. **Result Reporting**: If both the login and logout processes succeed, the action
+    returns a success message ('Connection Established') and a result value of `true`.
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the Endgame integration
+    or for troubleshooting connectivity issues.
+
+    - It does not process any entities or modify any data within Endgame or Google
+    SecOps.
+  ai_short_description: >-
+    A diagnostic action that verifies connectivity between Google SecOps and the Endgame
+    platform by performing a full authentication cycle (login and logout).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only performs a login and logout to verify connectivity with the
+      Endgame platform. It does not fetch contextual data, mutate external or internal
+      data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities. It operates independently of any specific
+      entity data, so all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic ping to test connectivity. It does not match any
+      of the expected outcome categories such as enrichment, containment, ticketing,
+      or alert manipulation.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Process Survey:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves detailed information about running processes from specific
+    endpoints managed by Endgame. It allows security analysts to perform a remote
+    'Process Survey' to identify potentially malicious activity, fileless attacks,
+    or suspicious unbacked executables. The action is asynchronous, meaning it initiates
+    an investigation in Endgame and waits for the results to be collected before completing.
+
+
+    ### Flow Description
+
+    1. **Endpoint Identification**: The action iterates through the provided Hostname
+    or IP Address entities and searches for matching managed endpoints in the Endgame
+    environment.
+
+    2. **Task Configuration**: Based on the endpoint's operating system and the action
+    parameters, a specific 'Process Survey' task is configured (e.g., enabling thread
+    collection or suspicious process filtering).
+
+    3. **Investigation Initiation**: The action creates a new investigation in Endgame
+    via API and assigns the survey task to the endpoint's sensors.
+
+    4. **Asynchronous Wait**: The action enters an 'In Progress' state, periodically
+    checking the Endgame API to see if the investigation tasks have finished.
+
+    5. **Result Collection**: Once the investigation is complete, the action retrieves
+    the process data, formats it into OS-specific data tables, and attaches the full
+    JSON results to the case.
+
+
+    ### Additional Notes
+
+    - The action supports Windows, Linux, and Solaris operating systems.
+
+    - Windows-specific features like 'MalwareScore' and 'Fileless Attack Detection'
+    are automatically ignored for non-Windows endpoints.
+
+    - The action creates a new investigation in the Endgame console for every execution.
+  ai_short_description: >-
+    Retrieves detailed information about running processes from specific endpoints
+    managed by Endgame by initiating a remote process survey.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation and assigns a process survey task to the endpoint's
+      sensors in the Endgame platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches process data from Endgame endpoints. It mutates external
+      data by creating a new investigation and assigning a process survey task in
+      the Endgame console. It does not mutate internal SecOps data, update entities,
+      create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES`, where supported entities are
+      ADDRESS and HOSTNAME. Therefore, it targets Address and Hostname entities and
+      filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a process survey on an endpoint to retrieve running processes.
+      This does not strictly align with enriching asset metadata, searching historical
+      events, or executing arbitrary commands. It is a specific forensic data collection
+      task, so it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Items to Return | Integer | No | Specify how many items to return. |
+
+    | Detect Fileless Attacks (Windows Only) | Boolean | No | Specify to detect fileless
+    attacks. Windows Only. |
+
+    | Detect Malware With MalwareScore (Windows Only) | Boolean | No | Specify to
+    detect malware processes with MalwareScore. Windows Only. |
+
+    | Collect Process Threads | Boolean | No | Specify to include information about
+    the amount of process threads in the response. |
+
+    | Return Only Suspicious Processes | Boolean | No | Specify to return only suspicious
+    processes from the endpoint. By the Endgame definition: Suspicious processes are
+    unbacked executable processes. |
+Removable Media Survey (Windows only):
+  ai_description: >-
+    ### General Description
+
+    The **Removable Media Survey (Windows only)** action retrieves detailed information
+    about removable media (such as USB devices) connected to specific endpoints managed
+    by the Endgame platform. It is designed to help security analysts identify potentially
+    unauthorized hardware or track the history of removable media usage on a host.
+    The action is asynchronous, meaning it initiates a survey task and then polls
+    for completion before retrieving and reporting the results.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Endgame manager and extracts
+    the 'Max Items to Return' parameter.
+
+    2. **Entity Filtering**: It iterates through the target entities, specifically
+    looking for Hostname and IP Address types.
+
+    3. **Endpoint Verification**: For each entity, it queries Endgame to find a matching
+    endpoint. If no endpoint is found, the entity is skipped.
+
+    4. **OS Validation**: The action checks the operating system of the endpoint.
+    Since this survey is only supported on Windows, non-Windows endpoints are skipped.
+
+    5. **Investigation Initiation**: For supported endpoints, the action creates a
+    new investigation in Endgame and triggers a 'removableMediaSurveyRequest' task.
+
+    6. **Asynchronous Polling**: The action enters an 'In Progress' state, periodically
+    checking if the Endgame investigation has completed.
+
+    7. **Data Collection**: Once the investigation is finished, the action retrieves
+    the survey results, including device names, serial numbers, vendor IDs, and connection
+    status.
+
+    8. **Reporting**: The collected data is formatted into data tables for each entity
+    and added to the case wall. The raw data is also provided in the action's JSON
+    result.
+
+
+    ### Additional Notes
+
+    * This action is strictly compatible with Windows-based endpoints.
+
+    * Because it creates an investigation record in Endgame, it is considered to perform
+    a mutation on the external system.
+  ai_short_description: >-
+    Retrieves detailed information about removable media connected to specific Windows
+    endpoints managed by the Endgame platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation task in the Endgame platform to survey removable
+      media on the target endpoints.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches endpoint details and investigation results from Endgame (fetches_data=true).
+      It creates a new investigation in Endgame using a POST request (can_mutate_external_data=true).
+      It does not update entities, create insights, or modify internal case/alert
+      data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks if
+      `entity.entity_type` is in `SUPPORTED_ENTITIES` (which includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`). Therefore, it targets Address and Hostname entities
+      and filters them by their entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (removable media history) for a specific
+      host/asset. This aligns with the 'Enrich Asset' expected outcome. It does not
+      execute arbitrary commands, contain hosts, or modify alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Items to Return | Integer | No | Specify how many items to return. |
+"Remove IP Subnet from Host Isolation Config":
+  ai_description: >-
+    ### General Description
+
+    Removes a specific IPv4 subnet from the Endgame Host Isolation configuration.
+    This action is used to manage the whitelist of network segments that hosts are
+    permitted to communicate with while in an isolated state. By removing a subnet,
+    you restrict the network access available to isolated endpoints.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the Endgame API using the
+    provided credentials.
+
+    2. **Configuration Check**: It retrieves the current Host Isolation whitelist
+    from Endgame via a GET request to verify the existence of the specified subnet.
+
+    3. **Subnet Removal**: If the subnet is found within the configuration, the action
+    sends a DELETE request to the Endgame API (`/host-isolation-whitelist/ipv4/{subnet}`)
+    to remove that specific subnet from the whitelist.
+
+    4. **Insight Creation**: If the 'Create Insight' parameter is true, it creates
+    a 'General' type insight in the SecOps case with the subnet details.
+
+    5. **Session Termination**: The action logs out of the Endgame manager to ensure
+    the session is closed.
+
+
+    ### Additional Notes
+
+    This action does not iterate over or utilize SecOps entities (like ADDRESS or
+    HOSTNAME) from the alert context. It operates exclusively on the subnet provided
+    in the 'IP Subnet' action parameter.
+  ai_short_description: >-
+    Removes a specific IPv4 subnet from the host isolation whitelist configuration
+    in Endgame.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a DELETE request to the Endgame API to remove a specific IPv4 subnet from
+      the host isolation whitelist configuration.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a DELETE request to the Endgame API to remove a subnet from
+      the host isolation whitelist, which mutates external data. It does not fetch
+      contextual enrichment data for entities. It can create a case insight internally
+      if the 'Create Insight' parameter is enabled, but it does not update entities
+      or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates exclusively on the static 'IP Subnet' parameter provided
+      in the action configuration. Therefore, all entity type and filter flags are
+      false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes a subnet from a host isolation whitelist configuration in
+      Endgame. This is a policy/configuration modification and does not directly match
+      the expected outcomes of standard categories like 'Contain Host' (which isolates
+      a specific endpoint) or 'Remove IOC From Allowlist' (which typically applies
+      to global threat indicators rather than isolation communication policies). Therefore,
+      no outcome categories are strictly matched.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | IP Subnet | String | Yes | Enter the IPv4 Subnet that you want to remove from
+    Host Isolation Config. |
+
+    | Create Insight | Boolean | Yes | If enabled, creates Insight after successful
+    execution of this action. |
+Software Survey (Windows only):
+  ai_description: >-
+    ### General Description
+
+    The **Software Survey (Windows only)** action retrieves a comprehensive list of
+    installed software from specific Windows endpoints managed by the Endgame platform.
+    This action provides visibility into the software inventory of an endpoint, which
+    is critical for identifying unauthorized applications, verifying patch levels,
+    or auditing system configurations during an investigation.
+
+
+    ### Flow Description
+
+    1. **Entity Processing**: The action iterates over Hostname and IP Address entities
+    from the current context.
+
+    2. **Endpoint Lookup**: It queries the Endgame API to find matching endpoints
+    for each entity.
+
+    3. **OS Verification**: The action checks if the endpoint's operating system is
+    Windows. Non-Windows endpoints are skipped.
+
+    4. **Investigation Creation**: For each supported endpoint, the action initiates
+    a new investigation in Endgame using the `softwareSurveyRequest` task type.
+
+    5. **Asynchronous Execution**: The action transitions to an 'In Progress' state,
+    waiting for the Endgame sensors to complete the software collection task.
+
+    6. **Result Collection**: Once the investigation is marked as complete in Endgame,
+    the action retrieves the results, including software names, versions, publishers,
+    and installation dates.
+
+    7. **Reporting**: The retrieved data is attached to the case as a data table for
+    each entity and provided as a structured JSON result.
+
+
+    ### Additional Notes
+
+    * This action is **Asynchronous**, meaning it may take several minutes to complete
+    depending on the endpoint's connectivity and the time required for the Endgame
+    sensor to perform the survey.
+
+    * Only Windows endpoints are supported; other operating systems will be logged
+    as skipped.
+  ai_short_description: >-
+    Retrieves a comprehensive list of installed software from specific Windows endpoints
+    managed by the Endgame platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a new software survey investigation task in the Endgame platform for
+      the targeted endpoints.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Endgame by retrieving investigation results. It
+      mutates external data by creating a new investigation task in Endgame. It does
+      not mutate internal data, update entities, create insights, modify alert data,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      not in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES` are ADDRESS and HOSTNAME.
+      It filters strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (installed software) for a specific
+      endpoint (asset). This aligns with the 'Enrich Asset' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Items to Return | Integer | No | Specify how many items to return. |
+System Survey:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comprehensive system information from an Endgame endpoint, including
+    memory usage, DNS settings, and OS details. This action is designed to provide
+    analysts with a detailed snapshot of an endpoint's current state to assist in
+    investigations and troubleshooting.
+
+
+    ### Flow Description
+
+    1. **Endpoint Identification**: The action searches for an Endgame endpoint matching
+    the provided Hostname or IP Address entity.
+
+    2. **Investigation Initiation**: If a matching endpoint is found and runs a supported
+    OS (Windows, Linux, Solaris, MacOS), a 'systemSurveyRequest' investigation is
+    created in Endgame via a POST request.
+
+    3. **Asynchronous Polling**: The action enters an 'In Progress' state, periodically
+    checking the status of the investigation until completion.
+
+    4. **Data Collection**: Once the investigation is complete, the action retrieves
+    results for the requested categories (OS info, network, disks, patches, security
+    products) based on the input parameters.
+
+    5. **Reporting**: The collected data is formatted into CSV tables and attached
+    to the case wall, and the raw data is provided in JSON format.
+
+
+    ### Additional Notes
+
+    * This action is asynchronous and will wait for the Endgame sensor to complete
+    the survey tasks.
+
+    * Patch and Security Product information are restricted to Windows endpoints.
+
+    * If multiple endpoints match a single entity, the first one found by the API
+    will be used.
+  ai_short_description: >-
+    Retrieves comprehensive system information from an Endgame endpoint, including
+    memory usage, DNS settings, and OS details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation task in Endgame to collect system survey data from
+      the endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving investigation results from Endgame. It
+      mutates external data by creating a new investigation task in Endgame via a
+      POST request. It does not mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (which includes ADDRESS and
+      HOSTNAME). Therefore, it targets Address and Hostname entities and filters by
+      entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (OS version, network interfaces, disks,
+      patches) for an endpoint (hostname or IP address). This aligns with the 'Enrich
+      Asset' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Items to Return | Integer | No | Specify how many items to return. |
+
+    | Include Security Product Information (Windows only) | Boolean | No | Specify
+    to get information about the security products installed on the endpoint (Windows
+    only). |
+
+    | Include Patch Information (Windows only) | Boolean | No | Specify to get information
+    about patches (Windows only). |
+
+    | Include Disk Information | Boolean | No | Specify to get information about Disks.
+    |
+
+    | Include Network Interface Information | Boolean | No | Specify to get information
+    about network interfaces. |
+Unisolate Host:
+  ai_description: >-
+    ### General Description
+
+    The **Unisolate Host** action initiates the process of releasing a previously
+    isolated endpoint within the Endgame platform. This action is critical for restoring
+    network connectivity to hosts after a security incident has been resolved. It
+    is designed to work specifically with Windows and MacOS endpoints.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Endgame API using provided credentials.
+
+    2. **Endpoint Identification**: For each provided Hostname or IP Address entity,
+    the action searches for a matching endpoint in the Endgame environment.
+
+    3. **OS Validation**: Checks if the identified endpoint is running a supported
+    operating system (Windows or MacOS).
+
+    4. **Task Initialization**: Retrieves the specific task ID for a `hostIsolationReleaseRequest`
+    and identifies the active sensors on the endpoint.
+
+    5. **Execution**: Sends a request to Endgame to initialize the unisolation task
+    for the identified sensors.
+
+    6. **Verification**: Confirms that the isolation request status has transitioned
+    to `RELEASE_REQUESTED`.
+
+    7. **Internal Updates**: If the 'Create Insight' parameter is active, it adds
+    a descriptive insight to the entity in Google SecOps.
+
+
+    ### Additional Notes
+
+    - This action only supports Windows and MacOS; other operating systems will be
+    skipped.
+
+    - If multiple endpoints match a single entity identifier, the action defaults
+    to processing the first match found.
+  ai_short_description: >-
+    Initiates the process of releasing a previously isolated endpoint within the Endgame
+    platform to restore network connectivity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a task in Endgame to release a previously isolated endpoint, restoring
+      its network connectivity.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to Endgame to initialize an unisolation task,
+      mutating external data. It does not fetch additional contextual data for enrichment.
+      It can create an insight on the entity if the 'Create Insight' parameter is
+      enabled, but does not update the entity itself or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes `ADDRESS` and
+      `HOSTNAME`. Therefore, it targets Address and Hostname entities, filtering strictly
+      by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a task in Endgame to release a previously isolated endpoint,
+      restoring its network connectivity. This directly aligns with the 'Uncontain
+      Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: true
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Create Insight | Boolean | No | If enabled, creates Insight after successful
+    execution of this action. |
+User Sessions Survey:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed information about active user sessions from specific Endgame
+    endpoints. This action is designed to provide visibility into who is currently
+    logged into a system, their logon type, and session duration. It supports Windows,
+    Linux, and Solaris operating systems. The action operates asynchronously: it first
+    initiates an investigation (survey) on the target endpoints and then polls for
+    the results until completion.
+
+
+    ### Flow Description
+
+    1. **Credential Initialization**: The action extracts API credentials and SSL
+    settings from the integration configuration.
+
+    2. **Endpoint Identification**: For each provided Hostname or IP Address entity,
+    the action queries the Endgame manager to find a matching managed endpoint.
+
+    3. **Compatibility Check**: The action verifies that the endpoint's operating
+    system is supported (Windows, Linux, or Solaris).
+
+    4. **Investigation Initiation**: It triggers a `userSessionsSurveyRequest` investigation
+    in Endgame for all compatible endpoints. The action then transitions to an 'In
+    Progress' state, storing the investigation IDs.
+
+    5. **Asynchronous Polling**: In the async phase, the action periodically checks
+    the status of the investigations in Endgame to determine if they have finished.
+
+    6. **Data Collection**: Once an investigation is complete, the action retrieves
+    the session data. For Windows, it collects fields like Username, Domain, and Logon
+    Type. For Unix-based systems, it collects UID, GID, Shell, and Terminal information.
+
+    7. **Output Generation**: The retrieved data is formatted into CSV tables and
+    attached to the case for each entity. A full JSON result is also provided for
+    further automation steps.
+
+
+    ### Additional Notes
+
+    - This action requires the Endgame sensor to be active and communicating with
+    the management console.
+
+    - If multiple endpoints match a single entity (e.g., an IP shared by multiple
+    records), the action will process the first matching endpoint found.
+  ai_short_description: >-
+    Retrieves detailed information about active user sessions from specific Endgame
+    endpoints asynchronously.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new investigation task in Endgame to survey user sessions on the target
+      endpoints.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (user sessions) from Endgame. To do this, it creates
+      an investigation task in Endgame via a POST request, which mutates external
+      data. It does not mutate internal data, update entities, create insights, modify
+      alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (which includes ADDRESS and
+      HOSTNAME). Therefore, it targets Address and Hostname entities and filters by
+      entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves active user sessions from an endpoint, which provides contextual
+      metadata about the asset. This aligns with the 'Enrich Asset' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Items to Return | Integer | No | Specify how many items to return. |
