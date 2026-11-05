@@ -33,10 +33,6 @@ class BadRequestException(VectraRUXException):
     """Exception for bad request"""
 
 
-class InvalidDetectionIDException(VectraRUXException):
-    """Invalid detection IDs Exception"""
-
-
 class LongURIException(VectraRUXException):
     """Long URI Exception"""
 
