@@ -37,14 +37,20 @@ def main() -> None:
         change = True
         raw_scope = getattr(siemplify, "execution_scope", ExecutionScope.Alert.value)
         execution_scope = get_execution_scope(raw_scope, logger=siemplify.LOGGER)
+        info_msg = ""
 
         if execution_scope.value == ExecutionScope.Alert.value:
             if (
                 siemplify.parameters.get("Only If First Alert", "false").lower()
                 == "true"
             ):
-                alerts = get_case_alerts(siemplify)
-                alerts.sort(key=lambda x: x.detected_time)
+                alerts = siemplify.case.alerts
+                alerts.sort(key=lambda x: (x.detected_time, x.creation_time))
+                if len(alerts) > 1 and alerts[0].detected_time == alerts[1].detected_time:
+                    siemplify.LOGGER.info(f"First and second alert detected_time is same")
+                    if alerts[0].creation_time == alerts[1].creation_time:
+                        siemplify.LOGGER.info("creation_time also identical — order may be non-deterministic")
+                info_msg = f"\n 1st alert: {alerts[0].identifier} vs this alert: {siemplify.current_alert.identifier}"
                 if (
                     siemplify.current_alert.identifier
                     != alerts[0].identifier
@@ -71,6 +77,7 @@ def main() -> None:
             result_value = "true"
         else:
             output_message = "Case's title not changed, not first alert in the case."
+            output_message += info_msg
             result_value = "true"
     except Exception as e:
         output_message = (
