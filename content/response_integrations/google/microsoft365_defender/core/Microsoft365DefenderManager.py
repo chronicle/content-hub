@@ -54,7 +54,7 @@ from .Microsoft365DefenderExceptions import (
     TooManyRequestsError,
 )
 from .Microsoft365DefenderParser import Microsoft365DefenderParser
-from .UtilsManager import validate_response
+from .UtilsManager import get_alert_id_from_display_id, validate_response
 
 
 class Microsoft365DefenderManager:
@@ -1064,11 +1064,13 @@ class Microsoft365DefenderManager:
                 objects
         """
         filtered_alerts = []
+        processed_alert_ids = set(existing_ids)
+        processed_alert_ids.update(get_alert_id_from_display_id(existing_id) for existing_id in existing_ids)
 
         for alert in alerts:
             alert_id = getattr(alert, id_key)
 
-            if alert_id not in [item.split("_")[0] for item in existing_ids]:
+            if alert_id not in processed_alert_ids:
                 filtered_alerts.append(alert)
             else:
                 self.siemplify.LOGGER.info(

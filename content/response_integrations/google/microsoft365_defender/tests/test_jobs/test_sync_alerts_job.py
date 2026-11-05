@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import json
 import types
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,12 +25,24 @@ from microsoft365_defender.core.Microsoft365DefenderExceptions import (
     Microsoft365DefenderException,
     NotFoundItemException,
 )
-from microsoft365_defender.core.UtilsManager import get_m365_alert_id_from_soar_alert
+from microsoft365_defender.core.UtilsManager import (
+    get_alert_id_from_display_id,
+    get_m365_alert_id_from_soar_alert,
+)
 
 from microsoft365_defender.jobs.SyncAlerts import SyncAlerts
 from microsoft365_defender.core.Microsoft365DefenderManager import (
     Microsoft365DefenderManager,
 )
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
+
+CUSTOM_DETECTION_ALERT_ID = "ead740e759-a5cf-436b-bb58-30598e150419_aml"
+DOCUMENTED_ALERT_ID = "da637551227677560813_-961444813"
+CONNECTOR_ALERT_HASH = "62660e86d980dcdca477fca4353b9a4b"
+DEFENDER_INCIDENT_ID = "56549"
+DISPLAY_ID_KEY = "DisplayId"
 
 
 def test_get_alerts_by_ids_handles_404_gracefully():
@@ -201,6 +216,44 @@ def test_get_m365_alert_id_from_soar_alert_fallback_to_context_property():
 
     alert_id_2 = get_m365_alert_id_from_soar_alert(soar_job, alert_2)
     assert alert_id_2 == "m365_context_alert_123"
+
+
+@pytest.mark.parametrize(
+    ("display_id", "expected_alert_id"),
+    [
+        (CUSTOM_DETECTION_ALERT_ID, CUSTOM_DETECTION_ALERT_ID),
+        (
+            f"{CUSTOM_DETECTION_ALERT_ID}_{CONNECTOR_ALERT_HASH}",
+            CUSTOM_DETECTION_ALERT_ID,
+        ),
+        (
+            f"{CUSTOM_DETECTION_ALERT_ID}_{CONNECTOR_ALERT_HASH}".upper(),
+            CUSTOM_DETECTION_ALERT_ID.upper(),
+        ),
+        (DOCUMENTED_ALERT_ID, DOCUMENTED_ALERT_ID),
+        (f"{DOCUMENTED_ALERT_ID}_{CONNECTOR_ALERT_HASH}", DOCUMENTED_ALERT_ID),
+    ],
+)
+def test_get_alert_id_from_display_id_removes_only_connector_hash(display_id: str, expected_alert_id: str) -> None:
+    """Test that underscores belonging to the Defender alert ID are preserved."""
+    assert get_alert_id_from_display_id(display_id) == expected_alert_id
+
+
+def test_get_m365_alert_id_from_soar_alert_with_untracked_display_id(mocker: MockerFixture) -> None:
+    """Test that a DisplayId without the connector hash resolves to the full ID.
+
+    This is the DisplayId format created when "Disable Alert Tracking" is enabled.
+    """
+    soar_job = mocker.Mock()
+    alert = mocker.Mock(
+        ticket_id=DEFENDER_INCIDENT_ID,
+        additional_properties=json.dumps({DISPLAY_ID_KEY: CUSTOM_DETECTION_ALERT_ID}),
+    )
+
+    alert_id = get_m365_alert_id_from_soar_alert(soar_job, alert)
+
+    assert alert_id == CUSTOM_DETECTION_ALERT_ID
+    soar_job.get_context_property.assert_not_called()
 
 
 def test_parse_sync_directions_default():

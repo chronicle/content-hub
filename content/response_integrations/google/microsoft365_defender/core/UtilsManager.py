@@ -42,6 +42,7 @@ from TIPCommon.types import SingleJson
 from .constants import (
     ALERT_ID_KEY,
     ALERT_KEYS_DATETIME_SUFFIX,
+    ALERT_UNIQUE_ID_HASH_SUFFIX_PATTERN,
     ALERT_UNIQUE_ID_KEY,
     SEVERITIES,
     TIMEFRAME_MAPPING,
@@ -452,20 +453,19 @@ def is_valid_m365_alert_id(alert_id: Any) -> bool:
     return isinstance(alert_id, str)
 
 
-def get_alert_id_from_display_id(display_id: str) -> str:
-    """Extracts the original alert ID from a display_id that might be a composite ID
-    (alert_id_hash).
+def get_alert_id_from_display_id(display_id: str | None) -> str | None:
+    """Extracts the original alert ID from a display ID.
 
     Args:
-        display_id (str): The display_id of the alert.
+        display_id: The display ID of the alert.
 
     Returns:
-        str: The original alert ID.
+        The original alert ID if found, otherwise None.
     """
-    if not isinstance(display_id, str) or "_" not in display_id:
+    if not isinstance(display_id, str):
         return display_id
 
-    return display_id.rsplit("_", 1)[0]
+    return re.sub(ALERT_UNIQUE_ID_HASH_SUFFIX_PATTERN, "", display_id)
 
 
 def get_m365_alert_id_from_soar_alert(
@@ -491,7 +491,7 @@ def get_m365_alert_id_from_soar_alert(
         additional_properties: dict = json.loads(alert.additional_properties)
         display_id: str | None = additional_properties.get("DisplayId")
         if display_id:
-            alert_id: str = get_alert_id_from_display_id(display_id)
+            alert_id: str | None = get_alert_id_from_display_id(display_id)
             if is_valid_m365_alert_id(alert_id):
                 return alert_id
 

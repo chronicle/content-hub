@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 INTEGRATION_NAME = "Microsoft365Defender"
 INTEGRATION_DISPLAY_NAME = "Microsoft 365 Defender"
 
@@ -97,6 +98,7 @@ OR_OPERATOR = "OR"
 AND_OPERATOR = "AND"
 ALERT_ID_KEY = "alert_id"
 ALERT_UNIQUE_ID_KEY = "alert_unique_id"
+ALERT_UNIQUE_ID_HASH_SUFFIX_PATTERN: str = r"_[0-9a-fA-F]{32}$"
 
 LIMIT_OF_INCIDENTS_TO_STORE = 1000
 MAX_EVIDENCES_PER_ALERT = 500

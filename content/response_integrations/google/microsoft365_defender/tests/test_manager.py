@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 from unittest.mock import patch, MagicMock, call
 
 import pytest
@@ -33,6 +36,14 @@ from microsoft365_defender.core.constants import (
 from microsoft365_defender.core.Microsoft365DefenderManager import (
     Microsoft365DefenderManager,
 )
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
+
+CUSTOM_DETECTION_ALERT_ID = "ead740e759-a5cf-436b-bb58-30598e150419_aml"
+CONNECTOR_ALERT_HASH = "62660e86d980dcdca477fca4353b9a4b"
+INGESTED_ALERT_ID = "da637551227677560813_-961444813"
+NEW_ALERT_ID = "da637551227677560814_-961444814"
 
 
 # pylint: disable=redefined-outer-name
@@ -772,3 +783,48 @@ def test_add_comment_to_alert_skips_empty_comment(manager):
 
     manager.add_comment_to_alert(alert_id="alert123", comment="   ")
     manager.session.post.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "stored_alert_id",
+    [
+        CUSTOM_DETECTION_ALERT_ID,
+        f"{CUSTOM_DETECTION_ALERT_ID}_{CONNECTOR_ALERT_HASH}",
+    ],
+)
+def test_get_filtered_alerts_skips_ingested_alert_with_underscore_in_id(
+    manager: Microsoft365DefenderManager,
+    mocker: MockerFixture,
+    stored_alert_id: str,
+) -> None:
+    """Test that an ingested alert whose ID contains "_" isn't ingested again.
+
+    Covers IDs stored with alert tracking disabled (raw ID) and enabled (ID with hash).
+    """
+    manager.siemplify = mocker.Mock()
+    alert = mocker.Mock(alert_id=CUSTOM_DETECTION_ALERT_ID)
+
+    filtered_alerts = manager.get_filtered_alerts(
+        alerts=[alert],
+        existing_ids={stored_alert_id},
+        is_tracking_enabled=False,
+    )
+
+    assert not filtered_alerts
+
+
+def test_get_filtered_alerts_returns_new_alert_when_tracking_disabled(
+    manager: Microsoft365DefenderManager,
+    mocker: MockerFixture,
+) -> None:
+    """Test that alerts which weren't ingested before are still returned."""
+    manager.siemplify = mocker.Mock()
+    new_alert = mocker.Mock(alert_id=NEW_ALERT_ID)
+
+    filtered_alerts = manager.get_filtered_alerts(
+        alerts=[new_alert],
+        existing_ids={INGESTED_ALERT_ID},
+        is_tracking_enabled=False,
+    )
+
+    assert filtered_alerts == [new_alert]
