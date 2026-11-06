@@ -59,16 +59,16 @@ class TestEnrichDomainRisk:
         integration_config_file_path=CONFIG_PATH,
         entities=[{"identifier": "newdomain.com", "entity_type": "DOMAIN", "additional_properties": {}}],
     )
-    def test_young_domain_not_suspicious_below_threshold(
+    def test_young_domain_always_suspicious(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
     ):
-        # score 10 is below default threshold (70) — young domain age alone does not flag suspicious
+        # young domains are always flagged regardless of score (per TECHPLAN)
         dt_manager.set_enrich_domains_response([YOUNG_DOMAIN_RESULT])
 
         EnrichDomainRisk.main()
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert "0 marked as suspicious" in action_output.results.output_message
+        assert "1 marked as suspicious" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, entities=[])
     def test_no_entities(
