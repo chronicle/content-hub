@@ -1,9 +1,22 @@
 from __future__ import annotations
 
 import urllib.parse
+from datetime import datetime
 from typing import Any
 
 from domaintools import utils
+
+from .constants import (
+    RISK_CATEGORY_HIGH,
+    RISK_CATEGORY_LOW,
+    RISK_CATEGORY_MEDIUM,
+    RISK_CATEGORY_SUSPICIOUS,
+    RISK_CATEGORY_YOUNG,
+    RISK_SCORE_HIGH,
+    RISK_SCORE_MEDIUM,
+    RISK_SCORE_SUSPICIOUS,
+    YOUNG_DOMAIN_AGE_DAYS,
+)
 
 
 def chunks(lst, n):
@@ -109,3 +122,31 @@ def get_domain_risk_score_details(domain_risk: dict[str, Any]) -> dict[str, Any]
             )
 
     return risk_scores
+
+
+def parse_domain_age_days(create_date_raw: Any) -> int | None:
+    """Return domain age in days from a raw create_date value, or None if unparseable."""
+    create_date_str = create_date_raw.get("value") if isinstance(create_date_raw, dict) else create_date_raw
+    if not create_date_str:
+        return None
+    try:
+        created = datetime.strptime(create_date_str[:10], "%Y-%m-%d")
+        return (datetime.now() - created).days
+    except ValueError:
+        return None
+
+
+def classify_domain_risk(overall_risk_score: int, domain_age_days: int | None) -> str:
+    """Classify a domain into a risk category based on score and age.
+
+    Young domain check takes precedence over risk score.
+    """
+    if domain_age_days is not None and domain_age_days < YOUNG_DOMAIN_AGE_DAYS:
+        return RISK_CATEGORY_YOUNG
+    if overall_risk_score >= RISK_SCORE_HIGH:
+        return RISK_CATEGORY_HIGH
+    if overall_risk_score >= RISK_SCORE_MEDIUM:
+        return RISK_CATEGORY_MEDIUM
+    if overall_risk_score >= RISK_SCORE_SUSPICIOUS:
+        return RISK_CATEGORY_SUSPICIOUS
+    return RISK_CATEGORY_LOW
