@@ -526,6 +526,87 @@ def test_release_note_hatch_only_applies_to_its_own_integration() -> None:
     assert [f.integration for f in result.blocking] == ["content/response_integrations/google/other"]
 
 
+@pytest.mark.parametrize(
+    "description",
+    [
+        "Non-breaking: added the Limit parameter.",
+        "A groundbreaking new connector.",
+        "This is not a breaking change.",
+        "No breaking changes; non regressive refactor.",
+        "non-regressive fix for pagination",
+        "Unbreakingly nice",
+    ],
+)
+def test_negated_or_embedded_breaking_words_do_not_waive(description: str) -> None:
+    assert bcc.mentions_breaking_change(description) is False
+    result = run({ACTION: None, NOTES: NOTES_YAML + release_note(f"'{description}'")})
+    assert result.exit_code == 1
+    assert result.reports[0].release_note_hatch is None
+
+
+@pytest.mark.parametrize(
+    "description",
+    ["BREAKING: removed Get Thing", "REGRESSIVE! - rewritten", "Regressive - removed Get Thing.", "(breaking)"],
+)
+def test_breaking_words_as_whole_words_do_waive(description: str) -> None:
+    assert bcc.mentions_breaking_change(description) is True
+    result = run({ACTION: None, NOTES: NOTES_YAML + release_note(f"'{description}'")})
+    assert result.exit_code == 0
+
+
+def test_editing_an_existing_note_to_declare_the_regression_counts_as_added() -> None:
+    """The note key includes the description and the flag, so rewriting an old entry to declare it is a declaration."""
+    old = release_note("Fixed pagination.", regressive="false")
+    base_files = {**BASE_FILES, NOTES: NOTES_YAML + old}
+    head_files = {**base_files, NOTES: NOTES_YAML + old.replace("Fixed pagination.", "REGRESSIVE - Fixed pagination.")}
+    del head_files[ACTION]
+    result = bcc.run_check([ACTION, NOTES], bcc.DictTree(base_files), bcc.DictTree(head_files), labels=[])
+    assert result.exit_code == 0
+    assert result.reports[0].release_note_hatch == "REGRESSIVE - Fixed pagination."
+    head_files[NOTES] = NOTES_YAML + old.replace("regressive: false", "regressive: true")
+    result = bcc.run_check([ACTION, NOTES], bcc.DictTree(base_files), bcc.DictTree(head_files), labels=[])
+    assert result.exit_code == 0
+    assert result.reports[0].release_note_hatch == "Fixed pagination."
+    # Reordering or re-quoting existing notes does not add anything.
+    head_files[NOTES] = old + NOTES_YAML.replace("NEW! Acme integration.", "'NEW! Acme integration.'")
+    result = bcc.run_check([ACTION, NOTES], bcc.DictTree(base_files), bcc.DictTree(head_files), labels=[])
+    assert result.exit_code == 1
+    assert result.reports[0].release_note_hatch is None
+
+
+def test_regressive_string_values_follow_as_bool() -> None:
+    assert bcc.as_bool("true") is bcc.as_bool("True") is bcc.as_bool(" YES ") is bcc.as_bool("1") is True
+    assert bcc.as_bool("false") is bcc.as_bool("0") is bcc.as_bool("") is bcc.as_bool(None) is bcc.as_bool([1]) is False
+    assert bcc.release_note_hatch([], [{"description": "x", "regressive": "false"}]) is None
+    assert bcc.release_note_hatch([], [{"description": "x", "regressive": "True"}]) == "x"
+    assert bcc.release_note_hatch([], [{"description": None, "regressive": 1}]) == "regressive: true"
+
+
+def test_labels_are_parsed_from_json_or_commas_and_matched_exactly() -> None:
+    assert bcc.parse_labels('["community", "Breaking-Change", " has, comma "]') == [
+        "community",
+        "Breaking-Change",
+        "has, comma",
+    ]
+    assert bcc.parse_labels("[]") == bcc.parse_labels("") == bcc.parse_labels(None) == bcc.parse_labels(" , ") == []
+    assert bcc.parse_labels("[not json") == ["[not json"]
+    assert bcc.parse_labels("a, breaking-change ,,b") == ["a", "breaking-change", "b"]
+    assert bcc.has_breaking_label(bcc.parse_labels('["non-breaking-change", "breaking-changes"]')) is False
+    assert bcc.has_breaking_label(bcc.parse_labels('["x", " BREAKING-CHANGE "]')) is True
+    assert run({ACTION: None}, labels='["non-breaking-change"]').exit_code == 1
+    assert run({ACTION: None}, labels='["breaking-change"]').exit_code == 0
+
+
+def test_hatches_waive_errors_but_leave_warnings_untouched() -> None:
+    result = run(
+        {ACTION: ACTION_YAML.replace("default_value: fast", "default_value: slow"), JOB: None}, labels="breaking-change"
+    )
+    by_rule = {f.rule.rule_id: f for f in result.findings}
+    assert by_rule["component-removed"].waived_by == "label `breaking-change`"
+    assert by_rule["default-value-changed"].waived_by is None
+    assert "PASS with waived breaking changes" in bcc.summary_markdown(result)
+
+
 # --------------------------------------------------------------------------- #
 # Robustness
 # --------------------------------------------------------------------------- #
@@ -568,6 +649,97 @@ def test_normalize_scalar() -> None:
     assert bcc.normalize_scalar("nan") == "nan"
 
 
+def test_names_are_compared_exactly_with_a_hint_for_near_misses() -> None:
+    """The platform matches names byte for byte, so trimming whitespace or changing case is a rename."""
+    base_files = {
+        **BASE_FILES,
+        CONNECTOR: CONNECTOR_YAML.replace("name: Max Hours Backwards", "name: 'Max Hours Backwards '"),
+        ACTION: ACTION_YAML.replace("name: Get Thing\n", "name: 'Get Thing  '\n"),
+    }
+    head_files = {**base_files, CONNECTOR: CONNECTOR_YAML.replace("is_mandatory: false", "is_mandatory: true")}
+    result = bcc.run_check([CONNECTOR], bcc.DictTree(base_files), bcc.DictTree(head_files), labels=[])
+    assert rule_ids(result, blocking_only=True) == ["parameter-removed"]
+    assert "new-mandatory-parameter-with-default" in rule_ids(result)  # the trimmed name is a new parameter
+    removed = next(f for f in result.findings if f.rule is bcc.Rule.PARAMETER_REMOVED)
+    assert removed.detail == (
+        "Parameter `Max Hours Backwards ` was removed. Found `Max Hours Backwards` instead; names must match exactly"
+        " (case and surrounding whitespace)."
+    )
+    # Case-only parameter rename.
+    result = bcc.run_check(
+        [JOB],
+        bcc.DictTree(BASE_FILES),
+        bcc.DictTree({**BASE_FILES, JOB: JOB_YAML.replace("name: Interval", "name: interval")}),
+        labels=[],
+    )
+    assert "Found `interval` instead" in result.findings[0].detail
+    # Component name trimmed: a rename, with the hint and the line of the new name.
+    result = bcc.run_check(
+        [ACTION], bcc.DictTree(base_files), bcc.DictTree({**base_files, ACTION: ACTION_YAML}), labels=[]
+    )
+    assert rule_ids(result, blocking_only=True) == ["component-name-changed"]
+    assert result.findings[0].detail.endswith("names must match exactly (case and surrounding whitespace).")
+    assert result.findings[0].line == 1
+    # A blank name is "no name", a non-scalar name is ignored, and parameters keep their line numbers.
+    assert bcc.as_name("   ") is bcc.as_name(None) is bcc.as_name({"a": 1}) is None
+    assert bcc.as_name(" X ") == " X "
+    params = bcc.parse_parameters(
+        [{"name": " Q "}, {"name": ""}, {"type": "string"}], bcc.name_lines("- name: ' Q '\n")
+    )
+    assert [(p.name, p.line) for p in params] == [(" Q ", 1)]
+
+
+def test_empty_example_placeholders_are_not_compared() -> None:
+    """``{}``/``[]`` mean "no example" (``mp`` maps ``{}`` to none), so replacing them cannot remove anything."""
+    for placeholder in ("{}", "[]"):
+        base_files = {**BASE_FILES, RESULT: placeholder}
+        for head_json in (json.dumps([{"a": 1}]), json.dumps({"a": 1}), "[]", "{}"):
+            head_files = {**base_files, RESULT: head_json}
+            assert bcc.run_check([RESULT], bcc.DictTree(base_files), bcc.DictTree(head_files), labels=[]).findings == []
+        head_files = {**base_files, RESULT: None, ACTION: ACTION_YAML.replace(RESULTS_METADATA_YAML, "")}
+        head_files.pop(RESULT)
+        assert bcc.run_check([RESULT], bcc.DictTree(base_files), bcc.DictTree(head_files), labels=[]).findings == []
+    # Emptying a real example still counts as losing its keys.
+    result = run({RESULT: "{}"})
+    assert rule_ids(result, blocking_only=True) == ["result-keys-removed"]
+
+
+def test_result_example_file_removed_while_still_referenced_is_a_warning() -> None:
+    result = run({RESULT: None})
+    assert rule_ids(result) == ["result-example-removed"]
+    assert result.exit_code == 0
+    assert result.findings[0].file == ACTION
+
+
+def test_many_removed_result_keys_are_truncated_in_the_detail() -> None:
+    keys = {f"key{i:02d}": i for i in range(15)}
+    base_files = {**BASE_FILES, RESULT: json.dumps(keys)}
+    head_files = {**base_files, RESULT: json.dumps({"key00": 0})}
+    result = bcc.run_check([RESULT], bcc.DictTree(base_files), bcc.DictTree(head_files), labels=[])
+    detail = result.findings[0].detail
+    assert detail.count("`key") == bcc.MAX_LISTED_KEYS
+    assert detail.endswith("(+4 more).")
+
+
+def test_component_files_are_discovered_like_mp_does() -> None:
+    """``mp`` loads ``*.yaml`` recursively below actions/connectors/jobs; ``.yml`` files are not components."""
+    nested = f"{ROOT}/actions/legacy/Old.yaml"
+    yml = f"{ROOT}/actions/Ignored.yml"
+    base_files = {
+        **BASE_FILES,
+        nested: "name: Old\nintegration_identifier: Acme\nparameters: []\n",
+        yml: "name: Ignored\n",
+    }
+    head_files = {k: v for k, v in base_files.items() if k not in {nested, yml}}
+    result = bcc.run_check([nested, yml], bcc.DictTree(base_files), bcc.DictTree(head_files), labels=[])
+    assert rule_ids(result) == ["component-removed"]
+    assert result.findings[0].component == 'action "Old"'
+
+
+def test_name_lines_strips_quotes_and_whitespace() -> None:
+    assert bcc.name_lines("name: '  Padded  '\n-   name: \"Q\"  \n") == {"Padded": 1, "Q": 2}
+
+
 # --------------------------------------------------------------------------- #
 # Reporting
 # --------------------------------------------------------------------------- #
@@ -598,49 +770,92 @@ def test_summary_table_and_json_report() -> None:
     report = bcc.json_report(result)
     assert report["exit_code"] == 1
     assert {f["rule"] for f in report["findings"]} == {"component-removed", "default-value-changed"}
+    assert {f["rule"]: f["blocking"] for f in report["findings"]} == {
+        "component-removed": True,
+        "default-value-changed": False,
+    }
+    assert report["integrations"] == [{"root": ROOT, "base_root": ROOT, "release_note_hatch": None}]
 
 
-def test_cli_end_to_end_with_git(tmp_path: Path) -> None:
-    """Exercise the git-backed path: two commits in a throwaway repository."""
-    import subprocess
+def test_annotation_properties_escape_commas_and_colons() -> None:
+    finding = bcc.Finding(bcc.Rule.COMPONENT_REMOVED, ROOT, "x", "d", file=f"{ROOT}/actions/A,B:C.yaml", line=0)
+    text = bcc.annotation(finding)
+    assert text.startswith(f"::error file={ROOT}/actions/A%2CB%3AC.yaml,line=1,title=")
+    assert text.count("::") == 2  # the opening and the separator only
+    assert bcc.annotation(bcc.Finding(bcc.Rule.PARSE_ERROR, ROOT, "x", "d")).startswith("::warning title=parse-error::")
 
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    git = lambda *args: subprocess.run(  # noqa: E731
-        ["git", *args],
-        cwd=repo,
-        check=True,
-        capture_output=True,
-        text=True,
-        env={
+
+def test_summary_escapes_pipes_and_newlines_in_cells() -> None:
+    result = run({ACTION: ACTION_YAML.replace("name: Get Thing", "name: Get | Thing")})
+    rows = [line for line in bcc.summary_markdown(result).splitlines() if line.startswith("| `acme`")]
+    assert len(rows) == 1
+    assert rows[0].count("|") - rows[0].count("\\|") == 7  # six cells
+    assert "Get \\| Thing" in rows[0]
+    assert bcc._md("a\nb|c") == "a b\\|c"
+
+
+def test_summary_lists_blocking_findings_first_and_caps_the_table() -> None:
+    warning = bcc.Finding(bcc.Rule.DEFAULT_VALUE_CHANGED, ROOT, "a", "w")
+    errors = [
+        bcc.Finding(bcc.Rule.PARAMETER_REMOVED, ROOT, f"c{i:04d}", f"e{i}") for i in range(bcc.MAX_SUMMARY_ROWS + 5)
+    ]
+    result = bcc.CheckResult("b", "h", "m", [bcc.IntegrationReport(ROOT, ROOT, [warning, *errors])], label_hatch=False)
+    ordered = bcc.sorted_findings(result)
+    assert ordered[0].is_blocking and ordered[-1] is warning
+    markdown = bcc.summary_markdown(result)
+    rows = [line for line in markdown.splitlines() if line.startswith("| `acme`")]
+    assert len(rows) == bcc.MAX_SUMMARY_ROWS
+    assert all("FAIL" in row for row in rows)
+    assert "... and 6 more finding(s)" in markdown
+    assert len(markdown.encode()) < 1024 * 1024
+
+
+class GitSandbox:
+    """A throwaway git repository whose working tree is replaced wholesale by ``commit``."""
+
+    def __init__(self, root: Path) -> None:
+        import subprocess
+
+        self.repo = root / "repo"
+        self.repo.mkdir()
+        self._env = {
             "GIT_AUTHOR_NAME": "t",
             "GIT_AUTHOR_EMAIL": "t@t",
             "GIT_COMMITTER_NAME": "t",
             "GIT_COMMITTER_EMAIL": "t@t",
-            "HOME": str(tmp_path),
+            "HOME": str(root),
             "PATH": "/usr/bin:/bin",
-        },
-    )
-    git("init", "-q", "-b", "main")
+        }
+        self._subprocess = subprocess
+        self.git("init", "-q", "-b", "main")
 
-    def write_all(files: Mapping[str, str]) -> None:
-        for name in list(p for p in repo.rglob("*") if p.is_file() and ".git" not in p.parts):
+    def git(self, *args: str) -> str:
+        return self._subprocess.run(
+            ["git", *args], cwd=self.repo, check=True, capture_output=True, text=True, env=self._env
+        ).stdout
+
+    def commit(self, files: Mapping[str, str | bytes], message: str = "commit") -> str:
+        for name in list(p for p in self.repo.rglob("*") if p.is_file() and ".git" not in p.parts):
             name.unlink()
         for path, content in files.items():
-            target = repo / path
+            target = self.repo / path
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(content, encoding="utf-8")
+            if isinstance(content, bytes):
+                target.write_bytes(content)
+            else:
+                target.write_text(content, encoding="utf-8")
+        self.git("add", "-A")
+        self.git("commit", "-q", "--allow-empty", "-m", message)
+        return self.git("rev-parse", "HEAD").strip()
 
-    write_all(BASE_FILES)
-    git("add", "-A")
-    git("commit", "-q", "-m", "base")
-    base_sha = git("rev-parse", "HEAD").stdout.strip()
+
+def test_cli_end_to_end_with_git(tmp_path: Path) -> None:
+    """Exercise the git-backed path: two commits in a throwaway repository."""
+    sandbox = GitSandbox(tmp_path)
+    base_sha = sandbox.commit(BASE_FILES, "base")
     head_files = {**BASE_FILES}
     del head_files[JOB]
-    write_all(head_files)
-    git("add", "-A")
-    git("commit", "-q", "-m", "remove job")
-    head_sha = git("rev-parse", "HEAD").stdout.strip()
+    head_sha = sandbox.commit(head_files, "remove job")
 
     summary = tmp_path / "summary.md"
     json_path = tmp_path / "report.json"
@@ -650,7 +865,7 @@ def test_cli_end_to_end_with_git(tmp_path: Path) -> None:
         "--head",
         head_sha,
         "--repo-root",
-        str(repo),
+        str(sandbox.repo),
         "--summary-file",
         str(summary),
         "--json",
@@ -667,7 +882,7 @@ def test_cli_end_to_end_with_git(tmp_path: Path) -> None:
         "--head",
         head_sha,
         "--repo-root",
-        str(repo),
+        str(sandbox.repo),
         "--labels",
         "breaking-change",
         "--summary-file",
@@ -693,6 +908,107 @@ def test_cli_rejects_unknown_commits(tmp_path: Path) -> None:
         ])
         == 2
     )
+
+
+def test_cli_compares_against_the_merge_base_not_the_base_tip(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Changes that landed on the base branch after the PR branched off must not be attributed to the PR."""
+    sandbox = GitSandbox(tmp_path)
+    fork_point = sandbox.commit(BASE_FILES, "fork point")
+    # The PR branch: a harmless description tweak.
+    sandbox.git("checkout", "-q", "-b", "pr")
+    head_sha = sandbox.commit({**BASE_FILES, ACTION: ACTION_YAML.replace("Gets a thing.", "Gets it.")}, "pr")
+    # Meanwhile main removed the job and a parameter; `base.sha` as reported by GitHub points at this tip.
+    sandbox.git("checkout", "-q", "main")
+    base_tip = sandbox.commit({k: v for k, v in BASE_FILES.items() if k != JOB}, "main moves on")
+
+    json_path = tmp_path / "report.json"
+    code = bcc.main([
+        "--base",
+        base_tip,
+        "--head",
+        head_sha,
+        "--repo-root",
+        str(sandbox.repo),
+        "--json",
+        str(json_path),
+    ])
+    report = json.loads(json_path.read_text())
+    assert code == 0
+    assert report["merge_base"] == fork_point
+    assert report["findings"] == []
+    assert "Comparing" in capsys.readouterr().out  # summary went to stdout because no --summary-file was given
+
+
+def test_cli_blocking_annotations_come_first_and_unwritable_outputs_do_not_crash(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """GitHub shows at most 10 annotations per severity per step, so the blocking ones must be printed first."""
+    sandbox = GitSandbox(tmp_path)
+    base_sha = sandbox.commit(BASE_FILES, "base")
+    head_files = {**BASE_FILES, ACTION: ACTION_YAML.replace("default_value: fast", "default_value: slow")}
+    del head_files[JOB]
+    head_sha = sandbox.commit(head_files, "head")
+    missing_dir = tmp_path / "does-not-exist"
+    code = bcc.main([
+        "--base",
+        base_sha,
+        "--head",
+        head_sha,
+        "--repo-root",
+        str(sandbox.repo),
+        "--summary-file",
+        str(missing_dir / "summary.md"),
+        "--json",
+        str(missing_dir / "report.json"),
+    ])
+    out = capsys.readouterr().out
+    assert code == 1
+    annotations = [line for line in out.splitlines() if line.startswith(("::error ", "::warning "))]
+    assert [a.split(" ", 1)[0] for a in annotations] == ["::error", "::warning"]
+    assert out.count("::warning::Could not write") == 2
+    assert "**Result: FAIL**" in out  # the summary falls back to stdout
+
+
+def test_git_layer_handles_special_characters_in_paths(tmp_path: Path) -> None:
+    """Paths with spaces, quotes and non-ASCII characters must be read and diffed verbatim.
+
+    ``git diff --name-only`` C-quotes such paths unless ``-z`` is used, and ``git cat-file --batch`` echoes a
+    missing object's path back (``<rev>:<path with spaces> missing``), which used to be parsed as a size.
+    """
+    sandbox = GitSandbox(tmp_path)
+    unicode_action = f'{ROOT}/actions/Ünïcode "Action".yaml'
+    spaced_example = f"{ROOT}/resources/Get Thing_JsonResult_example.json"
+    base_files = {
+        **BASE_FILES,
+        ACTION: ACTION_YAML.replace(
+            "resources/GetThing_JsonResult_example.json", "resources/Get Thing_JsonResult_example.json"
+        ),
+        spaced_example: RESULT_JSON,
+        unicode_action: "name: Ünïcode\nintegration_identifier: Acme\nparameters: []\n",
+    }
+    base_sha = sandbox.commit(base_files, "base")
+    head_files = {k: v for k, v in base_files.items() if k not in {unicode_action, spaced_example}}
+    head_sha = sandbox.commit(head_files, "head")
+
+    repo = bcc.GitRepo(str(sandbox.repo))
+    try:
+        changed = repo.changed_files(base_sha, head_sha, bcc.RI_ROOT)
+        assert sorted(changed) == sorted([unicode_action, spaced_example])
+        assert repo.read_blob(head_sha, spaced_example) is None
+        assert repo.read_blob(base_sha, spaced_example) == RESULT_JSON
+        assert repo.read_blob(base_sha, unicode_action) is not None
+        head_tree = bcc.GitTree(repo, head_sha)
+        assert head_tree.list_files(bcc.RI_ROOT + "/")  # listing the RI root once...
+        assert head_tree.list_files(ROOT + "/") == sorted(
+            p for p in head_files if p.startswith(ROOT + "/")
+        )  # serves this
+        result = bcc.run_check(changed, bcc.GitTree(repo, base_sha), head_tree, labels=[])
+    finally:
+        repo.close()
+    assert sorted(rule_ids(result)) == ["component-removed", "result-example-removed"]
+    assert result.findings[0].file == unicode_action
 
 
 if __name__ == "__main__":

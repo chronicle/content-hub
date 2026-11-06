@@ -38,7 +38,12 @@ directory, a result example removed, and files that cannot be parsed.
 
 Escape hatch: failures are downgraded to warnings when the PR carries the
 ``breaking-change`` label or when a ``release_notes.yaml`` entry added by the
-PR is marked ``regressive: true`` (or mentions "regressive"/"breaking").
+PR is marked ``regressive: true`` (or mentions the word "regressive"/"breaking";
+negated forms such as "non-breaking" do not count).
+
+Names (integration identifier/name, component names, parameter names) are
+compared exactly, including case and surrounding whitespace, because that is
+how the platform matches them when existing content is upgraded.
 
 The script only needs ``git`` and PyYAML. It never talks to the GitHub API,
 so it works for pull requests from forks with a read-only token: results are
@@ -46,7 +51,7 @@ reported through workflow annotations and ``$GITHUB_STEP_SUMMARY``.
 
 Usage:
     python ri_breaking_change_check.py --base <sha> --head <sha> \\
-        [--labels "a,b"] [--repo-root .] [--summary-file PATH] [--json PATH]
+        [--labels "a,b" | --labels '["a", "b"]'] [--repo-root .] [--summary-file PATH] [--json PATH]
 """
 
 from __future__ import annotations
@@ -68,11 +73,31 @@ import yaml
 RI_ROOT = "content/response_integrations"
 DEFINITION_FILE = "definition.yaml"
 RELEASE_NOTES_FILE = "release_notes.yaml"
+# ``mp`` loads every ``*.yaml`` below these directories (recursively); ``.yml`` files are not components.
 COMPONENT_DIRS: Mapping[str, str] = {"actions": "action", "connectors": "connector", "jobs": "job"}
+COMPONENT_SUFFIX = ".yaml"
 BREAKING_LABEL = "breaking-change"
-BREAKING_WORDS: tuple[str, ...] = ("regressive", "breaking")
+# A release note declares a breaking change when its description contains one of these words, unless a negation
+# ("non-breaking", "not a breaking change", "no breaking changes") precedes it within the same clause.
+BREAKING_WORDS: frozenset[str] = frozenset({"regressive", "breaking"})
+NEGATION_WORDS: frozenset[str] = frozenset({
+    "no",
+    "non",
+    "not",
+    "nothing",
+    "never",
+    "without",
+    "isn't",
+    "aren't",
+    "wasn't",
+})
+NEGATION_WINDOW = 2  # words
+_CLAUSE_SPLIT_RE = re.compile(r"[.;:!?()\[\]\n]+")
+_WORD_RE = re.compile(r"[a-z]+(?:'[a-z]+)?")
 ENTITY_RESULT_KEY = "EntityResult"
 MAX_LISTED_KEYS = 10
+# $GITHUB_STEP_SUMMARY is capped at 1 MiB; the table stops after this many rows and says how many were left out.
+MAX_SUMMARY_ROWS = 200
 # Action parameter types that are the same type on the platform (both map to
 # ``ActionParamType`` value 0 in ``packages/mp``), so switching between them
 # is not a breaking change.
@@ -325,8 +350,9 @@ class GitRepo:
         return out or None
 
     def changed_files(self, base: str, head: str, prefix: str) -> list[str]:
-        out = self.run("diff", "--no-renames", "--name-only", base, head, "--", prefix)
-        return [line.strip() for line in out.splitlines() if line.strip()]
+        # ``-z`` keeps paths verbatim; without it git C-quotes names with spaces, quotes or non-ASCII characters.
+        out = self.run("diff", "--no-renames", "--name-only", "-z", base, head, "--", prefix)
+        return [path for path in out.split("\0") if path]
 
     def read_blob(self, rev: str, path: str) -> str | None:
         if self._batch is None or self._batch.poll() is not None:
@@ -343,10 +369,13 @@ class GitRepo:
         try:
             proc.stdin.write(f"{rev}:{path}\n".encode())
             proc.stdin.flush()
-            header = proc.stdout.readline().decode("utf-8", "replace").split()
+            header_line = proc.stdout.readline().decode("utf-8", "replace").rstrip("\n")
         except (BrokenPipeError, OSError):
             return None
-        if len(header) != 3:  # "<object> missing" / "<object> ambiguous" / EOF
+        # Success: "<oid> <type> <size>". Otherwise git echoes the request followed by " missing" / " ambiguous";
+        # the echoed path may itself contain spaces, so parse from the right and validate the size.
+        header = header_line.rsplit(None, 2)
+        if len(header) != 3 or not header[2].isdigit():
             return None
         _, object_type, size = header
         content = proc.stdout.read(int(size) + 1)[:-1]  # payload is followed by a newline
@@ -370,8 +399,14 @@ class GitTree:
 
     def list_files(self, prefix: str) -> list[str]:
         if prefix not in self._listing:
-            out = self.repo.run("ls-tree", "-r", "--name-only", "-z", self.rev, "--", prefix, check=False)
-            self._listing[prefix] = sorted(p for p in out.split("\0") if p)
+            # A listing of a parent directory (the RI root is listed first) already contains the answer; this
+            # keeps a PR that touches hundreds of integrations to one ``ls-tree`` per revision.
+            parent = next((p for p in self._listing if prefix.startswith(p)), None)
+            if parent is not None:
+                self._listing[prefix] = [p for p in self._listing[parent] if p.startswith(prefix)]
+            else:
+                out = self.repo.run("ls-tree", "-r", "--name-only", "-z", self.rev, "--", prefix, check=False)
+                self._listing[prefix] = sorted(p for p in out.split("\0") if p)
         return self._listing[prefix]
 
     def read_text(self, path: str) -> str | None:
@@ -412,13 +447,21 @@ def as_text(value: Any) -> str | None:
     return str(value).strip()
 
 
+def as_name(value: Any) -> str | None:
+    """A name/identifier exactly as the platform will see it (no trimming); ``None`` when blank or missing."""
+    if value is None or isinstance(value, (Mapping, list)):
+        return None
+    text = str(value)
+    return text if text.strip() else None
+
+
 def name_lines(text: str) -> dict[str, int]:
-    """Map every ``name: <value>`` in the file to its first line number (1-based)."""
+    """Map every ``name: <value>`` in the file (value trimmed) to its first line number (1-based)."""
     lines: dict[str, int] = {}
     for number, line in enumerate(text.splitlines(), start=1):
         match = _NAME_LINE_RE.match(line)
         if match:
-            value = match.group("value").strip().strip("'\"")
+            value = match.group("value").strip().strip("'\"").strip()
             lines.setdefault(value, number)
     return lines
 
@@ -430,7 +473,7 @@ def parse_parameters(raw: Any, lines: Mapping[str, int]) -> tuple[Parameter, ...
     for item in raw:
         if not isinstance(item, Mapping):
             continue
-        name = as_text(item.get("name"))
+        name = as_name(item.get("name"))
         if not name:
             continue
         optional = item.get("optional_values")
@@ -441,7 +484,7 @@ def parse_parameters(raw: Any, lines: Mapping[str, int]) -> tuple[Parameter, ...
                 is_mandatory=as_bool(item.get("is_mandatory")),
                 default_value=item.get("default_value"),
                 optional_values=tuple(str(v) for v in optional) if isinstance(optional, list) else None,
-                line=lines.get(name, 1),
+                line=lines.get(name.strip(), 1),
             )
         )
     return tuple(params)
@@ -453,11 +496,11 @@ def parse_component(kind: str, path: str, text: str, tree: Tree, root: str) -> t
         return None, error
     if not isinstance(data, Mapping):
         return None, "component YAML is not a mapping"
-    name = as_text(data.get("name"))
+    name = as_name(data.get("name"))
     if not name:
         return None, "component YAML has no `name`"
     lines = name_lines(text)
-    integration_identifier = as_text(data.get("integration_identifier") or data.get("integration"))
+    integration_identifier = as_name(data.get("integration_identifier") or data.get("integration"))
     results: list[ResultExample] = []
     if kind == "action":
         results = load_result_examples(data.get("dynamic_results_metadata"), tree, root)
@@ -470,7 +513,7 @@ def parse_component(kind: str, path: str, text: str, tree: Tree, root: str) -> t
             parameters=parse_parameters(data.get("parameters"), lines),
             result_examples=tuple(results),
             script_result_name=as_text(data.get("script_result_name")),
-            name_line=lines.get(name, 1),
+            name_line=lines.get(name.strip(), 1),
         ),
         None,
     )
@@ -522,15 +565,15 @@ def load_snapshot(tree: Tree, root: str) -> IntegrationSnapshot:
             )
         )
     else:
-        identifier = as_text(definition.get("identifier"))
-        name = as_text(definition.get("name"))
+        identifier = as_name(definition.get("identifier"))
+        name = as_name(definition.get("name"))
         parameters = parse_parameters(definition.get("parameters"), name_lines(definition_text))
 
     components: list[Component] = []
     unparsed: set[str] = set()
     for path in files:
         relative = PurePosixPath(path).relative_to(root)
-        if len(relative.parts) != 2 or relative.suffix not in {".yaml", ".yml"}:
+        if len(relative.parts) < 2 or relative.suffix != COMPONENT_SUFFIX:
             continue
         kind = COMPONENT_DIRS.get(relative.parts[0])
         if kind is None:
@@ -652,6 +695,14 @@ def display(value: Any) -> str:
     return text if len(text) <= 60 else text[:57] + "..."
 
 
+def name_hint(name: str, candidates: Iterable[str]) -> str:
+    """Explain a near miss when ``name`` differs from a candidate only by case or surrounding whitespace."""
+    for candidate in candidates:
+        if candidate != name and candidate.strip().casefold() == name.strip().casefold():
+            return f" Found `{candidate}` instead; names must match exactly (case and surrounding whitespace)."
+    return ""
+
+
 def compare_parameters(
     base_params: Sequence[Parameter],
     head_params: Sequence[Parameter],
@@ -668,8 +719,11 @@ def compare_parameters(
     for name, base_param in base_by_name.items():
         head_param = head_by_name.get(name)
         if head_param is None:
+            hint = name_hint(name, head_by_name)
             findings.append(
-                Finding(Rule.PARAMETER_REMOVED, integration, component, f"Parameter `{name}` was removed.", file=file)
+                Finding(
+                    Rule.PARAMETER_REMOVED, integration, component, f"Parameter `{name}` was removed.{hint}", file=file
+                )
             )
             continue
         line = head_param.line
@@ -779,11 +833,16 @@ def result_shape(data: Any) -> tuple[str, frozenset[str]]:
     return shape, frozenset(keys)
 
 
+def is_empty_example(data: Any) -> bool:
+    """``{}`` / ``[]`` placeholders mean "no example" (``mp`` treats ``{}`` the same way): nothing to lose."""
+    return isinstance(data, (Mapping, list)) and len(data) == 0
+
+
 def compare_result_examples(base: Component, head: Component, *, integration: str) -> list[Finding]:
     findings: list[Finding] = []
     head_by_name = {r.result_name: r for r in head.result_examples}
     for base_result in base.result_examples:
-        if base_result.error or base_result.data is None:
+        if base_result.error or base_result.data is None or is_empty_example(base_result.data):
             continue  # nothing reliable to compare against
         head_result = head_by_name.get(base_result.result_name)
         if head_result is None or head_result.error == "missing":
@@ -863,24 +922,26 @@ def match_components(
             continue  # the file is still there but broken; the parse-error warning already covers it
         same_file = head_by_file.get(relative_file)
         if same_file is not None and same_file.name not in base_names:
+            hint = name_hint(base_component.name, [same_file.name])
             findings.append(
                 Finding(
                     Rule.COMPONENT_NAME_CHANGED,
                     integration,
                     base_component.label,
-                    f"`name` changed from `{base_component.name}` to `{same_file.name}` in `{same_file.file}`.",
+                    f"`name` changed from `{base_component.name}` to `{same_file.name}` in `{same_file.file}`.{hint}",
                     file=same_file.file,
                     line=same_file.name_line,
                 )
             )
             pairs.append((base_component, same_file))
         else:
+            hint = name_hint(base_component.name, head_by_name)
             findings.append(
                 Finding(
                     Rule.COMPONENT_REMOVED,
                     integration,
                     base_component.label,
-                    f"`{base_component.file}` was removed.",
+                    f"`{base_component.file}` was removed.{hint}",
                     file=base_component.file,
                 )
             )
@@ -1032,9 +1093,31 @@ def has_breaking_label(labels: Iterable[str]) -> bool:
 
 
 def parse_labels(raw: str | None) -> list[str]:
-    if not raw:
+    """Labels from a JSON list (``toJSON(github.event.pull_request.labels.*.name)``) or a comma-separated string."""
+    if not raw or not raw.strip():
         return []
+    if raw.lstrip().startswith("["):
+        try:
+            parsed = json.loads(raw)
+        except ValueError:
+            parsed = None
+        if isinstance(parsed, list):
+            return [str(label).strip() for label in parsed if str(label).strip()]
     return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def mentions_breaking_change(description: str) -> bool:
+    """``True`` when "regressive"/"breaking" occurs as a whole word that is not negated within its clause.
+
+    "groundbreaking" and "unbreakingly" are different words; "non-breaking", "not a breaking change" and
+    "no breaking changes" are negated. Sentence punctuation resets the negation window.
+    """
+    for clause in _CLAUSE_SPLIT_RE.split(description.casefold()):
+        words = _WORD_RE.findall(clause)
+        for index, word in enumerate(words):
+            if word in BREAKING_WORDS and not NEGATION_WORDS & set(words[max(0, index - NEGATION_WINDOW) : index]):
+                return True
+    return False
 
 
 def release_note_hatch(
@@ -1046,17 +1129,15 @@ def release_note_hatch(
     added = [n for n in head_notes if _note_key(n) not in base_keys]
     for note in reversed(added):  # newest entries are appended last
         description = str(note.get("description") or "")
-        if as_bool(note.get("regressive")) or any(word in description.casefold() for word in BREAKING_WORDS):
+        if as_bool(note.get("regressive")) or mentions_breaking_change(description):
             return description.strip() or "regressive: true"
     return None
 
 
 def _note_key(note: Mapping[str, Any]) -> str:
-    return json.dumps(
-        {k: note.get(k) for k in ("description", "version", "integration_version", "item_name", "publish_time")},
-        sort_keys=True,
-        default=str,
-    )
+    """Identity of a release note; a PR that edits the description or the ``regressive`` flag "adds" a note."""
+    keys = ("description", "version", "integration_version", "item_name", "publish_time", "regressive")
+    return json.dumps({k: note.get(k) for k in keys}, sort_keys=True, default=str)
 
 
 def apply_hatches(reports: list[IntegrationReport], *, label_hatch: bool) -> None:
@@ -1176,6 +1257,11 @@ def _severity_cell(finding: Finding) -> str:
     return "warning"
 
 
+def sorted_findings(result: CheckResult) -> list[Finding]:
+    """Blocking findings first (GitHub shows at most 10 annotations per severity per step), then stable order."""
+    return sorted(result.findings, key=lambda f: (not f.is_blocking, f.integration, f.component, f.rule.rule_id))
+
+
 def summary_markdown(result: CheckResult) -> str:
     lines = ["## Response Integrations breaking-change check", "", _verdict_line(result)]
     if result.label_hatch:
@@ -1196,9 +1282,8 @@ def summary_markdown(result: CheckResult) -> str:
             "| Integration | Component | Rule | Severity | Detail | How to fix |",
             "| --- | --- | --- | --- | --- | --- |",
         ]
-        for finding in sorted(
-            result.findings, key=lambda f: (not f.is_blocking, f.integration, f.component, f.rule.rule_id)
-        ):
+        findings = sorted_findings(result)
+        for finding in findings[:MAX_SUMMARY_ROWS]:
             cells = (
                 f"`{_md(PurePosixPath(finding.integration).name)}`",
                 _md(finding.component),
@@ -1208,6 +1293,8 @@ def summary_markdown(result: CheckResult) -> str:
                 _md(finding.fix),
             )
             lines.append("| " + " | ".join(cells) + " |")
+        if len(findings) > MAX_SUMMARY_ROWS:
+            lines += ["", f"... and {len(findings) - MAX_SUMMARY_ROWS} more finding(s); see the workflow log."]
         lines.append("")
     lines += [
         "<details><summary>What this check is and how to fix findings</summary>",
@@ -1287,6 +1374,17 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def write_output(path: str, text: str, *, append: bool) -> bool:
+    """Write ``text`` to ``path``; on failure print a warning annotation and return ``False`` instead of crashing."""
+    try:
+        with open(path, "a" if append else "w", encoding="utf-8") as handle:
+            handle.write(text)
+    except OSError as exc:
+        print(f"::warning::Could not write {path}: {exc}")
+        return False
+    return True
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     repo = GitRepo(args.repo_root)
@@ -1312,20 +1410,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Comparing {merge_base[:12]} (merge base) .. {args.head[:12]} (head); {len(changed)} changed file(s).")
     for report in result.reports:
         print(f"- {report.root}: {len(report.findings)} finding(s)")
-    for finding in result.findings:
+    for finding in sorted_findings(result):
         if not args.no_annotations:
             print(annotation(finding))
         else:
             print(f"[{finding.rule.rule_id}] {finding.integration} {finding.component}: {finding.detail}")
     markdown = summary_markdown(result)
-    if args.summary_file:
-        with open(args.summary_file, "a", encoding="utf-8") as handle:
-            handle.write(markdown)
-    else:
+    if not args.summary_file or not write_output(args.summary_file, markdown, append=True):
         print(markdown)
     if args.json_path:
-        with open(args.json_path, "w", encoding="utf-8") as handle:
-            json.dump(json_report(result), handle, indent=2)
+        write_output(args.json_path, json.dumps(json_report(result), indent=2), append=False)
     if result.exit_code:
         print(f"::error::{len(result.blocking)} breaking change(s) found. See the job summary for details and fixes.")
     return result.exit_code
