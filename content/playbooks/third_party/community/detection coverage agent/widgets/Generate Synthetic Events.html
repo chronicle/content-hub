@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google SecOps SOAR - Synthetic Events</title>
+    <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: var(--background, #f8fafc);
+            color: var(--foreground, #0f172a);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+        }
+        .surface-card {
+            background-color: var(--card, #ffffff);
+            color: var(--foreground, #0f172a);
+            border: 1px solid var(--border, #e2e8f0);
+        }
+        .surface-subtle {
+            background-color: var(--secondary, rgba(148, 163, 184, 0.12));
+            border: 1px solid var(--border, #e2e8f0);
+        }
+        .text-muted {
+            color: var(--muted-foreground, #64748b);
+        }
+        pre::-webkit-scrollbar { width: 6px; height: 6px; }
+        pre::-webkit-scrollbar-thumb { background: var(--border, #cbd5e1); border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6">
+
+    <!-- SOAR DATA BINDING -->
+    <script type="application/json" id="soar-synth-data">[Generate Synthetic Events.JsonResult]</script>
+    <script type="application/json" id="soar-bundle-data">[ [Alert.TDO_Events_Bundle] ]</script>
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        <!-- HEADER & FILTERS -->
+        <div class="surface-card rounded-2xl p-6 shadow-sm space-y-5">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-[var(--border)]">
+                <div class="space-y-1.5">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                        Step 2 · Attack Simulation Telemetry
+                    </div>
+                    <h1 class="text-2xl font-bold tracking-tight text-[var(--foreground)]">Generated Synthetic Events</h1>
+                    <p class="text-sm text-muted">AI-synthesized raw endpoint logs and Chronicle UDM event sequences simulating threat activity.</p>
+                </div>
+
+                <!-- SEARCH -->
+                <div class="relative w-full lg:w-80">
+                    <svg class="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    <input id="event-search" type="text" placeholder="Search command line, IP, file, PID..." oninput="applyEventFilters()"
+                        class="w-full pl-10 pr-4 py-2 text-xs rounded-xl surface-subtle text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                </div>
+            </div>
+
+            <!-- KPI SUMMARY -->
+            <div id="event-kpis" class="grid grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
+            <!-- FILTER PILLS -->
+            <div id="event-type-filters" class="flex flex-wrap items-center gap-2 pt-1"></div>
+        </div>
+
+        <!-- EVENTS LIST -->
+        <div id="events-container" class="space-y-4"></div>
+    </div>
+
+    <script>
+        let allEvents = [];
+        let activeFilter = 'ALL';
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function loadSoarJson(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return null;
+            let raw = el.textContent.trim();
+            if (!raw || raw.includes('.JsonResult') || raw.includes('Alert.')) {
+                return null;
+            }
+            // Strip sentinel reset tokens (NULLVALUE or RESET) injected by Context Value initialization
+            raw = raw
+                .replace(/^\[\s*"?(?:NULLVALUE|RESET)"?\s*,\s*/, '[')
+                .replace(/^\[\s*"?(?:NULLVALUE|RESET)"?\s*\]$/, '[]')
+                .trim();
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length === 0) return null;
+                return parsed;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function renderPendingState() {
+            document.getElementById('event-kpis').innerHTML = '';
+            document.getElementById('event-type-filters').innerHTML = '';
+            document.getElementById('events-container').innerHTML = `
+                <div class="flex flex-col items-center justify-center p-16 surface-card rounded-2xl text-center space-y-4">
+                    <div class="animate-spin rounded-full h-9 w-9 border-2 border-indigo-500 border-t-transparent"></div>
+                    <div class="space-y-1">
+                        <h3 class="text-base font-bold text-[var(--foreground)]">Waiting for "Generate Synthetic Events" Step...</h3>
+                        <p class="text-xs text-muted">Synthesized raw logs and UDM telemetry will appear here once the loop completes.</p>
+                    </div>
+                </div>`;
+        }
+
+        function decodeBase64Log(rawBase64) {
+            if (!rawBase64) return 'No rawLog provided (UDM-only source)';
+            try {
+                const decoded = atob(rawBase64);
+                try {
+                    return JSON.stringify(JSON.parse(decoded), null, 2);
+                } catch {
+                    return decoded;
+                }
+            } catch {
+                return rawBase64;
+            }
+        }
+
+        function normalizeEvents(synthRaw, bundleRaw) {
+            const bundleList = [];
+            const synthList = [];
+            const rawLogByLogId = {};
+
+            if (synthRaw) {
+                const items = Array.isArray(synthRaw) ? synthRaw : [synthRaw];
+                items.forEach((entry, bIdx) => {
+                    const res = entry?.response_data?.result || entry?.result || entry;
+                    let evts = res?.structuredContent?.syntheticEvents;
+                    if (!evts && res?.content?.[0]?.text) {
+                        try { evts = JSON.parse(res.content[0].text).syntheticEvents; } catch {}
+                    }
+                    if (!evts && entry?.syntheticEvents) evts = entry.syntheticEvents;
+                    if (Array.isArray(evts)) {
+                        evts.forEach(ev => {
+                            let udmObj = ev.udm;
+                            if (!udmObj && ev.udmJson) {
+                                try { udmObj = JSON.parse(ev.udmJson); } catch {}
+                            }
+                            const logId = udmObj?.metadata?.productLogId;
+                            if (logId && ev.rawLog) {
+                                rawLogByLogId[logId] = ev.rawLog;
+                            }
+                            synthList.push({
+                                tdoId: ev.tdoId || (items.length > 1 ? `t0${bIdx + 1}` : null),
+                                rawLog: ev.rawLog || null,
+                                udm: udmObj || {}
+                            });
+                        });
+                    }
+                });
+            }
+
+            if (Array.isArray(bundleRaw) && bundleRaw.length > 0) {
+                bundleRaw.forEach(bundle => {
+                    if (!bundle || typeof bundle !== 'object') return;
+                    const tdoId = bundle.threatDetectionOpportunityId;
+                    (bundle.udmsJson || []).forEach(uStr => {
+                        let udmObj = uStr;
+                        if (typeof uStr === 'string') {
+                            try { udmObj = JSON.parse(uStr); } catch {}
+                        }
+                        const logId = udmObj?.metadata?.productLogId;
+                        bundleList.push({
+                            tdoId,
+                            rawLog: (logId && rawLogByLogId[logId]) ? rawLogByLogId[logId] : null,
+                            udm: udmObj || {}
+                        });
+                    });
+                });
+            }
+
+            if (bundleList.length > synthList.length) {
+                return bundleList;
+            }
+            if (synthList.length > 0) {
+                if (bundleList.length === synthList.length) {
+                    synthList.forEach((item, idx) => {
+                        if (!item.tdoId && bundleList[idx]?.tdoId) {
+                            item.tdoId = bundleList[idx].tdoId;
+                        }
+                    });
+                }
+                return synthList;
+            }
+            return bundleList;
+        }
+
+        function getEventTypeBadge(eventType) {
+            const map = {
+                'PROCESS_LAUNCH': 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25',
+                'NETWORK_CONNECTION': 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/25',
+                'NETWORK_HTTP': 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25',
+                'FILE_READ': 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
+                'USER_LOGIN': 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'
+            };
+            return map[eventType] || 'surface-subtle text-[var(--foreground)]';
+        }
+
+        function extractTelemetryHighlights(udm) {
+            const rows = [];
+            const prin = udm.principal || {};
+            const tgt = udm.target || {};
+            const net = udm.network || {};
+
+            const host = prin.hostname || prin.asset?.hostname || tgt.hostname || prin.assetId;
+            if (host) rows.push({ label: 'Host / Asset', value: host });
+
+            const user = prin.user?.userid || tgt.user?.userid || prin.user?.windowsSid;
+            if (user) rows.push({ label: 'User / SID', value: user });
+
+            const parentName = tgt.process?.parentProcess?.file?.names?.[0] || tgt.process?.parentProcess?.file?.fullPath;
+            const procName = tgt.process?.file?.exifInfo?.originalFile || tgt.process?.file?.fullPath;
+            if (parentName || procName) {
+                rows.push({
+                    label: 'Process Lineage',
+                    value: `${parentName ? parentName + ' → ' : ''}${procName || 'process'}${tgt.process?.pid ? ' (PID ' + tgt.process.pid + ')' : ''}`
+                });
+            }
+
+            if (tgt.process?.commandLine) {
+                rows.push({ label: 'Command Line', value: tgt.process.commandLine, mono: true, fullWidth: true });
+            }
+
+            if (tgt.file?.fullPath && !tgt.process) {
+                rows.push({ label: 'Target File', value: tgt.file.fullPath, mono: true });
+            }
+
+            const srcIp = prin.ip?.[0] || prin.natIp?.[0];
+            const dstIp = tgt.ip?.[0] || tgt.url;
+            if (srcIp || dstIp) {
+                const srcStr = srcIp ? `${srcIp}${prin.port ? ':' + prin.port : ''}` : 'local';
+                const dstStr = dstIp ? `${dstIp}${tgt.port ? ':' + tgt.port : ''}` : '';
+                rows.push({
+                    label: 'Network Flow',
+                    value: `${srcStr}${dstStr ? ' → ' + dstStr : ''}${net.ipProtocol ? ' (' + net.ipProtocol + ' ' + (net.direction || '') + ')' : ''}`,
+                    mono: true
+                });
+            }
+
+            if (tgt.process?.file?.sha256) {
+                rows.push({ label: 'SHA-256 Hash', value: tgt.process.file.sha256, mono: true, fullWidth: true });
+            }
+
+            return rows;
+        }
+
+        function renderHeaderStats(events) {
+            const kpiEl = document.getElementById('event-kpis');
+            const filterEl = document.getElementById('event-type-filters');
+
+            const eventTypes = [...new Set(events.map(e => e.udm?.metadata?.eventType || 'UNKNOWN'))];
+            const logTypes = [...new Set(events.map(e => e.udm?.metadata?.logType).filter(Boolean))];
+            const hosts = [...new Set(events.map(e => e.udm?.principal?.hostname || e.udm?.principal?.assetId).filter(Boolean))];
+
+            kpiEl.innerHTML = `
+                <div class="p-4 rounded-xl surface-subtle">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-muted">Synthetic Events</p>
+                    <p class="text-2xl font-bold text-[var(--foreground)] mt-1">${events.length}</p>
+                </div>
+                <div class="p-4 rounded-xl surface-subtle">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-muted">UDM Event Types</p>
+                    <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">${eventTypes.length}</p>
+                </div>
+                <div class="p-4 rounded-xl surface-subtle">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-muted">Log Sources</p>
+                    <p class="text-lg font-bold text-[var(--foreground)] mt-1.5 truncate">${escapeHtml(logTypes.join(', ') || 'CS_EDR')}</p>
+                </div>
+                <div class="p-4 rounded-xl surface-subtle">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-muted">Simulated Endpoint</p>
+                    <p class="text-sm font-mono font-bold text-[var(--foreground)] mt-2 truncate">${escapeHtml(hosts[0] || 'Endpoint')}</p>
+                </div>
+            `;
+
+            const pills = ['ALL', ...eventTypes];
+            filterEl.innerHTML = `<span class="text-xs font-semibold uppercase tracking-wider text-muted mr-1">Event Type:</span>` +
+                pills.map(et => {
+                    const active = activeFilter === et;
+                    const cls = active
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'surface-subtle text-[var(--foreground)] hover:opacity-80';
+                    return `<button onclick="setEventFilter('${escapeHtml(et)}')" class="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${cls}">
+                        ${et === 'ALL' ? 'All (' + events.length + ')' : escapeHtml(et)}
+                    </button>`;
+                }).join('');
+        }
+
+        function setEventFilter(et) {
+            activeFilter = et;
+            renderHeaderStats(allEvents);
+            applyEventFilters();
+        }
+
+        function applyEventFilters() {
+            if (!allEvents.length) return;
+            const q = (document.getElementById('event-search')?.value || '').toLowerCase().trim();
+            const filtered = allEvents.filter(ev => {
+                const et = ev.udm?.metadata?.eventType || 'UNKNOWN';
+                if (activeFilter !== 'ALL' && et !== activeFilter) return false;
+                if (!q) return true;
+                const decodedRaw = ev.rawLog ? decodeBase64Log(ev.rawLog) : '';
+                const hay = (JSON.stringify(ev.udm) + ' ' + decodedRaw).toLowerCase();
+                return hay.includes(q);
+            });
+            renderEvents(filtered);
+        }
+
+        function switchTab(cardId, tab) {
+            ['summary', 'raw', 'udm'].forEach(t => {
+                const panel = document.getElementById(`${cardId}-panel-${t}`);
+                const btn = document.getElementById(`${cardId}-btn-${t}`);
+                if (!panel || !btn) return;
+                if (t === tab) {
+                    panel.classList.remove('hidden');
+                    btn.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white shadow-sm transition-all';
+                } else {
+                    panel.classList.add('hidden');
+                    btn.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg surface-subtle text-[var(--foreground)] hover:opacity-80 transition-all';
+                }
+            });
+        }
+
+        function copyPayload(btn, encoded) {
+            const text = decodeURIComponent(escape(atob(encoded)));
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = btn.innerHTML;
+                btn.innerHTML = '✓ Copied';
+                setTimeout(() => { btn.innerHTML = orig; }, 1500);
+            });
+        }
+
+        function renderEvents(events) {
+            const container = document.getElementById('events-container');
+            if (!events || events.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center p-12 surface-card text-muted rounded-2xl">
+                        No synthetic events match the current filter.
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = events.map((ev, index) => {
+                const cardId = `synth-evt-${index}`;
+                const meta = ev.udm?.metadata || {};
+                const eventType = meta.eventType || 'GENERIC_EVENT';
+                const badgeCls = getEventTypeBadge(eventType);
+                const rawDecoded = decodeBase64Log(ev.rawLog);
+                const udmFormatted = JSON.stringify(ev.udm, null, 2);
+                const highlights = extractTelemetryHighlights(ev.udm || {});
+                const b64Udm = btoa(unescape(encodeURIComponent(udmFormatted)));
+
+                return `
+                <div class="surface-card rounded-2xl shadow-sm overflow-hidden">
+                    <div class="px-5 py-4 surface-subtle border-x-0 border-t-0 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-600 text-white text-xs font-bold">
+                                #${index + 1}
+                            </span>
+                            ${ev.tdoId ? `<span class="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">${escapeHtml(ev.tdoId.toUpperCase())}</span>` : ''}
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold border ${badgeCls}">
+                                ${escapeHtml(eventType)}
+                            </span>
+                            <span class="px-2.5 py-1 rounded-md text-xs font-mono font-medium surface-card">
+                                ${escapeHtml(meta.logType || 'UDM')} · ${escapeHtml(meta.vendorName || 'Chronicle')} ${escapeHtml(meta.productName || '')}
+                            </span>
+                            ${meta.eventTimestamp ? `<span class="text-xs font-mono text-muted">${escapeHtml(meta.eventTimestamp)}</span>` : ''}
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <button id="${cardId}-btn-summary" onclick="switchTab('${cardId}', 'summary')"
+                                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white shadow-sm transition-all">
+                                Key Telemetry
+                            </button>
+                            <button id="${cardId}-btn-raw" onclick="switchTab('${cardId}', 'raw')"
+                                class="px-3 py-1.5 text-xs font-semibold rounded-lg surface-subtle text-[var(--foreground)] hover:opacity-80 transition-all">
+                                Raw Log (Decoded)
+                            </button>
+                            <button id="${cardId}-btn-udm" onclick="switchTab('${cardId}', 'udm')"
+                                class="px-3 py-1.5 text-xs font-semibold rounded-lg surface-subtle text-[var(--foreground)] hover:opacity-80 transition-all">
+                                UDM JSON
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="${cardId}-panel-summary" class="p-5 grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        ${highlights.map(h => `
+                            <div class="${h.fullWidth ? 'md:col-span-2' : ''} p-3.5 rounded-xl surface-subtle">
+                                <p class="text-xs font-bold uppercase tracking-wider text-muted mb-1.5">${escapeHtml(h.label)}</p>
+                                <p class="text-xs ${h.mono ? 'font-mono surface-card px-3 py-2 rounded-lg break-all' : 'font-semibold'} text-[var(--foreground)]">
+                                    ${escapeHtml(h.value)}
+                                </p>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div id="${cardId}-panel-raw" class="hidden">
+                        <pre class="p-5 text-xs font-mono leading-relaxed overflow-x-auto max-h-80 surface-subtle border-0 text-[var(--foreground)] whitespace-pre-wrap break-all">${escapeHtml(rawDecoded)}</pre>
+                    </div>
+
+                    <div id="${cardId}-panel-udm" class="hidden">
+                        <pre class="p-5 text-xs font-mono leading-relaxed overflow-x-auto max-h-80 surface-subtle border-0 text-[var(--foreground)] whitespace-pre-wrap break-all">${escapeHtml(udmFormatted)}</pre>
+                    </div>
+
+                    <div class="px-5 py-3 border-t border-[var(--border)] flex items-center justify-between">
+                        <span class="text-xs font-mono text-muted">Log ID: ${escapeHtml(meta.productLogId || 'N/A')}</span>
+                        <button onclick="copyPayload(this, '${b64Udm}')" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                            Copy UDM JSON
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // SOAR Host Theme Listener
+        const soarThemes = {
+            light: { '--background': '#f8fafc', '--foreground': '#0f172a', '--card': '#ffffff', '--secondary': '#f1f5f9', '--muted-foreground': '#64748b', '--border': '#e2e8f0' },
+            dark: { '--background': '#020817', '--foreground': '#f8fafc', '--card': '#0f172a', '--secondary': '#1e293b', '--muted-foreground': '#94a3b8', '--border': '#1e293b' }
+        };
+        function isColorDark(hexColor) {
+            if (!hexColor || hexColor.length < 4) return false;
+            let hex = hexColor.replace('#', '');
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            const r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16);
+            return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+        }
+        window.addEventListener('message', evt => {
+            if (evt.data && evt.data.background) {
+                const dark = isColorDark(evt.data.background);
+                const t = dark ? soarThemes.dark : soarThemes.light;
+                for (const [k, v] of Object.entries(t)) document.documentElement.style.setProperty(k, v);
+                document.documentElement.classList.toggle('dark', dark);
+            }
+        });
+
+        const synthLive = loadSoarJson('soar-synth-data');
+        const bundleLive = loadSoarJson('soar-bundle-data');
+        allEvents = normalizeEvents(synthLive, bundleLive);
+        if (allEvents.length === 0) {
+            renderPendingState();
+        } else {
+            renderHeaderStats(allEvents);
+            renderEvents(allEvents);
+        }
+    </script>
+</body>
+</html>
