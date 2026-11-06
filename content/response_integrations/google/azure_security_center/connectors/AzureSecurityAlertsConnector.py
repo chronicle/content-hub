@@ -13,12 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import sys
 
+from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
-
-from EnvironmentCommon import GetEnvironmentCommonFactory
 from TIPCommon.consts import TIMEOUT_THRESHOLD
 from TIPCommon.extraction import extract_connector_param
 from TIPCommon.filters import pass_whitelist_filter
@@ -26,20 +26,23 @@ from TIPCommon.smp_io import read_ids_by_timestamp, write_ids_with_timestamp
 from TIPCommon.smp_time import get_last_success_time, is_approaching_timeout
 from TIPCommon.utils import is_overflowed
 
+from ..core import utils
 from ..core.AzureSecurityCenterManager import AzureSecurityCenterManager
 from ..core.consts import (
     CONNECTOR_NAME,
+    DEFAULT_API_ROOT,
+    DEFAULT_CONNECTOR_SCRIPT_EXECUTION_TIME,
+    DEFAULT_GRAPH_API_ROOT,
+    DEFAULT_LOGIN_API_ROOT,
+    DEFAULT_LOWEST_SEVERITY_TO_FETCH,
     DEFAULT_MAX_ALERTS_TO_FETCH,
     DEFAULT_MAX_HOURS_BACKWARDS,
-    DEFAULT_LOWEST_SEVERITY_TO_FETCH,
-    DEFAULT_CONNECTOR_SCRIPT_EXECUTION_TIME,
+    HOURS_LIMIT_IN_IDS_FILE,
+    MAX_EVENTS_PER_ALERT,
     SEVERITIES_MAP,
     TIME_FORMAT,
-    MAX_EVENTS_PER_ALERT,
-    HOURS_LIMIT_IN_IDS_FILE,
 )
 from ..core.exceptions import AzureSecurityCenterValidationException
-from ..core import utils
 
 
 @output_handler
@@ -88,6 +91,27 @@ def main(is_test_run):
         refresh_token = extract_connector_param(
             siemplify, param_name="Refresh Token", is_mandatory=False, print_value=False
         )
+        login_api_root = extract_connector_param(
+            siemplify,
+            param_name="Login API Root",
+            default_value=DEFAULT_LOGIN_API_ROOT,
+            is_mandatory=False,
+            print_value=True,
+        )
+        api_root = extract_connector_param(
+            siemplify,
+            param_name="API Root",
+            default_value=DEFAULT_API_ROOT,
+            is_mandatory=False,
+            print_value=True,
+        )
+        graph_api_root = extract_connector_param(
+            siemplify,
+            param_name="Graph API Root",
+            default_value=DEFAULT_GRAPH_API_ROOT,
+            is_mandatory=False,
+            print_value=True,
+        )
         max_alerts_to_fetch = extract_connector_param(
             siemplify,
             param_name="Max Alerts To Fetch",
@@ -126,7 +150,7 @@ def main(is_test_run):
         verify_ssl = extract_connector_param(
             siemplify,
             param_name="Verify SSL",
-            default_value=False,
+            default_value=True,
             input_type=bool,
             is_mandatory=True,
         )
@@ -175,6 +199,9 @@ def main(is_test_run):
             tenant_id=tenant_id,
             siemplify=siemplify,
             refresh_token=refresh_token,
+            login_api_root=login_api_root,
+            api_root=api_root,
+            graph_api_root=graph_api_root,
         )
 
         # Read already existing alerts ids

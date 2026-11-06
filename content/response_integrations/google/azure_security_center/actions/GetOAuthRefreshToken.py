@@ -13,14 +13,18 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.AzureSecurityCenterManager import AzureSecurityCenterManager
-from ..core.consts import INTEGRATION_NAME, GENERATE_TOKEN_SCRIPT_NAME
+from ..core.consts import (
+    DEFAULT_LOGIN_API_ROOT,
+    GENERATE_TOKEN_SCRIPT_NAME,
+    INTEGRATION_NAME,
+)
 
 
 @output_handler
@@ -50,11 +54,19 @@ def main():
         param_name="Client Secret",
         is_mandatory=True,
     )
+    login_api_root = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Login API Root",
+        default_value=DEFAULT_LOGIN_API_ROOT,
+        is_mandatory=False,
+        print_value=True,
+    )
     verify_ssl = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
         param_name="Verify SSL",
-        default_value=False,
+        default_value=True,
         input_type=bool,
         is_mandatory=True,
     )
@@ -76,6 +88,7 @@ def main():
             code=authorization_code,
             tenant_id=tenant_id,
             verify_ssl=verify_ssl,
+            login_api_root=login_api_root,
         )
         siemplify.result.add_result_json(response_json)
         output_message = f"Successfully generated refresh token in {INTEGRATION_NAME}."
