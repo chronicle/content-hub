@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import urllib.parse
+from datetime import datetime
 from typing import Any
 
 from domaintools import utils
@@ -121,6 +122,18 @@ def get_domain_risk_score_details(domain_risk: dict[str, Any]) -> dict[str, Any]
             )
 
     return risk_scores
+
+
+def parse_domain_age_days(create_date_raw: Any) -> int | None:
+    """Return domain age in days from a raw create_date value, or None if unparseable."""
+    create_date_str = create_date_raw.get("value") if isinstance(create_date_raw, dict) else create_date_raw
+    if not create_date_str:
+        return None
+    try:
+        created = datetime.strptime(create_date_str[:10], "%Y-%m-%d")
+        return (datetime.now() - created).days
+    except ValueError:
+        return None
 
 
 def classify_domain_risk(overall_risk_score: int, domain_age_days: int | None) -> str:

@@ -21,7 +21,7 @@ from .datamodels import (
     WhoisHistoryModel,
     WhoisRegistration,
 )
-from .UtilsManager import classify_domain_risk, get_domain_risk_score_details
+from .UtilsManager import classify_domain_risk, get_domain_risk_score_details, parse_domain_age_days
 
 
 class DomainToolsParser:
@@ -170,16 +170,7 @@ class DomainToolsParser:
 
         overall_score = risk_details.get("overall_risk_score") or 0
         create_date_raw = raw_data.get("create_date") or {}
-        create_date = create_date_raw.get("value") if isinstance(create_date_raw, dict) else create_date_raw or None
-
-        domain_age_days: int | None = None
-        if create_date:
-            try:
-                created = datetime.strptime(create_date[:10], "%Y-%m-%d")
-                domain_age_days = (datetime.now() - created).days
-            except ValueError:
-                pass
-
+        domain_age_days = parse_domain_age_days(create_date_raw)
         risk_category = classify_domain_risk(overall_score, domain_age_days)
 
         ips = raw_data.get("ip") or []
