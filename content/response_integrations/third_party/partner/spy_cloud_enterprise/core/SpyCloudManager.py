@@ -8,8 +8,8 @@ from typing import Any
 from TIPCommon.extraction import extract_connector_param
 
 from .CheckpointManager import CheckpointManager
-from .Constants import ENDPOINT_BREACH_DATA_WATCHLIST, ENDPOINT_PING
-from .SpyCloudSDK import SpyCloudSDK
+from .Constants import ENDPOINT_PING
+from .SpyCloudSDK import SpyCloudInvalidCursorException, SpyCloudSDK
 
 SPYCLOUD_API_KEY = "API Key"
 ENABLE_COMPASS = "Enable Compass"
@@ -36,14 +36,44 @@ WATCHLIST_MODIFICATION_WINDOW_UNTIL_KEY = "watchlist_modification_window_until"
 WATCHLIST_MODIFICATION_CURSOR_SINCE_KEY = "watchlist_modification_cursor_since"
 WATCHLIST_MODIFICATION_CURSOR_KEY = "watchlist_modification_cursor"
 
+# Consecutive-failure counter for the resumable drain. A drain that is resumed
+# from persisted state can fail identically on every cycle (an expired cursor, a
+# window the API keeps rejecting), and because a failed cycle persists no
+# progress the connector would retry the same doomed request forever. After this
+# many consecutive failures the in-progress window is abandoned so the drain can
+# re-plan from the modification checkpoint instead of staying wedged.
+WATCHLIST_MODIFICATION_FAILURE_COUNT_KEY = "watchlist_modification_failure_count"
+MODIFICATION_MAX_CONSECUTIVE_FAILURES = 3
+
+# An expired cursor is recovered by restarting the current 2-hour chunk without
+# it. Bound the retries per cycle so a chunk that keeps handing back cursors the
+# API then rejects cannot spin inside a single connector cycle.
+MODIFICATION_MAX_CURSOR_RESETS_PER_CYCLE = 2
+
 # Per-cycle bounds. The record cap normally binds first and keeps the volume
 # handed to UDM conversion + return_package small enough to finish well inside
 # the connector timeout. The time budget is a wall-clock backstop covering all
 # fetching (publish-date pull + modification drain) so that the remaining time
 # in the ~59s SecOps cycle is reserved for catalog enrichment, UDM conversion,
 # and return_package.
-MODIFICATION_MAX_RECORDS_PER_CYCLE = 1500
+#
+# The record cap is also a *payload* bound, not just a time bound. Each packaged
+# alert carries a full UDM event (a serialized JSON blob plus ~110 flattened
+# spycloud_* fields) and runs about 10 KB on the wire, so a cycle that delivered
+# ~2,000 alerts wrote ~20 MB to stdout in a single return_package -- far beyond
+# what the platform will parse back, and every alert in the cycle was dropped.
+# Keep the combined per-cycle total in the low hundreds.
+MODIFICATION_MAX_RECORDS_PER_CYCLE = 400
 MODIFICATION_TIME_BUDGET_SECONDS = 25
+
+# Per-cycle bound on the publish-date pull, for the same payload reason.
+# `_build_time_chunks` can yield a dozen 2-hour chunks (the initial 24-hour
+# lookback, or any cycle resuming after downtime) and the pull used to drain all
+# of them at once while advancing the checkpoint straight to `until`. Instead,
+# take a bounded slice and only advance the checkpoint to the chunk boundary
+# actually reached, so the remaining chunks are picked up by later cycles.
+WATCHLIST_MAX_CHUNKS_PER_CYCLE = 1
+WATCHLIST_MAX_RECORDS_PER_CYCLE = 400
 
 # Breach catalog enrichment (integration guide 9.1.2 Option A: cache the catalog
 # locally and join on source_id). We never download the full global catalog;
@@ -218,7 +248,8 @@ class SpyCloudManager:
         return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def _format_compass_date_param(self, value: str) -> str:
-        """
+        """Reduce a window bound to the date-only format the Compass endpoint accepts.
+
         The Compass data endpoint currently accepts date-only since/until values
         in YYYY-MM-DD format. Watchlist continues to use full ISO timestamps.
         """
@@ -233,7 +264,7 @@ class SpyCloudManager:
             # timestamp format.
             return str(value).strip()[:10]
 
-    def _build_time_chunks(self, since: str, until: str, max_hours: int):
+    def _build_time_chunks(self, since: str, until: str, max_hours: int) -> list[tuple[str, str]]:
         start = self._parse_iso_z(since)
         end = self._parse_iso_z(until)
 
@@ -250,19 +281,18 @@ class SpyCloudManager:
 
         return chunks
 
-    def _get_context_property(self, key: str):
+    def _get_context_property(self, key: str) -> str | None:
         return self.siemplify.get_connector_context_property(
             self._context_identifier, key
         )
 
-    def _set_context_property(self, key: str, value: str):
+    def _set_context_property(self, key: str, value: str) -> None:
         self.siemplify.set_connector_context_property(
             self._context_identifier, key, value
         )
 
-    def _defer_context_property(self, key: str, value: str):
-        """
-        Queue a connector-context write to be committed only after this cycle's
+    def _defer_context_property(self, key: str, value: str) -> None:
+        """Queue a connector-context write to be committed only after this cycle's
         records have been successfully delivered (see commit_pending). Keeps
         modification-drain / Compass progress from advancing ahead of delivery.
         """
@@ -271,16 +301,16 @@ class SpyCloudManager:
         ]
         self._pending_context_writes.append((key, value))
 
-    def commit_pending(self):
+    def commit_pending(self) -> None:
         """Persist deferred progress. Call only after return_package succeeds."""
         for key, value in self._pending_context_writes:
             self._set_context_property(key, value)
         self._pending_context_writes = []
 
-    def _load_compass_last_run_date(self):
+    def _load_compass_last_run_date(self) -> str | None:
         return self._get_context_property(COMPASS_LAST_RUN_DATE_KEY)
 
-    def _save_compass_last_run_date(self, value: str):
+    def _save_compass_last_run_date(self, value: str) -> None:
         self._set_context_property(COMPASS_LAST_RUN_DATE_KEY, value)
 
     def _should_run_compass_today(self) -> bool:
@@ -293,10 +323,10 @@ class SpyCloudManager:
 
         return last_run_date != today
 
-    def _load_watchlist_modification_last_run_date(self):
+    def _load_watchlist_modification_last_run_date(self) -> str | None:
         return self._get_context_property(WATCHLIST_MODIFICATION_LAST_RUN_DATE_KEY)
 
-    def _save_watchlist_modification_last_run_date(self, value: str):
+    def _save_watchlist_modification_last_run_date(self, value: str) -> None:
         self._set_context_property(WATCHLIST_MODIFICATION_LAST_RUN_DATE_KEY, value)
 
     def _should_run_watchlist_modification_today(self) -> bool:
@@ -310,15 +340,14 @@ class SpyCloudManager:
 
         return last_run_date != today
 
-    def _load_watchlist_modification_checkpoint(self):
+    def _load_watchlist_modification_checkpoint(self) -> str | None:
         return self._get_context_property(WATCHLIST_MODIFICATION_CHECKPOINT_KEY)
 
-    def _save_watchlist_modification_checkpoint(self, value: str):
+    def _save_watchlist_modification_checkpoint(self, value: str) -> None:
         self._set_context_property(WATCHLIST_MODIFICATION_CHECKPOINT_KEY, value)
 
-    def _get_watchlist_modification_time_window(self):
-        """
-        Separate checkpoint for once-daily modified-record ingestion.
+    def _get_watchlist_modification_time_window(self) -> tuple[str, str]:
+        """Derive the window for the once-daily modified-record ingestion.
 
         Initial run uses the same 24-hour lookback behavior as the normal connector.
         Subsequent runs continue from the saved modification checkpoint.
@@ -343,11 +372,11 @@ class SpyCloudManager:
             since = self._format_iso_z(now - timedelta(hours=24))
             return since, until
 
-    def _is_sensitive_key(self, key) -> bool:
+    def _is_sensitive_key(self, key: Any) -> bool:
         key_lower = str(key).lower()
         return any(fragment in key_lower for fragment in SENSITIVE_KEY_FRAGMENTS)
 
-    def _safe_record_preview(self, record):
+    def _safe_record_preview(self, record: Any) -> dict[str, Any]:
         if not isinstance(record, dict):
             return {"type": type(record).__name__}
 
@@ -361,7 +390,13 @@ class SpyCloudManager:
         )[:50]
         return preview
 
-    def _log_safe_samples(self, label: str, records, is_test_run: bool, limit: int = 3):
+    def _log_safe_samples(
+        self,
+        label: str,
+        records: list[Any] | None,
+        is_test_run: bool,
+        limit: int = 3,
+    ) -> None:
         if not is_test_run:
             return
 
@@ -376,7 +411,7 @@ class SpyCloudManager:
                 f"{label} safe sample #{index}: {preview}"
             )
 
-    def _tag_records(self, records, source: str):
+    def _tag_records(self, records: list[Any] | None, source: str) -> list[Any]:
         tagged_records = []
         for record in records or []:
             if isinstance(record, dict):
@@ -387,10 +422,23 @@ class SpyCloudManager:
                 tagged_records.append(record)
         return tagged_records
 
-    def get_time_window(self):
+    def get_time_window(self) -> tuple[str, str]:
         return self.checkpoint_manager.get_next_since_until()
 
-    def _run_watchlist(self, since: str, until: str, is_test_run: bool = False):
+    def _run_watchlist(
+        self,
+        since: str,
+        until: str,
+        deadline_monotonic: float | None = None,
+        is_test_run: bool = False,
+    ) -> tuple[list[dict[str, Any]], str | None]:
+        """Pull Watchlist records by publish date, bounded to a slice of the window per cycle.
+
+        Returns ``(records, reached_until)``. ``reached_until`` is the end of the
+        last chunk actually fetched, which is what the caller may checkpoint --
+        it equals ``until`` only when the whole window was drained this cycle.
+        ``None`` means nothing was fetched and the checkpoint must not move.
+        """
         response = []
 
         watchlist_chunks = self._build_time_chunks(
@@ -402,10 +450,34 @@ class SpyCloudManager:
         self.siemplify.LOGGER.info(
             "Watchlist collection plan. "
             f"endpoint={WATCHLIST_ENDPOINT}, chunks={len(watchlist_chunks)}, "
+            f"chunks_this_cycle<={WATCHLIST_MAX_CHUNKS_PER_CYCLE}, "
             f"window={since} -> {until}, severities={self.severities}"
         )
 
+        reached_until = None
+
         for index, (chunk_since, chunk_until) in enumerate(watchlist_chunks, start=1):
+            if index > WATCHLIST_MAX_CHUNKS_PER_CYCLE:
+                self.siemplify.LOGGER.info(
+                    "Watchlist pull paused: per-cycle chunk cap "
+                    f"({WATCHLIST_MAX_CHUNKS_PER_CYCLE}) reached at {reached_until}; "
+                    "remaining chunks resume next cycle."
+                )
+                break
+            if len(response) >= WATCHLIST_MAX_RECORDS_PER_CYCLE:
+                self.siemplify.LOGGER.info(
+                    "Watchlist pull paused: per-cycle record cap "
+                    f"({WATCHLIST_MAX_RECORDS_PER_CYCLE}) reached at {reached_until}; "
+                    "remaining chunks resume next cycle."
+                )
+                break
+            if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
+                self.siemplify.LOGGER.info(
+                    f"Watchlist pull paused: time budget reached at {reached_until}; "
+                    "remaining chunks resume next cycle."
+                )
+                break
+
             self.siemplify.LOGGER.info(
                 "Fetching Watchlist chunk from "
                 f"{WATCHLIST_ENDPOINT}: chunk={index}/{len(watchlist_chunks)}, "
@@ -419,6 +491,9 @@ class SpyCloudManager:
             ) or []
             tagged_chunk_response = self._tag_records(chunk_response, SOURCE_WATCHLIST)
             response.extend(tagged_chunk_response)
+            # Only advance past a chunk that was fully fetched, so a later pause
+            # can never checkpoint over records this cycle did not deliver.
+            reached_until = chunk_until
 
             self.siemplify.LOGGER.info(
                 f"Watchlist chunk {index}/{len(watchlist_chunks)} returned "
@@ -431,10 +506,13 @@ class SpyCloudManager:
                 limit=1,
             )
 
-        self.siemplify.LOGGER.info(f"Watchlist total returned {len(response)} record(s)")
-        return response
+        self.siemplify.LOGGER.info(
+            f"Watchlist total returned {len(response)} record(s); "
+            f"reached_until={reached_until} (window until={until})"
+        )
+        return response, reached_until
 
-    def _complete_watchlist_modification_window(self, window_until: str):
+    def _complete_watchlist_modification_window(self, window_until: str) -> None:
         """Mark the current daily modification window fully drained (deferred)."""
         today = datetime.now(timezone.utc).date().isoformat()
         self._defer_context_property(WATCHLIST_MODIFICATION_LAST_RUN_DATE_KEY, today)
@@ -447,9 +525,64 @@ class SpyCloudManager:
             f"Will save (on delivery) last_run_date={today}, checkpoint={window_until}"
         )
 
-    def _drain_watchlist_modification(self, deadline_monotonic: float, is_test_run: bool = False):
+    def _clear_watchlist_modification_failures(self) -> None:
+        """Reset the consecutive-failure counter after a drain cycle succeeds."""
+        if self._get_context_property(WATCHLIST_MODIFICATION_FAILURE_COUNT_KEY):
+            self._set_context_property(WATCHLIST_MODIFICATION_FAILURE_COUNT_KEY, "0")
+
+    def _abandon_watchlist_modification_window(self, reason: str) -> None:
+        """Drop a wedged in-progress modification window.
+
+        Written immediately rather than deferred: this is failure recovery, not
+        delivery progress, and it must persist even on a cycle that delivers no
+        records. Nothing is lost by clearing it -- the modification checkpoint
+        only advances when a window completes, so the abandoned range is covered
+        again by the next window. The daily gate is marked as run so a
+        persistently failing window backs off for the rest of the day instead of
+        restarting on the very next cycle.
         """
-        Cursor-resumable, time-budgeted once-daily modification pull.
+        today = datetime.now(timezone.utc).date().isoformat()
+        self._set_context_property(WATCHLIST_MODIFICATION_WINDOW_UNTIL_KEY, "")
+        self._set_context_property(WATCHLIST_MODIFICATION_CURSOR_SINCE_KEY, "")
+        self._set_context_property(WATCHLIST_MODIFICATION_CURSOR_KEY, "")
+        self._set_context_property(WATCHLIST_MODIFICATION_LAST_RUN_DATE_KEY, today)
+        self._set_context_property(WATCHLIST_MODIFICATION_FAILURE_COUNT_KEY, "0")
+        self.siemplify.LOGGER.warn(
+            "Abandoning the in-progress Watchlist modification window after "
+            f"{MODIFICATION_MAX_CONSECUTIVE_FAILURES} consecutive failures: {reason}. "
+            "Drain state cleared and backed off until tomorrow; the range will be "
+            "re-planned from the modification checkpoint, so no records are dropped."
+        )
+
+    def _record_watchlist_modification_failure(self, error: Exception) -> None:
+        """Count a failed drain cycle and abandon the window once it is clearly stuck.
+
+        A failing cycle persists no progress, so without this the connector would
+        replay the identical failing request on every cycle indefinitely.
+        """
+        try:
+            failures = int(self._get_context_property(WATCHLIST_MODIFICATION_FAILURE_COUNT_KEY) or 0)
+        except (TypeError, ValueError):
+            failures = 0
+        failures += 1
+
+        window_until = self._get_context_property(WATCHLIST_MODIFICATION_WINDOW_UNTIL_KEY)
+        if window_until and failures >= MODIFICATION_MAX_CONSECUTIVE_FAILURES:
+            self._abandon_watchlist_modification_window(reason=str(error))
+            return
+
+        self._set_context_property(WATCHLIST_MODIFICATION_FAILURE_COUNT_KEY, str(failures))
+        self.siemplify.LOGGER.info(
+            "Watchlist modification drain failure recorded. "
+            f"consecutive_failures={failures}/{MODIFICATION_MAX_CONSECUTIVE_FAILURES}"
+        )
+
+    def _drain_watchlist_modification(
+        self,
+        deadline_monotonic: float,
+        is_test_run: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Run a cursor-resumable, time-budgeted slice of the once-daily modification pull.
 
         Follows the integration guide (once per calendar day, 2-hour windows,
         cursor pagination) but only fetches a bounded slice per connector cycle
@@ -493,6 +626,7 @@ class SpyCloudManager:
         records = []
         fetched = 0
         completed = False
+        cursor_resets = 0
 
         while True:
             if fetched >= MODIFICATION_MAX_RECORDS_PER_CYCLE:
@@ -527,13 +661,41 @@ class SpyCloudManager:
                 f"resume_cursor={'yes' if start_cursor else 'no'}, max_records={remaining_cap}"
             )
 
-            page, next_cursor = self.sdk.breach_data.watchlist_page(
-                since_modification=cursor_since,
-                until_modification=chunk_until,
-                severities=self.severities,
-                start_cursor=start_cursor,
-                max_records=remaining_cap,
-            )
+            try:
+                page, next_cursor = self.sdk.breach_data.watchlist_page(
+                    since_modification=cursor_since,
+                    until_modification=chunk_until,
+                    severities=self.severities,
+                    start_cursor=start_cursor,
+                    max_records=remaining_cap,
+                )
+            except SpyCloudInvalidCursorException as e:
+                if not start_cursor:
+                    # No cursor was sent, so this is not a resumable failure.
+                    raise
+
+                cursor_resets += 1
+                if cursor_resets > MODIFICATION_MAX_CURSOR_RESETS_PER_CYCLE:
+                    self.siemplify.LOGGER.error(
+                        "Watchlist modification drain giving up this cycle after "
+                        f"{cursor_resets} cursor resets; will resume next cycle. Error: {e}"
+                    )
+                    break
+
+                # SpyCloud cursors expire, and this one was persisted across
+                # connector cycles. Restart this 2-hour chunk from its start
+                # instead of re-sending a dead cursor forever. Records already
+                # delivered from the chunk are re-fetched and deduplicated
+                # downstream by alert identifier, which is strictly better than a
+                # permanently wedged drain.
+                self.siemplify.LOGGER.warn(
+                    "SpyCloud rejected the resumed Watchlist modification cursor "
+                    f"(expired). Restarting chunk since_modification={cursor_since} "
+                    f"without a cursor. Error: {e}"
+                )
+                cursor = ""
+                continue
+
             page = page or []
             tagged_page = self._tag_records(page, SOURCE_WATCHLIST_MODIFICATION)
             records.extend(tagged_page)
@@ -575,7 +737,12 @@ class SpyCloudManager:
         )
         return records
 
-    def _run_compass(self, since: str, until: str, is_test_run: bool = False):
+    def _run_compass(
+        self,
+        since: str,
+        until: str,
+        is_test_run: bool = False,
+    ) -> list[dict[str, Any]]:
         response = []
 
         compass_since = self._format_compass_date_param(since)
@@ -617,7 +784,7 @@ class SpyCloudManager:
         self.siemplify.LOGGER.info(f"Compass total returned {len(response)} record(s)")
         return response
 
-    def _load_breach_catalog_cache(self):
+    def _load_breach_catalog_cache(self) -> dict[str, Any]:
         raw = self._get_context_property(BREACH_CATALOG_CACHE_KEY)
         if not raw:
             return {}
@@ -630,7 +797,7 @@ class SpyCloudManager:
             )
             return {}
 
-    def _save_breach_catalog_cache(self, cache):
+    def _save_breach_catalog_cache(self, cache: dict[str, Any]) -> None:
         try:
             self._set_context_property(
                 BREACH_CATALOG_CACHE_KEY, json.dumps(cache, default=str)
@@ -639,7 +806,7 @@ class SpyCloudManager:
             self.siemplify.LOGGER.error(f"Failed to persist breach catalog cache: {e}")
 
     @staticmethod
-    def _minimal_catalog_entry(entry):
+    def _minimal_catalog_entry(entry: Any) -> dict[str, Any]:
         if not isinstance(entry, dict):
             return {}
         return {
@@ -648,7 +815,7 @@ class SpyCloudManager:
             if entry.get(key) not in (None, "", [], {})
         }
 
-    def _distinct_source_ids(self, records):
+    def _distinct_source_ids(self, records: list[Any] | None) -> list[str]:
         seen = []
         seen_set = set()
         for record in records or []:
@@ -663,11 +830,11 @@ class SpyCloudManager:
                 seen.append(key)
         return seen
 
-    def get_breach_catalog_index(self, records):
-        """
-        Build a source_id -> catalog-metadata index for enriching this cycle's
-        records, following integration guide 9.1.2 Option A (cache the breach
-        catalog locally and join on source_id).
+    def get_breach_catalog_index(self, records: list[Any] | None) -> dict[str, Any]:
+        """Build a source_id -> catalog-metadata index for enriching this cycle's records.
+
+        Follows integration guide 9.1.2 Option A (cache the breach catalog locally
+        and join on source_id).
 
         This never downloads the full global breach catalog (which is far larger
         than any single Watchlist). It lazily fetches only the catalog entries
@@ -729,9 +896,8 @@ class SpyCloudManager:
         )
         return index
 
-    def test_connectivity(self):
-        """
-        Connectivity-only test run.
+    def test_connectivity(self) -> bool:
+        """Ping SpyCloud to verify credentials and reachability, and nothing else.
 
         This intentionally avoids Watchlist and Compass collection so published
         Content Hub test runs cannot bypass production since/until windows,
@@ -749,219 +915,7 @@ class SpyCloudManager:
         )
         return True
 
-    # ------------------------------------------------------------------ #
-    # TEMP DIAGNOSTIC (revert after the no-new-records issue is resolved)
-    # ------------------------------------------------------------------ #
-    def diagnostic_pull(self):
-        """
-        TEMPORARY diagnostic used to figure out why the connector has not pulled
-        new Watchlist records for several days even though Ping succeeds.
-
-        Non-destructive: it does NOT save checkpoints, does NOT advance the
-        modification drain, and does NOT create alerts. It attempts a bounded,
-        real data pull against the current production window and logs everything
-        an operator needs to see. Each step is independently guarded so one
-        failure still lets the rest run.
-
-        Revert this method (and its call site in the connector) once fixed.
-        """
-        log = self.siemplify.LOGGER
-        DIAGNOSTIC_MAX_RECORDS = 200
-
-        log.info("===== SpyCloud DIAGNOSTIC test run START =====")
-        log.info(f"severities filter = {self.severities}")
-        log.info(f"enable_compass = {self.enable_compass}, api_root = {self.api_root}")
-
-        # 1) Connectivity (same check the normal test run does).
-        try:
-            self.sdk.breach_catalog.ping()
-            log.info("DIAG step 1 connectivity: ping OK")
-        except Exception as e:
-            log.error(f"DIAG step 1 connectivity: ping FAILED: {e}")
-
-        # 2) Current production window + how far behind the checkpoint is.
-        since = until = None
-        try:
-            raw_checkpoint = self.checkpoint_manager.load_checkpoint()
-            since, until = self.get_time_window()
-            log.info(
-                f"DIAG step 2 window: raw_checkpoint={raw_checkpoint}, "
-                f"since={since}, until={until}"
-            )
-            try:
-                span_hours = (
-                    self._parse_iso_z(until) - self._parse_iso_z(since)
-                ).total_seconds() / 3600.0
-                chunks = self._build_time_chunks(since, until, MAX_WATCHLIST_WINDOW_HOURS)
-                log.info(
-                    f"DIAG step 2 window span = {span_hours:.1f}h, which builds "
-                    f"{len(chunks)} x {MAX_WATCHLIST_WINDOW_HOURS}h watchlist chunk(s). "
-                    "A large chunk count is the smoking gun for a stuck-checkpoint "
-                    "timeout spiral (window grows each cycle, full drain never "
-                    "finishes inside the 59s limit, checkpoint never advances)."
-                )
-            except Exception as e:
-                log.error(f"DIAG step 2 chunk math FAILED: {e}")
-        except Exception as e:
-            log.error(f"DIAG step 2 window: FAILED to compute window: {e}")
-
-        def _severities_in(records):
-            return sorted(
-                {r.get("severity") for r in records if isinstance(r, dict)},
-                key=lambda v: (v is None, v),
-            )
-
-        # 3) PUBLISH-DATE pull over the FULL window (one bounded page), filtered.
-        #    This is what the regular connector pull (_run_watchlist) uses.
-        if since and until:
-            try:
-                page, next_cursor = self.sdk.breach_data.watchlist_page(
-                    since=since,
-                    until=until,
-                    severities=self.severities,
-                    max_records=DIAGNOSTIC_MAX_RECORDS,
-                )
-                page = page or []
-                log.info(
-                    f"DIAG step 3 PUBLISH-date filtered [{since} -> {until}] "
-                    f"severities={self.severities}: returned {len(page)} record(s) "
-                    f"(bounded at {DIAGNOSTIC_MAX_RECORDS}); "
-                    f"more_pages={'yes' if next_cursor else 'no'}"
-                )
-                self._log_safe_samples(
-                    label="DIAG publish filtered", records=page, is_test_run=True, limit=2
-                )
-            except Exception as e:
-                log.error(f"DIAG step 3 PUBLISH-date filtered FAILED: {e}")
-
-            # 4) Same publish-date window, UNFILTERED.
-            try:
-                page_all, _ = self.sdk.breach_data.watchlist_page(
-                    since=since,
-                    until=until,
-                    severities=None,
-                    max_records=DIAGNOSTIC_MAX_RECORDS,
-                )
-                page_all = page_all or []
-                log.info(
-                    f"DIAG step 4 PUBLISH-date UNFILTERED [{since} -> {until}]: "
-                    f"returned {len(page_all)} record(s); "
-                    f"severities present = {_severities_in(page_all)}"
-                )
-            except Exception as e:
-                log.error(f"DIAG step 4 PUBLISH-date UNFILTERED FAILED: {e}")
-
-            # 5) MODIFICATION-date pull over the same window (one bounded page),
-            #    filtered. This is the path that catches records newly added to /
-            #    modified in the catalog (the once-daily drain uses it). Records
-            #    that appear "new in the catalog" but have an old publish date only
-            #    show up here, NOT in steps 3/4.
-            try:
-                page_mod, next_mod = self.sdk.breach_data.watchlist_page(
-                    since_modification=since,
-                    until_modification=until,
-                    severities=self.severities,
-                    max_records=DIAGNOSTIC_MAX_RECORDS,
-                )
-                page_mod = page_mod or []
-                log.info(
-                    f"DIAG step 5 MODIFICATION-date filtered [{since} -> {until}] "
-                    f"severities={self.severities}: returned {len(page_mod)} record(s) "
-                    f"(bounded at {DIAGNOSTIC_MAX_RECORDS}); "
-                    f"more_pages={'yes' if next_mod else 'no'}. "
-                    "If this is >0 while steps 3/4 are 0, the expected records are "
-                    "arriving by MODIFICATION date, not publish date -> the regular "
-                    "publish-date pull cannot see them; only the once-daily "
-                    "modification drain can."
-                )
-                self._log_safe_samples(
-                    label="DIAG modification filtered", records=page_mod, is_test_run=True, limit=2
-                )
-            except Exception as e:
-                log.error(f"DIAG step 5 MODIFICATION-date filtered FAILED: {e}")
-
-            # 6) Same modification-date window, UNFILTERED.
-            try:
-                page_mod_all, _ = self.sdk.breach_data.watchlist_page(
-                    since_modification=since,
-                    until_modification=until,
-                    severities=None,
-                    max_records=DIAGNOSTIC_MAX_RECORDS,
-                )
-                page_mod_all = page_mod_all or []
-                log.info(
-                    f"DIAG step 6 MODIFICATION-date UNFILTERED [{since} -> {until}]: "
-                    f"returned {len(page_mod_all)} record(s); "
-                    f"severities present = {_severities_in(page_mod_all)}"
-                )
-            except Exception as e:
-                log.error(f"DIAG step 6 MODIFICATION-date UNFILTERED FAILED: {e}")
-
-        # ---- RAW request envelope probes -------------------------------- #
-        # Steps 3-6 go through pagination + tagging, which hides what the API
-        # actually returned. These probes hit the endpoint directly and log the
-        # exact URL, HTTP status, and response envelope (hits/results/cursor) so
-        # we can see whether the API itself is returning an empty set and why.
-        def _diag_raw(step_label, params):
-            try:
-                resp = self.sdk._handler.get(ENDPOINT_BREACH_DATA_WATCHLIST, params=params)
-                url = getattr(resp.request, "url", "?")
-                log.info(f"{step_label}: HTTP {resp.status_code}  url={url}")
-                try:
-                    body = resp.json()
-                except Exception:
-                    log.info(f"{step_label} non-JSON body preview: {str(resp.text)[:500]}")
-                    return
-                if isinstance(body, dict):
-                    results = body.get("results") or []
-                    log.info(
-                        f"{step_label} envelope: hits={body.get('hits')}, "
-                        f"results_len={len(results)}, "
-                        f"cursor={'yes' if body.get('cursor') else 'no'}, "
-                        f"top_level_keys={sorted(body.keys())}"
-                    )
-                else:
-                    log.info(f"{step_label} unexpected body type: {type(body).__name__}: {str(body)[:300]}")
-            except Exception as e:
-                log.error(f"{step_label} FAILED: {e}")
-
-        # 8) NO date filter at all. If this returns data but steps 3/9 do not, the
-        #    since/until params are the problem (format/semantics). If this is also
-        #    empty, the endpoint/watchlist/auth-scope is the problem.
-        _diag_raw("DIAG step 8 RAW no-params", {})
-
-        # 9) RAW publish-date window (unfiltered), same params the connector sends.
-        if since and until:
-            _diag_raw("DIAG step 9 RAW publish-date", {"since": since, "until": until})
-            # 10) RAW modification-date window (unfiltered).
-            _diag_raw(
-                "DIAG step 10 RAW modification-date",
-                {"since_modification": since, "until_modification": until},
-            )
-            # 11) RAW date-only window. Some SpyCloud endpoints expect YYYY-MM-DD
-            #     rather than a full ISO timestamp; if this returns data but step 9
-            #     does not, the timestamp format is being rejected/misread.
-            _diag_raw(
-                "DIAG step 11 RAW publish-date date-only",
-                {"since": since[:10], "until": until[:10]},
-            )
-
-        # 7) Modification-drain persisted state (in case that path is stuck too).
-        try:
-            log.info(
-                "DIAG step 7 modification state: "
-                f"last_run_date={self._get_context_property(WATCHLIST_MODIFICATION_LAST_RUN_DATE_KEY)}, "
-                f"checkpoint={self._get_context_property(WATCHLIST_MODIFICATION_CHECKPOINT_KEY)}, "
-                f"window_until={self._get_context_property(WATCHLIST_MODIFICATION_WINDOW_UNTIL_KEY)}, "
-                f"cursor_since={self._get_context_property(WATCHLIST_MODIFICATION_CURSOR_SINCE_KEY)}, "
-                f"cursor_set={'yes' if self._get_context_property(WATCHLIST_MODIFICATION_CURSOR_KEY) else 'no'}"
-            )
-        except Exception as e:
-            log.error(f"DIAG step 5 modification state FAILED: {e}")
-
-        log.info("===== SpyCloud DIAGNOSTIC test run END (no checkpoints saved) =====")
-
-    def _maybe_run_compass(self, since: str, until: str):
+    def _maybe_run_compass(self, since: str, until: str) -> list[dict[str, Any]]:
         """Run the once-daily Compass pull if it has not already run today."""
         try:
             if self._should_run_compass_today():
@@ -983,7 +937,7 @@ class SpyCloudManager:
             )
         return []
 
-    def main(self, is_test_run=False):
+    def main(self, is_test_run: bool = False) -> tuple[list[dict[str, Any]], str | None]:
         if is_test_run:
             self.siemplify.LOGGER.info(
                 "Test mode enabled. Running connectivity check only; skipping "
@@ -1009,14 +963,28 @@ class SpyCloudManager:
         response = []
         checkpoint_until = None
 
-        watchlist_response = self._run_watchlist(
-            since=since,
-            until=until,
-            is_test_run=False,
-        )
-        checkpoint_until = until
-
-        response.extend(watchlist_response)
+        # The window trails `now` by the ingestion-lag buffer, so a cycle running
+        # sooner than that after the previous one has nothing mature to fetch yet.
+        # Skip the pull and leave the checkpoint alone rather than querying (and
+        # checkpointing past) a range SpyCloud has not finished indexing.
+        if self._parse_iso_z(since) >= self._parse_iso_z(until):
+            self.siemplify.LOGGER.info(
+                f"Publish-date window is not open yet (since={since} >= until={until}); "
+                "skipping the Watchlist pull this cycle and leaving the checkpoint "
+                "unchanged. The modification drain still runs."
+            )
+        else:
+            watchlist_response, reached_until = self._run_watchlist(
+                since=since,
+                until=until,
+                deadline_monotonic=fetch_deadline,
+                is_test_run=False,
+            )
+            # Checkpoint only as far as this cycle actually fetched. When the
+            # pull paused early, the untouched tail of the window is re-planned
+            # by the next cycle instead of being skipped.
+            checkpoint_until = reached_until
+            response.extend(watchlist_response)
 
         modification_in_progress = False
         try:
@@ -1029,11 +997,13 @@ class SpyCloudManager:
             # (Read the in-cycle flag, not context: progress is now deferred and
             # not yet persisted at this point.)
             modification_in_progress = self._modification_drain_in_progress
+            self._clear_watchlist_modification_failures()
         except Exception as e:
             self.siemplify.LOGGER.error(
                 f"Failed to fetch Watchlist modification data. "
                 f"Continuing with normal Watchlist/Compass data: {e}"
             )
+            self._record_watchlist_modification_failure(e)
 
         # Defer Compass while a modification drain is mid-flight or the cycle's
         # time budget is spent, so the two heavy once-daily pulls don't compete

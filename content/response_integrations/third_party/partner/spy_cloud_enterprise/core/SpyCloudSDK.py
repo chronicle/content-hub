@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from email.utils import parsedate_to_datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests
@@ -30,6 +30,19 @@ class SpyCloudException(Exception):
     pass
 
 
+class SpyCloudInvalidCursorException(SpyCloudException):
+    """
+    Raised when SpyCloud rejects a pagination cursor (HTTP 400, e.g.
+    "Invalid parameter: 'cursor'. Cursor not found.").
+
+    Cursors are short-lived server-side handles. A resumable drain that persists
+    one across connector cycles must be able to recognize this specific failure
+    and restart the current window from its start, rather than re-sending a dead
+    cursor on every subsequent cycle.
+    """
+    pass
+
+
 class APIClient:
     """
     API handler class for making HTTP requests with configurable headers and base URL.
@@ -47,7 +60,7 @@ class APIClient:
         rate_limit_wait_seconds: float = DEFAULT_RATE_LIMIT_WAIT_SECONDS,
         inter_request_delay_seconds: float = DEFAULT_INTER_REQUEST_DELAY_SECONDS,
         verify_ssl: bool = True,
-    ):
+    ) -> None:
         if not api_key:
             raise ValueError("API key is required and cannot be empty")
 
@@ -97,18 +110,16 @@ class APIClient:
         return urljoin(self.base_url + "/", endpoint.lstrip("/"))
 
     def _safe_log(self, message: str) -> None:
-        """
-        Keep SDK logging concise and safe for connector output.
-        """
+        """Keep SDK logging concise and safe for connector output."""
         try:
             print(message)
         except Exception:
             pass
 
     def _get_retry_after_seconds(self, response: requests.Response) -> Optional[float]:
-        """
-        Parse Retry-After header if present.
-        Supports either seconds or HTTP date.
+        """Parse the Retry-After header if present.
+
+        Supports either seconds or an HTTP date.
         """
         retry_after = response.headers.get("Retry-After")
         if not retry_after:
@@ -136,9 +147,7 @@ class APIClient:
         attempt_number: int,
         response: Optional[requests.Response] = None,
     ) -> float:
-        """
-        Determine how long to wait before a retry.
-        """
+        """Determine how long to wait before a retry."""
         if response is not None and response.status_code == 429:
             retry_after_seconds = self._get_retry_after_seconds(response)
             if retry_after_seconds is not None:
@@ -273,9 +282,7 @@ class APIClient:
         return self._make_request("PATCH", endpoint, data=data, params=params, headers=headers, **kwargs)
 
     def validate_response(self, response: requests.Response, error_msg: str = "An error occurred") -> None:
-        """
-        Validate response and log relevant headers on HTTP errors.
-        """
+        """Validate the response and log relevant headers on HTTP errors."""
         try:
             response.raise_for_status()
         except requests.HTTPError as error:
@@ -296,20 +303,27 @@ class APIClient:
                     body_text = str(response.content)
 
             detail = message or body_text or "No response body returned"
+
+            # A rejected cursor is recoverable (restart the window) whereas other
+            # 400s are not, so surface it as a distinct type instead of forcing
+            # callers to string-match on the message.
+            if response.status_code == 400 and "cursor" in str(detail).lower():
+                raise SpyCloudInvalidCursorException(f"{error_msg}: {error} {detail}")
+
             raise SpyCloudException(f"{error_msg}: {error} {detail}")
 
     def close(self) -> None:
         self.session.close()
 
-    def __enter__(self):
+    def __enter__(self) -> APIClient:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
 
     def _log_spycloud_headers(self, response: requests.Response) -> None:
-        """
-        Print SpyCloud-specific response headers, including rate-limit hints if present.
+        """Print SpyCloud-specific response headers, including rate-limit hints if present.
+
         Only used on HTTP errors.
         """
         try:
@@ -336,7 +350,7 @@ class APIClient:
 class BaseClient:
     """Small common base for clients."""
 
-    def __init__(self, handler: APIClient):
+    def __init__(self, handler: APIClient) -> None:
         self._handler = handler
 
     def _build_date_params(
@@ -347,8 +361,7 @@ class BaseClient:
         until_modification: Optional[str] = None,
         additional_params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """
-        Build parameters dictionary with optional publish-time and modification-time filters.
+        """Build a parameters dictionary with optional publish-time and modification-time filters.
 
         since / until:
             Standard incremental publish-time window.
@@ -381,9 +394,8 @@ class BaseClient:
         err_msg: str = "Unable to get results",
         start_cursor: Optional[str] = None,
         max_records: Optional[int] = None,
-    ) -> tuple:
-        """
-        Resumable cursor pagination.
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        """Fetch a bounded slice of a query using resumable cursor pagination.
 
         The SpyCloud API returns at most ~1,000 records per request and hands
         back a ``cursor`` to fetch the next page (see integration guide). This
@@ -424,8 +436,8 @@ class BaseClient:
         params: Optional[Dict[str, Any]] = None,
         err_msg: str = "Unable to get results"
     ) -> List[Dict[str, Any]]:
-        """
-        Paginate the results of a request, draining every page.
+        """Paginate the results of a request, draining every page.
+
         :param url (str): The url to send request to
         :param params (dict, optional): The params of the request
         :param err_msg (str): The message to display on error
@@ -456,8 +468,7 @@ class BreachCatalogClient(BaseClient):
         return self._paginate_results(ENDPOINT_BREACH_CATALOG, params)
 
     def catalog_by_id(self, source_id: Any) -> Optional[Dict[str, Any]]:
-        """
-        Fetch a single breach catalog entry by its source_id.
+        """Fetch a single breach catalog entry by its source_id.
 
         Used for incremental, source_id-scoped enrichment (integration guide
         9.1.2 Option A: cache the catalog locally and join on source_id) instead
@@ -511,8 +522,9 @@ class BreachDataClient(BaseClient):
         severities: Optional[List[int]] = None,
         start_cursor: Optional[str] = None,
         max_records: Optional[int] = None,
-    ) -> tuple:
-        """
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        """Drain a bounded, resumable slice of the Watchlist query.
+
         Resumable variant of :meth:`watchlist` for high-volume, once-daily
         modification pulls. Returns ``(records, next_cursor)`` so a caller can
         drain a bounded slice per invocation and resume from ``next_cursor``.
@@ -576,7 +588,7 @@ class SpyCloudSDK:
         rate_limit_wait_seconds: float = DEFAULT_RATE_LIMIT_WAIT_SECONDS,
         inter_request_delay_seconds: float = DEFAULT_INTER_REQUEST_DELAY_SECONDS,
         verify_ssl: bool = True,
-    ):
+    ) -> None:
         self._handler = APIClient(
             api_key=api_key,
             base_url=base_url,
@@ -614,7 +626,7 @@ class SpyCloudSDK:
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         for client in self._clients.values():
             if hasattr(client, name):
                 return getattr(client, name)
