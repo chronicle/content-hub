@@ -1,0 +1,2425 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"Create a Reputation Override for Certificate":
+  ai_description: >-
+    ### General Description
+
+    Creates a reputation override for a certificate in VMware Carbon Black Cloud.
+    This action allows security analysts to programmatically define the reputation
+    (e.g., whitelisting or blacklisting) of applications based on their digital certificate's
+    signer and/or the issuing Certificate Authority.
+
+
+    ### Flow Description
+
+    1. Extracts the action parameters (Signer, CA, List Type, Description).
+
+    2. Validates that a valid reputation list (WHITE_LIST or BLACK_LIST) has been
+    selected.
+
+    3. Initializes the CBCloudManager to establish a connection with the VMware Carbon
+    Black Cloud instance.
+
+    4. Sends a POST request to the Carbon Black API to create a certificate-type (`CERT`)
+    reputation override with the specified details.
+
+    5. Captures the API response, which includes the unique ID of the new override,
+    and attaches it as a JSON result to the action output.
+
+
+    ### Additional Notes
+
+    - This action does not run on Google SecOps entities. It uses the provided manual
+    input parameters to interact with the VMware Carbon Black Cloud API.
+
+    - The action will fail if the 'Reputation Override List' is left as 'Not Specified'.
+  ai_short_description: >-
+    Creates a reputation override (whitelist or blacklist) for a certificate in VMware
+    Carbon Black Cloud based on its signer and/or Certificate Authority.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new certificate reputation override (whitelist or blacklist) in VMware
+      Carbon Black Cloud.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the VMware Carbon Black Cloud API to create
+      a new certificate reputation override. It does not fetch data, update internal
+      entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It uses manual input parameters
+      to create a reputation override.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: true
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a reputation override for a certificate, which can be either
+      a whitelist or a blacklist depending on the 'Reputation Override List' parameter.
+      This aligns with both 'Add IOC To Blocklist' and 'Add IOC To Allowlist' expected
+      outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Certificate Authority | String | No | Specify the Certificate Authority that
+    authorizes the validity of the certificate to add to reputation override. |
+
+    | Signed By | String | Yes | Specify the name of the signer to add to reputation
+    override. |
+
+    | Description | String | No | Specify a description for the created reputation
+    override. |
+
+    | Reputation Override List | Enum | Yes | Specify override list to create. Must
+    not be 'Not Specified'. |
+Create a Reputation Override for IT Tool:
+  ai_description: >-
+    ### General Description
+
+    Creates a reputation override for a specific IT tool in VMware Carbon Black Cloud.
+    This action allows users to define whether a specific file path should be treated
+    as part of a 'WHITE_LIST' or 'BLACK_LIST'. The action can target specific FILENAME
+    entities or use a manually provided file name and path.
+
+
+    ### Flow Description
+
+    1. Retrieves action parameters and integration configuration.
+
+    2. Determines the list of filenames to process. It uses the 'File Name' parameter
+    if provided; otherwise, it collects the identifiers of all 'FILENAME' entities
+    in the scope.
+
+    3. Validates that a 'Reputation Override List' is selected and that at least one
+    filename is available to process.
+
+    4. For each filename, constructs the full file path and calls the VMware Carbon
+    Black Cloud API (POST `/appservices/v6/orgs/{org_key}/reputations/overrides`)
+    to create the reputation override.
+
+    5. Captures the API response for each successful override and attaches the details
+    as JSON results.
+
+
+    ### Additional Notes
+
+    - If the 'File Name' parameter is empty, the action will attempt to process all
+    'FILENAME' entities present in the current context.
+
+    - The final path sent to VMware Carbon Black Cloud is a concatenation of 'File
+    Path' and 'File Name'.
+  ai_short_description: >-
+    Creates a reputation override for a specific IT tool in VMware Carbon Black Cloud,
+    allowing a file path to be added to an allowlist or blocklist.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a reputation override for a specific IT tool in VMware Carbon Black
+      Cloud.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the VMware Carbon Black Cloud API to create
+      a reputation override for an IT tool. It does not fetch data, update internal
+      entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: true
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.FILENAME`. Therefore, it targets FILENAME
+      entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: true
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a reputation override in VMware Carbon Black Cloud, which
+      can be either a 'WHITE_LIST' or 'BLACK_LIST'. This aligns with the 'Add IOC
+      To Blocklist' and 'Add IOC To Allowlist' expected outcomes, as it updates EDR
+      security controls to prevent or allow execution of the specified file.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Name | String | No | Specify a corresponding file name to add to reputation
+    override. |
+
+    | File Path | String | Yes | Specify a file path where corresponding IT Tool is
+    stored on disk to add to reputation override. Example format: C:\TMP\ |
+
+    | Description | String | No | Specify a description for the created reputation
+    to override. |
+
+    | Reputation Override List | Enum | Yes | Specify override list to create. |
+
+    | Include Child Processes | Boolean | No | If enabled, include IT Tool's child
+    processes on approved list |
+"Create a Reputation Override for SHA-256 Hash":
+  ai_description: >-
+    ### General Description
+
+    The **Create a Reputation Override for SHA-256 Hash** action allows users to define
+    a specific reputation (either `WHITE_LIST` or `BLACK_LIST`) for a file hash in
+    the VMware Carbon Black Cloud environment. This is a containment and policy management
+    action used to explicitly allow or block files based on their SHA-256 signature.
+    The action can target a hash provided as a direct input parameter or process multiple
+    `FILEHASH` entities present in the current context.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Retrieves integration configuration and action parameters.
+
+    2. **Target Identification:** Determines the list of hashes to process. It checks
+    the `SHA-256 Hash` parameter first; if empty, it collects all `FILEHASH` entities
+    from the Siemplify context.
+
+    3. **Format Validation:** Validates each hash against a SHA-256 regular expression
+    to ensure API compatibility.
+
+    4. **API Interaction:** For each valid hash, it sends a POST request to the VMware
+    Carbon Black Cloud API (`/appservices/v6/orgs/{org_key}/reputations/overrides`)
+    to create the reputation override with the specified list, filename, and description.
+
+    5. **Result Processing:** Collects the API response for each hash, including the
+    unique override ID and creation metadata.
+
+    6. **Finalization:** Updates the action results with JSON data and provides a
+    summary message of successful and failed overrides.
+
+
+    ### Additional Notes
+
+    - **Precedence Logic:** If a hash is provided in the `SHA-256 Hash` parameter,
+    the action will execute only for that specific hash, ignoring any `FILEHASH` entities
+    in the scope.
+
+    - **Validation:** The action strictly validates that the input is a valid 64-character
+    SHA-256 string. If an invalid format is detected, the action will fail.
+  ai_short_description: >-
+    Creates a reputation override (allowlist or blocklist) for a specific SHA-256
+    hash in VMware Carbon Black Cloud.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a reputation override (allowlist or blocklist) for a specific SHA-256
+      hash in VMware Carbon Black Cloud.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the VMware Carbon Black Cloud API to create
+      a reputation override (mutating external data). It does not fetch data for enrichment,
+      nor does it update internal entities, create insights, or add case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code checks if the 'SHA-256 Hash' parameter is provided. If not, it iterates
+      over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.FILEHASH`. Therefore, it targets FILEHASH entities and filters
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: true
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a reputation override for a SHA-256 hash in Carbon Black
+      Cloud. Depending on the 'Reputation Override List' parameter, it can add the
+      hash to a BLACK_LIST (preventing execution, matching 'Add IOC To Blocklist')
+      or a WHITE_LIST (marking as known good, matching 'Add IOC To Allowlist').
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | SHA-256 Hash | String | No | Specify a SHA-256 hash value to create override
+    for. If provided, this takes precedence over entities. |
+
+    | Filename | String | Yes | Specify a corresponding file name to add to reputation
+    override. |
+
+    | Description | String | No | Specify a description for the created reputation
+    override. |
+
+    | Reputation Override List | Enum | Yes | Specify override list to create. Options
+    include `WHITE_LIST` or `BLACK_LIST`. |
+Delete a Reputation Override:
+  ai_description: >-
+    ### General Description
+
+    Deletes a specific reputation override from VMware Carbon Black Cloud using its
+    unique identifier. This action is used to manage and clean up reputation lists
+    by removing entries that are no longer needed. It does not operate on Google SecOps
+    entities but rather targets a specific ID provided as an input parameter.
+
+
+    ### Flow Description
+
+    1. Initializes the connection to VMware Carbon Black Cloud using the provided
+    API credentials.
+
+    2. Retrieves the mandatory 'Reputation Override ID' from the action configuration.
+
+    3. Calls the Carbon Black Cloud API to perform a DELETE operation on the specific
+    reputation override resource.
+
+    4. If the API call is successful, the action completes with a success status;
+    otherwise, it logs the error and fails.
+
+
+    ### Additional Notes
+
+    This action does not operate on Google SecOps entities.
+  ai_short_description: >-
+    Deletes a specific reputation override from VMware Carbon Black Cloud using its
+    unique identifier.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a specific reputation override from VMware Carbon Black Cloud.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a DELETE request to the VMware Carbon Black Cloud API to remove
+      a reputation override. This constitutes mutating external data. It does not
+      fetch data for enrichment, nor does it mutate internal SOAR data, update entities,
+      or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not use or iterate over `siemplify.target_entities`. It operates
+      solely on the 'Reputation Override ID' provided as an input parameter. Therefore,
+      all entity type and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a reputation override in VMware Carbon Black Cloud based
+      on a specific ID. While this affects reputation lists, it does not directly
+      map to the expected outcomes of adding/removing specific IOCs from blocklists/allowlists
+      (as it operates on an abstract Override ID rather than an IOC entity), nor does
+      it match any other specific outcome category like enriching data, updating alerts,
+      or containing hosts. Therefore, all outcome category flags are set to false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Reputation Override ID | String | Yes | Specify a Reputation Override ID to
+    delete. |
+Device Background Scan:
+  ai_description: >-
+    ### General Description
+
+    The **Device Background Scan** action triggers a background scan task on VMware
+    Carbon Black Cloud for devices associated with the provided IP Address or Hostname
+    entities. This action is used to initiate a remote security scan on endpoints
+    to identify potential threats or verify the security posture of a device during
+    an incident response workflow.
+
+
+    ### Flow Description
+
+    1. **Connection Setup**: The action initializes the `CBCloudManager` using the
+    integration's API credentials and organization key.
+
+    2. **Entity Filtering**: It identifies all `ADDRESS` and `HOSTNAME` entities from
+    the target entities list provided by the SOAR platform.
+
+    3. **Device Search**: For each valid entity, the action queries the VMware Carbon
+    Black Cloud API to find matching devices based on the IP address or hostname.
+
+    4. **Scan Initiation**: If a matching device is found, the action sends a POST
+    request to the external system to create a `BACKGROUND_SCAN` task for that specific
+    device ID.
+
+    5. **Result Aggregation**: The action tracks successful task creations, missing
+    devices, and any failures, providing a comprehensive summary message and a boolean
+    success result.
+
+
+    ### Additional Notes
+
+    - The action relies on the integration's global configuration to authenticate
+    with VMware Carbon Black Cloud.
+
+    - It supports both `ADDRESS` (IP) and `HOSTNAME` entity types.
+
+    - If multiple devices match a single entity identifier in Carbon Black Cloud,
+    the action will select the first match to perform the scan.
+  ai_short_description: >-
+    Triggers a background scan task on VMware Carbon Black Cloud for devices associated
+    with the provided IP Address or Hostname entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a background scan task for the specified device in VMware Carbon Black
+      Cloud.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by searching for devices in Carbon Black Cloud to retrieve
+      the device ID. It mutates external data by sending a POST request to create
+      a background scan task for the identified device. It does not mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in ENTITIES_MAPPER.keys()`, where the mapper contains `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities
+      and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action triggers a background scan on a device. This does not directly align
+      with any of the specific expected outcomes such as 'Contain Host' (which isolates
+      the host), 'Execute Command on the Host' (which expects STDOUT), or 'Enrich
+      Asset' (which returns contextual metadata). Therefore, no outcome categories
+      are matched.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Disable Bypass Mode for Device:
+  ai_description: >-
+    ### General Description
+
+    Disables the Bypass Mode for devices on the VMware Carbon Black Cloud server.
+    This action is used to re-enable security enforcement on endpoints that were previously
+    placed in bypass mode (e.g., for troubleshooting or maintenance). It identifies
+    devices based on IP Address or Hostname entities and issues a command to the external
+    system to restore standard security policies.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the `CBCloudManager` using the integration's
+    global configuration.
+
+    2. **Entity Identification**: It filters the target entities to find supported
+    types: `ADDRESS` (IP) and `HOSTNAME`.
+
+    3. **Device Search**: For each suitable entity, the action performs a search in
+    VMware Carbon Black Cloud using the entity identifier to find the corresponding
+    device ID.
+
+    4. **Task Execution**: If a matching device is found, the action sends a POST
+    request to the Carbon Black Cloud `device_actions` endpoint to create a task that
+    toggles the Bypass Mode to `OFF` for that specific device ID.
+
+    5. **Result Aggregation**: The action tracks which entities were successfully
+    updated, which were missing in the external system, and which encountered errors,
+    returning a summary message to the Google SecOps case wall.
+
+
+    ### Additional Notes
+
+    This action relies on the device being actively managed by VMware Carbon Black
+    Cloud. If multiple devices match a single entity identifier, the action will apply
+    the change to the most recently contacted device.
+  ai_short_description: >-
+    Disables the Bypass Mode for devices on the VMware Carbon Black Cloud server based
+    on IP Address or Hostname entities to re-enable security enforcement.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a command to VMware Carbon Black Cloud to toggle the Bypass Mode to OFF
+      for the specified devices.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the VMware Carbon Black Cloud API to disable
+      bypass mode on specific devices, which mutates external data. It does not fetch
+      contextual data for enrichment, nor does it mutate internal SecOps data such
+      as updating entities, creating insights, or adding case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in ENTITIES_MAPPER.keys()`. The `ENTITIES_MAPPER` dictionary contains `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, the action targets ADDRESS and HOSTNAME
+      entities and filters them strictly by their entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action disables bypass mode on an EDR sensor, which re-enables standard
+      security enforcement on the endpoint. This does not match the strict definitions
+      of containing a host (which implies network isolation) or blocking an IOC. Therefore,
+      it does not fall into any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Dismiss VMware Carbon Black Cloud Alert:
+  ai_description: >-
+    ### General Description
+
+    Dismisses a specific alert within the VMware Carbon Black Cloud platform. This
+    action allows security analysts to programmatically close alerts by providing
+    a specific Alert ID, a dismissal reason, a determination (e.g., True Positive,
+    False Positive), and an optional explanatory message.
+
+
+    ### Flow Description
+
+    1. Retrieves action parameters including the Alert ID, Reason for dismissal, Determination,
+    and Message.
+
+    2. Validates the existence of the alert by performing a GET request to the VMware
+    Carbon Black Cloud API.
+
+    3. Sends a POST request to the Carbon Black Cloud workflow endpoint to update
+    the alert status to 'CLOSED', applying the selected remediation state, determination,
+    and note.
+
+    4. Returns a success message if the alert is successfully dismissed, or an error
+    if the operation fails.
+
+
+    ### Additional Notes
+
+    This action does not operate on entities within the Google SecOps case; it requires
+    a specific Alert ID as an input parameter.
+  ai_short_description: >-
+    Dismisses a specific alert within the VMware Carbon Black Cloud platform by updating
+    its status to closed with a specified reason and determination.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of a specific alert to 'CLOSED' in VMware Carbon Black Cloud,
+      applying the provided reason, determination, and comment.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action does not fetch contextual data for enrichment. It mutates external
+      data by sending a POST request to the VMware Carbon Black Cloud API to change
+      the status of an alert to 'CLOSED'. It does not mutate internal data, update
+      entities, create insights, modify internal alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It relies entirely on the 'Alert ID'
+      parameter provided as input. Therefore, it does not filter by entity identifier,
+      creation time, modification time, additional properties, case identifier, alert
+      identifier, entity type, is_internal, is_suspicious, is_artifact, is_vulnerable,
+      is_enriched, or is_pivot. All entity type flags and filtering flags are set
+      to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the status of an alert in an external system (VMware Carbon
+      Black Cloud) to 'CLOSED'. It does not match the 'Update Alert' category because
+      that category specifically applies to changing the status of an alert within
+      the SecOps platform itself. It does not enrich IOCs or assets, create or update
+      tickets, modify blocklists/allowlists, manage identities, contain hosts, search
+      or manipulate emails, or execute commands. Therefore, all outcome category flags
+      are set to false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | String | Yes | Alert ID to dismiss on VMware Carbon Black Cloud server.
+    |
+
+    | Reason for dismissal | Dropdown | Yes | VMware Carbon Black Cloud reason for
+    alert dismissal. |
+
+    | Determination | Dropdown | Yes | Specify the determination to set for an alert.
+    |
+
+    | Message for alert dismissal | String | No | Message to add to alert dismissal.
+    |
+Enable Bypass Mode for Device:
+  ai_description: >-
+    ### General Description
+
+    The **Enable Bypass Mode for Device** action allows security analysts to programmatically
+    enable 'Bypass Mode' for specific devices within VMware Carbon Black Cloud based
+    on IP or Hostname entities. By enabling bypass mode, the sensor remains installed
+    but stops active protection and blocking on the target device.
+
+
+    ### Flow Description
+
+    1. Identifies `ADDRESS` (IP) and `HOSTNAME` entities within the current Google
+    SecOps context.
+
+    2. For each identified entity, queries the VMware Carbon Black Cloud API to find
+    a matching device.
+
+    3. If a matching device is found, sends a POST request to the Carbon Black Cloud
+    `device_actions` endpoint to create a task that toggles Bypass Mode to 'ON' for
+    that specific device ID.
+
+    4. Tracks and reports the status for each entity, distinguishing between successful
+    task creations, missing devices, and execution failures.
+
+
+    ### Additional Notes
+
+    - Enabling Bypass Mode significantly reduces the security posture of the device
+    as active protection is disabled.
+
+    - This action does not update internal Google SecOps entity fields or create insights;
+    its primary effect is the state change in the external VMware Carbon Black Cloud
+    system.
+  ai_short_description: >-
+    Enables 'Bypass Mode' for specific devices within VMware Carbon Black Cloud based
+    on IP or Hostname entities, stopping active protection and blocking on the target
+    device.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a task in VMware Carbon Black Cloud to enable Bypass Mode for the specified
+      device.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches device data using a GET request to find the device ID, then
+      makes a POST request to the VMware Carbon Black Cloud API to create a bypass
+      mode task, mutating external data. It does not mutate internal data, update
+      entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in ENTITIES_MAPPER.keys()`, which maps to `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities
+      and filters strictly by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action enables bypass mode on a device, which disables active protection
+      by the Carbon Black sensor. This does not strictly align with 'Uncontain Host'
+      (which refers to network quarantine, handled by a separate action) or any other
+      available outcome category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and IP Address entities with detailed device information retrieved
+    from VMware Carbon Black Cloud. This action provides security analysts with critical
+    endpoint context, including operating system details, antivirus status, network
+    information, and assigned security policies.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts configuration parameters and initializes
+    the `CBCloudManager`, which performs an initial connectivity check.
+
+    2. **Entity Selection**: It identifies all target entities that match the supported
+    types: IP Address or Hostname.
+
+    3. **Device Search**: For each entity, the action queries the Carbon Black Cloud
+    API using the `search_devices` method. IP addresses are searched using a query
+    parameter, while Hostnames are matched using a 'starts with' logic.
+
+    4. **Data Processing**: If matching devices are found, the action retrieves the
+    most recently active device record.
+
+    5. **Internal Mutation**: The action updates the entity's `additional_properties`
+    with device metadata (OS, AV status, policy ID, etc.), sets the `is_enriched`
+    flag to true, and generates a data table for the case wall.
+
+    6. **Completion**: Finally, it updates the entities within Google SecOps and returns
+    a comprehensive JSON result of all enriched data.
+
+
+    ### Additional Notes
+
+    - The action specifically targets `ADDRESS` (IP) and `HOSTNAME` entity types.
+
+    - In cases where multiple device records match a single entity, the action automatically
+    selects the record with the most recent `last_contact_time` to ensure data freshness.
+
+    - Enrichment data added to entities is prefixed with `CB_CLOUD` for easy identification.
+  ai_short_description: >-
+    Enriches Hostname and IP Address entities with detailed device information retrieved
+    from VMware Carbon Black Cloud.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with device metadata, sets the is_enriched
+      flag to true, and adds a data table to the case wall.
+    reasoning: >-
+      The action fetches device data from VMware Carbon Black Cloud (fetches_data=true).
+      It does not mutate external data. It mutates internal data by updating entity
+      additional properties, setting the is_enriched flag, and adding a data table
+      to the case wall (can_mutate_internal_data=true, can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITIES`, where supported entities are ADDRESS
+      and HOSTNAME. Therefore, it targets Address and Hostname entities and filters
+      strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches device information from VMware Carbon Black Cloud for IP
+      and Hostname entities, returning contextual metadata such as OS version, AV
+      status, and policy information. This directly aligns with the 'Enrich Asset'
+      expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Execute Entity Processes Search:
+  ai_description: >-
+    ### General Description
+
+    Executes a process search in VMware Carbon Black Cloud for specific entities including
+    IP addresses, Hostnames, Users, File Hashes, and Processes. This action helps
+    in identifying process-level activity associated with these entities by querying
+    the Carbon Black Cloud Investigate API. It retrieves detailed event information,
+    identifies potential threats based on alert categories, and enriches the entities
+    within Google SecOps.
+
+
+    ### Flow Description
+
+    1. Initializes the Carbon Black Cloud manager using provided credentials and validates
+    connectivity.
+
+    2. Filters the target entities to include only supported types (IP, Hostname,
+    File Hash, Process, User).
+
+    3. For each supported entity, creates a search job in Carbon Black Cloud to find
+    related processes using the entity's original identifier.
+
+    4. Fetches detailed event information for the discovered process GUIDs once the
+    search job completes.
+
+    5. Checks the retrieved events for specific threat categories (specifically the
+    'THREAT' category). If a threat is identified, marks the entity as suspicious.
+
+    6. Updates the entities in Google SecOps, adds data tables with process details,
+    and optionally creates insights if configured.
+
+
+    ### Additional Notes
+
+    - The action uses the entity's original identifier for the search query if available.
+
+    - It specifically looks for the 'THREAT' category in alert categories to determine
+    if an entity should be marked as suspicious.
+  ai_short_description: >-
+    Executes a process search in VMware Carbon Black Cloud for specific entities to
+    retrieve detailed event information, identify potential threats, and enrich the
+    entities within Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entities with suspicious and enriched flags, adds data tables with process
+      details, and optionally creates insights.
+    reasoning: >-
+      The action fetches process and event data from Carbon Black Cloud via GET/POST
+      requests for search jobs. It does not mutate external data. It mutates internal
+      data by updating entities (marking them as suspicious and enriched), adding
+      data tables, and optionally creating insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: true
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes ADDRESS, HOSTNAME,
+      FILEHASH, PROCESS, and USER. Therefore, it targets these specific entity types
+      and filters by `entity_type`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for process events related to specific entities, matching
+      the 'Search Events' category. It retrieves contextual metadata and threat information
+      for IOCs (IP, Hash) and assets (Hostname, User), updating their suspicious status
+      in the platform, which matches both 'Enrich IOC' and 'Enrich Asset'. It does
+      not perform containment, blocklist updates, or ticket creation.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Start from Row | Integer | No | Specify from which row action should fetch data.
+    |
+
+    | Max Rows to Return | Integer | No | Specify how many rows action should return.
+    |
+
+    | Create Insight | Boolean | No | If enabled, action will create a Siemplify insight
+    based on process info from Carbon Black Cloud. |
+List Host Vulnerabilities:
+  ai_description: >-
+    ### General Description
+
+    Retrieves and lists vulnerabilities for Hostname and IP Address entities from
+    VMware Carbon Black Cloud. This action identifies the corresponding device in
+    the Carbon Black environment and fetches associated vulnerability data, including
+    CVE IDs, risk scores, and descriptions. It provides a summary of vulnerability
+    counts by severity and attaches detailed reports to the entities.
+
+
+    ### Flow Description
+
+    1. Extracts action parameters (Severity Filter and Max Vulnerabilities To Return).
+
+    2. Filters valid IP Address and Hostname entities from the case.
+
+    3. For each entity, searches Carbon Black Cloud for the matching device via the
+    `search_devices` API.
+
+    4. Fetches vulnerability details for the identified device via the `get_vulnerability_details`
+    API, applying the specified severity filters and result limits.
+
+    5. Calculates statistics for the found vulnerabilities (counts of Critical, Important,
+    Moderate, and Low severity issues).
+
+    6. Attaches a detailed data table (CVE ID, Risk Score, Severity, Description)
+    and raw JSON results to the entity.
+
+    7. Updates the entities within Google SecOps to reflect the enrichment status.
+
+
+    ### Additional Notes
+
+    If multiple devices match the entity identifier, the action prioritizes the most
+    recently contacted device.
+  ai_short_description: >-
+    Retrieves and lists vulnerabilities for Hostname and IP Address entities from
+    VMware Carbon Black Cloud.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Carbon Black Cloud using GET/POST requests to search
+      for devices and retrieve vulnerability details. It does not mutate external
+      data. It updates internal entities with the retrieved data using `siemplify.update_entities`
+      and attaches JSON results and tables, but does not create insights or case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in ENTITIES_MAPPER.keys()`. The `ENTITIES_MAPPER` dictionary contains `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, the action targets IP Address and Hostname
+      entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches vulnerability details for a specific host (IP or Hostname)
+      from Carbon Black Cloud. This aligns with the 'Enrich Asset' category, as it
+      retrieves contextual metadata and vulnerability information for an internal
+      resource.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Severity Filter | String | No | Specify the comma-separated list of severities
+    for vulnerabilities. If nothing is provided, action will ingest all related vulnerabilities.
+    Possible values: Critical, Important, Moderate, Low. |
+
+    | Max Vulnerabilities To Return | Integer | No | Specify how many vulnerabilities
+    to return per host. If nothing is provided, action will process all of the related
+    vulnerabilities. |
+List Reputation Overrides:
+  ai_description: >-
+    ### General Description
+
+    This action lists reputation overrides configured in VMware Carbon Black Cloud.
+    It allows security analysts to audit and review existing whitelist or blacklist
+    entries for file hashes (SHA256), certificates, and IT tools. The action supports
+    filtering by override list type and specific reputation types, as well as pagination
+    and sorting of results.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts integration configuration (API credentials)
+    and user-provided parameters.
+
+    2. **Validation**: It ensures that pagination parameters ('Start from Row' and
+    'Max Rows to Return') are within valid ranges.
+
+    3. **API Request**: The action calls the VMware Carbon Black Cloud API to search
+    for reputation overrides based on the provided filters (List, Type, Sort Order).
+
+    4. **Data Processing**: The retrieved overrides are parsed into specific data
+    models (SHA256, Certificate, or IT Tool) and grouped by their override type.
+
+    5. **Output Generation**: The action populates the Google SecOps case with data
+    tables for each group of overrides found and provides the full raw data in JSON
+    format.
+
+
+    ### Additional Notes
+
+    * This action **does not** run on Google SecOps entities. It is a global search
+    action that retrieves data directly from the VMware Carbon Black Cloud platform.
+
+    * Results are grouped by their override type and presented in separate data tables
+    for better readability.
+  ai_short_description: >-
+    Lists reputation overrides configured in VMware Carbon Black Cloud, allowing analysts
+    to audit whitelist or blacklist entries for file hashes, certificates, and IT
+    tools.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes an API request to VMware Carbon Black Cloud to fetch reputation
+      overrides. It does not mutate external data (the POST request is to a search
+      endpoint), nor does it update internal entities, create insights, or modify
+      alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It performs a global search for
+      reputation overrides based on the provided parameters without referencing specific
+      entities. Therefore, all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for reputation overrides (whitelists/blacklists) configured
+      in the external system. This does not match any of the predefined outcome categories
+      such as Enrich IOC, Search Events, or Get Alert Information. Therefore, all
+      outcome category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Reputation Override List | String | No | Specify override list action should
+    return. |
+
+    | Reputation Override Type | String | No | Specify override type action should
+    return. |
+
+    | Start from Row | Integer | No | Specify from which row action should fetch data.
+    |
+
+    | Max Rows to Return | Integer | No | Specify how many rows action should return.
+    |
+
+    | Rows Sort Order | String | No | Specify sort order for the returned rows. Rows
+    are sorted based on "create_time" value. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the VMware Carbon Black Cloud platform using the provided
+    API credentials. This action ensures that the integration can successfully communicate
+    with the remote server before executing other operations.
+
+
+    ### Flow Description
+
+    1. Extracts the API Root, Organization Key, API ID, API Secret Key, and SSL verification
+    preference from the integration configuration.
+
+    2. Initializes the `CBCloudManager` with the provided credentials and forces a
+    connectivity check.
+
+    3. Performs a POST request to the alerts search endpoint with a minimal payload
+    to verify that the API credentials are valid and the server is reachable.
+
+    4. Returns a success status if the API call completes without error; otherwise,
+    captures and reports the failure reason.
+
+
+    ### Additional Notes
+
+    - This action is primarily used for troubleshooting and initial setup validation.
+
+    - It does not process any entities or modify any data within Carbon Black Cloud.
+  ai_short_description: >-
+    Tests the connectivity to the VMware Carbon Black Cloud platform using the provided
+    API credentials to ensure successful communication with the remote server.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a basic POST request to verify API credentials and connectivity.
+      It does not fetch contextual data for entities, mutate external data, mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It solely tests connectivity
+      to the external API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticket creation.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Quarantine Device:
+  ai_description: >-
+    ### General Description
+
+    Quarantines devices in VMware Carbon Black Cloud based on IP Address or Hostname
+    entities. This action is used to isolate potentially compromised endpoints from
+    the network by triggering the 'Quarantine' state in the Carbon Black Cloud console.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts configuration parameters and initializes
+    the Carbon Black Cloud manager.
+
+    2. **Entity Filtering**: It identifies all IP Address and Hostname entities within
+    the current context.
+
+    3. **Device Search**: For each entity, it searches the Carbon Black Cloud environment
+    for a matching device using the entity identifier.
+
+    4. **Quarantine Execution**: If a matching device is found, the action sends a
+    request to enable quarantine mode for that device.
+
+    5. **Result Reporting**: The action tracks successful, missing, and failed quarantine
+    tasks and provides a summary message and JSON results.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Quarantines devices in VMware Carbon Black Cloud based on IP Address or Hostname
+    entities to isolate potentially compromised endpoints from the network.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Enables quarantine mode for a specific device in VMware Carbon Black Cloud,
+      isolating it from the network.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches device data using `manager.search_devices` (fetches_data=true).
+      It then mutates external data by calling `manager.create_quarantine_task` which
+      sends a POST request to enable quarantine mode on the device (can_mutate_external_data=true).
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES` contains `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities,
+      filtering strictly by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action isolates an endpoint from the network by enabling quarantine mode
+      on a device in Carbon Black Cloud. This directly aligns with the 'Contain Host'
+      expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Unquarantine Device:
+  ai_description: >-
+    ### General Description
+
+    This action creates an unquarantine device task on the VMware Carbon Black Cloud
+    server for specific IP Address or Hostname entities. It is used to programmatically
+    restore network connectivity and normal operations to a device that was previously
+    isolated or quarantined by the Carbon Black sensor.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action filters the target entities to include only
+    IP Address and Hostname entities.
+
+    2. **Device Search**: For each suitable entity, it queries the VMware Carbon Black
+    Cloud API (`search_devices`) to find matching devices based on the entity's original
+    identifier.
+
+    3. **Selection Logic**: If multiple devices match, the action selects the one
+    that checked in most recently.
+
+    4. **Task Creation**: The action sends a POST request to the Carbon Black Cloud
+    `device_actions` endpoint to create an unquarantine task for the identified device
+    ID.
+
+    5. **Reporting**: The action provides a summary of successful task creations,
+    missing devices, and any failures encountered during the process.
+
+
+    ### Additional Notes
+
+    - The action supports **ADDRESS** (IP) and **HOSTNAME** entities.
+
+    - If no device is found for an entity, it is skipped.
+
+    - The action performs a state-changing operation in an external system and is
+    therefore not classified as an enrichment action.
+  ai_short_description: >-
+    Creates an unquarantine device task on the VMware Carbon Black Cloud server for
+    specific IP Address or Hostname entities to restore network connectivity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates an unquarantine device task in VMware Carbon Black Cloud to restore
+      network connectivity for the device.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches device data to find the device ID, then makes a POST request
+      to mutate external data by creating an unquarantine task. It does not mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITIES` where SUPPORTED_ENTITIES includes ADDRESS and HOSTNAME.
+      It does not filter by other attributes.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a POST request to VMware Carbon Black Cloud to unquarantine
+      a device, which removes network isolation and restores the endpoint's communication
+      capabilities. This directly aligns with the 'Uncontain Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: true
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Update a Policy for Device by Policy ID:
+  ai_description: >-
+    ### General Description
+
+    Updates the security policy for a VMware Carbon Black Cloud sensor on a host identified
+    by an IP address or Hostname. This action is used to change the enforcement level
+    or configuration of a sensor by associating it with a different policy ID.
+
+
+    ### Flow Description
+
+    1. Retrieves the target `Policy ID` parameter.
+
+    2. Filters the target entities to identify IP addresses and Hostnames.
+
+    3. For each entity, queries VMware Carbon Black Cloud to find the corresponding
+    device. If multiple devices match, it selects the most recently contacted one.
+
+    4. If a device is found, it initiates a task to update the device's policy to
+    the specified `Policy ID` via the Carbon Black Cloud API.
+
+    5. Consolidates the results for all entities, reporting successful updates, missing
+    devices, or failures.
+
+
+    ### Additional Notes
+
+    If multiple devices are found matching a single entity identifier, the action
+    will automatically select the most recently contacted device to apply the policy
+    update.
+  ai_short_description: >-
+    Updates the security policy for a VMware Carbon Black Cloud sensor on a host identified
+    by an IP address or Hostname.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the security policy assigned to a specific device in VMware Carbon Black
+      Cloud.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by calling the 'search_devices' API to find the device
+      ID associated with the entity. It mutates external data by calling the 'create_policy_update_task'
+      API (POST request) to change the device's policy. It does not mutate internal
+      data, update entities, create insights, or add case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in ENTITIES_MAPPER.keys()`, where the mapper contains `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities
+      and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates a security policy on a device in VMware Carbon Black Cloud.
+      While this modifies the endpoint's configuration, it does not strictly align
+      with 'Contain Host' (which specifically isolates the host) or any other predefined
+      outcome category like 'Enrich Asset' or 'Add IOC to Blocklist'. Therefore, no
+      outcome categories are matched.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Policy ID | String | Yes | Specify a policy to associate with the VMware Carbon
+    Black Cloud sensor. |
