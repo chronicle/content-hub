@@ -31,39 +31,116 @@ from ..core.UtilsManager import extract_domain_from_string
 SUPPORTED_ENTITY_TYPES: list[str] = [EntityTypes.URL, EntityTypes.HOSTNAME, EntityTypes.DOMAIN]
 
 
+def _extract_params(siemplify: SiemplifyAction) -> tuple:
+    """Extract integration configuration and action parameters from the SOAR context."""
+    username = extract_configuration_param(
+        siemplify, provider_name=INTEGRATION_NAME, param_name="Username",
+        is_mandatory=True, print_value=True,
+    )
+    api_key = extract_configuration_param(
+        siemplify, provider_name=INTEGRATION_NAME, param_name="ApiToken",
+        is_mandatory=True, print_value=True,
+    )
+    verify_ssl = extract_configuration_param(
+        siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
+    )
+    domains_param = extract_action_param(siemplify, "Domains", print_value=True)
+    include_young = extract_action_param(
+        siemplify, param_name="Include Young Domains", input_type=bool, default_value=True
+    )
+    merge_with_entities = extract_action_param(
+        siemplify, param_name="Merge With Case Entities", input_type=bool, default_value=False
+    )
+    return username, api_key, verify_ssl, domains_param, include_young, merge_with_entities
+
+
+def _collect_domains(
+    siemplify: SiemplifyAction, domains_param: str | None, merge_with_entities: bool
+) -> list[str]:
+    """Build the deduplicated domain list from manual input, case entities, or both."""
+    manual = [d.strip() for d in domains_param.split(",") if d.strip()] if domains_param else []
+    entity_domains = [
+        domain
+        for entity in siemplify.target_entities
+        if entity.entity_type in SUPPORTED_ENTITY_TYPES
+        if (domain := extract_domain_from_string(entity.identifier))
+    ]
+    if manual and merge_with_entities:
+        return list(dict.fromkeys(manual + entity_domains))
+    return manual if manual else list(dict.fromkeys(entity_domains))
+
+
+def _enrich_and_summarize(
+    dt_manager: DomainToolsManager, domains: list[str]
+) -> tuple[list, dict[str, Any], list[str]]:
+    """Enrich domains via the API and return results, a risk category summary, and any missing domains."""
+    enriched_results = dt_manager.enrich_domains_with_risk(domains)
+    missing_domains = [d for d in domains if d not in {e.domain for e in enriched_results}]
+    summary: dict[str, Any] = {
+        "total_domains": len(enriched_results),
+        "high_risk_count": 0,
+        "medium_risk_count": 0,
+        "suspicious_count": 0,
+        "young_domain_count": 0,
+        "low_risk_count": 0,
+        "missing_count": len(missing_domains),
+    }
+    if missing_domains:
+        summary["missing_domains"] = missing_domains
+    for enriched in enriched_results:
+        if enriched.risk_category == RISK_CATEGORY_HIGH:
+            summary["high_risk_count"] += 1
+        elif enriched.risk_category == RISK_CATEGORY_MEDIUM:
+            summary["medium_risk_count"] += 1
+        elif enriched.risk_category == RISK_CATEGORY_SUSPICIOUS:
+            summary["suspicious_count"] += 1
+        elif enriched.risk_category == RISK_CATEGORY_YOUNG:
+            summary["young_domain_count"] += 1
+        else:
+            summary["low_risk_count"] += 1
+    return enriched_results, summary, missing_domains
+
+
+def _write_results(
+    siemplify: SiemplifyAction,
+    enriched_results: list,
+    include_young: bool,
+    summary: dict[str, Any],
+) -> None:
+    """Write JSON result and CSV data table to the SOAR case."""
+    domains_output = [
+        e.to_dict() for e in enriched_results
+        if include_young or e.risk_category != RISK_CATEGORY_YOUNG
+    ]
+    json_result = [{"Entity": "BulkEnrichment", "EntityResult": {"summary": summary, "domains": domains_output}}]
+    siemplify.result.add_result_json(json_result)
+    csv_rows = [e.to_table_data() for e in enriched_results]
+    if csv_rows:
+        siemplify.result.add_data_table("Bulk Domain Enrichment", construct_csv(csv_rows))
+
+
+def _format_output_message(summary: dict[str, Any], missing_domains: list[str]) -> str:
+    """Format the action output message with risk category counts and any missing domains."""
+    msg = (
+        f"Enriched {summary['total_domains']} domain(s): "
+        f"{summary['high_risk_count']} high risk, "
+        f"{summary['medium_risk_count']} medium risk, "
+        f"{summary['suspicious_count']} suspicious, "
+        f"{summary['young_domain_count']} young domains, "
+        f"{summary['low_risk_count']} low risk."
+    )
+    if missing_domains:
+        msg += f"\nNot returned by API ({len(missing_domains)}): {', '.join(missing_domains)}"
+    return msg
+
+
 @output_handler
 def main() -> None:
-    """Batch-enrich domains and return aggregate risk category statistics."""
     siemplify = SiemplifyAction()
     siemplify.script_name = BULK_ENRICH_DOMAINS_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Bulk Enrich Domains Started -----------------")
 
-    username: str = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Username",
-        is_mandatory=True,
-        print_value=True,
-    )
-    api_key: str = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="ApiToken",
-        is_mandatory=True,
-        print_value=True,
-    )
-    verify_ssl: str = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
-    )
-    domains_param: str = extract_action_param(
-        siemplify, param_name="Domains", default_value="", print_value=True
-    )
-    include_young: bool = extract_action_param(
-        siemplify, param_name="Include Young Domains", input_type=bool, default_value=True
-    )
-    merge_with_entities: bool = extract_action_param(
-        siemplify, param_name="Merge With Case Entities", input_type=bool, default_value=False
-    )
+    username, api_key, verify_ssl, domains_param, include_young, merge_with_entities = _extract_params(siemplify)
 
     status: int = EXECUTION_STATE_COMPLETED
     output_message: str = ""
@@ -71,27 +148,11 @@ def main() -> None:
 
     try:
         dt_manager = DomainToolsManager(
-            username=username,
-            api_key=api_key,
-            verify_ssl=verify_ssl,
+            username=username, api_key=api_key, verify_ssl=verify_ssl,
             siemplify_logger=siemplify.LOGGER,
         )
 
-        manual = [d.strip() for d in domains_param.split(",") if d.strip()] if domains_param else []
-        entity_domains = [
-            domain
-            for entity in siemplify.target_entities
-            if entity.entity_type in SUPPORTED_ENTITY_TYPES
-            if (domain := extract_domain_from_string(entity.identifier))
-        ]
-
-        if manual and merge_with_entities:
-            domains = list(dict.fromkeys(manual + entity_domains))
-        elif manual:
-            domains = manual
-        else:
-            domains = list(dict.fromkeys(entity_domains))
-
+        domains = _collect_domains(siemplify, domains_param, merge_with_entities)
         if not domains:
             output_message = "No domains provided or found in scope."
             result_value = False
@@ -104,60 +165,9 @@ def main() -> None:
             )
             domains = domains[:BULK_ENRICH_MAX_DOMAINS]
 
-        enriched_results = dt_manager.enrich_domains_with_risk(domains)
-
-        enriched_domain_set = {e.domain for e in enriched_results}
-        missing_domains = [d for d in domains if d not in enriched_domain_set]
-
-        summary: dict[str, Any] = {
-            "total_domains": len(enriched_results),
-            "high_risk_count": 0,
-            "medium_risk_count": 0,
-            "suspicious_count": 0,
-            "young_domain_count": 0,
-            "low_risk_count": 0,
-            "missing_count": len(missing_domains),
-        }
-        if missing_domains:
-            summary["missing_domains"] = missing_domains
-        domains_output: list[dict[str, Any]] = []
-
-        for enriched in enriched_results:
-            if enriched.risk_category == RISK_CATEGORY_HIGH:
-                summary["high_risk_count"] += 1
-            elif enriched.risk_category == RISK_CATEGORY_MEDIUM:
-                summary["medium_risk_count"] += 1
-            elif enriched.risk_category == RISK_CATEGORY_SUSPICIOUS:
-                summary["suspicious_count"] += 1
-            elif enriched.risk_category == RISK_CATEGORY_YOUNG:
-                summary["young_domain_count"] += 1
-            else:
-                summary["low_risk_count"] += 1
-
-            if not include_young and enriched.risk_category == RISK_CATEGORY_YOUNG:
-                continue
-
-            domains_output.append(enriched.to_dict())
-
-        json_result = [{"Entity": "BulkEnrichment", "EntityResult": {"summary": summary, "domains": domains_output}}]
-        siemplify.result.add_result_json(json_result)
-
-        csv_rows = [enriched.to_table_data() for enriched in enriched_results]
-        if csv_rows:
-            siemplify.result.add_data_table("Bulk Domain Enrichment", construct_csv(csv_rows))
-
-        output_message = (
-            f"Enriched {summary['total_domains']} domain(s): "
-            f"{summary['high_risk_count']} high risk, "
-            f"{summary['medium_risk_count']} medium risk, "
-            f"{summary['suspicious_count']} suspicious, "
-            f"{summary['young_domain_count']} young domains, "
-            f"{summary['low_risk_count']} low risk."
-        )
-        if missing_domains:
-            output_message += (
-                f"\nNot returned by API ({len(missing_domains)}): {', '.join(missing_domains)}"
-            )
+        enriched_results, summary, missing_domains = _enrich_and_summarize(dt_manager, domains)
+        _write_results(siemplify, enriched_results, include_young, summary)
+        output_message = _format_output_message(summary, missing_domains)
 
     except Exception as err:
         output_message = f"Error running action: {str(err)}"
