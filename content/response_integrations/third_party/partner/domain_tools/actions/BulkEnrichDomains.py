@@ -44,21 +44,21 @@ def _extract_params(siemplify: SiemplifyAction) -> tuple:
     verify_ssl = extract_configuration_param(
         siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
     )
-    domains_param = extract_action_param(siemplify, "Domains", print_value=True)
+    manual_domains_str = extract_action_param(siemplify, "Domains", print_value=True)
     include_young = extract_action_param(
         siemplify, param_name="Include Young Domains", input_type=bool, default_value=True
     )
     merge_with_entities = extract_action_param(
         siemplify, param_name="Merge With Case Entities", input_type=bool, default_value=False
     )
-    return username, api_key, verify_ssl, domains_param, include_young, merge_with_entities
+    return username, api_key, verify_ssl, manual_domains_str, include_young, merge_with_entities
 
 
 def _collect_domains(
-    siemplify: SiemplifyAction, domains_param: str | None, merge_with_entities: bool
+    siemplify: SiemplifyAction, manual_domains_str: str | None, merge_with_entities: bool
 ) -> list[str]:
     """Build the deduplicated domain list from manual input, case entities, or both."""
-    manual = [d.strip() for d in domains_param.split(",") if d.strip()] if domains_param else []
+    manual = [d.strip() for d in manual_domains_str.split(",") if d.strip()] if manual_domains_str else []
     entity_domains = [
         domain
         for entity in siemplify.target_entities
@@ -67,7 +67,7 @@ def _collect_domains(
     ]
     if manual and merge_with_entities:
         return list(dict.fromkeys(manual + entity_domains))
-    return manual if manual else list(dict.fromkeys(entity_domains))
+    return list(dict.fromkeys(manual)) if manual else list(dict.fromkeys(entity_domains))
 
 
 def _enrich_and_summarize(
@@ -108,13 +108,10 @@ def _write_results(
     summary: dict[str, Any],
 ) -> None:
     """Write JSON result and CSV data table to the SOAR case."""
-    domains_output = [
-        e.to_dict() for e in enriched_results
-        if include_young or e.risk_category != RISK_CATEGORY_YOUNG
-    ]
-    json_result = [{"Entity": "BulkEnrichment", "EntityResult": {"summary": summary, "domains": domains_output}}]
+    filtered = [e for e in enriched_results if include_young or e.risk_category != RISK_CATEGORY_YOUNG]
+    json_result = [{"Entity": "BulkEnrichment", "EntityResult": {"summary": summary, "domains": [e.to_dict() for e in filtered]}}]
     siemplify.result.add_result_json(json_result)
-    csv_rows = [e.to_table_data() for e in enriched_results]
+    csv_rows = [e.to_table_data() for e in filtered]
     if csv_rows:
         siemplify.result.add_data_table("Bulk Domain Enrichment", construct_csv(csv_rows))
 
@@ -159,11 +156,10 @@ def main() -> None:
             siemplify.end(output_message, result_value, status)
             return
 
-        if len(domains) > BULK_ENRICH_MAX_DOMAINS:
-            siemplify.LOGGER.warn(
-                f"Domain count {len(domains)} exceeds max {BULK_ENRICH_MAX_DOMAINS}. Truncating."
-            )
-            domains = domains[:BULK_ENRICH_MAX_DOMAINS]
+        max_domains = BULK_ENRICH_MAX_DOMAINS
+        if len(domains) > max_domains:
+            siemplify.LOGGER.info(f"Truncating {len(domains)} domains to {max_domains}")
+            domains = domains[:max_domains]
 
         enriched_results, summary, missing_domains = _enrich_and_summarize(dt_manager, domains)
         _write_results(siemplify, enriched_results, include_young, summary)
@@ -177,9 +173,7 @@ def main() -> None:
         result_value = False
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(f"Status: {status}")
-    siemplify.LOGGER.info(f"Result: {result_value}")
-    siemplify.LOGGER.info(f"Output Message: {output_message}")
+    siemplify.LOGGER.info(f"Status: {status}, Result: {result_value}, Output: {output_message}")
     siemplify.end(output_message, result_value, status)
 
 
