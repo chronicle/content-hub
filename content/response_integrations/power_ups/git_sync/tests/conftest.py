@@ -19,6 +19,12 @@ import pathlib
 import sys
 import tempfile
 
+import soar_sdk
+
+soar_sdk_dir = os.path.dirname(soar_sdk.__file__)
+if soar_sdk_dir not in sys.path:
+    sys.path.insert(0, soar_sdk_dir)
+
 import pytest
 from integration_testing.common import use_live_api
 from soar_sdk.SiemplifyBase import SiemplifyBase
@@ -91,6 +97,9 @@ def sdk_session(
 
     if not use_live_api():
         monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
+        top_level_mod = sys.modules.get("SiemplifyBase")
+        if top_level_mod and hasattr(top_level_mod, "SiemplifyBase"):
+            monkeypatch.setattr(top_level_mod.SiemplifyBase, "create_session", lambda *_: session)
 
         # Delegate BaseUrlSession.request to our mock session
         monkeypatch.setattr(
@@ -105,7 +114,6 @@ def sdk_session(
         )
 
         # Monkeypatch SiemplifyBase.__init__ to set valid local run folder paths
-        import sys
 
         for mod_name in ("SiemplifyBase", "soar_sdk.SiemplifyBase"):
             mod = sys.modules.get(mod_name)
