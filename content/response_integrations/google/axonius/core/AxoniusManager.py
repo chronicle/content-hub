@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 from copy import deepcopy
-import json
 import re
 from typing import Optional, List, Tuple, Union
 from urllib.parse import urljoin
@@ -133,7 +132,8 @@ class AxoniusManager:
         :param value: {str} Exact identifier string to match
         :return: {str} Escaped AQL regex expression
         """
-        return f'regex({json.dumps(f"^{re.escape(value)}$")}, "i")'
+        escaped = re.escape(value).replace('"', '\\"')
+        return f'regex("^{escaped}$", "i")'
 
     @staticmethod
     def _deduplicate_non_empty(values: Optional[List[str]]) -> List[str]:
@@ -198,8 +198,9 @@ class AxoniusManager:
         """
         sub_queries: List[str] = []
         for ip in self._deduplicate_non_empty(ip_addresses):
+            escaped_ip = ip.replace("\\", "\\\\").replace('"', '\\"')
             sub_queries.append(
-                f'("specific_data.data.network_interfaces.ips" == {json.dumps(ip)})'
+                f'("specific_data.data.network_interfaces.ips" == "{escaped_ip}")'
             )
         for hostname in self._deduplicate_non_empty(hostnames):
             regex_expr = self._exact_case_insensitive_regex(hostname)
