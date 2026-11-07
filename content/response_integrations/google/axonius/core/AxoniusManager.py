@@ -14,13 +14,16 @@
 
 from __future__ import annotations
 from copy import deepcopy
-from typing import Optional, List
+import json
+import re
+from typing import Optional, List, Tuple, Union
 from urllib.parse import urljoin
 
 import requests
 from requests import Session
 
 from soar_sdk.SiemplifyLogger import SiemplifyLogger
+from soar_sdk.SiemplifyUtils import unix_now
 from .consts import (
     INTEGRATION_IDENTIFIER,
     LOGICAL_OR,
@@ -59,6 +62,19 @@ ENDPOINTS = {
 
 HEADERS = {"Content-Type": "application/json"}
 
+DEFAULT_CONNECT_TIMEOUT = 10
+DEFAULT_READ_TIMEOUT = 60
+DEFAULT_REQUEST_TIMEOUT: Tuple[float, float] = (
+    DEFAULT_CONNECT_TIMEOUT,
+    DEFAULT_READ_TIMEOUT,
+)
+MIN_REQUEST_TIMEOUT = 5.0
+DEADLINE_SAFETY_BUFFER_MS = 5000
+DEFAULT_QUERY_BATCH_SIZE = 50
+MIN_PAGE_LIMIT = 50
+MAX_PAGE_LIMIT = 2000
+PAGE_LIMIT_MULTIPLIER = 10
+
 
 class AxoniusManager:
     """
@@ -72,6 +88,8 @@ class AxoniusManager:
         secret_key: str,
         verify_ssl: Optional[bool] = True,
         siemplify_logger: Optional[SiemplifyLogger] = None,
+        timeout: Union[Tuple[float, float], float] = DEFAULT_REQUEST_TIMEOUT,
+        execution_deadline_ms: Optional[int] = None,
     ) -> None:
         """
         The method is used to instantiate an object of AxoniusManager class
@@ -86,9 +104,42 @@ class AxoniusManager:
         self._session.verify = verify_ssl
         self._session.headers = deepcopy(HEADERS)
         self._session.headers.update({"api-key": api_key, "api-secret": secret_key})
+        self._timeout: Union[Tuple[float, float], float] = timeout
+        self._execution_deadline_ms: Optional[int] = execution_deadline_ms
 
         self.parser: AxoniusTransformationLayer = AxoniusTransformationLayer()
         self.siemplify_logger: SiemplifyLogger = siemplify_logger
+
+    def _get_request_timeout(self) -> Union[Tuple[float, float], float]:
+        """
+        Calculate bounded HTTP timeout respecting the SOAR action execution deadline when set.
+        :return: {tuple|float} Connect/read timeout for requests
+        """
+        if not self._execution_deadline_ms or self._execution_deadline_ms <= 0:
+            return self._timeout
+        remaining_sec = (
+            self._execution_deadline_ms - DEADLINE_SAFETY_BUFFER_MS - unix_now()
+        ) / 1000.0
+        bounded_sec = max(MIN_REQUEST_TIMEOUT, remaining_sec)
+        if isinstance(self._timeout, tuple):
+            connect_timeout, read_timeout = self._timeout
+            return (min(connect_timeout, bounded_sec), min(read_timeout, bounded_sec))
+        return min(self._timeout, bounded_sec)
+
+    @staticmethod
+    def _exact_case_insensitive_regex(value: str) -> str:
+        """
+        Build an anchored, escaped case-insensitive AQL regex expression.
+        :param value: {str} Exact identifier string to match
+        :return: {str} Escaped AQL regex expression
+        """
+        return f'regex({json.dumps(f"^{re.escape(value)}$")}, "i")'
+
+    @staticmethod
+    def _deduplicate_non_empty(values: Optional[List[str]]) -> List[str]:
+        if not values:
+            return []
+        return list(dict.fromkeys(v for v in values if isinstance(v, str) and v))
 
     def _get_full_url(self, url_key: str, **kwargs) -> str:
         """
@@ -106,7 +157,7 @@ class AxoniusManager:
         """
         request_url = self._get_full_url("ping")
         self._session.headers.update({"Content-Type": "application/vnd.api+json"})
-        response = self._session.get(request_url)
+        response = self._session.get(request_url, timeout=self._get_request_timeout())
         self.validate_response(
             response, f"Failed to test connectivity to {INTEGRATION_IDENTIFIER}"
         )
@@ -121,24 +172,14 @@ class AxoniusManager:
         :return: {str} Filter query for users endpoint
         """
         sub_queries: List[str] = []
-        if emails:
-            for email in emails:
-                user_query = (
-                    '("specific_data.data.username"' f' == regex("{email}", "i"))'
-                )
-                mail_query = '("specific_data.data.mail"' f' == regex("{email}", "i"))'
-                sub_queries.append(user_query)
-                sub_queries.append(mail_query)
-        if usernames:
-            for user in usernames:
-                display_name_query = (
-                    '("specific_data.data.display_name"' f' == regex("{user}", "i"))'
-                )
-                username_query = (
-                    '("specific_data.data.username"' f' == regex("{user}", "i"))'
-                )
-                sub_queries.append(display_name_query)
-                sub_queries.append(username_query)
+        for email in self._deduplicate_non_empty(emails):
+            regex_expr = self._exact_case_insensitive_regex(email)
+            sub_queries.append(f'("specific_data.data.username" == {regex_expr})')
+            sub_queries.append(f'("specific_data.data.mail" == {regex_expr})')
+        for user in self._deduplicate_non_empty(usernames):
+            regex_expr = self._exact_case_insensitive_regex(user)
+            sub_queries.append(f'("specific_data.data.display_name" == {regex_expr})')
+            sub_queries.append(f'("specific_data.data.username" == {regex_expr})')
 
         return f" {LOGICAL_OR} ".join(sub_queries)
 
@@ -156,27 +197,19 @@ class AxoniusManager:
         :return: {str} Filter query for devices endpoint
         """
         sub_queries: List[str] = []
-        if ip_addresses:
-            for ip in ip_addresses:
-                ip_query = '("specific_data.data.network_interfaces.ips"' f' == "{ip}")'
-                sub_queries.append(ip_query)
-        if hostnames:
-            for hostname in hostnames:
-                name_query = (
-                    '("specific_data.data.name"' f' == regex("{hostname}", "i"))'
-                )
-                hostname_query = (
-                    '("specific_data.data.hostname"' f' == regex("{hostname}", "i"))'
-                )
-                sub_queries.append(name_query)
-                sub_queries.append(hostname_query)
-        if mac_addresses:
-            for mac in mac_addresses:
-                mac_query = (
-                    '("specific_data.data.network_interfaces.mac"'
-                    f' == regex("{mac}", "i"))'
-                )
-                sub_queries.append(mac_query)
+        for ip in self._deduplicate_non_empty(ip_addresses):
+            sub_queries.append(
+                f'("specific_data.data.network_interfaces.ips" == {json.dumps(ip)})'
+            )
+        for hostname in self._deduplicate_non_empty(hostnames):
+            regex_expr = self._exact_case_insensitive_regex(hostname)
+            sub_queries.append(f'("specific_data.data.name" == {regex_expr})')
+            sub_queries.append(f'("specific_data.data.hostname" == {regex_expr})')
+        for mac in self._deduplicate_non_empty(mac_addresses):
+            regex_expr = self._exact_case_insensitive_regex(mac)
+            sub_queries.append(
+                f'("specific_data.data.network_interfaces.mac" == {regex_expr})'
+            )
         return f" {LOGICAL_OR} ".join(sub_queries)
 
     def get_user_axonius_id(
@@ -216,7 +249,9 @@ class AxoniusManager:
         return [user.internal_axon_id for user in found_users]
 
     def get_users(
-        self, emails: Optional[str] = None, usernames: Optional[str] = None
+        self,
+        emails: Optional[List[str]] = None,
+        usernames: Optional[List[str]] = None,
     ) -> List[UserGeneralAttribute]:
         """
         Get users general information
@@ -228,40 +263,72 @@ class AxoniusManager:
             raise AxoniusManagerMandatoryParametersError(
                 f"Failed to get general information for users. Emails or Usernames parameters must be provided"
             )
-        request_url = self._get_full_url("get_users")
-        payload = {
-            "data": {
-                "type": "entity_request_schema",
-                "attributes": {
-                    "get_metadata": True,
-                    "include_details": False,
-                    "fields": {
-                        "devices": [
-                            "specific_data.data.mail",
-                            "specific_data.data.display_name",
-                            "specific_data.data.username",
-                        ]
-                    },
-                    "excluded_adapters": {},
-                    "use_cursor": True,
-                    "filter": self._build_users_filter_query(emails, usernames),
-                    "use_cache_entry": False,
-                    "page": {"limit": 2000, "offset": 0},
-                    "field_filters": {},
-                    "include_notes": False,
-                    "always_cached_query": False,
-                },
-            }
-        }
-        response = self._session.post(request_url, json=payload)
-        err_msg = "Failed to get users with provided email addresses or usernames of: "
-        if emails:
-            err_msg += " ".join(emails)
-        if usernames:
-            err_msg += " ".join(usernames)
+        email_list = self._deduplicate_non_empty(emails)
+        username_list = self._deduplicate_non_empty(usernames)
+        tagged_items = [("email", e) for e in email_list] + [
+            ("username", u) for u in username_list
+        ]
+        if not tagged_items:
+            return []
 
-        self.validate_response(response, err_msg)
-        return self.parser.build_user_general_attribute_obj_list(response.json())
+        request_url = self._get_full_url("get_users")
+        results_by_id: dict[str, UserGeneralAttribute] = {}
+        results_without_id: List[UserGeneralAttribute] = []
+
+        for idx in range(0, len(tagged_items), DEFAULT_QUERY_BATCH_SIZE):
+            batch = tagged_items[idx : idx + DEFAULT_QUERY_BATCH_SIZE]
+            batch_emails = [val for kind, val in batch if kind == "email"]
+            batch_usernames = [val for kind, val in batch if kind == "username"]
+            page_limit = min(
+                MAX_PAGE_LIMIT, max(MIN_PAGE_LIMIT, len(batch) * PAGE_LIMIT_MULTIPLIER)
+            )
+            payload = {
+                "data": {
+                    "type": "entity_request_schema",
+                    "attributes": {
+                        "get_metadata": False,
+                        "include_details": False,
+                        "fields": {
+                            "users": [
+                                "specific_data.data.mail",
+                                "specific_data.data.display_name",
+                                "specific_data.data.username",
+                            ]
+                        },
+                        "excluded_adapters": {},
+                        "use_cursor": False,
+                        "filter": self._build_users_filter_query(
+                            batch_emails, batch_usernames
+                        ),
+                        "use_cache_entry": True,
+                        "page": {"limit": page_limit, "offset": 0},
+                        "field_filters": {},
+                        "include_notes": False,
+                        "always_cached_query": False,
+                    },
+                }
+            }
+            response = self._session.post(
+                request_url, json=payload, timeout=self._get_request_timeout()
+            )
+            err_msg = (
+                "Failed to get users with provided email addresses or usernames of: "
+            )
+            if batch_emails:
+                err_msg += " ".join(batch_emails)
+            if batch_usernames:
+                err_msg += " ".join(batch_usernames)
+
+            self.validate_response(response, err_msg)
+            for user in self.parser.build_user_general_attribute_obj_list(
+                response.json()
+            ):
+                if user.internal_axon_id:
+                    results_by_id.setdefault(user.internal_axon_id, user)
+                else:
+                    results_without_id.append(user)
+
+        return list(results_by_id.values()) + results_without_id
 
     def get_user_details(self, internal_axonius_id: str) -> UserDetailedInformation:
         """
@@ -272,7 +339,7 @@ class AxoniusManager:
         request_url = self._get_full_url(
             "get-user-details", internal_axonius_id=internal_axonius_id
         )
-        response = self._session.get(request_url)
+        response = self._session.get(request_url, timeout=self._get_request_timeout())
         self.validate_response(
             response,
             f"Failed to get details of user with internal axonius id of {internal_axonius_id}",
@@ -319,49 +386,81 @@ class AxoniusManager:
             raise AxoniusManagerMandatoryParametersError(
                 f"Failed to get general information for devices. IP Addresses, Hostnames or MAC addresses parameters must be provided"
             )
-        request_url = self._get_full_url("get-devices")
-        payload = {
-            "data": {
-                "type": "entity_request_schema",
-                "attributes": {
-                    "get_metadata": True,
-                    "include_details": False,
-                    "fields": {
-                        "devices": [
-                            "adapters",
-                            "specific_data.data.name",
-                            "specific_data.data.hostname",
-                            "specific_data.data.last_seen",
-                            "specific_data.data.network_interfaces.ips",
-                            "specific_data.data.network_interfaces.mac",
-                            "specific_data.data.os.type",
-                            "labels",
-                        ]
-                    },
-                    "excluded_adapters": {},
-                    "use_cursor": True,
-                    "filter": self._build_devices_filter_query(
-                        ip_addresses, mac_addresses, hostnames
-                    ),
-                    "use_cache_entry": False,
-                    "page": {"limit": 2000, "offset": 0},
-                    "field_filters": {},
-                    "include_notes": False,
-                    "always_cached_query": False,
-                },
-            }
-        }
-        response = self._session.post(request_url, json=payload)
-        err_msg = "Failed to get devices with provided ip addresses, hostnames or mac addresses of: "
-        if ip_addresses:
-            err_msg += " ".join(ip_addresses)
-        if hostnames:
-            err_msg += " ".join(hostnames)
-        if mac_addresses:
-            err_msg += " ".join(mac_addresses)
+        ip_list = self._deduplicate_non_empty(ip_addresses)
+        mac_list = self._deduplicate_non_empty(mac_addresses)
+        hostname_list = self._deduplicate_non_empty(hostnames)
+        tagged_items = (
+            [("ip", ip) for ip in ip_list]
+            + [("mac", mac) for mac in mac_list]
+            + [("hostname", h) for h in hostname_list]
+        )
+        if not tagged_items:
+            return []
 
-        self.validate_response(response, err_msg)
-        return self.parser.build_device_general_attribute_obj_list(response.json())
+        request_url = self._get_full_url("get-devices")
+        results_by_id: dict[str, DeviceGeneralAttribute] = {}
+        results_without_id: List[DeviceGeneralAttribute] = []
+
+        for idx in range(0, len(tagged_items), DEFAULT_QUERY_BATCH_SIZE):
+            batch = tagged_items[idx : idx + DEFAULT_QUERY_BATCH_SIZE]
+            batch_ips = [val for kind, val in batch if kind == "ip"]
+            batch_macs = [val for kind, val in batch if kind == "mac"]
+            batch_hostnames = [val for kind, val in batch if kind == "hostname"]
+            page_limit = min(
+                MAX_PAGE_LIMIT, max(MIN_PAGE_LIMIT, len(batch) * PAGE_LIMIT_MULTIPLIER)
+            )
+            payload = {
+                "data": {
+                    "type": "entity_request_schema",
+                    "attributes": {
+                        "get_metadata": False,
+                        "include_details": False,
+                        "fields": {
+                            "devices": [
+                                "adapters",
+                                "specific_data.data.name",
+                                "specific_data.data.hostname",
+                                "specific_data.data.last_seen",
+                                "specific_data.data.network_interfaces.ips",
+                                "specific_data.data.network_interfaces.mac",
+                                "specific_data.data.os.type",
+                                "labels",
+                            ]
+                        },
+                        "excluded_adapters": {},
+                        "use_cursor": False,
+                        "filter": self._build_devices_filter_query(
+                            batch_ips, batch_macs, batch_hostnames
+                        ),
+                        "use_cache_entry": True,
+                        "page": {"limit": page_limit, "offset": 0},
+                        "field_filters": {},
+                        "include_notes": False,
+                        "always_cached_query": False,
+                    },
+                }
+            }
+            response = self._session.post(
+                request_url, json=payload, timeout=self._get_request_timeout()
+            )
+            err_msg = "Failed to get devices with provided ip addresses, hostnames or mac addresses of: "
+            if batch_ips:
+                err_msg += " ".join(batch_ips)
+            if batch_hostnames:
+                err_msg += " ".join(batch_hostnames)
+            if batch_macs:
+                err_msg += " ".join(batch_macs)
+
+            self.validate_response(response, err_msg)
+            for device in self.parser.build_device_general_attribute_obj_list(
+                response.json()
+            ):
+                if device.internal_axon_id:
+                    results_by_id.setdefault(device.internal_axon_id, device)
+                else:
+                    results_without_id.append(device)
+
+        return list(results_by_id.values()) + results_without_id
 
     def get_device_details(self, internal_axonius_id: str) -> DeviceDetailedInformation:
         """
@@ -372,7 +471,7 @@ class AxoniusManager:
         request_url = self._get_full_url(
             "get-device-details", internal_axonius_id=internal_axonius_id
         )
-        response = self._session.get(request_url)
+        response = self._session.get(request_url, timeout=self._get_request_timeout())
         self.validate_response(
             response,
             f"Failed to get details of device with internal axonius id of {internal_axonius_id}",
@@ -398,7 +497,9 @@ class AxoniusManager:
                 },
             }
         }
-        response = self._session.put(request_url, json=payload)
+        response = self._session.put(
+            request_url, json=payload, timeout=self._get_request_timeout()
+        )
         self.validate_response(
             response,
             f"Failed to add tags to provided axonius ids {', '.join(internal_axonius_ids)}",
@@ -421,7 +522,9 @@ class AxoniusManager:
                 },
             }
         }
-        response = self._session.delete(request_url, json=payload)
+        response = self._session.delete(
+            request_url, json=payload, timeout=self._get_request_timeout()
+        )
         self.validate_response(
             response,
             f"Failed to remove tags from the provided axonius ids {', '.join(internal_axonius_ids)}",
@@ -444,7 +547,9 @@ class AxoniusManager:
                 },
             }
         }
-        response = self._session.put(request_url, json=payload)
+        response = self._session.put(
+            request_url, json=payload, timeout=self._get_request_timeout()
+        )
         self.validate_response(
             response,
             f"Failed to add tags to provided axonius ids {', '.join(internal_axonius_ids)}",
@@ -469,7 +574,9 @@ class AxoniusManager:
                 },
             }
         }
-        response = self._session.delete(request_url, json=payload)
+        response = self._session.delete(
+            request_url, json=payload, timeout=self._get_request_timeout()
+        )
         self.validate_response(
             response,
             f"Failed to remove tags from provided the axonius ids {', '.join(internal_axonius_ids)}",
@@ -486,7 +593,9 @@ class AxoniusManager:
             "add-note-to-user", internal_axonius_id=internal_axonius_id
         )
         payload = {"data": {"type": "notes_schema", "attributes": {"note": note}}}
-        response = self._session.post(request_url, json=payload)
+        response = self._session.post(
+            request_url, json=payload, timeout=self._get_request_timeout()
+        )
         self.validate_response(
             response,
             f"Failed to add note to user with axonius id {internal_axonius_id}",
@@ -504,7 +613,9 @@ class AxoniusManager:
             "add-note-to-device", internal_axonius_id=internal_axonius_id
         )
         payload = {"data": {"type": "notes_schema", "attributes": {"note": note}}}
-        response = self._session.post(request_url, json=payload)
+        response = self._session.post(
+            request_url, json=payload, timeout=self._get_request_timeout()
+        )
         self.validate_response(
             response,
             f"Failed to add note to device with axonius id {internal_axonius_id}",

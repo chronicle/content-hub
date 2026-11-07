@@ -18,7 +18,7 @@ from typing import List
 import requests
 from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
 
-from ..core.AxoniusManager import AxoniusManager
+from ..core.AxoniusManager import AxoniusManager, DEADLINE_SAFETY_BUFFER_MS
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_FAILED,
@@ -53,6 +53,15 @@ SUPPORTED_ENTITIES = [
     EntityTypes.MACADDRESS,
     EntityTypes.USER,
 ]
+
+
+def _is_deadline_reached(siemplify: SiemplifyAction) -> bool:
+    deadline_ms = siemplify.execution_deadline_unix_time_ms
+    return bool(
+        deadline_ms
+        and deadline_ms > 0
+        and unix_now() + DEADLINE_SAFETY_BUFFER_MS >= deadline_ms
+    )
 
 
 @output_handler
@@ -130,6 +139,8 @@ def main():
     }
 
     already_processed_axon_ids = []
+    fetched_user_details = {}
+    fetched_device_details = {}
     successful_entities = []
     failed_entities = []
 
@@ -144,6 +155,7 @@ def main():
             secret_key=secret_key,
             verify_ssl=verify_ssl,
             siemplify_logger=siemplify.LOGGER,
+            execution_deadline_ms=siemplify.execution_deadline_unix_time_ms,
         )
         max_notes_to_return = extract_action_param(
             siemplify,
@@ -185,327 +197,373 @@ def main():
         if any(users.values()):
             user_entities_identifiers = list(users["usernames"].keys())
             email_entities_identifiers = list(users["emails"].keys())
-            try:
-                # search for axonius users
-                found_users = manager.get_users(
-                    emails=email_entities_identifiers,
-                    usernames=user_entities_identifiers,
+            if _is_deadline_reached(siemplify):
+                siemplify.LOGGER.error(
+                    f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
                 )
-                siemplify.LOGGER.info(
-                    f"Found {len(found_users)} users in {INTEGRATION_IDENTIFIER}"
-                )
-
-                # find missing users, match axonius ids in the response to entity identifiers
-                for user in found_users:
-                    # axonius user's display name correlates to siemplify user entity
-                    found_display_name = get_username_entity_data(
-                        get_users_object=user,
-                        attribute="display_names",
-                        user_entity_dict=users,
-                        key="usernames",
+                status = EXECUTION_STATE_TIMEDOUT
+            else:
+                try:
+                    # search for axonius users
+                    found_users = manager.get_users(
+                        emails=email_entities_identifiers,
+                        usernames=user_entities_identifiers,
                     )
-                    if found_display_name:
-                        found_entities_to_process[found_display_name] = {
-                            "axon_id": user.internal_axon_id,
-                            "siemplify_entity": users["usernames"].pop(
-                                found_display_name, None
-                            ),
-                        }
-
-                    found_email = get_username_entity_data(
-                        get_users_object=user,
-                        attribute="emails",
-                        user_entity_dict=users,
-                        key="emails",
+                    siemplify.LOGGER.info(
+                        f"Found {len(found_users)} users in {INTEGRATION_IDENTIFIER}"
                     )
-                    # axonius user's email or username correlates to siemplify email entity
-                    if found_email:
-                        found_entities_to_process[found_email] = {
-                            "axon_id": user.internal_axon_id,
-                            "siemplify_entity": users["emails"].pop(found_email, None),
-                        }
 
-                    found_email_username = get_username_entity_data(
-                        get_users_object=user,
-                        attribute="usernames",
-                        user_entity_dict=users,
-                        key="emails",
+                    # find missing users, match axonius ids in the response to entity identifiers
+                    for user in found_users:
+                        # axonius user's display name correlates to siemplify user entity
+                        found_display_name = get_username_entity_data(
+                            get_users_object=user,
+                            attribute="display_names",
+                            user_entity_dict=users,
+                            key="usernames",
+                        )
+                        if found_display_name:
+                            found_entities_to_process[found_display_name] = {
+                                "axon_id": user.internal_axon_id,
+                                "siemplify_entity": users["usernames"].pop(
+                                    found_display_name, None
+                                ),
+                            }
+
+                        found_email = get_username_entity_data(
+                            get_users_object=user,
+                            attribute="emails",
+                            user_entity_dict=users,
+                            key="emails",
+                        )
+                        # axonius user's email or username correlates to siemplify email entity
+                        if found_email:
+                            found_entities_to_process[found_email] = {
+                                "axon_id": user.internal_axon_id,
+                                "siemplify_entity": users["emails"].pop(
+                                    found_email, None
+                                ),
+                            }
+
+                        found_email_username = get_username_entity_data(
+                            get_users_object=user,
+                            attribute="usernames",
+                            user_entity_dict=users,
+                            key="emails",
+                        )
+                        if found_email_username:
+                            found_entities_to_process[found_email_username] = {
+                                "axon_id": user.internal_axon_id,
+                                "siemplify_entity": users["emails"].pop(
+                                    found_email_username, None
+                                ),
+                            }
+
+                        found_username = get_username_entity_data(
+                            get_users_object=user,
+                            attribute="usernames",
+                            user_entity_dict=users,
+                            key="usernames",
+                        )
+                        if found_username:
+                            found_entities_to_process[found_username] = {
+                                "axon_id": user.internal_axon_id,
+                                "siemplify_entity": users["usernames"].pop(
+                                    found_username, None
+                                ),
+                            }
+                    # mark missing entities as failed
+                    failed_entities.extend(
+                        list(users["usernames"].keys()) + list(users["emails"].keys())
                     )
-                    if found_email_username:
-                        found_entities_to_process[found_email_username] = {
-                            "axon_id": user.internal_axon_id,
-                            "siemplify_entity": users["emails"].pop(
-                                found_email_username, None
-                            ),
-                        }
 
-                    found_username = get_username_entity_data(
-                        get_users_object=user,
-                        attribute="usernames",
-                        user_entity_dict=users,
-                        key="usernames",
-                    )
-                    if found_username:
-                        found_entities_to_process[found_username] = {
-                            "axon_id": user.internal_axon_id,
-                            "siemplify_entity": users["usernames"].pop(
-                                found_username, None
-                            ),
-                        }
-                # mark missing entities as failed
-                failed_entities.extend(
-                    list(users["usernames"].keys()) + list(users["emails"].keys())
-                )
-
-                for (
-                    entity_identifier,
-                    entity_with_axon_id_payload,
-                ) in found_entities_to_process.items():
-                    if unix_now() >= siemplify.execution_deadline_unix_time_ms:
-                        siemplify.LOGGER.error(
-                            f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
-                        )
-                        status = EXECUTION_STATE_TIMEDOUT
-                        break
-                    axon_id = entity_with_axon_id_payload.get("axon_id")
-                    entity = entity_with_axon_id_payload.get("siemplify_entity")
-                    if (not axon_id) or (not entity):
-                        siemplify.LOGGER.info(
-                            f"Axonius ID or siemplify entity were not found"
-                        )
-                        continue
-                    try:
-                        siemplify.LOGGER.info(
-                            f"Fetching details of entity {entity.identifier} with axon id {axon_id}"
-                        )
-                        user_details = manager.get_user_details(
-                            internal_axonius_id=axon_id
-                        )
-                        if user_details:
-                            json_results[entity.identifier] = user_details.as_json(
-                                max_notes_to_return=max_notes_to_return
+                    for (
+                        entity_identifier,
+                        entity_with_axon_id_payload,
+                    ) in found_entities_to_process.items():
+                        if _is_deadline_reached(siemplify):
+                            siemplify.LOGGER.error(
+                                f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
                             )
-                            siemplify.result.add_entity_link(
-                                f"{entity.identifier}",
-                                user_details.case_wall_report_link,
+                            status = EXECUTION_STATE_TIMEDOUT
+                            break
+                        axon_id = entity_with_axon_id_payload.get("axon_id")
+                        entity = entity_with_axon_id_payload.get("siemplify_entity")
+                        if (not axon_id) or (not entity):
+                            siemplify.LOGGER.info(
+                                f"Axonius ID or siemplify entity were not found"
                             )
-                            entity.additional_properties.update(
-                                user_details.as_enrichment()
-                            )
-                            entity.is_enriched = True
-                            # If same user is processed by different provided entities, insights and csv tables will not be duplicated
-                            # with the same data
-                            if axon_id not in already_processed_axon_ids:
-                                already_processed_axon_ids.append(axon_id)
-                                siemplify.result.add_entity_table(
-                                    f"{entity.identifier}",
-                                    construct_csv(
-                                        user_details.as_enrichment_csv_table()
-                                    ),
+                            continue
+                        try:
+                            if axon_id in fetched_user_details:
+                                user_details = fetched_user_details[axon_id]
+                            else:
+                                siemplify.LOGGER.info(
+                                    f"Fetching details of entity {entity.identifier} with axon id {axon_id}"
                                 )
-                                if max_notes_to_return:
-                                    siemplify.result.add_data_table(
-                                        f"{entity.identifier}: Notes",
+                                user_details = manager.get_user_details(
+                                    internal_axonius_id=axon_id
+                                )
+                                fetched_user_details[axon_id] = user_details
+                            if user_details:
+                                json_results[entity.identifier] = user_details.as_json(
+                                    max_notes_to_return=max_notes_to_return
+                                )
+                                siemplify.result.add_entity_link(
+                                    f"{entity.identifier}",
+                                    user_details.case_wall_report_link,
+                                )
+                                entity.additional_properties.update(
+                                    user_details.as_enrichment()
+                                )
+                                entity.is_enriched = True
+                                # If same user is processed by different provided entities, insights and csv tables will not be duplicated
+                                # with the same data
+                                if axon_id not in already_processed_axon_ids:
+                                    already_processed_axon_ids.append(axon_id)
+                                    siemplify.result.add_entity_table(
+                                        f"{entity.identifier}",
                                         construct_csv(
-                                            user_details.get_notes_as_csv()[
-                                                -max_notes_to_return:
-                                            ]
+                                            user_details.as_enrichment_csv_table()
                                         ),
                                     )
-                                if create_user_insight:
-                                    users_insights.append(
-                                        user_details.as_insight(entity.identifier)
-                                    )
+                                    if max_notes_to_return:
+                                        siemplify.result.add_data_table(
+                                            f"{entity.identifier}: Notes",
+                                            construct_csv(
+                                                user_details.get_notes_as_csv()[
+                                                    -max_notes_to_return:
+                                                ]
+                                            ),
+                                        )
+                                    if create_user_insight:
+                                        users_insights.append(
+                                            user_details.as_insight(entity.identifier)
+                                        )
+                                else:
+                                    already_processed_axon_ids.append(axon_id)
+                                successful_entities.append(entity)
                             else:
-                                already_processed_axon_ids.append(axon_id)
-                            successful_entities.append(entity)
-                        else:
+                                failed_entities.append(entity.identifier)
+                                siemplify.LOGGER.error(f"Failed to find user details")
+
+                        except Exception as error:
                             failed_entities.append(entity.identifier)
-                            siemplify.LOGGER.error(f"Failed to find user details")
+                            siemplify.LOGGER.error(
+                                f"Failed to enrich entity {entity.identifier}"
+                            )
+                            siemplify.LOGGER.exception(error)
+                            if _is_deadline_reached(siemplify):
+                                siemplify.LOGGER.error(
+                                    f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
+                                )
+                                status = EXECUTION_STATE_TIMEDOUT
+                                break
 
-                    except Exception as error:
-                        failed_entities.append(entity.identifier)
-                        siemplify.LOGGER.error(
-                            f"Failed to enrich entity {entity.identifier}"
-                        )
-                        siemplify.LOGGER.exception(error)
-
-            except (
-                requests.exceptions.ConnectionError,
-                AxoniusAuthorizationError,
-                AxoniusForbiddenError,
-            ):
-                raise
-            except Exception as error:
-                failed_entities.extend(
-                    user_entities_identifiers + email_entities_identifiers
-                )
-                siemplify.LOGGER.error(f"Failed to find users for provided entities")
-                siemplify.LOGGER.exception(error)
+                except (
+                    requests.exceptions.ConnectionError,
+                    AxoniusAuthorizationError,
+                    AxoniusForbiddenError,
+                ):
+                    raise
+                except Exception as error:
+                    failed_entities.extend(
+                        user_entities_identifiers + email_entities_identifiers
+                    )
+                    siemplify.LOGGER.error(
+                        f"Failed to find users for provided entities"
+                    )
+                    siemplify.LOGGER.exception(error)
+                    if _is_deadline_reached(siemplify):
+                        status = EXECUTION_STATE_TIMEDOUT
         else:
             siemplify.LOGGER.info("No users will be enriched")
 
         # process devices
-        if any(devices.values()):
+        if status != EXECUTION_STATE_TIMEDOUT and any(devices.values()):
             found_entities_to_process = {}
             ips_entities_identifiers = list(devices["ip_addresses"].keys())
             mac_entities_identifiers = list(devices["mac_addresses"].keys())
             hostname_entities_identifiers = list(devices["hostnames"].keys())
-            try:
-                # search for axonius devices
-                found_devices = manager.get_devices(
-                    ip_addresses=ips_entities_identifiers,
-                    mac_addresses=mac_entities_identifiers,
-                    hostnames=hostname_entities_identifiers,
+            if _is_deadline_reached(siemplify):
+                siemplify.LOGGER.error(
+                    f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
                 )
-                siemplify.LOGGER.info(
-                    f"Found {len(found_devices)} devices in {INTEGRATION_IDENTIFIER}"
-                )
+                status = EXECUTION_STATE_TIMEDOUT
+            else:
+                try:
+                    # search for axonius devices
+                    found_devices = manager.get_devices(
+                        ip_addresses=ips_entities_identifiers,
+                        mac_addresses=mac_entities_identifiers,
+                        hostnames=hostname_entities_identifiers,
+                    )
+                    siemplify.LOGGER.info(
+                        f"Found {len(found_devices)} devices in {INTEGRATION_IDENTIFIER}"
+                    )
 
-                # find missing devices, match axonius ids in the response to entity identifiers
-                for device in found_devices:
-                    for ip in device.ips:
-                        if ip in devices["ip_addresses"]:
-                            found_entities_to_process[ip] = {
-                                "axon_id": device.internal_axon_id,
-                                "siemplify_entity": devices["ip_addresses"].pop(
-                                    ip, None
-                                ),
-                            }
-
-                    for mac in device.macs:
-                        if (
-                            isinstance(mac, str)
-                            and mac.casefold() in devices["mac_addresses"]
-                        ):
-                            found_entities_to_process[mac] = {
-                                "axon_id": device.internal_axon_id,
-                                "siemplify_entity": devices["mac_addresses"].pop(
-                                    mac.casefold(), None
-                                ),
-                            }
-
-                    # axonius device's hostname and name correlates with siemplify hostname entity
-                    if (
-                        isinstance(device.hostname, str)
-                        and device.hostname.casefold() in devices["hostnames"]
-                    ):
-                        found_entities_to_process[device.hostname] = {
-                            "axon_id": device.internal_axon_id,
-                            "siemplify_entity": devices["hostnames"].pop(
-                                device.hostname.casefold(), None
-                            ),
-                        }
-
-                    if (
-                        isinstance(device.name, str)
-                        and device.name.casefold() in devices["hostnames"]
-                    ):
-                        found_entities_to_process[device.name] = {
-                            "axon_id": device.internal_axon_id,
-                            "siemplify_entity": devices["hostnames"].pop(
-                                device.name.casefold(), None
-                            ),
-                        }
-
-                # mark missing entities as failed
-                failed_entities.extend(
-                    list(devices["ip_addresses"].keys())
-                    + list(devices["mac_addresses"].keys())
-                    + list(devices["hostnames"].keys())
-                )
-
-                # process each entity separately
-                for (
-                    entity_identifier,
-                    entity_with_axon_id_payload,
-                ) in found_entities_to_process.items():
-                    if unix_now() >= siemplify.execution_deadline_unix_time_ms:
-                        siemplify.LOGGER.error(
-                            f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
-                        )
-                        status = EXECUTION_STATE_TIMEDOUT
-                        break
-                    axon_id = entity_with_axon_id_payload.get("axon_id")
-                    entity = entity_with_axon_id_payload.get("siemplify_entity")
-                    if (not axon_id) or (not entity):
-                        siemplify.LOGGER.info(
-                            f"Axonius ID or siemplify entity were not found"
-                        )
-                        continue
-                    try:
-                        siemplify.LOGGER.info(
-                            f"Fetching details of entity {entity_identifier} with axon id {axon_id}"
-                        )
-                        device_details = manager.get_device_details(
-                            internal_axonius_id=axon_id
-                        )
-                        if device_details:
-                            json_results[entity_identifier] = device_details.as_json(
-                                max_notes_to_return=max_notes_to_return
-                            )
-                            siemplify.result.add_entity_link(
-                                f"{entity.identifier}",
-                                device_details.case_wall_report_link,
-                            )
-                            entity.additional_properties.update(
-                                device_details.as_enrichment()
-                            )
-                            entity.is_enriched = True
-                            # If same user is processed by different provided entities, insights and csv tables will not be duplicated
-                            # with the same data
-                            if axon_id not in already_processed_axon_ids:
-                                already_processed_axon_ids.append(axon_id)
-                                siemplify.result.add_entity_table(
-                                    f"{entity.identifier}",
-                                    construct_csv(
-                                        device_details.as_enrichment_csv_table()
+                    # find missing devices, match axonius ids in the response to entity identifiers
+                    for device in found_devices:
+                        for ip in device.ips:
+                            if ip in devices["ip_addresses"]:
+                                found_entities_to_process[ip] = {
+                                    "axon_id": device.internal_axon_id,
+                                    "siemplify_entity": devices["ip_addresses"].pop(
+                                        ip, None
                                     ),
+                                }
+
+                        for mac in device.macs:
+                            if (
+                                isinstance(mac, str)
+                                and mac.casefold() in devices["mac_addresses"]
+                            ):
+                                found_entities_to_process[mac] = {
+                                    "axon_id": device.internal_axon_id,
+                                    "siemplify_entity": devices["mac_addresses"].pop(
+                                        mac.casefold(), None
+                                    ),
+                                }
+
+                        # axonius device's hostname and name correlates with siemplify hostname entity
+                        if (
+                            isinstance(device.hostname, str)
+                            and device.hostname.casefold() in devices["hostnames"]
+                        ):
+                            found_entities_to_process[device.hostname] = {
+                                "axon_id": device.internal_axon_id,
+                                "siemplify_entity": devices["hostnames"].pop(
+                                    device.hostname.casefold(), None
+                                ),
+                            }
+
+                        if (
+                            isinstance(device.name, str)
+                            and device.name.casefold() in devices["hostnames"]
+                        ):
+                            found_entities_to_process[device.name] = {
+                                "axon_id": device.internal_axon_id,
+                                "siemplify_entity": devices["hostnames"].pop(
+                                    device.name.casefold(), None
+                                ),
+                            }
+
+                    # mark missing entities as failed
+                    failed_entities.extend(
+                        list(devices["ip_addresses"].keys())
+                        + list(devices["mac_addresses"].keys())
+                        + list(devices["hostnames"].keys())
+                    )
+
+                    # process each entity separately
+                    for (
+                        entity_identifier,
+                        entity_with_axon_id_payload,
+                    ) in found_entities_to_process.items():
+                        if _is_deadline_reached(siemplify):
+                            siemplify.LOGGER.error(
+                                f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
+                            )
+                            status = EXECUTION_STATE_TIMEDOUT
+                            break
+                        axon_id = entity_with_axon_id_payload.get("axon_id")
+                        entity = entity_with_axon_id_payload.get("siemplify_entity")
+                        if (not axon_id) or (not entity):
+                            siemplify.LOGGER.info(
+                                f"Axonius ID or siemplify entity were not found"
+                            )
+                            continue
+                        try:
+                            if axon_id in fetched_device_details:
+                                device_details = fetched_device_details[axon_id]
+                            else:
+                                siemplify.LOGGER.info(
+                                    f"Fetching details of entity {entity_identifier} with axon id {axon_id}"
                                 )
-                                if max_notes_to_return:
-                                    siemplify.result.add_data_table(
-                                        f"{entity.identifier}: Notes",
+                                device_details = manager.get_device_details(
+                                    internal_axonius_id=axon_id
+                                )
+                                fetched_device_details[axon_id] = device_details
+                            if device_details:
+                                json_results[entity_identifier] = (
+                                    device_details.as_json(
+                                        max_notes_to_return=max_notes_to_return
+                                    )
+                                )
+                                siemplify.result.add_entity_link(
+                                    f"{entity.identifier}",
+                                    device_details.case_wall_report_link,
+                                )
+                                entity.additional_properties.update(
+                                    device_details.as_enrichment()
+                                )
+                                entity.is_enriched = True
+                                # If same user is processed by different provided entities, insights and csv tables will not be duplicated
+                                # with the same data
+                                if axon_id not in already_processed_axon_ids:
+                                    already_processed_axon_ids.append(axon_id)
+                                    siemplify.result.add_entity_table(
+                                        f"{entity.identifier}",
                                         construct_csv(
-                                            device_details.get_notes_as_csv()[
-                                                -max_notes_to_return:
-                                            ]
+                                            device_details.as_enrichment_csv_table()
                                         ),
                                     )
-                                if create_user_insight:
-                                    endpoints_insights.append(
-                                        str(
-                                            device_details.as_insight(entity.identifier)
+                                    if max_notes_to_return:
+                                        siemplify.result.add_data_table(
+                                            f"{entity.identifier}: Notes",
+                                            construct_csv(
+                                                device_details.get_notes_as_csv()[
+                                                    -max_notes_to_return:
+                                                ]
+                                            ),
                                         )
-                                    )
+                                    if create_user_insight:
+                                        endpoints_insights.append(
+                                            str(
+                                                device_details.as_insight(
+                                                    entity.identifier
+                                                )
+                                            )
+                                        )
+                                else:
+                                    already_processed_axon_ids.append(axon_id)
+                                successful_entities.append(entity)
                             else:
-                                already_processed_axon_ids.append(axon_id)
-                            successful_entities.append(entity)
-                        else:
+                                failed_entities.append(entity.identifier)
+                                siemplify.LOGGER.error(f"Failed to find device details")
+
+                        except Exception as error:
                             failed_entities.append(entity.identifier)
-                            siemplify.LOGGER.error(f"Failed to find device details")
+                            siemplify.LOGGER.error(
+                                f"Failed to enrich entity {entity.identifier}"
+                            )
+                            siemplify.LOGGER.exception(error)
+                            if _is_deadline_reached(siemplify):
+                                siemplify.LOGGER.error(
+                                    f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
+                                )
+                                status = EXECUTION_STATE_TIMEDOUT
+                                break
 
-                    except Exception as error:
-                        failed_entities.append(entity.identifier)
-                        siemplify.LOGGER.error(
-                            f"Failed to enrich entity {entity.identifier}"
-                        )
-                        siemplify.LOGGER.exception(error)
-
-            except (
-                requests.exceptions.ConnectionError,
-                AxoniusAuthorizationError,
-                AxoniusForbiddenError,
-            ):
-                raise
-            except Exception as error:
-                failed_entities.extend(
-                    ips_entities_identifiers
-                    + mac_entities_identifiers
-                    + hostname_entities_identifiers
-                )
-                siemplify.LOGGER.error(f"Failed to find devices for provided entities")
-                siemplify.LOGGER.exception(error)
-        else:
+                except (
+                    requests.exceptions.ConnectionError,
+                    AxoniusAuthorizationError,
+                    AxoniusForbiddenError,
+                ):
+                    raise
+                except Exception as error:
+                    failed_entities.extend(
+                        ips_entities_identifiers
+                        + mac_entities_identifiers
+                        + hostname_entities_identifiers
+                    )
+                    siemplify.LOGGER.error(
+                        f"Failed to find devices for provided entities"
+                    )
+                    siemplify.LOGGER.exception(error)
+                    if _is_deadline_reached(siemplify):
+                        status = EXECUTION_STATE_TIMEDOUT
+        elif status != EXECUTION_STATE_TIMEDOUT:
             siemplify.LOGGER.info("No devices will be enriched")
 
         if successful_entities:
