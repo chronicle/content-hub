@@ -19,3 +19,7 @@ class SnowflakeException(Exception):
     """
 
     pass
+
+
+class InvalidQueryParameterError(SnowflakeException):
+    """Raised when an action parameter can't be used safely in a SQL query."""
