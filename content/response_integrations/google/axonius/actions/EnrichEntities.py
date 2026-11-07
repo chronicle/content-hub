@@ -193,13 +193,20 @@ def main():
             elif entity.entity_type == EntityTypes.MACADDRESS:
                 devices["mac_addresses"][entity_identifier_casefold] = entity
 
+        siemplify.LOGGER.info(
+            f"Prepared target entities for enrichment - "
+            f"Usernames: {len(users['usernames'])}, Emails: {len(users['emails'])}, "
+            f"IPs: {len(devices['ip_addresses'])}, Hostnames: {len(devices['hostnames'])}, "
+            f"MACs: {len(devices['mac_addresses'])}"
+        )
+
         # process users
         if any(users.values()):
             user_entities_identifiers = list(users["usernames"].keys())
             email_entities_identifiers = list(users["emails"].keys())
             if _is_deadline_reached(siemplify):
                 siemplify.LOGGER.error(
-                    f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
+                    f"Timed out before searching users. Execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
                 )
                 status = EXECUTION_STATE_TIMEDOUT
             else:
@@ -273,9 +280,14 @@ def main():
                                 ),
                             }
                     # mark missing entities as failed
-                    failed_entities.extend(
-                        list(users["usernames"].keys()) + list(users["emails"].keys())
+                    unmatched_users = list(users["usernames"].keys()) + list(
+                        users["emails"].keys()
                     )
+                    siemplify.LOGGER.info(
+                        f"Matched {len(found_entities_to_process)} user entity(ies) to Axonius IDs; "
+                        f"{len(unmatched_users)} user entity(ies) were not found"
+                    )
+                    failed_entities.extend(unmatched_users)
 
                     for (
                         entity_identifier,
@@ -283,7 +295,7 @@ def main():
                     ) in found_entities_to_process.items():
                         if _is_deadline_reached(siemplify):
                             siemplify.LOGGER.error(
-                                f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
+                                f"Timed out while enriching user entities (enriched {len(successful_entities)} entity(ies) so far). Execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
                             )
                             status = EXECUTION_STATE_TIMEDOUT
                             break
@@ -296,6 +308,9 @@ def main():
                             continue
                         try:
                             if axon_id in fetched_user_details:
+                                siemplify.LOGGER.info(
+                                    f"Reusing cached user details for entity {entity.identifier} with axon id {axon_id}"
+                                )
                                 user_details = fetched_user_details[axon_id]
                             else:
                                 siemplify.LOGGER.info(
@@ -375,6 +390,9 @@ def main():
                     )
                     siemplify.LOGGER.exception(error)
                     if _is_deadline_reached(siemplify):
+                        siemplify.LOGGER.error(
+                            f"Timed out during user search. Execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
+                        )
                         status = EXECUTION_STATE_TIMEDOUT
         else:
             siemplify.LOGGER.info("No users will be enriched")
@@ -387,7 +405,7 @@ def main():
             hostname_entities_identifiers = list(devices["hostnames"].keys())
             if _is_deadline_reached(siemplify):
                 siemplify.LOGGER.error(
-                    f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
+                    f"Timed out before searching devices (enriched {len(successful_entities)} entity(ies) so far). Execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
                 )
                 status = EXECUTION_STATE_TIMEDOUT
             else:
@@ -449,11 +467,16 @@ def main():
                             }
 
                     # mark missing entities as failed
-                    failed_entities.extend(
+                    unmatched_devices = (
                         list(devices["ip_addresses"].keys())
                         + list(devices["mac_addresses"].keys())
                         + list(devices["hostnames"].keys())
                     )
+                    siemplify.LOGGER.info(
+                        f"Matched {len(found_entities_to_process)} device entity(ies) to Axonius IDs; "
+                        f"{len(unmatched_devices)} device entity(ies) were not found"
+                    )
+                    failed_entities.extend(unmatched_devices)
 
                     # process each entity separately
                     for (
@@ -462,7 +485,7 @@ def main():
                     ) in found_entities_to_process.items():
                         if _is_deadline_reached(siemplify):
                             siemplify.LOGGER.error(
-                                f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
+                                f"Timed out while enriching device entities (enriched {len(successful_entities)} entity(ies) so far). Execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
                             )
                             status = EXECUTION_STATE_TIMEDOUT
                             break
@@ -475,6 +498,9 @@ def main():
                             continue
                         try:
                             if axon_id in fetched_device_details:
+                                siemplify.LOGGER.info(
+                                    f"Reusing cached device details for entity {entity_identifier} with axon id {axon_id}"
+                                )
                                 device_details = fetched_device_details[axon_id]
                             else:
                                 siemplify.LOGGER.info(
@@ -562,9 +588,23 @@ def main():
                     )
                     siemplify.LOGGER.exception(error)
                     if _is_deadline_reached(siemplify):
+                        siemplify.LOGGER.error(
+                            f"Timed out during device search. Execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
+                        )
                         status = EXECUTION_STATE_TIMEDOUT
+        elif status == EXECUTION_STATE_TIMEDOUT and any(devices.values()):
+            siemplify.LOGGER.info(
+                f"Skipping device enrichment for {sum(len(v) for v in devices.values())} device entity(ies) because execution deadline was already reached"
+            )
         elif status != EXECUTION_STATE_TIMEDOUT:
             siemplify.LOGGER.info("No devices will be enriched")
+
+        siemplify.LOGGER.info(
+            f"Enrichment summary - Enriched entities: {len(successful_entities)}, "
+            f"Failed/unmatched entities: {len(failed_entities)}, "
+            f"Unique user detail GETs: {len(fetched_user_details)}, "
+            f"Unique device detail GETs: {len(fetched_device_details)}"
+        )
 
         if successful_entities:
             output_message += "Successfully enriched the following entities using {}:\n  {}\n\n".format(

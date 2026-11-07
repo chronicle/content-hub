@@ -107,7 +107,11 @@ class AxoniusManager:
         self._execution_deadline_ms: Optional[int] = execution_deadline_ms
 
         self.parser: AxoniusTransformationLayer = AxoniusTransformationLayer()
-        self.siemplify_logger: SiemplifyLogger = siemplify_logger
+        self.siemplify_logger: Optional[SiemplifyLogger] = siemplify_logger
+
+    def _log_info(self, message: str) -> None:
+        if self.siemplify_logger:
+            self.siemplify_logger.info(message)
 
     def _get_request_timeout(self) -> Union[Tuple[float, float], float]:
         """
@@ -122,8 +126,17 @@ class AxoniusManager:
         bounded_sec = max(MIN_REQUEST_TIMEOUT, remaining_sec)
         if isinstance(self._timeout, tuple):
             connect_timeout, read_timeout = self._timeout
-            return (min(connect_timeout, bounded_sec), min(read_timeout, bounded_sec))
-        return min(self._timeout, bounded_sec)
+            computed_timeout: Union[Tuple[float, float], float] = (
+                min(connect_timeout, bounded_sec),
+                min(read_timeout, bounded_sec),
+            )
+        else:
+            computed_timeout = min(self._timeout, bounded_sec)
+        if computed_timeout != self._timeout:
+            self._log_info(
+                f"Adjusted HTTP timeout from {self._timeout} to {computed_timeout}s based on remaining execution time"
+            )
+        return computed_timeout
 
     @staticmethod
     def _exact_case_insensitive_regex(value: str) -> str:
@@ -270,13 +283,25 @@ class AxoniusManager:
             ("username", u) for u in username_list
         ]
         if not tagged_items:
+            self._log_info(
+                "No non-empty email or username identifiers provided after deduplication"
+            )
             return []
 
         request_url = self._get_full_url("get_users")
         results_by_id: dict[str, UserGeneralAttribute] = {}
         results_without_id: List[UserGeneralAttribute] = []
+        total_batches = (
+            len(tagged_items) + DEFAULT_QUERY_BATCH_SIZE - 1
+        ) // DEFAULT_QUERY_BATCH_SIZE
+        self._log_info(
+            f"Searching {INTEGRATION_IDENTIFIER} users for {len(email_list)} unique email(s) and "
+            f"{len(username_list)} unique username(s) in {total_batches} batch(es) "
+            f"(batch_size={DEFAULT_QUERY_BATCH_SIZE}, use_cache_entry=True)"
+        )
 
         for idx in range(0, len(tagged_items), DEFAULT_QUERY_BATCH_SIZE):
+            batch_num = (idx // DEFAULT_QUERY_BATCH_SIZE) + 1
             batch = tagged_items[idx : idx + DEFAULT_QUERY_BATCH_SIZE]
             batch_emails = [val for kind, val in batch if kind == "email"]
             batch_usernames = [val for kind, val in batch if kind == "username"]
@@ -309,8 +334,14 @@ class AxoniusManager:
                     },
                 }
             }
+            request_timeout = self._get_request_timeout()
+            self._log_info(
+                f"Requesting users batch {batch_num}/{total_batches} "
+                f"(emails={len(batch_emails)}, usernames={len(batch_usernames)}, "
+                f"page_limit={page_limit}, timeout={request_timeout})"
+            )
             response = self._session.post(
-                request_url, json=payload, timeout=self._get_request_timeout()
+                request_url, json=payload, timeout=request_timeout
             )
             err_msg = (
                 "Failed to get users with provided email addresses or usernames of: "
@@ -321,15 +352,24 @@ class AxoniusManager:
                 err_msg += " ".join(batch_usernames)
 
             self.validate_response(response, err_msg)
-            for user in self.parser.build_user_general_attribute_obj_list(
+            batch_users = self.parser.build_user_general_attribute_obj_list(
                 response.json()
-            ):
+            )
+            self._log_info(
+                f"Users batch {batch_num}/{total_batches} returned {len(batch_users)} user record(s)"
+            )
+            for user in batch_users:
                 if user.internal_axon_id:
                     results_by_id.setdefault(user.internal_axon_id, user)
                 else:
                     results_without_id.append(user)
 
-        return list(results_by_id.values()) + results_without_id
+        final_users = list(results_by_id.values()) + results_without_id
+        if total_batches > 1:
+            self._log_info(
+                f"Deduplicated user search results across {total_batches} batches to {len(final_users)} unique user(s)"
+            )
+        return final_users
 
     def get_user_details(self, internal_axonius_id: str) -> UserDetailedInformation:
         """
@@ -396,13 +436,25 @@ class AxoniusManager:
             + [("hostname", h) for h in hostname_list]
         )
         if not tagged_items:
+            self._log_info(
+                "No non-empty device identifiers provided after deduplication"
+            )
             return []
 
         request_url = self._get_full_url("get-devices")
         results_by_id: dict[str, DeviceGeneralAttribute] = {}
         results_without_id: List[DeviceGeneralAttribute] = []
+        total_batches = (
+            len(tagged_items) + DEFAULT_QUERY_BATCH_SIZE - 1
+        ) // DEFAULT_QUERY_BATCH_SIZE
+        self._log_info(
+            f"Searching {INTEGRATION_IDENTIFIER} devices for {len(ip_list)} unique IP(s), "
+            f"{len(mac_list)} unique MAC(s), and {len(hostname_list)} unique hostname(s) "
+            f"in {total_batches} batch(es) (batch_size={DEFAULT_QUERY_BATCH_SIZE}, use_cache_entry=True)"
+        )
 
         for idx in range(0, len(tagged_items), DEFAULT_QUERY_BATCH_SIZE):
+            batch_num = (idx // DEFAULT_QUERY_BATCH_SIZE) + 1
             batch = tagged_items[idx : idx + DEFAULT_QUERY_BATCH_SIZE]
             batch_ips = [val for kind, val in batch if kind == "ip"]
             batch_macs = [val for kind, val in batch if kind == "mac"]
@@ -441,8 +493,14 @@ class AxoniusManager:
                     },
                 }
             }
+            request_timeout = self._get_request_timeout()
+            self._log_info(
+                f"Requesting devices batch {batch_num}/{total_batches} "
+                f"(ips={len(batch_ips)}, macs={len(batch_macs)}, hostnames={len(batch_hostnames)}, "
+                f"page_limit={page_limit}, timeout={request_timeout})"
+            )
             response = self._session.post(
-                request_url, json=payload, timeout=self._get_request_timeout()
+                request_url, json=payload, timeout=request_timeout
             )
             err_msg = "Failed to get devices with provided ip addresses, hostnames or mac addresses of: "
             if batch_ips:
@@ -453,15 +511,24 @@ class AxoniusManager:
                 err_msg += " ".join(batch_macs)
 
             self.validate_response(response, err_msg)
-            for device in self.parser.build_device_general_attribute_obj_list(
+            batch_devices = self.parser.build_device_general_attribute_obj_list(
                 response.json()
-            ):
+            )
+            self._log_info(
+                f"Devices batch {batch_num}/{total_batches} returned {len(batch_devices)} device record(s)"
+            )
+            for device in batch_devices:
                 if device.internal_axon_id:
                     results_by_id.setdefault(device.internal_axon_id, device)
                 else:
                     results_without_id.append(device)
 
-        return list(results_by_id.values()) + results_without_id
+        final_devices = list(results_by_id.values()) + results_without_id
+        if total_batches > 1:
+            self._log_info(
+                f"Deduplicated device search results across {total_batches} batches to {len(final_devices)} unique device(s)"
+            )
+        return final_devices
 
     def get_device_details(self, internal_axonius_id: str) -> DeviceDetailedInformation:
         """
