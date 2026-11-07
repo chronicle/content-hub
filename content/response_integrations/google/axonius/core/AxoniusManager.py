@@ -122,7 +122,7 @@ class AxoniusManager:
             return self._timeout
         remaining_sec = (
             self._execution_deadline_ms - DEADLINE_SAFETY_BUFFER_MS - unix_now()
-        ) / 1000.0
+        ) / 1000
         bounded_sec = max(MIN_REQUEST_TIMEOUT, remaining_sec)
         if isinstance(self._timeout, tuple):
             connect_timeout, read_timeout = self._timeout
