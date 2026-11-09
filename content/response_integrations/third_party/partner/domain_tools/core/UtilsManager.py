@@ -136,12 +136,18 @@ def parse_domain_age_days(create_date_raw: Any) -> int | None:
         return None
 
 
-def classify_domain_risk(overall_risk_score: int, domain_age_days: int | None) -> str:
+def classify_domain_risk(
+    overall_risk_score: int,
+    domain_age_days: int | None,
+    young_days: int = YOUNG_DOMAIN_AGE_DAYS,
+) -> str:
     """Classify a domain into a risk category based on score and age.
 
-    Young domain check takes precedence over risk score.
+    Young domain check takes precedence over risk score: proximity scores are
+    unreliable on newly-registered domains, so young_domain is the more accurate
+    signal regardless of the numeric score.
     """
-    if domain_age_days is not None and domain_age_days < YOUNG_DOMAIN_AGE_DAYS:
+    if domain_age_days is not None and domain_age_days < young_days:
         return RISK_CATEGORY_YOUNG
     if overall_risk_score >= RISK_SCORE_HIGH:
         return RISK_CATEGORY_HIGH

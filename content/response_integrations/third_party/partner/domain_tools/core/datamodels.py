@@ -6,15 +6,17 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any
 
+from TIPCommon.types import SingleJson
+
 
 class DTBaseModel:
     IRIS_LINK = "https://iris.domaintools.com/investigate/search/"
     GUIDED_PIVOT_THRESHOLD = 500
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
-    def to_json(self):
+    def to_json(self) -> str:
         return json.dumps(self.to_dict())
 
 
@@ -64,12 +66,12 @@ class Contact:
 
 @dataclass(slots=True)
 class Identity:
-    registrant_name: dict | None = None
-    registrant_org: dict | None = None
-    registrar: dict | None = None
+    registrant_name: SingleJson | None = None
+    registrant_org: SingleJson | None = None
+    registrar: SingleJson | None = None
     soa_email: list[str] = field(default_factory=list)
     ssl_email: list[str] = field(default_factory=list)
-    email_domains: list[dict] = field(default_factory=list)
+    email_domains: list[SingleJson] = field(default_factory=list)
     additional_whois_emails: list[str] = field(default_factory=list)
     registrant_contact: Contact | None = None
     admin_contact: Contact | None = None
@@ -81,21 +83,21 @@ class Identity:
 class Registration:
     registrar_status: list[str] = field(default_factory=list)
     domain_status: bool = False
-    create_date: dict | None = None
-    expiration_date: dict | None = None
+    create_date: SingleJson | None = None
+    expiration_date: SingleJson | None = None
 
 
 @dataclass(slots=True)
 class Hosting:
-    ip_addresses: list[dict] = field(default_factory=list)
-    ip_country_code: dict | None = None
-    isp: dict | None = None
-    mx_servers: list[dict] = field(default_factory=list)
+    ip_addresses: list[SingleJson] = field(default_factory=list)
+    ip_country_code: SingleJson | None = None
+    isp: SingleJson | None = None
+    mx_servers: list[SingleJson] = field(default_factory=list)
     spf_info: list[str] = field(default_factory=list)
-    name_servers: list[dict] = field(default_factory=list)
-    ssl_certificates: list[dict] = field(default_factory=list)
-    redirects_to: dict | None = None
-    redirect_domain: dict | None = None
+    name_servers: list[SingleJson] = field(default_factory=list)
+    ssl_certificates: list[SingleJson] = field(default_factory=list)
+    redirects_to: SingleJson | None = None
+    redirect_domain: SingleJson | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,12 +108,12 @@ class IrisInvestigateModel(DTBaseModel):
     identity: Identity
     registration: Registration
     hosting: Hosting
-    website_title: dict | None = None
-    first_seen: dict | None = None
-    server_type: dict | None = None
+    website_title: SingleJson | None = None
+    first_seen: SingleJson | None = None
+    server_type: SingleJson | None = None
 
     @staticmethod
-    def _extract_value(d: dict | None) -> str | None:
+    def _extract_value(d: SingleJson | None) -> str | None:
         return d.get("value") if isinstance(d, dict) else d
 
     def to_table_data(self) -> dict[str, Any]:

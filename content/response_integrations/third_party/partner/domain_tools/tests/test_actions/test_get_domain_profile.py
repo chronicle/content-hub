@@ -31,16 +31,16 @@ def _make_iris_model(domain: str = "example.com") -> IrisInvestigateModel:
             threat_profile_risk_score=RiskProfile(risk_score=5, threats=[], evidence=[]),
         ),
         identity=Identity(
-            registrant_name="Example Registrant",
-            registrant_org="Example Corp",
-            registrar="Example Registrar Inc.",
+            registrant_name={"value": "Example Registrant", "count": 1},
+            registrant_org={"value": "Example Corp", "count": 1},
+            registrar={"value": "Example Registrar Inc.", "count": 1},
         ),
         registration=Registration(
-            create_date="2013-12-06",
-            expiration_date="2026-12-06",
+            create_date={"value": "2013-12-06", "count": 1},
+            expiration_date={"value": "2026-12-06", "count": 1},
             domain_status=True,
         ),
-        hosting=Hosting(ip_country_code="us"),
+        hosting=Hosting(ip_country_code={"value": "us", "count": 1}),
     )
 
 
