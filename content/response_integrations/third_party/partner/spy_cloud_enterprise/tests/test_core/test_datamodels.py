@@ -336,14 +336,8 @@ class TestTimestamps:
         assert datamodels.event_publish_date(props) == "2026-06-14"
 
     def test_event_publish_date_falls_back_through_record_dates(self) -> None:
-        assert (
-            datamodels.event_publish_date({"spycloud_record_addition_date": "2026-01-01"})
-            == "2026-01-01"
-        )
-        assert (
-            datamodels.event_publish_date({"spycloud_infected_time": "2025-01-01"})
-            == "2025-01-01"
-        )
+        assert datamodels.event_publish_date({"spycloud_record_addition_date": "2026-01-01"}) == "2026-01-01"
+        assert datamodels.event_publish_date({"spycloud_infected_time": "2025-01-01"}) == "2025-01-01"
 
     def test_event_publish_date_empty_when_absent(self) -> None:
         assert datamodels.event_publish_date({"spycloud_email": "a@b.com"}) == ""

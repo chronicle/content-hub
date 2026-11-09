@@ -19,9 +19,11 @@ security gain. This action compares the two timestamps:
 already rotated after the newest exposure, so the playbook can gate the reset on
 ``ScriptResult > 0``.
 
-Unknown means reset. A missing or unparseable IdP timestamp, or a case with no
-datable password exposure, returns 1 - the safe direction is to remediate an
-exposure we cannot prove is stale.
+Unknown means reset. A missing or unparseable IdP timestamp, a case with no
+datable password exposure, or a matching exposure with no usable publish date
+alongside dated ones, returns 1 - the safe direction is to remediate an exposure we
+cannot prove is stale. A bare ``YYYY-MM-DD`` publish date is read as the end of
+that day, since the record may have been published any time on it.
 
 Data source: this action does NOT call the SpyCloud API. It reads the exposures
 already attached to the case, exactly like Filter Passwords By Policy.
@@ -29,9 +31,11 @@ already attached to the case, exactly like Filter Passwords By Policy.
 Sensitive data: no password value is read or surfaced. The JSON result carries
 only timestamps, counts, and the decision.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import re
+from datetime import datetime, time, timezone
 from typing import Any
 
 from soar_sdk.ScriptResult import (
@@ -54,6 +58,8 @@ DEFAULT_PASSWORD_EXPOSURES_ONLY = True
 RESET_NEEDED = 1
 RESET_NOT_NEEDED = 0
 
+DATE_ONLY_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
+
 
 def _event_has_password(props: dict[str, Any]) -> bool:
     """Report whether an exposure event involves a password at all.
@@ -68,6 +74,18 @@ def _event_has_password(props: dict[str, Any]) -> bool:
         str(props.get(key, "")).strip().lower() in ("true", "yes", "1", "t")
         for key in ("spycloud_has_plaintext_password", "spycloud_has_password")
     )
+
+
+def _parse_publish_date(raw_date: Any) -> datetime | None:
+    """Parse an exposure publish date, reading a bare calendar date as end of day.
+
+    ``parse_timestamp`` puts a bare date at midnight UTC, which would let a password
+    change later that same day look newer than a record published after it.
+    """
+    published = datamodels.parse_timestamp(raw_date)
+    if published is not None and DATE_ONLY_PATTERN.fullmatch(str(raw_date).strip()):
+        published = datetime.combine(published.date(), time.max, tzinfo=timezone.utc)
+    return published
 
 
 def _extract_latest_publish_date(
@@ -98,7 +116,7 @@ def _extract_latest_publish_date(
                     continue
             considered += 1
             raw_date = datamodels.event_publish_date(props)
-            published = datamodels.parse_timestamp(raw_date)
+            published = _parse_publish_date(raw_date)
             if published is None:
                 undated += 1
                 continue
@@ -112,6 +130,7 @@ def _extract_latest_publish_date(
 def _evaluate_rotation_status(
     last_reset: datetime | None,
     latest_publish: datetime | None,
+    undated: int,
 ) -> tuple[bool, str]:
     """Decide whether the password was already rotated after the newest exposure.
 
@@ -124,6 +143,11 @@ def _evaluate_rotation_status(
         return False, (
             "no SpyCloud exposure on this case carries a publish date to compare against, "
             "so the exposure is treated as live"
+        )
+    if undated > 0:
+        return False, (
+            f"{undated} matching exposure(s) on this case carry no usable publish date "
+            "and cannot be proven stale, so the exposure is treated as live"
         )
     if last_reset > latest_publish:
         return True, (
@@ -200,32 +224,26 @@ def main() -> None:
             undated,
         ) = _extract_latest_publish_date(alerts, email_filter, password_exposures_only)
 
-        rotated, reason = _evaluate_rotation_status(last_reset, latest_publish)
+        rotated, reason = _evaluate_rotation_status(last_reset, latest_publish, undated)
         result_value = RESET_NOT_NEEDED if rotated else RESET_NEEDED
 
-        siemplify.result.add_result_json(
-            {
-                "case_id": str(getattr(siemplify, "case_id", "") or ""),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "email_filter": email_filter,
-                "password_exposures_only": password_exposures_only,
-                "last_password_reset": last_reset.isoformat() if last_reset else "",
-                "last_password_reset_raw": str(last_reset_raw or ""),
-                "latest_exposure_publish_date": (
-                    latest_publish.isoformat() if latest_publish else ""
-                ),
-                "latest_exposure_publish_date_raw": latest_publish_raw,
-                "exposures_considered": considered,
-                "exposures_without_publish_date": undated,
-                "password_already_rotated": rotated,
-                "reset_required": not rotated,
-                "reason": reason,
-            }
-        )
+        siemplify.result.add_result_json({
+            "case_id": str(getattr(siemplify, "case_id", "") or ""),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "email_filter": email_filter,
+            "password_exposures_only": password_exposures_only,
+            "last_password_reset": last_reset.isoformat() if last_reset else "",
+            "last_password_reset_raw": str(last_reset_raw or ""),
+            "latest_exposure_publish_date": (latest_publish.isoformat() if latest_publish else ""),
+            "latest_exposure_publish_date_raw": latest_publish_raw,
+            "exposures_considered": considered,
+            "exposures_without_publish_date": undated,
+            "password_already_rotated": rotated,
+            "reset_required": not rotated,
+            "reason": reason,
+        })
 
-        output_message = _build_output_message(
-            rotated, reason, last_reset, latest_publish, considered
-        )
+        output_message = _build_output_message(rotated, reason, last_reset, latest_publish, considered)
 
     except Exception as error:
         siemplify.LOGGER.error(f'Error executing action "{SCRIPT_NAME}". Reason: {error}')
@@ -236,9 +254,7 @@ def main() -> None:
         output_message = f'Error executing action "{SCRIPT_NAME}". Reason: {error}'
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(
-        f"status: {status}, result_value: {result_value}, output_message: {output_message}"
-    )
+    siemplify.LOGGER.info(f"status: {status}, result_value: {result_value}, output_message: {output_message}")
     siemplify.end(output_message, result_value, status)
 
 

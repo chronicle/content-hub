@@ -27,6 +27,7 @@ class SpyCloudException(Exception):
     """
     General exception for SpyCloud
     """
+
     pass
 
 
@@ -40,6 +41,7 @@ class SpyCloudInvalidCursorException(SpyCloudException):
     and restart the current window from its start, rather than re-sending a dead
     cursor on every subsequent cycle.
     """
+
     pass
 
 
@@ -86,7 +88,7 @@ class APIClient:
             "X-API-Key": self.api_key,
             "User-Agent": self.user_agent,
             "Content-Type": "application/json",
-            "Accept": "application/json"
+            "Accept": "application/json",
         })
 
     def set_api_key(self, api_key: str) -> None:
@@ -167,7 +169,7 @@ class APIClient:
         data: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
-        **kwargs
+        **kwargs,
     ) -> requests.Response:
         url = self._build_url(endpoint)
 
@@ -192,7 +194,7 @@ class APIClient:
                     params=params,
                     headers=request_headers,
                     timeout=request_timeout,
-                    **kwargs
+                    **kwargs,
                 )
 
                 last_response = response
@@ -203,10 +205,7 @@ class APIClient:
                 if attempt > self.max_retries:
                     return response
 
-                sleep_seconds = self._calculate_sleep_seconds(
-                    attempt_number=attempt,
-                    response=response
-                )
+                sleep_seconds = self._calculate_sleep_seconds(attempt_number=attempt, response=response)
                 self._safe_log(
                     f"Retrying SpyCloud API request after HTTP {response.status_code} "
                     f"(attempt {attempt}/{self.max_retries}). Sleeping {sleep_seconds:.1f}s."
@@ -229,16 +228,10 @@ class APIClient:
         if last_response is not None:
             return last_response
 
-        raise SpyCloudException(
-            f"Failed to call SpyCloud API after retries: {last_exception}"
-        )
+        raise SpyCloudException(f"Failed to call SpyCloud API after retries: {last_exception}")
 
     def get(
-        self,
-        endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        **kwargs
+        self, endpoint: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, **kwargs
     ) -> requests.Response:
         return self._make_request("GET", endpoint, params=params, headers=headers, **kwargs)
 
@@ -248,7 +241,7 @@ class APIClient:
         data: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
-        **kwargs
+        **kwargs,
     ) -> requests.Response:
         return self._make_request("POST", endpoint, data=data, params=params, headers=headers, **kwargs)
 
@@ -258,16 +251,12 @@ class APIClient:
         data: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
-        **kwargs
+        **kwargs,
     ) -> requests.Response:
         return self._make_request("PUT", endpoint, data=data, params=params, headers=headers, **kwargs)
 
     def delete(
-        self,
-        endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        **kwargs
+        self, endpoint: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, **kwargs
     ) -> requests.Response:
         return self._make_request("DELETE", endpoint, params=params, headers=headers, **kwargs)
 
@@ -277,7 +266,7 @@ class APIClient:
         data: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
-        **kwargs
+        **kwargs,
     ) -> requests.Response:
         return self._make_request("PATCH", endpoint, data=data, params=params, headers=headers, **kwargs)
 
@@ -308,9 +297,9 @@ class APIClient:
             # 400s are not, so surface it as a distinct type instead of forcing
             # callers to string-match on the message.
             if response.status_code == 400 and "cursor" in str(detail).lower():
-                raise SpyCloudInvalidCursorException(f"{error_msg}: {error} {detail}")
+                raise SpyCloudInvalidCursorException(f"{error_msg}: {error} {detail}") from error
 
-            raise SpyCloudException(f"{error_msg}: {error} {detail}")
+            raise SpyCloudException(f"{error_msg}: {error} {detail}") from error
 
     def close(self) -> None:
         self.session.close()
@@ -333,11 +322,7 @@ class APIClient:
             matched = False
             for key, value in response.headers.items():
                 key_lower = key.lower()
-                if (
-                    "spycloud" in key_lower
-                    or key_lower.startswith("x-")
-                    or key_lower == "retry-after"
-                ):
+                if "spycloud" in key_lower or key_lower.startswith("x-") or key_lower == "retry-after":
                     self._safe_log(f"Response Header -> {key}: {value}")
                     matched = True
 
@@ -359,7 +344,7 @@ class BaseClient:
         until: Optional[str] = None,
         since_modification: Optional[str] = None,
         until_modification: Optional[str] = None,
-        additional_params: Optional[Dict[str, Any]] = None
+        additional_params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Build a parameters dictionary with optional publish-time and modification-time filters.
 
@@ -431,10 +416,7 @@ class BaseClient:
                 return results, cursor
 
     def _paginate_results(
-        self,
-        url: str,
-        params: Optional[Dict[str, Any]] = None,
-        err_msg: str = "Unable to get results"
+        self, url: str, params: Optional[Dict[str, Any]] = None, err_msg: str = "Unable to get results"
     ) -> List[Dict[str, Any]]:
         """Paginate the results of a request, draining every page.
 
@@ -453,17 +435,10 @@ class BreachCatalogClient(BaseClient):
     def ping(self) -> bool:
         """Validate API connectivity/authentication with a lightweight catalog request."""
         response = self._handler.get(ENDPOINT_PING)
-        self._handler.validate_response(
-            response,
-            "Unable to connect to SpyCloud breach catalog"
-        )
+        self._handler.validate_response(response, "Unable to connect to SpyCloud breach catalog")
         return True
 
-    def catalog(
-        self,
-        since: Optional[str] = None,
-        until: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    def catalog(self, since: Optional[str] = None, until: Optional[str] = None) -> List[Dict[str, Any]]:
         params = self._build_date_params(since=since, until=until)
         return self._paginate_results(ENDPOINT_BREACH_CATALOG, params)
 
@@ -480,9 +455,7 @@ class BreachCatalogClient(BaseClient):
         """
         endpoint = "{}/{}".format(ENDPOINT_BREACH_CATALOG, source_id)
         response = self._handler.get(endpoint)
-        self._handler.validate_response(
-            response, "Unable to get breach catalog entry {}".format(source_id)
-        )
+        self._handler.validate_response(response, "Unable to get breach catalog entry {}".format(source_id))
         json_body = response.json() or {}
         results = json_body.get("results") or []
         return results[0] if results else None
@@ -497,7 +470,7 @@ class BreachDataClient(BaseClient):
         until: Optional[str] = None,
         since_modification: Optional[str] = None,
         until_modification: Optional[str] = None,
-        severities: Optional[List[int]] = None
+        severities: Optional[List[int]] = None,
     ) -> List[Dict[str, Any]]:
         additional_params: Dict[str, Any] = {}
 
@@ -509,7 +482,7 @@ class BreachDataClient(BaseClient):
             until=until,
             since_modification=since_modification,
             until_modification=until_modification,
-            additional_params=additional_params
+            additional_params=additional_params,
         )
         return self._paginate_results(ENDPOINT_BREACH_DATA_WATCHLIST, params)
 
@@ -539,7 +512,7 @@ class BreachDataClient(BaseClient):
             until=until,
             since_modification=since_modification,
             until_modification=until_modification,
-            additional_params=additional_params
+            additional_params=additional_params,
         )
         return self._paginate_page(
             ENDPOINT_BREACH_DATA_WATCHLIST,
@@ -563,11 +536,7 @@ class CompassClient(BaseClient):
             return text[:10]
         return text
 
-    def data(
-        self,
-        since: Optional[str] = None,
-        until: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    def data(self, since: Optional[str] = None, until: Optional[str] = None) -> List[Dict[str, Any]]:
         params = self._build_date_params(
             since=self._date_only(since),
             until=self._date_only(until),
@@ -602,7 +571,7 @@ class SpyCloudSDK:
         self._clients = {
             "breach_data": BreachDataClient(self._handler),
             "breach_catalog": BreachCatalogClient(self._handler),
-            "compass": CompassClient(self._handler)
+            "compass": CompassClient(self._handler),
         }
 
     @property

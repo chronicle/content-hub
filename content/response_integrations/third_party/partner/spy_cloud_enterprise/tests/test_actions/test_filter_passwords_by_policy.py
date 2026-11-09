@@ -2,15 +2,19 @@
 
 The action reads the plaintext password values the connector flattened onto the
 case events and reports how many still match a minimum-length / symbol policy, so
-the Entra ID response playbook can gate a password reset. It makes no SpyCloud API
-call, so these tests inject a fake case object rather than mocking the vendor SDK.
+the Entra ID and Okta password response playbooks can gate a password reset. It
+makes no SpyCloud API call, so these tests inject a fake case object rather than
+mocking the vendor SDK.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import json
 from typing import Any
 from unittest.mock import MagicMock, patch
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 
 from spy_cloud_enterprise.actions import FilterPasswordsByPolicy
 
@@ -54,9 +58,7 @@ def _make_siemplify(
     end_calls: list[dict[str, Any]] = []
 
     def _end(message: str = "", result_value: Any = None, status: Any = None) -> None:
-        end_calls.append(
-            {"message": message, "result_value": result_value, "status": status}
-        )
+        end_calls.append({"message": message, "result_value": result_value, "status": status})
 
     siemplify.end.side_effect = _end
     return siemplify, end_calls
@@ -112,9 +114,7 @@ class TestFilterPasswordsByPolicy:
 
     def test_custom_minimum_length(self) -> None:
         alerts = [_Alert("SpyCloud", [_event(spycloud_password_plaintext="ab$")])]
-        siemplify, end_calls = _make_siemplify(
-            alerts, params={"Minimum Password Length": 3}
-        )
+        siemplify, end_calls = _make_siemplify(alerts, params={"Minimum Password Length": 3})
 
         _run(siemplify)
 
@@ -136,8 +136,6 @@ class TestFilterPasswordsByPolicy:
         siemplify, _ = _make_siemplify(alerts)
 
         _run(siemplify)
-
-        import json
 
         serialized = json.dumps(_json(siemplify))
         assert "Sup3r$ecret" not in serialized
@@ -209,3 +207,40 @@ class TestFilterPasswordsByPolicy:
             "abe@example.com",
             "zed@example.com",
         ]
+
+    def test_password_without_email_is_not_a_reset_target(self) -> None:
+        """A password event with no spycloud_email must not put "" in the reset list.
+
+        "" sorts before any address, so a playbook binding getByIndex("0") would
+        otherwise receive an empty identity and skip the real user.
+        """
+        alerts = [
+            _Alert(
+                "SpyCloud",
+                [
+                    _event(spycloud_email="", spycloud_password_plaintext="Sup3r$ecret"),
+                    _event(spycloud_password_plaintext="An0ther$ecret"),
+                ],
+            )
+        ]
+        siemplify, end_calls = _make_siemplify(alerts)
+
+        _run(siemplify)
+
+        payload = _json(siemplify)
+        assert payload["emails_with_remaining_passwords"] == ["victim@example.com"]
+        assert payload["all_exposed_emails"] == ["victim@example.com"]
+        assert payload["remaining"] == 2
+        assert end_calls[0]["result_value"] == 2
+
+    def test_minimum_length_below_one_fails(self) -> None:
+        """A minimum length of 0 or less would let every password through."""
+        alerts = [_Alert("SpyCloud", [_event(spycloud_password_plaintext="Sup3r$ecret")])]
+        for minimum_length in (0, -3):
+            siemplify, end_calls = _make_siemplify(alerts, params={"Minimum Password Length": minimum_length})
+
+            _run(siemplify)
+
+            assert end_calls[0]["status"] == EXECUTION_STATE_FAILED
+            assert end_calls[0]["result_value"] == 0
+            assert "must be at least 1" in end_calls[0]["message"]

@@ -231,8 +231,7 @@ class TestExpiredCursorRecovery:
         siemplify = _Siemplify(context=self._in_progress_context())
         breach_data = _FakeBreachData([
             SpyCloudInvalidCursorException(
-                "Unable to get results: 400 Client Error: Invalid parameter: 'cursor'. "
-                "Cursor not found."
+                "Unable to get results: 400 Client Error: Invalid parameter: 'cursor'. Cursor not found."
             ),
             ([{"document_id": "a"}], None),
         ])
@@ -270,6 +269,9 @@ class TestExpiredCursorRecovery:
         # Returns what it managed to collect rather than raising or looping.
         assert len(records) == 2
         assert instance._modification_drain_in_progress is True
+        # The rejected cursor is not persisted, so next cycle restarts the chunk
+        # instead of spending its first call re-sending a known-bad cursor.
+        assert dict(instance._pending_context_writes)[WATCHLIST_MODIFICATION_CURSOR_KEY] == ""
 
     def test_cursor_rejection_without_a_sent_cursor_propagates(self) -> None:
         """A chunk-start request sends no cursor, so this is not recoverable here."""
@@ -360,10 +362,7 @@ class _CountingBreachData:
 
     def watchlist(self, **kwargs: Any) -> list[dict[str, Any]]:
         self.calls.append(kwargs)
-        return [
-            {"document_id": f"{kwargs['since']}-{i}"}
-            for i in range(self._records_per_chunk)
-        ]
+        return [{"document_id": f"{kwargs['since']}-{i}"} for i in range(self._records_per_chunk)]
 
 
 class TestWatchlistPerCycleBound:
@@ -394,8 +393,7 @@ class TestWatchlistPerCycleBound:
         # The untouched tail of the window must not be checkpointed over.
         assert reached_until != until
         assert _parse(reached_until) == _parse(since) + timedelta(
-            hours=manager_module.MAX_WATCHLIST_WINDOW_HOURS
-            * manager_module.WATCHLIST_MAX_CHUNKS_PER_CYCLE
+            hours=manager_module.MAX_WATCHLIST_WINDOW_HOURS * manager_module.WATCHLIST_MAX_CHUNKS_PER_CYCLE
         )
 
     def test_fully_drained_window_reports_until_unchanged(self) -> None:

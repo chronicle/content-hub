@@ -12,6 +12,7 @@ stale must still come back as "reset required".
 from __future__ import annotations
 
 import dataclasses
+import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -58,9 +59,7 @@ def _make_siemplify(
     end_calls: list[dict[str, Any]] = []
 
     def _end(message: str = "", result_value: Any = None, status: Any = None) -> None:
-        end_calls.append(
-            {"message": message, "result_value": result_value, "status": status}
-        )
+        end_calls.append({"message": message, "result_value": result_value, "status": status})
 
     siemplify.end.side_effect = _end
     return siemplify, end_calls
@@ -79,9 +78,7 @@ class TestCheckPasswordRotation:
     def test_reset_skipped_when_password_changed_after_exposure(self) -> None:
         """The core case: the user already rotated, so the leak is dead."""
         alerts = [_Alert("SpyCloud", [_event(spycloud_publish_date="2026-06-14")])]
-        siemplify, end_calls = _make_siemplify(
-            alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00.000Z"}
-        )
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00.000Z"})
 
         _run(siemplify)
 
@@ -93,9 +90,7 @@ class TestCheckPasswordRotation:
 
     def test_reset_required_when_exposure_newer_than_reset(self) -> None:
         alerts = [_Alert("SpyCloud", [_event(spycloud_publish_date="2026-07-20")])]
-        siemplify, end_calls = _make_siemplify(
-            alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00.000Z"}
-        )
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00.000Z"})
 
         _run(siemplify)
 
@@ -106,9 +101,7 @@ class TestCheckPasswordRotation:
         """Equal timestamps are ambiguous, so remediate rather than assume safety."""
         stamp = "2026-07-01T09:15:00Z"
         alerts = [_Alert("SpyCloud", [_event(spycloud_publish_date=stamp)])]
-        siemplify, end_calls = _make_siemplify(
-            alerts, params={"Last Password Reset Time": stamp}
-        )
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": stamp})
 
         _run(siemplify)
 
@@ -126,9 +119,7 @@ class TestCheckPasswordRotation:
 
     def test_unparseable_reset_time_requires_reset(self) -> None:
         alerts = [_Alert("SpyCloud", [_event(spycloud_publish_date="2026-06-14")])]
-        siemplify, end_calls = _make_siemplify(
-            alerts, params={"Last Password Reset Time": "never"}
-        )
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "never"})
 
         _run(siemplify)
 
@@ -136,9 +127,7 @@ class TestCheckPasswordRotation:
 
     def test_exposure_without_publish_date_requires_reset(self) -> None:
         alerts = [_Alert("SpyCloud", [_event()])]
-        siemplify, end_calls = _make_siemplify(
-            alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"}
-        )
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"})
 
         _run(siemplify)
 
@@ -158,9 +147,7 @@ class TestCheckPasswordRotation:
                 ],
             )
         ]
-        siemplify, end_calls = _make_siemplify(
-            alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"}
-        )
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"})
 
         _run(siemplify)
 
@@ -169,12 +156,8 @@ class TestCheckPasswordRotation:
 
     def test_falls_back_to_record_addition_date(self) -> None:
         """Cases ingested before the publish date was flattened still compare."""
-        alerts = [
-            _Alert("SpyCloud", [_event(spycloud_record_addition_date="2026-06-14")])
-        ]
-        siemplify, end_calls = _make_siemplify(
-            alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"}
-        )
+        alerts = [_Alert("SpyCloud", [_event(spycloud_record_addition_date="2026-06-14")])]
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"})
 
         _run(siemplify)
 
@@ -222,9 +205,7 @@ class TestCheckPasswordRotation:
                 ],
             )
         ]
-        siemplify, end_calls = _make_siemplify(
-            alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"}
-        )
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"})
 
         _run(siemplify)
 
@@ -261,9 +242,7 @@ class TestCheckPasswordRotation:
     def test_non_spycloud_events_are_ignored(self) -> None:
         other = _Event(additional_properties={"device_vendor": "Acme", "publish": "x"})
         alerts = [_Alert("Other", [other])]
-        siemplify, end_calls = _make_siemplify(
-            alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"}
-        )
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"})
 
         _run(siemplify)
 
@@ -283,13 +262,9 @@ class TestCheckPasswordRotation:
                 ],
             )
         ]
-        siemplify, _ = _make_siemplify(
-            alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"}
-        )
+        siemplify, _ = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"})
 
         _run(siemplify)
-
-        import json
 
         assert "Sup3r$ecret" not in json.dumps(_json(siemplify))
 
@@ -305,3 +280,33 @@ class TestCheckPasswordRotation:
 
         assert end_calls[0]["result_value"] == 1
         assert "Error executing action" in end_calls[0]["message"]
+
+    def test_undated_exposure_alongside_dated_one_requires_reset(self) -> None:
+        """An undated exposure cannot be proven stale, even next to an older dated one."""
+        alerts = [
+            _Alert(
+                "SpyCloud",
+                [
+                    _event(spycloud_publish_date="2026-01-01"),
+                    _event(),
+                ],
+            )
+        ]
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-07-01T09:15:00Z"})
+
+        _run(siemplify)
+
+        assert end_calls[0]["result_value"] == 1
+        payload = _json(siemplify)
+        assert payload["exposures_without_publish_date"] == 1
+        assert "cannot be proven stale" in payload["reason"]
+
+    def test_date_only_publish_date_counts_as_end_of_day(self) -> None:
+        """A reset earlier on the publish day does not prove the exposure stale."""
+        alerts = [_Alert("SpyCloud", [_event(spycloud_publish_date="2026-06-14")])]
+        siemplify, end_calls = _make_siemplify(alerts, params={"Last Password Reset Time": "2026-06-14T08:00:00Z"})
+
+        _run(siemplify)
+
+        assert end_calls[0]["result_value"] == 1
+        assert _json(siemplify)["latest_exposure_publish_date"].startswith("2026-06-14T23:59:59")

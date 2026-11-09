@@ -158,9 +158,7 @@ class SpyCloudManager:
         # Persist per-connector state through the connector context property
         # API instead, keyed by the connector identifier.
         try:
-            self._context_identifier = (
-                self.siemplify.context.connector_info.identifier
-            )
+            self._context_identifier = self.siemplify.context.connector_info.identifier
         except AttributeError:
             self._context_identifier = self.siemplify.script_name
 
@@ -218,8 +216,7 @@ class SpyCloudManager:
                     self.severities.append(int(cleaned))
                 except ValueError:
                     self.siemplify.LOGGER.warning(
-                        f"Invalid severity value '{cleaned}' ignored. "
-                        "Please ensure only integers are configured."
+                        f"Invalid severity value '{cleaned}' ignored. Please ensure only integers are configured."
                     )
 
         self.siemplify.LOGGER.info(
@@ -273,32 +270,23 @@ class SpyCloudManager:
 
         while current < end:
             chunk_end = min(current + timedelta(hours=max_hours), end)
-            chunks.append((
-                self._format_iso_z(current),
-                self._format_iso_z(chunk_end)
-            ))
+            chunks.append((self._format_iso_z(current), self._format_iso_z(chunk_end)))
             current = chunk_end
 
         return chunks
 
     def _get_context_property(self, key: str) -> str | None:
-        return self.siemplify.get_connector_context_property(
-            self._context_identifier, key
-        )
+        return self.siemplify.get_connector_context_property(self._context_identifier, key)
 
     def _set_context_property(self, key: str, value: str) -> None:
-        self.siemplify.set_connector_context_property(
-            self._context_identifier, key, value
-        )
+        self.siemplify.set_connector_context_property(self._context_identifier, key, value)
 
     def _defer_context_property(self, key: str, value: str) -> None:
         """Queue a connector-context write to be committed only after this cycle's
         records have been successfully delivered (see commit_pending). Keeps
         modification-drain / Compass progress from advancing ahead of delivery.
         """
-        self._pending_context_writes = [
-            (k, v) for (k, v) in self._pending_context_writes if k != key
-        ]
+        self._pending_context_writes = [(k, v) for (k, v) in self._pending_context_writes if k != key]
         self._pending_context_writes.append((key, value))
 
     def commit_pending(self) -> None:
@@ -317,9 +305,7 @@ class SpyCloudManager:
         today = datetime.now(timezone.utc).date().isoformat()
         last_run_date = self._load_compass_last_run_date()
 
-        self.siemplify.LOGGER.info(
-            f"Compass daily gate check. last_run_date={last_run_date}, today={today}"
-        )
+        self.siemplify.LOGGER.info(f"Compass daily gate check. last_run_date={last_run_date}, today={today}")
 
         return last_run_date != today
 
@@ -334,8 +320,7 @@ class SpyCloudManager:
         last_run_date = self._load_watchlist_modification_last_run_date()
 
         self.siemplify.LOGGER.info(
-            "Watchlist modification daily gate check. "
-            f"last_run_date={last_run_date}, today={today}"
+            f"Watchlist modification daily gate check. last_run_date={last_run_date}, today={today}"
         )
 
         return last_run_date != today
@@ -366,8 +351,7 @@ class SpyCloudManager:
             return since, until
         except Exception:
             self.siemplify.LOGGER.error(
-                "Invalid Watchlist modification checkpoint found. "
-                "Falling back to a 24-hour modification lookback."
+                "Invalid Watchlist modification checkpoint found. Falling back to a 24-hour modification lookback."
             )
             since = self._format_iso_z(now - timedelta(hours=24))
             return since, until
@@ -381,13 +365,11 @@ class SpyCloudManager:
             return {"type": type(record).__name__}
 
         preview = {
-            key: record.get(key)
-            for key in SAFE_SAMPLE_FIELDS
-            if key in record and not self._is_sensitive_key(key)
+            key: record.get(key) for key in SAFE_SAMPLE_FIELDS if key in record and not self._is_sensitive_key(key)
         }
-        preview["non_sensitive_keys"] = sorted(
-            str(key) for key in record.keys() if not self._is_sensitive_key(key)
-        )[:50]
+        preview["non_sensitive_keys"] = sorted(str(key) for key in record.keys() if not self._is_sensitive_key(key))[
+            :50
+        ]
         return preview
 
     def _log_safe_samples(
@@ -407,9 +389,7 @@ class SpyCloudManager:
             except Exception:
                 preview = str(self._safe_record_preview(record))
 
-            self.siemplify.LOGGER.info(
-                f"{label} safe sample #{index}: {preview}"
-            )
+            self.siemplify.LOGGER.info(f"{label} safe sample #{index}: {preview}")
 
     def _tag_records(self, records: list[Any] | None, source: str) -> list[Any]:
         tagged_records = []
@@ -441,11 +421,7 @@ class SpyCloudManager:
         """
         response = []
 
-        watchlist_chunks = self._build_time_chunks(
-            since=since,
-            until=until,
-            max_hours=MAX_WATCHLIST_WINDOW_HOURS
-        )
+        watchlist_chunks = self._build_time_chunks(since=since, until=until, max_hours=MAX_WATCHLIST_WINDOW_HOURS)
 
         self.siemplify.LOGGER.info(
             "Watchlist collection plan. "
@@ -484,11 +460,9 @@ class SpyCloudManager:
                 f"since={chunk_since}, until={chunk_until}, severities={self.severities}"
             )
 
-            chunk_response = self.sdk.breach_data.watchlist(
-                since=chunk_since,
-                until=chunk_until,
-                severities=self.severities
-            ) or []
+            chunk_response = (
+                self.sdk.breach_data.watchlist(since=chunk_since, until=chunk_until, severities=self.severities) or []
+            )
             tagged_chunk_response = self._tag_records(chunk_response, SOURCE_WATCHLIST)
             response.extend(tagged_chunk_response)
             # Only advance past a chunk that was fully fetched, so a later pause
@@ -496,8 +470,7 @@ class SpyCloudManager:
             reached_until = chunk_until
 
             self.siemplify.LOGGER.info(
-                f"Watchlist chunk {index}/{len(watchlist_chunks)} returned "
-                f"{len(tagged_chunk_response)} record(s)"
+                f"Watchlist chunk {index}/{len(watchlist_chunks)} returned {len(tagged_chunk_response)} record(s)"
             )
             self._log_safe_samples(
                 label=f"Watchlist chunk {index}/{len(watchlist_chunks)}",
@@ -507,8 +480,7 @@ class SpyCloudManager:
             )
 
         self.siemplify.LOGGER.info(
-            f"Watchlist total returned {len(response)} record(s); "
-            f"reached_until={reached_until} (window until={until})"
+            f"Watchlist total returned {len(response)} record(s); reached_until={reached_until} (window until={until})"
         )
         return response, reached_until
 
@@ -603,9 +575,7 @@ class SpyCloudManager:
         if not window_until:
             # No drain in progress. Guardrail: start at most once per calendar day.
             if not self._should_run_watchlist_modification_today():
-                self.siemplify.LOGGER.info(
-                    "Skipping Watchlist modification pull because it already ran today."
-                )
+                self.siemplify.LOGGER.info("Skipping Watchlist modification pull because it already ran today.")
                 return []
             window_since, window_until = self._get_watchlist_modification_time_window()
             cursor_since = window_since
@@ -637,8 +607,7 @@ class SpyCloudManager:
                 break
             if time.monotonic() >= deadline_monotonic:
                 self.siemplify.LOGGER.info(
-                    "Watchlist modification drain paused: time budget reached; "
-                    "will resume next cycle."
+                    "Watchlist modification drain paused: time budget reached; will resume next cycle."
                 )
                 break
 
@@ -680,6 +649,7 @@ class SpyCloudManager:
                         "Watchlist modification drain giving up this cycle after "
                         f"{cursor_resets} cursor resets; will resume next cycle. Error: {e}"
                     )
+                    cursor = ""
                     break
 
                 # SpyCloud cursors expire, and this one was persisted across
@@ -713,8 +683,7 @@ class SpyCloudManager:
                 cursor_since = chunk_until
                 cursor = ""
                 self.siemplify.LOGGER.info(
-                    f"Watchlist modification chunk complete: {len(tagged_page)} record(s); "
-                    f"advanced to {chunk_until}."
+                    f"Watchlist modification chunk complete: {len(tagged_page)} record(s); advanced to {chunk_until}."
                 )
 
         # Defer progress persistence until the records are actually delivered.
@@ -732,9 +701,7 @@ class SpyCloudManager:
             is_test_run=is_test_run,
             limit=1,
         )
-        self.siemplify.LOGGER.info(
-            f"Watchlist modification returned {len(records)} record(s) this cycle."
-        )
+        self.siemplify.LOGGER.info(f"Watchlist modification returned {len(records)} record(s) this cycle.")
         return records
 
     def _run_compass(
@@ -760,20 +727,14 @@ class SpyCloudManager:
             f"since={compass_since}, until={compass_until}"
         )
         self.siemplify.LOGGER.info(
-            "Fetching Compass data from "
-            f"{COMPASS_ENDPOINT}: since={compass_since}, until={compass_until}"
+            f"Fetching Compass data from {COMPASS_ENDPOINT}: since={compass_since}, until={compass_until}"
         )
 
-        chunk_response = self.sdk.compass.data(
-            since=compass_since,
-            until=compass_until
-        ) or []
+        chunk_response = self.sdk.compass.data(since=compass_since, until=compass_until) or []
         tagged_chunk_response = self._tag_records(chunk_response, SOURCE_COMPASS)
         response.extend(tagged_chunk_response)
 
-        self.siemplify.LOGGER.info(
-            f"Compass request returned {len(tagged_chunk_response)} record(s)"
-        )
+        self.siemplify.LOGGER.info(f"Compass request returned {len(tagged_chunk_response)} record(s)")
         self._log_safe_samples(
             label="Compass request",
             records=tagged_chunk_response,
@@ -792,16 +753,12 @@ class SpyCloudManager:
             data = json.loads(raw)
             return data if isinstance(data, dict) else {}
         except Exception:
-            self.siemplify.LOGGER.warning(
-                "Breach catalog cache was unreadable; starting a fresh cache."
-            )
+            self.siemplify.LOGGER.warning("Breach catalog cache was unreadable; starting a fresh cache.")
             return {}
 
     def _save_breach_catalog_cache(self, cache: dict[str, Any]) -> None:
         try:
-            self._set_context_property(
-                BREACH_CATALOG_CACHE_KEY, json.dumps(cache, default=str)
-            )
+            self._set_context_property(BREACH_CATALOG_CACHE_KEY, json.dumps(cache, default=str))
         except Exception as e:
             self.siemplify.LOGGER.error(f"Failed to persist breach catalog cache: {e}")
 
@@ -809,11 +766,7 @@ class SpyCloudManager:
     def _minimal_catalog_entry(entry: Any) -> dict[str, Any]:
         if not isinstance(entry, dict):
             return {}
-        return {
-            key: entry.get(key)
-            for key in BREACH_CATALOG_CACHE_FIELDS
-            if entry.get(key) not in (None, "", [], {})
-        }
+        return {key: entry.get(key) for key in BREACH_CATALOG_CACHE_FIELDS if entry.get(key) not in (None, "", [], {})}
 
     def _distinct_source_ids(self, records: list[Any] | None) -> list[str]:
         seen = []
@@ -904,8 +857,7 @@ class SpyCloudManager:
         Compass daily gating, or connector checkpoints.
         """
         self.siemplify.LOGGER.info(
-            "Test run connectivity check. Pinging SpyCloud breach catalog endpoint: "
-            f"{ENDPOINT_PING}"
+            f"Test run connectivity check. Pinging SpyCloud breach catalog endpoint: {ENDPOINT_PING}"
         )
         self.sdk.breach_catalog.ping()
         self.siemplify.LOGGER.info(
@@ -926,15 +878,11 @@ class SpyCloudManager:
                 )
                 today = datetime.now(timezone.utc).date().isoformat()
                 self._defer_context_property(COMPASS_LAST_RUN_DATE_KEY, today)
-                self.siemplify.LOGGER.info(
-                    f"Compass run completed. Will save (on delivery) last_run_date={today}"
-                )
+                self.siemplify.LOGGER.info(f"Compass run completed. Will save (on delivery) last_run_date={today}")
                 return compass_response
             self.siemplify.LOGGER.info("Skipping Compass because it already ran today.")
         except Exception as e:
-            self.siemplify.LOGGER.error(
-                f"Failed to fetch Compass data. Treating as unavailable: {e}"
-            )
+            self.siemplify.LOGGER.error(f"Failed to fetch Compass data. Treating as unavailable: {e}")
         return []
 
     def main(self, is_test_run: bool = False) -> tuple[list[dict[str, Any]], str | None]:
@@ -956,9 +904,7 @@ class SpyCloudManager:
         self.siemplify.LOGGER.info(f"since: {since}")
         self.siemplify.LOGGER.info(f"until: {until}")
         self.siemplify.LOGGER.info(f"severities: {self.severities}")
-        self.siemplify.LOGGER.info(
-            f"Compass enabled: {self.enable_compass}; is_test_run={is_test_run}"
-        )
+        self.siemplify.LOGGER.info(f"Compass enabled: {self.enable_compass}; is_test_run={is_test_run}")
 
         response = []
         checkpoint_until = None
@@ -1000,8 +946,7 @@ class SpyCloudManager:
             self._clear_watchlist_modification_failures()
         except Exception as e:
             self.siemplify.LOGGER.error(
-                f"Failed to fetch Watchlist modification data. "
-                f"Continuing with normal Watchlist/Compass data: {e}"
+                f"Failed to fetch Watchlist modification data. Continuing with normal Watchlist/Compass data: {e}"
             )
             self._record_watchlist_modification_failure(e)
 

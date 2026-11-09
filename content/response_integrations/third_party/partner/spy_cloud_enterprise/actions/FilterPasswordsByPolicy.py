@@ -2,7 +2,8 @@
 SpyCloud Enterprise - Filter Passwords By Policy
 
 Decides whether a case's exposed passwords still matter under the organization's
-password policy, so the Entra ID response playbook can gate a password reset.
+password policy, so the identity-provider password response playbooks (Entra ID and
+Okta) can gate a password reset.
 
 The action reads the plaintext password values the connector flattened onto the
 case's security events (present only when the connector's "Include Plaintext
@@ -12,8 +13,8 @@ not satisfy the configured policy:
   - Minimum Password Length: passwords shorter than this are dropped.
   - Require Symbol: when enabled, passwords with no punctuation symbol are dropped.
 
-A password that still matches the policy is one Entra ID would accept, so an
-exposed copy of it is a live account-takeover risk worth resetting. ``result_value``
+A password that still matches the policy is one the identity provider would accept,
+so an exposed copy of it is a live account-takeover risk worth resetting. ``result_value``
 is the number of policy-conforming exposed passwords that remain after filtering;
 the playbook resets the user's password only when it is greater than zero.
 
@@ -30,6 +31,7 @@ is empty on a case whose only exposure is a severity 30 session cookie theft, so
 playbook's session-clearing step binds to ``all_exposed_emails`` instead to stay
 independent of the password outcome.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -152,6 +154,8 @@ def main() -> None:
             default_value=DEFAULT_MIN_LENGTH,
             print_value=True,
         )
+        if minimum_length < 1:
+            raise ValueError(f'"{MIN_LENGTH_PARAM}" must be at least 1.')
         require_symbol = siemplify.extract_action_param(
             param_name=REQUIRE_SYMBOL_PARAM,
             is_mandatory=False,
@@ -160,10 +164,7 @@ def main() -> None:
             print_value=True,
         )
 
-        siemplify.LOGGER.info(
-            f"Password policy: minimum length {minimum_length}, "
-            f"require symbol {require_symbol}"
-        )
+        siemplify.LOGGER.info(f"Password policy: minimum length {minimum_length}, require symbol {require_symbol}")
 
         alerts = siemplify.case.alerts or []
         siemplify.LOGGER.info(f"Scanning {len(alerts)} alert(s) in the case")
@@ -175,33 +176,27 @@ def main() -> None:
         dropped = total_passwords - remaining
         result_value = remaining
 
-        emails_with_remaining = sorted(
-            data["email"] for data in per_email.values() if data["kept"]
-        )
+        emails_with_remaining = sorted(data["email"] for data in per_email.values() if data["email"] and data["kept"])
 
-        siemplify.result.add_result_json(
-            {
-                "case_id": str(getattr(siemplify, "case_id", "") or ""),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "policy": {
-                    "minimum_length": minimum_length,
-                    "require_symbol": require_symbol,
-                },
-                "total_passwords": total_passwords,
-                "remaining": remaining,
-                "dropped": dropped,
-                "emails_with_remaining_passwords": emails_with_remaining,
-                # Every exposed identity on the case, whether or not it came with a
-                # password. The session-clearing path binds to this so it still has
-                # an identity on a password-free session cookie theft case.
-                "all_exposed_emails": all_exposed_emails,
-                "results_by_email": list(per_email.values()),
-            }
-        )
+        siemplify.result.add_result_json({
+            "case_id": str(getattr(siemplify, "case_id", "") or ""),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "policy": {
+                "minimum_length": minimum_length,
+                "require_symbol": require_symbol,
+            },
+            "total_passwords": total_passwords,
+            "remaining": remaining,
+            "dropped": dropped,
+            "emails_with_remaining_passwords": emails_with_remaining,
+            # Every exposed identity on the case, whether or not it came with a
+            # password. The session-clearing path binds to this so it still has
+            # an identity on a password-free session cookie theft case.
+            "all_exposed_emails": all_exposed_emails,
+            "results_by_email": list(per_email.values()),
+        })
 
-        output_message = _build_output_message(
-            total_passwords, remaining, dropped, minimum_length, require_symbol
-        )
+        output_message = _build_output_message(total_passwords, remaining, dropped, minimum_length, require_symbol)
 
     except Exception as error:
         siemplify.LOGGER.error(f'Error executing action "{SCRIPT_NAME}". Reason: {error}')
@@ -211,9 +206,7 @@ def main() -> None:
         output_message = f'Error executing action "{SCRIPT_NAME}". Reason: {error}'
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(
-        f"status: {status}, result_value: {result_value}, output_message: {output_message}"
-    )
+    siemplify.LOGGER.info(f"status: {status}, result_value: {result_value}, output_message: {output_message}")
     siemplify.end(output_message, result_value, status)
 
 

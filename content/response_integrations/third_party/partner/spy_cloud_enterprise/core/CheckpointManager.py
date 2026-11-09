@@ -29,11 +29,7 @@ class CheckpointManager:
         return self.siemplify.fetch_timestamp(datetime_format=False, timezone=False)
 
     def save_checkpoint(self, timestamp_ms: int) -> None:
-        self.siemplify.save_timestamp(
-            datetime_format=False,
-            timezone=False,
-            new_timestamp=timestamp_ms
-        )
+        self.siemplify.save_timestamp(datetime_format=False, timezone=False, new_timestamp=timestamp_ms)
 
     def iso_to_epoch_ms(self, value: str) -> int:
         dt = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)

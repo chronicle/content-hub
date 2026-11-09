@@ -95,9 +95,7 @@ def _collection_source_label(value: Any) -> str:
 def _format_source_counts(counter: Counter) -> str:
     if not counter:
         return "none"
-    return ", ".join(
-        f"{source}={count}" for source, count in sorted(counter.items())
-    )
+    return ", ".join(f"{source}={count}" for source, count in sorted(counter.items()))
 
 
 def _count_sources(
@@ -125,9 +123,7 @@ def _get_udm_event_sources(udm_event: Any) -> list[str]:
     if not isinstance(additional, dict):
         additional = {}
     return [
-        _collection_source_label(
-            extensions.get(COLLECTION_SOURCE_FIELD) or additional.get(COLLECTION_SOURCE_FIELD)
-        )
+        _collection_source_label(extensions.get(COLLECTION_SOURCE_FIELD) or additional.get(COLLECTION_SOURCE_FIELD))
     ]
 
 
@@ -313,32 +309,32 @@ def _collect_alerts(
             # significant contributor to hitting the connector timeout.
             if index <= 10 or index % 500 == 0:
                 siemplify.LOGGER.info(
-                "Building alert #{idx}: "
-                "event_type={event_type}, "
-                "product_log_id={product_log_id}, "
-                "collection_source={collection_source}, "
-                "merged_record_count={merged_record_count}, "
-                "source_severity={source_severity}, "
-                "severity_label={severity_label}, "
-                "soar_severity={soar_severity}, "
-                "risk_score={risk_score}, "
-                "criticality={criticality}, "
-                "product_severity={product_severity}, "
-                "product_priority={product_priority}".format(
-                    idx=index,
-                    event_type=event_type,
-                    product_log_id=product_log_id,
-                    collection_source=collection_source,
-                    merged_record_count=merged_record_count,
-                    source_severity=source_severity,
-                    severity_label=severity_label,
-                    soar_severity=soar_severity,
-                    risk_score=risk_score,
-                    criticality=criticality,
-                    product_severity=product_severity,
-                    product_priority=product_priority,
+                    "Building alert #{idx}: "
+                    "event_type={event_type}, "
+                    "product_log_id={product_log_id}, "
+                    "collection_source={collection_source}, "
+                    "merged_record_count={merged_record_count}, "
+                    "source_severity={source_severity}, "
+                    "severity_label={severity_label}, "
+                    "soar_severity={soar_severity}, "
+                    "risk_score={risk_score}, "
+                    "criticality={criticality}, "
+                    "product_severity={product_severity}, "
+                    "product_priority={product_priority}".format(
+                        idx=index,
+                        event_type=event_type,
+                        product_log_id=product_log_id,
+                        collection_source=collection_source,
+                        merged_record_count=merged_record_count,
+                        source_severity=source_severity,
+                        severity_label=severity_label,
+                        soar_severity=soar_severity,
+                        risk_score=risk_score,
+                        criticality=criticality,
+                        product_severity=product_severity,
+                        product_priority=product_priority,
+                    )
                 )
-            )
 
             alert = build_alert_from_udm_event(
                 udm_event,
@@ -347,9 +343,7 @@ def _collect_alerts(
             )
 
             if not alert:
-                siemplify.LOGGER.error(
-                    f"Parser returned an empty alert object for product_log_id={product_log_id}"
-                )
+                siemplify.LOGGER.error(f"Parser returned an empty alert object for product_log_id={product_log_id}")
                 continue
 
             alerts.append(alert)
@@ -360,10 +354,7 @@ def _collect_alerts(
             except Exception:
                 preview = str(udm_event)[:2000]
 
-            siemplify.LOGGER.error(
-                f"Failed to process UDM event #{index} into alert: {e}. "
-                f"UDM preview: {preview}"
-            )
+            siemplify.LOGGER.error(f"Failed to process UDM event #{index} into alert: {e}. UDM preview: {preview}")
 
     siemplify.LOGGER.info(f"Created {len(alerts)} alerts")
     siemplify.LOGGER.info(
@@ -380,7 +371,7 @@ def main(is_test_run: bool) -> None:
     siemplify.script_name = CONNECTOR_NAME
 
     manager = None
-    alerts = []
+    alerts: list[Any] = []
     checkpoint_until = None
     collection_succeeded = False
 
@@ -399,7 +390,7 @@ def main(is_test_run: bool) -> None:
     # is empty or null" and drops every alert in the cycle.
     siemplify.return_package(alerts)
 
-    if not collection_succeeded or is_test_run:
+    if not collection_succeeded or manager is None or is_test_run:
         # Commit nothing, so undelivered records are re-fetched next cycle
         # rather than skipped (integration guide 9.2). Test runs never commit.
         return

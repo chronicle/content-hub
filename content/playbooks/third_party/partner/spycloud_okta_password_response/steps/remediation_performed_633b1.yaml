@@ -1,10 +1,11 @@
 name: Condition
-description: Evaluate whether either remediation actually succeeded - the Okta password
-    reset or the Okta session clear. This step is a join - it is reached both from the
-    session-clear audit step (sessions were cleared) and directly from the "No" branch
-    of "Severity 30 Present?" (no session cookie theft exposure), so it runs on every
-    path through the playbook. The "Yes" branch closes the case; the "No" branch ends
-    the playbook and leaves the case open for an analyst.
+description: Evaluate whether the remediations succeeded - the Okta password reset
+    and the Okta session clear. This step is a join - it is reached both from the
+    session audit step and directly from the "No" branch of "Severity 30 Present?" (no
+    session cookie theft exposure), so it runs on every path through the playbook. If
+    either remediation ran and failed, the "Remediation Failed" branch ends the playbook
+    and leaves the case open for an analyst. Otherwise the "Yes" branch closes the case
+    when at least one remediation succeeded, and the "No" branch leaves it open.
 identifier: 633b1718-2489-42a5-a26c-9f85dea72ccb
 original_step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
 playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
@@ -22,28 +23,27 @@ parameters:
     playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
     name: AssignedUsers
     value: null
-# LogicalOperator 1 is OR: the "Yes" branch is taken when the reset succeeded, or the
-# session clear succeeded, or both. A step that did not run on this path resolves to an
-# empty value, which does not equal "true", so the skipped remediation cannot satisfy
-# the branch on its own.
+# Branches are evaluated in order and the first match wins. LogicalOperator 1 is OR.
+# "Remediation Failed" comes first: if either remediation ran and returned "false"
+# the case stays open, even when the other one succeeded, so a partial remediation
+# never auto-closes. "Yes" then closes the case when at least one remediation
+# returned "true". A step that did not run on this path resolves to an empty value,
+# which matches neither "true" nor "false", so a skipped remediation affects neither
+# branch.
 -   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
     playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
     name: Branches
-    value: '[{"LogicalOperator":1,"Conditions":[{"Operator":0,"FieldName":"[Reset User
-        Password.is_success]","Type":7,"Value":"true","CustomOperatorName":"Core
-        Functions.Equal"},{"Operator":0,"FieldName":"[Clear User
-        Sessions.is_success]","Type":7,"Value":"true","CustomOperatorName":"Core
-        Functions.Equal"}],"Order":1,"IsDefaultBranch":false,"Name":"Yes"},{"LogicalOperator":0,"Conditions":[],"Order":2,"IsDefaultBranch":true,"Name":"No"}]'
+    value: '[{"LogicalOperator":1,"Conditions":[{"Operator":0,"FieldName":"[Reset User Password.is_success]","Type":7,"Value":"false","CustomOperatorName":"Core Functions.Equal"},{"Operator":0,"FieldName":"[Clear User Sessions.is_success]","Type":7,"Value":"false","CustomOperatorName":"Core Functions.Equal"}],"Order":1,"IsDefaultBranch":false,"Name":"Remediation Failed"},{"LogicalOperator":1,"Conditions":[{"Operator":0,"FieldName":"[Reset User Password.is_success]","Type":7,"Value":"true","CustomOperatorName":"Core Functions.Equal"},{"Operator":0,"FieldName":"[Clear User Sessions.is_success]","Type":7,"Value":"true","CustomOperatorName":"Core Functions.Equal"}],"Order":2,"IsDefaultBranch":false,"Name":"Yes"},{"LogicalOperator":0,"Conditions":[],"Order":3,"IsDefaultBranch":true,"Name":"No"}]'
 -   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
     playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
     name: DistinctDuplicateEntities
     value: 'true'
-# Fall back to branch 2 ("No") if a placeholder cannot be resolved - a failure to read
+# Fall back to branch 3 ("No") if a placeholder cannot be resolved - a failure to read
 # a remediation result should leave the case open rather than error the playbook.
 -   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
     playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
     name: ErrorFallbackBranch
-    value: '2'
+    value: '3'
 -   step_id: 633b1718-2489-42a5-a26c-9f85dea72ccb
     playbook_id: 7ef9edae-891c-4514-b062-e3e800355e32
     name: HasApprovalLink

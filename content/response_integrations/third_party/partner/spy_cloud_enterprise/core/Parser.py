@@ -161,10 +161,7 @@ def get_best_identifier_from_udm(udm_event: dict[str, Any]) -> str:
 def build_stable_alert_id_from_udm(udm_event: dict[str, Any]) -> str:
     extensions = get_udm_extensions(udm_event)
 
-    direct_id = first_present(
-        extensions,
-        ["document_id", "log_id", "infected_machine_id", "record_id", "id"]
-    )
+    direct_id = first_present(extensions, ["document_id", "log_id", "infected_machine_id", "record_id", "id"])
     if direct_id:
         return f"spycloud:{direct_id}"
 
@@ -338,21 +335,19 @@ def flatten_udm_event_for_alert(udm_event: dict[str, Any]) -> dict[str, Any]:
         "udm_product_name": metadata.get("product_name"),
         "udm_product_event_type": metadata.get("product_event_type"),
         "udm_description": metadata.get("description"),
-
         "principal_hostname": principal.get("hostname"),
         "principal_asset_id": principal.get("asset_id"),
         "principal_ip": principal.get("ip"),
         "principal_platform": principal.get("platform"),
         "principal_userid": principal_user.get("userid"),
         "principal_user_email_addresses": principal_user.get("email_addresses"),
-
         "target_hostname": target.get("hostname"),
         "target_url": target.get("url"),
         "target_domain": target.get("domain"),
         "target_ip": target.get("ip"),
         "target_file_full_path": target.get("file", {}).get("full_path")
-        if isinstance(target.get("file"), dict) else None,
-
+        if isinstance(target.get("file"), dict)
+        else None,
         "security_result_severity": security_result.get("severity"),
         "security_result_category": security_result.get("category"),
         "security_result_summary": security_result.get("summary"),
@@ -363,28 +358,23 @@ def flatten_udm_event_for_alert(udm_event: dict[str, Any]) -> dict[str, Any]:
         "security_result_product_priority": security_result.get("product_priority"),
         "security_result_confidence": security_result.get("confidence"),
         "security_result_threat_name": security_result.get("threat_name"),
-
         "spycloud_document_id": extensions.get("document_id"),
         "spycloud_source_id": extensions.get("source_id"),
         "spycloud_source_severity": extensions.get("severity"),
         "spycloud_severity_label": (
-            extensions.get("spycloud_severity_label")
-            or additional.get("spycloud_severity_label")
+            extensions.get("spycloud_severity_label") or additional.get("spycloud_severity_label")
         ),
         "spycloud_mapped_soar_severity": extensions.get("soar_severity") or additional.get("soar_severity"),
         "spycloud_risk_score": extensions.get("risk_score") or additional.get("risk_score"),
         "spycloud_criticality": extensions.get("criticality") or additional.get("criticality"),
-
         "spycloud_email": extensions.get("email"),
         "spycloud_username": extensions.get("username"),
         "spycloud_domain": extensions.get("domain"),
         "spycloud_password_type": extensions.get("password_type"),
         "spycloud_has_password": extensions.get("has_password") or additional.get("has_password"),
         "spycloud_has_plaintext_password": (
-            extensions.get("has_plaintext_password")
-            or additional.get("has_plaintext_password")
+            extensions.get("has_plaintext_password") or additional.get("has_plaintext_password")
         ),
-
         # Sensitive breach values. Only populated when the connector's "Include
         # Plaintext Secrets" option is enabled; otherwise the converter never puts
         # these into the UDM extensions and each resolves to an empty string.
@@ -410,7 +400,6 @@ def flatten_udm_event_for_alert(udm_event: dict[str, Any]) -> dict[str, Any]:
         "spycloud_bank_number": extensions.get("bank_number"),
         "spycloud_bank_routing_number": extensions.get("bank_routing_number"),
         "spycloud_taxid": extensions.get("taxid"),
-
         "spycloud_log_id": extensions.get("log_id"),
         "spycloud_infected_machine_id": extensions.get("infected_machine_id"),
         "spycloud_infected_time": extensions.get("infected_time"),
@@ -431,7 +420,6 @@ def flatten_udm_event_for_alert(udm_event: dict[str, Any]) -> dict[str, Any]:
         "spycloud_user_agent": extensions.get("user_agent"),
         "spycloud_country_code": extensions.get("country_code"),
         "spycloud_timezone": extensions.get("timezone"),
-
         "spycloud_breach_title": first_present(extensions, ["title", "short_title"]),
         "spycloud_breach_site": extensions.get("site"),
         "spycloud_breach_main_category": extensions.get("breach_main_category"),
@@ -440,12 +428,10 @@ def flatten_udm_event_for_alert(udm_event: dict[str, Any]) -> dict[str, Any]:
         "spycloud_confidence": extensions.get("confidence"),
         "spycloud_tlp": extensions.get("tlp"),
         "spycloud_collection_source": (
-            extensions.get("spycloud_collection_source")
-            or additional.get("spycloud_collection_source")
+            extensions.get("spycloud_collection_source") or additional.get("spycloud_collection_source")
         ),
         "spycloud_merged_record_count": (
-            extensions.get("_merged_record_count")
-            or additional.get("_merged_record_count")
+            extensions.get("_merged_record_count") or additional.get("_merged_record_count")
         ),
     }
 
