@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from TIPCommon.types import SingleJson
+
 from .datamodels import (
     RDAPDNSSEC,
     Analytics,
@@ -25,23 +27,39 @@ from .UtilsManager import classify_domain_risk, get_domain_risk_score_details, p
 
 
 class DomainToolsParser:
-    def _safe_get_value(self, data: dict, key: str) -> str:
+    @staticmethod
+    def _safe_get_value(data: SingleJson, key: str) -> str:
         val = data.get(key)
         return val.get("value", "") if isinstance(val, dict) else (val or "")
 
-    def _safe_get_dict(self, data: dict, key: str) -> dict | None:
+    @staticmethod
+    def _safe_get_dict(data: SingleJson, key: str) -> SingleJson | None:
         """Returns the full {value, count} dict if value is non-empty, else None."""
         val = data.get(key)
         if not isinstance(val, dict):
             return None
         return val if val.get("value") else None
 
-    def _to_list_dict(self, data: dict, key: str) -> list[dict]:
+    @staticmethod
+    def _to_list_dict(data: SingleJson, key: str) -> list[SingleJson]:
         """Ensures tracking codes are always a list of dicts."""
         val = data.get(key)
         if not val:
             return []
         return val if isinstance(val, list) else [{"value": val}]
+
+    @staticmethod
+    def _to_single_json(val: Any) -> SingleJson | None:
+        """Normalize a raw API value (str or {value, count} dict) to SingleJson or None.
+
+        Handles APIs that return a field as either a plain string or a pivot dict
+        depending on the endpoint (e.g. iris_enrich vs iris_investigate for registrar).
+        """
+        if isinstance(val, dict):
+            return val if val.get("value") else None
+        if isinstance(val, str) and val:
+            return {"value": val, "count": 0}
+        return None
 
     def _parse_iris_contact(self, contact_data: dict) -> Contact:
         if not contact_data:
@@ -109,7 +127,7 @@ class DomainToolsParser:
             identity=Identity(
                 registrant_name=self._safe_get_dict(raw_data, "registrant_name"),
                 registrant_org=self._safe_get_dict(raw_data, "registrant_org"),
-                registrar=self._safe_get_dict(raw_data, "registrar"),
+                registrar=self._to_single_json(raw_data.get("registrar")),
                 soa_email=raw_data.get("soa_email") or [],
                 ssl_email=raw_data.get("ssl_email") or [],
                 email_domains=[
@@ -163,122 +181,146 @@ class DomainToolsParser:
             country=_v("country"),
         )
 
-    def parse_iris_enrich_data(self, domain: str, raw_data: dict[str, Any]) -> EnrichedDomainSummary:
-        """Parse a single iris_enrich result into an EnrichedDomainSummary."""
-        risk_raw = raw_data.get("domain_risk") or {}
-        risk_details = get_domain_risk_score_details(risk_raw)
+    @staticmethod
+    def _parse_risk_components(risk_details: dict[str, Any]) -> dict[str, Any]:
+        """Extract and normalize risk scores, threats, and evidence from risk_details."""
+        threats_raw = risk_details.get("threat_profile_threats", "")
+        evidence_raw = risk_details.get("threat_profile_evidence", "")
+        return {
+            "overall_risk_score": risk_details.get("overall_risk_score") or 0,
+            "proximity_risk_score": risk_details.get("proximity_risk_score") or 0,
+            "threat_profile_risk_score": risk_details.get("threat_profile_risk_score") or 0,
+            "malware_risk_score": risk_details.get("threat_profile_malware_risk_score") or 0,
+            "phishing_risk_score": risk_details.get("threat_profile_phishing_risk_score") or 0,
+            "spam_risk_score": risk_details.get("threat_profile_spam_risk_score") or 0,
+            "threats": (
+                [t.strip() for t in threats_raw.split(",") if t.strip()]
+                if isinstance(threats_raw, str) else (threats_raw or [])
+            ),
+            "evidence": (
+                [e.strip() for e in evidence_raw.split(",") if e.strip()]
+                if isinstance(evidence_raw, str) else (evidence_raw or [])
+            ),
+        }
 
-        overall_score = risk_details.get("overall_risk_score") or 0
+    @staticmethod
+    def _calculate_domain_age(raw_data: SingleJson) -> tuple[str | None, int | None]:
+        """Return (create_date_str, domain_age_days) from raw API data."""
         create_date_raw = raw_data.get("create_date") or {}
         domain_age_days = parse_domain_age_days(create_date_raw)
-        risk_category = classify_domain_risk(overall_score, domain_age_days)
+        create_date = create_date_raw.get("value") or None if isinstance(create_date_raw, dict) else create_date_raw or None
+        return create_date, domain_age_days
 
-        ips = raw_data.get("ip") or []
-        ip_cc = ips[0].get("country_code", {}).get("value", "") if ips else ""
-
+    def _extract_identity_fields(self, raw_data: SingleJson) -> dict[str, Any]:
+        """Extract registrant, registrar, and contact fields."""
         registrant_org_raw = raw_data.get("registrant_org") or {}
         registrant_org = (
             registrant_org_raw.get("value") if isinstance(registrant_org_raw, dict) else registrant_org_raw or None
         )
+        return {
+            "registrant_name": self._safe_get_value(raw_data, "registrant_name") or None,
+            "registrant_org": registrant_org,
+            "registrar": self._safe_get_value(raw_data, "registrar") or None,
+            "registrar_status": raw_data.get("registrar_status") or [],
+            "registrant_contact": self._parse_iris_enrich_contact(raw_data.get("registrant_contact") or {}),
+            "admin_contact": self._parse_iris_enrich_contact(raw_data.get("admin_contact") or {}),
+            "technical_contact": self._parse_iris_enrich_contact(raw_data.get("technical_contact") or {}),
+            "billing_contact": self._parse_iris_enrich_contact(raw_data.get("billing_contact") or {}),
+        }
 
-        iris_link = f'https://iris.domaintools.com/investigate/search/?q=domain:"{domain}"'
-
-        website_title = self._safe_get_value(raw_data, "website_title") or None
-        server_type = self._safe_get_value(raw_data, "server_type") or None
-        first_seen = self._safe_get_value(raw_data, "first_seen") or None
-        redirect = self._safe_get_value(raw_data, "redirect") or None
-        redirect_domain = self._safe_get_value(raw_data, "redirect_domain") or None
-        registrant_name = self._safe_get_value(raw_data, "registrant_name") or None
-        registrar = self._safe_get_value(raw_data, "registrar") or None
-        registrar_status = raw_data.get("registrar_status") or []
-        spf_info = raw_data.get("spf_info") or None
-        ssl_info = raw_data.get("ssl_info") or []
-        tld = raw_data.get("tld") or None
-        expiration_date = self._safe_get_value(raw_data, "expiration_date") or None
-        active = bool(raw_data.get("active"))
-        whois_url = raw_data.get("whois_url") or None
+    def _extract_infrastructure_fields(self, raw_data: SingleJson) -> dict[str, Any]:
+        """Extract hosting metadata, tracking codes, and infrastructure fields."""
+        ips = raw_data.get("ip") or []
+        ip_cc = ips[0].get("country_code", {}).get("value", "") if ips else ""
         pr_raw = raw_data.get("popularity_rank")
-        popularity_rank = int(pr_raw) if pr_raw and str(pr_raw).isdigit() else None
-        alexa = str(raw_data.get("alexa")) if raw_data.get("alexa") else None
-        adsense = self._safe_get_value(raw_data, "adsense") or None
-        google_analytics = self._safe_get_value(raw_data, "google_analytics") or None
-        ga4 = raw_data.get("ga4") or []
-        gtm_codes = raw_data.get("gtm_codes") or []
-        fb_codes = raw_data.get("fb_codes") or []
-        hotjar_codes = raw_data.get("hotjar_codes") or []
-        baidu_codes = raw_data.get("baidu_codes") or []
-        yandex_codes = raw_data.get("yandex_codes") or []
-        matomo_codes = raw_data.get("matomo_codes") or []
-        statcounter_project_codes = raw_data.get("statcounter_project_codes") or []
-        statcounter_security_codes = raw_data.get("statcounter_security_codes") or []
-        registrant_contact = self._parse_iris_enrich_contact(raw_data.get("registrant_contact") or {})
-        admin_contact = self._parse_iris_enrich_contact(raw_data.get("admin_contact") or {})
-        technical_contact = self._parse_iris_enrich_contact(raw_data.get("technical_contact") or {})
-        billing_contact = self._parse_iris_enrich_contact(raw_data.get("billing_contact") or {})
-        tags = raw_data.get("tags") or []
+        return {
+            "ip_country_code": ip_cc,
+            "website_title": self._safe_get_value(raw_data, "website_title") or None,
+            "server_type": self._safe_get_value(raw_data, "server_type") or None,
+            "first_seen": self._safe_get_value(raw_data, "first_seen") or None,
+            "redirect": self._safe_get_value(raw_data, "redirect") or None,
+            "redirect_domain": self._safe_get_value(raw_data, "redirect_domain") or None,
+            "expiration_date": self._safe_get_value(raw_data, "expiration_date") or None,
+            "spf_info": raw_data.get("spf_info") or None,
+            "ssl_info": raw_data.get("ssl_info") or [],
+            "tld": raw_data.get("tld") or None,
+            "active": bool(raw_data.get("active")),
+            "whois_url": raw_data.get("whois_url") or None,
+            "popularity_rank": int(pr_raw) if pr_raw and str(pr_raw).isdigit() else None,
+            "alexa": str(raw_data.get("alexa")) if raw_data.get("alexa") else None,
+            "adsense": self._safe_get_value(raw_data, "adsense") or None,
+            "google_analytics": self._safe_get_value(raw_data, "google_analytics") or None,
+            "ga4": raw_data.get("ga4") or [],
+            "gtm_codes": raw_data.get("gtm_codes") or [],
+            "fb_codes": raw_data.get("fb_codes") or [],
+            "hotjar_codes": raw_data.get("hotjar_codes") or [],
+            "baidu_codes": raw_data.get("baidu_codes") or [],
+            "yandex_codes": raw_data.get("yandex_codes") or [],
+            "matomo_codes": raw_data.get("matomo_codes") or [],
+            "statcounter_project_codes": raw_data.get("statcounter_project_codes") or [],
+            "statcounter_security_codes": raw_data.get("statcounter_security_codes") or [],
+            "tags": raw_data.get("tags") or [],
+        }
 
-        threats_raw = risk_details.get("threat_profile_threats", "")
-        evidence_raw = risk_details.get("threat_profile_evidence", "")
-        threats = (
-            [t.strip() for t in threats_raw.split(",") if t.strip()]
-            if isinstance(threats_raw, str)
-            else (threats_raw or [])
-        )
-        evidence = (
-            [e.strip() for e in evidence_raw.split(",") if e.strip()]
-            if isinstance(evidence_raw, str)
-            else (evidence_raw or [])
-        )
+    def parse_iris_enrich_data(self, domain: str, raw_data: SingleJson) -> EnrichedDomainSummary:
+        """Parse a single iris_enrich result into an EnrichedDomainSummary."""
+        risk_details = get_domain_risk_score_details(raw_data.get("domain_risk") or {})
+        risk = self._parse_risk_components(risk_details)
+        create_date, domain_age_days = self._calculate_domain_age(raw_data)
+        risk_category = classify_domain_risk(risk["overall_risk_score"], domain_age_days)
+        identity = self._extract_identity_fields(raw_data)
+        infra = self._extract_infrastructure_fields(raw_data)
+        iris_link = f'https://iris.domaintools.com/investigate/search/?q=domain:"{domain}"'
 
         return EnrichedDomainSummary(
             domain=domain,
             risk_category=risk_category,
-            overall_risk_score=overall_score,
-            proximity_risk_score=risk_details.get("proximity_risk_score") or 0,
-            threat_profile_risk_score=risk_details.get("threat_profile_risk_score") or 0,
-            malware_risk_score=risk_details.get("threat_profile_malware_risk_score") or 0,
-            phishing_risk_score=risk_details.get("threat_profile_phishing_risk_score") or 0,
-            spam_risk_score=risk_details.get("threat_profile_spam_risk_score") or 0,
-            threat_profile_threats=threats,
-            threat_profile_evidence=evidence,
+            overall_risk_score=risk["overall_risk_score"],
+            proximity_risk_score=risk["proximity_risk_score"],
+            threat_profile_risk_score=risk["threat_profile_risk_score"],
+            malware_risk_score=risk["malware_risk_score"],
+            phishing_risk_score=risk["phishing_risk_score"],
+            spam_risk_score=risk["spam_risk_score"],
+            threat_profile_threats=risk["threats"],
+            threat_profile_evidence=risk["evidence"],
             create_date=create_date,
             domain_age_days=domain_age_days,
             is_young_domain=(risk_category == "young_domain"),
-            registrant_org=registrant_org,
-            registrant_name=registrant_name,
-            registrar=registrar,
-            registrar_status=registrar_status,
-            ip_country_code=ip_cc,
             iris_investigate_link=iris_link,
-            website_title=website_title,
-            server_type=server_type,
-            first_seen=first_seen,
-            redirect=redirect,
-            redirect_domain=redirect_domain,
-            expiration_date=expiration_date,
-            active=active,
-            whois_url=whois_url,
-            popularity_rank=popularity_rank,
-            alexa=alexa,
-            spf_info=spf_info,
-            ssl_info=ssl_info,
-            tld=tld,
-            adsense=adsense,
-            google_analytics=google_analytics,
-            ga4=ga4,
-            gtm_codes=gtm_codes,
-            fb_codes=fb_codes,
-            hotjar_codes=hotjar_codes,
-            baidu_codes=baidu_codes,
-            yandex_codes=yandex_codes,
-            matomo_codes=matomo_codes,
-            statcounter_project_codes=statcounter_project_codes,
-            statcounter_security_codes=statcounter_security_codes,
-            registrant_contact=registrant_contact,
-            admin_contact=admin_contact,
-            technical_contact=technical_contact,
-            billing_contact=billing_contact,
-            tags=tags,
+            registrant_name=identity["registrant_name"],
+            registrant_org=identity["registrant_org"],
+            registrar=identity["registrar"],
+            registrar_status=identity["registrar_status"],
+            registrant_contact=identity["registrant_contact"],
+            admin_contact=identity["admin_contact"],
+            technical_contact=identity["technical_contact"],
+            billing_contact=identity["billing_contact"],
+            ip_country_code=infra["ip_country_code"],
+            website_title=infra["website_title"],
+            server_type=infra["server_type"],
+            first_seen=infra["first_seen"],
+            redirect=infra["redirect"],
+            redirect_domain=infra["redirect_domain"],
+            expiration_date=infra["expiration_date"],
+            spf_info=infra["spf_info"],
+            ssl_info=infra["ssl_info"],
+            tld=infra["tld"],
+            active=infra["active"],
+            whois_url=infra["whois_url"],
+            popularity_rank=infra["popularity_rank"],
+            alexa=infra["alexa"],
+            adsense=infra["adsense"],
+            google_analytics=infra["google_analytics"],
+            ga4=infra["ga4"],
+            gtm_codes=infra["gtm_codes"],
+            fb_codes=infra["fb_codes"],
+            hotjar_codes=infra["hotjar_codes"],
+            baidu_codes=infra["baidu_codes"],
+            yandex_codes=infra["yandex_codes"],
+            matomo_codes=infra["matomo_codes"],
+            statcounter_project_codes=infra["statcounter_project_codes"],
+            statcounter_security_codes=infra["statcounter_security_codes"],
+            tags=infra["tags"],
         )
 
     def parse_domain_rdap_data(self, raw_data: dict[str, Any]) -> ParsedDomainRDAPModel:

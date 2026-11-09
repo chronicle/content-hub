@@ -8,6 +8,7 @@ from typing import Any
 from domaintools import API
 from domaintools.exceptions import NotFoundException
 
+from .constants import BULK_ENRICH_BATCH_SIZE, LICENSE_IRIS_ENRICH
 from .datamodels import EnrichedDomainSummary, IrisInvestigateModel, ParsedDomainRDAPModel, WhoisHistoryModel
 from .DomainToolsParser import DomainToolsParser
 from .exceptions import DomainToolsManagerError
@@ -97,7 +98,7 @@ class DomainToolsManager:
 
             return dt_available_products
         except Exception as e:
-            raise DomainToolsManager(f"Unable to get account info. Reason: {str(e)}")
+            raise DomainToolsManagerError(f"Unable to get account info. Reason: {str(e)}")
 
     def _check_license(self, product_name: str) -> None:
         """Checks if a specific product is available under the current license.
@@ -114,8 +115,10 @@ class DomainToolsManager:
                 f"You don't have {product_name} - {self.available_api_calls} in your license."
             )
 
-    def enrich_domains_with_risk(self, domains: list[str]) -> list[EnrichedDomainSummary]:
-        from .constants import BULK_ENRICH_BATCH_SIZE, LICENSE_IRIS_ENRICH
+    def enrich_domains_with_risk(
+        self,
+        domains: list[str],
+    ) -> list[EnrichedDomainSummary]:
         try:
             self._check_license(LICENSE_IRIS_ENRICH)
             results = []
@@ -157,7 +160,7 @@ class DomainToolsManager:
                 f"Unable to get parsed domain rdap for {domain}. Reason {str(e)}"
             )
 
-    def get_whois_history(self, domain: str):
+    def get_whois_history(self, domain: str) -> WhoisHistoryModel:
         try:
             self._check_license("whois-history")
             response = self._api.whois_history(query=domain).response()
