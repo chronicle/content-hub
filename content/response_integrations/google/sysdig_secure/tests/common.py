@@ -19,5 +19,6 @@ from TIPCommon.types import SingleJson
 from integration_testing.common import get_def_file_content as get_json_file_content
 
 
+INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
 CONFIG: SingleJson = get_json_file_content(CONFIG_PATH)
