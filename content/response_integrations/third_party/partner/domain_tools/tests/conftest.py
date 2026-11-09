@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 import pytest
-from TIPCommon.types import SingleJson
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 pytest_plugins = ("integration_testing.conftest",)
 

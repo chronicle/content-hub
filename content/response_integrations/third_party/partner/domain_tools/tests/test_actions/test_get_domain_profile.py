@@ -23,7 +23,7 @@ DOMAIN_ENTITY = {"identifier": "example.com", "entity_type": "DOMAIN", "addition
 
 def _make_iris_model(domain: str = "example.com") -> IrisInvestigateModel:
     return IrisInvestigateModel(
-        name=domain,
+        domain=domain,
         last_enriched="2026-07-18",
         analytics=Analytics(
             overall_risk_score=23,
@@ -66,7 +66,7 @@ class TestGetDomainProfile:
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
-        assert "Successfully built profiles for 1 domain(s)" in action_output.results.output_message
+        assert "Successfully built profiles for 1 of 1 domain(s)" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, entities=[])
     def test_no_entities(
@@ -96,7 +96,7 @@ class TestGetDomainProfile:
     ) -> None:
         model = _make_iris_model()
         model_no_date = IrisInvestigateModel(
-            name=model.name,
+            domain=model.domain,
             last_enriched=model.last_enriched,
             analytics=model.analytics,
             identity=model.identity,

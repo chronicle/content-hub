@@ -6,6 +6,7 @@ Builds a comprehensive dossier for each in-scope domain using DomainTools Iris I
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
@@ -97,7 +98,8 @@ def _build_summary_message(
     failed_entities: list,
     missing_domains: list[str],
 ) -> str:
-    msg = f"Successfully built profiles for {len(success_entities)} domain(s)."
+    total = len(success_entities) + len(failed_entities) + len(missing_domains)
+    msg = f"Successfully built profiles for {len(success_entities)} of {total} domain(s)."
     if failed_entities:
         msg += f"\nFailed to profile: {', '.join(str(e.identifier) for e in failed_entities)}"
     if missing_domains:
@@ -135,7 +137,15 @@ def main() -> None:
             siemplify_logger=siemplify.LOGGER,
         )
 
-        iris_models = dt_manager.investigate_domains(domains=list(domain_entity_map.keys()))
+        try:
+            iris_models = dt_manager.investigate_domains(domains=list(domain_entity_map.keys()))
+        except Exception as api_err:
+            siemplify.LOGGER.error(f"Failed to retrieve domain profiles: {api_err}")
+            output_message = "No domain profiles could be built."
+            result_value = False
+            siemplify.end(output_message, result_value, status)
+            return
+
         iris_model_map = {m.domain: m for m in iris_models}
 
         missing_domains = [d for d in domain_entity_map if d not in iris_model_map]

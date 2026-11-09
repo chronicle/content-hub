@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from TIPCommon.types import SingleJson
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 from .datamodels import (
     RDAPDNSSEC,
@@ -92,7 +93,7 @@ class DomainToolsParser:
         billing_contact = self._parse_iris_contact(raw_data.get("billing_contact", {}))
 
         return IrisInvestigateModel(
-            name=str(raw_data.get("domain", "")),
+            domain=str(raw_data.get("domain", "")),
             last_enriched=datetime.now().strftime("%Y-%m-%d"),
             website_title=self._safe_get_dict(raw_data, "website_title"),
             first_seen=self._safe_get_dict(raw_data, "first_seen"),

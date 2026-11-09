@@ -4,9 +4,10 @@ import json
 import urllib.parse
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from TIPCommon.types import SingleJson
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 class DTBaseModel:
@@ -102,7 +103,7 @@ class Hosting:
 
 @dataclass(frozen=True, slots=True)
 class IrisInvestigateModel(DTBaseModel):
-    name: str
+    domain: str
     last_enriched: str
     analytics: Analytics
     identity: Identity
@@ -119,7 +120,7 @@ class IrisInvestigateModel(DTBaseModel):
     def to_table_data(self) -> dict[str, Any]:
         """Returns a simplified summary dict for UI tables (csv)."""
         return {
-            "Name": self.name,
+            "Name": self.domain,
             "Last Enriched": datetime.now().strftime("%Y-%m-%d"),
             "Overall Risk Score": self.analytics.overall_risk_score,
             "Proximity Risk Score": self.analytics.proximity_risk_score,

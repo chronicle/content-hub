@@ -122,7 +122,7 @@ def main() -> None:
 
             # get the corresponding domain entity
             for domain_model in domain_iris_models:
-                entity = extracted_domains[domain_model.name]
+                entity = extracted_domains[domain_model.domain]
                 siemplify.LOGGER.info(f"Processing entity: {entity.identifier}")
                 try:
                     domain_dict = domain_model.to_dict()
