@@ -43,9 +43,9 @@ YOUNG_DOMAIN_RESULT = EnrichedDomainSummary(
 class TestEnrichDomainRisk:
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, entities=[DOMAIN_ENTITY])
-    def test_enrich_success(
+    def test_high_risk_marks_suspicious(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
-    ):
+    ) -> None:
         dt_manager.set_enrich_domains_response([HIGH_RISK_RESULT])
 
         EnrichDomainRisk.main()
@@ -61,7 +61,7 @@ class TestEnrichDomainRisk:
     )
     def test_young_domain_always_suspicious(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
-    ):
+    ) -> None:
         # young domains are always flagged regardless of score (per TECHPLAN)
         dt_manager.set_enrich_domains_response([YOUNG_DOMAIN_RESULT])
 
@@ -73,7 +73,7 @@ class TestEnrichDomainRisk:
     @set_metadata(integration_config_file_path=CONFIG_PATH, entities=[])
     def test_no_entities(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
-    ):
+    ) -> None:
         EnrichDomainRisk.main()
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
@@ -83,7 +83,7 @@ class TestEnrichDomainRisk:
     @set_metadata(integration_config_file_path=CONFIG_PATH, entities=[DOMAIN_ENTITY])
     def test_api_failure(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
-    ):
+    ) -> None:
         dt_manager.simulate_enrich_failure()
 
         EnrichDomainRisk.main()
@@ -99,7 +99,7 @@ class TestEnrichDomainRisk:
     )
     def test_custom_threshold(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
-    ):
+    ) -> None:
         low_score = EnrichedDomainSummary(
             domain="evil.com",
             risk_category="medium_risk",

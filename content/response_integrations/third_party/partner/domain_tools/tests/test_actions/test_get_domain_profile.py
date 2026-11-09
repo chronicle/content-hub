@@ -57,7 +57,7 @@ class TestGetDomainProfile:
     @set_metadata(integration_config_file_path=CONFIG_PATH, entities=[DOMAIN_ENTITY])
     def test_profile_success(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
-    ):
+    ) -> None:
         dt_manager.set_investigate_domains_response([_make_iris_model()])
         dt_manager.set_parsed_domain_rdap_response(_make_rdap_model())
         dt_manager.set_whois_history_response(_make_whois_model())
@@ -71,7 +71,7 @@ class TestGetDomainProfile:
     @set_metadata(integration_config_file_path=CONFIG_PATH, entities=[])
     def test_no_entities(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
-    ):
+    ) -> None:
         GetDomainProfile.main()
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
@@ -81,7 +81,7 @@ class TestGetDomainProfile:
     @set_metadata(integration_config_file_path=CONFIG_PATH, entities=[DOMAIN_ENTITY])
     def test_investigate_failure(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
-    ):
+    ) -> None:
         dt_manager.simulate_investigate_failure()
 
         GetDomainProfile.main()
@@ -91,13 +91,20 @@ class TestGetDomainProfile:
         assert "No domain profiles could be built" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, entities=[DOMAIN_ENTITY])
-    def test_rdap_not_found_still_succeeds(
+    def test_missing_create_date_still_succeeds(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
-    ):
-        dt_manager.set_investigate_domains_response([_make_iris_model()])
-        dt_manager.set_parsed_domain_rdap_response(
-            ParsedDomainRDAPModel(domain="example.com", has_found=False)
+    ) -> None:
+        model = _make_iris_model()
+        model_no_date = IrisInvestigateModel(
+            name=model.name,
+            last_enriched=model.last_enriched,
+            analytics=model.analytics,
+            identity=model.identity,
+            registration=Registration(create_date=None, domain_status=True),
+            hosting=model.hosting,
         )
+        dt_manager.set_investigate_domains_response([model_no_date])
+        dt_manager.set_parsed_domain_rdap_response(_make_rdap_model())
         dt_manager.set_whois_history_response(_make_whois_model())
 
         GetDomainProfile.main()
@@ -114,7 +121,7 @@ class TestGetDomainProfile:
     )
     def test_multiple_entities(
         self, action_output: MockActionOutput, dt_manager: MockDomainToolsManager
-    ):
+    ) -> None:
         dt_manager.set_investigate_domains_response([_make_iris_model()])
         dt_manager.set_parsed_domain_rdap_response(_make_rdap_model())
         dt_manager.set_whois_history_response(_make_whois_model())

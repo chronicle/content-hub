@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from TIPCommon.types import SingleJson
 
 pytest_plugins = ("integration_testing.conftest",)
 
@@ -10,7 +12,12 @@ pytest_plugins = ("integration_testing.conftest",)
 class MockEntity:
     """Simple mock entity class that mimics DomainEntityInfo."""
 
-    def __init__(self, identifier: str, entity_type: str, additional_properties: dict | None = None):
+    def __init__(
+        self,
+        identifier: str,
+        entity_type: str,
+        additional_properties: SingleJson | None = None,
+    ) -> None:
         self.identifier = identifier
         self.entity_type = entity_type
         self.additional_properties = additional_properties or {}
@@ -21,10 +28,10 @@ class MockEntity:
         self.is_vulnerable = False
         self.is_pivot = False
 
-    def _update_internal_properties(self):
+    def _update_internal_properties(self) -> None:
         pass
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return {
             "identifier": self.identifier,
             "entity_type": self.entity_type,
@@ -37,11 +44,11 @@ class MockEntity:
 class MockDomainToolsManager:
     """Mock DomainToolsManager for testing actions without real API calls."""
 
-    def __init__(self):
-        self.enrich_domains_response = []
-        self.investigate_domains_response = []
-        self.parsed_domain_rdap_response = None
-        self.whois_history_response = None
+    def __init__(self) -> None:
+        self.enrich_domains_response: list = []
+        self.investigate_domains_response: list = []
+        self.parsed_domain_rdap_response: Any = None
+        self.whois_history_response: Any = None
 
         self.should_fail_enrich = False
         self.should_fail_investigate = False
@@ -49,40 +56,40 @@ class MockDomainToolsManager:
         self.should_fail_whois = False
         self.exception_message = "API Error"
 
-    def set_enrich_domains_response(self, response):
+    def set_enrich_domains_response(self, response: list) -> None:
         self.enrich_domains_response = response
 
-    def set_investigate_domains_response(self, response):
+    def set_investigate_domains_response(self, response: list) -> None:
         self.investigate_domains_response = response
 
-    def set_parsed_domain_rdap_response(self, response):
+    def set_parsed_domain_rdap_response(self, response: Any) -> None:
         self.parsed_domain_rdap_response = response
 
-    def set_whois_history_response(self, response):
+    def set_whois_history_response(self, response: Any) -> None:
         self.whois_history_response = response
 
-    def simulate_enrich_failure(self, should_fail: bool = True):
+    def simulate_enrich_failure(self, should_fail: bool = True) -> None:
         self.should_fail_enrich = should_fail
 
-    def simulate_investigate_failure(self, should_fail: bool = True):
+    def simulate_investigate_failure(self, should_fail: bool = True) -> None:
         self.should_fail_investigate = should_fail
 
-    def enrich_domains_with_risk(self, domains: list):
+    def enrich_domains_with_risk(self, domains: list[str]) -> list:
         if self.should_fail_enrich:
             raise Exception(self.exception_message)
         return self.enrich_domains_response
 
-    def investigate_domains(self, domains: list):
+    def investigate_domains(self, domains: list[str]) -> list:
         if self.should_fail_investigate:
             raise Exception(self.exception_message)
         return self.investigate_domains_response
 
-    def get_parsed_domain_rdap(self, domain: str):
+    def get_parsed_domain_rdap(self, domain: str) -> Any:
         if self.should_fail_rdap:
             raise Exception(self.exception_message)
         return self.parsed_domain_rdap_response
 
-    def get_whois_history(self, domain: str):
+    def get_whois_history(self, domain: str) -> Any:
         if self.should_fail_whois:
             raise Exception(self.exception_message)
         return self.whois_history_response
@@ -94,7 +101,7 @@ def dt_manager() -> MockDomainToolsManager:
 
 
 @pytest.fixture(autouse=True)
-def mock_dt_manager(monkeypatch: pytest.MonkeyPatch, dt_manager: MockDomainToolsManager):
+def mock_dt_manager(monkeypatch: pytest.MonkeyPatch, dt_manager: MockDomainToolsManager) -> None:
     """Patch DomainToolsManager in all action modules."""
     monkeypatch.setattr(
         "domain_tools.actions.EnrichDomainRisk.DomainToolsManager",
@@ -115,7 +122,7 @@ def mock_dt_manager(monkeypatch: pytest.MonkeyPatch, dt_manager: MockDomainTools
 
 
 @pytest.fixture(autouse=True)
-def mock_siemplify_methods(monkeypatch: pytest.MonkeyPatch):
+def mock_siemplify_methods(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock SOAR SDK methods not provided by integration_testing."""
     monkeypatch.setattr(
         "soar_sdk.SiemplifyAction.SiemplifyAction.update_entities",
@@ -128,26 +135,26 @@ def mock_siemplify_methods(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(autouse=True)
-def convert_entities(monkeypatch: pytest.MonkeyPatch):
+def convert_entities(monkeypatch: pytest.MonkeyPatch) -> None:
     """Convert dict entities passed to @set_metadata into MockEntity objects."""
     import integration_testing.set_meta as set_meta_module
 
     original_get_entities = set_meta_module._get_entities_path_and_fn
     original_get_entities_2 = set_meta_module._get_entities_path_and_fn_2
 
-    def _to_entity(entity_dict: dict) -> MockEntity:
+    def _to_entity(entity_dict: dict[str, Any]) -> MockEntity:
         return MockEntity(
             identifier=entity_dict.get("identifier", ""),
             entity_type=entity_dict.get("entity_type", ""),
             additional_properties=dict(entity_dict.get("additional_properties", {})),
         )
 
-    def patched(entities):
+    def patched(entities: list) -> Any:
         if entities and isinstance(entities, list) and isinstance(entities[0], dict):
             entities = [_to_entity(e) for e in entities]
         return original_get_entities(entities)
 
-    def patched_2(entities):
+    def patched_2(entities: list) -> Any:
         if entities and isinstance(entities, list) and isinstance(entities[0], dict):
             entities = [_to_entity(e) for e in entities]
         return original_get_entities_2(entities)
