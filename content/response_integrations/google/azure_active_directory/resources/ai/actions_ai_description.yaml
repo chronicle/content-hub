@@ -1,0 +1,2398 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Add User To a Group:
+  ai_description: >-
+    ### General Description
+
+    Adds specific User entities to a designated Azure Active Directory (Azure AD)
+    group. This action is primarily used for access management and containment workflows,
+    such as moving a compromised user to a restricted security group. The action requires
+    the user's identifier to be in the User Principal Name (UPN) format and the target
+    group to be identified by its unique GUID.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves the target Group ID from the action parameters.
+
+    2. **Entity Filtering**: Filters the target entities to identify those of type
+    `USER`.
+
+    3. **User Identification**: For each user entity, makes a GET request to the Azure
+    AD API to retrieve the internal Object ID associated with the user's Principal
+    Name.
+
+    4. **Membership Update**: Executes a POST request to the Azure AD API to add the
+    user's directory object to the specified group.
+
+    5. **Completion**: Returns a summary message indicating successful and failed
+    additions.
+
+
+    ### Additional Notes
+
+    - The action specifically targets entities of type `USER`.
+
+    - If a user is already a member of the group, the API may return an error which
+    the action will log as a failure for that specific entity.
+  ai_short_description: >-
+    Adds specific User entities to a designated Azure Active Directory (Azure AD)
+    group for access management or containment purposes.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds the specified user to an Azure Active Directory group.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Azure AD API to add a user to a group,
+      which mutates external data. It does not fetch contextual data for enrichment
+      (only an ID lookup for the mutation), nor does it update internal entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      the condition `entity.entity_type == EntityTypes.USER`. Therefore, it targets
+      USER entities and filters them strictly by their entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action makes a POST request to Azure AD to add a user to a specific group.
+      This directly aligns with the 'Update Identity' expected outcome, which includes
+      modifying account metadata such as group memberships. It does not match other
+      categories like Disable Identity or Enrich Asset.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group ID | String | Yes | Azure AD group id in 00e40000-1971-439d-80fc-d0e000001dbd
+    format. |
+Disable Account:
+  ai_description: >-
+    ### General Description
+
+    Disables a user account in Azure Active Directory (Azure AD). It is primarily
+    used for containment and remediation during security incidents to prevent unauthorized
+    access by a compromised or suspicious user account. The action targets User entities
+    and updates their status in the external Azure AD environment.
+
+
+    ### Flow Description
+
+    1. Retrieves necessary configuration parameters and initializes the Azure AD Manager.
+
+    2. Filters the target entities to identify all `USER` entities.
+
+    3. Iterates through the suitable entities and sends a `PATCH` request to the Microsoft
+    Graph API endpoint (`v1.0/users/{user}`) with the payload `{"accountEnabled":
+    "false"}` to disable the account.
+
+    4. Tracks successful and failed operations.
+
+    5. Returns a summary message indicating the success or failure of the operation
+    for each entity.
+
+
+    ### Additional Notes
+
+    The action expects User entities to be in the format `username@domain` (User Principal
+    Name). This action performs a state change in Azure AD and is not considered an
+    enrichment action.
+  ai_short_description: >-
+    Disables a user account in Azure Active Directory to prevent unauthorized access
+    by a compromised or suspicious user account.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends a PATCH request to Microsoft Graph API to disable the user account by
+      setting 'accountEnabled' to false.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a PATCH request to Microsoft Graph API to disable a user account,
+      which mutates external data. It does not fetch contextual data, update internal
+      entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES` contains `EntityTypes.USER`.
+      Therefore, it targets USER entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: true
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action sends a PATCH request to Azure AD to set 'accountEnabled' to false
+      for a specific user. This directly aligns with the 'Disable Identity' expected
+      outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Enable Account:
+  ai_description: >-
+    ### General Description
+
+    Enables a user account in Azure Active Directory (Azure AD). This action is used
+    as a remediation or containment step to restore access to a previously disabled
+    user account. It interacts with the Microsoft Graph API to update the account
+    status.
+
+
+    ### Flow Description
+
+    1. Filters the target entities to identify those of type `USER`.
+
+    2. Authenticates with the Azure AD Login API using the client credentials grant
+    type to retrieve an OAuth2 access token.
+
+    3. For each identified user entity, the action sends a `PATCH` request to the
+    `/users/{user_principal_name}` endpoint with the payload `{"accountEnabled": "true"}`
+    to enable the account.
+
+    4. Collects the results for all processed entities and returns a summary message
+    indicating which accounts were successfully enabled and which failed.
+
+
+    ### Additional Notes
+
+    The action expects the user entity identifier to be in the `username@domain` format
+    (User Principal Name).
+  ai_short_description: >-
+    Enables a user account in Azure Active Directory (Azure AD) to restore access
+    to a previously disabled user account.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Enables a user account in Azure Active Directory by sending a PATCH request
+      to update the account status.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a PATCH request to Azure AD to enable a user account, which
+      mutates external data. It does not fetch contextual data, update internal entities,
+      or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      is defined as `[EntityTypes.USER]`. Therefore, it targets USER entities and
+      filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: true
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action enables a user account in Azure Active Directory, restoring authentication
+      capabilities. This directly aligns with the 'Enable Identity' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Enrich Host:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname entities with device information from Azure Active Directory
+    (Azure AD). The action searches for a device in Azure AD where the `displayName`
+    matches the entity's identifier. If a match is found, it retrieves metadata such
+    as operating system, version, compliance status, and last sign-in time.
+
+
+    ### Flow Description
+
+    1. Identifies all Hostname entities within the current context.
+
+    2. For each Hostname, queries the Microsoft Graph `/devices` endpoint using a
+    filter on the `displayName` attribute.
+
+    3. If multiple devices are returned, it selects the one that is currently enabled
+    and has the most recent sign-in timestamp.
+
+    4. Updates the entity's additional properties with the retrieved data (prefixed
+    with 'AAD') and marks the entity as enriched.
+
+    5. Adds a detailed CSV-formatted data table to the case wall for each successfully
+    enriched host.
+
+    6. Attaches the raw JSON results to the action's output.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Enriches Hostname entities with device information from Azure Active Directory
+    (Azure AD) by matching the entity's identifier with the device's display name.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Microsoft Graph API to fetch device data
+      (fetches_data=true). It does not mutate external data. It updates the internal
+      entities with the fetched data (can_update_entities=true) but does not create
+      insights or case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.HOSTNAME`. Therefore, it targets Hostname entities and filters
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches device information from Azure AD to enrich Hostname entities
+      with contextual metadata such as OS version and compliance status. This directly
+      aligns with the 'Enrich Asset' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Enrich User:
+  ai_description: >-
+    ### General Description
+
+    Enriches User entities by retrieving comprehensive profile information from Azure
+    Active Directory (Microsoft Graph API). It provides context regarding a user's
+    organizational role, contact information, account status, and optionally, their
+    Multi-Factor Authentication (MFA) registration status and sign-in activity.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts action parameters such as `Fields To Return`,
+    `Include MFA Details`, and `Include Last Sign In Details`.
+
+    2. **Entity Filtering**: Filters the target entities to include only those of
+    type `USER`.
+
+    3. **Data Retrieval**: For each suitable user entity, performs a GET request to
+    the Microsoft Graph API to fetch the user's profile based on the specified fields.
+
+    4. **MFA Enrichment**: If `Include MFA Details` is enabled, performs an additional
+    API call to retrieve authentication method registration details.
+
+    5. **Sign-In Activity Enrichment**: If `Include Last Sign In Details` is enabled,
+    performs an additional API call to retrieve the user's sign-in activity.
+
+    6. **Internal Updates**: Updates the entity's `additional_properties` with the
+    retrieved data, marks the entity as enriched, and adds a data table to the case
+    wall.
+
+    7. **Completion**: Updates the entities in the Google SecOps environment and returns
+    a JSON result containing the raw data.
+
+
+    ### Additional Notes
+
+    - The action expects the User entity identifier to be in a format compatible with
+    Azure AD User Principal Names (UPN), typically `username@domain.com`.
+
+    - Fetching MFA details or sign-in activity requires specific permissions (e.g.,
+    `AuditLog.Read.All`) in Azure AD.
+  ai_short_description: >-
+    Enriches User entities by retrieving comprehensive profile information, MFA details,
+    and sign-in activity from Azure Active Directory.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Azure Active Directory using GET requests (fetches_data=true).
+      It does not mutate external data or internal case data. It updates the entities
+      with the retrieved information (can_update_entities=true). It does not create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.USER`. Therefore, it targets User entities
+      and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches contextual metadata (profile information, MFA details, sign-in
+      activity) for a user from Azure Active Directory. This matches the 'Enrich Asset'
+      expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Fields To Return | String | No | A comma-separated list of fields that you want
+    to return. If nothing is provided, action will return fields that are considered
+    to be default by API. |
+
+    | Include MFA Details | Boolean | No | If enabled, action will return MFA details
+    about the user. |
+
+    | Include Last Sign In Details | Boolean | No | If selected, the action retrieves
+    the user's sign-in activity, including both interactive and non-interactive sign-in
+    timestamps. |
+Force Password Update:
+  ai_description: >-
+    ### General Description
+
+    Forces a password update for specified Azure Active Directory users. This action
+    modifies the user's password profile in Azure AD to require them to change their
+    password during their next login attempt. It is primarily used as a containment
+    or remediation step when a user account is suspected of being compromised.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action retrieves Azure AD credentials and configuration
+    parameters from the integration settings.
+
+    2. **Authentication:** It initializes the `AzureADManager`, which generates an
+    OAuth2 access token using the provided Client ID and Secret.
+
+    3. **Entity Selection:** The action filters the target entities to identify those
+    of type `USER`.
+
+    4. **API Interaction:** For each valid user entity, it calls the Microsoft Graph
+    API via a `PATCH` request to the `/users/{user}` endpoint. The request payload
+    sets `forceChangePasswordNextSignIn` to `true` within the `passwordProfile` object.
+
+    5. **Completion:** The action tracks successful and failed updates, returning
+    a summary message to the Google SecOps case wall and setting the final execution
+    status.
+
+
+    ### Additional Notes
+
+    - The action expects User entities to be in the `username@domain` format (User
+    Principal Name).
+
+    - This action performs a state change in the external Azure AD environment and
+    is not considered an enrichment action.
+  ai_short_description: >-
+    Forces a password update for specified Azure Active Directory users, requiring
+    them to change their password during their next login attempt.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Modifies the user's password profile in Azure AD to require a password change
+      on the next login.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a PATCH request to Azure AD to modify the user's password profile
+      (can_mutate_external_data=true). It does not fetch additional context data,
+      mutate internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == EntityTypes.USER`. Therefore, it targets USER
+      entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a PATCH request to Azure AD to force a password update for
+      a user, requiring them to change their password on the next login. This directly
+      aligns with the 'Reset Identity Password' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: true
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get Manager Contact Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves contact information for the manager of a specified User entity from
+    Azure Active Directory (Microsoft Graph). This action fetches details such as
+    the manager's display name, email, and mobile phone number, and can optionally
+    retrieve MFA registration status and last sign-in details.
+
+
+    ### Flow Description
+
+    1. Extracts configuration and action parameters.
+
+    2. Filters target entities to include only User entities.
+
+    3. For each valid entity, queries the Microsoft Graph API (`/users/{user}/manager`)
+    to retrieve the assigned manager's profile based on the requested fields.
+
+    4. If `Include MFA Details` is true, performs an additional lookup for the manager's
+    MFA registration status using the authentication methods report endpoint.
+
+    5. If `Include Last Sign In Details` is true, fetches the manager's sign-in activity.
+
+    6. Adds a data table to the case wall for each entity containing the manager's
+    contact details and returns the raw JSON data.
+
+
+    ### Additional Notes
+
+    - The action expects User entities to be formatted as User Principal Names (e.g.,
+    `user@domain.com`).
+
+    - Retrieving MFA details requires the `AuditLog.Read.All` permission in Azure
+    AD.
+  ai_short_description: >-
+    Retrieves contact information for the manager of a specified User entity from
+    Azure Active Directory, optionally including MFA registration status and last
+    sign-in details.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the Microsoft Graph API to fetch manager details,
+      MFA details, and sign-in activity for a user. It does not mutate external data,
+      update internal entities, or create insights. It only adds data tables and JSON
+      results to the case.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES = [EntityTypes.USER]`.
+      Therefore, it targets User entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches contextual metadata (manager details, MFA, sign-in activity)
+      for a user resource from Azure Active Directory. This matches the 'Enrich Asset'
+      expected outcome. It does not mutate data on external systems or update alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Fields To Return | String | No | A comma-separated list of fields that you want
+    to return. If nothing is provided, the action will return the Display Name, Mobile
+    Phone, and Mail. |
+
+    | Include MFA Details | Boolean | No | If enabled, action will return MFA details
+    about the user. |
+
+    | Include Last Sign In Details | Boolean | No | If selected, the action retrieves
+    the user's sign-in activity, including both interactive and non-interactive sign-in
+    timestamps. |
+Is User In a Group:
+  ai_description: >-
+    ### General Description
+
+    Checks if User entities are members of a specific Azure Active Directory (Azure
+    AD) group. This action is primarily used for identity verification and access
+    control validation during security investigations, allowing analysts to determine
+    if a user belongs to a sensitive or relevant administrative group.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the target Group ID from the action
+    parameters.
+
+    2. **Entity Filtering**: It identifies all User entities within the current alert
+    or case context.
+
+    3. **API Interaction**: For each identified user, the action queries the Microsoft
+    Graph API (`/users/{user}/memberOf`) using the user's principal name and filters
+    for the specific Group ID.
+
+    4. **Result Processing**: It determines if the user is a member based on the API
+    response and aggregates the results.
+
+    5. **Output**: The action provides a summary message indicating which users were
+    found in the group and returns a JSON object mapping each user entity to a boolean
+    value representing their membership status.
+
+
+    ### Additional Notes
+
+    - The action expects the User entity identifier to be in a format recognized by
+    Azure AD, typically the User Principal Name (UPN) or email address.
+
+    - If no User entities are present in the context, the action will complete with
+    a failure status.
+  ai_short_description: >-
+    Checks if User entities are members of a specific Azure Active Directory (Azure
+    AD) group.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Microsoft Graph API to fetch group membership
+      data for users. It does not mutate external data, nor does it update internal
+      entities, create insights, or modify alert data. It only returns a JSON result.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.USER`. Therefore, it targets User entities and filters strictly
+      by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries Azure AD to determine if a user belongs to a specific group,
+      which provides contextual metadata about the user's identity and access rights.
+      This aligns with the 'Enrich Asset' category. It does not mutate any data or
+      perform containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group ID | String | Yes | Azure AD group id in 00e40000-1971-439d-80fc-d0e000001dbd
+    format. |
+List Groups:
+  ai_description: >-
+    ### General Description
+
+    Lists Azure Active Directory groups based on specified search criteria. This action
+    retrieves a list of groups from an Azure AD tenant, applying filters based on
+    the group's display name and controlling the sort order and number of results
+    returned. It is a utility action that queries the directory globally and does
+    not operate on specific entities.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts action-specific parameters including `Order By`,
+    `Results Limit`, `Filter Logic`, and `Filter Value`.
+
+    2. **Manager Setup**: Initializes the `AzureADManager` to authenticate and establish
+    a session with the Microsoft Graph API.
+
+    3. **Data Retrieval**: Sends a GET request to the `/v1.0/groups` endpoint of the
+    Microsoft Graph API to fetch the directory groups.
+
+    4. **Filtering and Pagination**: Applies the specified filtering logic (Equal
+    or Contains on the displayName) and sorting (ASC or DESC) to the retrieved group
+    list, handling OData pagination as needed.
+
+    5. **Output Generation**: Converts the filtered list of groups into a CSV-formatted
+    data table attached to the case wall, and returns the raw data as a JSON result.
+
+
+    ### Additional Notes
+
+    * This action does not process or enrich Google SecOps entities.
+
+    * Results are presented as a data table on the case wall and as a JSON object
+    in the action results.
+  ai_short_description: >-
+    Lists Azure Active Directory groups based on specified search criteria by querying
+    the Microsoft Graph API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Microsoft Graph API to fetch a list of
+      Azure AD groups. It fetches data but does not mutate any external data, nor
+      does it update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It retrieves a global list of groups
+      from Azure Active Directory without referencing, iterating over, or filtering
+      `siemplify.target_entities`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of groups from Azure Active Directory. This is a
+      general directory query and does not match any of the specific expected outcomes
+      such as enriching an asset/IOC, managing identities, updating alerts, or modifying
+      blocklists.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Order By | String | No | Specifies the result order. Groups\
+    \ are sorted by their display name. |\n| Results Limit | Integer | No | Specify\
+    \ max number of groups to return. |\n| Filter Logic | String | No | Specify what\
+    \ filter logic should be applied. Filtering is working on the Name field. |\n\
+    | Filter Value | String | No | Specify what value should be used in the filter.\
+    \ If \u201CEqual\u201C is selected, action will try to find the exact match among\
+    \ results and if \u201CContains\u201C is selected, action will try to find results\
+    \ that contain that substring. If nothing is provided in this parameter, the filter\
+    \ will not be applied. Filtering is working on the Name field. |"
+List Members in the Group:
+  ai_description: >-
+    Lists members of a specified Azure Active Directory group. This action retrieves
+    a list of users belonging to a group by providing either the Group Name or the
+    Group ID. It supports pagination via the 'Max Records To Return' parameter and
+    provides granular filtering capabilities based on user attributes like Display
+    Name, Principal Name, or Mail.
+
+
+    ### Flow Description
+
+    1. **Parameter Validation**: The action ensures that either a 'Group ID' or 'Group
+    Name' is provided. It also validates that the 'Max Records To Return' is a positive
+    integer.
+
+    2. **Group Identification**: If a 'Group ID' is not provided, the action queries
+    Azure AD to find the ID associated with the provided 'Group Name'.
+
+    3. **Data Retrieval**: The action calls the Microsoft Graph API to fetch the members
+    of the identified group, handling pagination automatically to meet the requested
+    limit.
+
+    4. **Filtering**: If filtering parameters are provided (Key, Logic, and Value),
+    the action filters the retrieved member list based on the specified criteria (e.g.,
+    checking if the User Principal Name contains a specific string).
+
+    5. **Output Generation**: The resulting list of members is returned as a JSON
+    object and formatted into a data table for the case wall.
+
+
+    ### Additional Notes
+
+    - Either 'Group ID' or 'Group Name' must be configured for the action to run successfully.
+
+    - If 'Filter Key' is selected as 'Select One' while 'Filter Logic' is set to 'Equal'
+    or 'Contains', the action will fail with a validation error.
+  ai_short_description: >-
+    Lists members of a specified Azure Active Directory group by providing either
+    the Group Name or the Group ID, with optional filtering and pagination.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Microsoft Graph API to fetch group members
+      (fetches_data=true). It does not perform any state-changing operations on external
+      systems (can_mutate_external_data=false) or internal systems (can_mutate_internal_data=false).
+      It does not update entities, create insights, modify alert data, or create case
+      comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates solely on the provided action parameters (Group Name
+      or Group ID). Therefore, all entity type flags and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a list of members for a specific Azure AD group. It does
+      not enrich a specific IOC or Asset entity, nor does it mutate any external or
+      internal state. It does not match any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Records To Return | String | No | Specify how many records to return. If
+    nothing is provided, action will return 50 records. |
+
+    | Group Name | String | No | Specify group name to return user list for. Either
+    this or Group ID must be provided. |
+
+    | Group ID | String | No | Specify the ID of the group in which you want to list
+    the members. Takes priority over Group Name. |
+
+    | Filter Key | Dropdown | No | Specify the key that needs to be used to filter
+    group members. |
+
+    | Filter Logic | Dropdown | No | Specify what filter logic should be applied.
+    |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    |
+List User's Groups Membership:
+  ai_description: >-
+    ### General Description
+
+    Retrieves and lists the Azure Active Directory group memberships for specified
+    users. This action allows for filtering groups by security status, display name,
+    or description, and can return either basic or detailed group information. It
+    can process users provided as Siemplify entities or via a manual input parameter.
+
+
+    ### Flow Description
+
+    1. Extract configuration and action parameters, including filtering criteria and
+    limits.
+
+    2. Initialize the Azure Active Directory manager to establish an API connection.
+
+    3. Fetch all groups from the directory and apply the specified filters (Filter
+    Key, Logic, and Value) to create a master list of relevant groups.
+
+    4. For each target user (from parameter or entity), query Azure AD for the IDs
+    of groups they belong to, respecting the 'Security Enabled Only' flag.
+
+    5. Match the user's group IDs against the pre-filtered list of directory groups.
+
+    6. Create a data table for each user showing their memberships and attach the
+    raw JSON results to the case.
+
+
+    ### Additional Notes
+
+    - If the 'User Name' parameter is populated, the action will ignore any User entities
+    in the scope and process the provided names instead.
+
+    - Usernames should be provided in the `username@domain` format.
+
+    - If 'Filter Key' is selected but 'Filter Logic' is 'Not Specified', the filter
+    will not be applied.
+  ai_short_description: >-
+    Retrieves and lists the Azure Active Directory group memberships for specified
+    users.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes API requests to Azure AD to fetch group memberships for users.
+      It does not mutate external data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES = [EntityTypes.USER]`.
+      This means it targets USER entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches group memberships for a user from Azure AD. This provides
+      contextual metadata about a user, which aligns with the 'Enrich Asset' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | User Name | String | No | Specify user name to return groups membership for.
+    User name should be specified in username@domain format. Parameter accepts multiple
+    values as a comma separated string. |
+
+    | Return Only Security Enabled Groups | Boolean | No | If enabled, only security
+    groups that the user is a member of will be returned. |
+
+    | Return Detailed Groups Information | Boolean | No | If enabled, detailed information
+    on the AD groups will be returned. |
+
+    | Filter Key | Dropdown | No | Specify the key that needs to be used to filter
+    groups. |
+
+    | Filter Logic | Dropdown | No | Specify what filter logic should be applied.
+    Filtering logic is working based on the value provided in the "Filter Key" parameter.
+    |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    If "Equal" is selected, action will try to find the exact match among results
+    and if "Contains" is selected, action will try to find results that contain that
+    substring. If nothing is provided in this parameter, the filter will not be applied.
+    Filtering logic is working based on the value provided in the "Filter Key" parameter.
+    |
+
+    | Max Records To Return | Integer | No | Specify how many records to return. If
+    nothing is provided, action will return 50 records. |
+List Users:
+  ai_description: >-
+    ### General Description
+
+    The **List Users** action retrieves a list of users from Azure Active Directory
+    (Microsoft Graph API) based on user-defined search and filtering criteria. It
+    allows for field selection, sorting, and advanced filtering specifically on the
+    `userPrincipalName` (Username) field. This action is a utility task and does not
+    operate on specific Google SecOps entities.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts configuration and action parameters.
+
+    2. **Connectivity**: Initializes the `AzureADManager` to establish a session with
+    the Microsoft Graph API.
+
+    3. **Validation**: Validates if the advanced filter can be applied based on the
+    selected output fields.
+
+    4. **Data Retrieval**: Sends a GET request to the `/users` endpoint, applying
+    OData `$select` and `$orderby` parameters.
+
+    5. **Pagination & Filtering**: Iterates through paginated results and applies
+    manual filtering if an `Advanced Filter Value` is provided.
+
+    6. **Output**: Constructs a CSV-formatted data table and a JSON result containing
+    the user details, attaching them to the action output.
+
+
+    ### Additional Notes
+
+    - If an `Advanced Filter Value` is provided, the `Filter` parameter must either
+    be set to "All Fields" or include `userPrincipalName` in the selection; otherwise,
+    the action will fail.
+  ai_short_description: >-
+    Retrieves a list of users from Azure Active Directory based on user-defined search
+    and filtering criteria.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Microsoft Graph API to fetch a list of
+      users. It does not mutate external data, nor does it mutate internal data, update
+      entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It retrieves a list of users based
+      on action parameters without referencing `siemplify.target_entities`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of users from Azure Active Directory based on search
+      criteria. It does not enrich specific IOCs or assets, nor does it mutate data,
+      search events, or perform any of the other specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Filter | String | No | Specifies which fields will be included\
+    \ in the results. By default, we will return all the fields. |\n| Order By Field\
+    \ | String | No | Specifies the field based on which the results are ordered.\
+    \ |\n| Order By | String | No | Specifies the result order. |\n| Results Limit\
+    \ | Integer | No | Specify max number of users to return. |\n| Advanced Filter\
+    \ Logic | String | No | Specify what filter logic should be applied. Advanced\
+    \ filtering is working on the Username (userPrincipalName) field. |\n| Advanced\
+    \ Filter Value | String | No | Specify what value should be used in the filter.\
+    \ If \u201CEqual\u201C is selected, action will try to find the exact match among\
+    \ results and if \u201CContains\u201C is selected, action will try to find results\
+    \ that contain that substring. If nothing is provided in this parameter, the filter\
+    \ will not be applied. Advanced filtering is working on the Username (userPrincipalName)\
+    \ field. |"
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ designed to verify the connectivity between Google SecOps and the Azure Active\
+    \ Directory (Azure AD) service. It ensures that the integration configuration\
+    \ parameters\u2014such as credentials and API endpoints\u2014are correct and that\
+    \ the network path to the Microsoft Graph API is open.\n\n### Flow Description\n\
+    1. **Parameter Extraction:** The action retrieves the integration configuration\
+    \ parameters (Client ID, Secret, Tenant ID, etc.) from the environment.\n2. **Manager\
+    \ Initialization:** It initializes the `AzureADManager` class.\n3. **Authentication:**\
+    \ During initialization, the manager attempts to generate an OAuth access token\
+    \ by sending a POST request to the Login API Root.\n4. **Connectivity Test:**\
+    \ If authentication succeeds, the manager performs a GET request to the API Root\
+    \ (`/v1.0`) to verify service availability.\n5. **Result Reporting:** If both\
+    \ steps succeed, the action returns a success status. If any step fails (e.g.,\
+    \ invalid credentials, network timeout), it catches the exception and reports\
+    \ a failure.\n\n### Additional Notes\n- This action does not process any entities\
+    \ or alert data.\n- It primarily tests the authentication flow (OAuth 2.0 Client\
+    \ Credentials grant) and the basic reachability of the Graph API root endpoint."
+  ai_short_description: >-
+    Tests connectivity to the Azure Active Directory service by verifying the integration
+    configuration parameters and ensuring the network path to the Microsoft Graph
+    API is open.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the API root to test connectivity. It does
+      not fetch contextual data for alerts/entities, nor does it mutate external or
+      internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use any entity-specific
+      identifiers. It solely tests connectivity to the external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic ping to test connectivity. It does not enrich entities,
+      mutate external data, update alerts, or perform any of the specific expected
+      outcomes listed in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Remove User from a Group:
+  ai_description: >-
+    ### General Description
+
+    Removes one or more users from a specified Azure Active Directory (Azure AD) group.
+    This action allows for group membership management by targeting users either through
+    Siemplify entities or manual input parameters. It supports identifying groups
+    by their Display Name or unique Group ID.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves Azure AD connection details and action parameters.
+
+    2. **Group Resolution**: If a `Group ID` is provided, it is used directly. Otherwise,
+    the action queries Azure AD to find the ID associated with the provided `Group
+    Name`.
+
+    3. **User Identification**: Collects usernames from the `User Name` parameter.
+    If not provided, it falls back to extracting identifiers from `USER` entities
+    in the action scope.
+
+    4. **Processing**: For each username:
+        - Retrieves the internal Azure User ID using the principal name via a GET
+    request to the Microsoft Graph API.
+        - Sends a DELETE request to the Microsoft Graph API to remove the user's reference
+    from the specified group's members list.
+    5. **Reporting**: Aggregates results, identifying which users were successfully
+    removed, which were not found in the group, and which were not found in the directory
+    at all.
+
+
+    ### Additional Notes
+
+    - Either **Group Name** or **Group ID** must be provided for the action to execute.
+
+    - Usernames must be in the `username@domain` format.
+
+    - If no **User Name** parameter is supplied, the action will attempt to process
+    all `USER` entities currently in the action scope.
+  ai_short_description: >-
+    Removes one or more users from a specified Azure Active Directory (Azure AD) group
+    to manage group memberships.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes the specified users from an Azure Active Directory group via the Microsoft
+      Graph API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (group ID and user ID) via GET requests to the Microsoft
+      Graph API. It mutates external data by sending a DELETE request to remove the
+      user from the group. It does not mutate internal SecOps data, update entities,
+      create insights, or add case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.USER`. Therefore, it targets USER entities and filters them strictly
+      by their entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes a user from an Azure AD group. This modifies account metadata
+      and group memberships, which directly aligns with the 'Update Identity' expected
+      outcome. It does not disable the identity, reset passwords, or block IOCs.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | User Name | String | No | Specify user name to remove from the target group.
+    User name should be specified in username@domain format. Parameter accepts multiple
+    values as a comma separated string. |
+
+    | Group Name | String | No | Specify group name to remove user from. |
+
+    | Group ID | String | No | Specify the ID of the group from which you want to
+    remove the user. If both "Group Name" and "Group ID" are provided, then "Group
+    ID" will have priority. Example of the id: 00e40000-1971-439d-80fc-d0e000001dbd.
+    |
+Reset User Password:
+  ai_description: >-
+    ### General Description
+
+    Resets the password for specified users in Azure Active Directory. This action
+    allows an analyst to set a new password for a user and automatically forces them
+    to change it upon their next login. It is primarily used for account recovery
+    or as a containment measure during a security incident.
+
+
+    ### Flow Description
+
+    1. **Initialization:** The action retrieves integration configuration (Client
+    ID, Secret, Tenant ID) and action parameters (`Username`, `Password`).
+
+    2. **Target Identification:** It determines the list of target users. It first
+    checks the `Username` parameter; if empty, it collects all `USERUNIQNAME` (User)
+    entities from the current SecOps context.
+
+    3. **Connectivity Check:** It initializes the `AzureADManager`, which authenticates
+    with Microsoft Graph and verifies connectivity.
+
+    4. **Password Reset Execution:** For each identified user, the action sends a
+    `PATCH` request to the Microsoft Graph API (`v1.0/users/{user}`) to update the
+    user's `passwordProfile`. This update sets the new password and enables the `forceChangePasswordNextSignIn`
+    flag.
+
+    5. **Error Handling:** The action monitors for password complexity errors, timeouts,
+    and general API failures, tracking successful and failed attempts separately.
+
+    6. **Final Reporting:** It concludes by providing a summary message of which users
+    were successfully updated and which failed.
+
+
+    ### Additional Notes
+
+    - **Precedence:** If the `Username` parameter is populated, the action will prioritize
+    those values over any `USERUNIQNAME` entities present in the case.
+
+    - **Complexity Requirements:** The action will fail for a specific user if the
+    provided password does not meet the Azure AD password complexity policies.
+
+    - **Format:** Usernames must be in the User Principal Name (UPN) format (e.g.,
+    user@company.com).
+  ai_short_description: >-
+    Resets the password for specified users in Azure Active Directory and forces them
+    to change it upon their next login.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the user's password profile in Azure Active Directory via a PATCH request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a PATCH request to the Microsoft Graph API to update the user's
+      password profile, which mutates external data. It does not fetch enrichment
+      data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.USER`. Therefore, it targets USER entities and filters strictly
+      by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action resets a user's password in Azure Active Directory, which directly
+      aligns with the 'Reset Identity Password' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: true
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Username | String | No | User name to change password for. Parameter expects
+    value in a username@domain format and accepts multiple values as a comma separated
+    string. If provided, the action will process these specific usernames and ignore
+    any SecOps entities. |
+
+    | Password | Password | Yes | The new authentication password to be assigned to
+    the target user(s). |
+Revoke User Session:
+  ai_description: >-
+    ### General Description
+
+    The **Revoke User Session** action is a containment capability for Azure Active
+    Directory (Azure AD) that immediately invalidates all active sessions and refresh
+    tokens for a specified user. This action is primarily used during security incidents
+    to prevent further unauthorized access by a compromised account by forcing the
+    user to re-authenticate across all devices and browser sessions.
+
+
+    ### Flow Description
+
+    1. **Entity Identification**: The action filters the target entities to identify
+    those of type `USER`.
+
+    2. **User Lookup**: For each identified user, the action determines if the identifier
+    is an email address or a display name. It then queries the Microsoft Graph API
+    (`GET /users`) to retrieve the unique Azure User ID.
+
+    3. **Session Revocation**: Using the retrieved User ID, the action executes a
+    POST request to the `revokeSignInSessions` endpoint (`POST /users/{user_id}/revokeSignInSessions`).
+    This invalidates all refresh tokens and session cookies issued to the user.
+
+    4. **Result Processing**: The action collects the API responses and reports success
+    or failure for each entity. If a user is not found in Azure AD, it is flagged
+    as a failure.
+
+
+    ### Additional Notes
+
+    - **Permissions**: The Azure AD application must have the `User.ReadWrite.All`
+    or `Directory.ReadWrite.All` Microsoft Graph API permissions.
+
+    - **Propagation**: Session revocation can take up to 5 minutes to propagate across
+    all Microsoft 365 services and applications.
+  ai_short_description: >-
+    Immediately invalidates all active sessions and refresh tokens for a specified
+    user in Azure Active Directory to prevent unauthorized access.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Revokes active sessions and refresh tokens for the specified user in Azure Active
+      Directory.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the `revokeSignInSessions` endpoint in Azure
+      AD to invalidate user sessions, which mutates external data. It does not fetch
+      contextual data for enrichment, nor does it update internal entities, create
+      insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.USER`. Therefore, it targets USER entities and filters strictly
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: true
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action revokes active sessions for a user in Azure Active Directory. This
+      directly aligns with the 'Disable Identity' expected outcome, which involves
+      revoking active sessions and preventing a user from authenticating.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
