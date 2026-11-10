@@ -15,7 +15,6 @@
 from __future__ import annotations
 import sys
 import json
-from functools import partial
 from typing import Tuple, List, Dict, Any
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
@@ -51,10 +50,8 @@ from ..core.TrendVisionOneManager import TrendVisionOneManager
 from ..core.UtilsManager import (
     ErrorType,
     classify_exception,
-    count_skipped_entities,
     get_entity_original_identifier,
-    log_action_result_summary,
-    log_timeout_marker_once,
+    log_run_summary,
     process_agents,
 )
 
@@ -85,8 +82,8 @@ def isolate_agents(
         agent_uids=agent_uuids,
     )
     result_data["failed"].extend(agents.failed_agents)
-    for agent_uuid in agents.failed_agents:
-        result_data["json_results"][agent_uuid] = {"error_type": ErrorType.ENDPOINT_NOT_FOUND}
+    for agent_uuid, error_type in agents.failed_error_types.items():
+        result_data["json_results"][agent_uuid] = {"error_type": error_type}
     for endpoint in agents.successful_agents:
         if endpoint.guid in result_data["result_endpoints"]:
             result_data["result_urls"][endpoint.guid] = result_data[
@@ -263,57 +260,6 @@ def generate_output_message_and_result(result_data):
     return output_message, result_value
 
 
-def get_summary_counts(
-    result_data: dict[str, Any],
-    targets: int,
-    skipped: int,
-    pending_error_type: str | None = None,
-) -> tuple[int, int, list[str], int]:
-    """Count the targets of the run for the action summary line.
-
-    Args:
-        result_data: The async state of the run.
-        targets: The number of distinct targets in scope.
-        skipped: The number of unsupported entities.
-        pending_error_type: If set, count each pending target as failed with this error type.
-
-    Returns:
-        The targets, the succeeded count, one error type for each failed target, and the skipped count.
-
-    """
-    json_results = result_data.get("json_results", {})
-    error_types = [result["error_type"] for result in json_results.values() if result.get("error_type")]
-    if pending_error_type:
-        pending = sum(1 for url in result_data.get("result_urls", {}).values() if url)
-        error_types += [pending_error_type] * pending
-
-    return targets, len(set(result_data.get("completed", []))), error_types, skipped
-
-
-def log_run_summary(
-    siemplify: SiemplifyAction,
-    status: int,
-    result_data: dict[str, Any],
-    targets: int,
-    error: Exception | None,
-) -> None:
-    """Log the timeout marker on IN_PROGRESS polls and the summary line when the run ends.
-
-    Args:
-        siemplify: The action object.
-        status: The execution state that the run ends with.
-        result_data: The async state of the run. The timeout marker flag is saved in it.
-        targets: The number of distinct targets in scope.
-        error: The exception that ended the run, if any.
-
-    """
-    skipped = count_skipped_entities(siemplify.target_entities, SUPPORTED_ENTITY_TYPES)
-    get_counts = partial(get_summary_counts, result_data, targets, skipped)
-    if status == EXECUTION_STATE_INPROGRESS:
-        log_timeout_marker_once(siemplify, result_data, partial(get_counts, pending_error_type=ErrorType.TIMEOUT))
-    log_action_result_summary(siemplify, status, get_counts, error=error)
-
-
 @output_handler
 def main(is_first_run):
     siemplify = SiemplifyAction()
@@ -366,7 +312,7 @@ def main(is_first_run):
     ]
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     try:
-        if not suitable_entities:
+        if not suitable_entities and not agent_uuids:
             output_message = "No suitable entities found in the scope"
         else:
             manager = TrendVisionOneManager(
@@ -439,7 +385,7 @@ def main(is_first_run):
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
     targets = len({entity.identifier for entity in suitable_entities} | set(agent_uuids))
-    log_run_summary(siemplify, status, result_data, targets, error)
+    log_run_summary(siemplify, status, result_data, targets, SUPPORTED_ENTITY_TYPES, error=error)
     if status == EXECUTION_STATE_INPROGRESS:
         result_value = json.dumps(result_data)
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

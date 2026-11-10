@@ -41,7 +41,7 @@ DESCRIPTION = "Contain the endpoint"
 
 
 def make_manager_setup(
-    endpoints: dict[str, str],
+    endpoints: dict[str, str | Exception],
     task_statuses: dict[str, str],
     errors: dict[str, Exception] | None = None,
     method: str = "isolate_endpoint",
@@ -49,7 +49,7 @@ def make_manager_setup(
     """Build a manager setup that maps lookups to endpoints and task URLs to task statuses.
 
     Args:
-        endpoints: Endpoint GUID for each IP address, hostname, or agent UUID that exists.
+        endpoints: Endpoint GUID, or the lookup error, for each IP address, hostname, or agent UUID that exists.
         task_statuses: Task status for each task URL. A test can change it between polls.
         errors: Exception that the containment call raises for each endpoint GUID.
         method: The name of the manager containment method.
@@ -64,6 +64,8 @@ def make_manager_setup(
         agent_id: str | None = None,
     ) -> MagicMock | None:
         guid = endpoints.get(ip or hostname or agent_id)
+        if isinstance(guid, Exception):
+            raise guid
         return MagicMock(guid=guid) if guid else None
 
     def contain(description: str, guid: str) -> str:
@@ -170,6 +172,33 @@ class TestIsolateEndpoint:
         assert set(get_json_by_entity(mock_siemplify)) == {"host1", "g2"}
         [summary] = get_summary_lines(mock_siemplify)
         assert (summary["outcome"], summary["targets"], summary["failed"]) == ("SUCCESS", "2", "0")
+
+    def test_agent_uuid_only(self) -> None:
+        """Process the Agent UUID when no Hostname or IP entity is in scope."""
+        mock_siemplify = self.run(({"g2": "g2"}, {"url-g2": "succeeded"}), [], agent_uuids="g2")
+
+        assert get_end_args(mock_siemplify)[1:] == (True, EXECUTION_STATE_COMPLETED)
+        assert get_json_by_entity(mock_siemplify) == {"g2": {"task_id": "task-url-g2", "status": "succeeded"}}
+        [summary] = get_summary_lines(mock_siemplify)
+        assert (summary["outcome"], summary["targets"], summary["failed"]) == ("SUCCESS", "1", "0")
+
+    def test_no_targets_keeps_message(self) -> None:
+        """Keep the legacy message when there are no supported entities and no Agent UUIDs."""
+        mock_siemplify = self.run(({}, {}), [make_entity("http://x", EntityTypes.URL)])
+
+        output_message, result_value, status = get_end_args(mock_siemplify)
+        assert output_message == "No suitable entities found in the scope"
+        assert (result_value, status) == (False, EXECUTION_STATE_COMPLETED)
+        [summary] = get_summary_lines(mock_siemplify)
+        assert (summary["outcome"], summary["error_type"]) == ("FAILURE", "INVALID_INPUT")
+        assert (summary["targets"], summary["skipped"]) == ("0", "1")
+
+    def test_agent_lookup_error_keeps_error_type(self) -> None:
+        """Tag an Agent UUID whose lookup fails with the classified error, not ENDPOINT_NOT_FOUND."""
+        mock_siemplify = self.run(({"g2": make_http_error(500)}, {}), [], agent_uuids="g2")
+
+        assert get_end_args(mock_siemplify)[1:] == (False, EXECUTION_STATE_COMPLETED)
+        assert get_json_by_entity(mock_siemplify) == {"g2": {"error_type": "VENDOR_ERROR"}}
 
     def test_endpoint_not_found(self) -> None:
         """Tag an unknown entity and an unknown Agent UUID with ENDPOINT_NOT_FOUND."""

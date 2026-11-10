@@ -32,6 +32,7 @@ from TIPCommon import dict_to_flat, add_prefix_to_dict, convert_list_to_comma_st
 class AgentResult(NamedTuple):
     successful_agents: list[Endpoint]
     failed_agents: list[str]
+    failed_error_types: dict[str, str] | None = None
 
 
 class BaseModel:

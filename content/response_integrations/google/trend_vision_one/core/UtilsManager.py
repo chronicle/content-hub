@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Container, Iterable, Mapping
 from enum import StrEnum
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import os
@@ -135,19 +136,22 @@ def process_agents(
     Returns:
         AgentResult: An object containing two lists: `successful_agents`
         (list of Endpoint objects) and `failed_agents` (list of agent UUIDs
-        that could not be processed).
+        that could not be processed), and `failed_error_types` (the error type
+        of each failed agent UUID).
     """
-    agent_result: datamodels.AgentResult = datamodels.AgentResult([], [])
+    agent_result: datamodels.AgentResult = datamodels.AgentResult([], [], {})
     for agent_id in agent_uids:
         try:
             if (agent := manager.search_endpoint(agent_id=agent_id)) is not None:
                 agent_result.successful_agents.append(agent)
             else:
                 agent_result.failed_agents.append(agent_id)
+                agent_result.failed_error_types[agent_id] = ErrorType.ENDPOINT_NOT_FOUND
                 manager.siemplify.LOGGER.info(f"Agent UUID not found: {agent_id}")
 
         except TrendVisionOneException as e:
             agent_result.failed_agents.append(agent_id)
+            agent_result.failed_error_types[agent_id] = classify_exception(e)[0]
             manager.siemplify.LOGGER.error(f"An error occurred on agent: {agent_id}")
             manager.siemplify.LOGGER.exception(e)
 
@@ -349,3 +353,57 @@ def count_skipped_entities(target_entities: Iterable[Any], supported_types: Cont
         The unsupported entity count.
     """
     return sum(getattr(entity, "entity_type", "") not in supported_types for entity in target_entities)
+
+
+def get_summary_counts(
+    result_data: dict[str, Any],
+    targets: int,
+    skipped: int,
+    pending_error_type: str | None = None,
+) -> tuple[int, int, list[str], int]:
+    """Count the targets of an Isolate or Unisolate Endpoint run for the action summary line.
+
+    Args:
+        result_data: The async state of the run.
+        targets: The number of distinct targets in scope.
+        skipped: The number of unsupported entities.
+        pending_error_type: If set, count each pending target as failed with this error type.
+
+    Returns:
+        The targets, the succeeded count, one error type for each failed target, and the skipped count.
+
+    """
+    json_results = result_data.get("json_results", {})
+    error_types = [result["error_type"] for result in json_results.values() if result.get("error_type")]
+    if pending_error_type:
+        pending = sum(1 for url in result_data.get("result_urls", {}).values() if url)
+        error_types += [pending_error_type] * pending
+
+    return targets, len(set(result_data.get("completed", []))), error_types, skipped
+
+
+def log_run_summary(
+    siemplify: SiemplifyAction,
+    status: int,
+    result_data: dict[str, Any],
+    targets: int,
+    supported_entity_types: Container[str],
+    *,
+    error: Exception | None = None,
+) -> None:
+    """Log the timeout marker on IN_PROGRESS polls and the summary line when an Isolate or Unisolate run ends.
+
+    Args:
+        siemplify: The action object.
+        status: The execution state that the run ends with.
+        result_data: The async state of the run. The timeout marker flag is saved in it.
+        targets: The number of distinct targets in scope.
+        supported_entity_types: Entity types supported by the action.
+        error: The exception that ended the run, if any.
+
+    """
+    skipped = count_skipped_entities(siemplify.target_entities, supported_entity_types)
+    get_counts = partial(get_summary_counts, result_data, targets, skipped)
+    if status == EXECUTION_STATE_INPROGRESS:
+        log_timeout_marker_once(siemplify, result_data, partial(get_counts, pending_error_type=ErrorType.TIMEOUT))
+    log_action_result_summary(siemplify, status, get_counts, error=error)
