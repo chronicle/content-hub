@@ -241,6 +241,31 @@ class TrendVisionOneManager:
             None,
         )
 
+    def collect_file(self, guid: str, file_path: str, description: str) -> str:
+        """Start a collect file task on an endpoint.
+
+        Args:
+            guid: The agent GUID of the endpoint.
+            file_path: The path of the file on the endpoint.
+            description: The reason for the task.
+
+        Returns:
+            The task URL from the Operation-Location header.
+        """
+        raise NotImplementedError
+
+    def download_collected_file(self, resource_location: str, destination: str) -> str:
+        """Download the archive of a finished collect file task.
+
+        Args:
+            resource_location: The download location from the task result.
+            destination: The local path to write the archive to.
+
+        Returns:
+            The local path of the archive.
+        """
+        raise NotImplementedError
+
     def get_task(self, task_url) -> datamodels.Task:
         """
         Get task details

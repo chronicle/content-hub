@@ -28,6 +28,7 @@ UPDATE_WORKBENCH_ALERT_SCRIPT_NAME = (
 )
 SUBMIT_FILE_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Submit File"
 SUBMIT_URL_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Submit URL"
+ACQUIRE_FILE_SCRIPT_NAME = f"{INTEGRATION_NAME} - Acquire File"
 EXECUTE_EMAIL_SCRIPT_NAME = f"{INTEGRATION_DISPLAY_NAME} - Execute Email"
 
 ENDPOINTS = {
@@ -37,6 +38,7 @@ ENDPOINTS = {
     "search_endpoint": "/v3.0/eiqs/endpoints",
     "isolate_endpoint": "/v3.0/response/endpoints/isolate",
     "unisolate_endpoint": "/v3.0/response/endpoints/restore",
+    "collect_file": "/v3.0/response/endpoints/collectFile",
     "get_task": "/v3.0/response/tasks/{task_id}",
     "get_scripts": "/v3.0/response/customScripts",
     "run_script": "/v3.0/response/endpoints/runScript",
