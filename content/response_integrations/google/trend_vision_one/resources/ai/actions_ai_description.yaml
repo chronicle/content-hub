@@ -1,10 +1,163 @@
+Acquire File:
+  ai_description: >-
+    ### General Description
+
+    Collects a file from Trend Vision One endpoints and downloads it as a password-protected
+    archive. The action targets IP Address and Hostname entities, as well as provided
+    Agent UUIDs. You can run it with only the Agent UUID parameter.
+
+
+    ### Flow Description
+
+    1. Tests connectivity to Trend Vision One.
+
+    2. Filters the target entities to include only IP Address and Hostname types.
+
+    3. Searches Trend Vision One for the endpoint of each entity and each Agent UUID
+    to get its agent GUID.
+
+    4. Starts one collect file task per agent GUID for the File Path parameter.
+
+    5. Polls the tasks asynchronously until they succeed, fail, or time out.
+
+    6. For each succeeded task, downloads the archive to the action run folder and
+    attaches it to the case if it is not too large.
+
+    7. Returns a JSON result for each target with the status, agent GUID, endpoint
+    name, requested file path, download path, archive password, file hashes, and
+    size. Failed targets have the error and the error type.
+
+
+    ### Additional Notes
+
+    This is an asynchronous action. Adjust the script timeout value in the Google
+    SecOps IDE as needed. The API key role needs the Collect remote file, Download
+    task result, and View, filter, and search (Task List tab) permissions of Response
+    Management, and the Endpoint Inventory View permission.
+  ai_short_description: >-
+    Collects a file from Trend Vision One endpoints by IP Address, Hostname, or Agent
+    UUID, and downloads it as a password-protected archive.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a collect file task for each endpoint in Trend Vision One.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action searches endpoints, polls task statuses, and downloads the collected
+      archive (fetches_data=true). It makes a POST request that creates a collect file
+      task in Trend Vision One (can_mutate_external_data=true). It does not update
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. Therefore, it targets Address and Hostname entities,
+      filtering strictly by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action collects a file from an endpoint and downloads the password-protected
+      archive from Trend Vision One. This matches the 'Download File' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Path | String | Yes | Specify the absolute path of the file to collect from
+    the endpoint, for example C:\Windows\System32\calc.exe or /etc/hosts. |
+
+    | Agent UUID | String | No | A comma-separated list of UUIDs. The action processes
+    these UUIDs along with their related entities. |
 Enrich Entities:
   ai_description: >-
     ### General Description
 
     Enriches Hostname and IP Address entities, as well as provided Agent UUIDs, using
     endpoint information from Trend Vision One. This action retrieves contextual metadata
-    about the endpoints and updates the entities within the SecOps platform.
+    about the endpoints, including the isolation status of each endpoint, and updates
+    the entities within the SecOps platform. You can run it with only the Agent UUID
+    parameter.
 
 
     ### Flow Description
@@ -16,14 +169,17 @@ Enrich Entities:
     3. Iterates through the filtered entities and queries Trend Vision One for endpoint
     details using the entity's original identifier (IP or Hostname).
 
-    4. If an endpoint is found, the action enriches the entity's additional properties,
-    marks it as enriched, and attaches an entity table with the endpoint data.
+    4. If an endpoint is found, the action gets the isolation status of the endpoint
+    (on, off, or unknown). It enriches the entity's additional properties with the
+    endpoint data and the isolation status, marks the entity as enriched, and attaches
+    an entity table. If the isolation status lookup fails, the status is unknown.
 
     5. Processes any provided Agent UUIDs by querying Trend Vision One and appending
     the successful results.
 
     6. Updates the successfully enriched entities in the SecOps platform and attaches
-    the raw JSON results to the action.
+    the JSON results to the action. Each failed target has the error and the error
+    type in the JSON result.
 
 
     ### Additional Notes
@@ -31,7 +187,7 @@ Enrich Entities:
     None.
   ai_short_description: >-
     Enriches Hostname and IP Address entities, along with optional Agent UUIDs, by
-    retrieving endpoint details from Trend Vision One.
+    retrieving endpoint details and isolation status from Trend Vision One.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -443,7 +599,8 @@ Isolate Endpoint:
 
     Isolates specific endpoints in Trend Vision One based on IP addresses, hostnames,
     or provided Agent UUIDs. This action initiates a state change on the external
-    device to prevent network traffic to or from the specified entity.
+    device to prevent network traffic to or from the specified entity. You can run
+    it with only the Agent UUID parameter.
 
 
     ### Flow Description
@@ -462,7 +619,8 @@ Isolate Endpoint:
     5. Monitors the status of the isolation tasks asynchronously until completion
     or timeout.
 
-    6. Returns the task details and status as JSON results.
+    6. Returns the task details and status as JSON results. Each failed target has
+    the error type in the JSON result.
 
 
     ### Additional Notes
@@ -1014,7 +1172,7 @@ Unisolate Endpoint:
 
     Unisolates specific endpoints in Trend Vision One. This action initiates a state
     change on the external device to restore network connectivity for the specified
-    entities or agent UUIDs.
+    entities or agent UUIDs. You can run it with only the Agent UUID parameter.
 
 
     ### Flow Description
@@ -1033,7 +1191,8 @@ Unisolate Endpoint:
     5. Asynchronously polls the Trend Vision One API to check the status of the unisolation
     tasks until they succeed, fail, or time out.
 
-    6. Returns the task statuses and outputs a summary message.
+    6. Returns the task statuses and outputs a summary message. Each failed target
+    has the error type in the JSON result.
 
 
     ### Additional Notes
