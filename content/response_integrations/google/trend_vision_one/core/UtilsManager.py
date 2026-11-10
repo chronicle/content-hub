@@ -195,7 +195,8 @@ def _get_http_status(error: Exception) -> int | None:
 def _get_error_type(error: Exception, http_status: int | None) -> str:
     """Map an exception and its HTTP status code to an error type.
 
-    Trend Vision One errors have an error_type attribute. The code that raises them sets it when it knows the failure reason.
+    Trend Vision One errors have an error_type attribute. The code that raises them sets it when it knows the
+    failure reason.
 
     Args:
         error: The exception to map.

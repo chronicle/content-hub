@@ -41,16 +41,14 @@ def make_endpoint() -> Endpoint:
     Returns:
         The endpoint.
     """
-    return TrendVisionOneParser.build_endpoint_obj(
-        {
-            "agentGuid": AGENT_GUID,
-            "osDescription": "CentOS 7",
-            "loginAccount": {"value": ["root"]},
-            "endpointName": {"value": "host-1"},
-            "ip": {"value": ["10.0.0.1"]},
-            "installedProductCodes": ["xes"],
-        }
-    )
+    return TrendVisionOneParser.build_endpoint_obj({
+        "agentGuid": AGENT_GUID,
+        "osDescription": "CentOS 7",
+        "loginAccount": {"value": ["root"]},
+        "endpointName": {"value": "host-1"},
+        "ip": {"value": ["10.0.0.1"]},
+        "installedProductCodes": ["xes"],
+    })
 
 
 def make_domain_entity(identifier: str, entity_type: str) -> MagicMock:

@@ -22,12 +22,15 @@ import requests
 from urllib.parse import urljoin, urlparse
 from datetime import datetime
 
-from .constants import ENDPOINTS, POSSIBLE_SEVERITIES, DATETIME_FORMAT, DEFAULT_MAX_LIMIT
 from .constants import (
     COLLECT_FILE_NOT_SUPPORTED_CODE,
     COLLECT_FILE_TARGET_NOT_FOUND_MESSAGE,
+    DATETIME_FORMAT,
+    DEFAULT_MAX_LIMIT,
     DOWNLOAD_CHUNK_SIZE_BYTES,
     DOWNLOAD_TIMEOUT_SECONDS,
+    ENDPOINTS,
+    POSSIBLE_SEVERITIES,
     SUCCESSFUL_STATUS_CODES,
 )
 from . import datamodels
