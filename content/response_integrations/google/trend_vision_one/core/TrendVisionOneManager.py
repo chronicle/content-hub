@@ -490,3 +490,17 @@ class TrendVisionOneManager:
         validate_response(response)
 
         return response.json()
+
+    def get_endpoint_isolation_status(self, agent_guid: str) -> str | None:
+        """Get the isolation status of an endpoint from the Endpoint Security API.
+
+        Args:
+            agent_guid: The agent GUID of the endpoint.
+
+        Returns:
+            The isolationStatus value (unknown, on, or off), or None if the response has no value.
+        """
+        response = self.session.get(self._get_full_url("endpoint_details", agent_guid=agent_guid))
+        validate_response(response)
+
+        return response.json().get("isolationStatus")

@@ -39,6 +39,7 @@ ENDPOINTS = {
     "isolate_endpoint": "/v3.0/response/endpoints/isolate",
     "unisolate_endpoint": "/v3.0/response/endpoints/restore",
     "collect_file": "/v3.0/response/endpoints/collectFile",
+    "endpoint_details": "/v3.0/endpointSecurity/endpoints/{agent_guid}",
     "get_task": "/v3.0/response/tasks/{task_id}",
     "get_scripts": "/v3.0/response/customScripts",
     "run_script": "/v3.0/response/endpoints/runScript",
