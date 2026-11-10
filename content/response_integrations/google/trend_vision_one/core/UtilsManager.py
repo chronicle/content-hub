@@ -81,8 +81,7 @@ EXECUTION_STATE_NAMES: Mapping[int, str] = {
 ASYNC_ACTION_TIMEOUT_THRESHOLD_MS = 35000
 SUMMARY_NONE = "NONE"
 TIMEOUT_MARKER_LOGGED_KEY = "timeout_marker_logged"
-SummaryCounts = tuple[int, int, list[str]] | tuple[int, int, list[str], int]
-
+SummaryCounts = tuple[int, int, list[str], int]
 
 
 def get_entity_original_identifier(entity: Any) -> str:
@@ -240,7 +239,6 @@ def build_action_result_summary(
     skipped: int = 0,
     error: Exception | None = None,
     error_type: str | None = None,
-    fallback_error_type: str | None = None,
 ) -> str:
     """Build the ACTION_RESULT_SUMMARY log line.
 
@@ -254,8 +252,8 @@ def build_action_result_summary(
         error_types: One error type for each failed target.
         skipped: The number of unsupported entities skipped.
         error: The exception that ended the run, if any.
-        error_type: The error type to report instead of the dominant one.
-        fallback_error_type: Reported if nothing succeeded and no failure has a reason. Default INVALID_INPUT.
+        error_type: The error type to report instead of the dominant one. If nothing succeeded and no failure
+            has a reason, INVALID_INPUT is reported.
 
     Returns:
         The summary line, with enums and counts only.
@@ -275,7 +273,7 @@ def build_action_result_summary(
         outcome = "SUCCESS"
     reason = error_type or dominant_error_type(error_types)
     if not succeeded and reason == SUMMARY_NONE:
-        reason = fallback_error_type or ErrorType.INVALID_INPUT
+        reason = ErrorType.INVALID_INPUT
 
     return (
         f"ACTION_RESULT_SUMMARY v=1 outcome={outcome} error_type={reason} "
@@ -289,28 +287,19 @@ def log_action_result_summary(
     execution_state: int,
     get_counts: Callable[[], SummaryCounts],
     error: Exception | None = None,
-    fallback_error_type: str | None = None,
 ) -> None:
     """Log the summary line of a finished run. Skip in-progress polls. Never raise.
 
     Args:
         siemplify: The action object.
         execution_state: The execution state that the run ends with.
-        get_counts: Return (targets, succeeded, error_types) or (targets, succeeded, error_types, skipped).
+        get_counts: Return (targets, succeeded, error_types, skipped).
         error: The exception that ended the run, if any.
-        fallback_error_type: Reported if nothing succeeded and no failure has a reason. Default INVALID_INPUT.
     """
     if execution_state == EXECUTION_STATE_INPROGRESS:
         return
     try:
-        siemplify.LOGGER.info(
-            build_action_result_summary(
-                execution_state,
-                *get_counts(),
-                error=error,
-                fallback_error_type=fallback_error_type,
-            )
-        )
+        siemplify.LOGGER.info(build_action_result_summary(execution_state, *get_counts(), error=error))
     except Exception:
         return
 
@@ -327,7 +316,7 @@ def log_timeout_marker_once(
     Args:
         siemplify: The action object.
         state: The async state that the action saves for the next poll.
-        get_counts: Return (targets, succeeded, error_types) or (targets, succeeded, error_types, skipped).
+        get_counts: Return (targets, succeeded, error_types, skipped).
     """
     try:
         deadline = siemplify.async_total_duration_deadline
@@ -373,7 +362,6 @@ def get_summary_counts(
 
     Returns:
         The targets, the succeeded count, one error type for each failed target, and the skipped count.
-
     """
     json_results = result_data.get("json_results", {})
     error_types = [result["error_type"] for result in json_results.values() if result.get("error_type")]
@@ -402,7 +390,6 @@ def log_run_summary(
         targets: The number of distinct targets in scope.
         supported_entity_types: Entity types supported by the action.
         error: The exception that ended the run, if any.
-
     """
     skipped = count_skipped_entities(siemplify.target_entities, supported_entity_types)
     get_counts = partial(get_summary_counts, result_data, targets, skipped)

@@ -128,19 +128,6 @@ class TestSummaryLine:
         )
         assert SUMMARY_PATTERN.match(line)
 
-    def test_zero_targets_line_uses_fallback(self) -> None:
-        """Verifies that a run with no targets and no exception reports the fallback reason."""
-        line = utils.build_action_result_summary(
-            EXECUTION_STATE_COMPLETED,
-            0,
-            0,
-            [],
-            fallback_error_type="INVALID_INPUT",
-        )
-
-        assert "outcome=FAILURE error_type=INVALID_INPUT" in line
-        assert "targets=0 failed=0 skipped=0" in line
-
     def test_default_invalid_input_when_nothing_succeeded(self) -> None:
         """Verify default INVALID_INPUT when succeeded is 0 and no failure reason is present."""
         zero_target_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 0, 0, [])
@@ -152,22 +139,10 @@ class TestSummaryLine:
         assert "outcome=FAILURE error_type=INVALID_INPUT" in skipped_line
         assert "targets=0 failed=0 skipped=1" in skipped_line
 
-    def test_fallback_error_type_ignored_when_succeeded(self) -> None:
-        """Verify fallback_error_type is ignored when at least one target succeeded."""
-        success_line = utils.build_action_result_summary(
-            EXECUTION_STATE_COMPLETED,
-            1,
-            1,
-            [],
-            fallback_error_type="INVALID_INPUT",
-        )
-        partial_line = utils.build_action_result_summary(
-            EXECUTION_STATE_COMPLETED,
-            2,
-            1,
-            ["ENDPOINT_NOT_FOUND"],
-            fallback_error_type="INVALID_INPUT",
-        )
+    def test_default_ignored_when_succeeded(self) -> None:
+        """Verify the INVALID_INPUT default is not used when at least one target succeeded."""
+        success_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 1, 1, [])
+        partial_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 2, 1, ["ENDPOINT_NOT_FOUND"])
 
         assert SUMMARY_PATTERN.match(success_line)
         assert "outcome=SUCCESS error_type=NONE" in success_line
@@ -205,23 +180,11 @@ class TestSummaryLine:
             "execution_state=FAILED targets=2 failed=1 skipped=3 exc_type=TrendVisionOneException http_status=401"
         )
 
-    def test_log_accepts_three_and_four_tuple_counts(self) -> None:
-        """Verify log_action_result_summary accepts both 3-tuple and 4-tuple count callbacks."""
-        siemplify = MagicMock()
-
-        utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: (1, 1, []))
-        utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: (1, 1, [], 2))
-
-        first_line = siemplify.LOGGER.info.call_args_list[0].args[0]
-        second_line = siemplify.LOGGER.info.call_args_list[1].args[0]
-        assert "targets=1 failed=0 skipped=0" in first_line
-        assert "targets=1 failed=0 skipped=2" in second_line
-
     def test_log_skips_in_progress(self) -> None:
         """Verifies that no line is logged on an in-progress poll."""
         siemplify = MagicMock()
 
-        utils.log_action_result_summary(siemplify, EXECUTION_STATE_INPROGRESS, lambda: (1, 0, []))
+        utils.log_action_result_summary(siemplify, EXECUTION_STATE_INPROGRESS, lambda: (1, 0, [], 0))
 
         siemplify.LOGGER.info.assert_not_called()
 
@@ -230,7 +193,7 @@ class TestSummaryLine:
         siemplify = MagicMock()
         siemplify.LOGGER.info.side_effect = RuntimeError("logger down")
 
-        utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: (1, 1, []))
+        utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: (1, 1, [], 0))
         utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: 1 / 0)
 
 
@@ -257,8 +220,8 @@ class TestTimeoutMarker:
         siemplify = self.make_action(unix_now() + 10_000)
         state = {}
 
-        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"]))
-        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"]))
+        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"], 0))
+        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"], 0))
 
         siemplify.LOGGER.info.assert_called_once()
         line = siemplify.LOGGER.info.call_args[0][0]
@@ -271,9 +234,9 @@ class TestTimeoutMarker:
         siemplify = self.make_action(unix_now() + 3_600_000)
         state = {}
 
-        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"]))
+        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"], 0))
         siemplify.async_total_duration_deadline = 0
-        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"]))
+        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"], 0))
 
         siemplify.LOGGER.info.assert_not_called()
         assert state == {}
@@ -286,8 +249,8 @@ class TestTimeoutMarker:
 
         siemplify.LOGGER.info.assert_not_called()
 
-    def test_marker_accepts_four_tuple_counts(self) -> None:
-        """Verify log_timeout_marker_once preserves skipped count from a 4-tuple callback."""
+    def test_marker_keeps_skipped_count(self) -> None:
+        """Verify log_timeout_marker_once keeps the skipped count of the callback."""
         siemplify = self.make_action(unix_now() + 10_000)
 
         utils.log_timeout_marker_once(siemplify, {}, lambda: (1, 0, ["TIMEOUT"], 2))
