@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 DESCRIPTION = "Contain the endpoint"
+NOT_FOUND = {"error": "Endpoint was not found in Trend Vision One.", "error_type": "ENDPOINT_NOT_FOUND"}
 
 
 def make_manager_setup(
@@ -76,7 +77,11 @@ def make_manager_setup(
     def setup(manager: MagicMock) -> None:
         manager.search_endpoint.side_effect = search_endpoint
         getattr(manager, method).side_effect = contain
-        manager.get_task.side_effect = lambda task_url: MagicMock(id=f"task-{task_url}", status=task_statuses[task_url])
+        manager.get_task.side_effect = lambda task_url: MagicMock(
+            id=f"task-{task_url}",
+            status=task_statuses[task_url],
+            raw_data={},
+        )
 
     return setup
 
@@ -198,7 +203,7 @@ class TestIsolateEndpoint:
         mock_siemplify = self.run(({"g2": make_http_error(500)}, {}), [], agent_uuids="g2")
 
         assert get_end_args(mock_siemplify)[1:] == (False, EXECUTION_STATE_COMPLETED)
-        assert get_json_by_entity(mock_siemplify) == {"g2": {"error_type": "VENDOR_ERROR"}}
+        assert get_json_by_entity(mock_siemplify) == {"g2": {"error": "failed", "error_type": "VENDOR_ERROR"}}
 
     def test_endpoint_not_found(self) -> None:
         """Tag an unknown entity and an unknown Agent UUID with ENDPOINT_NOT_FOUND."""
@@ -207,26 +212,31 @@ class TestIsolateEndpoint:
         output_message, result_value, status = get_end_args(mock_siemplify)
         assert output_message == f"None of the provided endpoints were {self.verb}d."
         assert (result_value, status) == (False, EXECUTION_STATE_COMPLETED)
-        assert get_json_by_entity(mock_siemplify) == {
-            "10.0.0.1": {"error_type": "ENDPOINT_NOT_FOUND"},
-            "missing": {"error_type": "ENDPOINT_NOT_FOUND"},
-        }
+        assert get_json_by_entity(mock_siemplify) == {"10.0.0.1": NOT_FOUND, "missing": NOT_FOUND}
         [summary] = get_summary_lines(mock_siemplify)
         assert (summary["outcome"], summary["error_type"]) == ("FAILURE", "ENDPOINT_NOT_FOUND")
         assert (summary["targets"], summary["failed"]) == ("2", "2")
 
-    @pytest.mark.parametrize("task_status", ["failed", "rejected"])
-    def test_task_failed(self, task_status: str) -> None:
-        """Tag a task that Trend Vision One failed or rejected with VENDOR_ERROR. Keep the legacy keys."""
+    @pytest.mark.parametrize(
+        ("task_status", "error_type"),
+        [("failed", "VENDOR_ERROR"), ("rejected", "PERMISSION_DENIED"), ("canceled", "CANCELLED")],
+    )
+    def test_task_failed(self, task_status: str, error_type: str) -> None:
+        """Tag a failed, rejected, or canceled task with its error type and error text. Keep the legacy keys."""
         entities = [make_entity("host1", EntityTypes.HOSTNAME)]
         mock_siemplify = self.run(({"host1": "g1"}, {"url-g1": task_status}), entities)
 
         assert get_end_args(mock_siemplify)[1:] == (False, EXECUTION_STATE_COMPLETED)
         assert get_json_by_entity(mock_siemplify) == {
-            "host1": {"task_id": "task-url-g1", "status": task_status, "error_type": "VENDOR_ERROR"},
+            "host1": {
+                "task_id": "task-url-g1",
+                "status": task_status,
+                "error": f"The task ended with status {task_status}.",
+                "error_type": error_type,
+            },
         }
         [summary] = get_summary_lines(mock_siemplify)
-        assert (summary["outcome"], summary["error_type"], summary["failed"]) == ("FAILURE", "VENDOR_ERROR", "1")
+        assert (summary["outcome"], summary["error_type"], summary["failed"]) == ("FAILURE", error_type, "1")
 
     def test_target_exceptions_are_classified(self) -> None:
         """Tag the entity and Agent UUID whose containment call raises with the classified error type."""
@@ -239,8 +249,8 @@ class TestIsolateEndpoint:
 
         assert get_end_args(mock_siemplify)[1:] == (False, EXECUTION_STATE_COMPLETED)
         assert get_json_by_entity(mock_siemplify) == {
-            "host1": {"error_type": "VENDOR_ERROR"},
-            "g2": {"error_type": "RATE_LIMITED"},
+            "host1": {"error": "failed", "error_type": "VENDOR_ERROR"},
+            "g2": {"error": "failed", "error_type": "RATE_LIMITED"},
         }
         [summary] = get_summary_lines(mock_siemplify)
         assert (summary["outcome"], summary["error_type"], summary["failed"]) == ("FAILURE", "RATE_LIMITED", "2")
@@ -254,7 +264,7 @@ class TestIsolateEndpoint:
         first = self.run(setup_args, entities)
         _, state, status = get_end_args(first)
         assert status == EXECUTION_STATE_INPROGRESS
-        assert json.loads(state)["json_results"]["host3"] == {"error_type": "ENDPOINT_NOT_FOUND"}
+        assert json.loads(state)["json_results"]["host3"] == NOT_FOUND
         statuses["url-g1"] = "succeeded"
         second = self.run(setup_args, entities, state=state)
         _, state, status = get_end_args(second)
@@ -267,13 +277,16 @@ class TestIsolateEndpoint:
         json_by_entity = get_json_by_entity(third)
         assert json_by_entity["host1"] == {"task_id": "task-url-g1", "status": "succeeded"}
         assert json_by_entity["host2"]["error_type"] == "VENDOR_ERROR"
-        assert json_by_entity["host3"] == {"error_type": "ENDPOINT_NOT_FOUND"}
+        assert json_by_entity["host3"] == NOT_FOUND
         [summary] = get_summary_lines(third)
         assert (summary["outcome"], summary["error_type"]) == ("PARTIAL_SUCCESS", "VENDOR_ERROR")
         assert (summary["targets"], summary["failed"]) == ("3", "2")
 
     def test_exception_ends_run(self) -> None:
-        """Log the error type and HTTP status of an exception that ends a poll. Count unfinished targets as failed."""
+        """Attach JSON and log the error type and HTTP status of an exception that ends a poll.
+
+        Unfinished targets get the run error in the JSON result and count as failed.
+        """
         setup_args = ({"host1": "g1", "host2": "g2"}, {"url-g1": "running", "url-g2": "running"})
         entities = [make_entity("host1", EntityTypes.HOSTNAME), make_entity("host2", EntityTypes.HOSTNAME)]
         _, state, _ = get_end_args(self.run(setup_args, entities))
@@ -290,6 +303,11 @@ class TestIsolateEndpoint:
         )
 
         assert get_end_args(mock_siemplify)[1:] == (False, EXECUTION_STATE_FAILED)
+        failure = {"status": "running", "error": "failed", "error_type": "PERMISSION_DENIED"}
+        assert get_json_by_entity(mock_siemplify) == {
+            "host1": {"task_id": "task-url-g1", **failure},
+            "host2": {"task_id": "task-url-g2", **failure},
+        }
         [summary] = get_summary_lines(mock_siemplify)
         assert (summary["outcome"], summary["error_type"]) == ("FAILURE", "PERMISSION_DENIED")
         assert (summary["execution_state"], summary["targets"], summary["failed"]) == ("FAILED", "2", "2")

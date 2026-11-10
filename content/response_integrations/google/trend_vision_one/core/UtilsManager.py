@@ -29,12 +29,18 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_TIMEDOUT,
 )
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyUtils import unix_now
+from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, unix_now
 
 from .TrendVisionOneManager import TrendVisionOneManager
 from .TrendVisionOneExceptions import TrendVisionOneException, TrendVisionOneTimeoutException
 
-from .constants import GLOBAL_TIMEOUT_THRESHOLD_IN_MIN
+from .constants import (
+    CANCELED_STATUS,
+    ENDPOINT_NOT_FOUND_MESSAGE,
+    FAILED_STATUS,
+    GLOBAL_TIMEOUT_THRESHOLD_IN_MIN,
+    REJECTED_STATUS,
+)
 from . import datamodels
 
 if TYPE_CHECKING:
@@ -72,6 +78,11 @@ EXCEPTION_ERROR_TYPES: tuple[tuple[type[Exception], ErrorType], ...] = (
     (requests.Timeout, ErrorType.CONNECTION_ERROR),
     (TrendVisionOneTimeoutException, ErrorType.TIMEOUT),
 )
+TASK_STATUS_ERROR_TYPES: Mapping[str, ErrorType] = {
+    FAILED_STATUS: ErrorType.VENDOR_ERROR,
+    REJECTED_STATUS: ErrorType.PERMISSION_DENIED,
+    CANCELED_STATUS: ErrorType.CANCELLED,
+}
 EXECUTION_STATE_NAMES: Mapping[int, str] = {
     EXECUTION_STATE_COMPLETED: "COMPLETED",
     EXECUTION_STATE_INPROGRESS: "IN_PROGRESS",
@@ -136,7 +147,7 @@ def process_agents(
     Returns:
         AgentResult: An object containing two lists: `successful_agents`
         (list of Endpoint objects) and `failed_agents` (list of agent UUIDs
-        that could not be processed), and `failed_error_types` (the error type
+        that could not be processed), and `failures` (the error and error_type
         of each failed agent UUID).
     """
     agent_result: datamodels.AgentResult = datamodels.AgentResult([], [], {})
@@ -146,12 +157,15 @@ def process_agents(
                 agent_result.successful_agents.append(agent)
             else:
                 agent_result.failed_agents.append(agent_id)
-                agent_result.failed_error_types[agent_id] = ErrorType.ENDPOINT_NOT_FOUND
+                agent_result.failures[agent_id] = {
+                    "error": ENDPOINT_NOT_FOUND_MESSAGE,
+                    "error_type": ErrorType.ENDPOINT_NOT_FOUND,
+                }
                 manager.siemplify.LOGGER.info(f"Agent UUID not found: {agent_id}")
 
         except TrendVisionOneException as e:
             agent_result.failed_agents.append(agent_id)
-            agent_result.failed_error_types[agent_id] = classify_exception(e)[0]
+            agent_result.failures[agent_id] = {"error": str(e), "error_type": classify_exception(e)[0]}
             manager.siemplify.LOGGER.error(f"An error occurred on agent: {agent_id}")
             manager.siemplify.LOGGER.exception(e)
 
@@ -396,6 +410,38 @@ def log_run_summary(
     if status == EXECUTION_STATE_INPROGRESS:
         log_timeout_marker_once(siemplify, result_data, partial(get_counts, pending_error_type=ErrorType.TIMEOUT))
     log_action_result_summary(siemplify, status, get_counts, error=error)
+
+
+def add_unfinished_json_result(siemplify: SiemplifyAction, result_data: dict[str, Any], error: Exception) -> None:
+    """Attach the JSON result of an Isolate or Unisolate run that an exception ended.
+
+    Finished targets keep their result. Each pending target gets the error text and error type of the exception.
+
+    Args:
+        siemplify: The action object.
+        result_data: The async state of the run.
+        error: The exception that ended the run.
+    """
+    json_results = result_data.get("json_results", {})
+    failure = {"error": str(error).strip(), "error_type": classify_exception(error)[0]}
+    for target in [key for key, url in result_data.get("result_urls", {}).items() if url]:
+        json_results.setdefault(target, {}).update(failure)
+    if json_results:
+        siemplify.result.add_result_json(convert_dict_to_json_result_dict(json_results))
+
+
+def get_task_failure(task: datamodels.Task) -> dict[str, str]:
+    """Get the error text and error type of a response task that ended without success.
+
+    Args:
+        task: The task. Its status is failed, rejected, canceled, or another status that is not a success.
+
+    Returns:
+        The error and error_type keys of the JSON result.
+    """
+    message = (task.raw_data.get("error") or {}).get("message") or f"The task ended with status {task.status}."
+
+    return {"error": message, "error_type": TASK_STATUS_ERROR_TYPES.get(task.status, ErrorType.VENDOR_ERROR)}
 
 
 def get_endpoint_search_args(target: Any) -> dict[str, str]:

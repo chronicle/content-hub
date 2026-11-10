@@ -42,8 +42,8 @@ RESULT_DATA = {
 }
 
 
-def test_process_agents_keeps_error_type_of_each_failed_agent() -> None:
-    """Tag a missing agent with ENDPOINT_NOT_FOUND and a lookup error with its classified error type."""
+def test_process_agents_keeps_failure_of_each_failed_agent() -> None:
+    """Tag a missing agent with ENDPOINT_NOT_FOUND and a lookup error with its error text and classified type."""
     manager = MagicMock()
     endpoint = MagicMock(guid="found")
     lookups = {"found": endpoint, "missing": None, "broken": make_http_error(403)}
@@ -59,7 +59,10 @@ def test_process_agents_keeps_error_type_of_each_failed_agent() -> None:
 
     assert result.successful_agents == [endpoint]
     assert result.failed_agents == ["missing", "broken"]
-    assert result.failed_error_types == {"missing": "ENDPOINT_NOT_FOUND", "broken": "PERMISSION_DENIED"}
+    assert result.failures == {
+        "missing": {"error": "Endpoint was not found in Trend Vision One.", "error_type": "ENDPOINT_NOT_FOUND"},
+        "broken": {"error": "failed", "error_type": "PERMISSION_DENIED"},
+    }
 
 
 def test_get_summary_counts() -> None:

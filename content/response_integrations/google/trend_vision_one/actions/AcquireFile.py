@@ -44,7 +44,6 @@ from ..core.constants import (
     ACQUIRE_FILE_PENDING_STATUSES,
     ACQUIRE_FILE_SCRIPT_NAME,
     ACQUIRE_FILE_TASK_DESCRIPTION,
-    ACQUIRE_FILE_TASK_ERROR_TYPES,
     DEFAULT_TIMEOUT,
     FAILED_STATUS,
     INTEGRATION_DISPLAY_NAME,
@@ -58,6 +57,7 @@ from ..core.UtilsManager import (
     classify_exception,
     count_skipped_entities,
     get_endpoint_search_args,
+    get_task_failure,
     is_async_action_global_timeout_approaching,
     log_action_result_summary,
     log_timeout_marker_once,
@@ -354,14 +354,13 @@ def build_task_failure(state: SingleJson, guid: str, task: Task) -> SingleJson:
     Returns:
         The entity result.
     """
-    message = (task.raw_data.get("error") or {}).get("message") or (
-        f"The collect file task ended with status {task.status}."
-    )
-    error_type = ACQUIRE_FILE_TASK_ERROR_TYPES.get(task.status, ErrorType.VENDOR_ERROR)
-    if task.status == FAILED_STATUS and is_file_not_found(message):
-        error_type = ErrorType.FILE_NOT_FOUND
+    failure = get_task_failure(task)
+    if task.status == FAILED_STATUS and is_file_not_found(failure["error"]):
+        failure["error_type"] = ErrorType.FILE_NOT_FOUND
 
-    return build_failure_entry(message, error_type, guid, state["file_path"], state["pending"][guid]["task_id"])
+    task_id = state["pending"][guid]["task_id"]
+
+    return build_failure_entry(failure["error"], failure["error_type"], guid, state["file_path"], task_id)
 
 
 def poll_task(siemplify: SiemplifyAction, manager: TrendVisionOneManager, state: SingleJson, guid: str) -> None:

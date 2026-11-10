@@ -35,9 +35,8 @@ from ..core.constants import (
     INTEGRATION_DISPLAY_NAME,
     ISOLATE_ENDPOINT_SCRIPT_NAME,
     SUCCESS_STATUS,
-    FAILED_STATUS,
-    REJECTED_STATUS,
     RUNNING_STATUS,
+    ENDPOINT_NOT_FOUND_MESSAGE,
     GLOBAL_TIMEOUT_THRESHOLD_IN_MIN,
     DEFAULT_TIMEOUT,
 )
@@ -48,9 +47,12 @@ from ..core.TrendVisionOneExceptions import (
 )
 from ..core.TrendVisionOneManager import TrendVisionOneManager
 from ..core.UtilsManager import (
+    TASK_STATUS_ERROR_TYPES,
     ErrorType,
+    add_unfinished_json_result,
     classify_exception,
     get_entity_original_identifier,
+    get_task_failure,
     log_run_summary,
     process_agents,
 )
@@ -82,8 +84,7 @@ def isolate_agents(
         agent_uids=agent_uuids,
     )
     result_data["failed"].extend(agents.failed_agents)
-    for agent_uuid, error_type in agents.failed_error_types.items():
-        result_data["json_results"][agent_uuid] = {"error_type": error_type}
+    result_data["json_results"].update(agents.failures)
     for endpoint in agents.successful_agents:
         if endpoint.guid in result_data["result_endpoints"]:
             result_data["result_urls"][endpoint.guid] = result_data[
@@ -100,7 +101,7 @@ def isolate_agents(
             except TrendVisionOneException as e:
                 if endpoint.guid not in result_data["failed"]:
                     result_data["failed"].append(endpoint.guid)
-                result_data["json_results"][endpoint.guid] = {"error_type": classify_exception(e)[0]}
+                result_data["json_results"][endpoint.guid] = {"error": str(e), "error_type": classify_exception(e)[0]}
                 manager.siemplify.LOGGER.error(
                     f"Isolation failed no agent {endpoint.guid}"
                 )
@@ -148,13 +149,16 @@ def start_operation(
                     result_data["result_endpoints"][endpoint.guid] = result_url
             else:
                 result_data["failed"].append(entity.identifier)
-                result_data["json_results"][entity.identifier] = {"error_type": ErrorType.ENDPOINT_NOT_FOUND}
+                result_data["json_results"][entity.identifier] = {
+                    "error": ENDPOINT_NOT_FOUND_MESSAGE,
+                    "error_type": ErrorType.ENDPOINT_NOT_FOUND,
+                }
                 siemplify.LOGGER.info(
                     f"No endpoint found for the entity: {entity.identifier}"
                 )
         except Exception as e:
             result_data["failed"].append(entity.identifier)
-            result_data["json_results"][entity.identifier] = {"error_type": classify_exception(e)[0]}
+            result_data["json_results"][entity.identifier] = {"error": str(e), "error_type": classify_exception(e)[0]}
             siemplify.LOGGER.error(f"An error occurred on entity {entity.identifier}")
             siemplify.LOGGER.exception(e)
         siemplify.LOGGER.info(f"Finished processing entity: {entity.identifier}")
@@ -204,12 +208,12 @@ def query_operation_status(
                     "task_id": task_details.id,
                     "status": task_details.status,
                 }
-            elif task_details.status in [FAILED_STATUS, REJECTED_STATUS]:
+            elif task_details.status in TASK_STATUS_ERROR_TYPES:
                 result_data["result_urls"][entity_identifier] = None
                 result_data["json_results"][entity_identifier] = {
                     "task_id": task_details.id,
                     "status": task_details.status,
-                    "error_type": ErrorType.VENDOR_ERROR,
+                    **get_task_failure(task_details),
                 }
                 result_data["failed"].append(entity_identifier)
 
@@ -354,12 +358,7 @@ def main(is_first_run):
         status = EXECUTION_STATE_FAILED
 
         if result_data:
-            json_results = result_data.get("json_results", {})
-            for target in [key for key, url in result_data.get("result_urls", {}).items() if url]:
-                json_results.setdefault(target, {})["error_type"] = ErrorType.TIMEOUT
-            siemplify.result.add_result_json(
-                convert_dict_to_json_result_dict(json_results)
-            )
+            add_unfinished_json_result(siemplify, result_data, e)
 
             output_message_for_finished, _ = generate_output_message_and_result(
                 result_data
@@ -382,6 +381,7 @@ def main(is_first_run):
         )
         status = EXECUTION_STATE_FAILED
         result_value = False
+        add_unfinished_json_result(siemplify, result_data, e)
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
     targets = len({entity.identifier for entity in suitable_entities} | set(agent_uuids))

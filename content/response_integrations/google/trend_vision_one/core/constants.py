@@ -52,9 +52,11 @@ ENDPOINTS = {
 }
 
 ENRICHMENT_PREFIX = "TrendVisionOne"
+ENDPOINT_NOT_FOUND_MESSAGE = f"Endpoint was not found in {INTEGRATION_DISPLAY_NAME}."
 SUCCESS_STATUS = "succeeded"
 FAILED_STATUS = "failed"
 REJECTED_STATUS = "rejected"
+CANCELED_STATUS = "canceled"
 RUNNING_STATUS = "running"
 RATE_LIMIT_EXCEEDED = "Rate limit exceeded"
 GLOBAL_TIMEOUT_THRESHOLD_IN_MIN = 1
@@ -78,8 +80,6 @@ SEVERITY_MAPPING = {"INFO": -1, "LOW": 40, "MEDIUM": 60, "HIGH": 80, "CRITICAL":
 ACQUIRE_FILE_ACTION_NAME = "Acquire File"
 ACQUIRE_FILE_TASK_DESCRIPTION = "Collect file from Google SecOps"
 ACQUIRE_FILE_PENDING_STATUSES = ("queued", "running", "pendingApproval")
-# Values match UtilsManager.ErrorType. constants.py cannot import UtilsManager (circular import).
-ACQUIRE_FILE_TASK_ERROR_TYPES = {"failed": "VENDOR_ERROR", "canceled": "CANCELLED", "rejected": "PERMISSION_DENIED"}
 ACQUIRE_FILE_MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
 COLLECT_FILE_TARGET_NOT_FOUND_MESSAGE = "Target not found"
 COLLECT_FILE_NOT_SUPPORTED_CODE = "NotSupported"
