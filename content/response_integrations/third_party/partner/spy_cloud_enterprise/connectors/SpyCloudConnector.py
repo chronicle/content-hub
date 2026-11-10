@@ -367,6 +367,24 @@ def _collect_alerts(
 
 @output_handler
 def main(is_test_run: bool) -> None:
+    """Collect one cycle of SpyCloud alerts, deliver them, then commit progress.
+
+    ``return_package`` is called exactly once per execution. The platform parses the
+    connector's entire stdout as a single JSON document, and ``return_package``
+    writes that document without a trailing separator; a second call would append a
+    second document and make the whole payload unparseable, which the platform
+    reports as "returned unexpected output" / "the result of running is empty or
+    null" and drops every alert in the cycle.
+
+    When collection failed, or on a test run, nothing is committed, so undelivered
+    records are re-fetched next cycle rather than skipped (integration guide 9.2).
+
+    Progress commits happen only after successful delivery, so they run after the
+    package is already on stdout and they talk to the SOAR API (``save_timestamp`` /
+    ``set_connector_context_property``). A failure there must not escape: the
+    package was delivered, so the worst correct outcome is a non-advanced checkpoint
+    and a replayed slice next cycle.
+    """
     siemplify = SiemplifyConnectorExecution()
     siemplify.script_name = CONNECTOR_NAME
 
@@ -382,24 +400,11 @@ def main(is_test_run: bool) -> None:
         siemplify.LOGGER.error(f"Connector execution failed: {e}")
         alerts, checkpoint_until = [], None
 
-    # Exactly ONE return_package per execution. The platform parses the
-    # connector's entire stdout as a single JSON document, and return_package
-    # writes that document without a trailing separator; a second call would
-    # append a second document and make the whole payload unparseable, which the
-    # platform reports as "returned unexpected output" / "the result of running
-    # is empty or null" and drops every alert in the cycle.
     siemplify.return_package(alerts)
 
     if not collection_succeeded or manager is None or is_test_run:
-        # Commit nothing, so undelivered records are re-fetched next cycle
-        # rather than skipped (integration guide 9.2). Test runs never commit.
         return
 
-    # Progress commits happen only after successful delivery, which means they
-    # run *after* the package is already on stdout and they talk to the SOAR API
-    # (save_timestamp / set_connector_context_property). A failure here must not
-    # escape: the package was delivered, so the worst correct outcome is a
-    # non-advanced checkpoint and a replayed slice next cycle.
     try:
         _commit_progress(siemplify, manager, checkpoint_until, is_test_run)
     except Exception as e:

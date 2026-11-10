@@ -271,7 +271,13 @@ class APIClient:
         return self._make_request("PATCH", endpoint, data=data, params=params, headers=headers, **kwargs)
 
     def validate_response(self, response: requests.Response, error_msg: str = "An error occurred") -> None:
-        """Validate the response and log relevant headers on HTTP errors."""
+        """Validate the response and log relevant headers on HTTP errors.
+
+        A 400 that mentions the cursor raises ``SpyCloudInvalidCursorException``
+        rather than ``SpyCloudException``: a rejected cursor is recoverable (restart
+        the window) whereas other 400s are not, so it is surfaced as a distinct type
+        instead of forcing callers to string-match on the message.
+        """
         try:
             response.raise_for_status()
         except requests.HTTPError as error:
@@ -293,9 +299,6 @@ class APIClient:
 
             detail = message or body_text or "No response body returned"
 
-            # A rejected cursor is recoverable (restart the window) whereas other
-            # 400s are not, so surface it as a distinct type instead of forcing
-            # callers to string-match on the message.
             if response.status_code == 400 and "cursor" in str(detail).lower():
                 raise SpyCloudInvalidCursorException(f"{error_msg}: {error} {detail}") from error
 
