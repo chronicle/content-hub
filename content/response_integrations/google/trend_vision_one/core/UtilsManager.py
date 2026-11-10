@@ -28,6 +28,7 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_INPROGRESS,
     EXECUTION_STATE_TIMEDOUT,
 )
+from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import unix_now
 
 from .TrendVisionOneManager import TrendVisionOneManager
@@ -407,3 +408,21 @@ def log_run_summary(
     if status == EXECUTION_STATE_INPROGRESS:
         log_timeout_marker_once(siemplify, result_data, partial(get_counts, pending_error_type=ErrorType.TIMEOUT))
     log_action_result_summary(siemplify, status, get_counts, error=error)
+
+
+def get_endpoint_search_args(target: Any) -> dict[str, str]:
+    """Build the TrendVisionOneManager.search_endpoint arguments for an entity or an Agent UUID.
+
+    Args:
+        target: A Hostname or IP Address entity, or an Agent UUID.
+
+    Returns:
+        The keyword arguments of TrendVisionOneManager.search_endpoint.
+    """
+    if isinstance(target, str):
+        return {"agent_id": target}
+    identifier = get_entity_original_identifier(target)
+    if target.entity_type == EntityTypes.ADDRESS:
+        return {"ip": identifier}
+
+    return {"hostname": identifier}

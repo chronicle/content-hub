@@ -57,14 +57,13 @@ from ..core.UtilsManager import (
     ErrorType,
     classify_exception,
     count_skipped_entities,
-    get_entity_original_identifier,
+    get_endpoint_search_args,
     is_async_action_global_timeout_approaching,
     log_action_result_summary,
     log_timeout_marker_once,
 )
 
 if TYPE_CHECKING:
-    from soar_sdk.SiemplifyDataModel import DomainEntityInfo
     from TIPCommon.types import SingleJson
 
     from ..core.datamodels import Task
@@ -141,22 +140,6 @@ def get_counts(state: SingleJson) -> tuple[int, int, list[str], int]:
     error_types = [result["error_type"] for result in results if result["status"] == RESULT_FAILURE]
 
     return len(state["keys"]), succeeded, error_types, state["skipped"]
-
-
-def get_lookup(entity: DomainEntityInfo) -> SingleJson:
-    """Build the endpoint search arguments for an entity.
-
-    Args:
-        entity: A Hostname or IP Address entity.
-
-    Returns:
-        The keyword arguments of TrendVisionOneManager.search_endpoint.
-    """
-    identifier = get_entity_original_identifier(entity)
-    if entity.entity_type == EntityTypes.ADDRESS:
-        return {"ip": identifier}
-
-    return {"hostname": identifier}
 
 
 def resolve_targets(
@@ -238,8 +221,8 @@ def start_acquisition(siemplify: SiemplifyAction, manager: TrendVisionOneManager
     state["file_path"] = extract_action_param(siemplify, param_name="File Path", is_mandatory=True, print_value=True)
     agent_uuids = string_to_multi_value(extract_action_param(siemplify, param_name="Agent UUID", print_value=True))
     entities = [entity for entity in siemplify.target_entities if entity.entity_type in SUPPORTED_ENTITY_TYPES]
-    lookups = {entity.identifier: get_lookup(entity) for entity in entities}
-    lookups.update({agent_uuid: {"agent_id": agent_uuid} for agent_uuid in agent_uuids})
+    lookups = {entity.identifier: get_endpoint_search_args(entity) for entity in entities}
+    lookups.update({agent_uuid: get_endpoint_search_args(agent_uuid) for agent_uuid in agent_uuids})
     state["keys"] = list(lookups)
     state["skipped"] = count_skipped_entities(siemplify.target_entities, SUPPORTED_ENTITY_TYPES)
     manager.test_connectivity()

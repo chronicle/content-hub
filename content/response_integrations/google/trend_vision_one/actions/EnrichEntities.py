@@ -40,6 +40,7 @@ from ..core.UtilsManager import (
     ErrorType,
     classify_exception,
     count_skipped_entities,
+    get_endpoint_search_args,
     get_entity_original_identifier,
     log_action_result_summary,
 )
@@ -114,25 +115,6 @@ def get_isolation_status(siemplify: SiemplifyAction, manager: TrendVisionOneMana
         return UNKNOWN_ISOLATION_STATUS
 
 
-def search_target(manager: TrendVisionOneManager, target: DomainEntityInfo | str, identifier: str) -> Endpoint | None:
-    """Search the endpoint of an entity or of an Agent UUID.
-
-    Args:
-        manager: The Trend Vision One manager.
-        target: The entity or Agent UUID.
-        identifier: The original identifier of the target.
-
-    Returns:
-        The endpoint, or None if it was not found.
-    """
-    if isinstance(target, str):
-        return manager.search_endpoint(agent_id=target)
-    if target.entity_type == EntityTypes.ADDRESS:
-        return manager.search_endpoint(ip=identifier)
-
-    return manager.search_endpoint(hostname=identifier)
-
-
 def enrich_entity(
     siemplify: SiemplifyAction,
     entity: DomainEntityInfo,
@@ -178,7 +160,7 @@ def enrich_targets(
         identifier = target if is_agent else get_entity_original_identifier(target)
         try:
             siemplify.LOGGER.info(f"Started processing entity: {identifier}")
-            endpoint = search_target(manager, target, identifier)
+            endpoint = manager.search_endpoint(**get_endpoint_search_args(target))
             if endpoint:
                 isolation_status = get_isolation_status(siemplify, manager, endpoint.guid)
                 if not is_agent:
