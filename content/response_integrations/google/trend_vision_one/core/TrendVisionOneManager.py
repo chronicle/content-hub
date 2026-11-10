@@ -18,11 +18,13 @@ from base64 import b64encode
 from http import HTTPStatus
 import os
 import pathlib
+import time
 import requests
 from urllib.parse import urljoin, urlparse
 from datetime import datetime
 
 from .constants import (
+    COLLECT_FILE_DUPLICATE_TASK_CODE,
     COLLECT_FILE_NOT_SUPPORTED_CODE,
     COLLECT_FILE_TARGET_NOT_FOUND_MESSAGE,
     DATETIME_FORMAT,
@@ -37,6 +39,8 @@ from . import datamodels
 from .TrendVisionOneExceptions import TrendVisionOneException
 from .TrendVisionOneParser import TrendVisionOneParser
 from .api_utils import validate_response
+
+DOWNLOAD_CONNECTION_ERRORS = (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError)
 
 
 class TrendVisionOneManager:
@@ -262,7 +266,7 @@ class TrendVisionOneManager:
             description: The reason for the task.
 
         Returns:
-            The task URL from the Operation-Location header.
+            The task URL from the Operation-Location header. If the same task already exists, the URL of that task.
 
         Raises:
             TrendVisionOneException: If the endpoint item of the multi-status response is not 2xx.
@@ -272,15 +276,18 @@ class TrendVisionOneManager:
         validate_response(response)
         item = response.json()[0]
         status = item.get("status", 0)
-        if status not in SUCCESSFUL_STATUS_CODES:
-            error = (item.get("body") or {}).get("error") or {}
-            message = error.get("message") or f"The collect file request failed with status {status}."
-            error_type = self._get_collect_file_error_type(status, error.get("code"), message)
-            raise TrendVisionOneException(message, error_type=error_type)
+        error = (item.get("body") or {}).get("error") or {}
         task_url = next(
             (header.get("value") for header in item.get("headers", []) if header.get("name") == "Operation-Location"),
             None,
         )
+        if task_url and error.get("code") == COLLECT_FILE_DUPLICATE_TASK_CODE:
+            self.siemplify.LOGGER.info(f"A collect file task for this file already exists on agent {guid}. Using it.")
+            return task_url
+        if status not in SUCCESSFUL_STATUS_CODES:
+            message = error.get("message") or f"The collect file request failed with status {status}."
+            error_type = self._get_collect_file_error_type(status, error.get("code"), message)
+            raise TrendVisionOneException(message, error_type=error_type)
         if not task_url:
             message = "The collect file response has no task location."
             raise TrendVisionOneException(message, error_type="VENDOR_ERROR")
@@ -312,38 +319,67 @@ class TrendVisionOneManager:
 
         return "INVALID_INPUT"
 
-    def download_collected_file(self, resource_location: str, destination: str) -> str:
+    def download_collected_file(
+        self,
+        resource_location: str,
+        destination: str,
+        max_seconds: float = DOWNLOAD_TIMEOUT_SECONDS,
+    ) -> str:
         """Download the archive of a finished collect file task.
 
         The API does not document if the resource location needs the API token. The token is sent only to the
-        API root host. If that request gets 401 or 403, or if the host is different, the request is sent with no
-        token. Error messages do not include the URL.
+        API root host over HTTPS. If that request gets 401 or 403, or if the host is different, the request is sent
+        with no token. Error messages do not include the URL. A failed download leaves no partial file.
 
         Args:
             resource_location: The download location from the task result.
             destination: The local path to write the archive to.
+            max_seconds: The time limit of the download, in seconds.
 
         Returns:
             The local path of the archive.
 
         Raises:
-            TrendVisionOneException: If there is no location or the download fails.
+            TrendVisionOneException: If there is no location, the download fails, or it passes the time limit.
         """
         if not resource_location:
             message = "The collect file task has no download location."
             raise TrendVisionOneException(message, error_type="VENDOR_ERROR")
+        path = pathlib.Path(destination)
+        try:
+            self._stream_to_file(resource_location, path, max_seconds)
+        except requests.RequestException as error:
+            path.unlink(missing_ok=True)
+            error_type = "CONNECTION_ERROR" if isinstance(error, DOWNLOAD_CONNECTION_ERRORS) else "VENDOR_ERROR"
+            message = f"Failed to download the collected file: {type(error).__name__}."
+            raise TrendVisionOneException(message, error_type=error_type) from None
+        except Exception:
+            path.unlink(missing_ok=True)
+            raise
+
+        return destination
+
+    def _stream_to_file(self, resource_location: str, path: pathlib.Path, max_seconds: float) -> None:
+        """Stream a download location to a file.
+
+        Args:
+            resource_location: The download location from the task result.
+            path: The local path to write the archive to.
+            max_seconds: The time limit of the download, in seconds.
+
+        Raises:
+            TrendVisionOneException: If the response is not 2xx or the download passes the time limit.
+        """
+        deadline = time.monotonic() + max_seconds
+        timeout = min(max_seconds, DOWNLOAD_TIMEOUT_SECONDS)
+        location, api_root = urlparse(resource_location), urlparse(self.api_root)
         response = None
-        if urlparse(resource_location).netloc == urlparse(self.api_root).netloc:
-            response = self.session.get(resource_location, stream=True, timeout=DOWNLOAD_TIMEOUT_SECONDS)
+        if location.scheme == "https" and location.hostname == api_root.hostname:
+            response = self.session.get(resource_location, stream=True, timeout=timeout)
         if response is None or response.status_code in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:
             if response is not None:
                 response.close()
-            response = requests.get(
-                resource_location,
-                stream=True,
-                verify=self.verify_ssl,
-                timeout=DOWNLOAD_TIMEOUT_SECONDS,
-            )
+            response = requests.get(resource_location, stream=True, verify=self.verify_ssl, timeout=timeout)
         with response:
             if not response.ok:
                 message = f"Failed to download the collected file. HTTP status: {response.status_code}."
@@ -351,10 +387,12 @@ class TrendVisionOneManager:
                     f"HTTP {response.status_code}",
                     response=response,
                 )
-            with pathlib.Path(destination).open("wb") as file:
-                file.writelines(response.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE_BYTES))
-
-        return destination
+            with path.open("wb") as file:
+                for chunk in response.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE_BYTES):
+                    if time.monotonic() > deadline:
+                        message = "The download of the collected file did not finish in the time left for this run."
+                        raise TrendVisionOneException(message, error_type="TIMEOUT")
+                    file.write(chunk)
 
     def get_task(self, task_url) -> datamodels.Task:
         """

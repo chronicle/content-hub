@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import traceback
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
@@ -28,18 +29,22 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_INPROGRESS,
 )
 from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import unix_now
 
 from ..actions import AcquireFile
+from ..core import TrendVisionOneManager as manager_module
 from ..core.datamodels import Endpoint, Task
 from ..core.TrendVisionOneExceptions import TrendVisionOneException
 from ..core.TrendVisionOneManager import TrendVisionOneManager
 from ..core.TrendVisionOneParser import TrendVisionOneParser
 from ..core.UtilsManager import classify_exception
 from .common import get_summary_lines, make_entity, run_action
+from .test_action_result_summary import make_http_error
 
 API_ROOT = "https://api.xdr.trendmicro.com"
 FILE_PATH = "C:\\Temp\\evil file.exe"
 TASK_URL = f"{API_ROOT}/v3.0/response/tasks/"
+SIGNED_URL = "https://storage.example.com/signed?X-Amz-Signature=secret"
 
 
 def make_endpoint(guid: str) -> Endpoint:
@@ -123,12 +128,13 @@ class FakeVisionOne:
 
         return make_endpoint(guid) if guid else None
 
-    def download(self, resource_location: str, destination: str) -> str:
+    def download(self, resource_location: str, destination: str, max_seconds: float) -> str:
         """Write a fake archive.
 
         Args:
             resource_location: The download location.
             destination: The local path.
+            max_seconds: The time limit of the download.
 
         Returns:
             The local path.
@@ -456,7 +462,7 @@ class TestAcquireFileAction:
 
         def setup(manager: MagicMock) -> None:
             fake.setup(manager)
-            manager.siemplify.execution_deadline_unix_time_ms = 0
+            manager.siemplify.async_total_duration_deadline = unix_now()
 
         poll = run_action(
             AcquireFile,
@@ -490,6 +496,74 @@ class TestAcquireFileAction:
             "FAILED",
         )
         assert summary["exc_type"] == "TrendVisionOneTimeoutException"
+
+    def test_run_deadline_keeps_tasks_pending(self, tmp_path: pathlib.Path) -> None:
+        """Verifies that a run near its own deadline stops polling and saves the unchecked tasks for the next poll."""
+        entities = [make_entity(name, EntityTypes.HOSTNAME) for name in ("A", "B")]
+        fake = FakeVisionOne(tmp_path, {"A": "ga", "B": "gb"}, {"ga": "succeeded", "gb": "succeeded"})
+
+        def setup(manager: MagicMock) -> None:
+            fake.setup(manager)
+
+            def get_task(task_url: str) -> Task:
+                manager.siemplify.execution_deadline_unix_time_ms = unix_now()
+                return make_task(task_url.rsplit("/", 1)[-1], "succeeded")
+
+            manager.get_task.side_effect = get_task
+
+        first = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, entities, main_args=(True,))
+        poll = run_poll(fake, first)
+
+        message, result_value, status = get_end(first)
+        assert (status, message) == (EXECUTION_STATE_INPROGRESS, "Waiting for results for the following endpoints: B")
+        assert set(json.loads(result_value)["pending"]) == {"gb"}
+        assert get_summary_lines(first) == []
+        assert get_end(poll)[1:] == (True, EXECUTION_STATE_COMPLETED)
+        assert {key: value["status"] for key, value in get_json(poll).items()} == {"A": "success", "B": "success"}
+
+    @pytest.mark.parametrize(
+        "error",
+        [make_http_error(429), make_http_error(503), requests.ConnectionError("reset"), requests.Timeout("slow")],
+        ids=["rate_limited", "server_error", "connection_error", "timeout"],
+    )
+    def test_transient_poll_error_keeps_task_pending(
+        self,
+        tmp_path: pathlib.Path,
+        host: MagicMock,
+        error: Exception,
+    ) -> None:
+        """Verifies that a transient task status error keeps the target pending and the next poll finishes it."""
+        fake = FakeVisionOne(tmp_path, {"HOST1": "g1"}, {"g1": "succeeded"})
+
+        def setup(manager: MagicMock) -> None:
+            fake.setup(manager)
+            manager.get_task.side_effect = error
+
+        first = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
+        poll = run_poll(fake, first)
+
+        message, result_value, status = get_end(first)
+        assert status == EXECUTION_STATE_INPROGRESS
+        assert message == "Waiting for results for the following endpoints: HOST1"
+        assert set(json.loads(result_value)["pending"]) == {"g1"}
+        first.result.add_result_json.assert_not_called()
+        assert get_json(poll)["HOST1"]["status"] == "success"
+
+    def test_transient_download_error_keeps_task_pending(self, tmp_path: pathlib.Path, host: MagicMock) -> None:
+        """Verifies that a download connection error keeps the target pending instead of failing it."""
+        fake = FakeVisionOne(tmp_path, {"HOST1": "g1"}, {"g1": "succeeded"})
+
+        def setup(manager: MagicMock) -> None:
+            fake.setup(manager)
+            manager.download_collected_file.side_effect = TrendVisionOneException(
+                "Failed to download the collected file: ConnectionError.",
+                error_type="CONNECTION_ERROR",
+            )
+
+        siemplify = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
+
+        assert get_end(siemplify)[2] == EXECUTION_STATE_INPROGRESS
+        assert set(json.loads(get_end(siemplify)[1])["pending"]) == {"g1"}
 
     def test_run_error_reports_every_target(self, tmp_path: pathlib.Path, host: MagicMock) -> None:
         """Verifies that a run error (bad credentials) fails the action with a JSON entry per target."""
@@ -610,6 +684,23 @@ def _raise(error: Exception) -> None:
     raise error
 
 
+def _chunks_then_raise(chunk: bytes, message: str) -> object:
+    """Yield one chunk, then fail like a dropped connection.
+
+    Args:
+        chunk: The chunk to yield first.
+        message: The error message.
+
+    Yields:
+        The chunk.
+
+    Raises:
+        requests.exceptions.ChunkedEncodingError: After the chunk.
+    """
+    yield chunk
+    raise requests.exceptions.ChunkedEncodingError(message)
+
+
 def make_manager() -> TrendVisionOneManager:
     """Build a manager with a mocked session.
 
@@ -678,6 +769,21 @@ class TestCollectFile:
 
         assert error.value.error_type == expected
 
+    def test_duplicate_task_returns_existing_task_url(self) -> None:
+        """Verifies that a 400 TaskError item with an Operation-Location returns the URL of the existing task."""
+        manager = make_manager()
+        location = f"{TASK_URL}00000001"
+        manager.session.post.return_value.json.return_value = [
+            {
+                "status": 400,
+                "headers": [{"name": "Operation-Location", "value": location}],
+                "body": {"error": {"code": "TaskError", "message": "Task duplication."}},
+            }
+        ]
+
+        assert manager.collect_file("g1", FILE_PATH, "reason") == location
+        manager.siemplify.LOGGER.info.assert_called_once()
+
     def test_item_without_location_raises(self) -> None:
         """Verifies that a 2xx item with no Operation-Location raises VENDOR_ERROR."""
         manager = make_manager()
@@ -744,6 +850,69 @@ class TestDownloadCollectedFile:
         assert str(error.value) == "Failed to download the collected file. HTTP status: 403."
         assert "secret" not in str(error.value.__cause__)
         assert classify_exception(error.value) == ("PERMISSION_DENIED", "TrendVisionOneException", 403)
+
+    def test_http_location_never_gets_token(self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verifies that a plain HTTP location on the API host is downloaded without the bearer session."""
+        manager = make_manager()
+        plain_get = MagicMock(return_value=make_download_response(200))
+        monkeypatch.setattr(requests, "get", plain_get)
+
+        manager.download_collected_file("http://api.xdr.trendmicro.com/files/1", str(tmp_path / "a.zip"))
+
+        manager.session.get.assert_not_called()
+        plain_get.assert_called_once()
+
+    @pytest.mark.parametrize(
+        ("error", "error_type"),
+        [
+            (requests.ConnectionError(SIGNED_URL), "CONNECTION_ERROR"),
+            (requests.exceptions.InvalidURL(SIGNED_URL), "VENDOR_ERROR"),
+        ],
+    )
+    def test_request_error_hides_url(
+        self,
+        tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch,
+        error: requests.RequestException,
+        error_type: str,
+    ) -> None:
+        """Verifies that a requests error is replaced by an error with no URL in its text or traceback."""
+        manager = make_manager()
+        monkeypatch.setattr(requests, "get", MagicMock(side_effect=error))
+
+        with pytest.raises(TrendVisionOneException) as raised:
+            manager.download_collected_file(SIGNED_URL, str(tmp_path / "a.zip"))
+
+        assert str(raised.value) == f"Failed to download the collected file: {type(error).__name__}."
+        assert raised.value.error_type == error_type
+        assert "secret" not in "".join(traceback.format_exception(raised.value))
+
+    def test_stream_error_removes_partial_file(self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verifies that a connection drop during the stream removes the partial archive and is a connection error."""
+        manager = make_manager()
+        response = make_download_response(200)
+        response.iter_content.side_effect = lambda chunk_size: _chunks_then_raise(b"arch", "drop")
+        monkeypatch.setattr(requests, "get", MagicMock(return_value=response))
+        destination = tmp_path / "a.zip"
+
+        with pytest.raises(TrendVisionOneException) as raised:
+            manager.download_collected_file("https://storage.example.com/signed", str(destination))
+
+        assert raised.value.error_type == "CONNECTION_ERROR"
+        assert not destination.exists()
+
+    def test_time_limit_stops_download(self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verifies that a download past its time limit raises TIMEOUT and removes the partial archive."""
+        manager = make_manager()
+        monkeypatch.setattr(requests, "get", MagicMock(return_value=make_download_response(200)))
+        monkeypatch.setattr(manager_module.time, "monotonic", MagicMock(side_effect=[0, 5, 11]))
+        destination = tmp_path / "a.zip"
+
+        with pytest.raises(TrendVisionOneException) as raised:
+            manager.download_collected_file("https://storage.example.com/signed", str(destination), max_seconds=10)
+
+        assert raised.value.error_type == "TIMEOUT"
+        assert not destination.exists()
 
     def test_missing_location_raises(self, tmp_path: pathlib.Path) -> None:
         """Verifies that a task result with no resource location raises VENDOR_ERROR."""

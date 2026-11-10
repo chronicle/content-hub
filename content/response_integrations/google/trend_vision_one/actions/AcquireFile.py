@@ -18,9 +18,11 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import pathlib
 import re
 import sys
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from soar_sdk.ScriptResult import (
@@ -31,20 +33,15 @@ from soar_sdk.ScriptResult import (
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler, unix_now
-from TIPCommon import (
-    extract_action_param,
-    extract_configuration_param,
-    is_approaching_timeout,
-    string_to_multi_value,
-)
+from TIPCommon import extract_action_param, extract_configuration_param, string_to_multi_value
 
 from ..core.constants import (
     ACQUIRE_FILE_ACTION_NAME,
+    ACQUIRE_FILE_DEADLINE_MARGIN_MS,
     ACQUIRE_FILE_MAX_ATTACHMENT_BYTES,
     ACQUIRE_FILE_PENDING_STATUSES,
     ACQUIRE_FILE_SCRIPT_NAME,
     ACQUIRE_FILE_TASK_DESCRIPTION,
-    DEFAULT_TIMEOUT,
     FAILED_STATUS,
     INTEGRATION_DISPLAY_NAME,
     INTEGRATION_NAME,
@@ -58,7 +55,6 @@ from ..core.UtilsManager import (
     count_skipped_entities,
     get_endpoint_search_args,
     get_task_failure,
-    is_async_action_global_timeout_approaching,
     log_action_result_summary,
     log_timeout_marker_once,
 )
@@ -73,6 +69,7 @@ SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]
 RESULT_SUCCESS = "success"
 RESULT_FAILURE = "failure"
 TIMEOUT_ERROR_MESSAGE = "Action ran into a timeout during execution."
+TRANSIENT_ERROR_TYPES = (ErrorType.CONNECTION_ERROR, ErrorType.RATE_LIMITED, ErrorType.TIMEOUT)
 
 
 def new_state() -> SingleJson:
@@ -291,6 +288,7 @@ def download_file(
     state: SingleJson,
     guid: str,
     task: Task,
+    max_seconds: float,
 ) -> SingleJson:
     """Download the archive of a succeeded task and build the success result.
 
@@ -300,6 +298,7 @@ def download_file(
         state: The async state.
         guid: The agent GUID.
         task: The succeeded collect file task.
+        max_seconds: The time limit of the download, in seconds.
 
     Returns:
         The entity result.
@@ -308,7 +307,7 @@ def download_file(
     task_id = task.id or state["pending"][guid]["task_id"]
     requested_file_path = raw_task.get("filePath") or state["file_path"]
     destination = get_download_folder(siemplify) / build_file_name(task_id, requested_file_path)
-    local_path = manager.download_collected_file(raw_task.get("resourceLocation"), str(destination))
+    local_path = manager.download_collected_file(raw_task.get("resourceLocation"), str(destination), max_seconds)
     attach_file(siemplify, destination)
 
     return {
@@ -363,14 +362,37 @@ def build_task_failure(state: SingleJson, guid: str, task: Task) -> SingleJson:
     return build_failure_entry(failure["error"], failure["error_type"], guid, state["file_path"], task_id)
 
 
-def poll_task(siemplify: SiemplifyAction, manager: TrendVisionOneManager, state: SingleJson, guid: str) -> None:
+def is_transient_error(error: Exception) -> bool:
+    """Check if an error can go away on a later poll.
+
+    Args:
+        error: The exception from the task status check or the download.
+
+    Returns:
+        True for connection errors, rate limits, download time limits, and HTTP 5xx.
+    """
+    error_type, _, http_status = classify_exception(error)
+
+    return error_type in TRANSIENT_ERROR_TYPES or (http_status or 0) >= HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+def poll_task(
+    siemplify: SiemplifyAction,
+    manager: TrendVisionOneManager,
+    state: SingleJson,
+    guid: str,
+    max_seconds: float,
+) -> None:
     """Check the task of one agent. Save the result of its targets if the task is done.
+
+    A transient error keeps the task pending, so that the next poll tries again.
 
     Args:
         siemplify: The action object.
         manager: The Trend Vision One manager.
         state: The async state.
         guid: The agent GUID.
+        max_seconds: The time limit of the download, in seconds.
     """
     pending = state["pending"][guid]
     try:
@@ -378,11 +400,14 @@ def poll_task(siemplify: SiemplifyAction, manager: TrendVisionOneManager, state:
         if task.status in ACQUIRE_FILE_PENDING_STATUSES:
             return
         entry = (
-            download_file(siemplify, manager, state, guid, task)
+            download_file(siemplify, manager, state, guid, task, max_seconds)
             if task.status == SUCCESS_STATUS
             else build_task_failure(state, guid, task)
         )
     except Exception as error:
+        if is_transient_error(error):
+            siemplify.LOGGER.exception(f"Temporary error on the task of agent {guid}. The next poll tries again.")
+            return
         siemplify.LOGGER.exception(f"Failed to get the collected file of agent {guid}.")
         error_type = classify_exception(error)[0]
         entry = build_failure_entry(str(error), error_type, guid, state["file_path"], pending["task_id"])
@@ -425,31 +450,46 @@ def build_output_message(state: SingleJson, succeeded: list[str], failed: list[s
     return "\n".join(messages)
 
 
+def get_time_left_ms(deadline_ms: int) -> float:
+    """Get the time left until a platform deadline, minus a safety margin.
+
+    Args:
+        deadline_ms: The deadline in Unix milliseconds, or 0 if the platform did not set one.
+
+    Returns:
+        The time left in milliseconds, or infinity if there is no deadline.
+    """
+    return deadline_ms - unix_now() - ACQUIRE_FILE_DEADLINE_MARGIN_MS if deadline_ms else math.inf
+
+
 def poll_tasks(
     siemplify: SiemplifyAction,
     manager: TrendVisionOneManager,
     state: SingleJson,
-    action_start_time: int,
 ) -> tuple[str, bool | str, int]:
     """Check all pending tasks, then save the state for the next poll or finish the action.
+
+    If this run is close to its own deadline, the tasks that are not checked stay pending for the next poll.
 
     Args:
         siemplify: The action object.
         manager: The Trend Vision One manager.
         state: The async state.
-        action_start_time: The start time of this run, in milliseconds.
 
     Returns:
         The output message, the result value (the serialized state if tasks are pending), and the execution state.
 
     Raises:
-        TrendVisionOneTimeoutException: If the action is close to its timeout.
+        TrendVisionOneTimeoutException: If the action is close to its async timeout.
     """
     for guid in list(state["pending"]):
-        timeout_approaching = is_async_action_global_timeout_approaching(siemplify, action_start_time)
-        if timeout_approaching or is_approaching_timeout(action_start_time, DEFAULT_TIMEOUT):
+        if get_time_left_ms(siemplify.async_total_duration_deadline) <= 0:
             raise TrendVisionOneTimeoutException(TIMEOUT_ERROR_MESSAGE)
-        poll_task(siemplify, manager, state, guid)
+        run_time_left_ms = get_time_left_ms(siemplify.execution_deadline_unix_time_ms)
+        if run_time_left_ms <= 0:
+            siemplify.LOGGER.info("This run is close to its deadline. The next poll checks the remaining tasks.")
+            break
+        poll_task(siemplify, manager, state, guid, run_time_left_ms / 1000)
     if state["pending"]:
         log_timeout_marker_once(siemplify, state, lambda: get_counts(state))
         message = f"Waiting for results for the following endpoints: {', '.join(get_pending_keys(state))}"
@@ -480,9 +520,9 @@ def handle_run_error(siemplify: SiemplifyAction, state: SingleJson, error: Excep
         key: (guid, pending["task_id"]) for guid, pending in state["pending"].items() for key in pending["keys"]
     }
     error_type = classify_exception(error)[0]
+    message = TIMEOUT_ERROR_MESSAGE if is_timeout else str(error)
     for key in unfinished:
         agent_id, task_id = tasks_by_key.get(key, (None, None))
-        message = TIMEOUT_ERROR_MESSAGE if is_timeout else str(error)
         record_result(state, [key], build_failure_entry(message, error_type, agent_id, state["file_path"], task_id))
     if state["json_results"]:
         siemplify.result.add_result_json(convert_dict_to_json_result_dict(state["json_results"]))
@@ -548,19 +588,12 @@ def load_state(siemplify: SiemplifyAction) -> SingleJson:
     return {**new_state(), **saved_state}
 
 
-def run_once(
-    siemplify: SiemplifyAction,
-    state: SingleJson,
-    action_start_time: int,
-    *,
-    is_first_run: bool,
-) -> tuple[str, bool | str, int]:
+def run_once(siemplify: SiemplifyAction, state: SingleJson, *, is_first_run: bool) -> tuple[str, bool | str, int]:
     """Start the tasks on the first run or load the saved state on a poll, then check the pending tasks.
 
     Args:
         siemplify: The action object.
         state: The async state. The function fills it in place, so that a failure can still report it.
-        action_start_time: The start time of this run, in milliseconds.
         is_first_run: True for the first run, False for an async poll.
 
     Returns:
@@ -572,7 +605,7 @@ def run_once(
     else:
         state.update(load_state(siemplify))
 
-    return poll_tasks(siemplify, manager, state, action_start_time)
+    return poll_tasks(siemplify, manager, state)
 
 
 @output_handler
@@ -584,12 +617,11 @@ def main(is_first_run: bool) -> None:
     """
     siemplify = SiemplifyAction()
     siemplify.script_name = ACQUIRE_FILE_SCRIPT_NAME
-    action_start_time = unix_now()
     state = new_state()
     run_error = None
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     try:
-        output_message, result_value, status = run_once(siemplify, state, action_start_time, is_first_run=is_first_run)
+        output_message, result_value, status = run_once(siemplify, state, is_first_run=is_first_run)
     except Exception as error:
         siemplify.LOGGER.exception(f"Error executing action {ACQUIRE_FILE_SCRIPT_NAME}.")
         run_error = error
