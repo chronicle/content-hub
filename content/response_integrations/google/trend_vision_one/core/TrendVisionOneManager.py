@@ -194,8 +194,7 @@ class TrendVisionOneManager:
         elif agent_id is not None:
             entity_filter = f"agentGuid eq '{agent_id}'"
 
-        self.session.headers.update({"TMV1-Query": entity_filter})
-        response = self.session.get(url)
+        response = self.session.get(url, headers={"TMV1-Query": entity_filter})
         validate_response(response)
         items = response.json().get("items", [])
         if not items:

@@ -751,3 +751,28 @@ class TestDownloadCollectedFile:
             make_manager().download_collected_file("", str(tmp_path / "a.zip"))
 
         assert error.value.error_type == "VENDOR_ERROR"
+
+
+class TestSearchEndpoint:
+    """Tests for TrendVisionOneManager.search_endpoint."""
+
+    def test_query_header_does_not_leak_to_later_requests(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verifies that TMV1-Query is sent on the search request only, not on later session requests."""
+        manager = TrendVisionOneManager(API_ROOT, "token", verify_ssl=True, siemplify=MagicMock())
+        sent: list[requests.PreparedRequest] = []
+        response = MagicMock()
+        response.json.return_value = {"items": []}
+
+        def fake_send(request: requests.PreparedRequest, **_: object) -> MagicMock:
+            sent.append(request)
+
+            return response
+
+        monkeypatch.setattr(manager.session, "send", fake_send)
+
+        manager.search_endpoint(agent_id="g1")
+        manager.get_endpoint_isolation_status("g1")
+
+        assert sent[0].headers["TMV1-Query"] == "agentGuid eq 'g1'"
+        assert "TMV1-Query" not in sent[1].headers
+        assert sent[1].headers["Authorization"] == "Bearer token"
