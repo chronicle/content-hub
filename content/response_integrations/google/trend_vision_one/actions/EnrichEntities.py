@@ -34,6 +34,7 @@ from ..core.constants import (
     INTEGRATION_DISPLAY_NAME,
     ENRICH_ENTITIES_SCRIPT_NAME,
     ENRICHMENT_PREFIX,
+    ENDPOINT_NOT_FOUND_MESSAGE,
 )
 from ..core.datamodels import Endpoint
 from ..core.UtilsManager import (
@@ -49,7 +50,6 @@ from ..core.UtilsManager import (
 SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]
 ISOLATION_STATUS_KEY = "isolationStatus"
 UNKNOWN_ISOLATION_STATUS = "unknown"
-NOT_FOUND_MESSAGE = f"Endpoint was not found in {INTEGRATION_DISPLAY_NAME}."
 
 
 @dataclasses.dataclass
@@ -169,7 +169,7 @@ def enrich_targets(
                 json_key = endpoint.guid if is_agent else identifier
                 result.json_result[json_key] = {**endpoint.to_json(), ISOLATION_STATUS_KEY: isolation_status}
             else:
-                result.add_failure(target, identifier, NOT_FOUND_MESSAGE, ErrorType.ENDPOINT_NOT_FOUND)
+                result.add_failure(target, identifier, ENDPOINT_NOT_FOUND_MESSAGE, ErrorType.ENDPOINT_NOT_FOUND)
             siemplify.LOGGER.info(f"Finish processing entity: {identifier}")
         except Exception as e:
             siemplify.LOGGER.exception(f"An error occurred on entity: {identifier}. Reason: {e}")
@@ -211,7 +211,8 @@ def main():
             siemplify,
             param_name="Agent UUID",
             print_value=True,
-        )
+        ),
+        only_unique=True,
     )
 
     suitable_entities = [

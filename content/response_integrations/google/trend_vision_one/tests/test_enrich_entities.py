@@ -163,6 +163,19 @@ class TestEnrichEntities:
         assert result_value is True
         assert get_summary_lines(mock_siemplify)[0]["outcome"] == "SUCCESS"
 
+    def test_duplicate_agent_uuids_processed_once(self) -> None:
+        """Test that a repeated Agent UUID is looked up once and counts as one target."""
+
+        def setup(manager: MagicMock) -> None:
+            manager.search_endpoint.return_value = make_endpoint()
+            manager.get_endpoint_isolation_status.return_value = "on"
+
+        mock_siemplify = run_action(EnrichEntities, {"Agent UUID": f"{AGENT_GUID}, {AGENT_GUID}"}, setup)
+
+        mock_siemplify.LOGGER.exception.assert_not_called()
+        assert mock_siemplify.end.call_args.args[0].count(AGENT_GUID) == 1
+        assert get_summary_lines(mock_siemplify)[0]["targets"] == "1"
+
     @pytest.mark.parametrize(
         "isolation_lookup",
         [{"side_effect": make_http_error(403)}, {"return_value": None}],
