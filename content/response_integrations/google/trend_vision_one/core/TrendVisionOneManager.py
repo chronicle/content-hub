@@ -15,13 +15,23 @@
 from __future__ import annotations
 
 from base64 import b64encode
+from http import HTTPStatus
 import os
+import pathlib
 import requests
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from datetime import datetime
 
 from .constants import ENDPOINTS, POSSIBLE_SEVERITIES, DATETIME_FORMAT, DEFAULT_MAX_LIMIT
+from .constants import (
+    COLLECT_FILE_NOT_SUPPORTED_CODE,
+    COLLECT_FILE_TARGET_NOT_FOUND_MESSAGE,
+    DOWNLOAD_CHUNK_SIZE_BYTES,
+    DOWNLOAD_TIMEOUT_SECONDS,
+    SUCCESSFUL_STATUS_CODES,
+)
 from . import datamodels
+from .TrendVisionOneExceptions import TrendVisionOneException
 from .TrendVisionOneParser import TrendVisionOneParser
 from .api_utils import validate_response
 
@@ -251,11 +261,61 @@ class TrendVisionOneManager:
 
         Returns:
             The task URL from the Operation-Location header.
+
+        Raises:
+            TrendVisionOneException: If the endpoint item of the multi-status response is not 2xx.
         """
-        raise NotImplementedError
+        payload = [{"agentGuid": guid, "filePath": file_path, "description": description}]
+        response = self.session.post(self._get_full_url("collect_file"), json=payload)
+        validate_response(response)
+        item = response.json()[0]
+        status = item.get("status", 0)
+        if status not in SUCCESSFUL_STATUS_CODES:
+            error = (item.get("body") or {}).get("error") or {}
+            message = error.get("message") or f"The collect file request failed with status {status}."
+            error_type = self._get_collect_file_error_type(status, error.get("code"), message)
+            raise TrendVisionOneException(message, error_type=error_type)
+        task_url = next(
+            (header.get("value") for header in item.get("headers", []) if header.get("name") == "Operation-Location"),
+            None,
+        )
+        if not task_url:
+            message = "The collect file response has no task location."
+            raise TrendVisionOneException(message, error_type="VENDOR_ERROR")
+
+        return task_url
+
+    @staticmethod
+    def _get_collect_file_error_type(status: int, code: str | None, message: str) -> str:
+        """Map a failed item of the collect file multi-status response to an error type.
+
+        The values match UtilsManager.ErrorType. This module cannot import UtilsManager (circular import).
+
+        Args:
+            status: The HTTP status of the item.
+            code: The error code of the item.
+            message: The error message of the item.
+
+        Returns:
+            The error type.
+        """
+        if status >= HTTPStatus.INTERNAL_SERVER_ERROR:
+            return "VENDOR_ERROR"
+        if status == HTTPStatus.FORBIDDEN:
+            return "PERMISSION_DENIED"
+        if status == HTTPStatus.NOT_FOUND or COLLECT_FILE_TARGET_NOT_FOUND_MESSAGE in message:
+            return "ENDPOINT_NOT_FOUND"
+        if code == COLLECT_FILE_NOT_SUPPORTED_CODE:
+            return "UNSUPPORTED_ENDPOINT"
+
+        return "INVALID_INPUT"
 
     def download_collected_file(self, resource_location: str, destination: str) -> str:
         """Download the archive of a finished collect file task.
+
+        The API does not document if the resource location needs the API token. The token is sent only to the
+        API root host. If that request gets 401 or 403, or if the host is different, the request is sent with no
+        token. Error messages do not include the URL.
 
         Args:
             resource_location: The download location from the task result.
@@ -263,8 +323,36 @@ class TrendVisionOneManager:
 
         Returns:
             The local path of the archive.
+
+        Raises:
+            TrendVisionOneException: If there is no location or the download fails.
         """
-        raise NotImplementedError
+        if not resource_location:
+            message = "The collect file task has no download location."
+            raise TrendVisionOneException(message, error_type="VENDOR_ERROR")
+        response = None
+        if urlparse(resource_location).netloc == urlparse(self.api_root).netloc:
+            response = self.session.get(resource_location, stream=True, timeout=DOWNLOAD_TIMEOUT_SECONDS)
+        if response is None or response.status_code in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:
+            if response is not None:
+                response.close()
+            response = requests.get(
+                resource_location,
+                stream=True,
+                verify=self.verify_ssl,
+                timeout=DOWNLOAD_TIMEOUT_SECONDS,
+            )
+        with response:
+            if not response.ok:
+                message = f"Failed to download the collected file. HTTP status: {response.status_code}."
+                raise TrendVisionOneException(message) from requests.HTTPError(
+                    f"HTTP {response.status_code}",
+                    response=response,
+                )
+            with pathlib.Path(destination).open("wb") as file:
+                file.writelines(response.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE_BYTES))
+
+        return destination
 
     def get_task(self, task_url) -> datamodels.Task:
         """

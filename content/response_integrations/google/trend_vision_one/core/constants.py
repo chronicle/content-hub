@@ -73,3 +73,15 @@ DEVICE_PRODUCT = "Trend Vision One"
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 POSSIBLE_SEVERITIES = ["low", "medium", "high", "critical"]
 SEVERITY_MAPPING = {"INFO": -1, "LOW": 40, "MEDIUM": 60, "HIGH": 80, "CRITICAL": 100}
+
+# Acquire File
+ACQUIRE_FILE_ACTION_NAME = "Acquire File"
+ACQUIRE_FILE_TASK_DESCRIPTION = "Collect file from Google SecOps"
+ACQUIRE_FILE_PENDING_STATUSES = ("queued", "running", "pendingApproval")
+# Values match UtilsManager.ErrorType. constants.py cannot import UtilsManager (circular import).
+ACQUIRE_FILE_TASK_ERROR_TYPES = {"failed": "VENDOR_ERROR", "canceled": "CANCELLED", "rejected": "PERMISSION_DENIED"}
+ACQUIRE_FILE_MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
+COLLECT_FILE_TARGET_NOT_FOUND_MESSAGE = "Target not found"
+COLLECT_FILE_NOT_SUPPORTED_CODE = "NotSupported"
+DOWNLOAD_CHUNK_SIZE_BYTES = 1024 * 1024
+DOWNLOAD_TIMEOUT_SECONDS = 60
