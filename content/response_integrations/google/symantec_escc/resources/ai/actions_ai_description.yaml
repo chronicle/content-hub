@@ -1,0 +1,597 @@
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname, FileHash, URL, and IP Address entities using threat intelligence
+    and device telemetry from Symantec Endpoint Security Complete Cloud (SESCC). The
+    action retrieves detailed information about endpoints (OS, user, status) and IOCs
+    (reputation, prevalence, geographic distribution).
+
+
+    ### Flow Description
+
+    1. Validates the connection to Symantec ESCC and verifies that the specified 'Device
+    Group' exists in the external system via API.
+
+    2. Iterates through Hostname entities, matching them against devices within the
+    specified group. For matches, it retrieves full device details including OS version,
+    logged-in user, and security status via API.
+
+    3. Iterates through IOC entities (IP, URL, Hash). Fetches threat intelligence
+    including reputation scores, first/last seen dates, and industry/country prevalence
+    via API. For FileHashes, it also retrieves process chain information.
+
+    4. Updates the Google SecOps entities with enrichment attributes, adds data tables
+    for visibility, and sets the 'suspicious' flag based on reputation results.
+
+    5. Generates consolidated case insights for endpoints and IOCs if configured.
+
+
+    ### Additional Notes
+
+    - Only SHA256 hashes are supported for enrichment. Other hash types will be skipped.
+
+    - Entities are marked as 'enriched' upon success. If an IOC has a 'BAD' reputation,
+    the entity is also marked as 'suspicious'.
+  ai_short_description: >-
+    Enriches Hostname, FileHash, URL, and IP Address entities using threat intelligence
+    and device telemetry from Symantec Endpoint Security Complete Cloud (SESCC).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Symantec ESCC via GET requests. It does not mutate
+      external data. It updates internal entities (`siemplify.update_entities`) and
+      creates insights (`siemplify.create_case_insight`).
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them into `suitable_entities`
+      (URL, FILEHASH, ADDRESS) and `hostname_entities` (HOSTNAME) based on their `entity_type`
+      attribute.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence for IOCs (IP, URL, Hash) and contextual
+      metadata for endpoints (Hostname). This matches the 'Enrich IOC' and 'Enrich
+      Asset' expected outcomes. It does not mutate external data or perform other
+      actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Group | String | Yes | Specify the name of the device group that should
+    be used to retrieve information about endpoints. |
+
+    | Create Endpoint Insight | Boolean | No | If enabled, action will create an insight
+    containing information about the endpoints. |
+
+    | Create IOC Insight | Boolean | No | If enabled, action will create an insight
+    containing information about enriched IOCs. |
+Get Related IOCs:
+  ai_description: >-
+    ### General Description
+
+    The **Get Related IOCs** action retrieves Indicators of Compromise (IOCs) associated
+    with specific entities from Symantec Endpoint Security Complete Cloud (SESCC).
+    It supports IP Addresses, URLs, and SHA256 File Hashes. This action is primarily
+    used for threat hunting and expanding the scope of an investigation by identifying
+    other potentially malicious artifacts linked to the initial indicators.
+
+
+    ### Flow Description
+
+    1. **Filter Entities**: The action identifies supported entities (IP, URL, FileHash)
+    from the target list.
+
+    2. **Validate Hashes**: For FileHash entities, it verifies that the identifier
+    is a valid SHA256 string (exactly 64 characters).
+
+    3. **Fetch Data**: For each valid entity, it queries the Symantec SESCC API to
+    find related threat intelligence.
+
+    4. **Apply Filters**: The retrieved IOCs are filtered based on the user-defined
+    `Source Filter` parameter.
+
+    5. **Aggregate Results**: The action collects all unique related IOCs and categorizes
+    them by type (File, Domain, or IP).
+
+    6. **Output**: The final list of related IOCs is returned as a JSON object for
+    use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - Only **SHA256** hashes are supported for FileHash entities. Other hash types
+    (like MD5 or SHA1) will be skipped by the logic.
+
+    - The action aggregates results into three categories: File IOCs, Domain IOCs,
+    and IP IOCs, returning them as a unified JSON result.
+  ai_short_description: >-
+    Retrieves Indicators of Compromise (IOCs) associated with specific entities (IP
+    Addresses, URLs, and SHA256 File Hashes) from Symantec Endpoint Security Complete
+    Cloud (SESCC).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches related IOCs from Symantec Endpoint Security Complete Cloud
+      via a GET request. It does not mutate external data, nor does it update internal
+      entities, create insights, or add case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are URL,
+      FILEHASH, and ADDRESS. It also checks if the FILEHASH identifier length is exactly
+      64 characters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches related IOCs for specific entities, which provides threat
+      intelligence context. This aligns with the 'Enrich IOC' category. It does not
+      mutate external data, update alerts, or perform other actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Source Filter | String | No | Specify the source filter. If nothing is provided,
+    action will return related entities, based on all sources. Possible Values: byThreatActor,
+    byProcessChain, bySignature, bySampleTraits, byNetworkingTrait, bySimilarIncidents.
+    |
+List Device Groups:
+  ai_description: >-
+    ### General Description
+
+    The **List Device Groups** action retrieves a list of available device groups
+    from Symantec Endpoint Security Complete Cloud (SESCC). This utility action allows
+    users to discover group IDs and names, which can be used for filtering or targeting
+    in other security operations within the platform.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the Symantec ESCC API using
+    the provided Client ID and Client Secret to obtain a bearer access token.
+
+    2. **Data Retrieval**: It fetches the complete list of device groups by making
+    a GET request to the Symantec `/v1/device-groups` endpoint.
+
+    3. **Filtering**: If a `Filter Value` is provided, the action iterates through
+    the retrieved groups and filters them based on the selected `Filter Logic` (Equal
+    or Contains) against the group's name attribute.
+
+    4. **Limiting**: The resulting list is truncated to the number specified in the
+    `Max Groups To Return` parameter.
+
+    5. **Output**: The action generates a data table titled "Available Device Groups"
+    and populates the action's JSON result with the details (ID and Name) of the identified
+    groups.
+
+
+    ### Additional Notes
+
+    - This action does not require or process any entities from the SecOps environment.
+
+    - If no groups match the provided criteria, the action will complete successfully
+    but indicate that no groups were found.
+  ai_short_description: >-
+    Retrieves a list of available device groups from Symantec Endpoint Security Complete
+    Cloud (SESCC) based on specified filtering criteria.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from an external system (Symantec ESCC) by making a
+      GET request to retrieve device groups. It does not mutate external data, mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It works solely on the provided action parameters to fetch device
+      groups from the external system. Therefore, all entity type flags and filter
+      flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of device groups from Symantec ESCC. It does not
+      enrich specific IOCs or assets, update alerts, create tickets, modify blocklists/allowlists,
+      or perform any other operations that match the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Logic | String | No | Specify what filter logic should be applied. Optional
+    values: Equal, Contains. Default: Equal. |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    |
+
+    | Max Groups To Return | Integer | No | Specify how many groups to return. Default:
+    50. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    the Google SecOps platform and the Symantec Endpoint Security Complete Cloud (SESCC)
+    instance. It ensures that the integration is correctly configured and that the
+    platform can successfully authenticate and communicate with the Symantec API.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the global configuration parameters,
+    including the API Root, Client ID, Client Secret, and SSL verification settings.
+
+    2. **Manager Initialization**: It initializes the `SymantecESCCManager`, which
+    automatically attempts to generate an OAuth2 access token using the provided Client
+    ID and Client Secret.
+
+    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
+    performs a POST request to the `/v1/incidents` endpoint with a minimal limit (1)
+    to verify that the API responds correctly.
+
+    4. **Result Reporting**: If the API call is successful, the action completes with
+    a success message. If any step fails (e.g., authentication error, network timeout),
+    it catches the exception and reports a failure.
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the integration or
+    for troubleshooting connection issues.
+
+    - It relies on the integration's global configuration for authentication and endpoint
+    details.
+  ai_short_description: >-
+    Verifies connectivity between the Google SecOps platform and the Symantec Endpoint
+    Security Complete Cloud (SESCC) instance.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a basic API request to verify connectivity. It does not
+      fetch contextual data for alerts, mutate external or internal data, update entities,
+      or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It is a simple connectivity
+      test.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

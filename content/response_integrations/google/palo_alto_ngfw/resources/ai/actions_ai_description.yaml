@@ -1,0 +1,1568 @@
+Add Ips to group:
+  ai_description: >-
+    ### General Description
+
+    This action adds IP address entities to a specified address group within a Palo
+    Alto Networks Next-Generation Firewall (NGFW). It supports managing both vsys-specific
+    address groups and shared address groups. The action automatically handles the
+    creation of address objects if they do not already exist before adding them to
+    the target group.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Extracts action parameters and integration configuration.
+
+    2. **Validation:** Checks if the required combination of parameters (Shared Objects
+    vs. Device/Vsys) is provided.
+
+    3. **Entity Filtering:** Identifies all `ADDRESS` entities from the target entities
+    list.
+
+    4. **Processing (Vsys Mode):** If 'Use Shared Objects' is false, the action retrieves
+    current group members via the NGFW API, checks for existing entries, creates missing
+    address objects, and adds new IPs to the group using the `EditBlockedIpsInGroup`
+    API method.
+
+    5. **Processing (Shared Mode):** If 'Use Shared Objects' is true, the action checks
+    if the entity exists in the shared group, ensures the address object is shared,
+    and adds it to the shared group via the NGFW API.
+
+    6. **Completion:** Aggregates results into categories (success, failure, already
+    exists), attaches a JSON result to the action, and provides a summary output message.
+
+
+    ### Additional Notes
+
+    * **Conditional Requirement:** Either the 'Use Shared Objects' parameter must
+    be set to `True`, or both 'Device Name' and 'Vsys Name' must be provided for the
+    action to execute successfully.
+
+    * The action will not create a shared address group if it does not already exist;
+    however, it will create shared address objects for the IP entities if they are
+    missing.
+  ai_short_description: >-
+    Adds IP address entities to a specified address group within a Palo Alto Networks
+    Next-Generation Firewall (NGFW), supporting both vsys-specific and shared address
+    groups.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds IP addresses to a specified address group (vsys-specific or shared) on
+      the Palo Alto Networks Next-Generation Firewall.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes API requests to the Palo Alto NGFW to add IP addresses to a
+      specified address group. This mutates external data by changing the firewall's
+      configuration. It does not fetch enrichment data, update internal entities,
+      or create insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` is `[EntityTypes.ADDRESS]`.
+      Therefore, it targets ADDRESS entities and filters strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds IP addresses to a specified address group on a firewall. The
+      underlying API method called is `EditBlockedIpsInGroup`, which indicates the
+      action is intended to update security controls to block the IOCs. This aligns
+      with the 'Add IOC To Blocklist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | No | The device name in which the group is located. The
+    default device name of NGFW is localhost.localdomain. |
+
+    | Vsys Name | String | No | The vsys in which the group is located. The default
+    vsys name of NGFW is vsys1. |
+
+    | Address Group Name | String | Yes | Group name value. |
+
+    | Use Shared Objects | Boolean | No | If enabled, action will use shared objects
+    instead of vsys. Note: action will not create a shared address group, if it doesn't
+    exist. |
+
+
+    **Parameter Notes:**
+
+    * Either the 'Use Shared Objects' parameter must be enabled, or both 'Device Name'
+    and 'Vsys Name' must be provided.
+Block Urls:
+  ai_description: >-
+    ### General Description
+
+    Adds URL entities to a specified URL category on a Palo Alto Networks Next-Generation
+    Firewall (NGFW). This action is primarily used to manage custom URL categories
+    which can then be referenced in security policies to control web traffic. It supports
+    both local vsys-specific categories and shared objects.
+
+
+    ### Flow Description
+
+    1. Validates that either 'Use Shared Objects' is enabled or that both 'Device
+    Name' and 'Vsys Name' are provided.
+
+    2. Filters the target entities to identify URL entities.
+
+    3. For each URL, verifies the character length (max 255) and queries the NGFW
+    to check if the URL already exists in the specified category.
+
+    4. If the URL is valid and not already present, sends a request to the Palo Alto
+    NGFW API to add the URL to the category.
+
+    5. Concludes by providing a JSON result and an output message detailing which
+    URLs were successfully added, which failed, and which already existed.
+
+
+    ### Additional Notes
+
+    - **Policy Requirement**: Adding a URL to a category does not automatically block
+    it; a security policy must be configured on the NGFW to use that category for
+    blocking or filtering.
+
+    - **Constraints**: The length of a URL cannot exceed 255 characters; URLs exceeding
+    this limit will be skipped.
+
+    - **Configuration Logic**: Either 'Use Shared Objects' must be enabled, or both
+    'Device Name' and 'Vsys Name' must be provided for the action to execute successfully.
+  ai_short_description: >-
+    Adds URL entities to a specified URL category on a Palo Alto Networks Next-Generation
+    Firewall (NGFW) to manage custom URL categories for web traffic control.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds URL entities to a specified URL category on the Palo Alto NGFW.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes API requests to Palo Alto NGFW to add URLs to a specified category,
+      which mutates external data. It does not fetch data for enrichment, nor does
+      it mutate internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES = [EntityTypes.URL]`.
+      This means it targets URL entities, filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds URLs to a URL category on a Palo Alto NGFW. This category is
+      typically used in security policies to block or filter web traffic, which aligns
+      with the 'Add IOC To Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | No | The device name in which the group is located. The
+    default device name of NGFW is localhost.localdomain. In case configured differently,
+    please refer to https://<NGFWIP>/php/rest/browse.php/config::devices for the list
+    of all the device names and select the relevant device. |
+
+    | Vsys Name | String | No | The vsys in which the group is located. The default
+    vsys name of NGFW is vsys1. In case configured differently, please refer to https://<NGFW
+    IP>/php/rest/browse.php/config::devices::entry[@name='<DEVICE NAME>']::vsys for
+    the list of all the vsys names of the device and select the relevant vsys. |
+
+    | URL Category Name | String | Yes | Policy name value. |
+
+    | Use Shared Objects | Boolean | No | If enabled, action will use shared objects
+    instead of vsys. |
+Block ips in policy:
+  ai_description: >-
+    ### General Description
+
+    Blocks IP addresses in a specific security policy on a Palo Alto Networks Next-Generation
+    Firewall (NGFW). This action allows for granular control by adding IPs to either
+    the source or destination field of a named policy. It automatically handles the
+    creation of Address Objects if they do not already exist on the device before
+    adding them to the policy.
+
+
+    ### Flow Description
+
+    1. **Validation**: Validates that the 'Target' parameter is set to either 'source'
+    or 'destination'.
+
+    2. **Entity Filtering**: Identifies all 'ADDRESS' entities within the current
+    scope.
+
+    3. **State Retrieval**: Connects to the NGFW API and retrieves the list of IP
+    addresses currently configured in the specified policy and target field.
+
+    4. **Address Object Management**: For each target IP not already in the policy,
+    the action checks for an existing Address Object. If one does not exist, it creates
+    a new Address Object for that IP.
+
+    5. **Policy Update**: Updates the security policy by adding the new IP addresses
+    to the existing list of members.
+
+    6. **Result Aggregation**: Categorizes each IP as 'success', 'failure', or 'already_exist'
+    and returns a summary message and JSON result.
+
+
+    ### Additional Notes
+
+    - The action performs a 'delete' and 'set' operation on the policy's IP list to
+    ensure the new IPs are added alongside existing ones.
+
+    - If an IP address is already present in the specified policy and target field,
+    the action will identify it as 'already existing' and will not attempt to add
+    it again.
+
+    - This action requires a subsequent 'Commit' action to be executed in the playbook
+    for the changes to take effect on the NGFW candidate configuration.
+  ai_short_description: >-
+    Blocks specific IP address entities by adding them to the source or destination
+    field of a security policy on a Palo Alto Networks Next-Generation Firewall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds IP addresses to the specified security policy (source or destination) on
+      the Palo Alto NGFW.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes API requests to the Palo Alto NGFW to create address objects
+      and update security policies, which mutates external data. It does not fetch
+      contextual enrichment data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` contains only `EntityTypes.ADDRESS`.
+      Therefore, it targets ADDRESS entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds IP addresses to a security policy on a firewall to block traffic.
+      This directly aligns with the 'Add IOC To Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | Yes | The device name in which the group is located.
+    The default device name of NGFW is localhost.localdomain. |
+
+    | Vsys Name | String | Yes | The vsys in which the group is located. The default
+    vsys name of NGFW is vsys1. |
+
+    | Policy Name | String | Yes | Policy name value. |
+
+    | Target | String | Yes | Has to be source or destination. |
+Commit Changes:
+  ai_description: "### General Description\nThis action commits pending configuration\
+    \ changes on a Palo Alto Networks Next-Generation Firewall (NGFW). In Palo Alto\
+    \ NGFW, configuration changes are first made to a 'candidate configuration' and\
+    \ must be explicitly committed to become part of the 'running configuration'.\
+    \ This action allows security analysts to finalize changes made by other automated\
+    \ actions (like blocking IPs or URLs) or manual edits.\n\n### Flow Description\n\
+    1. **Authentication:** The action authenticates with the Palo Alto NGFW using\
+    \ the configured API credentials to obtain an API key.\n2. **Parameter Extraction:**\
+    \ It retrieves the `Only My Changes` boolean flag from the action parameters.\n\
+    3. **Commit Execution:** \n    - If `Only My Changes` is enabled, it makes an\
+    \ API call to send a partial commit command targeting only the changes associated\
+    \ with the current user.\n    - If `Only My Changes` is disabled, it makes an\
+    \ API call to send a force commit command for all pending changes.\n4. **Finalization:**\
+    \ The action validates the API response and reports a successful commit to the\
+    \ Google SecOps case wall.\n\n### Additional Notes\n- **Permissions:** To use\
+    \ the `Only My Changes` option, the configured user must have administrative privileges\
+    \ on the Palo Alto device.\n- **Scope:** This action does not target specific\
+    \ entities; it operates on the global configuration state of the firewall."
+  ai_short_description: >-
+    Commits pending configuration changes on a Palo Alto Networks Next-Generation
+    Firewall (NGFW) to apply them to the active running configuration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Commits pending configuration changes on the Palo Alto NGFW, applying them to
+      the active running configuration.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes an API call to the Palo Alto NGFW to commit pending configuration
+      changes, which mutates the external system's state by applying the candidate
+      configuration to the running configuration. It does not fetch contextual data,
+      update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or process any
+      entity data. It performs a global configuration commit on the firewall, so all
+      entity types and filters are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action commits pending configuration changes on the firewall. It does not
+      directly block IOCs, enrich data, manage tickets, or perform any of the specific
+      expected outcomes listed in the categories. Therefore, all categories are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Only My Changes | Boolean | Yes | If set to `True`, the action will only commit
+    changes made by the administrator account configured in the integration settings.
+    If set to `False`, it performs a full commit of all pending changes on the device.
+    |
+Edit Blocked Applications:
+  ai_description: >-
+    ### General Description
+
+    This action manages application-based blocking on a Palo Alto Networks Next-Generation
+    Firewall (NGFW). It enables the addition or removal of specific applications from
+    a designated security policy, allowing for dynamic adjustment of access controls
+    based on application signatures.
+
+
+    ### Flow Description
+
+    1. Retrieves connection details and target policy identifiers (Device, Vsys, Policy
+    Name).
+
+    2. Parses the comma-separated strings of applications to block and unblock into
+    unique sets.
+
+    3. Fetches the current candidate configuration from the Palo Alto NGFW via API
+    to identify the existing applications assigned to the policy.
+
+    4. Calculates the new set of applications by adding the requested 'Block' applications
+    and removing the 'Unblock' applications.
+
+    5. Sends a request to the NGFW API to update the application list for the specified
+    policy if changes are detected.
+
+    6. Retrieves the updated list of applications from the firewall to confirm the
+    current state.
+
+    7. Returns a JSON result containing the final list of applications in the policy.
+
+
+    ### Additional Notes
+
+    - If neither 'Applications To Block' nor 'Applications To UnBlock' are provided,
+    the action will complete without making any changes to the firewall configuration.
+
+    - This action modifies the 'candidate configuration'. A separate 'Commit' action
+    is typically required to make these changes active on the device.
+  ai_short_description: >-
+    Manages application-based blocking on a Palo Alto Networks Next-Generation Firewall
+    (NGFW) by adding or removing specific applications from a designated security
+    policy.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the application blocklist for a specific security policy on the Palo
+      Alto NGFW.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the current candidate configuration and the updated list
+      of blocked applications from the firewall (fetches_data=true). It modifies the
+      firewall's security policy by adding or removing applications via API requests
+      (can_mutate_external_data=true). It does not mutate internal SOAR data, update
+      entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over `siemplify.target_entities`. It
+      relies entirely on string inputs provided via the 'Applications To Block' and
+      'Applications To UnBlock' parameters. Therefore, it does not run on any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies a firewall policy to block or unblock specific applications
+      (e.g., 'apple-siri'). While it updates security controls, applications are not
+      standard Indicators of Compromise (IOCs) like IPs, domains, or hashes. Therefore,
+      it does not strictly fit the 'Add IOC To Blocklist' or 'Remove IOC From Blocklist'
+      categories. It does not enrich data, manage alerts, or handle tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Applications To Block | String | No | List of applications to block, comma separated,
+    e.g: apple-siri,app2. |
+
+    | Applications To UnBlock | String | No | List of applications to unblock, comma
+    separated, e.g: apple-siri,app2. |
+
+    | Device Name | String | Yes | The device name in which the group is located.
+    The default device name of NGFW is localhost.localdomain. |
+
+    | Vsys Name | String | Yes | The vsys in which the group is located. The default
+    vsys name of NGFW is vsys1. |
+
+    | Policy Name | String | Yes | Policy name value. |
+Get Blocked Applications:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of applications currently blocked by a specific security policy
+    on a Palo Alto Networks Next-Generation Firewall (NGFW). This action is useful
+    for auditing security rules and verifying which applications are restricted within
+    a particular virtual system (vsys) and device context.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Palo Alto NGFW using the provided credentials
+    and API root.
+
+    2. **Configuration Retrieval**: Fetches the current candidate configuration XML
+    from the device via a GET request.
+
+    3. **Policy Parsing**: Searches the XML configuration for the specified `Policy
+    Name` within the defined `Device Name` and `Vsys Name` using XPath.
+
+    4. **Data Extraction**: Extracts all application members associated with the identified
+    security rule.
+
+    5. **Result Reporting**: Returns the list of blocked applications as a JSON array
+    and provides a formatted summary message in the action output.
+
+
+    ### Additional Notes
+
+    - This action does not run on entities; it queries the firewall configuration
+    based on the provided policy name.
+
+    - It retrieves data from the 'candidate configuration' of the firewall.
+  ai_short_description: >-
+    Retrieves a list of applications currently blocked by a specific security policy
+    on a Palo Alto Networks Next-Generation Firewall (NGFW).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Palo Alto NGFW API to fetch the candidate
+      configuration and extracts blocked applications. It does not mutate external
+      data, nor does it update internal entities, create insights, or modify alert
+      data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It only uses the provided
+      action parameters to query the firewall configuration.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration data (blocked applications) from a firewall
+      policy. It does not enrich specific IOCs or assets, nor does it mutate any external
+      or internal state, so it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | Yes | The device name in which the group is located.
+    The default device name of NGFW is localhost.localdomain. In case configured differently,
+    please refer to https://<NGFWIP>/php/rest/browse.php/config::devices for the list
+    of all the device names and select the relevant device. |
+
+    | Vsys Name | String | Yes | The vsys in which the group is located. The default
+    vsys name of NGFW is vsys1. In case configured differently, please refer to https://<NGFW
+    IP>/php/rest/browse.php/config::devices::entry[@name='<DEVICE NAME>']::vsys for
+    the list of all the vsys names of the device and select the relevant vsys. |
+
+    | Policy Name | String | Yes | Policy name value. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a diagnostic tool designed to verify the connectivity and authentication
+    credentials between Google SecOps and a Palo Alto Networks Next-Generation Firewall
+    (NGFW) or Panorama instance. It ensures that the provided API Root, Username,
+    and Password are correct and that the network path is open.
+
+
+    ### Flow Description
+
+    1. Extracts the integration configuration parameters including the API Root, credentials,
+    and SSL verification settings.
+
+    2. Initializes the `NGFWManager` class.
+
+    3. Attempts to authenticate by requesting an API key from the Palo Alto device
+    via a POST or GET request to the `/?type=keygen` endpoint.
+
+    4. Parses the response to ensure a valid API key was returned.
+
+    5. Returns a success message if the key is successfully retrieved, or reports
+    a failure if a network error or authentication failure occurs.
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the integration or
+    for troubleshooting communication issues.
+  ai_short_description: >-
+    Verifies connectivity and authentication credentials between Google SecOps and
+    a Palo Alto Networks Next-Generation Firewall (NGFW) or Panorama instance.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action initializes a connection to the Palo Alto NGFW/Panorama instance
+      to verify credentials and network connectivity by requesting an API key. It
+      does not fetch contextual data for alerts, mutate external data, mutate internal
+      case data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It is a generic connectivity
+      test that operates independently of case or alert entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple diagnostic ping to test connectivity and authentication
+      with the Palo Alto NGFW/Panorama instance. It does not match any of the specific
+      outcome categories such as enriching IOCs, updating alerts, or modifying external
+      security controls.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Remove Ips from group:
+  ai_description: >-
+    ### General Description
+
+    Removes IP address entities from a specified address group in Palo Alto NGFW.
+    This action supports both vsys-specific address groups and shared address groups.
+    It first verifies the existence of the IP addresses within the target group before
+    attempting removal to ensure accuracy.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Palo Alto NGFW using the provided credentials
+    and API root.
+
+    2. **Entity Filtering**: Identifies all `ADDRESS` entities from the current context.
+
+    3. **Group Retrieval**: Fetches the current list of IP addresses belonging to
+    the specified address group (either shared or vsys-specific) via an HTTP GET request
+    to the NGFW API.
+
+    4. **Membership Validation**: Compares the target entities against the group members
+    to identify which IPs actually need to be removed and which are not present.
+
+    5. **Removal Execution**: Sends HTTP requests to the NGFW API to remove the identified
+    IP addresses from the group.
+
+    6. **Result Reporting**: Returns a summary of successfully removed IPs and those
+    that were not found in the group initially.
+
+
+    ### Additional Notes
+
+    Either the 'Use Shared Objects' parameter must be set to true, or both 'Device
+    Name' and 'Vsys Name' must be provided for the action to execute successfully.
+  ai_short_description: >-
+    Removes IP address entities from a specified address group (shared or vsys-specific)
+    in Palo Alto NGFW.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes specified IP addresses from an address group (shared or vsys-specific)
+      in the Palo Alto NGFW.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action mutates external data by removing IP addresses from an address group
+      in Palo Alto NGFW. It does not fetch contextual data for enrichment, nor does
+      it mutate internal SecOps data, update entities, create insights, modify alerts,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` is `[EntityTypes.ADDRESS]`.
+      Therefore, it targets ADDRESS entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes IP addresses from a generic address group in Palo Alto NGFW.
+      While address groups are often used in blocklists or allowlists, the action
+      itself is a generic group modification and does not explicitly guarantee the
+      removal from a blocklist or allowlist. Therefore, it does not strictly match
+      any of the specific outcome categories like 'Remove IOC From Blocklist' or 'Remove
+      IOC From Allowlist'.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | No | The device name in which the group is located. The
+    default device name of NGFW is localhost.localdomain. Required if 'Use Shared
+    Objects' is false. |
+
+    | Vsys Name | String | No | The vsys in which the group is located. The default
+    vsys name of NGFW is vsys1. Required if 'Use Shared Objects' is false. |
+
+    | Address Group Name | String | Yes | The name of the required address group.
+    |
+
+    | Use Shared Objects | Boolean | No | If enabled, action will use shared objects
+    instead of vsys. Note: action will not create a shared address group, if it doesn't
+    exist. |
+Unblock Urls:
+  ai_description: >-
+    ### General Description
+
+    Removes URL entities from a specified URL category in Palo Alto NGFW. This action
+    is used to unblock URLs by removing them from custom URL categories that are typically
+    referenced in security policies. It supports both vsys-specific categories and
+    shared categories.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves action parameters including Device Name, Vsys
+    Name, URL Category Name, and the Use Shared Objects flag.
+
+    2. **Entity Filtering**: Filters the target entities to identify valid URL entities.
+
+    3. **Validation**: Checks if the necessary location parameters (Device Name and
+    Vsys Name) are provided when not using shared objects.
+
+    4. **Data Retrieval**: Connects to the Palo Alto NGFW API and fetches the current
+    list of URLs associated with the specified category.
+
+    5. **Comparison**: Compares the target URL entities against the retrieved list
+    to determine which URLs are currently present in the category.
+
+    6. **Mutation**: For each matching URL, sends an API request to the NGFW to remove
+    the URL from the category (using either vsys-specific or shared object API paths).
+
+    7. **Completion**: Returns a JSON result containing lists of successfully removed
+    URLs and URLs that were not found in the category initially.
+
+
+    ### Additional Notes
+
+    - If 'Use Shared Objects' is set to `false`, both 'Device Name' and 'Vsys Name'
+    must be provided (or use their defaults) for the action to function correctly.
+
+    - The action performs a 'Read-Compare-Write' flow to ensure it only attempts to
+    remove URLs that actually exist in the target category.
+  ai_short_description: >-
+    Removes specified URL entities from a custom URL category in Palo Alto NGFW to
+    unblock them.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes specified URL entities from a custom URL category on the Palo Alto NGFW.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes API calls to Palo Alto NGFW to remove URLs from a URL category,
+      mutating external data. It does not fetch data for enrichment, nor does it mutate
+      internal SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES = [EntityTypes.URL]`.
+      Therefore, it targets URL entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes URL entities from a URL category on a firewall, which effectively
+      unblocks them or removes them from a restricted list. This aligns with the 'Remove
+      IOC From Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | No | The device name in which the group is located. The
+    default device name of NGFW is localhost.localdomain. In case configured differently,
+    please refer to https://<NGFWIP>/php/rest/browse.php/config::devices for the list
+    of all the device names and select the relevant device. |
+
+    | Vsys Name | String | No | The vsys in which the group is located. The default
+    vsys name of NGFW is vsys1. In case configured differently, please refer to https://<NGFW
+    IP>/php/rest/browse.php/config::devices::entry[@name='<DEVICE NAME>']::vsys for
+    the list of all the vsys names of the device and select the relevant vsys. |
+
+    | URL Category Name | String | Yes | URL Category Name |
+
+    | Use Shared Objects | Boolean | No | If enabled, action will use shared objects
+    instead of vsys. |
+Unblock ips in policy:
+  ai_description: >-
+    ### General Description
+
+    Unblocks IP addresses by removing them from a specific security policy on a Palo
+    Alto NGFW device. This action targets either the source or destination fields
+    of a policy and processes each IP address individually.
+
+
+    ### Flow Description
+
+    1. **Validation**: The action validates that the `Target` parameter is set to
+    either 'source' or 'destination'.
+
+    2. **Entity Filtering**: It identifies all `ADDRESS` entities within the current
+    scope.
+
+    3. **Data Retrieval**: It connects to the Palo Alto NGFW and retrieves the current
+    list of blocked IPs for the specified policy and target.
+
+    4. **Policy Modification**: For each identified entity, the action checks if it
+    exists in the current policy. If found, it removes the IP from the policy configuration.
+
+    5. **Result Reporting**: The action tracks which IPs were successfully removed
+    and which were not present in the policy initially, returning this data as a JSON
+    result.
+
+
+    ### Additional Notes
+
+    - This action requires a subsequent 'Commit Changes' action to be executed in
+    the Palo Alto NGFW for the changes to take effect on the device.
+
+    - Only entities of type `ADDRESS` are processed.
+  ai_short_description: >-
+    Unblocks IP addresses by removing them from a specific security policy on a Palo
+    Alto NGFW device.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes IP addresses from a specific security policy on the Palo Alto NGFW device.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the current list of blocked IPs from the firewall (fetches_data=true)
+      and then makes API calls to remove the specified IP addresses from the policy
+      (can_mutate_external_data=true). It does not mutate internal data, update entities,
+      or create insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES` is `[EntityTypes.ADDRESS]`.
+      This means it targets ADDRESS entities, filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes IP addresses from a security policy on a Palo Alto NGFW device.
+      This restores connectivity for the indicator by removing it from a restricted
+      list, which directly aligns with the 'Remove IOC From Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | Yes | The device name in which the group is located.
+    The default device name of NGFW is localhost.localdomain. In case configured differently,
+    please refer to https://<NGFWIP>/php/rest/browse.php/config::devices for the list
+    of all the device names and select the relevant device. |
+
+    | Vsys Name | String | Yes | The vsys in which the group is located. The default
+    vsys name of NGFW is vsys1. In case configured differently, please refer to https://<NGFW
+    IP>/php/rest/browse.php/config::devices::entry[@name='<DEVICE NAME>']::vsys for
+    the list of all the vsys names of the device and select the relevant vsys. |
+
+    | Policy Name | String | Yes | Policy name value. |
+
+    | Target | String | Yes | Has to be source or destination. |

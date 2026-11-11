@@ -1,0 +1,1598 @@
+Get Operation Status:
+  ai_description: "### General Description\nRetrieves the status and details of a\
+    \ specific Google Kubernetes Engine (GKE) operation. This action is designed to\
+    \ track the progress of long-running tasks such as cluster updates, node pool\
+    \ modifications, or deletions. It operates asynchronously, meaning it can be configured\
+    \ to poll the GKE API until the operation reaches a terminal state (DONE) or the\
+    \ action times out.\n\n### Flow Description\n1. **Initialization**: The action\
+    \ extracts the Project ID, Location, and Operation Name from the input parameters\
+    \ and initializes the GKE API manager.\n2. **Status Retrieval**: It performs a\
+    \ GET request to the GKE API to fetch the current details of the specified operation.\n\
+    3. **Execution Mode Check**: \n    - If 'Wait for cluster configuration change\
+    \ operation to finish' is **False**, the action completes immediately, returning\
+    \ the current operation details.\n    - If 'Wait...' is **True**, the action checks\
+    \ if the operation status is terminal (e.g., 'DONE').\n4. **Async Polling**: If\
+    \ the operation is still 'PENDING' or 'RUNNING' and the wait flag is set, the\
+    \ action enters an 'In Progress' state, saving the operation name to be checked\
+    \ again in subsequent runs.\n5. **Completion**: Once the operation is finished\
+    \ or the polling stops, the full JSON response of the operation is attached to\
+    \ the action results.\n\n### Additional Notes\n- This action does **not** run\
+    \ on entities. It is a utility action used to monitor the state of the infrastructure.\n\
+    - When 'Wait for cluster configuration change operation to finish' is enabled,\
+    \ the action utilizes the SOAR's async mechanism to check the status periodically."
+  ai_short_description: >-
+    Retrieves the status and details of a specific Google Kubernetes Engine (GKE)
+    operation, optionally polling asynchronously until completion.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the GKE API to fetch the status of a specific
+      operation. It does not mutate external data, update internal entities, or create
+      insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It relies entirely
+      on the provided action parameters to fetch the operation status.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves the status of a GKE operation. This is an infrastructure
+      monitoring task and does not align with any of the predefined security outcome
+      categories such as enriching IOCs/assets, managing tickets, or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Project ID | String | No | Specify the name of the project for which to fetch
+    operation status for. If nothing is provided, the project will be extracted from
+    integration configuration. |
+
+    | Location | String | Yes | Specify Google Compute Engine location for which to
+    fetch operation status for. Example: europe-central2-a |
+
+    | Operation Name | String | Yes | Specify Google Compute Engine operation to fetch.
+    |
+
+    | Wait for cluster configuration change operation to finish | Boolean | No | If
+    enabled, action will wait for the results of the cluster configuration change
+    operation. |
+List Clusters:
+  ai_description: >-
+    ### General Description
+
+    Lists Google Kubernetes Engine (GKE) clusters within a specific Google Cloud project
+    and location based on search and filtering criteria. This action is designed for
+    administrative visibility and does not operate on specific Google SecOps entities.
+    It retrieves detailed cluster metadata, including status, versions, and network
+    configurations.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction and Validation**: The action extracts input parameters
+    and ensures that `Max Records To Return` is a positive integer.
+
+    2. **API Interaction**: It initializes the GKE service and performs a GET request
+    to the Google Kubernetes Engine API to list clusters for the specified project
+    and location.
+
+    3. **Filtering Logic**: If `Filter Logic` (Equal or Contains) and a `Filter Value`
+    are provided, the action filters the list of clusters by comparing the `name`
+    attribute of each cluster against the filter value.
+
+    4. **Result Limitation**: The resulting list is truncated to match the `Max Records
+    To Return` limit.
+
+    5. **Data Presentation**: The action generates a Data Table named "Found Clusters"
+    containing flattened cluster details and populates the JSON results with the raw
+    cluster data.
+
+
+    ### Additional Notes
+
+    - This action does not require or process any entities from the Google SecOps
+    environment.
+
+    - Filtering is applied locally to the results returned by the GKE API based on
+    the cluster's name attribute.
+  ai_short_description: >-
+    Lists Google Kubernetes Engine (GKE) clusters within a specific Google Cloud project
+    and location based on search and filtering criteria.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Google Kubernetes Engine API to list clusters.
+      It fetches data but does not mutate external data, update internal entities,
+      or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It retrieves a list of clusters
+      based on integration and action parameters without referencing specific entities,
+      so all entity flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action lists GKE clusters based on search criteria. It does not enrich specific
+      IOCs or assets, update alerts, manage tickets, modify blocklists/allowlists,
+      manage identities, contain hosts, or perform any other operations that match
+      the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Project ID | String | No | Specify the name of the project in which to search
+    for clusters in. If nothing is provided, the project will be extracted from integration
+    configuration. |
+
+    | Cluster Location | String | Yes | Specify Google Compute Engine location in
+    which to search for clusters in. Example: europe-central2-a |
+
+    | Filter Logic | String | No | Specify what filter logic should be applied. Filtering
+    logic is working based on the cluster name field. |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    If "Equal" is selected, action should will try to find the exact match among results
+    and if "Contains" is selected, action will try to find results that contain the
+    substring. If nothing is provided in this parameter, the filter will not be applied.
+    Filtering logic is working based on the cluster name field. |
+
+    | Max Records To Return | Integer | No | Specify how many records to return. |
+List Node Pools:
+  ai_description: >-
+    ### General Description
+
+    Lists node pools for a Google Kubernetes Engine (GKE) cluster based on specified
+    search and filtering criteria. This action retrieves detailed configuration information
+    for node pools within a specific cluster and location, providing visibility into
+    the cluster's infrastructure.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction and Validation:** The action extracts input parameters
+    and ensures 'Max Records To Return' is a positive integer.
+
+    2. **API Interaction:** It calls the Google Kubernetes Engine API to list all
+    node pools for the specified cluster and location.
+
+    3. **Filtering Logic:** If a 'Filter Value' is provided, the action filters the
+    list of node pools by comparing the 'name' field using the specified 'Filter Logic'.
+
+    4. **Result Truncation:** The list is truncated to respect the 'Max Records To
+    Return' limit.
+
+    5. **Output:** The action populates a data table named "Found Node Pools" and
+    provides the raw data in JSON format. If no node pools match the criteria, the
+    action returns a failure status with an informative message.
+
+
+    ### Additional Notes
+
+    - This action does not operate on Google SecOps entities; it is a standalone query
+    action.
+
+    - Filtering is specifically applied to the `name` attribute of the node pools.
+  ai_short_description: >-
+    Lists node pools for a Google Kubernetes Engine (GKE) cluster based on specified
+    search and filtering criteria.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Google Kubernetes Engine API to fetch
+      node pool data (fetches_data=true). It does not perform any POST/PUT/DELETE
+      operations to mutate external data, nor does it mutate internal data such as
+      updating entities, creating insights, or adding case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity
+      information. It relies entirely on the provided parameters (Cluster Name, Cluster
+      Location, etc.) to fetch data. Therefore, it does not run on entities and all
+      entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries the Google Kubernetes Engine API to list node pools for a
+      specific cluster. It does not enrich an IOC or an Asset entity, nor does it
+      perform any state-changing operations like updating alerts, tickets, or blocklists.
+      Therefore, it does not match any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Project ID | String | No | Specify the name of the project in which to search
+    for clusters in. If nothing is provided, the project will be extracted from integration
+    configuration. |
+
+    | Cluster Location | String | Yes | Specify Google Compute Engine location in
+    which to search for clusters in. Example: europe-central2-a |
+
+    | Cluster Name | String | Yes | Specify Google Kubernetes Engine cluster name.
+    |
+
+    | Filter Logic | String | No | Specify what filter logic should be applied. Filtering
+    logic is working based on the node pool name field. |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    If "Equal" is selected, action should will try to find the exact match among results
+    and if "Contains" is selected, action will try to find results that contain the
+    substring. If nothing is provided in this parameter, the filter will not be applied.
+    Filtering logic is working based on the node pool name field. |
+
+    | Max Records To Return | Integer | No | Specify how many records to return. |
+List Operations:
+  ai_description: "### General Description\nThe **List Operations** action retrieves\
+    \ a list of operations performed within a Google Kubernetes Engine (GKE) environment\
+    \ for a specific location. This utility action is used to audit or track changes\
+    \ and lifecycle events\u2014such as cluster updates, node pool modifications,\
+    \ or deletions\u2014within a GKE project. It allows analysts to monitor the status\
+    \ and history of infrastructure changes directly from the SOAR platform.\n\n###\
+    \ Flow Description\n1. **Parameter Extraction and Validation**: The action retrieves\
+    \ input parameters and validates that `Max Records To Return` is a positive integer.\n\
+    2. **API Interaction**: It connects to the GKE API and performs a GET request\
+    \ to list all operations for the specified project and location.\n3. **Filtering**:\
+    \ If a `Filter Value` is provided, the action iterates through the retrieved operations\
+    \ and keeps only those whose names match the criteria defined by the `Filter Logic`.\n\
+    4. **Result Truncation**: The filtered list is sliced to ensure it does not exceed\
+    \ the `Max Records To Return` limit.\n5. **Output Generation**: The final list\
+    \ of operations is returned as a JSON object and displayed in a Data Table named\
+    \ \"Found Operations\" on the case wall.\n\n### Additional Notes\n- This action\
+    \ **does not run on Siemplify entities**. It performs a global query against the\
+    \ GKE API for the specified location.\n- Filtering is applied locally to the results\
+    \ returned by the GKE API, specifically targeting the `name` field of the operation\
+    \ objects."
+  ai_short_description: >-
+    Retrieves a list of operations performed within a Google Kubernetes Engine (GKE)
+    environment for a specific location.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the GKE API by making a GET request to list operations.
+      It does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use entity-specific identifiers.
+      It performs a global query against the GKE API based on the provided parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of operations from GKE. It does not enrich specific
+      IOCs or assets, nor does it mutate any data, update alerts, or perform any of
+      the other specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Project ID | String | No | Specify the name of the project for which to fetch
+    the operations for. If nothing is provided, the project will be extracted from
+    integration configuration. |
+
+    | Location | String | Yes | Specify Google Compute Engine location for which to
+    fetch the operations for. Example: europe-central2-a |
+
+    | Filter Logic | String | No | Specify what filter logic should be applied. |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    If "Equal" is selected, action should will try to find the exact match among results
+    and if "Contains" is selected, action will try to find results that contain the
+    substring. If nothing is provided in this parameter, the filter will not be applied.
+    Filtering logic is working based on the operation name field. |
+
+    | Max Records To Return | String | No | Specify how many records to return. Default:
+    50. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the Google Kubernetes Engine (GKE) service. It ensures that the integration
+    configuration parameters, such as API credentials, Project ID, and Location ID,
+    are correctly configured and that the environment has the necessary network access
+    to reach the GKE API endpoints.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the GKE API manager using the authentication
+    credentials and configuration details provided in the integration settings.
+
+    2. **Connectivity Test**: It executes a `GET` request to the GKE API's `clusters`
+    endpoint for the specified project and location.
+
+    3. **Validation**: The action validates the HTTP response from the GKE service.
+    If the request is successful, it confirms that the connection is established.
+    If it fails, it raises a descriptive error based on the API response.
+
+
+    ### Additional Notes
+
+    - This action is typically used during the initial setup of the integration or
+    for troubleshooting connectivity issues.
+
+    - It performs a read-only operation to validate the connection.
+  ai_short_description: >-
+    Verifies connectivity between Google SecOps and the Google Kubernetes Engine (GKE)
+    service by testing the integration configuration parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the GKE API to test connectivity. It does
+      not fetch contextual data for entities, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It simply tests connectivity to
+      the external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, ticketing, or alert
+      manipulation.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Set Cluster Addons:
+  ai_description: "### General Description\nUpdates the configuration of various addons\
+    \ for a Google Kubernetes Engine (GKE) cluster. This action allows administrators\
+    \ to enable or disable features like HTTP Load Balancing, Horizontal Pod Autoscaling,\
+    \ and Network Policy configuration. The action is asynchronous and can optionally\
+    \ wait for the GKE operation to complete before finishing.\n\n### Flow Description\n\
+    1. **Initialization:** Authenticates with Google Cloud and initializes the GKE\
+    \ API managers.\n2. **Parameter Extraction:** Retrieves all addon configurations\
+    \ and the target cluster details from the action parameters.\n3. **Validation:**\
+    \ Ensures that at least one addon is being modified. If all are set to `Not Changed`,\
+    \ the action fails.\n4. **API Request:** Sends a POST request to the GKE `setAddons`\
+    \ endpoint to initiate the configuration change.\n5. **Operation Monitoring:**\
+    \ \n    * If `Wait for cluster configuration change operation to finish` is **False**,\
+    \ the action completes immediately, returning the operation details.\n    * If\
+    \ `Wait for cluster configuration change operation to finish` is **True**, the\
+    \ action enters an asynchronous state, periodically checking the operation status\
+    \ until it is `DONE` or the action times out.\n6. **Result:** Returns the final\
+    \ operation status and details as a JSON result.\n\n### Additional Notes\n* **Requirement:**\
+    \ At least one addon parameter must be set to a value other than `Not Changed`\
+    \ for the action to execute.\n* **Concurrency:** If the target cluster is already\
+    \ undergoing a configuration change, new changes will be rejected by the GKE API\
+    \ until the current operation finishes.\n* **Async Behavior:** This action uses\
+    \ the SOAR async mechanism to monitor long-running GKE operations without blocking\
+    \ the execution engine."
+  ai_short_description: >-
+    Updates the configuration of various addons for a Google Kubernetes Engine (GKE)
+    cluster.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of various addons for a Google Kubernetes Engine (GKE)
+      cluster via the GKE API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the GKE API to update cluster addons, which
+      mutates external data. It does not fetch contextual data for entities, nor does
+      it update internal SecOps data like entities, insights, or case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any Siemplify entities. It uses parameters to
+      specify the target GKE cluster. Therefore, all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the configuration of a GKE cluster. This does not align with
+      any of the predefined outcome categories such as enriching IOCs, containing
+      hosts, or updating tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Project ID | String | No | Specify the name of the project in which to search
+    for clusters in. If nothing is provided, the project will be extracted from integration
+    configuration. |
+
+    | Cluster Location | String | Yes | Specify Google Compute Engine location in
+    which to search for clusters in. Example: europe-central2-a |
+
+    | Cluster Name | String | Yes | Specify Google Kubernetes Engine cluster name.
+    |
+
+    | HTTP Load Balancing | String | No | Specify the value for the HTTP Load Balancing
+    addon configuration. |
+
+    | Horizontal Pod Autoscaling | String | No | Specify the value for the Horizontal
+    Pod Autoscaling addon configuration. |
+
+    | Network Policy Config | String | No | Specify the value for the Network Policy
+    Config addon configuration. |
+
+    | Cloud Run Config | String | No | Specify the value for the Cloud Run Config
+    addon configuration. |
+
+    | DNS Cache Config | String | No | Specify the value for the DNS Cache Config
+    addon configuration. |
+
+    | Config Connector Config | String | No | Specify the value for the Config Connector
+    Config addon. |
+
+    | GCE Persistent Disk Csi Driver Config | String | No | Specify the value for
+    the GCE Persistent Disk Csi Driver Config addon. |
+
+    | Wait for cluster configuration change operation to finish | Boolean | No | If
+    enabled, action will wait for the results of the cluster configuration change
+    operation. |
+Set Cluster Labels:
+  ai_description: >-
+    ### General Description
+
+    Sets or updates labels for a specific Google Kubernetes Engine (GKE) cluster.
+    This action is asynchronous and works by appending the provided JSON labels to
+    the cluster's existing label set. It first retrieves the current cluster configuration
+    to obtain the required label fingerprint and existing labels, merges them with
+    the new input, and then submits an update request to the GKE API.
+
+
+    ### Flow Description
+
+    1. Extracts the Project ID, Cluster Location, Cluster Name, and the JSON-formatted
+    labels from the action parameters.
+
+    2. Makes a GET request to the GKE API to fetch the existing cluster details, retrieving
+    the current labels and the `labelFingerprint` required for updates.
+
+    3. Merges the provided labels into the existing label dictionary to ensure no
+    existing data is overwritten unless explicitly specified in the input.
+
+    4. Makes a POST request to the GKE API to update the cluster labels using the
+    merged set and the fingerprint.
+
+    5. If 'Wait for cluster configuration change operation to finish' is disabled,
+    returns the operation details immediately.
+
+    6. If 'Wait for cluster configuration change operation to finish' is enabled,
+    enters an asynchronous loop, checking the operation status until it reaches a
+    'DONE' state or the SOAR execution deadline is reached.
+
+    7. Provides the final operation status and details in the JSON result.
+
+
+    ### Additional Notes
+
+    This action does not operate on Siemplify entities. If the target cluster is already
+    undergoing a configuration change, new configuration changes will not be accepted
+    until the current configuration changes finish.
+  ai_short_description: >-
+    Sets or updates labels for a specific Google Kubernetes Engine (GKE) cluster by
+    merging new labels with the existing ones.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the labels of a specific Google Kubernetes Engine (GKE) cluster.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the GKE API to update the labels of a cluster,
+      which mutates external data. It does not fetch contextual data for enrichment,
+      nor does it mutate internal SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates solely on the provided cluster name and location parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the labels of a Google Kubernetes Engine cluster. This is
+      a cloud infrastructure management operation and does not match any of the predefined
+      security outcome categories such as Enrich IOC, Contain Host, or Update Alert.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Project ID | String | No | Specify the name of the project in which to search
+    for clusters in. If nothing is provided, the project will be extracted from integration
+    configuration. |
+
+    | Cluster Location | String | Yes | Specify Google Compute Engine location in
+    which to search for clusters in. Example: europe-central2-a |
+
+    | Cluster Name | String | Yes | Specify Google Kubernetes Engine cluster name.
+    |
+
+    | Cluster Labels | String | Yes | Specify a JSON object that contains labels to
+    add to the cluster. Please consider default value for the format reference. Action
+    appends new labels to any existing cluster labels. |
+
+    | Wait for cluster configuration change operation to finish | Boolean | No | If
+    enabled, action will wait for the results of the cluster configuration change
+    operation. |
+Set Node Autoscaling:
+  ai_description: >-
+    ### General Description
+
+    Sets the node pool autoscaling configuration for a specific Google Kubernetes
+    Engine (GKE) cluster. This action allows users to enable or disable autoscaling
+    and define the minimum and maximum node counts for a designated node pool. It
+    operates asynchronously, meaning it creates a configuration change operation in
+    GKE and can optionally wait for that operation to complete.
+
+
+    ### Flow Description
+
+    1. Extracts the cluster identifiers and desired autoscaling settings from the
+    input parameters.
+
+    2. Validates that at least one autoscaling parameter is being modified.
+
+    3. Sends a POST request to the GKE API's `setAutoscaling` endpoint for the specified
+    node pool to apply the new configuration.
+
+    4. If the wait parameter is disabled, returns success immediately after the operation
+    is created.
+
+    5. If the wait parameter is enabled, enters an asynchronous loop, periodically
+    checking the operation status via GET requests until it reaches a 'DONE' state
+    or the execution deadline is reached.
+
+    6. Returns the final operation details as a JSON result.
+
+
+    ### Additional Notes
+
+    At least one configuration change (Autoscaling Mode, Minimum Node Count, or Maximum
+    Node Count) must be provided for the action to execute. This action does not run
+    on SOAR entities; it relies entirely on the provided input parameters. If the
+    cluster is already undergoing a configuration change, new changes may be rejected
+    until the current one finishes.
+  ai_short_description: >-
+    Sets the node pool autoscaling configuration for a specific Google Kubernetes
+    Engine (GKE) cluster.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Modifies the autoscaling configuration (mode, minimum, and maximum node counts)
+      for a specific node pool in a Google Kubernetes Engine cluster.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the GKE API to update the autoscaling configuration
+      of a node pool. It does not fetch contextual data for enrichment, nor does it
+      update internal SOAR entities or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the provided input parameters to target the
+      GKE cluster and node pool. Therefore, all entity type flags and filter flags
+      are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies infrastructure configuration (GKE node pool autoscaling).
+      It does not match any of the predefined outcome categories such as enriching
+      IOCs, updating alerts, managing tickets, or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Project ID | String | No | Specify the name of the project in which to search
+    for clusters in. If nothing is provided, the project will be extracted from integration
+    configuration. |
+
+    | Cluster Location | String | Yes | Specify Google Compute Engine location in
+    which to search for clusters in. Example: europe-central2-a |
+
+    | Cluster Name | String | Yes | Specify Google Kubernetes Engine cluster name.
+    |
+
+    | Node Pool Name | String | Yes | Specify node pool name for the Google Kubernetes
+    Engine cluster. |
+
+    | Autoscaling Mode | Dropdown | No | Specify autoscaling mode status for the node
+    pool. |
+
+    | Minimum Node Count | Integer | No | Specify minimum node count for the node
+    pool configuration. |
+
+    | Maximum Node Count | Integer | No | Specify maximum node count for the node
+    pool configuration. |
+
+    | Wait for cluster configuration change operation to finish | Boolean | No | If
+    enabled, action will wait for the results of the cluster configuration change
+    operation. |
+Set Node Count:
+  ai_description: >-
+    ### General Description
+
+    Sets the node count for a specific node pool within a Google Kubernetes Engine
+    (GKE) cluster. This action initiates a configuration change on the GKE side to
+    resize the cluster's infrastructure, which is useful for scaling resources up
+    or down based on demand or security requirements.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts parameters and initializes the GKE API manager
+    and services.
+
+    2. **Validation**: Validates that the 'Node Count' is a non-negative integer.
+
+    3. **Execution (First Run)**: Sends a POST request to the GKE API to set the node
+    pool size.
+
+    4. **Async Handling**: If 'Wait for cluster configuration change operation to
+    finish' is enabled, the action returns an 'In Progress' status to the SOAR platform.
+
+    5. **Status Polling (Subsequent Runs)**: If running in async mode, the action
+    retrieves the operation status from GKE.
+
+    6. **Completion**: Once the operation is finished (or if not waiting), the action
+    returns the operation metadata as JSON results and completes the execution.
+
+
+    ### Additional Notes
+
+    - This action does not operate on Google SecOps entities.
+
+    - If the target cluster is already undergoing a configuration change, new requests
+    will be rejected until the current operation finishes.
+  ai_short_description: >-
+    Sets the node count for a specific node pool within a Google Kubernetes Engine
+    (GKE) cluster.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sets the node count for a specific node pool within a Google Kubernetes Engine
+      (GKE) cluster.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the GKE API to set the node pool size, which
+      mutates external data. It does not fetch data for enrichment, update internal
+      entities, create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `siemplify.target_entities` or any entity-specific identifiers.
+      It operates purely on the provided cluster and node pool parameters. Therefore,
+      all entity flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action resizes a GKE cluster node pool. This is an infrastructure management
+      operation and does not match any of the predefined security outcome categories
+      such as enriching IOCs, containing hosts, or managing tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Project ID | String | No | Specify the name of the project in which to search
+    for clusters in. If nothing is provided, the project will be extracted from integration
+    configuration. |
+
+    | Cluster Location | String | Yes | Specify Google Compute Engine location in
+    which to search for clusters in. Example: europe-central2-a |
+
+    | Cluster Name | String | Yes | Specify Google Kubernetes Engine cluster name.
+    |
+
+    | Node Pool Name | String | Yes | Specify node pool name for the Google Kubernetes
+    Engine cluster. |
+
+    | Node Count | Integer | Yes | Specify node count for the Google Kubernetes Engine
+    cluster node pool. |
+
+    | Wait for cluster configuration change operation to finish | Boolean | No | If
+    enabled, action will wait for the results of the cluster configuration change
+    operation. |
+Set Node Pool Management:
+  ai_description: >-
+    ### General Description
+
+    Sets the node pool management configuration for a specific Google Kubernetes Engine
+    (GKE) cluster. This action allows administrators to enable or disable the Auto
+    Upgrade and Auto Repair features for a designated node pool. It is an asynchronous
+    action that initiates a configuration change operation in GKE and can optionally
+    wait for the operation to complete.
+
+
+    ### Flow Description
+
+    1. Extracts action parameters and initializes the GKE API, Node, and Operation
+    managers using the provided credentials.
+
+    2. Validates that at least one management setting (Auto Upgrade or Auto Repair)
+    is scheduled for a change.
+
+    3. If only one setting is being modified, the action fetches the current node
+    pool configuration to preserve the existing state of the other setting.
+
+    4. Sends a POST request to the GKE API to update the node pool management settings,
+    which creates a GKE operation.
+
+    5. If the user opted to wait for the operation, the action enters an asynchronous
+    state, periodically checking the operation's status until it is completed, fails,
+    or the action times out.
+
+    6. Returns the operation details as a JSON object and provides a success or failure
+    message based on the API response.
+
+
+    ### Additional Notes
+
+    - At least one of the parameters, Auto Upgrade or Auto Repair, must be set to
+    a value other than `Not Changed` for the action to proceed.
+
+    - If only one management feature is being changed, the action automatically retrieves
+    the current state of the other feature from the GKE API to ensure it remains unchanged
+    during the update.
+
+    - If the target cluster is already undergoing a configuration change, new changes
+    may be rejected by GKE until the current operation finishes.
+  ai_short_description: >-
+    Sets the node pool management configuration (Auto Upgrade and Auto Repair) for
+    a specific Google Kubernetes Engine (GKE) cluster.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the node pool management configuration (Auto Upgrade, Auto Repair) for
+      a specific Google Kubernetes Engine (GKE) cluster.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Google Kubernetes Engine API to update
+      the node pool management configuration, which mutates external data. It does
+      not fetch contextual data for entities, mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any Siemplify entities. It interacts directly
+      with the Google Kubernetes Engine API based on the provided action parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies the configuration of a Google Kubernetes Engine cluster
+      node pool. This does not align with any of the predefined outcome categories
+      such as enriching IOCs, updating alerts, or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Project ID | String | No | Specify the name of the project in which to search
+    for clusters in. If nothing is provided, the project will be extracted from integration
+    configuration. |
+
+    | Cluster Location | String | Yes | Specify Google Compute Engine location in
+    which to search for clusters in. Example: europe-central2-a |
+
+    | Cluster Name | String | Yes | Specify Google Kubernetes Engine cluster name.
+    |
+
+    | Node Pool Name | String | Yes | Specify node pool name for the Google Kubernetes
+    Engine cluster. |
+
+    | Auto Upgrade | String | No | Specify the status of auto upgrade management feature.
+    |
+
+    | Auto Repair | String | No | Specify the status of auto repair management feature.
+    |
+
+    | Wait for cluster configuration change operation to finish | Boolean | No | If
+    enabled, action will wait for the results of the cluster configuration change
+    operation. |

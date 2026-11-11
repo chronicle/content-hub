@@ -1,0 +1,1177 @@
+Add SCCE Tags:
+  ai_description: >-
+    ### General Description
+
+    Adds metadata tags to a Google SecOps case based on the properties of the security
+    events within the alert. This action helps in categorizing and organizing cases
+    by extracting key information such as cloud provider, finding class, and project
+    identifiers from the event data and applying them as searchable tags.
+
+
+    ### Flow Description
+
+    1. **Event Iteration**: The action iterates through all security events associated
+    with the current alert.
+
+    2. **Property Analysis**: For each event, it examines the `additional_properties`
+    dictionary.
+
+    3. **Pattern Matching**: It compares the property keys against a predefined set
+    of regex patterns (defined in `TAG_MAPPING`).
+
+    4. **Tag Transformation**: When a match is found, the corresponding value is transformed
+    into a standardized tag format (e.g., mapping 'GOOGLE_CLOUD_PLATFORM' to 'Google
+    Cloud').
+
+    5. **Tag Application**: The action applies all identified tags to the case using
+    the internal SOAR tagging mechanism.
+
+    6. **Result Reporting**: It returns a success message if tags were added, or a
+    failure message if no matching properties were found.
+
+
+    ### Additional Notes
+
+    This action operates entirely on internal case data and does not interact with
+    external systems.
+  ai_short_description: >-
+    Adds metadata tags to a Google SecOps case based on the properties of the security
+    events within the alert.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Adds metadata tags to the case based on security event properties.
+    reasoning: >-
+      The action processes internal security event data to extract tags and applies
+      them to the case using `soar_action.add_tag`. It does not fetch external data,
+      mutate external systems, update entities, create insights, or add case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities. It processes security events
+      from the current alert to extract and apply tags.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds tags to the case based on security event properties. It does
+      not match any of the specific expected outcomes such as enriching IOCs, updating
+      alert status/severity, or interacting with external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+CloudEntityParser:
+  ai_description: >-
+    ### General Description
+
+    The CloudEntityParser action automatically identifies and extracts cloud-related
+    resource identifiers from the raw security events associated with a Google SecOps
+    alert. It supports resources from Google Cloud Platform (GCP), Amazon Web Services
+    (AWS), and Microsoft Azure. Once identified, these resources are added to the
+    case as formal entities, and relationships are established between them (e.g.,
+    linking a User to a Host) to provide a clearer picture of the cloud infrastructure
+    involved in the alert.
+
+
+    ### Flow Description
+
+    1. Scans all security events attached to the current alert.
+
+    2. Looks for specific keys (such as `event_principal_user_emailAddresses` or `event_target_resource_name`)
+    and applies regex patterns to find GCP Service Accounts, AWS ARNs, EC2 instance
+    IDs, S3 buckets, and Azure resource paths.
+
+    3. Maps extracted values to SecOps entity types such as `USER`, `HOSTNAME`, `DATABASE`,
+    `DEPLOYMENT`, `CONTAINER`, or `PROCESS` based on the resource format.
+
+    4. Upserts entities: If an entity with the same identifier already exists in the
+    case, its additional properties are updated with cloud-specific metadata. If the
+    entity is new, it is created and added to the case.
+
+    5. Identifies links between users and resources (e.g., an AWS IAM user accessing
+    an EC2 instance or S3 bucket) and creates directional relationships within the
+    SecOps case.
+
+
+    ### Additional Notes
+
+    This action is purely internal and does not communicate with external cloud provider
+    APIs; it relies entirely on the data already present in the alert's security events.
+  ai_short_description: >-
+    Automatically identifies and extracts cloud-related resource identifiers from
+    the raw security events associated with a Google SecOps alert, adding them to
+    the case as formal entities and establishing relationships between them.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Creates new entities and relationships between them based on parsed event data.
+    reasoning: >-
+      The action parses internal event data and does not fetch data from external
+      sources. It mutates internal data by creating new entities and relationships,
+      and updates existing entities with new properties. It does not mutate external
+      data, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action processes `self.soar_action.current_alert.security_events` to extract
+      cloud resource identifiers. It does not iterate over `target_entities` to perform
+      its primary logic, but only searches existing entities to avoid duplicates.
+      Therefore, it does not run on specific entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action extracts cloud resource identifiers from alert events and creates
+      entities and relationships internally. It does not fetch external enrichment
+      data, mutate external systems, or match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+"Create SCC Enterprise Cloud Posture Ticket Type Jira":
+  ai_description: >-
+    ### General Description
+
+    This action bootstraps the Jira environment required for the SCC Enterprise integration.
+    It ensures that a dedicated project, a specific issue type, and all necessary
+    custom fields and screens are correctly configured in the target Jira instance.
+    This setup is a prerequisite for the 'Sync SCC-Jira Tickets' job and 'Posture
+    Findings with Jira' playbook.
+
+
+    ### Flow Description
+
+    1. Initializes the Jira client using the provided credentials and API root.
+
+    2. Makes an API call to check if the 'SCC Enterprise Project' exists. If not,
+    it makes API calls to create the project along with a default workflow and status
+    mapping.
+
+    3. Makes an API call to verify the existence of the 'SCC Enterprise Cloud Posture
+    Ticket' issue type within the project. If missing, it makes API calls to create
+    and assign this custom issue type.
+
+    4. Iterates through a predefined list of custom fields and makes API calls to
+    ensure they are created and correctly associated with the project and issue type.
+
+    5. Makes API calls to set up custom screens and screen schemes to ensure the Jira
+    UI correctly displays the relevant SCC fields for the new issue type.
+
+    6. Makes an API call to create a 'Posture Test Ticket' in the newly configured
+    project to verify that the entire setup is functional. The details of this test
+    ticket are returned as the action's output.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Bootstraps the Jira environment for the SCC Enterprise integration by creating
+    a dedicated project, issue type, custom fields, screens, and a verification test
+    ticket.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new project, issue type, custom fields, screens, and a test ticket
+      in the target Jira instance.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes POST/PUT requests to Jira to create a project, issue type,
+      custom fields, screens, and a test ticket (can_mutate_external_data=true). It
+      does not fetch contextual data for alerts, mutate internal data, update entities,
+      or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It performs configuration tasks
+      on the external Jira instance without referencing specific entities from the
+      case.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: true
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action configures Jira by creating projects, issue types, and fields. As
+      a final step, it creates a test ticket in Jira to verify the configuration,
+      which matches the 'Create Ticket' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | API Root | String | Yes | API root of the Jira instance. |
+
+    | Username | String | Yes | Username of the Jira account. |
+
+    | API Token | Password | Yes | Password of the Jira account. |
+
+    | Verify SSL | Boolean | No | If enabled, verify the SSL certificate for the connection
+    to Jira is valid. |
+"Create SCC Enterprise Cloud Posture Ticket Type SNOW":
+  ai_description: >-
+    Bootstraps the ServiceNow environment to support SCC Enterprise Cloud Posture
+    ticket synchronization. This action is a prerequisite for the 'Sync SCC-ServiceNow
+    Tickets' job and associated playbooks. It automates the creation of the necessary
+    schema and UI components in ServiceNow to ensure the integration functions correctly.
+
+
+    ### Flow Description
+
+    1. Validates connection details and extracts configuration parameters from the
+    SOAR environment.
+
+    2. Checks for the existence of the specified 'Table Role' in ServiceNow and creates
+    it if it is the default value and currently missing.
+
+    3. Creates the custom ServiceNow table `u_scc_enterprise_cloud_posture_ticket`
+    and populates it with a predefined set of fields including severity, status, cloud
+    environment, and finding details.
+
+    4. Sets up business rules in ServiceNow, such as logic to automatically set the
+    'Closed' timestamp when a ticket status changes to Resolved.
+
+    5. Creates a ServiceNow Application Menu and Module to allow users to navigate
+    to the new table within the ServiceNow user interface.
+
+    6. Configures the default Form and List views for the new table to ensure data
+    is displayed in a structured and readable format.
+
+    7. Inserts a dummy test ticket into the newly created table to confirm the entire
+    setup is functional and returns the result as JSON.
+  ai_short_description: >-
+    Bootstraps the ServiceNow environment by creating a custom table, roles, business
+    rules, and UI components to support SCC Enterprise Cloud Posture ticket synchronization.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a custom table, roles, business rules, application modules, UI views,
+      and a test ticket in ServiceNow.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action mutates external data by creating a custom table, roles, business
+      rules, application modules, UI views, and a test ticket in ServiceNow. It does
+      not fetch contextual data, mutate internal data, update entities, or create
+      insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It performs a setup operation in
+      ServiceNow without referencing specific entities from the case.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a bootstrap/setup script that creates schema, roles, and UI components
+      in ServiceNow. It does not align with standard operational outcome categories
+      like enriching IOCs, updating alerts, or creating operational tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | API Root | String | Yes | API root of the ServiceNow instance. |
+
+    | Username | String | Yes | Username of the ServiceNow account. |
+
+    | Password | Password | Yes | Password of the ServiceNow account. |
+
+    | Verify SSL | Boolean | No | If enabled, verify the SSL certificate for the connection
+    to the ServiceNow is valid. |
+
+    | Table Role | String | No | Specify the role that should be set to access the
+    newly created table. If nothing is provided, action will create a new role "u_scc_enterprise_cloud_posture_ticket_user".
+    |
+Lock Playbook:
+  ai_description: >-
+    ### General Description
+
+    Enforces sequential playbook execution for Google Security Command Center (SCC)
+    Posture cases. This action acts as a software mutex (lock), ensuring that only
+    one playbook instance processes a case at any given time. It utilizes a 'Smart
+    Lock' mechanism stored within the case context to track which alert currently
+    holds execution priority. If another alert's playbook is already running, this
+    action will pause and wait (entering an IN_PROGRESS state) until the lock becomes
+    available.
+
+
+    ### Flow Description
+
+    1. **Check Lock Status**: Retrieve the `SCC-SMART-LOCK` property from the case
+    context.
+
+    2. **Initial Acquisition**: If no lock exists, the current alert acquires the
+    lock by writing its identifiers to the case context and the action completes.
+
+    3. **Self-Verification**: If a lock exists and is already held by the current
+    alert, the action completes successfully.
+
+    4. **Conflict Resolution**: If the lock is held by a different alert, the action
+    checks the status of that alert's workflow instances.
+
+    5. **Wait State**: If the previous alert's playbook is still running, the action
+    sets its state to `IN_PROGRESS` to trigger an asynchronous retry.
+
+    6. **Lock Handover**: If the previous alert's playbook has finished, the current
+    alert takes over the lock and the action completes.
+
+
+    ### Additional Notes
+
+    - This action is designed for use in asynchronous environments. It will automatically
+    transition to an 'In Progress' state if the lock is held by an active playbook,
+    allowing the SOAR engine to retry the action until the lock is released.
+
+    - The lock is stored in the case context property `SCC-SMART-LOCK`.
+  ai_short_description: >-
+    Enforces sequential playbook execution for Google Security Command Center (SCC)
+    Posture cases by acting as a software mutex (lock) stored within the case context.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Sets a case context property (`SCC-SMART-LOCK`) to act as a mutex for playbook
+      execution.
+    reasoning: >-
+      The action reads and writes case context properties (`SCC-SMART-LOCK`) to manage
+      playbook execution locks. It fetches internal workflow instance data but does
+      not fetch external contextual data. It mutates internal data by setting the
+      case context property.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It interacts with the case context
+      and alert identifiers to manage playbook execution locks.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action manages internal playbook execution concurrency by setting and checking
+      case context properties. It does not interact with external systems, enrich
+      data, or match any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    and configuration of the **SCC Enterprise** integration within Google SecOps.
+    Its primary purpose is to ensure that the integration is correctly set up and
+    that the platform can successfully initialize the integration's components. This
+    action is typically used during initial setup or for troubleshooting communication
+    issues.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the SCC Enterprise base action class
+    and sets the default success and error messages.
+
+    2. **Connectivity Check**: The action executes a placeholder connectivity test
+    to verify that the integration logic is reachable.
+
+    3. **Result Reporting**: If the initialization and execution complete without
+    exceptions, the action returns a success message indicating that the integration
+    is functional.
+
+
+    ### Additional Notes
+
+    - This action does not process or interact with any entities (IPs, Hosts, etc.).
+
+    - It is a non-functional action intended solely for connectivity validation.
+
+    - Following standard SOAR practices, this action is not categorized as an enrichment
+    task.
+  ai_short_description: >-
+    A diagnostic utility designed to verify the connectivity and configuration of
+    the SCC Enterprise integration within Google SecOps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action is a simple ping test. It does not fetch data, mutate external data,
+      mutate internal data, update entities, create insights, modify alert data, or
+      create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or interact with any entities. It is a simple connectivity
+      test.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple ping/connectivity test and does not perform any enrichment,
+      mutation, or interaction with external systems beyond a basic connection check.
+      Therefore, it does not match any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Prepare Description:
+  ai_description: >-
+    ### General Description
+
+    This action prepares a formatted description for an ITSM ticket (such as Jira
+    or ServiceNow) based on Google Security Command Center (SCC) finding data. It
+    dynamically generates content by combining alert-level metadata with a summary
+    table of all findings associated with the current case. The output can be formatted
+    as either HTML or Jira Wiki Markup.
+
+
+    ### Flow Description
+
+    1. Retrieves the 'Output' format preference from the action configuration.
+
+    2. Determines the cloud provider (GCP, AWS, or Azure) by analyzing the current
+    alert's source grouping identifier.
+
+    3. Pulls finding details such as descriptions, recommendations, next steps, and
+    CVSS/CVE information from the alert's event data.
+
+    4. Fetches the finding state context (a list of all findings in the case) from
+    the internal case context property `SCC-FINDINGS-STATE`.
+
+    5. Creates a summary table (HTML or JWM) listing impacted resources, their status,
+    severity, and links to the SCC console.
+
+    6. Uses Jinja2 templates to render the final description, merging the extracted
+    finding details with the generated summary table.
+
+    7. Returns the final formatted string in the action's JSON results.
+
+
+    ### Additional Notes
+
+    - This action relies on the `SCC-FINDINGS-STATE` case context property. It is
+    expected that the 'Set SCC-FINDINGS-STATE Context Value' action has been executed
+    earlier in the playbook.
+
+    - If no description can be generated (e.g., missing context), the action will
+    return a failure status.
+  ai_short_description: >-
+    Prepares a formatted description for an ITSM ticket (such as Jira or ServiceNow)
+    based on Google Security Command Center (SCC) finding data, outputting either
+    HTML or Jira Wiki Markup.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action reads data from the current alert and case context, formats it using
+      a template, and returns the result. It does not fetch data from external APIs,
+      mutate external data, mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use entity-specific identifiers.
+      It operates on the current alert and case context data.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action formats data into a description string and returns it as a JSON result.
+      It does not interact with external systems to create tickets, enrich data, or
+      perform any other categorized outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Output | String | No | Specifies the output format of the generated description.
+    Options are 'HTML' (typically for ServiceNow) or 'Jira Wiki Markup' (for Jira).
+    |
+Set SCC-FINDINGS-STATE Context Value:
+  ai_description: >-
+    ### General Description
+
+    The **Set SCC-FINDINGS-STATE Context Value** action is a utility task designed
+    to maintain a structured state of Google Security Command Center (SCC) findings
+    within a Google SecOps case. It populates or updates a specific case context property
+    named `SCC-FINDINGS-STATE`. This context serves as a central data store for other
+    automated processes, such as the 'Sync SCC Data' job and ITSM (ServiceNow/Jira)
+    synchronization tasks, allowing them to track finding statuses, Attack Exposure
+    (APS) scores, and resource associations across multiple alerts in a single case.
+
+
+    ### Flow Description
+
+    1. **Read Existing Context**: The action retrieves the current value of the `SCC-FINDINGS-STATE`
+    property from the case context.
+
+    2. **Extract Finding Data**: It parses the first event of the current alert to
+    extract finding-specific details, including the finding ID, state (Active/Inactive),
+    APS score, and resource name.
+
+    3. **Deduplication Check**: It compares the current alert's finding data against
+    the existing context. If the finding is already recorded and the instance URL
+    is set, the action terminates to avoid redundant updates.
+
+    4. **Update Context**: If the finding is new, the action identifies the cloud
+    provider (GCP, AWS, or Azure) from the alert's source grouping identifier, adds
+    the new finding metadata to the collection, and sorts the list based on state
+    and severity.
+
+    5. **Commit Changes**: The updated finding state is serialized to JSON and saved
+    back to the `SCC-FINDINGS-STATE` case context property.
+
+
+    ### Additional Notes
+
+    This action is typically used as a building block in playbooks to ensure that
+    finding metadata is consistently available for downstream reporting and synchronization
+    logic.
+  ai_short_description: >-
+    Maintains a structured state of Google Security Command Center (SCC) findings
+    within a Google SecOps case by populating or updating a specific case context
+    property named `SCC-FINDINGS-STATE`.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the case context property `SCC-FINDINGS-STATE` with new finding metadata.
+    reasoning: >-
+      The action reads the current case context property, extracts finding data from
+      the alert's first event, and updates the case context property with the new
+      finding metadata. It does not fetch external data, mutate external data, update
+      entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process target entities. It operates on
+      the current alert's event data and case context properties.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates an internal case context property with finding data extracted
+      from the alert's events. It does not match any of the specific external outcome
+      categories like enriching IOCs, updating tickets, or blocking IPs.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

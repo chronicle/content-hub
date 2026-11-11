@@ -1,0 +1,50 @@
+from __future__ import annotations
+INTEGRATION_IDENTIFIER = "GoogleCloudIAM"
+INTEGRATION_DISPLAY_NAME = "Google Cloud IAM"
+
+API_URL = "https://iam.googleapis.com"
+SCOPES = [
+    "https://www.googleapis.com/auth/iam",
+    "https://www.googleapis.com/auth/cloud-platform",
+]
+
+PING_SCRIPT_NAME = "Ping"
+GET_SERVICE_ACCOUNT_IAM_POLICY_SCRIPT_NAME = "Get Service Account IAM Policy"
+SET_SERVICE_ACCOUNT_IAM_POLICY_SCRIPT_NAME = "Set Service Account IAM Policy"
+DISABLE_SERVICE_ACCOUNT_SCRIPT_NAME = "Disable Service Account"
+ENABLE_SERVICE_ACCOUNT_SCRIPT_NAME = "Enable Service Account"
+DELETE_SERVICE_ACCOUNT_SCRIPT_NAME = "Delete Service Account"
+LIST_ROLES_SCRIPT_NAME = "List Roles"
+CREATE_ROLE_SCRIPT_NAME = "Create Role"
+DELETE_ROLE_SCRIPT_NAME = "Delete Role"
+LIST_SERVICE_ACCOUNTS_SCRIPT_NAME = "List Service Accounts"
+CREATE_SERVICE_ACCOUNT_SCRIPT_NAME = "Create Service Account"
+ENRICH_ENTITIES_SCRIPT_NAME = "Enrich Entities"
+ROTATE_SERVICE_ACCOUNT_KEYS_SCRIPT_NAME: str = "Rotate Service Account Keys"
+
+INVALID_JSON_PAYLOAD = "Invalid JSON payload"
+INVALID_ARGUMENT = "INVALID_ARGUMENT"
+ALREADY_EXISTS = "ALREADY_EXISTS"
+NON_EXISTING_ROLE_NAME = ["The role named", "was not found"]
+ROLE_ALREADY_DELETED = ["role_id", "already deleted"]
+INVALID_ROLE_ID = ["role_id", "is", "invalid"]
+
+DEFAULT_ROLE_VIEW = "Basic"
+
+ROLE_VIEW_PARAMETERS_MAPPER = {"Basic": "BASIC", "Full": "FULL"}
+
+DEFAULT_MAX_ROLES_TO_RETURN = 50
+DEFAULT_MAX_SERVICE_ACCOUNTS_TO_RETURN = 50
+MAX_PAGE_SIZE = 1000
+DEFAULT_PAGE_SIZE = 300
+
+MAX_PAGE_SIZE_SERVICE_ACCOUNTS = 100
+DEFAULT_PAGE_SIZE_SERVICE_ACCOUNTS = 20
+
+ENRICHMENT_PREFIX = "G_IAM"
+SA_RESOURCE_NAME_PATTERN = r"projects\/((\w|-)+)\/serviceaccounts\/((\w|-|\.|@)+)"
+DEFAULT_SA_KEY_TYPE: str = "USER_MANAGED"
+
+MAX_SERVICE_ACCOUNT_KEYS: int = 10
+NOT_FOUND_STATUS_CODE: int = 404
+BAD_REQUEST_STATUS_CODE: int = 400

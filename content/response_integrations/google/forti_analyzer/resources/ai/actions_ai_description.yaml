@@ -1,0 +1,768 @@
+Add Comment To Alert:
+  ai_description: >-
+    ### General Description
+
+    The **Add Comment To Alert** action allows users to append a comment to a specific
+    alert within a FortiAnalyzer instance. This is useful for documenting investigation
+    steps, providing context, or updating the status of an alert directly from Google
+    SecOps.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the necessary configuration and action
+    parameters (Alert ID and Comment).
+
+    2. **Authentication**: Establishes a session with the FortiAnalyzer API.
+
+    3. **Alert Lookup**: The action searches for the alert using the provided `Alert
+    ID` via an API request to retrieve its metadata, specifically the Administrative
+    Domain (ADOM) it belongs to.
+
+    4. **Comment Submission**: Once the ADOM is identified, the action sends an update
+    request (POST) to the FortiAnalyzer API to add the specified comment to the alert.
+
+    5. **Result Handling**: The action returns the API response as a JSON result and
+    provides a success message upon completion.
+
+
+    ### Additional Notes
+
+    - This action requires the `Alert ID` to exist in FortiAnalyzer. If the alert
+    is not found, the action will fail.
+
+    - The comment is added to the external FortiAnalyzer system and does not automatically
+    create a comment within the Google SecOps case wall unless explicitly configured
+    in a playbook.
+  ai_short_description: >-
+    Appends a comment to a specific alert within a FortiAnalyzer instance.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a comment to a specific alert in the external FortiAnalyzer system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to FortiAnalyzer to add a comment to an alert,
+      which mutates external data (can_mutate_external_data=true). It does not fetch
+      contextual data for enrichment, nor does it mutate internal SecOps data, update
+      entities, create insights, modify internal alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the `Alert ID` and `Comment` parameters provided
+      in the action configuration. Therefore, it does not run on entities and all
+      entity type flags are false.
+  outcome_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a POST request to FortiAnalyzer to append a comment to an
+      existing alert. This directly aligns with the 'Add Alert Comment' expected outcome.
+      It does not enrich IOCs, update internal SecOps alerts, or interact with ticketing
+      systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | String | Yes | Specify the ID of the alert that needs to be updated.
+    |
+
+    | Comment | String | Yes | Specify the comment for the alert. |
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and IP Address entities with device information retrieved from
+    FortiAnalyzer. This action connects to a FortiAnalyzer instance to fetch metadata
+    such as OS version, platform type, serial number, and connection status for the
+    target entities. The retrieved data is then mapped to the entity's additional
+    properties and displayed in a structured data table within the case.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts connection parameters and filters the
+    target entities to identify supported types (ADDRESS and HOSTNAME).
+
+    2. **Authentication**: It establishes a session with FortiAnalyzer using the provided
+    credentials.
+
+    3. **Data Retrieval**: For each supported entity, the action queries the FortiAnalyzer
+    device database (`/dvmdb/device`) using the IP address or Hostname as a filter
+    via a POST request.
+
+    4. **Enrichment**: If a matching device is found, the action updates the entity's
+    additional properties with a prefix 'FortiAn', marks the entity as enriched, and
+    adds a detailed CSV-formatted data table to the entity in the SOAR interface.
+
+    5. **Finalization**: The action updates the modified entities in the system, logs
+    out of the FortiAnalyzer session, and returns a summary of successful and failed
+    enrichments.
+
+
+    ### Additional Notes
+
+    - Supported entity types are Hostname and IP Address.
+  ai_short_description: >-
+    Enriches Hostname and IP Address entities with device information retrieved from
+    FortiAnalyzer, mapping metadata such as OS version and platform type to the entity's
+    additional properties.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to FortiAnalyzer API (`/dvmdb/device`) to fetch
+      device data. It does not mutate external data but updates internal entities
+      with the fetched data and adds an entity table. It does not create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS,
+      EntityTypes.HOSTNAME]`. This means it targets ADDRESS and HOSTNAME entities,
+      filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches device information (like OS version, platform type, serial
+      number) for IP and Hostname entities from FortiAnalyzer. This matches the 'Enrich
+      Asset' expected outcome, as it returns contextual metadata for a resource. It
+      does not return threat intelligence, so it is not 'Enrich IOC'.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    between Google SecOps and the FortiAnalyzer server. It ensures that the provided
+    integration configuration parameters (API Root, Username, Password, and SSL settings)
+    are correct and that the network path is open.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action extracts the integration configuration
+    settings.
+
+    2. **Authentication**: It attempts to log in to the FortiAnalyzer server via the
+    `/jsonrpc` endpoint to obtain a session ID.
+
+    3. **Connectivity Test**: Once authenticated, it executes a lightweight API call
+    (requesting a single alert from `/eventmgmt/alerts`) to confirm that the session
+    is valid and the user has sufficient permissions.
+
+    4. **Session Termination**: Regardless of the test result, the action attempts
+    to log out and close the session to prevent resource leakage on the FortiAnalyzer
+    server.
+
+    5. **Result Reporting**: The action returns a success message if all steps complete
+    without error, or a failure message detailing the exception encountered.
+
+
+    ### Additional Notes
+
+    * This action is typically used during the initial setup of the integration or
+    for troubleshooting connection issues.
+
+    * It performs a full authentication cycle (login, test request, and logout) to
+    ensure the session management is functioning correctly.
+  ai_short_description: >-
+    Verifies connectivity between Google SecOps and the FortiAnalyzer server using
+    the provided integration configuration parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action is a simple connectivity test (Ping). It authenticates to the FortiAnalyzer
+      API, makes a lightweight request to verify access, and then logs out. It does
+      not fetch contextual data for cases, nor does it mutate any external or internal
+      data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action is a system-level diagnostic test that does not process or iterate
+      over any entities. Therefore, all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic ping to test connectivity with the FortiAnalyzer
+      server. It does not perform any enrichment, containment, ticketing, or other
+      operations that match the defined outcome categories. Therefore, all outcome
+      category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Search Logs:
+  ai_description: >-
+    ### General Description
+
+    Searches for logs in FortiAnalyzer based on specified criteria such as log type,
+    time frame, and custom query filters. This action operates asynchronously, meaning
+    it initiates a search task and polls for completion before retrieving the results.
+    It is designed for broad log discovery and does not target specific entities within
+    a case.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts configuration details and user-provided
+    search parameters.
+
+    2. **Task Creation (First Run)**: On the initial execution, the action calculates
+    the required timestamps and sends a POST request to the FortiAnalyzer API (`/logview/adom/root/logsearch`)
+    to create a new log search task.
+
+    3. **Async Polling**: The action enters an asynchronous state, storing the task
+    ID. In subsequent runs, it polls the FortiAnalyzer API (`/logview/adom/root/logsearch/{task_id}`)
+    to check the progress of the search task.
+
+    4. **Data Retrieval**: Once the search task progress reaches 100%, the action
+    retrieves the resulting logs up to the specified 'Max Logs To Return' limit.
+
+    5. **Output**: The retrieved logs are formatted as a JSON result and the action
+    execution is completed.
+
+
+    ### Additional Notes
+
+    * **Asynchronous Execution**: This action is marked as async. It will return an
+    'In Progress' status while the FortiAnalyzer server processes the search task.
+    Ensure the script timeout in the IDE is adjusted if searching large volumes of
+    data.
+
+    * **Custom Time Frame**: Either a predefined 'Time Frame' must be selected, or
+    'Custom' must be selected with a valid 'Start Time'.
+  ai_short_description: >-
+    Searches for logs in FortiAnalyzer based on specified criteria such as log type,
+    time frame, and custom query filters, returning the results as JSON.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes POST requests to FortiAnalyzer to create a search task and
+      retrieve log results. It fetches data but does not mutate external state (other
+      than transient search tasks), nor does it update internal entities or create
+      insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It relies entirely
+      on the provided action parameters to perform the search.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for logs based on criteria and returns them, which aligns
+      perfectly with the 'Search Events' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Log Type | String | No | Specify the log type that needs to be searched. |
+
+    | Case Sensitive Filter | Boolean | No | If enabled, the filter is case sensitive.
+    |
+
+    | Query Filter | String | No | Specify the query filter for the search. |
+
+    | Device ID | String | No | Specify the ID of the device that needs to be searched.
+    If nothing is provided, the action searches in All_Fortigate. Examples of values:
+    All_FortiGate, All_FortiMail, All_FortiWeb, All_FortiManager, All_Syslog, All_FortiClient,
+    All_FortiCache, All_FortiProxy, All_FortiAnalyzer, All_FortiSandbox, All_FortiAuthenticator,
+    All_FortiDDoS. |
+
+    | Time Frame | String | No | Specify a time frame for the results. If "Custom"
+    is selected, you also need to provide the "Start Time" parameter. |
+
+    | Start Time | String | No | Specify the start time for the results. This parameter
+    is mandatory, if "Custom" is selected for the "Time Frame" parameter. Format:
+    ISO 8601 |
+
+    | End Time | String | No | Specify the end time for the results. Format: ISO 8601.
+    If nothing is provided and "Custom" is selected for the "Time Frame" parameter
+    then this parameter uses current time. |
+
+    | Time Order | String | No | Specify the time ordering in the search. |
+
+    | Max Logs To Return | Integer | No | Specify the number of logs you want to return.
+    Default: 20. Maximum: 1000. |
+Update Alert:
+  ai_description: >-
+    ### General Description
+
+    Updates the status and metadata of a specific alert within FortiAnalyzer. This
+    action allows for acknowledging or unacknowledging alerts, marking them as read,
+    and assigning them to specific users. It requires the Alert ID and at least one
+    modification parameter to be configured.
+
+
+    ### Flow Description
+
+    1. Extracts the Alert ID and the desired update values (Acknowledge Status, Mark
+    As Read, Assign To) from the action parameters.
+
+    2. Validates that at least one update parameter is provided; otherwise, the action
+    fails early.
+
+    3. Queries FortiAnalyzer to find the alert by ID. This step is necessary to retrieve
+    the alert's ADOM, which is required for the update endpoints.
+
+    4. Executes the requested updates:
+       - If 'Acknowledge Status' is provided, it calls the acknowledgment endpoint.
+       - If 'Mark As Read' is true, it calls the read-status endpoint.
+       - If 'Assign To' is provided, it calls the assignment endpoint.
+    5. Fetches the updated alert object from FortiAnalyzer to provide the most current
+    state in the action's JSON result.
+
+
+    ### Additional Notes
+
+    - At least one of the following parameters must be provided/changed for the action
+    to execute: 'Acknowledge Status', 'Mark As Read', or 'Assign To'.
+
+    - The action automatically identifies the Administrative Domain (ADOM) associated
+    with the alert before applying updates.
+  ai_short_description: >-
+    Updates the status, acknowledgment, read state, or assignee of a specific alert
+    within FortiAnalyzer.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the acknowledgment status, read status, and assignee of a specific alert
+      in FortiAnalyzer.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by querying the alert to retrieve its ADOM and final
+      state. It mutates external data by sending POST requests to FortiAnalyzer to
+      update the alert's acknowledgment, read status, and assignee. It does not mutate
+      internal SOAR data, update entities, create insights, or add case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It relies entirely on the 'Alert
+      ID' parameter provided in the action configuration to target a specific alert
+      in FortiAnalyzer. Therefore, all entity types and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies the status, read state, and assignee of an alert in FortiAnalyzer.
+      This directly aligns with the 'Update Alert' expected outcome, which involves
+      changing the status or assignee of an alert within the SecOps platform.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: true
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | String | Yes | Specify the ID of the alert that needs to be updated.
+    |
+
+    | Acknowledge Status | Dropdown | No | Specify the acknowledgment status for alert.
+    Options: Select One, Acknowledge, Unacknowledge. |
+
+    | Mark As Read | Boolean | No | If enabled, the action marks the alert as read.
+    |
+
+    | Assign To | String | No | Specify to whom the alert needs to be assigned. |

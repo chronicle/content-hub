@@ -1,0 +1,435 @@
+<!-- Custom Widget / Integration Version when it was updated 23.0 -->
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700,700i" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css?family=Source Sans Pro" rel="stylesheet"/>
+  <script
+   src="https://cdn.jsdelivr.net/npm/showdown@1.9.0/dist/showdown.min.js"
+   integrity="sha384-KpuxVjTC2hfOkg5KV3jSdx1eA6xy0PGS0wNfDrwf4sZBnZdzlIsnkH+LzLkavmH7"
+   crossorigin="anonymous"></script>
+  <script
+   src="https://cdn.jsdelivr.net/npm/dompurify@3.4.17/dist/purify.min.js"
+   integrity="sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx"
+   crossorigin="anonymous"></script>
+  <title>
+   Google Threat Intelligence - Ask Threat Intelligence Agent
+  </title>
+  <style>
+   /* 1. ROOT VARIABLES & THEMES */
+    :root {
+      /* Layout & Colors */
+      --widget-bg: #212c44;
+      --widget-font-family: 'Source Sans Pro', sans-serif;
+      --widget-text-color: #ffffff;
+      --scrollbar-bg-color: #6275a3;
+
+      /* Components */
+      --widget-row-highlight-bg: #2f3d5c;
+      --divider-border-colcor: #3a4a6c;
+      --divider-border-width: 1px;
+
+      /* Table */
+      --table-color-even-row: #26334f;
+
+      /* Logo */
+      --logo-size: 48px;
+      --logo-color: #ffffff;
+
+      /* UI Elements */
+      --input-border: #6275a3;
+      --status-text: #b5b5b5;
+      --link-color: #78d9ec;
+    }
+
+    html.light-theme {
+      --widget-bg: #ffffff !important;
+      --widget-text-color: #0f1029;
+      --scrollbar-bg-color: #d3d8ea;
+      --widget-row-highlight-bg: #e5e8f2;
+      --divider-border-colcor: #d3d8ea;
+      --table-color-even-row: #f4f5fa;
+      --logo-color: #4e4f63;
+      --input-border: #d3d8ea;
+      --status-text: #6b6d7a;
+      --link-color: #0088a5;
+    }
+
+    html.dark-theme {
+      --widget-bg: #232330 !important;
+      --widget-text-color: #ffffff;
+      --scrollbar-bg-color: #303045;
+      --widget-row-highlight-bg: #5f6368;
+      --divider-border-colcor: #303045;
+      --table-color-even-row: #3c4043;
+      --logo-color: #ffffff;
+      --input-border: #80808b;
+      --link-color: #8ab4f8;
+    }
+
+    /* 2. RESET & BASICS */
+    * {
+      margin: 0;
+      padding: 0;
+      outline: none;
+      box-sizing: border-box;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-bg-color) transparent;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: var(--scrollbar-bg-color);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+
+    /* 3. GLOBAL LAYOUT */
+    body {
+      font-family: var(--widget-font-family), serif;
+      color: var(--widget-text-color);
+      background-color: var(--widget-bg);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .wrapper {
+      display: flex;
+      flex: 1;
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 4. LOGO */
+    .logo {
+      width: var(--logo-size) !important;
+      height: var(--logo-size) !important;
+      min-width: var(--logo-size) !important;
+      max-width: var(--logo-size) !important;
+      flex: 0 0 var(--logo-size) !important;
+      color: var(--logo-color);
+    }
+    .wrapper > .logo {
+      position: absolute;
+      top: 3px;
+      right: 20px;
+      z-index: 10;
+    }
+
+    /* 5. MAIN CONTENT & MARKDOWN STYLING */
+    .main-content {
+      flex: 1;
+      overflow: auto;
+      padding: 12px 68px 12px 12px;
+    }
+
+    .markdown-content {
+      font: 400 14px/20px var(--widget-font-family);
+      color: var(--widget-text-color);
+      word-break: break-word;
+    }
+
+    .markdown-content h1,
+    .markdown-content h2,
+    .markdown-content h3,
+    .markdown-content h4,
+    .markdown-content h5,
+    .markdown-content h6 {
+      font-weight: 600;
+      line-height: 1.3;
+      margin: 14px 0 6px 0;
+    }
+
+    .markdown-content h1:first-child,
+    .markdown-content h2:first-child,
+    .markdown-content h3:first-child,
+    .markdown-content h4:first-child,
+    .markdown-content p:first-child {
+      margin-top: 0;
+    }
+
+    .markdown-content h1 { font-size: 20px; }
+    .markdown-content h2 { font-size: 18px; }
+    .markdown-content h3 { font-size: 16px; }
+    .markdown-content h4,
+    .markdown-content h5,
+    .markdown-content h6 { font-size: 14px; }
+
+    .markdown-content p {
+      margin: 6px 0;
+    }
+
+    .markdown-content ul {
+      list-style: disc;
+      padding-left: 20px;
+      margin: 6px 0;
+    }
+
+    .markdown-content ol {
+      list-style: decimal;
+      padding-left: 20px;
+      margin: 6px 0;
+    }
+
+    .markdown-content li {
+      margin: 4px 0;
+    }
+
+    .markdown-content a {
+      color: var(--link-color);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .markdown-content code {
+      background-color: var(--widget-row-highlight-bg);
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .markdown-content pre {
+      background-color: var(--table-color-even-row);
+      border: 1px solid var(--divider-border-colcor);
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin: 8px 0;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .markdown-content pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+    }
+
+    .markdown-content blockquote {
+      border-left: 3px solid var(--input-border);
+      padding-left: 12px;
+      margin: 8px 0;
+      color: var(--status-text);
+    }
+
+    .markdown-content hr {
+      border: 0;
+      border-top: 1px solid var(--divider-border-colcor);
+      margin: 12px 0;
+    }
+
+    .markdown-content table {
+      width: 100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin: 8px 0;
+    }
+
+    .markdown-content th,
+    .markdown-content td {
+      border: 1px solid var(--divider-border-colcor);
+      padding: 6px 10px;
+      text-align: left;
+      font-size: 14px;
+      vertical-align: top;
+    }
+
+    .markdown-content th {
+      background-color: var(--widget-row-highlight-bg);
+      font-weight: 600;
+    }
+
+    .markdown-content tr:nth-child(even) {
+      background-color: var(--table-color-even-row);
+    }
+  </style>
+ </head>
+ <body>
+  <div class="wrapper">
+   <svg class="logo" fill="currentColor" height="28" viewbox="0 0 28 28" width="28" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15.12 4.007c-.6-.07-1.12.401-1.12 1.003 0 .501.37.932.87.982 4.01.432 7.13 3.841 7.13 7.973h2c0-5.135-3.89-9.386-8.88-9.958Zm5.64 14.25a.976.976 0 0 0 .15 1.223c.45.452 1.21.381 1.55-.16A9.94 9.94 0 0 0 24 13.975h-2a8.03 8.03 0 0 1-1.24 4.282Z">
+    </path>
+    <path d="M15.15 8.078c-.6-.12-1.15.381-1.15.993 0 .492.35.883.83.983a4.009 4.009 0 0 1 3.17 3.92h2a6.03 6.03 0 0 0-4.85-5.906v.01Zm4.44 8.083c.27-.672.41-1.414.41-2.186h-2c0 .511-.1.993-.28 1.444a.99.99 0 0 0 .22 1.083c.51.511 1.39.33 1.65-.341Zm-1.32 4.593a7.886 7.886 0 0 1-5.55 1.143c-3.37-.531-6.09-3.26-6.62-6.638-.07-.432-.1-.863-.1-1.284H4c0 .441.03.892.09 1.354.58 4.422 4.15 8.002 8.56 8.584 2.46.32 4.79-.261 6.68-1.454.54-.341.61-1.103.16-1.555a.984.984 0 0 0-1.22-.15Z">
+    </path>
+    <path d="M8.15 15.319c.49 2.236 2.29 4.041 4.52 4.532 1.26.281 2.47.15 3.54-.28.66-.261.83-1.144.32-1.645a.986.986 0 0 0-1.07-.22c-.76.31-1.63.39-2.55.13a4.058 4.058 0 0 1-2.74-2.748 3.926 3.926 0 0 1-.16-1.103h-2c0 .441.05.882.15 1.344l-.01-.01Z">
+    </path>
+    <path d="m14.71 13.273-8-8.023a.994.994 0 0 0-1.41 0 1 1 0 0 0 0 1.414l.97.973A9.953 9.953 0 0 0 4 13.975h2c0-1.845.63-3.55 1.69-4.914l1.43 1.434a5.982 5.982 0 0 0-1.11 3.48h2c0-.742.22-1.434.57-2.026l2.73 2.738c.2.2.45.29.71.29.26 0 .51-.1.71-.29a1 1 0 0 0 0-1.414h-.02Z">
+    </path>
+   </svg>
+   <section class="main-content" id="mainContent">
+    <div class="markdown-content description"></div>
+   </section>
+  </div>
+  <script>
+   /**
+   * Constants for theme settings.
+   */
+  const ThemeSettings = {
+    LIGHT_THEME_CLASS: 'light-theme',
+    DARK_THEME_CLASS: 'dark-theme',
+  };
+
+  const LIGHT_THEME_HEX = "#bdc1c6";
+  const DARK_THEME_HEX = "#282837";
+  const GRAY_THEME_HEX = "#2f3d5c";
+
+  /**
+   * The main 'message' event handler that updates the theme.
+   */
+  function handleThemeUpdate(event) {
+    if (event.source !== window.parent) {
+      return;
+    }
+
+    const styles = event.data;
+
+    if (typeof styles !== 'object' || styles === null) {
+      return;
+    }
+
+    const bg = styles.background || styles.backgroundColor || '';
+    const colorString = bg.toLowerCase().trim();
+
+    let isLight = false;
+    let isDark = false;
+    let isGray = false;
+
+    if (colorString === LIGHT_THEME_HEX) {
+      isLight = true;
+    } else if (colorString === DARK_THEME_HEX) {
+      isDark = true;
+    } else if (colorString === GRAY_THEME_HEX) {
+      isGray = true;
+    } else {
+      let r, g, b;
+      const rgbMatch = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+
+      if (rgbMatch) {
+        r = parseInt(rgbMatch[1]);
+        g = parseInt(rgbMatch[2]);
+        b = parseInt(rgbMatch[3]);
+      } else if (bg.startsWith('#')) {
+        const hex = bg.replace('#', '');
+        const fH = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+        if (fH.length === 6) {
+          r = parseInt(fH.substring(0, 2), 16);
+          g = parseInt(fH.substring(2, 4), 16);
+          b = parseInt(fH.substring(4, 6), 16);
+        }
+      }
+
+      if (r !== undefined) {
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        if (brightness > 128) {
+          isLight = true;
+        }
+      }
+    }
+
+    const html = document.documentElement;
+
+    if (isLight) {
+      html.classList.add(ThemeSettings.LIGHT_THEME_CLASS);
+      html.classList.remove(ThemeSettings.DARK_THEME_CLASS);
+    } else if (isDark) {
+      html.classList.add(ThemeSettings.DARK_THEME_CLASS);
+      html.classList.remove(ThemeSettings.LIGHT_THEME_CLASS);
+    } else {
+      html.classList.remove(ThemeSettings.LIGHT_THEME_CLASS);
+      html.classList.remove(ThemeSettings.DARK_THEME_CLASS);
+    }
+  }
+
+  window.addEventListener('message', handleThemeUpdate);
+
+  const actionListData = [{stepInstanceName}.JsonResult];
+
+  function extractResponseText(data) {
+    if (!data) {
+      return "";
+    }
+    if (Array.isArray(data)) {
+      const firstItem = data[0]?.EntityResult || data[0] || {};
+      return firstItem.response_text || "";
+    }
+    if (typeof data === "object") {
+      return data.response_text || "";
+    }
+    return String(data);
+  }
+
+  function prepareDescription(description, selector) {
+    const element = document.querySelector("." + selector);
+    if (!element) {
+      return;
+    }
+    if (!description) {
+      element.textContent = "N/A";
+      return;
+    }
+    if (typeof DOMPurify === "undefined") {
+      element.textContent = String(description);
+      return;
+    }
+    description = formatDescription(replaceHeaderSpaces(String(description)));
+    element.innerHTML = DOMPurify.sanitize(replaceEmWithUnderscores(description));
+    openLinksInNewTab();
+  }
+
+  function formatDescription(recommendations) {
+    if (typeof showdown !== "undefined") {
+      const converter = new showdown.Converter({
+        tables: true,
+        simplifiedAutoLink: true,
+        strikethrough: true,
+        tasklists: true,
+      });
+      return converter.makeHtml(
+        addSpacesToBullets(recommendations, 3)
+      );
+    }
+    return recommendations;
+  }
+
+  function addSpacesToBullets(markdown, spacesCount) {
+    const spaces = " ".repeat(spacesCount);
+    return markdown.replace(/^(\s*)- /gm, `$1${spaces}- `);
+  }
+
+  function replaceHeaderSpaces(description) {
+    return description.replace(/(\n+)\s*(#+)\s*(.*?)\s*(\n+)/g, '$1$2 $3$4');
+  }
+
+  function replaceEmWithUnderscores(description) {
+    return description.replace(/(\S)<em>(.*?)<\/em>(\S)/g, '$1_$2_$3');
+  }
+
+  function openLinksInNewTab() {
+    const links = document.getElementsByTagName("a");
+    for (let i = 0; i < links.length; i++) {
+      links[i].setAttribute("target", "_blank");
+      links[i].setAttribute("rel", "noopener noreferrer");
+    }
+  }
+
+  prepareDescription(extractResponseText(actionListData), "description");
+  </script>
+ </body>
+</html>

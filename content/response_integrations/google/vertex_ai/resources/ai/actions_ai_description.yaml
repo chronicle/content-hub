@@ -1,0 +1,783 @@
+Analyze EML:
+  ai_description: >-
+    ### General Description
+
+    The **Analyze EML** action leverages Google Vertex AI to perform deep security
+    analysis on EML (Email) files. It is designed to identify potential threats such
+    as phishing links, malicious attachments, and social engineering tactics by processing
+    the raw email content through a generative AI model. The action returns a structured
+    analysis including threat levels, specific findings, and recommended verification
+    steps.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the model configuration and
+    the list of files to be analyzed from the action parameters.
+
+    2. **Validation**: It validates the file list format and ensures numerical parameters
+    (Temperature, Max Tokens) are within valid ranges.
+
+    3. **File Processing**: The action iterates through each provided file path, reads
+    the file from the local system, and Base64 encodes the content.
+
+    4. **AI Analysis**: For each file, a specialized security analyst prompt is constructed
+    and sent to the Vertex AI API along with the encoded EML data. The prompt instructs
+    the AI to identify phishing, malware, and social engineering risks.
+
+    5. **Result Aggregation**: The AI's response (containing a threat level, identified
+    threats, and protection measures) is parsed and aggregated into a structured JSON
+    result for the SOAR platform.
+
+
+    ### Additional Notes
+
+    This action does not automatically process entities from the case; it requires
+    explicit file paths provided in the 'Files To Analyze' parameter. If a file is
+    not found at the specified path, the action logs an error for that specific file
+    but continues processing others.
+  ai_short_description: >-
+    Leverages Google Vertex AI to perform deep security analysis on EML files, identifying
+    potential threats like phishing and malicious attachments, and returning a structured
+    threat analysis report.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes an API call to Vertex AI to generate content based on the provided
+      EML files (fetches_data=true). It does not mutate any external data, nor does
+      it update internal SecOps data such as entities, insights, or case comments.
+      It only returns a JSON result.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It solely relies on the file paths provided in the 'Files To Analyze'
+      parameter. Therefore, it does not run on entities and all entity type and filtering
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action uploads the contents of an EML file to Vertex AI (acting as an analysis
+      engine) to evaluate security risks and returns a structured threat analysis
+      (threat level, threats found). This aligns with the 'Submit File' expected outcome.
+      It does not enrich specific IOCs or assets, nor does it modify alerts or tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Model ID | String | No | The ID of the model to use, such as gemini-1.5-flash-002.
+    |
+
+    | Publisher Name | String | No | The name of the publisher for the model. |
+
+    | Temperature | String | No | The value to control the degree of randomness in
+    a token selection. This parameter accepts float data type values. |
+
+    | Files To Analyze | String | Yes | Comma-separated list of EML files to submit
+    for analysis. |
+
+    | Max Output Tokens | String | No | The maximum number of output tokens to generate
+    in every response. |
+Describe Entity:
+  ai_description: >-
+    ### General Description
+
+    The **Describe Entity** action utilizes Google Vertex AI to generate concise,
+    human-readable summaries of security entities. It processes metadata associated
+    with any entity type (e.g., IP addresses, hostnames, file hashes) and uses generative
+    AI to provide a high-level overview of the entity's context and attributes within
+    the environment.
+
+
+    ### Flow Description
+
+    1. Extracts action parameters including model configuration and caching preferences.
+
+    2. Iterates over the target entities provided in the action scope.
+
+    3. Retrieves the full metadata for each target entity from Google SecOps.
+
+    4. Flattens the metadata and removes fields specified in the 'Exclude Fields'
+    parameter or the internal default exclusion list.
+
+    5. Calculates a unique hash for the entity data and checks the internal SOAR context
+    for a valid, non-expired summary cache.
+
+    6. If no valid cache exists, sends a request to the Vertex AI API (`generateContent`
+    or `rawPredict`) with the entity data to generate a summary.
+
+    7. Saves the generated summary to the internal cache.
+
+    8. Returns the summary and usage metadata in the action's JSON result.
+
+
+    ### Additional Notes
+
+    - This action implements an internal caching mechanism using the SOAR context
+    to minimize API usage and improve performance.
+
+    - The cache is validated using a hash of the entity's metadata; if the metadata
+    changes (excluding ignored fields), the summary will be regenerated regardless
+    of the 'Refresh After' setting.
+  ai_short_description: >-
+    Utilizes Google Vertex AI to generate concise, human-readable summaries of security
+    entities based on their metadata.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches generated content from the Vertex AI API based on the provided
+      entity metadata. It does not mutate external data, update internal entities,
+      create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over all target entities and processes them without filtering
+      by specific entity types or properties. Therefore, it supports all entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action generates a summary of existing entity metadata using an AI model.
+      It does not fetch new threat intelligence (Enrich IOC), contextual asset metadata
+      from an external system (Enrich Asset), or perform any other specific outcome
+      category operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Model ID | String | No | The ID of the model to use, such as gemini-1.5-flash-002.
+    |
+
+    | Publisher Name | String | No | The name of the publisher for the model. |
+
+    | Temperature | Float | No | The value to control the degree of randomness in
+    a token selection. This parameter accepts float data type values. |
+
+    | Exclude Fields | String | No | A comma-separated list of the Google SecOps entity
+    metadata fields to exclude during the entity summary generation. |
+
+    | Force Refresh | Boolean | No | If selected, the action ignores the "Refresh
+    After (Days)" parameter and hash validation and regenerates the entity summary
+    for every action run. |
+
+    | Refresh After (Days) | Integer | Yes | The number of days for the action to
+    wait before refreshing the entity summary. |
+
+    | Max Output Tokens | Integer | No | The maximum number of output tokens to generate
+    in every response. |
+Execute Prompt:
+  ai_description: >-
+    ### General Description
+
+    Executes a text prompt using Google Vertex AI models (e.g., Gemini). This action
+    allows users to interact with Large Language Models (LLMs) to perform tasks such
+    as summarization, analysis, or data extraction based on a provided text instruction.
+    It supports various model parameters to control the output's creativity, format,
+    and length.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts and validates all input parameters, ensuring types
+    like floats and JSON strings are correctly formatted.
+
+    2. **Token Validation**: If a `Max Input Tokens` limit is set, the action calls
+    the Vertex AI API (`countTokens` or `rawPredict`) to count the tokens in the prompt.
+    If the count exceeds the limit, the action terminates with an error.
+
+    3. **API Interaction**: Constructs a request with the prompt and generation configuration
+    (temperature, candidate count, etc.) and sends it to the Vertex AI service via
+    the `generateContent` or `rawPredict` API call.
+
+    4. **Response Handling**: Receives the generated content from the model, parses
+    the text and metadata, and populates the action's JSON results for use in subsequent
+    playbook steps.
+
+
+    ### Additional Notes
+
+    This action is a utility and does not process or enrich specific SecOps entities
+    (like IPs or Hostnames) automatically; it operates solely on the provided text
+    prompt.
+  ai_short_description: >-
+    Executes a text prompt using Google Vertex AI models to generate content, summarize
+    text, or extract data based on user instructions.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by sending a prompt to the Vertex AI API and retrieving
+      the generated response. It does not mutate external data (as it only queries
+      the AI model for generation), nor does it mutate internal data, update entities,
+      create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or process any
+      entity-specific data. It operates entirely on the provided text prompt parameter.
+      Therefore, all entity types and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action sends a text prompt to a generative AI model and returns the generated
+      response. It does not enrich specific IOCs or assets, update alerts, create
+      tickets, modify blocklists/allowlists, manage identities, or interact with endpoints/emails.
+      Therefore, it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Model ID | String | No | The ID of the model to use, such as gemini-1.5-flash-002.
+    |
+
+    | Publisher Name | String | No | The name of the publisher for the model. |
+
+    | Text Prompt | String | Yes | The text instructions to include in the prompt.
+    |
+
+    | Temperature | String | No | The value to control the degree of randomness in
+    a token selection. This parameter accepts float data type values. |
+
+    | Candidate Count | String | No | The number of response variations to return
+    in every action run. |
+
+    | Response MIME type | String | No | The media (MIME) type of the output response
+    for the generated candidate text. |
+
+    | Response Schema | String | No | The schema for the generated candidate text
+    to follow. To use this parameter, configure the "Response MIME Type" parameter.
+    |
+
+    | Max Input Tokens | String | No | The maximum number of input tokens to submit.
+    If the number of tokens exceeds the configured maximum number, the action fails.
+    |
+
+    | Max Output Tokens | String | No | The maximum number of output tokens to generate
+    in every response. |
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ designed to verify the connectivity between Google SecOps and the Vertex AI\
+    \ service. It validates that the integration's configuration parameters\u2014\
+    such as the API Root, Project ID, and authentication credentials\u2014are correctly\
+    \ set up and that the Vertex AI API is reachable.\n\n### Flow Description\n1.\
+    \ **Authentication**: The action initializes the `AuthManager` to prepare an authorized\
+    \ session using the provided GCP credentials.\n2. **Parameter Extraction**: It\
+    \ retrieves the `Default Model` and `Publisher Name` from the integration's configuration.\n\
+    3. **Connectivity Test**: The action calls the `test_connectivity` method in the\
+    \ `ApiManager`, which executes a `GET` request to the Vertex AI `publishers.models.get`\
+    \ endpoint.\n4. **Result Handling**: If the API call is successful, the action\
+    \ returns a success message. If the request fails (e.g., due to authentication\
+    \ errors or network issues), it raises a `VertexAIManagerException` with the relevant\
+    \ error details.\n\n### Additional Notes\n* This action is strictly for connectivity\
+    \ testing and does not process any alert or entity data.\n* It requires valid\
+    \ Google Cloud credentials (Service Account JSON or Workload Identity) configured\
+    \ at the integration level."
+  ai_short_description: >-
+    Verifies connectivity between Google SecOps and the Vertex AI service by making
+    a test API call to the publishers models endpoint.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Vertex AI API to test connectivity. It
+      does not fetch contextual data for entities, mutate external data, update internal
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It is a diagnostic
+      action that tests connectivity using integration-level parameters, so all entity-related
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic ping utility to test API connectivity. It does not
+      perform enrichment, containment, ticket management, or any other operations
+      that match the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Transform Data:
+  ai_description: >-
+    ### General Description
+
+    The **Transform Data** action leverages Google Vertex AI's generative models to
+    perform structured data transformations. It takes a raw JSON object and a set
+    of natural language instructions (Text Prompt) to produce a new, transformed JSON
+    output. This action is designed for utility tasks such as reformatting data, extracting
+    specific fields, or normalizing values between different system formats within
+    a playbook flow.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the model configuration, the
+    text prompt, and the input JSON object from the action parameters.
+
+    2. **Validation**: It validates that the input JSON is well-formed and that numerical
+    parameters like Temperature and Max Output Tokens are valid.
+
+    3. **Data Preparation**: The input JSON object is serialized and base64-encoded
+    to be sent as inline data within the prompt structure.
+
+    4. **API Interaction**: The action sends a request to the Vertex AI API (using
+    either `generateContent` or `rawPredict` depending on the publisher) containing
+    the instructions and the encoded data.
+
+    5. **Result Processing**: The model's response is parsed as JSON and stored in
+    the action's results for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - This action does not operate on SecOps entities; it processes the specific JSON
+    object provided in the parameters.
+
+    - The output is explicitly requested in `application/json` format via the generation
+    configuration.
+  ai_short_description: >-
+    Uses Google Vertex AI's generative models to perform structured data transformations
+    on a provided JSON object based on natural language instructions.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Vertex AI API to generate content based
+      on the provided JSON object and prompt. It does not fetch contextual data about
+      entities, nor does it mutate external state (like creating tickets or blocking
+      IPs). It also does not update internal SecOps data like entities, insights,
+      or case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on SecOps entities. It processes a specific JSON
+      object provided via action parameters. Therefore, all entity type and filter
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a utility for transforming JSON data using Vertex AI generative
+      models. It does not match any of the specific expected outcomes such as enriching
+      IOCs, managing tickets, modifying alerts, or interacting with endpoints/identities.
+      Thus, all outcome category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Model ID | String | No | The ID of the model to use, such\
+    \ as gemini-1.5-flash-002. |\n| Publisher Name | String | No | The name of the\
+    \ publisher for the model. |\n| Text Prompt | String | Yes | The text instructions\
+    \ to include in the prompt. |\n| Temperature | String | No | The value to control\
+    \ the degree of randomness in a token selection. This parameter accepts float\
+    \ data type values. For more information about temperature values, see \u201C\
+    Experiment with the parameter values\u201D (https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/adjust-parameter-values#temperature).\
+    \ |\n| JSON Object | String | Yes | The JSON object to use as an action input.\
+    \ |\n| Max Output Tokens | String | Yes | The maximum number of output tokens\
+    \ to generate in every response. A token is approximately four characters. 100\
+    \ tokens correspond to roughly 60-80 words. For more information, see \u201CExperiment\
+    \ with parameter values\u201D (https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/adjust-parameter-values#max-output-tokens).\
+    \ |"
