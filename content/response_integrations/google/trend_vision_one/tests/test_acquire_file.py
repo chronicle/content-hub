@@ -555,6 +555,20 @@ class TestAcquireFileAction:
         assert get_json_by_entity(siemplify)["HOST1"]["status"] == "success"
         siemplify.LOGGER.exception.assert_called_once_with("Unable to attach g1_evil_file.exe.zip to the case.")
 
+    def test_unreadable_archive_on_attach_keeps_success(self, tmp_path: pathlib.Path, host: MagicMock) -> None:
+        """Verifies that an archive that cannot be read for the attachment is logged and the target still succeeds."""
+        fake = FakeVisionOne(tmp_path, {"HOST1": "g1"}, {"g1": "succeeded"})
+
+        def setup(manager: MagicMock) -> None:
+            fake.setup(manager)
+            manager.download_collected_file.side_effect = lambda _location, destination, _seconds: destination
+
+        siemplify = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
+
+        assert get_json_by_entity(siemplify)["HOST1"]["status"] == "success"
+        siemplify.result.add_attachment.assert_not_called()
+        siemplify.LOGGER.exception.assert_called_once_with("Unable to attach g1_evil_file.exe.zip to the case.")
+
     def test_large_archive_is_not_attached(
         self,
         tmp_path: pathlib.Path,

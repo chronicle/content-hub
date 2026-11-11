@@ -270,11 +270,11 @@ def attach_file(siemplify: SiemplifyAction, path: pathlib.Path) -> None:
         siemplify: The action object.
         path: The local path of the archive.
     """
-    size = path.stat().st_size
-    if size > ACQUIRE_FILE_MAX_ATTACHMENT_BYTES:
-        siemplify.LOGGER.info(f"{path.name} is not attached to the case. Size {size} bytes is over the limit.")
-        return
     try:
+        size = path.stat().st_size
+        if size > ACQUIRE_FILE_MAX_ATTACHMENT_BYTES:
+            siemplify.LOGGER.info(f"{path.name} is not attached to the case. Size {size} bytes is over the limit.")
+            return
         siemplify.result.add_attachment(
             title=f"Acquired Endpoint File - {path.name}",
             filename=path.name,
