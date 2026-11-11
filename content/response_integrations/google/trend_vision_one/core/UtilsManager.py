@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Container, Iterable, Mapping
 from enum import StrEnum
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -32,7 +31,7 @@ from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, unix_now
 
 from .TrendVisionOneManager import TrendVisionOneManager
-from .TrendVisionOneExceptions import TrendVisionOneException, TrendVisionOneTimeoutException
+from .TrendVisionOneExceptions import TrendVisionOneTimeoutException
 
 from .constants import (
     CANCELED_STATUS,
@@ -44,6 +43,8 @@ from .constants import (
 from . import datamodels
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Container, Iterable, Mapping
+
     from soar_sdk.SiemplifyAction import SiemplifyAction
 
 
@@ -163,7 +164,7 @@ def process_agents(
                 }
                 manager.siemplify.LOGGER.info(f"Agent UUID not found: {agent_id}")
 
-        except TrendVisionOneException as e:
+        except Exception as e:
             agent_result.failed_agents.append(agent_id)
             agent_result.failures[agent_id] = {"error": str(e), "error_type": classify_exception(e)[0]}
             manager.siemplify.LOGGER.error(f"An error occurred on agent: {agent_id}")
@@ -182,7 +183,8 @@ def classify_exception(error: Exception) -> tuple[str, str, int | None]:
         The error type, the exception class name, and the HTTP status code or None.
     """
     underlying = error.__cause__ or error.__context__
-    if not hasattr(error, "error_type") and isinstance(underlying, Exception):
+    is_classifiable = hasattr(error, "error_type") or isinstance(error, requests.RequestException)
+    if not is_classifiable and isinstance(underlying, Exception):
         error = underlying
     http_status = _get_http_status(error)
 

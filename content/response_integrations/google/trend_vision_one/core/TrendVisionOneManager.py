@@ -30,9 +30,9 @@ from .constants import (
     DATETIME_FORMAT,
     DEFAULT_MAX_LIMIT,
     DOWNLOAD_CHUNK_SIZE_BYTES,
-    DOWNLOAD_TIMEOUT_SECONDS,
     ENDPOINTS,
     POSSIBLE_SEVERITIES,
+    REQUEST_TIMEOUT_SECONDS,
     SUCCESSFUL_STATUS_CODES,
 )
 from . import datamodels
@@ -81,7 +81,7 @@ class TrendVisionOneManager:
         Returns:
             () None
         """
-        response = self.session.get(self._get_full_url("healthcheck"))
+        response = self.session.get(self._get_full_url("healthcheck"), timeout=REQUEST_TIMEOUT_SECONDS)
         validate_response(response)
 
     def get_alerts(self, start_timestamp, lowest_severity_filter, limit):
@@ -201,7 +201,7 @@ class TrendVisionOneManager:
         elif agent_id is not None:
             entity_filter = f"agentGuid eq '{agent_id}'"
 
-        response = self.session.get(url, headers={"TMV1-Query": entity_filter})
+        response = self.session.get(url, headers={"TMV1-Query": entity_filter}, timeout=REQUEST_TIMEOUT_SECONDS)
         validate_response(response)
         items = response.json().get("items", [])
         if not items:
@@ -272,13 +272,13 @@ class TrendVisionOneManager:
             TrendVisionOneException: If the endpoint item of the multi-status response is not 2xx.
         """
         payload = [{"agentGuid": guid, "filePath": file_path, "description": description}]
-        response = self.session.post(self._get_full_url("collect_file"), json=payload)
+        response = self.session.post(self._get_full_url("collect_file"), json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
         validate_response(response)
         item = response.json()[0]
         status = item.get("status", 0)
         error = (item.get("body") or {}).get("error") or {}
         task_url = next(
-            (header.get("value") for header in item.get("headers", []) if header.get("name") == "Operation-Location"),
+            (header.get("value") for header in item.get("headers") or [] if header.get("name") == "Operation-Location"),
             None,
         )
         if task_url and error.get("code") == COLLECT_FILE_DUPLICATE_TASK_CODE:
@@ -323,7 +323,7 @@ class TrendVisionOneManager:
         self,
         resource_location: str,
         destination: str,
-        max_seconds: float = DOWNLOAD_TIMEOUT_SECONDS,
+        max_seconds: float = REQUEST_TIMEOUT_SECONDS,
     ) -> str:
         """Download the archive of a finished collect file task.
 
@@ -371,7 +371,7 @@ class TrendVisionOneManager:
             TrendVisionOneException: If the response is not 2xx or the download passes the time limit.
         """
         deadline = time.monotonic() + max_seconds
-        timeout = min(max_seconds, DOWNLOAD_TIMEOUT_SECONDS)
+        timeout = min(max_seconds, REQUEST_TIMEOUT_SECONDS)
         location, api_root = urlparse(resource_location), urlparse(self.api_root)
         response = None
         if location.scheme == "https" and location.hostname == api_root.hostname:
@@ -403,7 +403,7 @@ class TrendVisionOneManager:
         Returns:
             (datamodels.Task)
         """
-        response = self.session.get(task_url)
+        response = self.session.get(task_url, timeout=REQUEST_TIMEOUT_SECONDS)
         validate_response(response)
 
         return self.parser.build_task_obj(response.json())
@@ -628,7 +628,10 @@ class TrendVisionOneManager:
         Returns:
             The isolationStatus value (unknown, on, or off), or None if the response has no value.
         """
-        response = self.session.get(self._get_full_url("endpoint_details", agent_guid=agent_guid))
+        response = self.session.get(
+            self._get_full_url("endpoint_details", agent_guid=agent_guid),
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
         validate_response(response)
 
         return response.json().get("isolationStatus")

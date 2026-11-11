@@ -31,7 +31,7 @@ from soar_sdk.SiemplifyUtils import unix_now
 
 from ..actions import IsolateEndpoint
 from ..core.UtilsManager import TIMEOUT_MARKER_LOGGED_KEY
-from .common import get_summary_lines, make_entity, run_action
+from .common import get_end_args, get_json_by_entity, get_summary_lines, make_entity, run_action
 from .test_action_result_summary import make_http_error
 
 if TYPE_CHECKING:
@@ -47,17 +47,7 @@ def make_manager_setup(
     errors: dict[str, Exception] | None = None,
     method: str = "isolate_endpoint",
 ) -> Callable[[MagicMock], None]:
-    """Build a manager setup that maps lookups to endpoints and task URLs to task statuses.
-
-    Args:
-        endpoints: Endpoint GUID, or the lookup error, for each IP address, hostname, or agent UUID that exists.
-        task_statuses: Task status for each task URL. A test can change it between polls.
-        errors: Exception that the containment call raises for each endpoint GUID.
-        method: The name of the manager containment method.
-
-    Returns:
-        The manager setup function for run_action.
-    """
+    """Build a manager setup that maps lookups to endpoints and task URLs to task statuses."""
 
     def search_endpoint(
         ip: str | None = None,
@@ -86,35 +76,6 @@ def make_manager_setup(
     return setup
 
 
-def get_end_args(mock_siemplify: MagicMock) -> tuple[str, Any, int]:
-    """Get the output message, result value, and execution state that the action ended with.
-
-    Args:
-        mock_siemplify: The mocked action object.
-
-    Returns:
-        The arguments of siemplify.end.
-    """
-    mock_siemplify.end.assert_called_once()
-
-    return mock_siemplify.end.call_args.args
-
-
-def get_json_by_entity(mock_siemplify: MagicMock) -> dict[str, Any]:
-    """Get the JSON result of the action, keyed by target.
-
-    Args:
-        mock_siemplify: The mocked action object.
-
-    Returns:
-        The EntityResult of each target.
-    """
-    mock_siemplify.result.add_result_json.assert_called_once()
-    json_result = mock_siemplify.result.add_result_json.call_args.args[0]
-
-    return {item["Entity"]: item["EntityResult"] for item in json_result}
-
-
 class TestIsolateEndpoint:
     """Tests for the failure reasons and the summary line of the action."""
 
@@ -129,17 +90,7 @@ class TestIsolateEndpoint:
         agent_uuids: str = "",
         state: str | None = None,
     ) -> MagicMock:
-        """Run the action once.
-
-        Args:
-            setup_args: Endpoints, task statuses, and optional errors for make_manager_setup.
-            entities: The target entities.
-            agent_uuids: The value of the Agent UUID parameter.
-            state: The async state of the previous run. If None, run as the first run.
-
-        Returns:
-            The mocked action object.
-        """
+        """Run the action once."""
         params = {"Description": DESCRIPTION, "Agent UUID": agent_uuids}
         if state is not None:
             params["additional_data"] = state
@@ -283,10 +234,7 @@ class TestIsolateEndpoint:
         assert (summary["targets"], summary["failed"]) == ("3", "2")
 
     def test_exception_ends_run(self) -> None:
-        """Attach JSON and log the error type and HTTP status of an exception that ends a poll.
-
-        Unfinished targets get the run error in the JSON result and count as failed.
-        """
+        """Attach JSON and log the error type and HTTP status of an exception that ends a poll."""
         setup_args = ({"host1": "g1", "host2": "g2"}, {"url-g1": "running", "url-g2": "running"})
         entities = [make_entity("host1", EntityTypes.HOSTNAME), make_entity("host2", EntityTypes.HOSTNAME)]
         _, state, _ = get_end_args(self.run(setup_args, entities))

@@ -19,10 +19,11 @@ from __future__ import annotations
 import json
 import pathlib
 import traceback
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 import requests
+import urllib3.exceptions
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_FAILED,
@@ -33,12 +34,13 @@ from soar_sdk.SiemplifyUtils import unix_now
 
 from ..actions import AcquireFile
 from ..core import TrendVisionOneManager as manager_module
+from ..core.constants import REQUEST_TIMEOUT_SECONDS
 from ..core.datamodels import Endpoint, Task
 from ..core.TrendVisionOneExceptions import TrendVisionOneException
 from ..core.TrendVisionOneManager import TrendVisionOneManager
 from ..core.TrendVisionOneParser import TrendVisionOneParser
 from ..core.UtilsManager import classify_exception
-from .common import get_summary_lines, make_entity, run_action
+from .common import get_end_args, get_json_by_entity, get_summary_lines, make_entity, run_action
 from .test_action_result_summary import make_http_error
 
 API_ROOT = "https://api.xdr.trendmicro.com"
@@ -48,28 +50,12 @@ SIGNED_URL = "https://storage.example.com/signed?X-Amz-Signature=secret"
 
 
 def make_endpoint(guid: str) -> Endpoint:
-    """Build an endpoint search result.
-
-    Args:
-        guid: The agent GUID.
-
-    Returns:
-        The endpoint.
-    """
+    """Build an endpoint search result."""
     return TrendVisionOneParser.build_endpoint_obj({"agentGuid": guid, "endpointName": {"value": f"name-{guid}"}})
 
 
 def make_task(task_id: str, status: str, **fields: object) -> Task:
-    """Build a collect file task.
-
-    Args:
-        task_id: The task ID.
-        status: The task status.
-        **fields: More task fields.
-
-    Returns:
-        The task.
-    """
+    """Build a collect file task."""
     raw_data = {
         "id": task_id,
         "status": status,
@@ -96,13 +82,7 @@ class FakeVisionOne:
     """Configure the mocked manager with endpoints and task statuses."""
 
     def __init__(self, tmp_path: pathlib.Path, endpoints: dict[str, str], statuses: dict[str, str]) -> None:
-        """Init the fake.
-
-        Args:
-            tmp_path: The run folder.
-            endpoints: The agent GUID by hostname, IP address, or agent UUID.
-            statuses: The task status by agent GUID.
-        """
+        """Init the fake."""
         self.tmp_path = tmp_path
         self.endpoints = endpoints
         self.statuses = statuses
@@ -114,41 +94,19 @@ class FakeVisionOne:
         hostname: str | None = None,
         agent_id: str | None = None,
     ) -> Endpoint | None:
-        """Return the endpoint of a search, or None.
-
-        Args:
-            ip: The IP address.
-            hostname: The hostname.
-            agent_id: The agent UUID.
-
-        Returns:
-            The endpoint or None.
-        """
+        """Return the endpoint of a search, or None."""
         guid = self.endpoints.get(ip or hostname or agent_id)
 
         return make_endpoint(guid) if guid else None
 
     def download(self, resource_location: str, destination: str, max_seconds: float) -> str:
-        """Write a fake archive.
-
-        Args:
-            resource_location: The download location.
-            destination: The local path.
-            max_seconds: The time limit of the download.
-
-        Returns:
-            The local path.
-        """
+        """Write a fake archive."""
         pathlib.Path(destination).write_bytes(b"archive")
 
         return destination
 
     def setup(self, manager: MagicMock) -> None:
-        """Configure the mocked manager.
-
-        Args:
-            manager: The mocked manager.
-        """
+        """Configure the mocked manager."""
         self.manager = manager
         manager.siemplify.run_folder = str(self.tmp_path)
         manager.search_endpoint.side_effect = self.search_endpoint
@@ -161,70 +119,31 @@ class FakeVisionOne:
 
 
 def run_first(fake: FakeVisionOne, entities: list[MagicMock], agent_uuids: str = "") -> MagicMock:
-    """Run the first run of the action.
-
-    Args:
-        fake: The fake Trend Vision One.
-        entities: The target entities.
-        agent_uuids: The Agent UUID parameter.
-
-    Returns:
-        The mocked action object.
-    """
+    """Run the first run of the action."""
     params = {"File Path": FILE_PATH, "Agent UUID": agent_uuids}
 
     return run_action(AcquireFile, params, fake.setup, entities, main_args=(True,))
 
 
 def run_poll(fake: FakeVisionOne, previous: MagicMock) -> MagicMock:
-    """Run an async poll with the state that the previous run saved.
-
-    Args:
-        fake: The fake Trend Vision One.
-        previous: The mocked action object of the previous run.
-
-    Returns:
-        The mocked action object.
-    """
-    params = {"additional_data": get_end(previous)[1]}
+    """Run an async poll with the state that the previous run saved."""
+    params = {"additional_data": get_end_args(previous)[1]}
 
     return run_action(AcquireFile, params, fake.setup, [make_entity("other", EntityTypes.HOSTNAME)], main_args=(False,))
 
 
-def get_end(mock_siemplify: MagicMock) -> tuple[str, MagicMock, int]:
-    """Get the arguments of siemplify.end.
-
-    Args:
-        mock_siemplify: The mocked action object.
-
-    Returns:
-        The output message, the result value, and the execution state.
-    """
-    return mock_siemplify.end.call_args.args
-
-
-def get_json(mock_siemplify: MagicMock) -> dict[str, MagicMock]:
-    """Get the JSON result by entity.
-
-    Args:
-        mock_siemplify: The mocked action object.
-
-    Returns:
-        The entity result by entity.
-    """
-    entries = mock_siemplify.result.add_result_json.call_args.args[0]
-
-    return {entry["Entity"]: entry["EntityResult"] for entry in entries}
-
-
 @pytest.fixture
 def host() -> MagicMock:
-    """Build a hostname entity.
-
-    Returns:
-        The entity.
-    """
+    """Build a hostname entity."""
     return make_entity("HOST1", EntityTypes.HOSTNAME)
+
+
+def _make_connection_error() -> requests.ConnectionError:
+    """Build a connection error with a urllib3 context."""
+    error = requests.ConnectionError("reset")
+    error.__context__ = urllib3.exceptions.ProtocolError("Connection aborted.")
+
+    return error
 
 
 class TestAcquireFileAction:
@@ -237,8 +156,8 @@ class TestAcquireFileAction:
 
         siemplify = run_first(fake, [host, user])
 
-        message, result_value, status = get_end(siemplify)
-        entry = get_json(siemplify)["HOST1"]
+        message, result_value, status = get_end_args(siemplify)
+        entry = get_json_by_entity(siemplify)["HOST1"]
         local_path = str(tmp_path / "g1_evil_file.exe.zip")
         assert (status, result_value) == (EXECUTION_STATE_COMPLETED, True)
         assert message == (
@@ -287,8 +206,8 @@ class TestAcquireFileAction:
 
         siemplify = run_first(fake, [make_entity("10.0.0.1", EntityTypes.ADDRESS)], agent_uuids="uuid-2")
 
-        assert get_end(siemplify)[1] is True
-        assert {key: value["agent_id"] for key, value in get_json(siemplify).items()} == {
+        assert get_end_args(siemplify)[1] is True
+        assert {key: value["agent_id"] for key, value in get_json_by_entity(siemplify).items()} == {
             "10.0.0.1": "g1",
             "uuid-2": "g2",
         }
@@ -301,7 +220,7 @@ class TestAcquireFileAction:
 
         siemplify = run_first(fake, [host], agent_uuids="g1, g1")
 
-        results = get_json(siemplify)
+        results = get_json_by_entity(siemplify)
         assert set(results) == {"HOST1", "g1"}
         assert results["HOST1"] == results["g1"]
         fake.manager.collect_file.assert_called_once()
@@ -312,13 +231,13 @@ class TestAcquireFileAction:
         """Verifies that an entity without an endpoint fails with ENDPOINT_NOT_FOUND and the playbook continues."""
         siemplify = run_first(FakeVisionOne(tmp_path, {}, {}), [host])
 
-        message, result_value, status = get_end(siemplify)
+        message, result_value, status = get_end_args(siemplify)
         assert (status, result_value) == (EXECUTION_STATE_COMPLETED, False)
         assert message == (
             'Action wasn\'t able to acquire the file "C:\\Temp\\evil file.exe" on the following entities using '
             "Trend Vision One: HOST1."
         )
-        assert get_json(siemplify)["HOST1"] == {
+        assert get_json_by_entity(siemplify)["HOST1"] == {
             "status": "failure",
             "error": "Endpoint HOST1 was not found in Trend Vision One.",
             "error_type": "ENDPOINT_NOT_FOUND",
@@ -347,7 +266,7 @@ class TestAcquireFileAction:
             main_args=(True,),
         )
 
-        results = get_json(siemplify)
+        results = get_json_by_entity(siemplify)
         assert results["HOST1"]["error"] == "refused"
         assert results["uuid-2"]["status"] == "success"
         assert get_summary_lines(siemplify)[0]["outcome"] == "PARTIAL_SUCCESS"
@@ -363,8 +282,8 @@ class TestAcquireFileAction:
 
         siemplify = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
 
-        assert get_end(siemplify)[1:] == (False, EXECUTION_STATE_COMPLETED)
-        entry = get_json(siemplify)["HOST1"]
+        assert get_end_args(siemplify)[1:] == (False, EXECUTION_STATE_COMPLETED)
+        entry = get_json_by_entity(siemplify)["HOST1"]
         assert (entry["error"], entry["error_type"], entry["agent_id"]) == ("rejected item", error_type, "g1")
         assert get_summary_lines(siemplify)[0]["error_type"] == error_type
 
@@ -372,7 +291,6 @@ class TestAcquireFileAction:
         ("status", "error", "expected"),
         [
             ("failed", {"code": "TaskError", "message": "Agent error."}, "VENDOR_ERROR"),
-            ("failed", {"code": "TaskError", "message": "The file was not found."}, "FILE_NOT_FOUND"),
             ("canceled", None, "CANCELLED"),
             ("rejected", None, "PERMISSION_DENIED"),
         ],
@@ -394,8 +312,8 @@ class TestAcquireFileAction:
 
         siemplify = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
 
-        entry = get_json(siemplify)["HOST1"]
-        assert get_end(siemplify)[1:] == (False, EXECUTION_STATE_COMPLETED)
+        entry = get_json_by_entity(siemplify)["HOST1"]
+        assert get_end_args(siemplify)[1:] == (False, EXECUTION_STATE_COMPLETED)
         assert (entry["error_type"], entry["task_id"]) == (expected, "g1")
         fake.manager.download_collected_file.assert_not_called()
 
@@ -404,7 +322,7 @@ class TestAcquireFileAction:
         """Verifies that queued, running, and pendingApproval tasks keep the action in progress with no summary."""
         siemplify = run_first(FakeVisionOne(tmp_path, {"HOST1": "g1"}, {"g1": status}), [host])
 
-        message, result_value, execution_state = get_end(siemplify)
+        message, result_value, execution_state = get_end_args(siemplify)
         state = json.loads(result_value)
         assert execution_state == EXECUTION_STATE_INPROGRESS
         assert message == "Waiting for results for the following endpoints: HOST1"
@@ -423,17 +341,17 @@ class TestAcquireFileAction:
         fake.statuses = {"gb": "succeeded"}
         poll_2 = run_poll(fake, poll_1)
 
-        assert get_end(first)[2] == get_end(poll_1)[2] == EXECUTION_STATE_INPROGRESS
-        assert get_end(poll_1)[0] == "Waiting for results for the following endpoints: B"
+        assert get_end_args(first)[2] == get_end_args(poll_1)[2] == EXECUTION_STATE_INPROGRESS
+        assert get_end_args(poll_1)[0] == "Waiting for results for the following endpoints: B"
         assert get_summary_lines(first) == get_summary_lines(poll_1) == []
-        results = get_json(poll_2)
+        results = get_json_by_entity(poll_2)
         assert {key: value["status"] for key, value in results.items()} == {
             "A": "success",
             "B": "success",
             "C": "failure",
         }
-        assert get_end(poll_2)[1:] == (True, EXECUTION_STATE_COMPLETED)
-        assert "Action wasn't able to acquire" in get_end(poll_2)[0]
+        assert get_end_args(poll_2)[1:] == (True, EXECUTION_STATE_COMPLETED)
+        assert "Action wasn't able to acquire" in get_end_args(poll_2)[0]
         summary = get_summary_lines(poll_2)[0]
         assert (summary["outcome"], summary["targets"], summary["failed"]) == ("PARTIAL_SUCCESS", "3", "1")
 
@@ -450,9 +368,9 @@ class TestAcquireFileAction:
 
         siemplify = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
 
-        entry = get_json(siemplify)["HOST1"]
+        entry = get_json_by_entity(siemplify)["HOST1"]
         assert (entry["status"], entry["error_type"], entry["task_id"]) == ("failure", "PERMISSION_DENIED", "g1")
-        assert get_end(siemplify)[1] is False
+        assert get_end_args(siemplify)[1] is False
 
     def test_timeout_reports_unfinished_targets(self, tmp_path: pathlib.Path) -> None:
         """Verifies that a timeout fails the action and attaches JSON for finished and unfinished targets."""
@@ -462,18 +380,18 @@ class TestAcquireFileAction:
 
         def setup(manager: MagicMock) -> None:
             fake.setup(manager)
-            manager.siemplify.async_total_duration_deadline = unix_now()
+            manager.siemplify.async_total_duration_deadline = unix_now() + 45_000
 
         poll = run_action(
             AcquireFile,
-            {"additional_data": get_end(first)[1]},
+            {"additional_data": get_end_args(first)[1]},
             setup,
             [],
             main_args=(False,),
         )
 
-        message, result_value, status = get_end(poll)
-        results = get_json(poll)
+        message, result_value, status = get_end_args(poll)
+        results = get_json_by_entity(poll)
         assert (status, result_value) == (EXECUTION_STATE_FAILED, False)
         assert message == (
             'Error executing action "Acquire File". Reason: action ran into a timeout during execution. '
@@ -488,7 +406,7 @@ class TestAcquireFileAction:
             "requested_file_path": FILE_PATH,
             "task_id": "gb",
         }
-        fake.manager.get_task.assert_not_called()
+        fake.manager.get_task.assert_called_once()
         summary = get_summary_lines(poll)[0]
         assert (summary["outcome"], summary["error_type"], summary["execution_state"]) == (
             "PARTIAL_SUCCESS",
@@ -514,16 +432,17 @@ class TestAcquireFileAction:
         first = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, entities, main_args=(True,))
         poll = run_poll(fake, first)
 
-        message, result_value, status = get_end(first)
+        message, result_value, status = get_end_args(first)
         assert (status, message) == (EXECUTION_STATE_INPROGRESS, "Waiting for results for the following endpoints: B")
         assert set(json.loads(result_value)["pending"]) == {"gb"}
         assert get_summary_lines(first) == []
-        assert get_end(poll)[1:] == (True, EXECUTION_STATE_COMPLETED)
-        assert {key: value["status"] for key, value in get_json(poll).items()} == {"A": "success", "B": "success"}
+        assert get_end_args(poll)[1:] == (True, EXECUTION_STATE_COMPLETED)
+        statuses = {key: value["status"] for key, value in get_json_by_entity(poll).items()}
+        assert statuses == {"A": "success", "B": "success"}
 
     @pytest.mark.parametrize(
         "error",
-        [make_http_error(429), make_http_error(503), requests.ConnectionError("reset"), requests.Timeout("slow")],
+        [make_http_error(429), make_http_error(503), _make_connection_error(), requests.Timeout("slow")],
         ids=["rate_limited", "server_error", "connection_error", "timeout"],
     )
     def test_transient_poll_error_keeps_task_pending(
@@ -542,12 +461,12 @@ class TestAcquireFileAction:
         first = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
         poll = run_poll(fake, first)
 
-        message, result_value, status = get_end(first)
+        message, result_value, status = get_end_args(first)
         assert status == EXECUTION_STATE_INPROGRESS
         assert message == "Waiting for results for the following endpoints: HOST1"
         assert set(json.loads(result_value)["pending"]) == {"g1"}
         first.result.add_result_json.assert_not_called()
-        assert get_json(poll)["HOST1"]["status"] == "success"
+        assert get_json_by_entity(poll)["HOST1"]["status"] == "success"
 
     def test_transient_download_error_keeps_task_pending(self, tmp_path: pathlib.Path, host: MagicMock) -> None:
         """Verifies that a download connection error keeps the target pending instead of failing it."""
@@ -562,8 +481,8 @@ class TestAcquireFileAction:
 
         siemplify = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
 
-        assert get_end(siemplify)[2] == EXECUTION_STATE_INPROGRESS
-        assert set(json.loads(get_end(siemplify)[1])["pending"]) == {"g1"}
+        assert get_end_args(siemplify)[2] == EXECUTION_STATE_INPROGRESS
+        assert set(json.loads(get_end_args(siemplify)[1])["pending"]) == {"g1"}
 
     def test_run_error_reports_every_target(self, tmp_path: pathlib.Path, host: MagicMock) -> None:
         """Verifies that a run error (bad credentials) fails the action with a JSON entry per target."""
@@ -584,12 +503,12 @@ class TestAcquireFileAction:
             main_args=(True,),
         )
 
-        assert get_end(siemplify) == (
+        assert get_end_args(siemplify) == (
             'Error executing action "Acquire File". Reason: Unauthorized',
             False,
             EXECUTION_STATE_FAILED,
         )
-        assert {key: value["error_type"] for key, value in get_json(siemplify).items()} == {
+        assert {key: value["error_type"] for key, value in get_json_by_entity(siemplify).items()} == {
             "HOST1": "AUTHENTICATION_FAILED",
             "uuid-2": "AUTHENTICATION_FAILED",
         }
@@ -601,12 +520,12 @@ class TestAcquireFileAction:
 
         def setup(manager: MagicMock) -> None:
             fake.setup(manager)
-            manager.get_task.side_effect = TrendVisionOneException("Internal server error.")
+            manager.get_task.side_effect = make_http_error(403)
 
         siemplify = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
 
-        entry = get_json(siemplify)["HOST1"]
-        assert (entry["error"], entry["error_type"]) == ("Internal server error.", "VENDOR_ERROR")
+        entry = get_json_by_entity(siemplify)["HOST1"]
+        assert (entry["error"], entry["error_type"]) == ("failed", "PERMISSION_DENIED")
         assert entry["task_id"] == "g1"
 
     def test_no_targets(self, tmp_path: pathlib.Path) -> None:
@@ -615,7 +534,7 @@ class TestAcquireFileAction:
         siemplify = run_first(fake, [make_entity("bob", EntityTypes.USER)])
 
         fake.manager.test_connectivity.assert_not_called()
-        assert get_end(siemplify) == (
+        assert get_end_args(siemplify) == (
             "No suitable entities or Agent UUIDs were found to acquire the file from.",
             False,
             EXECUTION_STATE_COMPLETED,
@@ -633,7 +552,7 @@ class TestAcquireFileAction:
 
         siemplify = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
 
-        assert get_json(siemplify)["HOST1"]["status"] == "success"
+        assert get_json_by_entity(siemplify)["HOST1"]["status"] == "success"
         siemplify.LOGGER.exception.assert_called_once_with("Unable to attach g1_evil_file.exe.zip to the case.")
 
     def test_large_archive_is_not_attached(
@@ -647,7 +566,7 @@ class TestAcquireFileAction:
 
         siemplify = run_first(FakeVisionOne(tmp_path, {"HOST1": "g1"}, {"g1": "succeeded"}), [host])
 
-        assert get_json(siemplify)["HOST1"]["status"] == "success"
+        assert get_json_by_entity(siemplify)["HOST1"]["status"] == "success"
         siemplify.result.add_attachment.assert_not_called()
 
     def test_run_folder_fallback(
@@ -666,49 +585,154 @@ class TestAcquireFileAction:
 
         siemplify = run_action(AcquireFile, {"File Path": FILE_PATH}, setup, [host], main_args=(True,))
 
-        assert get_json(siemplify)["HOST1"]["download_path"] == str(tmp_path / "downloads" / "g1_evil_file.exe.zip")
+        expected_destination = str(tmp_path / "downloads" / "g1_evil_file.exe.zip")
+        assert get_json_by_entity(siemplify)["HOST1"]["download_path"] == expected_destination
 
     def test_build_file_name_is_safe(self) -> None:
         """Verifies that the local file name has no path separators or unsafe characters."""
         assert AcquireFile.build_file_name("RM-1", "/var/../a b;c.sh") == "RM-1_a_b_c.sh.zip"
         assert AcquireFile.build_file_name("RM-2", "C:\\dir\\") == "RM-2_collected_file.zip"
 
+    def test_download_timeout_fails_after_limit(self, tmp_path: pathlib.Path) -> None:
+        """Verifies that a download timeout fails a target after 3 attempts and lets other targets finish."""
+        fake = FakeVisionOne(tmp_path, {"A": "ga", "B": "gb"}, {"ga": "queued", "gb": "queued"})
+        first = run_first(fake, [make_entity("A", EntityTypes.HOSTNAME), make_entity("B", EntityTypes.HOSTNAME)])
+        fake.statuses = {"ga": "succeeded", "gb": "succeeded"}
+
+        def setup(manager: MagicMock) -> None:
+            fake.setup(manager)
+            original_download = manager.download_collected_file.side_effect
+
+            def download(resource_location: str, destination: str, max_seconds: float) -> str:
+                if "ga" in resource_location:
+                    manager.siemplify.execution_deadline_unix_time_ms = unix_now()
+                    timeout_error = "download timeout"
+                    raise TrendVisionOneException(timeout_error, error_type="TIMEOUT")
+                return original_download(resource_location, destination, max_seconds)
+
+            manager.download_collected_file.side_effect = download
+
+        poll_1 = run_action(AcquireFile, {"additional_data": get_end_args(first)[1]}, setup, [], main_args=(False,))
+        assert get_end_args(poll_1)[2] == EXECUTION_STATE_INPROGRESS
+
+        poll_2 = run_action(AcquireFile, {"additional_data": get_end_args(poll_1)[1]}, setup, [], main_args=(False,))
+        assert get_end_args(poll_2)[2] == EXECUTION_STATE_INPROGRESS
+        state_2 = json.loads(get_end_args(poll_2)[1])
+        assert state_2["pending"]["ga"]["download_timeouts"] == 2
+        assert list(state_2["pending"]) == ["ga", "gb"]
+
+        poll_3 = run_action(AcquireFile, {"additional_data": get_end_args(poll_2)[1]}, setup, [], main_args=(False,))
+        assert get_end_args(poll_3)[2] == EXECUTION_STATE_INPROGRESS
+        state_3 = json.loads(get_end_args(poll_3)[1])
+        assert list(state_3["pending"]) == ["gb"]
+
+        poll_4 = run_action(AcquireFile, {"additional_data": get_end_args(poll_3)[1]}, setup, [], main_args=(False,))
+        _, result_value, status = get_end_args(poll_4)
+        assert (status, result_value) == (EXECUTION_STATE_COMPLETED, True)
+        results = get_json_by_entity(poll_4)
+        assert results["B"]["status"] == "success"
+        assert results["A"] == {
+            "status": "failure",
+            "error": "The archive did not download in the script timeout. Increase the script timeout in the IDE.",
+            "error_type": "TIMEOUT",
+            "agent_id": "ga",
+            "requested_file_path": FILE_PATH,
+            "task_id": "ga",
+        }
+
+    def test_final_timeout_run_checks_tasks_and_succeeds(self, tmp_path: pathlib.Path) -> None:
+        """Verifies that the final timeout run still checks pending tasks and finishes succeeded tasks."""
+        fake = FakeVisionOne(tmp_path, {"A": "ga"}, {"ga": "queued"})
+        first = run_first(fake, [make_entity("A", EntityTypes.HOSTNAME)])
+        fake.statuses = {"ga": "succeeded"}
+
+        def setup(manager: MagicMock) -> None:
+            fake.setup(manager)
+            manager.siemplify.async_total_duration_deadline = unix_now() + 45_000
+            manager.siemplify.async_polling_interval_in_sec = 60
+
+        poll = run_action(AcquireFile, {"additional_data": get_end_args(first)[1]}, setup, [], main_args=(False,))
+
+        _, result_value, status = get_end_args(poll)
+        assert (status, result_value) == (EXECUTION_STATE_COMPLETED, True)
+        fake.manager.get_task.assert_called_once()
+        assert get_json_by_entity(poll)["A"]["status"] == "success"
+
+    def test_zip_password_not_in_logs(self, tmp_path: pathlib.Path) -> None:
+        """Verifies that the zip archive password is saved in state but never logged."""
+        fake = FakeVisionOne(tmp_path, {"A": "ga", "B": "gb"}, {"ga": "succeeded", "gb": "queued"})
+        first = run_first(fake, [make_entity("A", EntityTypes.HOSTNAME), make_entity("B", EntityTypes.HOSTNAME)])
+        assert "pass-ga" in get_end_args(first)[1]
+        logged = " ".join(str(call) for call in first.LOGGER.mock_calls)
+        assert "pass-ga" not in logged
+
+    def test_non_transient_poll_error_fails_one_target(self, tmp_path: pathlib.Path) -> None:
+        """Verifies that a non-transient error on one target fails that target while the other finishes."""
+        fake = FakeVisionOne(tmp_path, {"A": "ga", "B": "gb"}, {"ga": "queued", "gb": "queued"})
+        first = run_first(fake, [make_entity("A", EntityTypes.HOSTNAME), make_entity("B", EntityTypes.HOSTNAME)])
+        fake.statuses = {"gb": "succeeded"}
+
+        def setup(manager: MagicMock) -> None:
+            fake.setup(manager)
+
+            def get_task(task_url: str) -> Task:
+                if "ga" in task_url:
+                    raise make_http_error(403)
+                return make_task("gb", "succeeded")
+
+            manager.get_task.side_effect = get_task
+
+        poll = run_action(AcquireFile, {"additional_data": get_end_args(first)[1]}, setup, [], main_args=(False,))
+
+        _, result_value, status = get_end_args(poll)
+        assert (status, result_value) == (EXECUTION_STATE_COMPLETED, True)
+        results = get_json_by_entity(poll)
+        assert results["A"]["status"] == "failure"
+        assert results["A"]["error_type"] == "PERMISSION_DENIED"
+        assert results["B"]["status"] == "success"
+
+    def test_poll_config_error_preserves_finished_results(self, tmp_path: pathlib.Path) -> None:
+        """Verifies that a config extraction error on a poll preserves finished results in the JSON result."""
+        fake = FakeVisionOne(tmp_path, {"A": "ga", "B": "gb"}, {"ga": "succeeded", "gb": "queued"})
+        first = run_first(fake, [make_entity("A", EntityTypes.HOSTNAME), make_entity("B", EntityTypes.HOSTNAME)])
+
+        with patch.object(AcquireFile, "build_manager", side_effect=Exception("Missing mandatory parameter API Token")):
+            poll = run_action(
+                AcquireFile, {"additional_data": get_end_args(first)[1]}, fake.setup, [], main_args=(False,)
+            )
+
+        assert get_end_args(poll)[2] == EXECUTION_STATE_FAILED
+        results = get_json_by_entity(poll)
+        assert results["A"]["status"] == "success"
+        assert results["B"]["status"] == "failure"
+
+    def test_poll_with_none_polling_interval_stays_in_progress(self, tmp_path: pathlib.Path) -> None:
+        """Verifies that a poll with null polling interval and future deadline ends IN_PROGRESS."""
+        fake = FakeVisionOne(tmp_path, {"A": "ga"}, {"ga": "queued"})
+        first = run_first(fake, [make_entity("A", EntityTypes.HOSTNAME)])
+
+        def setup(manager: MagicMock) -> None:
+            fake.setup(manager)
+            manager.siemplify.async_polling_interval_in_sec = None
+            manager.siemplify.async_total_duration_deadline = unix_now() + 3_600_000
+
+        poll = run_action(AcquireFile, {"additional_data": get_end_args(first)[1]}, setup, [], main_args=(False,))
+        assert get_end_args(poll)[2] == EXECUTION_STATE_INPROGRESS
+
 
 def _raise(error: Exception) -> None:
-    """Raise an error from a lambda.
-
-    Args:
-        error: The error to raise.
-
-    Raises:
-        Exception: Always.
-    """
+    """Raise an error from a lambda."""
     raise error
 
 
 def _chunks_then_raise(chunk: bytes, message: str) -> object:
-    """Yield one chunk, then fail like a dropped connection.
-
-    Args:
-        chunk: The chunk to yield first.
-        message: The error message.
-
-    Yields:
-        The chunk.
-
-    Raises:
-        requests.exceptions.ChunkedEncodingError: After the chunk.
-    """
+    """Yield one chunk, then fail like a dropped connection."""
     yield chunk
     raise requests.exceptions.ChunkedEncodingError(message)
 
 
 def make_manager() -> TrendVisionOneManager:
-    """Build a manager with a mocked session.
-
-    Returns:
-        The manager.
-    """
+    """Build a manager with a mocked session."""
     manager = TrendVisionOneManager(API_ROOT, "token", verify_ssl=True, siemplify=MagicMock())
     manager.session = MagicMock()
 
@@ -716,15 +740,7 @@ def make_manager() -> TrendVisionOneManager:
 
 
 def make_download_response(status_code: int, chunks: tuple[bytes, ...] = (b"arch", b"ive")) -> MagicMock:
-    """Build a streamed download response.
-
-    Args:
-        status_code: The HTTP status code.
-        chunks: The body chunks.
-
-    Returns:
-        The response.
-    """
+    """Build a streamed download response."""
     response = MagicMock(status_code=status_code, ok=status_code < 400)
     response.iter_content.return_value = iter(chunks)
 
@@ -746,6 +762,7 @@ class TestCollectFile:
         manager.session.post.assert_called_once_with(
             f"{API_ROOT}/v3.0/response/endpoints/collectFile",
             json=[{"agentGuid": "g1", "filePath": FILE_PATH, "description": "reason"}],
+            timeout=REQUEST_TIMEOUT_SECONDS,
         )
 
     @pytest.mark.parametrize(

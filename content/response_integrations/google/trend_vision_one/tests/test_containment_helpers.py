@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import requests
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_INPROGRESS
 from soar_sdk.SiemplifyUtils import unix_now
 
@@ -63,6 +64,25 @@ def test_process_agents_keeps_failure_of_each_failed_agent() -> None:
         "missing": {"error": "Endpoint was not found in Trend Vision One.", "error_type": "ENDPOINT_NOT_FOUND"},
         "broken": {"error": "failed", "error_type": "PERMISSION_DENIED"},
     }
+
+
+def test_process_agents_raw_requests_error_continues_processing() -> None:
+    """Verifies that a network error on one agent does not stop other agents from being processed."""
+    manager = MagicMock()
+    endpoint = MagicMock(guid="agent-2")
+
+    def search_endpoint(agent_id: str) -> MagicMock | None:
+        if agent_id == "agent-1":
+            raise requests.ConnectionError("Connection refused")
+        return endpoint
+
+    manager.search_endpoint.side_effect = search_endpoint
+
+    result = process_agents(manager, ["agent-1", "agent-2"])
+
+    assert result.successful_agents == [endpoint]
+    assert result.failed_agents == ["agent-1"]
+    assert result.failures["agent-1"]["error_type"] == "CONNECTION_ERROR"
 
 
 def test_get_summary_counts() -> None:

@@ -33,14 +33,7 @@ SUMMARY_PATTERN: re.Pattern[str] = re.compile(
 
 
 def get_summary_lines(mock_siemplify: Any) -> list[dict[str, str]]:
-    """Get the ACTION_RESULT_SUMMARY lines that an action logged, parsed into fields.
-
-    Args:
-        mock_siemplify: The mocked action object.
-
-    Returns:
-        The fields of each summary line. A line that does not match the exact format fails the test.
-    """
+    """Get the ACTION_RESULT_SUMMARY lines that an action logged, parsed into fields."""
     lines = [
         call.args[0]
         for call in mock_siemplify.LOGGER.info.call_args_list
@@ -59,18 +52,7 @@ def run_action(
     entities: list[Any] | None = None,
     main_args: tuple[Any, ...] = (),
 ) -> Any:
-    """Run a Trend Vision One action with a mocked manager.
-
-    Args:
-        module: The action module.
-        params: The action parameters, including additional_data for async polls.
-        manager_setup: Configure the mocked manager.
-        entities: The target entities.
-        main_args: The arguments of main(), for example (True,) for the first run of an async action.
-
-    Returns:
-        The mocked action object.
-    """
+    """Run a Trend Vision One action with a mocked manager."""
     with (
         patch.object(module, "SiemplifyAction") as mock_siemplify_action,
         patch.object(module, "extract_configuration_param"),
@@ -81,6 +63,7 @@ def run_action(
         mock_siemplify.target_entities = entities or []
         mock_siemplify.execution_deadline_unix_time_ms = 9999999999999
         mock_siemplify.async_total_duration_deadline = 0
+        mock_siemplify.async_polling_interval_in_sec = 30
         mock_extract_action.side_effect = lambda siemplify, param_name, **kwargs: params.get(
             param_name, kwargs.get("default_value")
         )
@@ -92,18 +75,25 @@ def run_action(
 
 
 def make_entity(identifier: str, entity_type: str) -> MagicMock:
-    """Build a target entity.
-
-    Args:
-        identifier: The entity identifier.
-        entity_type: The entity type.
-
-    Returns:
-        The entity.
-    """
+    """Build a target entity."""
     entity = MagicMock()
     entity.identifier = identifier
     entity.entity_type = entity_type
     entity.additional_properties = {}
 
     return entity
+
+
+def get_end_args(mock_siemplify: Any) -> tuple[str, Any, int]:
+    """Get the output message, result value, and execution state that the action ended with."""
+    mock_siemplify.end.assert_called_once()
+
+    return mock_siemplify.end.call_args.args
+
+
+def get_json_by_entity(mock_siemplify: Any) -> dict[str, Any]:
+    """Get the JSON result of the action, keyed by target."""
+    mock_siemplify.result.add_result_json.assert_called_once()
+    json_result = mock_siemplify.result.add_result_json.call_args.args[0]
+
+    return {item["Entity"]: item["EntityResult"] for item in json_result}

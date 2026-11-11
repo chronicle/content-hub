@@ -25,22 +25,19 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyDataModel import DomainEntityInfo, EntityTypes
 
 from ..actions import EnrichEntities
+from ..core.constants import REQUEST_TIMEOUT_SECONDS
 from ..core.datamodels import Endpoint
 from ..core.TrendVisionOneExceptions import TrendVisionOneException
 from ..core.TrendVisionOneManager import TrendVisionOneManager
 from ..core.TrendVisionOneParser import TrendVisionOneParser
-from .common import get_summary_lines, make_entity, run_action
+from .common import get_json_by_entity, get_summary_lines, make_entity, run_action
 from .test_action_result_summary import make_http_error, make_response
 
 AGENT_GUID = "3573f000-0000-0000-0000-000000000001"
 
 
 def make_endpoint() -> Endpoint:
-    """Build an endpoint from a raw eiqs endpoint record.
-
-    Returns:
-        The endpoint.
-    """
+    """Build an endpoint from a raw eiqs endpoint record."""
     return TrendVisionOneParser.build_endpoint_obj({
         "agentGuid": AGENT_GUID,
         "osDescription": "CentOS 7",
@@ -52,34 +49,11 @@ def make_endpoint() -> Endpoint:
 
 
 def make_domain_entity(identifier: str, entity_type: str) -> MagicMock:
-    """Build a target entity that passes the DomainEntityInfo type check of the action.
-
-    Args:
-        identifier: The entity identifier.
-        entity_type: The entity type.
-
-    Returns:
-        The entity.
-    """
+    """Build a target entity that passes the DomainEntityInfo type check of the action."""
     entity = make_entity(identifier, entity_type)
     entity.__class__ = DomainEntityInfo
 
     return entity
-
-
-def get_json_result(mock_siemplify: MagicMock) -> dict[str, Any]:
-    """Get the JSON result of the action keyed by entity.
-
-    Args:
-        mock_siemplify: The mocked action object.
-
-    Returns:
-        The EntityResult of each entity.
-    """
-    mock_siemplify.result.add_result_json.assert_called_once()
-    entries = mock_siemplify.result.add_result_json.call_args.args[0]
-
-    return {entry["Entity"]: entry["EntityResult"] for entry in entries}
 
 
 class TestEnrichEntities:
@@ -105,7 +79,7 @@ class TestEnrichEntities:
 
         mock_siemplify = run_action(EnrichEntities, {}, setup, [entity])
 
-        assert get_json_result(mock_siemplify)["target-1"] == {
+        assert get_json_by_entity(mock_siemplify)["target-1"] == {
             **endpoint.raw_data,
             "isolationStatus": isolation_status,
         }
@@ -155,7 +129,7 @@ class TestEnrichEntities:
 
         mock_siemplify = run_action(EnrichEntities, {"Agent UUID": AGENT_GUID}, setup)
 
-        assert get_json_result(mock_siemplify) == {AGENT_GUID: {**endpoint.raw_data, "isolationStatus": "on"}}
+        assert get_json_by_entity(mock_siemplify) == {AGENT_GUID: {**endpoint.raw_data, "isolationStatus": "on"}}
         assert isolation_calls == [AGENT_GUID]
         mock_siemplify.result.add_entity_table.assert_not_called()
         message, result_value, _ = mock_siemplify.end.call_args.args
@@ -191,7 +165,7 @@ class TestEnrichEntities:
 
         mock_siemplify = run_action(EnrichEntities, {}, setup, [entity])
 
-        assert get_json_result(mock_siemplify)["10.0.0.1"]["isolationStatus"] == "unknown"
+        assert get_json_by_entity(mock_siemplify)["10.0.0.1"]["isolationStatus"] == "unknown"
         assert entity.additional_properties["TrendVisionOne_isolationStatus"] == "unknown"
         assert mock_siemplify.end.call_args.args[1:] == (True, EXECUTION_STATE_COMPLETED)
         assert mock_siemplify.LOGGER.exception.call_count == int("side_effect" in isolation_lookup)
@@ -211,7 +185,7 @@ class TestEnrichEntities:
 
         mock_siemplify = run_action(EnrichEntities, {}, setup, entities)
 
-        json_result = get_json_result(mock_siemplify)
+        json_result = get_json_by_entity(mock_siemplify)
         assert json_result["found"]["isolationStatus"] == "off"
         assert json_result["missing"] == {
             "error": "Endpoint was not found in Trend Vision One.",
@@ -236,7 +210,7 @@ class TestEnrichEntities:
 
         mock_siemplify = run_action(EnrichEntities, {"Agent UUID": AGENT_GUID}, setup)
 
-        assert get_json_result(mock_siemplify)[AGENT_GUID]["error_type"] == "ENDPOINT_NOT_FOUND"
+        assert get_json_by_entity(mock_siemplify)[AGENT_GUID]["error_type"] == "ENDPOINT_NOT_FOUND"
         assert mock_siemplify.end.call_args.args == (
             "None of the provided entities were enriched.",
             False,
@@ -262,7 +236,7 @@ class TestEnrichEntities:
 
         mock_siemplify = run_action(EnrichEntities, {"Agent UUID": AGENT_GUID}, setup, entities)
 
-        json_result = get_json_result(mock_siemplify)
+        json_result = get_json_by_entity(mock_siemplify)
         assert json_result["broken"]["error_type"] == "VENDOR_ERROR"
         assert json_result[AGENT_GUID] == {"error": "down", "error_type": "CONNECTION_ERROR"}
         assert json_result["ok"]["isolationStatus"] == "on"
@@ -287,7 +261,7 @@ class TestEnrichEntities:
         mock_siemplify = run_action(EnrichEntities, {"Agent UUID": AGENT_GUID}, setup, [entity])
 
         failure = {"error": str(error), "error_type": "AUTHENTICATION_FAILED"}
-        assert get_json_result(mock_siemplify) == {"10.0.0.1": failure, AGENT_GUID: failure}
+        assert get_json_by_entity(mock_siemplify) == {"10.0.0.1": failure, AGENT_GUID: failure}
         assert mock_siemplify.end.call_args.args[1:] == (False, EXECUTION_STATE_FAILED)
         assert get_summary_lines(mock_siemplify) == [
             {
@@ -324,14 +298,7 @@ class TestGetEndpointIsolationStatus:
     """Tests for the isolation status lookup of the manager."""
 
     def make_manager(self, response: requests.Response) -> TrendVisionOneManager:
-        """Build a manager whose session returns a fixed response.
-
-        Args:
-            response: The response of the session GET call.
-
-        Returns:
-            The manager.
-        """
+        """Build a manager whose session returns a fixed response."""
         manager = TrendVisionOneManager(api_root="https://api.example.com", api_token="token", verify_ssl=True)
         manager.session = MagicMock()
         manager.session.get.return_value = response
@@ -343,7 +310,10 @@ class TestGetEndpointIsolationStatus:
         manager = self.make_manager(make_response(200, b'{"agentGuid": "g", "isolationStatus": "on"}'))
 
         assert manager.get_endpoint_isolation_status("g") == "on"
-        manager.session.get.assert_called_once_with("https://api.example.com/v3.0/endpointSecurity/endpoints/g")
+        manager.session.get.assert_called_once_with(
+            "https://api.example.com/v3.0/endpointSecurity/endpoints/g",
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
 
     def test_raises_on_http_error(self) -> None:
         """Test that an HTTP error from the endpoint details API raises a Trend Vision One error."""

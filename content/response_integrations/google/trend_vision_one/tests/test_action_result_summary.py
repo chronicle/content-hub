@@ -16,10 +16,11 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
+import urllib3
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_FAILED,
@@ -30,19 +31,12 @@ from soar_sdk.SiemplifyUtils import unix_now
 from ..core import UtilsManager as utils
 from ..core.api_utils import validate_response
 from ..core.TrendVisionOneExceptions import TrendVisionOneException, TrendVisionOneTimeoutException
+from ..core.TrendVisionOneManager import TrendVisionOneManager
 from .common import SUMMARY_PATTERN, make_entity
 
 
 def make_response(status_code: int, body: bytes = b"{}") -> requests.Response:
-    """Build an HTTP response.
-
-    Args:
-        status_code: The HTTP status code.
-        body: The response body.
-
-    Returns:
-        The response.
-    """
+    """Build an HTTP response."""
     response = requests.Response()
     response.status_code = status_code
     response._content = body
@@ -51,19 +45,31 @@ def make_response(status_code: int, body: bytes = b"{}") -> requests.Response:
 
 
 def make_http_error(status_code: int) -> TrendVisionOneException:
-    """Build the error that validate_response raises for an HTTP status code.
-
-    Args:
-        status_code: The HTTP status code.
-
-    Returns:
-        The error.
-    """
+    """Build the error that validate_response raises for an HTTP status code."""
     try:
         validate_response(make_response(status_code, b'{"error": {"message": "failed"}}'))
     except TrendVisionOneException as error:
         return error
     raise AssertionError("validate_response did not raise")
+
+
+def real_adapter_error(kind: str) -> Exception:
+    """Get the exception that requests raises when urllib3 fails (no network)."""
+    pool = urllib3.connectionpool.HTTPSConnectionPool("api.xdr.trendmicro.com", 443)
+    if kind == "connection":
+        reason = urllib3.exceptions.NewConnectionError(pool, "Connection refused")
+        urllib3_error = urllib3.exceptions.MaxRetryError(pool, "/v3.0/response/tasks/1", reason)
+    elif kind == "read_timeout":
+        urllib3_error = urllib3.exceptions.ReadTimeoutError(pool, "/v3.0/response/tasks/1", "Read timed out.")
+    else:
+        urllib3_error = urllib3.exceptions.ProtocolError("Connection aborted.", ConnectionResetError(104, "reset"))
+    manager = TrendVisionOneManager("https://api.xdr.trendmicro.com", "token", verify_ssl=True, siemplify=MagicMock())
+    with patch.object(urllib3.connectionpool.HTTPConnectionPool, "urlopen", side_effect=urllib3_error):
+        try:
+            manager.get_task("https://api.xdr.trendmicro.com/v3.0/response/tasks/1")
+        except requests.RequestException as error:
+            return error
+    raise AssertionError("no error")
 
 
 class TestClassifyException:
@@ -113,6 +119,14 @@ class TestClassifyException:
         error.__context__ = requests.ConnectionError("refused")
 
         assert utils.classify_exception(error) == ("CONNECTION_ERROR", "ConnectionError", None)
+
+    @pytest.mark.parametrize("kind", ["connection", "read_timeout", "reset"])
+    def test_real_requests_error_classified_as_connection_error(self, kind: str) -> None:
+        """Verifies that real adapter network errors are classified as CONNECTION_ERROR."""
+        error = real_adapter_error(kind)
+        error_type, _, _ = utils.classify_exception(error)
+
+        assert error_type == "CONNECTION_ERROR"
 
 
 class TestSummaryLine:
@@ -214,14 +228,7 @@ class TestTimeoutMarker:
 
     @staticmethod
     def make_action(deadline: int) -> MagicMock:
-        """Build an action object with an async deadline.
-
-        Args:
-            deadline: The async deadline in Unix milliseconds.
-
-        Returns:
-            The action object.
-        """
+        """Build an action object with an async deadline."""
         siemplify = MagicMock()
         siemplify.async_total_duration_deadline = deadline
         siemplify.async_polling_interval_in_sec = 30

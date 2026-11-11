@@ -42,7 +42,6 @@ from ..core.constants import (
     ACQUIRE_FILE_PENDING_STATUSES,
     ACQUIRE_FILE_SCRIPT_NAME,
     ACQUIRE_FILE_TASK_DESCRIPTION,
-    FAILED_STATUS,
     INTEGRATION_DISPLAY_NAME,
     INTEGRATION_NAME,
     SUCCESS_STATUS,
@@ -56,7 +55,6 @@ from ..core.UtilsManager import (
     get_endpoint_search_args,
     get_task_failure,
     log_action_result_summary,
-    log_timeout_marker_once,
 )
 
 if TYPE_CHECKING:
@@ -70,6 +68,8 @@ RESULT_SUCCESS = "success"
 RESULT_FAILURE = "failure"
 TIMEOUT_ERROR_MESSAGE = "Action ran into a timeout during execution."
 TRANSIENT_ERROR_TYPES = (ErrorType.CONNECTION_ERROR, ErrorType.RATE_LIMITED, ErrorType.TIMEOUT)
+MAX_DOWNLOAD_TIMEOUTS = 3
+DOWNLOAD_TIMEOUT_MESSAGE = "The archive did not download in the script timeout. Increase the script timeout in the IDE."
 
 
 def new_state() -> SingleJson:
@@ -330,20 +330,6 @@ def download_file(
     }
 
 
-def is_file_not_found(message: str) -> bool:
-    """Check if a task error message says that the file was not found.
-
-    Args:
-        message: The task error message.
-
-    Returns:
-        True if the message clearly says that the file does not exist.
-    """
-    message = message.lower()
-
-    return "no such file" in message or ("file" in message and ("not found" in message or "not exist" in message))
-
-
 def build_task_failure(state: SingleJson, guid: str, task: Task) -> SingleJson:
     """Build the result of a task that ended with failed, canceled, rejected, or an unknown status.
 
@@ -356,9 +342,6 @@ def build_task_failure(state: SingleJson, guid: str, task: Task) -> SingleJson:
         The entity result.
     """
     failure = get_task_failure(task)
-    if task.status == FAILED_STATUS and is_file_not_found(failure["error"]):
-        failure["error_type"] = ErrorType.FILE_NOT_FOUND
-
     task_id = state["pending"][guid]["task_id"]
 
     return build_failure_entry(failure["error"], failure["error_type"], guid, state["file_path"], task_id)
@@ -387,7 +370,8 @@ def poll_task(
 ) -> None:
     """Check the task of one agent. Save the result of its targets if the task is done.
 
-    A transient error keeps the task pending, so that the next poll tries again.
+    A transient error keeps the task pending, so that the next poll tries again. A download that passes the run time
+    limit 3 times fails the target.
 
     Args:
         siemplify: The action object.
@@ -407,12 +391,18 @@ def poll_task(
             else build_task_failure(state, guid, task)
         )
     except Exception as error:
-        if is_transient_error(error):
-            siemplify.LOGGER.exception(f"Temporary error on the task of agent {guid}. The next poll tries again.")
-            return
-        siemplify.LOGGER.exception(f"Failed to get the collected file of agent {guid}.")
         error_type = classify_exception(error)[0]
-        entry = build_failure_entry(str(error), error_type, guid, state["file_path"], pending["task_id"])
+        if is_transient_error(error):
+            if error_type == ErrorType.TIMEOUT:
+                pending["download_timeouts"] = pending.get("download_timeouts", 0) + 1
+            if pending.get("download_timeouts", 0) < MAX_DOWNLOAD_TIMEOUTS:
+                siemplify.LOGGER.exception(f"Temporary error on the task of agent {guid}. The next poll tries again.")
+                return
+            message = DOWNLOAD_TIMEOUT_MESSAGE
+        else:
+            message = str(error)
+        siemplify.LOGGER.exception(f"Failed to get the collected file of agent {guid}.")
+        entry = build_failure_entry(message, error_type, guid, state["file_path"], pending["task_id"])
     record_result(state, pending["keys"], entry)
     del state["pending"][guid]
 
@@ -482,18 +472,21 @@ def poll_tasks(
         The output message, the result value (the serialized state if tasks are pending), and the execution state.
 
     Raises:
-        TrendVisionOneTimeoutException: If the action is close to its async timeout.
+        TrendVisionOneTimeoutException: If pending targets cannot be polled again before the async deadline.
     """
     for guid in list(state["pending"]):
-        if get_time_left_ms(siemplify.async_total_duration_deadline) <= 0:
-            raise TrendVisionOneTimeoutException(TIMEOUT_ERROR_MESSAGE)
-        run_time_left_ms = get_time_left_ms(siemplify.execution_deadline_unix_time_ms)
-        if run_time_left_ms <= 0:
+        time_left_ms = min(
+            get_time_left_ms(siemplify.execution_deadline_unix_time_ms),
+            get_time_left_ms(siemplify.async_total_duration_deadline),
+        )
+        if time_left_ms <= 0:
             siemplify.LOGGER.info("This run is close to its deadline. The next poll checks the remaining tasks.")
             break
-        poll_task(siemplify, manager, state, guid, run_time_left_ms / 1000)
+        poll_task(siemplify, manager, state, guid, time_left_ms / 1000)
     if state["pending"]:
-        log_timeout_marker_once(siemplify, state, lambda: get_counts(state))
+        polling_interval_ms = (siemplify.async_polling_interval_in_sec or 0) * 1000
+        if get_time_left_ms(siemplify.async_total_duration_deadline) <= polling_interval_ms:
+            raise TrendVisionOneTimeoutException(TIMEOUT_ERROR_MESSAGE)
         message = f"Waiting for results for the following endpoints: {', '.join(get_pending_keys(state))}"
         return message, json.dumps(state), EXECUTION_STATE_INPROGRESS
     results = state["json_results"]
@@ -566,7 +559,8 @@ def build_manager(siemplify: SiemplifyAction) -> TrendVisionOneManager:
             siemplify,
             provider_name=INTEGRATION_NAME,
             param_name="Verify SSL",
-            is_mandatory=True,
+            is_mandatory=False,
+            default_value=True,
             input_type=bool,
             print_value=True,
         ),
@@ -601,11 +595,11 @@ def run_once(siemplify: SiemplifyAction, state: SingleJson, *, is_first_run: boo
     Returns:
         The output message, the result value, and the execution state.
     """
+    if not is_first_run:
+        state.update(load_state(siemplify))
     manager = build_manager(siemplify)
     if is_first_run:
         start_acquisition(siemplify, manager, state)
-    else:
-        state.update(load_state(siemplify))
 
     return poll_tasks(siemplify, manager, state)
 
