@@ -122,3 +122,60 @@ def test_get_siemplify_users_1p_http_error_fails_action(
     assert str(status_code) in action_output.results.output_message
     assert expected_error_message in action_output.results.output_message
     assert action_output.results.json_output is None
+
+
+def _build_1p_users_response() -> requests.Response:
+    """Build a 1P legacySoarUsers response with one active and one disabled user."""
+    response = requests.Response()
+    response.status_code = 200
+    response.url = "https://soar.example.com/v1alpha/projects/p/locations/us/instances/i/legacySoarUsers"
+    response._content = (
+        b'{"legacySoarUsers": [{"displayName": "active_user", "accountState": "ACTIVE"}, '
+        b'{"displayName": "disabled_user", "accountState": "DISABLED"}]}'
+    )
+    return response
+
+
+@set_metadata(integration_config={}, parameters={"Hide Disabled Users": "true"})
+@patch("TIPCommon.rest.soar_platform_clients.api_client_factory.platform_supports_1p_api", return_value=True)
+@patch("TIPCommon.utils.platform_supports_1p_api", return_value=True)
+def test_get_siemplify_users_1p_hides_disabled_users(
+    _mock_utils_1p: MagicMock,
+    _mock_factory_1p: MagicMock,
+    action_output: MockActionOutput,
+) -> None:
+    """Verify 1P users with accountState DISABLED are excluded when Hide Disabled Users is true."""
+    with patch(
+        "TIPCommon.rest.soar_platform_clients.base_soar_api.BaseSoarApi._make_request",
+        return_value=_build_1p_users_response(),
+    ):
+        GetSiemplifyUsers.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.json_output is not None
+    users = action_output.results.json_output.json_result["siemplifyUsers"]
+    assert [(user["userName"], user["isDisabled"]) for user in users] == [("active_user", False)]
+
+
+@set_metadata(integration_config={}, parameters={"Hide Disabled Users": "false"})
+@patch("TIPCommon.rest.soar_platform_clients.api_client_factory.platform_supports_1p_api", return_value=True)
+@patch("TIPCommon.utils.platform_supports_1p_api", return_value=True)
+def test_get_siemplify_users_1p_returns_disabled_users_when_not_hidden(
+    _mock_utils_1p: MagicMock,
+    _mock_factory_1p: MagicMock,
+    action_output: MockActionOutput,
+) -> None:
+    """Verify 1P disabled users are returned with isDisabled true when Hide Disabled Users is false."""
+    with patch(
+        "TIPCommon.rest.soar_platform_clients.base_soar_api.BaseSoarApi._make_request",
+        return_value=_build_1p_users_response(),
+    ):
+        GetSiemplifyUsers.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.json_output is not None
+    users = action_output.results.json_output.json_result["siemplifyUsers"]
+    assert [(user["userName"], user["isDisabled"]) for user in users] == [
+        ("active_user", False),
+        ("disabled_user", True),
+    ]
