@@ -24,6 +24,15 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_action_param, extract_configuration_param
 
 from ..core.FireEyeHXManager import FireEyeHXManager, FireEyeHXNotFoundError
+from ..core.UtilsManager import (
+    AGENT_LOOKUP_ENTITY_TYPES,
+    ErrorType,
+    classify_exception,
+    count_skipped_entities,
+    get_agent_lookup_failure_counts,
+    get_operation_summary_counts,
+    log_action_result_summary,
+)
 
 INTEGRATION_NAME = "FireEyeHX"
 SCRIPT_NAME = "Check Containment Status"
@@ -80,6 +89,15 @@ def main() -> None:
     result_value = "false"
     operation_results = {}
     host_info = None
+    hx_manager = None
+    lookup_failed = False
+    has_agent_id = bool(isinstance(agent_id_param, str) and agent_id_param.strip())
+    has_supported_entity = any(
+        getattr(entity, "entity_type", "") in AGENT_LOOKUP_ENTITY_TYPES for entity in siemplify.target_entities
+    )
+    targets = int(has_agent_id or has_supported_entity)
+    skipped = count_skipped_entities(siemplify.target_entities, AGENT_LOOKUP_ENTITY_TYPES, has_agent_id=has_agent_id)
+    error = None
 
     try:
         hx_manager = FireEyeHXManager(
@@ -98,6 +116,7 @@ def main() -> None:
             output_message = "No Agent ID was provided or could be resolved from entities."
             status = EXECUTION_STATE_FAILED
             result_value = "false"
+            lookup_failed = True
         else:
             try:
                 host_info = hx_manager.get_host_by_agent_id(agent_id)
@@ -134,6 +153,7 @@ def main() -> None:
                     "result": "failure",
                     "status": "failed",
                     "reason": str(e),
+                    "error_type": classify_exception(e)[0],
                 }
 
         json_result = {
@@ -143,6 +163,7 @@ def main() -> None:
         siemplify.result.add_result_json(json_result)
 
     except Exception as e:
+        error = e
         siemplify.LOGGER.exception(f"Failed to execute action! Error is {e}")
         status = EXECUTION_STATE_FAILED
         result_value = "false"
@@ -150,7 +171,8 @@ def main() -> None:
 
     finally:
         try:
-            hx_manager.logout()
+            if hx_manager is not None:
+                hx_manager.logout()
         except Exception as e:
             siemplify.LOGGER.exception(f"Logging out failed. Error: {e}")
 
@@ -158,6 +180,20 @@ def main() -> None:
     siemplify.LOGGER.info(f"Status: {status}:")
     siemplify.LOGGER.info(f"Result Value: {result_value}")
     siemplify.LOGGER.info(f"Output Message: {output_message}")
+    log_action_result_summary(
+        siemplify,
+        status,
+        lambda: (
+            *(
+                get_agent_lookup_failure_counts(siemplify.target_entities, hx_manager.lookup_errors)
+                if lookup_failed
+                else get_operation_summary_counts(operation_results, targets)
+            ),
+            skipped,
+        ),
+        error=error,
+        fallback_error_type=ErrorType.INVALID_INPUT,
+    )
     siemplify.end(output_message, result_value, status)
 
 

@@ -18,6 +18,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from ..actions import CheckContainmentStatus as check_status_module
+from ..core.FireEyeHXManager import FireEyeHXManagerError, FireEyeHXNotFoundError
+from .common import get_summary_lines, make_entity, run_action
 
 
 class TestCheckContainmentStatus(unittest.TestCase):
@@ -145,6 +147,135 @@ class TestCheckContainmentStatus(unittest.TestCase):
             "Host with Agent ID resolved-ip-agent-999 containment status: contained",
             "contained",
             0,
+        )
+
+
+class TestCheckContainmentStatusSummary(unittest.TestCase):
+    """Tests for the failure reason and the summary line of Check Containment Status."""
+
+    def test_status_error(self) -> None:
+        """Verifies the error type in the failure entry and the summary line."""
+        error = FireEyeHXNotFoundError("Unable to get containment status for host a: x", 404, "ENDPOINT_NOT_FOUND")
+
+        def setup(mock_manager):
+            mock_manager.resolve_agent_id_from_entities.return_value = "a"
+            mock_manager.get_host_by_agent_id.side_effect = error
+            mock_manager.get_containment_status.side_effect = error
+
+        mock_siemplify = run_action(check_status_module, {"Agent Id": "a"}, setup)
+
+        json_result = mock_siemplify.result.add_result_json.call_args[0][0]
+        assert json_result["operation_results"]["a"]["error_type"] == "ENDPOINT_NOT_FOUND"
+        mock_siemplify.end.assert_called_once_with(
+            f"Failed to get containment status for Agent ID: a. Error: {error}",
+            "false",
+            2,
+        )
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["error_type"] == "ENDPOINT_NOT_FOUND"
+        assert summary["targets"] == "1"
+
+    def test_success_line(self) -> None:
+        """Verifies a SUCCESS summary line for a status lookup."""
+
+        def setup(mock_manager):
+            mock_manager.resolve_agent_id_from_entities.return_value = "a"
+            mock_manager.get_host_by_agent_id.return_value = MagicMock(containment_state="contained", raw_data={})
+
+        mock_siemplify = run_action(check_status_module, {"Agent Id": "a"}, setup)
+
+        assert mock_siemplify.end.call_args[0][1:] == ("contained", 0)
+        [summary] = get_summary_lines(mock_siemplify)
+        assert (summary["outcome"], summary["error_type"], summary["targets"]) == ("SUCCESS", "NONE", "1")
+
+    def test_agent_not_found(self) -> None:
+        """Verifies ENDPOINT_NOT_FOUND when no agent matches the entities."""
+
+        def setup(mock_manager):
+            mock_manager.resolve_agent_id_from_entities.return_value = None
+
+        mock_siemplify = run_action(check_status_module, {}, setup, [make_entity("10.0.0.1", "ADDRESS")])
+
+        mock_siemplify.end.assert_called_once_with(
+            "No Agent ID was provided or could be resolved from entities.",
+            "false",
+            2,
+        )
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["error_type"] == "ENDPOINT_NOT_FOUND"
+        assert summary["targets"] == "1"
+
+    def test_no_input(self) -> None:
+        """Verifies a zero-target INVALID_INPUT line when there is no Agent Id and no entity."""
+
+        def setup(mock_manager):
+            mock_manager.resolve_agent_id_from_entities.return_value = None
+
+        mock_siemplify = run_action(check_status_module, {}, setup)
+
+        [summary] = get_summary_lines(mock_siemplify)
+        assert (summary["error_type"], summary["targets"]) == ("INVALID_INPUT", "0")
+
+    def test_setup_error_skips_logout(self) -> None:
+        """Verifies that a failed login does not call logout on a missing manager."""
+        with (
+            patch.object(check_status_module, "SiemplifyAction") as mock_siemplify_action,
+            patch.object(check_status_module, "extract_configuration_param"),
+            patch.object(check_status_module, "extract_action_param"),
+            patch.object(check_status_module, "FireEyeHXManager", side_effect=FireEyeHXManagerError("x", 403)),
+        ):
+            check_status_module.main()
+
+        mock_siemplify = mock_siemplify_action.return_value
+        mock_siemplify.LOGGER.exception.assert_called_once_with("Failed to execute action! Error is x")
+        assert get_summary_lines(mock_siemplify)[0]["error_type"] == "PERMISSION_DENIED"
+
+    def test_only_unsupported_entity_reports_skipped(self) -> None:
+        """Verify unsupported entities report skipped=1 when no Agent Id is provided."""
+
+        def setup(mock_manager):
+            mock_manager.resolve_agent_id_from_entities.return_value = None
+
+        mock_siemplify = run_action(check_status_module, {}, setup, [make_entity("user", "USERUNIQNAME")])
+
+        [summary] = get_summary_lines(mock_siemplify)
+        assert summary["error_type"] == "INVALID_INPUT"
+        assert (summary["targets"], summary["failed"], summary["skipped"]) == ("0", "0", "1")
+
+    def test_unsupported_entity_skipped_vs_agent_id_override(self) -> None:
+        """Verify unsupported entities increment skipped unless Agent Id overrides target entities."""
+        entities = [make_entity("10.0.0.1", "ADDRESS"), make_entity("user", "USERUNIQNAME")]
+
+        def resolved_setup(mock_manager):
+            mock_manager.resolve_agent_id_from_entities.return_value = "a"
+            mock_manager.get_host_by_agent_id.return_value = MagicMock(containment_state="contained", raw_data={})
+
+        def missing_setup(mock_manager):
+            mock_manager.resolve_agent_id_from_entities.return_value = None
+
+        entity_ok = run_action(check_status_module, {"Agent Id": ""}, resolved_setup, entities)
+        entity_missing = run_action(check_status_module, {"Agent Id": ""}, missing_setup, entities)
+        override_ok = run_action(check_status_module, {"Agent Id": "a"}, resolved_setup, entities)
+
+        [ok_summary] = get_summary_lines(entity_ok)
+        [missing_summary] = get_summary_lines(entity_missing)
+        [override_summary] = get_summary_lines(override_ok)
+        assert (ok_summary["outcome"], ok_summary["targets"], ok_summary["failed"], ok_summary["skipped"]) == (
+            "SUCCESS",
+            "1",
+            "0",
+            "1",
+        )
+        assert (
+            missing_summary["error_type"],
+            missing_summary["targets"],
+            missing_summary["failed"],
+            missing_summary["skipped"],
+        ) == ("ENDPOINT_NOT_FOUND", "1", "1", "1")
+        assert (override_summary["outcome"], override_summary["targets"], override_summary["skipped"]) == (
+            "SUCCESS",
+            "1",
+            "0",
         )
 
 
