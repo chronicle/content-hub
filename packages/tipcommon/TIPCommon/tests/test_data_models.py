@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from TIPCommon.data_models import CaseCloseComment, CaseDetails, CasePriority
+from TIPCommon.data_models import CaseCloseComment, CaseDetails, CasePriority, UserDetails
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
@@ -321,3 +321,25 @@ class TestCaseCloseComment:
     def test_1p_empty_comments(self, json_data):
         result = CaseCloseComment.from_json(json_data)
         assert result.comment == ""
+
+
+class TestUserDetails:
+    """Unit tests for UserDetails parsing across Legacy and 1P responses."""
+
+    @pytest.mark.parametrize(
+        ("user_json", "expected_is_disabled"),
+        [
+            ({"displayName": "user", "accountState": "DISABLED"}, True),
+            ({"displayName": "user", "accountState": "ACTIVE"}, False),
+            ({"displayName": "user", "accountState": "PENDING"}, False),
+            ({"userName": "user", "isDisabled": True}, True),
+            ({"userName": "user", "isDisabled": False}, False),
+            ({"userName": "user", "isDisabled": False, "accountState": "DISABLED"}, False),
+        ],
+    )
+    def test_from_json_is_disabled(self, user_json: SingleJson, expected_is_disabled: bool) -> None:
+        """Test UserDetails.from_json uses isDisabled when present, else the 1P accountState."""
+        user_details = UserDetails.from_json(user_json)
+
+        assert user_details.is_disabled is expected_is_disabled
+        assert user_details.to_json()["isDisabled"] is expected_is_disabled
