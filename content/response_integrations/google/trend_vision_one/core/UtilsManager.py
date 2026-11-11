@@ -181,8 +181,9 @@ def classify_exception(error: Exception) -> tuple[str, str, int | None]:
     Returns:
         The error type, the exception class name, and the HTTP status code or None.
     """
-    if not hasattr(error, "error_type") and isinstance(error.__cause__, Exception):
-        error = error.__cause__
+    underlying = error.__cause__ or error.__context__
+    if not hasattr(error, "error_type") and isinstance(underlying, Exception):
+        error = underlying
     http_status = _get_http_status(error)
 
     return _get_error_type(error, http_status), type(error).__name__, http_status
@@ -238,11 +239,15 @@ def dominant_error_type(error_types: Iterable[str]) -> str:
         error_types: The error types of the failed targets and of the run.
 
     Returns:
-        The dominant error type, or NONE if there are no error types.
+        The dominant error type, or NONE if there are no error types. An unknown error type has the lowest precedence.
     """
     precedence = list(ErrorType)
 
-    return min(error_types, key=precedence.index, default=SUMMARY_NONE)
+    return min(
+        error_types,
+        key=lambda error_type: precedence.index(error_type) if error_type in precedence else len(precedence),
+        default=SUMMARY_NONE,
+    )
 
 
 def build_action_result_summary(

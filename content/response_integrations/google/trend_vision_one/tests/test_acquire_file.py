@@ -610,9 +610,11 @@ class TestAcquireFileAction:
         assert entry["task_id"] == "g1"
 
     def test_no_targets(self, tmp_path: pathlib.Path) -> None:
-        """Verifies that a run with no supported entity and no Agent UUID returns false."""
-        siemplify = run_first(FakeVisionOne(tmp_path, {}, {}), [make_entity("bob", EntityTypes.USER)])
+        """Verifies that a run with no supported entity and no Agent UUID returns false without an API call."""
+        fake = FakeVisionOne(tmp_path, {}, {})
+        siemplify = run_first(fake, [make_entity("bob", EntityTypes.USER)])
 
+        fake.manager.test_connectivity.assert_not_called()
         assert get_end(siemplify) == (
             "No suitable entities or Agent UUIDs were found to acquire the file from.",
             False,

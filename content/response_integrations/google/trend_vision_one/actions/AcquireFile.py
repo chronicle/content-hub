@@ -222,6 +222,8 @@ def start_acquisition(siemplify: SiemplifyAction, manager: TrendVisionOneManager
     lookups.update({agent_uuid: get_endpoint_search_args(agent_uuid) for agent_uuid in agent_uuids})
     state["keys"] = list(lookups)
     state["skipped"] = count_skipped_entities(siemplify.target_entities, SUPPORTED_ENTITY_TYPES)
+    if not lookups:
+        return
     manager.test_connectivity()
     for guid, keys in resolve_targets(siemplify, manager, state, lookups).items():
         start_task(siemplify, manager, state, guid, keys)

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any
+from typing import TYPE_CHECKING
 
 from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
 from soar_sdk.SiemplifyDataModel import EntityTypes, DomainEntityInfo
@@ -46,19 +46,34 @@ from ..core.UtilsManager import (
     log_action_result_summary,
 )
 
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
 
 SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]
 ISOLATION_STATUS_KEY = "isolationStatus"
 UNKNOWN_ISOLATION_STATUS = "unknown"
 
 
-@dataclasses.dataclass
+def get_target_identifier(target: DomainEntityInfo | str) -> str:
+    """Get the identifier of a target.
+
+    Args:
+        target: The entity or Agent UUID.
+
+    Returns:
+        The Agent UUID, or the original identifier of the entity.
+    """
+    return target if isinstance(target, str) else get_entity_original_identifier(target)
+
+
+@dataclasses.dataclass(slots=True)
 class EnrichmentResult:
     """Outcome of the enrichment of all targets."""
 
     successful: list[DomainEntityInfo | Endpoint] = dataclasses.field(default_factory=list)
     failed: list[DomainEntityInfo | str] = dataclasses.field(default_factory=list)
-    json_result: dict[str, Any] = dataclasses.field(default_factory=dict)
+    json_result: SingleJson = dataclasses.field(default_factory=dict)
     error_types: list[str] = dataclasses.field(default_factory=list)
 
     def add_failure(self, target: DomainEntityInfo | str, identifier: str, error: str, error_type: str) -> None:
@@ -73,6 +88,19 @@ class EnrichmentResult:
         self.failed.append(target)
         self.error_types.append(error_type)
         self.json_result[identifier] = {"error": error, "error_type": error_type}
+
+    def add_run_error(self, targets: list[DomainEntityInfo | str], error: Exception) -> None:
+        """Record a run error as a failure of each target that has no JSON result yet.
+
+        Args:
+            targets: The supported entities, then the Agent UUIDs.
+            error: The exception that ended the run.
+        """
+        error_type = classify_exception(error)[0]
+        for target in targets:
+            identifier = get_target_identifier(target)
+            if identifier not in self.json_result:
+                self.add_failure(target, identifier, str(error), error_type)
 
 
 def get_entities_list(entities_list: list[DomainEntityInfo | str]) -> list[str]:
@@ -157,7 +185,7 @@ def enrich_targets(
     result = EnrichmentResult()
     for target in targets:
         is_agent = isinstance(target, str)
-        identifier = target if is_agent else get_entity_original_identifier(target)
+        identifier = get_target_identifier(target)
         try:
             siemplify.LOGGER.info(f"Started processing entity: {identifier}")
             endpoint = manager.search_endpoint(**get_endpoint_search_args(target))
@@ -275,6 +303,9 @@ def main():
         )
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
+        result.add_run_error([*suitable_entities, *agent_uuids], e)
+        if result.json_result:
+            siemplify.result.add_result_json(convert_dict_to_json_result_dict(result.json_result))
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(

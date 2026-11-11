@@ -277,15 +277,17 @@ class TestEnrichEntities:
         )
 
     def test_run_ending_exception_logs_summary(self) -> None:
-        """Test that a connectivity failure ends the run as FAILED and counts every target as failed."""
+        """Test that a connectivity failure ends the run as FAILED with a JSON failure entry per target."""
         entity = make_domain_entity("10.0.0.1", EntityTypes.ADDRESS)
+        error = make_http_error(401)
 
         def setup(manager: MagicMock) -> None:
-            manager.test_connectivity.side_effect = make_http_error(401)
+            manager.test_connectivity.side_effect = error
 
         mock_siemplify = run_action(EnrichEntities, {"Agent UUID": AGENT_GUID}, setup, [entity])
 
-        mock_siemplify.result.add_result_json.assert_not_called()
+        failure = {"error": str(error), "error_type": "AUTHENTICATION_FAILED"}
+        assert get_json_result(mock_siemplify) == {"10.0.0.1": failure, AGENT_GUID: failure}
         assert mock_siemplify.end.call_args.args[1:] == (False, EXECUTION_STATE_FAILED)
         assert get_summary_lines(mock_siemplify) == [
             {

@@ -107,6 +107,13 @@ class TestClassifyException:
         except RuntimeError as error:
             assert utils.classify_exception(error) == ("CONNECTION_ERROR", "ConnectionError", None)
 
+    def test_implicitly_chained_error_is_unwrapped(self) -> None:
+        """Verifies that an error raised inside an except block without "from" is classified by its context."""
+        error = RuntimeError("wrapper")
+        error.__context__ = requests.ConnectionError("refused")
+
+        assert utils.classify_exception(error) == ("CONNECTION_ERROR", "ConnectionError", None)
+
 
 class TestSummaryLine:
     """Tests for the precedence and the format of the summary line."""
@@ -117,6 +124,11 @@ class TestSummaryLine:
             "AUTHENTICATION_FAILED"
         )
         assert utils.dominant_error_type([]) == "NONE"
+
+    def test_dominant_error_type_ranks_unknown_value_last(self) -> None:
+        """Verifies that a value outside ErrorType does not raise and loses to a known error type."""
+        assert utils.dominant_error_type(["NOT_AN_ERROR_TYPE", "TIMEOUT"]) == "TIMEOUT"
+        assert utils.dominant_error_type(["NOT_AN_ERROR_TYPE"]) == "NOT_AN_ERROR_TYPE"
 
     def test_partial_success_line(self) -> None:
         """Verifies the exact format of a line with one success and one failure."""
