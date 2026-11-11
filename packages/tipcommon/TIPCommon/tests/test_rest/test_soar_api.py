@@ -681,6 +681,32 @@ def test_get_siemplify_user_details_one_platform_propagates_http_errors(
     assert f"User details error {status_code}" in str(exc_info.value)
 
 
+@pytest.mark.parametrize(
+    ("should_hide_disabled_users", "expected_users"),
+    [
+        (True, [("active_user", False)]),
+        (False, [("active_user", False), ("disabled_user", True)]),
+    ],
+)
+def test_get_siemplify_user_details_one_platform_hide_disabled_users(
+    should_hide_disabled_users: bool,
+    expected_users: list[tuple[str, bool]],
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+) -> None:
+    """Test get_siemplify_user_details hides 1P DISABLED users and reports isDisabled from accountState."""
+    body = (
+        b'{"legacySoarUsers": [{"displayName": "active_user", "accountState": "ACTIVE"}, '
+        b'{"displayName": "disabled_user", "accountState": "DISABLED"}]}'
+    )
+    mock_chronicle_soar.session.request.return_value = _make_response(200, body)
+
+    res = get_siemplify_user_details(mock_chronicle_soar, "", False, 0, 1000, should_hide_disabled_users)
+
+    assert [(user.user_name, user.is_disabled) for user in res] == expected_users
+
+
 @pytest.mark.parametrize("status_code", [400, 403, 404, 500])
 def test_assign_case_to_user_one_platform_propagates_http_error_with_body(
     status_code: int,

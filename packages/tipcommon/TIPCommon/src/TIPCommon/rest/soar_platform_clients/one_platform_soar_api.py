@@ -24,10 +24,21 @@ from typing import TYPE_CHECKING
 import requests
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
-from TIPCommon.consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE, NO_CONTENT_STATUS_CODE
+from TIPCommon.consts import (
+    DATAPLANE_1P_HEADER,
+    DEFAULT_1P_PAGE_SIZE,
+    DISABLED_1P_ACCOUNT_STATE,
+    NO_CONTENT_STATUS_CODE,
+)
 from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
 from TIPCommon.rest.custom_types import HttpMethod
-from TIPCommon.utils import escape_odata_literal, get_sdk_api_uri, safe_json_for_204, temporarily_remove_header
+from TIPCommon.utils import (
+    escape_odata_literal,
+    get_sdk_api_uri,
+    safe_cast_bool_value_from_str,
+    safe_json_for_204,
+    temporarily_remove_header,
+)
 
 from .base_soar_api import BaseSoarApi, validate_response
 
@@ -559,10 +570,24 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._paginate_results(endpoint, "emailTemplates")
 
     def get_siemplify_user_details(self) -> list[SingleJson]:
-        """Get siemplify user details."""
+        """Get siemplify user details.
+
+        Note:
+            1P `legacySoarUsers` has no hide disabled users flag. When
+            `self.params.should_hide_disabled_users` is set, users whose
+            `accountState` is `DISABLED` are filtered out after fetching.
+
+        Returns:
+            The list of user JSON objects.
+        """
         page_size = getattr(self.params, "page_size", _PAGE_SIZE)
         endpoint = f"/legacySoarUsers?pageSize={page_size}"
-        return self._paginate_results(endpoint, "legacySoarUsers")
+        users = self._paginate_results(endpoint, "legacySoarUsers")
+        should_hide_disabled_users: bool | str = getattr(self.params, "should_hide_disabled_users", False)
+        if not safe_cast_bool_value_from_str(should_hide_disabled_users):
+            return users
+
+        return [user for user in users if user.get("accountState") != DISABLED_1P_ACCOUNT_STATE]
 
     def get_domain_alias(self) -> requests.Response:
         """Get domain alias."""

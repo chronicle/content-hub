@@ -211,6 +211,46 @@ def test_get_siemplify_user_details(
     )
 
 
+@pytest.mark.parametrize(
+    ("should_hide_disabled_users", "expected_user_names"),
+    [
+        (True, ["active_user", "pending_user"]),
+        ("true", ["active_user", "pending_user"]),
+        (False, ["active_user", "disabled_user", "pending_user"]),
+        ("False", ["active_user", "disabled_user", "pending_user"]),
+    ],
+)
+def test_get_siemplify_user_details_hide_disabled_users(
+    mocker: MockerFixture,
+    mock_chronicle_soar: MagicMock,
+    mock_get_sdk_api_uri: MagicMock,
+    should_hide_disabled_users: bool | str,
+    expected_user_names: list[str],
+) -> None:
+    """Test get_siemplify_user_details drops 1P DISABLED users only when hiding disabled users."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.should_hide_disabled_users = should_hide_disabled_users
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "legacySoarUsers": [
+            {"displayName": "active_user", "accountState": "ACTIVE"},
+            {"displayName": "disabled_user", "accountState": "DISABLED"},
+            {"displayName": "pending_user", "accountState": "PENDING"},
+        ],
+    }
+    mock_chronicle_soar.session.request.return_value = mock_response
+
+    users = client.get_siemplify_user_details()
+
+    assert [user["displayName"] for user in users] == expected_user_names
+    mock_chronicle_soar.session.request.assert_called_once_with(
+        "GET", "https://mock-soar-api.com/legacySoarUsers?pageSize=1000", params=None, json=None
+    )
+
+
 def test_search_cases_by_everything_single_page(
     mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
 ) -> None:
