@@ -13,9 +13,15 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import pathlib
-import json
+from typing import TYPE_CHECKING
+
 from integration_testing.common import get_def_file_content
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
 INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
-CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / 'config.json'
-CONFIG: dict = get_def_file_content(CONFIG_PATH) if CONFIG_PATH.exists() else {}
+CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
+CONFIG: SingleJson = get_def_file_content(CONFIG_PATH) if CONFIG_PATH.exists() else {}
