@@ -1,0 +1,612 @@
+Add a Rule to a Security Policy:
+  ai_description: >-
+    ### General Description
+
+    Adds a new security rule to an existing security policy in Google Cloud Armor.
+    This action allows for the programmatic modification of Web Application Firewall
+    (WAF) or security policy configurations by injecting a rule defined in JSON format.
+    It automatically handles the retrieval of the required policy fingerprint to ensure
+    the update is synchronized with the current state of the external resource.
+
+
+    ### Flow Description
+
+    1. Extracts the Policy Name, Region, and Rule JSON parameters.
+
+    2. Validates the provided Rule JSON to ensure it is properly formatted.
+
+    3. Initializes the Google Cloud Armor API manager with the necessary authentication
+    credentials.
+
+    4. Retrieves the current security policy from Google Cloud Armor to extract its
+    `fingerprint`.
+
+    5. Injects the retrieved fingerprint into the Rule JSON payload to satisfy API
+    concurrency requirements.
+
+    6. Sends a POST request to the Google Cloud Armor API to add the new rule to the
+    specified security policy.
+
+    7. Retrieves and returns the updated security policy to confirm the rule addition.
+
+
+    ### Additional Notes
+
+    - This action does not operate on Google SecOps entities; it is a management action
+    for Google Cloud Armor infrastructure.
+
+    - The action automatically retrieves the latest `fingerprint` from the target
+    policy and injects it into the Rule JSON before submission to prevent version
+    conflicts.
+  ai_short_description: >-
+    Adds a new security rule to an existing security policy in Google Cloud Armor.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new rule to a security policy in Google Cloud Armor.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to fetch the current security policy fingerprint,
+      then makes a POST request to add a new rule to the security policy in Google
+      Cloud Armor. It mutates external data by modifying the security policy but does
+      not mutate internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over `siemplify.target_entities`. It
+      relies entirely on the provided action parameters (Policy Name, Region, Rule
+      JSON) to interact with the Google Cloud Armor API. Therefore, it does not use
+      any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds a generic JSON-defined rule to a Google Cloud Armor security
+      policy. While this could theoretically be used to block or allow specific IPs,
+      the action itself is a generic infrastructure configuration step and does not
+      directly take an IOC or endpoint as input to block or contain. Therefore, it
+      does not strictly match any of the predefined outcome categories such as 'Add
+      IOC To Blocklist' or 'Contain Host'.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Policy Name | String | Yes | Security policy name to add a new rule to. |
+
+    | Region | String | No | Region for the policy to add the rule in. If no value
+    is provided, the rule is added to the global-level security policy. |
+
+    | Rule JSON | String | Yes | JSON definition of the rule to add. For more information
+    about adding a rule to a policy, see Method: securityPolicies.addRule (https://cloud.google.com/compute/docs/reference/rest/v1/securityPolicies/addRule).
+    |
+Create a Security Policy:
+  ai_description: >-
+    ### General Description
+
+    Creates a new security policy in the Google Cloud Armor service. This action allows
+    users to define complex security configurations, including rules, WAF exclusions,
+    and DDoS protection settings, by providing a raw JSON definition. It supports
+    both global and regional security policies.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction & Validation**: The action retrieves the 'Region' and
+    'Policy JSON' parameters. It validates that the 'Policy JSON' is a valid JSON
+    string.
+
+    2. **Region Validation**: It performs a pre-check by listing policies in the specified
+    region to ensure the region name is valid for the authenticated project.
+
+    3. **Policy Creation**: The action sends a POST request to the Google Cloud Armor
+    API with the provided JSON payload to initiate the creation of the security policy.
+
+    4. **Verification & Retrieval**: After the creation request, the action enters
+    a polling loop (with retries) to fetch the details of the newly created policy
+    using a GET request. This ensures the policy was successfully committed.
+
+    5. **Result Processing**: The final policy data is returned as a JSON result,
+    and the action status is set to success.
+
+
+    ### Additional Notes
+
+    * This action does not operate on Google SecOps entities (IPs, Domains, etc.);
+    it is a management action for infrastructure configuration.
+
+    * The 'Policy JSON' must include the 'name' field as it is used to verify the
+    creation during the retrieval phase.
+  ai_short_description: >-
+    Creates a new security policy in the Google Cloud Armor service using a provided
+    JSON definition.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new security policy in Google Cloud Armor.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to Google Cloud Armor to create a new security
+      policy, which mutates external data. It does not fetch contextual data for enrichment,
+      nor does it mutate internal SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It is an infrastructure management
+      action that creates a security policy based on provided parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a security policy in Google Cloud Armor. This is an infrastructure
+      configuration action and does not match any of the predefined outcome categories
+      such as enriching IOCs, blocking IOCs, or managing tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Region | String | No | The region to create a policy in. If no value is provided,
+    the global-level security policy is created. |
+
+    | Policy JSON | String | Yes | The JSON definition of the policy to create. For
+    more information about policies, see REST Resource: securityPolicies (https://cloud.google.com/compute/docs/reference/rest/v1/securityPolicies).
+    |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the Google Cloud Armor service using the credentials
+    and configuration provided in the integration settings. This action ensures that
+    the SOAR platform can successfully authenticate and communicate with the Google
+    Cloud Compute API to manage security policies.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves integration-level configuration including
+    API root and authentication details.
+
+    2. **Validation**: Validates that the provided authentication JSON or email is
+    in the correct format.
+
+    3. **Manager Initialization**: Authenticates with GCP and initializes the Google
+    Cloud Armor API manager.
+
+    4. **Connectivity Test**: Executes a 'List Security Policies' API call with a
+    result limit of 1 to verify that the service is reachable and credentials have
+    sufficient permissions.
+
+    5. **Result Reporting**: Returns a success message if the API call completes without
+    error.
+
+
+    ### Additional Notes
+
+    * Either 'User Service Account' or 'Workload Identity Email' must be configured
+    at the integration level for this action to succeed.
+
+    * This action is primarily used for troubleshooting and verifying setup.
+  ai_short_description: >-
+    Tests the connectivity to the Google Cloud Armor service to ensure successful
+    authentication and communication.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to list security policies solely to verify connectivity.
+      It does not fetch contextual data for alerts/entities, nor does it mutate any
+      external or internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It is a system-level action used
+      to test connectivity to the external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Update a Security Policy:
+  ai_description: >-
+    ### General Description
+
+    Updates an existing security policy in the Google Cloud Armor service. This action
+    modifies the configuration of a security policy (such as its description, adaptive
+    protection settings, or advanced options) using a provided JSON definition. Note
+    that this action is designed to update the policy itself and cannot be used to
+    update individual rules within the policy. This action does not operate on Google
+    SecOps SOAR entities.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the policy name, region, and the new policy
+    JSON from the action input parameters.
+
+    2. **Validation**: Validates that the provided Policy JSON is a valid JSON structure.
+
+    3. **Fingerprint Retrieval**: Makes a GET request to the Google Cloud Armor API
+    to fetch the current state of the specified policy and extracts its unique `fingerprint`.
+
+    4. **JSON Preparation**: Injects the retrieved fingerprint into the user-provided
+    Policy JSON to ensure the update request is authorized for the current version
+    of the resource.
+
+    5. **Policy Update**: Sends a PATCH request to the Google Cloud Armor API with
+    the updated policy configuration.
+
+    6. **Verification**: Makes a final GET request to retrieve the updated policy
+    details from the API to confirm the changes and returns the raw JSON result to
+    the SOAR platform.
+
+
+    ### Additional Notes
+
+    * The action automatically retrieves the current policy's 'fingerprint' from Google
+    Cloud Armor before performing the update. This fingerprint is required by the
+    Google Cloud API to prevent concurrent modification conflicts.
+
+    * This action uses the `PATCH` method, meaning it updates the fields provided
+    in the JSON while preserving others where applicable.
+  ai_short_description: >-
+    Updates an existing security policy configuration in the Google Cloud Armor service
+    using a provided JSON definition.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates an existing security policy configuration in Google Cloud Armor.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a PATCH request to the Google Cloud Armor API to update an
+      existing security policy, which mutates external data. It does not fetch contextual
+      data for alerts/entities, nor does it mutate internal SecOps data, update entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. The configuration explicitly states that this action doesn't run
+      on Google SecOps SOAR entities. Therefore, all entity type and filter flags
+      are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates a security policy configuration in Google Cloud Armor. It
+      does not enrich IOCs or assets, update alerts or tickets, manage blocklists/allowlists
+      for specific IOCs, contain hosts, or perform any of the other specific expected
+      outcomes defined in the categories. Therefore, all outcome category flags are
+      set to false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Policy Name | String | Yes | Security policy name to update. |
+
+    | Region | String | No | Region for the updated policy. If no value is provided,
+    the global-level security policy is created. |
+
+    | Policy JSON | String | Yes | JSON definition of the policy to update. You cannot
+    update rules with this action. |

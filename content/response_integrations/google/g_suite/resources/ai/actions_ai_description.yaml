@@ -1,0 +1,3822 @@
+Add Members To Group:
+  ai_description: >-
+    ### General Description
+
+    Adds members to a specified Google Workspace (GSuite) group. This action allows
+    administrators to manage group memberships by processing both User entities present
+    in the Google SecOps case and additional email addresses provided as input parameters.
+    It interacts with the Google Directory API to perform the additions.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the target group email and the optional
+    list of additional user emails from the action configuration.
+
+    2. **Entity Filtering**: Identifies all `USER` entities within the current Google
+    SecOps context.
+
+    3. **Consolidation**: Combines the email addresses from the entities and the 'User
+    Email Addresses' parameter into a unique set of target members.
+
+    4. **API Interaction**: For each target member, the action calls the Google Directory
+    API's 'members.insert' endpoint to add the user to the group.
+
+    5. **Result Handling**: Tracks which users were successfully added, which already
+    existed in the group, and which failed due to errors.
+
+    6. **Output**: Generates a summary message detailing the outcome for each user
+    and provides the raw JSON response from the GSuite API for successful additions.
+
+
+    ### Additional Notes
+
+    - The action is case-insensitive regarding email addresses; all identifiers are
+    converted to lowercase before processing.
+
+    - If a user is already a member of the group, the action will identify this and
+    continue processing other users without failing the entire action.
+  ai_short_description: >-
+    Adds members to a specified Google Workspace (GSuite) group by processing User
+    entities and additional email addresses.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds users to a specified Google Workspace group via the Google Directory API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Google Directory API to add members to
+      a group, mutating external data. It does not fetch data for enrichment, mutate
+      internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES = [EntityTypes.USER]`. Therefore,
+      it targets USER entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds users to a Google Workspace group, which modifies their account
+      metadata and group memberships. This aligns with the 'Update Identity' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group Email Address | String | Yes | Email of the group to add the members to.
+    |
+
+    | User Email Addresses | String | No | A comma-separated list of users that you
+    want to remove from the group. Note: values from this parameter will be executed
+    alongside User Entities. |
+Block Extension:
+  ai_description: >-
+    ### General Description
+
+    The Block Extension action allows administrators to block a specific Chrome extension
+    within a designated Google Workspace Organizational Unit (OU). This action is
+    primarily used for security containment, preventing the installation or execution
+    of potentially malicious or unauthorized browser extensions across a subset of
+    the organization.
+
+
+    ### Flow Description
+
+    1. Initializes the GSuite API client.
+
+    2. Extracts and validates the Organization Unit Name and Extension ID parameters.
+
+    3. Fetches all organizational units from the GSuite environment to find the ID
+    of the target OU.
+
+    4. Sends a POST request to the Google Chrome Policy API (`batchModify`) to set
+    the `appInstallType` of the specified extension to `BLOCKED` for the target OU.
+
+    5. Calls the `resolve` policy endpoint to verify that the effective policy for
+    that extension in the target OU is set to `BLOCKED`.
+
+    6. Returns a success message and the resolved policy details as JSON.
+
+
+    ### Additional Notes
+
+    A Chrome Enterprise license is required to use this action.
+  ai_short_description: >-
+    Blocks a specific Chrome extension within a designated Google Workspace Organizational
+    Unit (OU) by modifying the Chrome extension policy.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Modifies the Chrome extension policy for a specific Organizational Unit to block
+      the installation of the specified extension.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches organizational units to resolve the OU ID and fetches the
+      resolved policy to verify the change. It mutates external data by sending a
+      POST request to the Chrome Policy API to block the specified extension. It does
+      not mutate internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or filter any entities. It relies solely on the
+      provided input parameters (Organization Unit Name and Extension ID).
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies a Chrome extension policy in Google Workspace to block an
+      extension. This does not directly align with any of the predefined outcome categories
+      such as blocking an IOC on a firewall/EDR, disabling an identity, or containing
+      a host.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Organization Unit Name | String | Yes | The name of the organizational unit
+    in which to block the extension. |
+
+    | Extension ID | String | Yes | The ID of the extension to block. |
+Create Group:
+  ai_description: >-
+    ### General Description
+
+    Creates a new group within the GSuite (Google Workspace) directory. This action
+    allows administrators to programmatically define a group's identity, including
+    its email address, display name, and description.
+
+
+    ### Flow Description
+
+    1. Extracts the `Email Address`, `Name`, and `Description` parameters.
+
+    2. Initializes the GSuite API client.
+
+    3. Sends a POST request to the GSuite Admin Directory API to create the group
+    with the provided details.
+
+    4. If successful, returns the details of the newly created group in JSON format.
+
+    5. If the email is invalid or the group already exists, it catches the specific
+    exception and reports a failure.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Creates a new group within the GSuite (Google Workspace) directory.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new group in the GSuite directory.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the GSuite API to create a new group, which
+      mutates external data. It does not fetch contextual data for enrichment, nor
+      does it mutate internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use any entity-specific
+      identifiers. It operates solely on the provided input parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new group in GSuite. This does not match any of the predefined
+      outcome categories such as Update Identity, Create Ticket, or Enrich Asset.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Email Address | String | Yes | Email address of the new group. |
+
+    | Name | String | No | Display name of the new group. |
+
+    | Description | String | No | Description of the new group. |
+Create OU:
+  ai_description: >-
+    ### General Description
+
+    Creates a new organizational unit (OU) within a GSuite account using the Google
+    Admin SDK. This action allows administrators to programmatically structure their
+    directory by defining the OU's name, description, and its position within the
+    organizational hierarchy via a parent path.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the Customer ID, Name, Description,
+    and Parent OU Path from the input settings.
+
+    2. **API Initialization**: Authenticates with GSuite using the provided service
+    account credentials and prepares an authorized session.
+
+    3. **OU Creation**: Executes a POST request to the GSuite Admin Directory API
+    endpoint (`/admin/directory/v1/customer/{customer_id}/orgunits`) with the specified
+    OU details.
+
+    4. **Result Processing**: If successful, the details of the newly created organizational
+    unit are returned as a JSON object and the action status is set to completed.
+
+
+    ### Additional Notes
+
+    - This action does not operate on SecOps entities; it is a standalone management
+    task.
+
+    - The 'Parent OU Path' must exist in the GSuite directory for the action to succeed.
+  ai_short_description: >-
+    Creates a new organizational unit (OU) within a GSuite account using the Google
+    Admin SDK.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new organizational unit (OU) in the GSuite directory.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a POST request to the GSuite API to create a new organizational
+      unit, which mutates external data. It does not fetch contextual data for enrichment,
+      nor does it mutate internal SecOps data like entities, insights, or case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on or iterate over any entities. It performs a standalone
+      administrative task based on the provided parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new organizational unit in GSuite. This is an administrative
+      directory management task and does not match any of the specific security outcome
+      categories such as enriching IOCs, updating identities, or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Customer ID | String | Yes | The unique ID for the customer's G Suite account,
+    'my_customer' alias can also be used to represent your account's customerId. |
+
+    | Name | String | No | Display name of the new OU. |
+
+    | Description | String | No | Description of the new OU. |
+
+    | Parent OU Path | String | Yes | The full path to the organizational unit's parent
+    OU. |
+Create User:
+  ai_description: >-
+    ### General Description
+
+    Creates a new user account in GSuite (Google Workspace) using the Directory API.
+    This action allows administrators to programmatically provision users by providing
+    essential details such as names, email addresses, and initial security settings
+    like password requirements.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves user details (names, email,
+    password, etc.) from the input parameters.
+
+    2. **API Initialization:** It establishes a connection to the GSuite Directory
+    API using the configured credentials.
+
+    3. **User Creation:** A POST request is sent to the GSuite `/admin/directory/v1/users`
+    endpoint to create the account with the provided organizational and personal details.
+
+    4. **Result Handling:** The action captures the API response, adds the created
+    user's metadata to the action's JSON results, and reports the success or failure
+    of the operation.
+
+
+    ### Additional Notes
+
+    * This action does not process or iterate over Google SecOps entities; it relies
+    entirely on the provided input parameters.
+
+    * The password provided is hashed using SHA256 before being sent to the GSuite
+    API for security.
+  ai_short_description: >-
+    Creates a new user account in GSuite (Google Workspace) using the Directory API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new user account in GSuite (Google Workspace).
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the GSuite API to create a new user account,
+      which mutates external data. It does not fetch contextual data for enrichment,
+      nor does it mutate internal SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities (e.g., `siemplify.target_entities`).
+      It relies entirely on the provided input parameters to create a new user. Therefore,
+      all entity types and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new user account in GSuite. There is no specific outcome
+      category for creating an identity or user account (only disable, enable, reset
+      password, or update). Therefore, it does not match any of the available outcome
+      categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Given Name | String | Yes | The user's first name. |
+
+    | Family Name | String | Yes | The user's last name. |
+
+    | Password | Password | Yes | The password of the new user. |
+
+    | Email Address | String | Yes | The user's primary email address. |
+
+    | Phone | String | No | The phone number of the user. |
+
+    | Gender | String | No | The gender of the user. Valid values: female, male, other,
+    unknown. |
+
+    | Department | String | No | The name of the department of the user. |
+
+    | Organization | String | No | The name of the organization of the user. |
+
+    | Change Password At Next Login | Boolean | Yes | Whether to force the user to
+    change his password on next login. |
+Delete Extension:
+  ai_description: >-
+    ### General Description
+
+    Deletes a specified Chrome extension policy from a Google Workspace Organizational
+    Unit (OU). This action effectively removes the extension from a blocklist or allowlist
+    by reverting the OU's policy to its inherited state from the parent organizational
+    unit. Note that a Chrome Enterprise license is required for this operation.
+
+
+    ### Flow Description
+
+    1. **Validation**: The action validates the provided Extension ID against a regex
+    pattern (32 characters using letters 'a' through 'p').
+
+    2. **OU Identification**: It fetches the list of all organizational units from
+    Google Workspace to find the internal ID corresponding to the provided 'Organization
+    Unit Name'.
+
+    3. **Policy Deletion**: It sends a POST request to the Google Chrome Policy API
+    to 'batch-inherit' the policy for the specified extension and OU, which removes
+    the local policy override.
+
+    4. **Verification**: The action performs a follow-up check by resolving the effective
+    policy for the OU to ensure the extension policy is no longer directly applied.
+    If the policy persists, an error is raised.
+
+    5. **Result Reporting**: Upon successful verification, it returns a success message
+    and the ID of the deleted extension in the result JSON.
+
+
+    ### Additional Notes
+
+    A Chrome Enterprise license is required to use this action.
+  ai_short_description: >-
+    Deletes a specified Chrome extension policy from a Google Workspace Organizational
+    Unit, effectively removing it from a blocklist or allowlist by reverting to the
+    inherited policy.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a Chrome extension policy from a Google Workspace Organizational Unit
+      by reverting it to the inherited policy.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action mutates external data by sending a POST request to the Google Chrome
+      Policy API to 'batch-inherit' (delete) an extension policy. It does not fetch
+      contextual enrichment data for entities, nor does it mutate internal SecOps
+      data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the explicitly provided action parameters (Organization Unit
+      Name and Extension ID) to perform its operations. Therefore, all entity types
+      and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action explicitly deletes a specified Chrome extension from an organizational
+      unit blocklist by reverting the policy to its inherited state. This restores
+      execution rights for the extension (which can be considered an indicator/application),
+      aligning with the 'Remove IOC From Blocklist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Organization Unit Name | String | Yes | The name of the organizational unit
+    from which to delete the extension. |
+
+    | Extension ID | String | Yes | The ID of the extension to delete. |
+Delete Group:
+  ai_description: >-
+    ### General Description
+
+    Deletes a Google Workspace (GSuite) Directory Group using its unique email address.
+    This action is used to programmatically remove groups from a Google Workspace
+    environment, which is useful for offboarding or cleanup tasks during incident
+    response.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the GSuite API client using the
+    provided integration configuration.
+
+    2. **Parameter Extraction**: The action retrieves the 'Group Email Address' from
+    the user input.
+
+    3. **API Execution**: The action sends a DELETE request to the Google Workspace
+    Admin SDK Directory API endpoint for groups.
+
+    4. **Error Handling**: If the group is not found or the API returns an error,
+    the action logs the failure and reports it to the user.
+
+    5. **Completion**: The action concludes by returning a success status and a boolean
+    result indicating whether the deletion was successful.
+
+
+    ### Additional Notes
+
+    Ensure the provided service account or delegated user has the necessary permissions
+    to delete groups in the Google Workspace directory.
+  ai_short_description: >-
+    Deletes a Google Workspace (GSuite) Directory Group using its unique email address.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a group in Google Workspace via the Admin SDK Directory API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action extracts the 'Group Email Address' parameter and makes a DELETE request
+      to the Google Workspace API to remove the group. This mutates external data.
+      It does not fetch contextual data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The script does not iterate over `siemplify.target_entities` or perform any
+      entity-based operations. It operates solely on the provided 'Group Email Address'
+      action parameter. Therefore, all entity type and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a group in Google Workspace. This operation does not match
+      any of the predefined outcome categories such as disabling an identity, updating
+      an identity (which focuses on user accounts), or enriching an asset. Therefore,
+      all outcome category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group Email Address | String | Yes | Email of the group to delete. |
+Delete OU:
+  ai_description: >-
+    ### General Description
+
+    Deletes an organizational unit (OU) from a G Suite account using the Google Directory
+    API. This action requires the specific customer ID and the full path of the organizational
+    unit to be removed. It is a destructive action that modifies the external G Suite
+    environment by permanently removing the specified OU.
+
+
+    ### Flow Description
+
+    1. Extracts the `Customer ID` and `OU Path` parameters from the action configuration.
+
+    2. Initializes the GSuite API client using the provided credentials.
+
+    3. Calls the Google Directory API via a DELETE request to remove the specified
+    organizational unit.
+
+    4. Handles any validation or execution errors, returning a failure status if the
+    OU cannot be deleted.
+
+    5. Returns a success message and execution status upon successful deletion.
+
+
+    ### Additional Notes
+
+    This action does not operate on SecOps entities.
+  ai_short_description: >-
+    Deletes an organizational unit (OU) from a G Suite account using the Google Directory
+    API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes an organizational unit (OU) from the external G Suite environment.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a DELETE request to the Google Directory API to remove an organizational
+      unit. It mutates external data but does not fetch enrichment data, update internal
+      entities, create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process any entities. It relies entirely
+      on the provided action parameters to execute the deletion. Therefore, all entity-related
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes an organizational unit in G Suite. This operation does not
+      match any of the predefined outcome categories such as enriching IOCs/assets,
+      managing tickets, modifying identities, or interacting with emails. Therefore,
+      all outcome category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Customer ID | String | Yes | The unique ID for the customer's G Suite account,
+    'my_customer' alias can also be used to represent your account's customerId. |
+
+    | OU Path | String | Yes | The full path to the organizational unit. If organizational
+    unit is located under root (/) path, provide just organizational unit name, without
+    path. |
+Delete User:
+  ai_description: >-
+    ### General Description
+
+    The **Delete User** action allows administrators to permanently remove a user
+    account from a GSuite (Google Workspace) domain. This action is typically used
+    during offboarding processes or to remediate compromised accounts by removing
+    them from the organization's directory.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the GSuite API client using the
+    provided integration credentials.
+
+    2. **Parameter Extraction**: The action retrieves the mandatory `Email Address`
+    from the input parameters.
+
+    3. **API Execution**: It calls the GSuite Directory API's `delete` endpoint for
+    the specified user.
+
+    4. **Error Handling**: If the user is not found, it logs a specific "User not
+    found" error. If the deletion is successful, it returns a success status. For
+    any other API or connection errors, it captures the exception and marks the action
+    as failed.
+
+
+    ### Additional Notes
+
+    - This action does not run on entities automatically; it requires the specific
+    email address to be provided as a parameter.
+
+    - Deleting a user is a destructive action and may result in the loss of associated
+    data (Drive, Mail, etc.) depending on the GSuite domain's retention policies.
+  ai_short_description: >-
+    Permanently removes a user account from a GSuite (Google Workspace) domain.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a user account in the GSuite (Google Workspace) domain.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a DELETE request to the GSuite API to remove a user account.
+      It mutates external data but does not fetch enrichment data, update internal
+      entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the 'Email Address' parameter provided in
+      the action configuration.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: true
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action permanently deletes a user account from GSuite, which effectively
+      revokes their access and prevents them from authenticating, aligning with the
+      goal of disabling an identity.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Email Address | String | Yes | The email address of the user to delete. |
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches **User** entities with detailed profile information from Google Workspace
+    (GSuite). This action helps security analysts understand the context of a user
+    involved in an alert by providing data such as their full name, administrative
+    privileges, account status (suspended/archived), and last login activity.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Establishes a connection to the Google Workspace Admin
+    SDK using service account credentials.
+
+    2. **Entity Filtering**: Identifies all **User** entities within the current context.
+
+    3. **Data Retrieval**: For each valid user entity, the action queries the Google
+    Workspace Directory API using the user's primary email address via a GET request.
+
+    4. **Enrichment**:
+        *   Flattens the retrieved JSON data.
+        *   Updates the entity's `additional_properties` with the flattened data (prefixed
+    with 'GSuite').
+        *   Sets the entity's `is_enriched` flag to `True`.
+    5. **Finalization**: Updates the entities in the Google SecOps platform and provides
+    a summary of successful and failed enrichments.
+
+
+    ### Additional Notes
+
+    *   The action requires the Google Workspace integration to be properly configured
+    with a Service Account that has the necessary Directory API scopes.
+
+    *   Only entities of type **USER** are processed.
+  ai_short_description: >-
+    Enriches User entities with detailed profile information from Google Workspace
+    (GSuite), providing data such as full name, administrative privileges, account
+    status, and last login activity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Google Workspace using a GET request (`gsuite_manager.get_user`).
+      It does not mutate external data. It updates the internal entities with the
+      fetched data using `siemplify.update_entities`. It does not create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` is
+      `[EntityTypes.USER]`. Therefore, it targets User entities and filters by entity
+      type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches user profile information from Google Workspace and enriches
+      the User entity with this contextual metadata. This directly aligns with the
+      'Enrich Asset' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
+Get Extension Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves comprehensive details for one or more Chrome Extensions from Google
+    Workspace. This action provides security analysts with visibility into extension
+    metadata, as well as the specific users and devices that have requested the extension's
+    installation within the organization. Note that a Chrome Enterprise license is
+    required to use this action.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Initializes the GSuite API client using the configured
+    credentials.
+
+    2. **Parameter Parsing**: Extracts the list of Extension IDs and validates that
+    the 'Max Requesting' limits are within the allowed range (1 to 1000).
+
+    3. **Data Retrieval**: For each provided Extension ID, the action sequentially
+    calls the Google Chrome Management API to fetch:
+        - General extension metadata (name, description, publisher, permissions, etc.)
+    via a GET request.
+        - A list of users who requested the extension, up to the specified limit,
+    via a GET request.
+        - A list of devices where the extension was requested, up to the specified
+    limit, via a GET request.
+    4. **Data Aggregation**: Combines the metadata, user details, and device details
+    into a unified JSON structure for each extension.
+
+    5. **Result Finalization**: Sets the action status based on whether any extension
+    details were successfully retrieved and outputs the aggregated JSON data.
+
+
+    ### Additional Notes
+
+    - This action does not process entities from the Google SecOps case; it operates
+    strictly on the Extension IDs provided in the input parameters.
+
+    - The action performs multiple API calls per extension (details, users, and devices)
+    and aggregates them into a single JSON result per ID.
+  ai_short_description: >-
+    Retrieves comprehensive details, including metadata, requesting users, and requesting
+    devices, for one or more Chrome Extensions from Google Workspace.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the Google Chrome Management API to fetch extension
+      details, users, and devices. It does not mutate external data, update internal
+      entities, create insights, or modify case/alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or filter `siemplify.target_entities`. It operates
+      exclusively on the `Extension ID` parameter provided by the user. Therefore,
+      it does not run on any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches metadata about Chrome extensions based on provided IDs. It
+      does not enrich standard IOCs or assets, mutate alerts, manage tickets, or perform
+      containment/remediation. Therefore, it does not match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Extension ID | String | Yes | A comma-separated list of extension IDs to enrich.
+    |
+
+    | Max Requesting Users To Return | Integer | Yes | The maximum number of users
+    to return who requested the extension installation. The maximum value is `1000`.
+    |
+
+    | Max Requesting Devices To Return | Integer | Yes | The maximum number of devices
+    to return where the extension installation was requested. The maximum value is
+    `1000`. |
+Get Group Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get Group Details** action retrieves comprehensive configuration and permission
+    settings for specified Google Workspace groups. It allows security analysts to
+    audit group visibility, membership policies, and posting permissions directly
+    from Google Workspace. This action is particularly useful for investigating group-based
+    access controls or verifying the security posture of specific communication channels.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action parses the comma-separated list of group
+    email addresses provided in the input parameter.
+
+    2. **API Initialization**: Establishes an authenticated session with the Google
+    Workspace API using the configured service account credentials.
+
+    3. **Data Retrieval**: For each provided group email, the action sends a GET request
+    to the Google Groups Settings API to fetch the group's metadata and permission
+    settings.
+
+    4. **Error Handling**: If a group is not found or an API error occurs for a specific
+    identifier, the action logs the failure and continues to the next group.
+
+    5. **Result Aggregation**: Successfully retrieved group settings are converted
+    into a JSON format and attached to the action's output.
+
+    6. **Status Reporting**: The action returns a success message listing the enriched
+    groups or a failure message if no groups could be processed.
+
+
+    ### Additional Notes
+
+    * This action does not automatically process entities from the SOAR case. It relies
+    entirely on the identifiers provided in the **Group Email Addresses** parameter.
+  ai_short_description: >-
+    Retrieves comprehensive configuration and permission settings for specified Google
+    Workspace groups.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Google Workspace API to fetch group settings
+      (fetches_data=true). It does not mutate external data, mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It relies entirely on the `Group Email Addresses` parameter. Therefore,
+      it does not run on entities and all entity type flags must be false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches group settings from Google Workspace based on provided email
+      addresses. It does not enrich IOCs or assets, mutate alerts, tickets, blocklists,
+      identities, or emails. It does not match any of the specific expected outcomes
+      defined in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group Email Addresses | String | Yes | A comma-separated list of group emails
+    that you want to examine. |
+Get Host Browser Details:
+  ai_description: >-
+    ### General Description
+
+    The **Get Host Browser Details** action retrieves comprehensive information about
+    Chrome browsers associated with a specific **HOSTNAME** entity within a Google
+    Workspace environment. This action is particularly useful for security investigations
+    involving managed Chrome devices, providing visibility into OS versions, browser
+    versions, extensions, and applied policies. Note that this action requires a **Chrome
+    Enterprise** license to function correctly.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all `HOSTNAME` entities provided
+    in the current context.
+
+    2. **API Query**: For each hostname, it queries the Google Admin SDK (Chrome Browser
+    Devices endpoint) using the machine name as a filter to find matching managed
+    browsers.
+
+    3. **Data Retrieval**: It fetches details such as device ID, OS platform, browser
+    versions, last activity time, and active extensions.
+
+    4. **Policy Parsing**: The action specifically iterates through `machinePolicies`
+    and `userPolicies`. It attempts to parse any JSON-formatted strings found within
+    policy values into structured objects to ensure the output is easy to consume.
+
+    5. **Result Output**: The processed browser details are attached to the action's
+    JSON results for each successful hostname, and a summary message is provided in
+    the action output.
+
+
+    ### Additional Notes
+
+    This action requires a Chrome Enterprise license.
+  ai_short_description: >-
+    Retrieves comprehensive information about Chrome browsers associated with a specific
+    HOSTNAME entity within a Google Workspace environment.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Google Admin SDK to fetch browser details
+      for a given hostname. It does not mutate external data, nor does it update internal
+      entities or create insights. It only adds the fetched data to the action's JSON
+      results.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action targets entities of type HOSTNAME. The framework filters the entities
+      based on the `_get_entity_types` method which returns `[EntityTypesEnum.HOST_NAME]`,
+      meaning it filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches contextual metadata (browser details, OS platform, extensions,
+      policies) for a hostname (asset) from Google Workspace. This aligns with the
+      'Enrich Asset' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+List Group Members:
+  ai_description: >-
+    ### General Description
+
+    The **List Group Members** action retrieves a comprehensive list of all members
+    belonging to a specific Google Workspace (GSuite) group. This is useful for auditing
+    group access, investigating potential insider threats, or verifying group composition
+    during incident response. The action interacts with the GSuite Directory API to
+    fetch member details such as email, role (e.g., OWNER, MEMBER), and status.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the target group's email address
+    and the preference for derived membership from the user input.
+
+    2. **API Initialization**: It initializes the GSuite API client using the integration's
+    service account credentials and delegated email configuration.
+
+    3. **Data Retrieval**: The action calls the GSuite Directory API's `members.list`
+    endpoint for the specified group email. It applies the `includeDerivedMembership`
+    flag based on the input parameter.
+
+    4. **Pagination**: The logic automatically handles API pagination to ensure that
+    all members are retrieved if the group size exceeds the default page limit.
+
+    5. **Output Generation**: The retrieved member list is processed into a JSON result
+    and formatted into a Data Table named 'Group [Email] Members' for display within
+    the Google SecOps case wall.
+
+
+    ### Additional Notes
+
+    If the specified group email address does not exist, the action will fail with
+    a specific 'Group email address was not found' error message.
+  ai_short_description: >-
+    Retrieves a comprehensive list of all members belonging to a specific Google Workspace
+    (GSuite) group.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the GSuite API to fetch group members (fetches_data
+      = true). It does not mutate external data, internal data, update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It relies entirely on the provided
+      input parameters (Group Email Address) to fetch data.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of members for a specific group. It does not enrich
+      a specific IOC or Asset, nor does it mutate external data, update alerts, or
+      perform any of the other specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group Email Address | String | Yes | Email address of the group. |
+
+    | Include Derived Membership | Boolean | Yes | Whether to list indirect memberships.
+    |
+List Group Privileges:
+  ai_description: >-
+    ### General Description
+
+    Retrieves and lists the roles and unique privileges associated with specific Google
+    Workspace groups. It allows security analysts to audit group permissions by fetching
+    role assignments and expanding them into granular privileges. The action supports
+    filtering by specific roles or privileges and provides a structured JSON output
+    of the findings.
+
+
+    ### Flow Description
+
+    1. **Validation**: The action validates input parameters, ensuring 'Max Roles
+    To Return' and 'Max Privileges To Return' are positive integers, and 'Expand Privileges'
+    is enabled if 'Check Privileges' is used.
+
+    2. **Group Retrieval**: Iterates over the provided group email addresses and fetches
+    the group's unique ID from Google Workspace via a GET request to the Google Admin
+    API.
+
+    3. **Role Assignment Discovery**: Retrieves all role assignments linked to the
+    group ID via a GET request.
+
+    4. **Role Detail Fetching**: Fetches the full role definition, including associated
+    privileges, for each assigned role via a GET request.
+
+    5. **Filtering**: Filters the discovered roles and privileges based on the 'Check
+    Roles' and 'Check Privileges' parameters.
+
+    6. **Result Generation**: Compiles the filtered roles and unique privileges into
+    a JSON result for each group and adds it to the execution output.
+
+
+    ### Additional Notes
+
+    - The 'Expand Privileges' parameter must be set to 'True' if any values are provided
+    in the 'Check Privileges' parameter; otherwise, the action will fail validation.
+
+    - If 'Check Roles' is populated, the action will only evaluate privileges belonging
+    to those specific roles.
+  ai_short_description: >-
+    Retrieves and lists the roles and unique privileges associated with specific Google
+    Workspace groups to audit group permissions.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the Google Workspace API to fetch group details,
+      role assignments, and role definitions. It does not mutate any external data,
+      nor does it update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the `Group Email Addresses` parameter provided
+      by the user. Therefore, it does not run on entities and all entity type flags
+      are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches group roles and privileges from Google Workspace based on
+      a provided parameter. It does not enrich specific IOCs or Assets (entities),
+      nor does it update alerts, manage tickets, modify blocklists, or perform any
+      other operations that match the expected outcomes of the available categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group Email Addresses | String | Yes | A comma-separated list of groups that
+    you want to examine. |
+
+    | Check Roles | String | No | Specify a comma-separated list of roles that you
+    want to check in relation to the group. |
+
+    | Check Privileges | String | No | Specify a comma-separated list of permission
+    that you want to check in relation to the group. Note: "Expand Privileges" needs
+    to be enabled for this parameter to work. If there are values inside the "Check
+    Roles" parameter, action will check the privileges only among those roles. |
+
+    | Expand Privileges | Boolean | No | If enabled, action will return information
+    about all of the unique privileges related to the group. |
+
+    | Max Roles To Return | Integer | Yes | Specify how many roles related to the
+    group to return. |
+
+    | Max Privileges To Return | Integer | Yes | Specify how many privileges related
+    to the group to return. |
+List OU Of Account:
+  ai_description: >-
+    ### General Description
+
+    The **List OU Of Account** action retrieves a list of organizational units (OUs)
+    from a specified G Suite (Google Workspace) account. This action is primarily
+    used for administrative visibility and auditing of the organizational structure
+    within a Google Workspace environment.
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization:** The action extracts the Customer ID, Organization
+    Unit Path, and the maximum number of results from the input parameters.
+
+    2. **Validation:** It validates that the 'Max Organization Units' parameter falls
+    within the acceptable range of 1 to 100.
+
+    3. **API Request:** The action authenticates with the G Suite Admin SDK and sends
+    a GET request to the organizational units endpoint for the specified customer.
+
+    4. **Data Transformation:** The retrieved organizational unit data is parsed into
+    structured objects, including details such as the OU name, path, ID, and parent
+    information.
+
+    5. **Result Output:** The action generates a data table titled 'OU List' and attaches
+    the full JSON results to the action output for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - This action does not require or process specific entities (such as Users or
+    Hosts) from the Google SecOps case; it operates at the account/customer level.
+  ai_short_description: >-
+    Retrieves a list of organizational units (OUs) from a specified G Suite (Google
+    Workspace) account.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the G Suite API to fetch organizational units.
+      It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates purely on the provided action parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches organizational units from G Suite. It does not enrich specific
+      IOCs or assets, nor does it mutate any data, manage tickets, or perform any
+      of the other specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Customer ID | String | Yes | The unique ID for the customer's G Suite account,
+    'my_customer' alias can also be used to represent your account's customerId. |
+
+    | Organization Unit Path | String | No | The path of the organizational unit that
+    needs to be returned. |
+
+    | Max Organization Units | Integer | Yes | Number of organizational units to return.
+    Maximum is 100. |
+List User Privileges:
+  ai_description: >-
+    ### General Description
+
+    Retrieves and lists roles and privileges for specific users in Google Workspace.
+    This action allows security analysts to audit user permissions by fetching role
+    assignments and their associated privileges directly from the Google Directory
+    API.
+
+
+    ### Flow Description
+
+    1. **Identity Extraction**: The action identifies target users from both the provided
+    `User Email Addresses` parameter and the `USER` entities present in the current
+    alert context.
+
+    2. **Validation**: It validates that `Expand Privileges` is enabled if `Check
+    Privileges` is specified, and ensures limit parameters are positive integers.
+
+    3. **Data Retrieval**: For each user, it queries the Google Workspace API to list
+    role assignments (optionally including indirect/inherited ones).
+
+    4. **Role Resolution**: It fetches the full details for each assigned role to
+    identify the specific privileges (permissions) granted by that role.
+
+    5. **Filtering and Truncation**: The retrieved roles and privileges are filtered
+    against the `Check Roles` and `Check Privileges` parameters and truncated based
+    on the `Max` limit parameters.
+
+    6. **Enrichment**: The action updates the User entities in Google SecOps with
+    a comma-separated list of their roles and attaches a detailed JSON result containing
+    the full roles and privileges breakdown.
+
+
+    ### Additional Notes
+
+    Supported entities: User.
+  ai_short_description: >-
+    Retrieves and lists roles and privileges for specific users in Google Workspace
+    to audit user permissions.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the User entities in Google SecOps with their roles and privileges in
+      the additional properties.
+    reasoning: >-
+      The action makes GET requests to the Google Workspace API to fetch role assignments
+      and role details (fetches_data=true). It does not mutate external data (can_mutate_external_data=false).
+      It updates internal entities with the fetched roles (can_update_entities=true,
+      can_mutate_internal_data=true) and adds a JSON result, but does not create insights
+      or case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `self.soar_action.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES
+      = [EntityTypes.USER]`. Therefore, it targets USER entities and filters strictly
+      by the `entity_type` attribute.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches roles and privileges for a user from Google Workspace. This
+      matches the 'Enrich Asset' expected outcome as it returns contextual metadata
+      for a user identity. It does not mutate external data or perform other categorized
+      actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | User Email Addresses | String | No | A comma-separated list of users that you
+    want to process. Note: values from this parameter will be executed alongside User
+    Entities. |
+
+    | Check Roles | String | No | Specify a comma-separated list of roles that you
+    want to check in relation to the user. |
+
+    | Check Privileges | String | No | Specify a comma-separated list of permission
+    that you want to check in relation to the user. Note: "Expand Privileges" needs
+    to be enabled for this parameter to work. If there are values inside the "Check
+    Roles" parameter, action will check the privileges only among those roles. |
+
+    | Include Inherited Roles | Boolean | No | If enabled, action will additionally
+    return user roles that were inherited from groups. |
+
+    | Expand Privileges | Boolean | No | If enabled, action will return information
+    about all of the unique privileges related to the user. |
+
+    | Max Roles To Return | Integer | Yes | Specify how many roles related to the
+    user to return. |
+
+    | Max Privileges To Return | Integer | Yes | Specify how many privileges related
+    to the user to return. |
+List Users:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of users from a Google Workspace (GSuite) account based on various
+    filtering criteria such as administrative privileges, suspension status, organizational
+    unit, and 2FA enrollment. The action queries the Google Workspace Directory API
+    and returns the matching user records as a JSON object and a formatted data table
+    within the Google SecOps environment.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action extracts input parameters including filters
+    (e.g., Admin status, Suspended status, Org Unit) and the record limit.
+
+    2. **API Client Initialization**: Initializes the GSuite API client using the
+    configured service account credentials.
+
+    3. **Query Construction**: Builds a search query string based on the provided
+    filtering parameters.
+
+    4. **Data Retrieval**: Makes a GET request to the Google Workspace Directory API
+    (`/admin/directory/v1/users`) to fetch the list of users. If specific email addresses
+    are provided, it iterates through them to perform targeted searches.
+
+    5. **Output Generation**: Processes the retrieved user data, returning it as a
+    JSON result and populating a data table named 'Google Gsuite Users'.
+
+
+    ### Additional Notes
+
+    - If the 'Email Addresses' parameter is used, the 'Record Limit' parameter is
+    ignored as the action will attempt to find all specified addresses.
+
+    - Either 'Customer ID' or 'Domain' is typically required by the underlying API,
+    though the action defaults to 'my_customer' if neither is provided.
+  ai_short_description: >-
+    Retrieves a list of users from a Google Workspace account based on specified filtering
+    criteria and returns the results as JSON and a data table.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Google Workspace API to fetch user data
+      based on provided filters. It does not perform any state-changing operations
+      (POST/PUT/DELETE) on external systems. It also does not mutate internal SOAR
+      data such as updating entities, creating insights, modifying alerts, or adding
+      case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers from the SOAR platform. It relies entirely on the action parameters
+      (such as 'Email Addresses' or general filters) to query the Google Workspace
+      Directory. Therefore, it does not run on entities and all entity-related flags
+      are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries a directory service to list users based on parameters. It
+      does not enrich a specific IOC or Asset entity within the SOAR platform, nor
+      does it mutate external state, update alerts, or interact with tickets/emails.
+      Therefore, it does not match any of the specific expected outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Customer ID | String | No | The unique ID for the customer's G Suite account,
+    'my_customer' alias can also be used to represent your account's customerId. |
+
+    | Domain | String | No | Specify a domain to search for users in. |
+
+    | Manager Email | String | No | The email address of a user's direct manager |
+
+    | Return only Admin Accounts? | Boolean | No | Specify whether to return only
+    admin accounts. |
+
+    | Return only Delegated Admin Accounts? | Boolean | No | Specify whether to return
+    only delegated admin accounts. |
+
+    | Return only Suspended Users? | Boolean | No | Specify whether to return only
+    suspended accounts. |
+
+    | Org Unit Path | String | No | The full path of an org unit to retrieve users
+    from. This matches all org unit chains under the target. |
+
+    | Department | String | No | The department within the organization to retrieve
+    users from. |
+
+    | Record Limit | Integer | No | Specify how many records can be returned by the
+    action. |
+
+    | Custom Query Parameter | String | No | Optional. Specify custom query parameter
+    you want to add to the list users search call. For example, orgName='Human Resources'
+    For reference on which fields can be used see https://developers.google.com/admin-sdk/directory/v1/guides/search-users#fields.
+    Note: when providing the 'Custom Query Parameter', make sure that you are not
+    providing 'email' field alongside 'Email Addresses' parameter as the generated
+    query will not work. |
+
+    | Return only users without 2fa? | Boolean | No | If enabled, action will only
+    return users that don't have 2fa enabled. |
+
+    | Email Addresses | String | No | Specify a comma-separated list of email addresses
+    that need to be searched for. Note: if 'Email Addresses' parameter is used, then
+    'Record Limit' parameter is ignored. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The Ping action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the Google Workspace (GSuite) environment. Its primary purpose
+    is to ensure that the integration's configuration parameters are correctly configured
+    and that the Google Directory API is reachable and authorized.
+
+
+    ### Flow Description
+
+    1. The action initializes the GSuite API client by extracting the integration's
+    configuration and preparing an authorized session.
+
+    2. It executes a lightweight `GET` request to the Google Directory API's `list-users`
+    endpoint, specifically requesting a maximum of one result for the 'my_customer'
+    alias.
+
+    3. The action checks the HTTP response status. If the API returns a successful
+    response, the connection is verified.
+
+    4. The action returns a success message if the connection is established; otherwise,
+    it catches the exception and reports the specific failure reason.
+
+
+    ### Additional Notes
+
+    This action is typically executed during the initial setup of the GSuite integration
+    or when troubleshooting authentication and network issues. It performs a read-only
+    operation and does not impact any data within Google Workspace.
+  ai_short_description: >-
+    Verifies connectivity between Google SecOps and the Google Workspace (GSuite)
+    environment by executing a lightweight API request.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for alerts/entities. It does not mutate external data, internal data, update
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It simply tests connectivity to
+      the external API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic ping to test connectivity. It does not enrich data,
+      mutate alerts, interact with tickets, modify blocklists, or perform any other
+      operations that match the expected outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Remove Extension:
+  ai_description: >-
+    ### General Description
+
+    The `Remove Extension` action allows administrators to uninstall a specific Chrome
+    extension from all browsers registered within a designated Organizational Unit
+    (OU) in Google Workspace. Unlike simply blocking an extension, this action explicitly
+    sets the installation policy to `REMOVE`, which triggers the actual uninstallation
+    of the extension from the users' Chrome browsers.
+
+
+    ### Flow Description
+
+    1. **Validation**: The action validates the provided `Extension ID` against a
+    specific regex to ensure it is a valid 32-character Chrome extension identifier.
+
+    2. **OU Lookup**: It retrieves a list of all Organizational Units from Google
+    Workspace via a GET request to find the one matching the provided `Organization
+    Unit Name` and obtains its unique ID.
+
+    3. **Policy Update**: It sends a POST request to the Google Chrome Policy API
+    (`batchModify`) to modify the `appInstallType` for the specified extension within
+    the target OU, setting it to `REMOVE`.
+
+    4. **Verification**: The action resolves the effective policy for that extension
+    and OU via a POST request to the `resolve` endpoint to verify that the change
+    was successfully applied.
+
+    5. **Result Reporting**: If the verification succeeds, it returns a success status
+    and populates the action results with the ID of the removed extension.
+
+
+    ### Additional Notes
+
+    - The `Extension ID` must consist of exactly 32 characters using letters 'a' through
+    'p'.
+
+    - This action requires appropriate Google Workspace administrative privileges
+    to modify Chrome policies for the target Organizational Unit.
+  ai_short_description: >-
+    Removes a specified Chrome extension from an organizational unit's registered
+    Chrome browsers in Google Workspace by setting its installation policy to 'REMOVE'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Modifies the Chrome extension policy in Google Workspace to remove the specified
+      extension from the target Organizational Unit.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action modifies external data by sending a POST request to the Google Chrome
+      Policy API to change the installation policy of a Chrome extension to 'REMOVE'.
+      It does not fetch contextual data for enrichment, nor does it mutate internal
+      SOAR data, update entities, create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It relies entirely on the provided
+      input parameters (`Organization Unit Name` and `Extension ID`) to perform its
+      tasks. Therefore, all entity types and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes a Chrome extension policy from a Google Workspace Organizational
+      Unit. This is a specific administrative configuration change that does not align
+      with any of the predefined outcome categories such as enriching IOCs/assets,
+      updating alerts, managing tickets, blocking IOCs, or modifying identities. Thus,
+      all outcome category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Organization Unit Name | String | Yes | The name of the organizational unit
+    from which to remove the extension. |
+
+    | Extension ID | String | Yes | The ID of the extension to remove. |
+Remove Members From Group:
+  ai_description: >-
+    ### General Description
+
+    Removes members from a specified GSuite group. This action is designed to manage
+    group memberships by targeting specific user email addresses, either provided
+    manually as a parameter or identified as User entities within the Google SecOps
+    case context.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the mandatory `Group Email Address`
+    and the optional `User Email Addresses` list from the input parameters.
+
+    2. **API Client Setup**: Authenticates with GSuite using the configured service
+    account or workload identity to establish a management session.
+
+    3. **Target Identification**: Collects all `USER` entities from the current case
+    and merges them with the list provided in the `User Email Addresses` parameter
+    to form a unique set of target emails.
+
+    4. **Execution**: Iterates through the target list, calling the GSuite Directory
+    API to remove each member from the specified group.
+
+    5. **Error Handling**: Specifically catches 'Not Found' or 'Validation' errors
+    from GSuite to identify users or groups that do not exist.
+
+    6. **Reporting**: Compiles a summary of successful removals, users not found in
+    the group, and any technical failures, then returns this status to the Google
+    SecOps platform.
+
+
+    ### Additional Notes
+
+    - The action is case-insensitive regarding email addresses.
+
+    - It gracefully handles cases where a user is not a member of the group or the
+    group does not exist by reporting them as 'not found' rather than failing the
+    entire action.
+
+    - If no User entities are present and the 'User Email Addresses' parameter is
+    empty, the action will complete without performing any removals.
+  ai_short_description: >-
+    Removes members from a specified GSuite group by targeting specific user email
+    addresses provided manually or identified as User entities within the case context.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes specified users from a GSuite group.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a DELETE request to the GSuite API to remove users from a specified
+      group. It mutates external data by modifying group memberships but does not
+      fetch data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES` contains `EntityTypes.USER`.
+      Therefore, it targets USER entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes users from a GSuite group, which modifies their group memberships.
+      This aligns with the 'Update Identity' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group Email Address | String | Yes | Email of the group to remove the members
+    from. |
+
+    | User Email Addresses | String | No | A comma-separated list of users that you
+    want to remove from the group. Note: values from this parameter will be executed
+    alongside User Entities. |
+Revoke User Session:
+  ai_description: >-
+    ### General Description
+
+    Revokes user web and device sessions and resets sign-in cookies for specified
+    users using Google Workspace. This action is primarily used for containment or
+    security response when a user account is suspected of being compromised, ensuring
+    that all active sessions are terminated across all devices.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the 'User Email Addresses' from the action
+    configuration.
+
+    2. **Entity Filtering**: Identifies all `USER` entities within the current Google
+    SecOps context.
+
+    3. **Validation**: Validates the format of all collected email addresses (from
+    both parameters and entities).
+
+    4. **API Interaction**: For each unique email address, it calls the Google Workspace
+    Admin SDK's `signOut` endpoint via a POST request.
+
+    5. **Result Processing**: Tracks successful sign-outs and failures (e.g., user
+    not found). It then generates a summary message and populates the JSON results
+    with the status of each processed user.
+
+
+    ### Additional Notes
+
+    - The action targets both explicitly provided email addresses and `USER` entities
+    present in the Google SecOps case.
+
+    - If no users are found or provided, the action will return a 'None of the provided
+    users were found' message.
+  ai_short_description: >-
+    Revokes user web and device sessions and resets sign-in cookies for specified
+    users using Google Workspace.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Revokes user web and device sessions and resets sign-in cookies in Google Workspace.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Google Workspace API to sign out users,
+      which mutates external data. It does not fetch contextual data, update internal
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `self.soar_action.target_entities` and filters them using
+      `entity.entity_type.casefold() in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES`
+      is `[EntityTypes.USER.casefold()]`. Therefore, it targets User entities and
+      filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: true
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action revokes active web and device sessions for a user, which directly
+      aligns with the 'Disable Identity' expected outcome of revoking active sessions
+      and preventing a user from authenticating.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | User Email Addresses | String | No | A comma-separated list of users to sign
+    out. The action runs the values from this parameter with User entities. |
+Search User Activity Events:
+  ai_description: >-
+    Retrieves activity events from Google Workspace applications for specified users.
+    This action queries the Google Reports API to gather logs related to user actions
+    in applications like Google Drive, Admin, Login, and Chrome. It allows for filtering
+    by specific event types and time frames, providing a detailed audit trail of user
+    behavior within the Workspace environment.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Authenticates with Google Workspace using service account
+    credentials and initializes the GSuite manager.
+
+    2. **Target Identification**: Aggregates user emails from the action parameters
+    and the 'USER' entities in the current scope.
+
+    3. **Time Range Calculation**: Determines the ISO 8601 start and end timestamps
+    based on the selected 'Time Frame' or 'Custom' parameters.
+
+    4. **Data Retrieval**: Iterates through each target user and application, calling
+    the Google Reports API to fetch activity logs.
+
+    5. **Filtering and Deduplication**: Filters the retrieved events based on the
+    'Event Type Filter' and removes duplicate event records.
+
+    6. **Result Compilation**: Aggregates the unique events into a JSON result set,
+    categorized by user, and returns the data to the SOAR platform.
+
+
+    ### Additional Notes
+
+    - If 'Time Frame' is set to 'Custom', the 'Start Time' parameter must be provided.
+
+    - The action processes both the 'User Email Addresses' parameter and any 'USER'
+    entities present in the current Google SecOps context.
+  ai_short_description: >-
+    Retrieves activity events from Google Workspace applications for specified users.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Google Reports API to fetch user activity
+      events (fetches_data=true). It does not mutate external data, nor does it update
+      internal entities, create insights, or add case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `self.soar_action.target_entities` and filters them
+      by checking if `entity.entity_type == EntityTypesEnum.USER.value`. It also extracts
+      the original identifier using `get_entity_original_identifier(entity)`. Therefore,
+      it targets USER entities and filters by entity type and identifier.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries the Google Reports API to fetch user activity events based
+      on specific parameters like time frame and application names. This directly
+      aligns with the 'Search Events' expected outcome, which returns a collection
+      of historical logs or telemetry data matching specific search parameters.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | User Email Addresses | String | No | A comma-separated list of additional user
+    email addresses to process. The action processes all users in this list in addition
+    to a User entity (if one is provided). |
+
+    | Application Names | List | Yes | A list of applications to query for activity
+    events. For a full list of supported applications, see the ApplicationName documentation.
+    |
+
+    | Event Type Filter | String | No | A comma-separated list of event types to retrieve.
+    |
+
+    | Time Frame | Enum | No | The time frame for the activity search. If Custom is
+    selected, the Start Time parameter is required. |
+
+    | Start Time | String | No | The start of the time range for the activity search.
+    This parameter is required if Custom is selected for the Time Frame parameter.
+    Configure the value in ISO 8601 format. |
+
+    | End Time | String | No | The end of the time range for the activity search.
+    This parameter is optional when Custom is selected for the Time Frame parameter
+    and defaults to the current time if not provided. Configure the value in ISO 8601
+    format. |
+
+    | Max Events To Return | Integer | No | The maximum number of events to return
+    per user. The default value is 200. The maximum value is 1000. The action processes
+    a maximum of 1000 events per user, per application. |
+Update OU:
+  ai_description: >-
+    ### General Description
+
+    Updates an existing organizational unit (OU) within a G Suite account. This action
+    allows administrators to modify the display name and description of an OU identified
+    by its full path.
+
+
+    ### Flow Description
+
+    1. Extracts the Customer ID, OU Path, and optional Name and Description from the
+    action parameters.
+
+    2. Initializes the G Suite Directory API client using the provided credentials.
+
+    3. Executes a `PUT` request to the G Suite endpoint to update the specified organizational
+    unit's metadata.
+
+    4. Captures the API response containing the updated OU details and provides it
+    as a JSON result.
+
+
+    ### Additional Notes
+
+    This action does not run on entities and requires manual input of the OU path.
+  ai_short_description: >-
+    Updates an existing organizational unit (OU) within a G Suite account by modifying
+    its display name and description.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the metadata (name and description) of an organizational unit in G Suite.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a PUT request to the G Suite API to update an organizational
+      unit's metadata, which mutates external data. It does not fetch data for enrichment,
+      mutate internal SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use entity-specific identifiers.
+      It relies entirely on the provided action parameters to identify and update
+      the organizational unit.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates an organizational unit in G Suite. This does not match any
+      of the specific expected outcomes such as updating an identity (which targets
+      users/accounts), enriching IOCs, or managing tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Customer ID | String | Yes | The unique ID for the customer's G Suite account,
+    'my_customer' alias can also be used to represent your account's customerId. |
+
+    | Name | String | No | Display name of the OU. |
+
+    | Description | String | No | Description of the OU. |
+
+    | OU Path | String | Yes | The full path to the organizational unit. If organizational
+    unit is located under root (/) path, provide just organizational unit name, without
+    path. |
+Update User:
+  ai_description: >-
+    ### General Description
+
+    Updates user profile information and account status in the Google Workspace (GSuite)
+    Directory. This action allows for bulk updates of multiple users identified by
+    their primary email addresses. It can modify personal details, organizational
+    information, security settings like password requirements, and the account's suspension
+    status.
+
+
+    ### Flow Description
+
+    1. Extracts the list of email addresses and the various optional profile fields
+    from the action parameters.
+
+    2. Iterates through each provided email address.
+
+    3. For each user, constructs a payload with the updated fields and sends a PUT
+    request to the Google Directory API's `/admin/directory/v1/users/{primary_email}`
+    endpoint.
+
+    4. If the 'User Status' parameter is set, it specifically modifies the `suspended`
+    attribute of the user account.
+
+    5. Tracks successful updates and failures, returning the updated user data in
+    JSON format for successful operations.
+
+
+    ### Additional Notes
+
+    This action does not operate on Google SecOps entities but relies entirely on
+    the provided email addresses in the parameters.
+  ai_short_description: >-
+    Updates user profile information, password, and account suspension status in the
+    Google Workspace Directory based on provided email addresses.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates user profile information, password, and account suspension status in
+      the Google Workspace Directory.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PUT request to the Google Workspace API to update user
+      details, which mutates external data. It does not fetch contextual data, mutate
+      internal data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not use or iterate over `siemplify.target_entities`. It relies
+      entirely on the 'Email Address' parameter provided by the user.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: true
+    download_file: false
+    enable_identity: true
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action makes a PUT request to the Google Workspace API to update user details.
+      It can modify account metadata (Update Identity), change the user's password
+      and force a reset at next login (Reset Identity Password), and suspend or unsuspend
+      the user account (Disable Identity / Enable Identity).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: true
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Email Address | String | Yes | A comma-separated list of primary email addresses
+    that will be used to identify users that need to be updated. |
+
+    | Given Name | String | No | The user's first name |
+
+    | Family Name | String | No | The user's last name |
+
+    | Password | String | No | The password of the user. |
+
+    | Phone | String | No | The phone number of the user. |
+
+    | Gender | String | No | The gender of the user. Valid values: female, male, other,
+    unknown. |
+
+    | Department | String | No | The name of the department of the user. |
+
+    | Organization | String | No | The name of the organization of the user. |
+
+    | Change Password At Next Login | Boolean | Yes | Whether to force the user to
+    change his password on next login. |
+
+    | User Status | String | No | Specify if user status should be updated to blocked
+    or unblocked. By default action is no changing the user status. |

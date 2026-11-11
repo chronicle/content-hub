@@ -1,0 +1,765 @@
+Generate AWS Credentials:
+  ai_description: >-
+    ### General Description
+
+    Generates temporary AWS credentials (Access Key, Secret Key, and Security Token)
+    using a specified AWS role configured in HashiCorp Vault. This action interacts
+    with the HashiCorp Vault AWS Secret Engine to provide dynamic, short-lived credentials
+    for AWS operations without requiring hardcoded secrets.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Authenticates with HashiCorp Vault using the provided API
+    token or username/password credentials.
+
+    2. **Validation**: Validates the TTL parameter to ensure it is a positive integer
+    and parses the JSON Expression Builder string.
+
+    3. **Credential Generation**: Sends a GET request to the Vault AWS Secret Engine
+    endpoint (`/v1/{path}/creds/{role}`) with the specified role and optional parameters
+    (ARN, session name, TTL).
+
+    4. **Data Processing**: Receives the dynamic credentials from Vault. If an Expression
+    Builder is provided, it traverses the JSON response to extract specific fields.
+
+    5. **Output**: Returns the generated credentials (or the filtered subset) as a
+    JSON result for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - This action does not process or enrich Google SecOps entities.
+
+    - The 'AWS Secret Engine Path' parameter will override the global 'Key-Value Secret
+    Engine Path' configuration if provided.
+  ai_short_description: >-
+    Generates temporary AWS credentials (Access Key, Secret Key, and Security Token)
+    using a specified AWS role configured in HashiCorp Vault.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the HashiCorp Vault API to fetch temporary
+      AWS credentials. It does not mutate external data (as it uses a GET request
+      to retrieve dynamically generated credentials), nor does it mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or process any
+      entity-specific data. It operates entirely on the provided action parameters
+      to fetch AWS credentials from HashiCorp Vault.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches temporary AWS credentials from HashiCorp Vault. It does not
+      enrich IOCs or assets, update alerts, manage tickets, modify blocklists/allowlists,
+      or perform any of the other specific outcome categories listed.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| AWS Secret Engine Path | String | No | Specify the path\
+    \ used for the aws secret storage. Parameter is used to interact with secrets\
+    \ stored in storage, it is used to construct the urls like https://x.x.x.x:8200/v1/aws/roles/\
+    \ |\n| AWS Role Name | String | Yes | Specify the role name to generate credentials\
+    \ for. |\n| AWS Role ARN | String | No | Specify the ARN of the role to assume\
+    \ if credential_type on the Vault role is assumed_role. Must match one of the\
+    \ allowed role ARNs in the Vault role. |\n| AWS Role Session Name | String | No\
+    \ | Specify the role session name to attach to the assumed role ARN. If not provided\
+    \ it will be generated dynamically by default. |\n| TTL (seconds) | String | No\
+    \ | Specifies the TTL in seconds for the use of the STS token. This is specified\
+    \ as a string with a duration suffix. Valid only when AWS role credential_type\
+    \ in Vault is assumed_role or federation_token. When not specified, the default_sts_ttl\
+    \ set for the role will be used. If that is also not set, then the default value\
+    \ of 3600 seconds will be used. |\n| JSON Expression Builder | String | No | Specify\
+    \ a JSON Expression Builder expression to filter a specific subset of data from\
+    \ secret, for example:  \\| \u201Cdata\u201D \\| \u201Cdata\u201D \\| \u201Ckey0\u201D\
+    \ |"
+List AWS Roles:
+  ai_description: >-
+    ### General Description
+
+    The **List AWS Roles** action retrieves a list of available AWS roles configured
+    within a specific AWS Secret Engine in HashiCorp Vault. This action is used for
+    discovery and administrative purposes, allowing users to see which roles are available
+    for credential generation without targeting specific SOAR entities.
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: The action extracts integration configuration
+    and action parameters.
+
+    2. **Validation**: It validates that the `Max Records To Return` parameter is
+    a positive integer.
+
+    3. **API Interaction**: The action sends a `LIST` HTTP request to the HashiCorp
+    Vault API endpoint `/v1/{key_value}/roles/` using the provided secret engine path.
+
+    4. **Data Truncation**: The resulting list of role keys is truncated based on
+    the `Max Records To Return` limit.
+
+    5. **Output**: The list of roles is returned as a JSON result, and a success message
+    is displayed in the action output.
+
+
+    ### Additional Notes
+
+    - This action does **not** run on entities; it is a global discovery action.
+
+    - If the specified path does not exist or contains no roles, the action will return
+    a 'Not Found' status.
+  ai_short_description: >-
+    Retrieves a list of available AWS roles configured within a specific AWS Secret
+    Engine in HashiCorp Vault.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a LIST request to the HashiCorp Vault API to fetch available
+      AWS roles (fetches_data=true). It does not perform any state-changing operations
+      on external systems (can_mutate_external_data=false) and does not update internal
+      entities, create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates globally to fetch a list of AWS roles from HashiCorp
+      Vault, so all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of AWS roles from HashiCorp Vault. It does not enrich
+      specific IOCs or assets, update alerts, manage tickets, modify blocklists/allowlists,
+      or perform any other operations that match the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | AWS Secret Engine Path | String | No | Specify the path used for the aws secret
+    storage. Parameter is used to interact with secrets stored in storage, it is used
+    to construct the urls like https://x.x.x.x:8200/v1/aws/roles/ |
+
+    | Max Records To Return | String | No | Specify how many records to return. If
+    nothing is provided, action will return 50 records. |
+List Key-Value Secret Keys:
+  ai_description: >-
+    ### General Description
+
+    This action lists secret keys available in a HashiCorp Vault Key-Value (KV) Secret
+    Engine (Version 2) based on a provided path. It retrieves the names of the keys
+    stored within a specific folder or path but does not retrieve the actual secret
+    values. This is primarily used for discovery and auditing of stored secrets within
+    the Vault.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the HashiCorp Vault manager using
+    either a Token or Username/Password credentials provided in the configuration.
+
+    2. **Path Resolution**: It determines the target KV Secret Engine path, prioritizing
+    the action-level parameter over the global configuration.
+
+    3. **API Request**: It sends a `LIST` request to the Vault API endpoint `/v1/{key_value}/metadata/{secret_path}`.
+
+    4. **Data Processing**: If keys are found, the list is truncated according to
+    the 'Max Records To Return' limit.
+
+    5. **Result Output**: The list of keys is returned as a JSON object, and the action
+    completes successfully if keys are found or fails with a 'Not Found' message if
+    the path is invalid or empty.
+
+
+    ### Additional Notes
+
+    - This action does not run on entities. It is a utility action that interacts
+    with the Vault system directly.
+
+    - The action specifically targets the metadata endpoint of the KV engine to list
+    keys without accessing sensitive data.
+  ai_short_description: >-
+    Lists secret keys available in a HashiCorp Vault Key-Value (KV) Secret Engine
+    based on a provided path without retrieving the actual secret values.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a LIST request to the HashiCorp Vault API to fetch secret keys.
+      It does not mutate external data, nor does it update internal entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It interacts directly with the
+      HashiCorp Vault API using the provided parameters, so all entity-related flags
+      are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a list of secret keys from HashiCorp Vault. This does not
+      match any of the predefined outcome categories such as enriching IOCs/assets,
+      updating alerts, managing tickets, or modifying blocklists. Therefore, all outcome
+      category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Key-Value Secret Engine Path | String | No | Specify the path used for the key-value
+    secret storage. Currently only version 2 is supported. Parameter is used to interact
+    with secrets stored in storage, it is used to construct the urls like https://x.x.x.x:8200/v1/secret/data/<secret
+    to fetch from kv store> |
+
+    | Secret Path | String | No | Specify secret path to fetch, action accept folder
+    names, example secret path folder name is my-secret, key-value store path is secret,
+    so full path to fetch would be "https://x.x.x.x:8200/v1/secret/data/my-secret".
+    If not provided, action will return all secret keys stored in the secret engine.
+    |
+
+    | Max Records To Return | Integer | No | Specify how many records to return. If
+    nothing is provided, action will return 50 records. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the HashiCorp Vault instance using the provided configuration
+    parameters. This action is primarily used to verify that the integration can successfully
+    authenticate and communicate with the Vault API by performing a health check against
+    the host information endpoint.
+
+
+    ### Flow Description
+
+    1. Retrieves connection details and authentication credentials from the integration
+    configuration.
+
+    2. Initializes the HashiCorpVaultManager, which configures the request session
+    and handles authentication. If credentials are provided instead of a token, it
+    performs a login request to retrieve a client token.
+
+    3. Executes a GET request to the `/v1/sys/host-info` endpoint to verify the service
+    is reachable and the credentials are valid.
+
+    4. Returns a success message if the connection is established, or a failure message
+    with error details if the connection or authentication fails.
+
+
+    ### Additional Notes
+
+    * The action requires either a valid Token or a combination of Username and Password
+    for authentication. If neither is provided, the action will fail during initialization.
+
+    * This action does not process any entities and is intended for configuration
+    validation.
+  ai_short_description: >-
+    Tests the connectivity to the HashiCorp Vault instance using the provided configuration
+    parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the HashiCorp Vault API to test connectivity.
+      It does not fetch contextual data for entities, mutate external data, or modify
+      internal SecOps data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It is a system-level connectivity
+      test that does not reference or iterate over target entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (ping) to verify integration settings.
+      It does not match any of the specific outcome categories such as enriching IOCs,
+      updating alerts, or mutating external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Read Key-Value Secret:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a specific secret from a HashiCorp Vault Key-Value (KV) version 2 engine.
+    This action allows users to fetch sensitive data stored in Vault and optionally
+    filter the returned JSON structure to extract specific values using a pipe-delimited
+    expression builder. It does not operate on entities and is primarily used for
+    utility or orchestration tasks within a playbook.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the HashiCorp Vault manager using
+    the provided API root and authentication credentials.
+
+    2. **Path Resolution**: It determines the target Key-Value engine path, prioritizing
+    the action-level parameter over the global configuration.
+
+    3. **Data Retrieval**: It performs a GET request to the Vault API to fetch the
+    secret data from the specified path and version.
+
+    4. **Filtering (Optional)**: If a JSON Expression Builder is provided, the action
+    splits the expression by the '|' delimiter and traverses the JSON response to
+    extract the requested nested value.
+
+    5. **Output**: The retrieved secret (or filtered subset) is added to the action's
+    JSON results, and the execution status is updated based on success or failure
+    (e.g., secret not found).
+
+
+    ### Additional Notes
+
+    - This action specifically supports HashiCorp Vault KV Secrets Engine - Version
+    2.
+
+    - Authentication can be performed using either a Vault Token or a Username/Password
+    combination configured in the integration settings.
+  ai_short_description: >-
+    Retrieves a specific secret from a HashiCorp Vault Key-Value (KV) version 2 engine,
+    optionally filtering the returned JSON structure to extract specific values.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the HashiCorp Vault API to fetch secret data
+      (fetches_data = true). It does not perform any state-changing operations on
+      external systems (can_mutate_external_data = false). It does not mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates purely on the provided action parameters to fetch a
+      secret from Vault. Therefore, all entity type flags and filter flags must be
+      false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a secret from HashiCorp Vault. It does not enrich IOCs or
+      assets, update alerts, create tickets, modify blocklists/allowlists, manage
+      identities, contain hosts, search events, execute commands, download files,
+      send/search/delete/update emails, submit files, send messages, search assets,
+      or get alert information. It is a utility action for retrieving credentials/secrets.
+      Therefore, it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Key-Value Secret Engine Path | String | No | Specify the path used for the key-value
+    secret storage. Currently only version 2 is supported. Parameter is used to interact
+    with secrets stored in storage, it is used to construct the urls like https://x.x.x.x:8200/v1/secret/data/<secret
+    to fetch from kv store> |
+
+    | Secret Path | String | Yes | Specify secret path to fetch, example secret path
+    is my-secret, key-value store path is secret, so full path to fetch would be "https://x.x.x.x:8200/v1/secret/data/my-secret".
+    |
+
+    | Secret Version | String | No | Specify a secret version to fetch. |
+
+    | JSON Expression Builder | String | No | Specify a JSON Expression Builder expression
+    to filter a specific subset of data from secret, for example: data \| data \|
+    key0 |

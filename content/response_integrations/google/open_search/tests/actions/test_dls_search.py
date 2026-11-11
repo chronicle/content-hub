@@ -1,0 +1,31 @@
+from TIPCommon.base.action import ExecutionState
+
+from open_search.actions import dsl_search
+from open_search.tests.common import CONFIG_PATH, SEARCH_RESULTS
+from open_search.tests.core.product import OpenSearchProduct
+from open_search.tests.core.session import OpenSearchSession
+from integration_testing.platform.script_output import MockActionOutput
+from integration_testing.set_meta import set_metadata
+
+SUCCESS_OUTPUT_MESSAGE = "Successfully executed OpenSearch DSL Query 1 hits found"
+
+
+@set_metadata(
+    integration_config_file_path=CONFIG_PATH,
+    parameters={
+        "Index": "test-index",
+        "Query": '{"query": {"match_all": {}}}',
+        "Limit": 10,
+    },
+)
+def test_dsl_search_success(
+    opensearch_product: OpenSearchProduct,
+    script_session: OpenSearchSession,
+    action_output: MockActionOutput,
+) -> None:
+    opensearch_product.set_search_results(SEARCH_RESULTS)
+    dsl_search.main()
+    assert len(script_session.request_history) == 1
+    assert action_output.results.output_message == SUCCESS_OUTPUT_MESSAGE
+    assert action_output.results.result_value is True
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
