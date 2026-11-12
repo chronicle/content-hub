@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -11,15 +25,15 @@ from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.validation import ParameterValidator
 from TIPCommon.utils import is_empty_string_or_none
 
-from google_cloud_iam.core.consts import (
+from ..core.consts import (
     API_URL,
     INTEGRATION_IDENTIFIER,
     INTEGRATION_DISPLAY_NAME,
     DISABLE_SERVICE_ACCOUNT_SCRIPT_NAME,
 )
-from google_cloud_iam.core.exceptions import GoogleCloudIAMValidationError
-from google_cloud_iam.core.GoogleCloudIAMManager import GoogleCloudIAMManager
-from google_cloud_iam.core.utils import extract_service_account_resource_path
+from ..core.exceptions import GoogleCloudIAMValidationError
+from ..core.GoogleCloudIAMManager import GoogleCloudIAMManager
+from ..core.utils import extract_service_account_resource_path
 
 
 SUPPORTED_ENTITIES = [EntityTypes.USER, EntityTypes.DEPLOYMENT]

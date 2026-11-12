@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # ============================================================================#
 # title           :GoogleCloudIAMManager.py
 # description     :This Module contain all Google Cloud IAM operations functionality
@@ -24,7 +38,7 @@ from TIPCommon.rest.gcp import (
     validate_impersonation,
 )
 
-from google_cloud_iam.core.consts import (
+from .consts import (
     DEFAULT_SA_KEY_TYPE,
     INTEGRATION_DISPLAY_NAME,
     SCOPES,
@@ -39,9 +53,9 @@ from google_cloud_iam.core.consts import (
     MAX_PAGE_SIZE_SERVICE_ACCOUNTS,
     INVALID_ROLE_ID,
 )
-from google_cloud_iam.core.datamodels import Policy, Role, ServiceAccount, ServiceAccountKey
-from google_cloud_iam.core.GoogleCloudIAMParser import GoogleCloudIAMParser
-from google_cloud_iam.core.exceptions import (
+from .datamodels import Policy, Role, ServiceAccount, ServiceAccountKey
+from .GoogleCloudIAMParser import GoogleCloudIAMParser
+from .exceptions import (
     GoogleCloudIAMManagerError,
     GoogleCloudIAMPolicyJSONError,
     GoogleCloudIAMRoleExistsError,
@@ -52,7 +66,7 @@ from google_cloud_iam.core.exceptions import (
     GoogleCloudIAMValidationError,
     GoogleCloudIAMServiceAccountNotFoundError,
 )
-from google_cloud_iam.core.utils import parse_string_to_dict
+from .utils import parse_string_to_dict
 
 
 # ============================= CONSTS ===================================== #

@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -8,7 +22,7 @@ from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 
-from google_cloud_iam.core.consts import (
+from ..core.consts import (
     API_URL,
     BAD_REQUEST_STATUS_CODE,
     INTEGRATION_IDENTIFIER,
@@ -16,13 +30,13 @@ from google_cloud_iam.core.consts import (
     NOT_FOUND_STATUS_CODE,
     ROTATE_SERVICE_ACCOUNT_KEYS_SCRIPT_NAME,
 )
-from google_cloud_iam.core.exceptions import (
+from ..core.exceptions import (
     GoogleCloudIAMManagerError,
     GoogleCloudIAMServiceAccountNotFoundError,
     GoogleCloudIAMValidationError,
 )
-from google_cloud_iam.core.GoogleCloudIAMManager import GoogleCloudIAMManager
-from google_cloud_iam.core.utils import extract_service_account_resource_path
+from ..core.GoogleCloudIAMManager import GoogleCloudIAMManager
+from ..core.utils import extract_service_account_resource_path
 
 if TYPE_CHECKING:
     from typing import Any
