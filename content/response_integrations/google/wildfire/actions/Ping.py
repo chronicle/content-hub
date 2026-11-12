@@ -13,25 +13,30 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.WildfireManager import WildfireManager
+
+INTEGRATION_NAME = "Wildfire"
+ACTION_NAME = "Ping"
 
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    conf = siemplify.get_configuration("Wildfire")
-    api_key = conf["Api Key"]
+    siemplify.script_name = f"{INTEGRATION_NAME} - {ACTION_NAME}"
 
-    # Connect to Wildfire
-    wildfire_manager = WildfireManager(api_key)
+    try:
+        wildfire_manager = WildfireManager.from_siemplify(siemplify)
+        connectivity = wildfire_manager.test_connectivity()
+        siemplify.end("Successfully connected to the Wildfire service.", connectivity, EXECUTION_STATE_COMPLETED)
 
-    # Test connectivity
-    connectivity = wildfire_manager.test_connectivity()
-
-    # If no exception occurs - then connection is successful
-    siemplify.end("Connected successfully.", connectivity)
+    except Exception as e:
+        siemplify.LOGGER.exception("Failed to connect to Wildfire")
+        siemplify.end(f"Failed to connect to the Wildfire service. Reason: {e}", False, EXECUTION_STATE_FAILED)
 
 
 if __name__ == "__main__":
