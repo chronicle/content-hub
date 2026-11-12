@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XM Cyber - Entity Data</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+
+    <style>
+      /* Global styles */
+      * {
+        font-family: "Lexend", sans-serif !important;
+        font-optical-sizing: auto;
+        font-weight: 400;
+        font-style: normal;
+      }
+      body {
+        font-size: 13px;
+        color: #ddd; /* Softer than pure white */
+        background-color: #344262 !important;
+        margin: 20px;
+      }
+      .entity-container {
+        display: flex;
+        height: 500px;
+        border: 1px solid #26334f;
+        overflow: hidden;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+      }
+      .entity-list {
+        width: 25%;
+        border-right: 1px solid #121826 !important;
+        overflow-y: auto;
+        border-radius: 0px;
+        background-color: #121826;
+      }
+      .entity-content {
+        width: 75%;
+        padding: 15px;
+      }
+      .list-group-item.active {
+        background-color: #2a4fbf !important; /* Lighter blue */
+        border-bottom: 2px solid #4a7dff !important; /* Add a bottom border */
+        font-weight: 500;
+      }
+      .list-group-item {
+        border: 0px;
+        font-size: 15px;
+        color: white;
+        border-color: #26334f;
+        background-color: inherit;
+        cursor: pointer;
+        padding: 10px 15px;
+      }
+      .list-group-item:hover {
+        color: white;
+        background: rgba(255, 255, 255, 0.08);
+        transition: background 0.2s ease-in-out;
+      }
+      .tab-content {
+        overflow-y: auto;
+        background-color: #121826;
+      }
+      .card {
+        border: 0px;
+        background-color: inherit;
+        color: white;
+      }
+      .card-title {
+        padding: 10px 10px 0px;
+        font-size: 17px;
+        margin-bottom: 0 !important;
+      }
+      .card-title a {
+        font-size: 17px;
+      }
+      .card-body {
+        padding: 20px;
+      }
+      .row {
+        margin-bottom: 10px;
+      }
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #344262; /* Slightly lighter for better visibility */
+        border-radius: 2px;
+        border: 1px solid #121826;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent; /* Removes unnecessary background */
+      }
+      /* Badge styling */
+      .badge {
+        font-size: 12px;
+        padding: 6px 12px;
+        word-break: break-all;
+        font-weight: 400;
+      }
+
+      .text-bg-danger {
+        background-color: #d9534f !important; /* More vibrant red */
+      }
+      .text-bg-success {
+        background-color: #28a745 !important; /* Brighter green */
+      }
+      .text-bg-warning {
+        background-color: #f0ad4e !important; /* Warm yellow */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid mt-3 mb-3">
+      <div class="entity-container">
+        <!-- Sidebar List -->
+        <div
+          class="entity-list list-group"
+          id="entityTabs"
+          role="tablist"
+        ></div>
+
+        <!-- Right Side Content -->
+        <div class="entity-content tab-content" id="entityContent"></div>
+      </div>
+    </div>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      const entities = [XMCyber_Get Event Data JSON_1.JsonResult];
+
+      const arrayFields = ["Labels", "Attacked By Techniques"];
+      const fieldsToIgnore = new Set([
+        "Last Activity Date",
+        "ARN",
+        "Entity Type",
+        "url",
+      ]);
+      const fieldsDisplayConditions = {
+        "Is Critical Asset": true,
+        "User without MFA": true,
+        "Highly Privileged": true,
+      };
+      function getBadgeClass(value) {
+        let className = "";
+        switch (value) {
+          case "HIGH":
+            className = "badge text-bg-danger";
+            break;
+          case "MEDIUM":
+            className = "badge text-bg-warning";
+            break;
+          case "LOW":
+            break;
+          case "NONE":
+          case "NOTCOMPROMISED":
+            className = "badge text-bg-secondary";
+            break;
+          default:
+            break;
+        }
+
+        return className;
+      }
+
+      const entityTabs = document.getElementById("entityTabs");
+      const entityContent = document.getElementById("entityContent");
+
+      let isFirst = true;
+
+      for (let key in entities) {
+        let entity = entities[key];
+
+        // Create the tab item (entity list)
+        let tabItem = document.createElement("a");
+        tabItem.className = `list-group-item list-group-item-action ${
+          isFirst ? "active" : ""
+        }`;
+        tabItem.setAttribute("data-bs-toggle", "list");
+        tabItem.setAttribute("href", `#${key}`);
+        tabItem.setAttribute("role", "tab");
+        tabItem.innerHTML = key;
+        entityTabs.appendChild(tabItem);
+
+        let tabPane = document.createElement("div");
+        tabPane.className = `tab-pane fade ${isFirst ? "show active" : ""}`;
+        tabPane.id = key;
+        tabPane.setAttribute("role", "tabpanel");
+
+        const entity_data = entities[key];
+        const entityID = key;
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const cardTitle = document.createElement("div");
+        cardTitle.className = "card-title";
+
+        const entityType = entity_data["Entity Type"];
+
+        const entityURL = entity_data["url"];
+        cardTitle.innerHTML = entityURL
+          ? `<a class="btn btn-link btn-sm text-light text-decoration-none" target="_blank" href="${entityURL}">${entityID} (${entityType}) <i class="bi bi-box-arrow-up-right mx-2"></i></a>`
+          : `${entityID} (${entityType})`;
+
+        const cardBody = document.createElement("div");
+        cardBody.className = "card-body";
+
+        const row = document.createElement("div");
+        row.className = "row";
+
+        let index = 0;
+
+        for (let [property, value] of Object.entries(entity_data)) {
+          if (fieldsToIgnore.has(property)) continue;
+
+          if (arrayFields.includes(property)) {
+            value = value.split(",").map((item) => item.trim());
+          }
+          if (value === "" || (Array.isArray(value) && value.length === 0))
+            continue;
+
+          const newRow = document.createElement("div");
+          newRow.className = "row";
+
+          const propertyName = document.createElement("div");
+          propertyName.className = "col-6 col-md-6";
+          propertyName.textContent = property;
+
+          const propertyValue = document.createElement("div");
+          propertyValue.className = "col-6 col-md-6";
+
+          if (Array.isArray(value)) {
+            if (value.length === 0) continue;
+
+            const collapsibleLink = document.createElement("a");
+            collapsibleLink.className = "btn btn-link btn-sm text-light";
+            collapsibleLink.textContent = "Show more";
+            collapsibleLink.setAttribute("data-bs-toggle", "collapse");
+
+            let id = `${property
+              .replaceAll(" ", "-")
+              .toLowerCase()}-${index}-collapse`;
+            collapsibleLink.setAttribute("href", `#${id}`);
+            collapsibleLink.setAttribute("role", "button");
+            collapsibleLink.setAttribute("aria-expanded", "false");
+            collapsibleLink.setAttribute("aria-controls", `${id}`);
+
+            const collapsibleSection = document.createElement("div");
+            collapsibleSection.className = "collapse";
+            collapsibleSection.id = `${id}`;
+
+            const showList = document.createElement("span");
+            const hideList = document.createElement("span");
+
+            for (let index in value) {
+              const listItem = document.createElement("span");
+              listItem.textContent = value[index];
+              listItem.className = "badge text-bg-info m-1";
+
+              if (index < 2) {
+                showList.appendChild(listItem);
+              } else {
+                hideList.appendChild(listItem);
+              }
+            }
+
+            propertyValue.appendChild(showList);
+            if (hideList.children.length > 0) {
+              collapsibleSection.appendChild(hideList);
+              propertyValue.appendChild(collapsibleSection);
+              propertyValue.appendChild(collapsibleLink);
+            }
+
+            collapsibleSection.addEventListener(
+              "hidden.bs.collapse",
+              (event) => {
+                collapsibleLink.textContent = "Show more";
+              }
+            );
+
+            collapsibleSection.addEventListener(
+              "shown.bs.collapse",
+              (event) => {
+                collapsibleLink.textContent = "Show less";
+              }
+            );
+          } else {
+            // Check if the property value is a boolean
+            if (typeof value === "boolean") {
+              var classCondition = value;
+              if (property in fieldsDisplayConditions) {
+                if (fieldsDisplayConditions[property] !== value) continue;
+                if (value === true) classCondition = !value;
+              }
+              const booleanBadge = document.createElement("span");
+              booleanBadge.className = `badge rounded-pill text-bg-${
+                classCondition ? "success" : "danger"
+              }`;
+              booleanBadge.textContent = value ? "Yes" : "No";
+              // Add the boolean badge to the property value element
+              propertyValue.appendChild(booleanBadge);
+            } else if (!isNaN(value)) {
+              const badge = document.createElement("span");
+              if (value >= 50 && value < 75) {
+                badge.className = "badge rounded-pill text-bg-warning";
+              } else if (value >= 75) {
+                badge.className = "badge rounded-pill text-bg-danger";
+              } else {
+                badge.className = "badge rounded-pill text-bg-success";
+              }
+              badge.textContent = value;
+              propertyValue.appendChild(badge);
+            } else {
+              const badge = document.createElement("span");
+              badge.className = getBadgeClass(value);
+              badge.textContent = value;
+              propertyValue.appendChild(badge);
+            }
+          }
+
+          newRow.appendChild(propertyName);
+          newRow.appendChild(propertyValue);
+
+          cardBody.appendChild(newRow);
+          index++;
+        }
+
+        card.appendChild(cardTitle);
+
+        if (cardBody.childElementCount === 0) {
+          cardBody.innerHTML = `<div style="text-align: center;">No data found</div>`;
+        }
+        card.appendChild(cardBody);
+
+        tabPane.appendChild(card);
+        entityContent.appendChild(tabPane);
+
+        isFirst = false;
+      }
+    </script>
+  </body>
+</html>
