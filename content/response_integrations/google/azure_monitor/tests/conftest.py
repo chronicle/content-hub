@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import pytest
-import soar_sdk  # noqa: F401
 from integration_testing.common import use_live_api
 from integration_testing.logger import Logger
 from TIPCommon.base.utils import CreateSession
