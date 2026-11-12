@@ -1,0 +1,454 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Enrich Assets:
+  ai_description: >-
+    ### General Description
+
+    Enriches information about specific resources using Palo Alto Prisma Cloud. This
+    action allows users to retrieve detailed metadata, risk grades, and cloud-specific
+    attributes for assets by providing their unique identifiers (Asset ID or Asset
+    RRN). It is primarily used to gather context on cloud resources during an investigation.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the list of asset identifiers from the
+    action input and validates the CSV format.
+
+    2. **Authentication**: Establishes a secure session with the Palo Alto Prisma
+    Cloud API using the configured credentials.
+
+    3. **Data Retrieval**: Iterates through each provided identifier and performs
+    a lookup via the Prisma Cloud asset enrichment endpoint (`uai/v1/asset`) using
+    an HTTP POST request.
+
+    4. **Result Processing**: Collects the raw data for all successfully found assets
+    into a JSON result set and identifies any identifiers that could not be resolved.
+
+    5. **Output**: Returns the enriched asset data as a JSON result and provides a
+    summary message in the action output indicating which assets were successfully
+    enriched.
+
+
+    ### Additional Notes
+
+    This action relies on the `Asset Identifiers` parameter and does not automatically
+    process case entities.
+  ai_short_description: >-
+    Enriches information about specific cloud resources using Palo Alto Prisma Cloud
+    by retrieving detailed metadata and attributes based on provided Asset IDs or
+    RRNs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes an HTTP POST request to the Prisma Cloud API (`uai/v1/asset`)
+      to fetch asset enrichment data. It does not mutate external data (the POST is
+      used for querying), nor does it mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the `Asset Identifiers` parameter provided
+      by the user. Therefore, it does not run on entities, and all entity type flags
+      and filter flags must be false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches detailed metadata and cloud-specific attributes for a given
+      cloud resource (asset) from Palo Alto Prisma Cloud. This aligns with the 'Enrich
+      Asset' expected outcome, as it returns contextual metadata for a resource. It
+      does not mutate external data, update alerts, or perform containment actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Asset Identifiers | String | Yes | Comma-separated list of asset identifiers
+    which you want to fetch the details for. An asset identifier is either an Asset
+    ID or Asset RRN. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the Palo Alto Prisma Cloud instance using the credentials
+    provided in the integration configuration. This action ensures that the API Root,
+    Access Key ID, and Secret Access Key are valid and that the SOAR engine can successfully
+    communicate with the Prisma Cloud environment.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the API Root, Access Key ID, Secret Access
+    Key, and SSL verification settings from the integration configuration.
+
+    2. **Authentication**: Initiates a login request to the Prisma Cloud `login` endpoint
+    to obtain a temporary Bearer token.
+
+    3. **Connectivity Test**: Executes a POST request to the `v2/alert` endpoint with
+    a minimal query (limit 1) to verify that the authenticated session has the necessary
+    permissions to retrieve data.
+
+    4. **Validation**: Checks the HTTP response status; if successful, it confirms
+    the connection is active.
+
+
+    ### Additional Notes
+
+    - This action is primarily used for troubleshooting and verifying setup during
+    the initial configuration of the Palo Alto Prisma Cloud integration.
+
+    - It performs a real authentication flow and a lightweight API call to verify
+    permissions.
+  ai_short_description: >-
+    Tests the connectivity to the Palo Alto Prisma Cloud instance using the credentials
+    provided in the integration configuration to ensure successful communication.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the Prisma Cloud API to test connectivity.
+      It does not fetch data for enrichment, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or filter any entities. It is a system-level action
+      used solely to test connectivity to the external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticket management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Respond To Alert:
+  ai_description: >-
+    ### General Description
+
+    Updates the status of a specific alert in Palo Alto Prisma Cloud. This action
+    allows security analysts to programmatically manage the lifecycle of alerts by
+    dismissing, snoozing, reopening, or remediating them directly from Google SecOps.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a session with Palo Alto Prisma Cloud using
+    provided credentials.
+
+    2. **Verification**: Validates that the provided `Alert ID` exists in the Prisma
+    Cloud environment via a GET request.
+
+    3. **Validation**: Checks that a valid `Response Type` is selected and ensures
+    `Snooze Time` is present if the response type is `Snooze`.
+
+    4. **Execution**: Sends the corresponding API request to Prisma Cloud:
+        - `Remediate`: Sends a PATCH request to the remediation endpoint.
+        - `Dismiss`/`Snooze`: Sends a POST request to the dismiss endpoint with the
+    appropriate payload.
+        - `Reopen`: Sends a POST request to the reopen endpoint.
+    5. **Result**: Returns the success status and the updated response state.
+
+
+    ### Additional Notes
+
+    - If `Response Type` is set to `Snooze`, the `Snooze Time` parameter must be provided,
+    or the action will fail.
+
+    - The action first verifies the existence of the `Alert ID` before attempting
+    to update its status.
+  ai_short_description: >-
+    Updates the status of a specific alert in Palo Alto Prisma Cloud.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status of an alert (e.g., Dismiss, Snooze, Reopen, Remediate) in
+      Palo Alto Prisma Cloud.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST/PATCH request to Palo Alto Prisma Cloud to update the
+      status of an alert, which mutates external data. It does not fetch additional
+      contextual data for enrichment, nor does it mutate internal SecOps data, update
+      entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the 'Alert ID' parameter provided in the
+      action configuration. Therefore, all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the status of an alert in Palo Alto Prisma Cloud. It does
+      not update an alert within the SecOps platform itself, nor does it interact
+      with an ITSM ticketing system. Therefore, it does not match the 'Update Alert'
+      or 'Update Ticket' categories based on their strict definitions. It does not
+      enrich IOCs/assets or perform containment actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert ID | String | Yes | ID of the response alert. |
+
+    | Response Type | Dropdown | No | Alert status. If the Snooze value is selected,
+    the Snooze Time parameter is required. Possible values: Dismiss, Snooze, Reopen,
+    Remediate. |
+
+    | Snooze Time | String | No | Snooze time in hours. |
+
+    | Dismiss Note | String | No | Note for a dismissal. |

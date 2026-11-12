@@ -1,0 +1,624 @@
+Advanced ES Search:
+  ai_description: >-
+    ### General Description
+
+    The **Advanced ES Search** action executes a time-bounded search query against
+    an Elasticsearch cluster using Lucene syntax. It allows users to specify indices,
+    search fields, and time ranges to retrieve specific log data or documents. This
+    action is ideal for log analysis, forensic investigations, and threat hunting
+    within a defined temporal window.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Establishes a connection to the Elasticsearch server using
+    the provided integration credentials and SSL settings.
+
+    2. **Parameter Extraction**: Retrieves search parameters including the index pattern,
+    Lucene query, and time-range constraints from the action configuration.
+
+    3. **Query Construction**: Builds a search request using the `elasticsearch-dsl`
+    library, incorporating the Lucene query string and specifying the target fields.
+
+    4. **Time Range Application**: If provided, applies a range filter to the specified
+    `Timestamp Field` using the `Oldest Date` and `Earliest Date` values.
+
+    5. **Execution**: Executes the search against the Elasticsearch instance via the
+    `advanced_es_search` method and retrieves the hits up to the defined `Limit`.
+
+    6. **Data Processing**: Flattens the nested JSON results and formats them into
+    a CSV-compatible structure.
+
+    7. **Output**: Adds a Data Table to the case results and provides the raw JSON
+    data for downstream playbook tasks.
+
+
+    ### Additional Notes
+
+    - This action does not operate on specific entities within a case; it performs
+    a global search based on the provided parameters.
+
+    - If both **Oldest Date** and **Earliest Date** are left empty, no time-based
+    filtering will be applied to the query.
+  ai_short_description: >-
+    Executes a time-bounded search query against an Elasticsearch cluster using Lucene
+    syntax, returning the results as a data table and raw JSON.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by executing a search query against Elasticsearch. It
+      does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It performs a global search based on the provided parameters, so
+      all entity type flags and filter flags must be false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a search query against Elasticsearch to retrieve historical
+      logs or telemetry data matching specific search parameters. This directly aligns
+      with the 'Search Events' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Index | String | No | Search pattern for a elastic index. In elastic, index
+    is like a DatabaseName, and data is stored across various indexes. This param
+    defines in what index(es) to search. It can be an exact name ie: "smp_playbooks-2019.06.13"
+    or you can use a (*) wildcard to search by a pattern. e: "smp_playbooks-2019.06*"
+    or "smp*". |
+
+    | Query | String | No | The search query to perform. It is in Lucene syntax. IE1:
+    "*" (this is a wildcard that will return all record) IE1: "level:error" IE2: "level:information"
+    IE3: "level:error OR level:warning" |
+
+    | Limit | String | No | Limits the document return count, ie: 10. 0 = No limit
+    |
+
+    | Display Field | String | No | Limits the returned fields. Default "*" = Return
+    all fields. You can state a single field. ie: "level" |
+
+    | Search Field | String | No | Search field for free text queries (When query
+    doesn't specify a field name). Default is "_all", which means all fields are searched.
+    It is best to use proper lucene syntanx on "_all" fields, or textual search on
+    a specific field. |
+
+    | Timestamp Field | String | No | The name of the field to run time-based filtering
+    against. Default is @timestamp. If both Earliest Date and Oldest Date are empty,
+    no time-based filtering will occur. |
+
+    | Oldest Date | String | No | Start date of the search. Search will return only
+    records equal or after this point in time. Input may be in exact UTC or relative
+    form (using date-math). |
+
+    | Earliest Date | String | No | End date of the search. Search will return only
+    records equal or before this point in time. Input may be in exact UTC or relative
+    form (using date-math). |
+DSL Search:
+  ai_description: >-
+    ### General Description
+
+    The **DSL Search** action allows users to execute complex queries against an ElasticSearch
+    cluster using the ElasticSearch Domain Specific Language (DSL). It is primarily
+    used for threat hunting, log retrieval, or data correlation within a SOAR workflow.
+    The action retrieves documents based on the provided query and index pattern.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts search parameters (Index, Query, Limit).
+
+    2. **Query Execution**: The action makes an API call to the ElasticSearch server
+    to execute the DSL query against the specified index. If the query is `*`, it
+    applies a default 24-hour lookback. It handles pagination to ensure the requested
+    `Limit` of results is reached.
+
+    3. **Data Processing**: Retrieved documents are parsed and flattened into a simplified
+    dictionary format.
+
+    4. **Output Generation**: The action constructs a CSV-formatted data table from
+    the results and attaches it to the action results. It also returns the raw JSON
+    results for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - The action defaults to a 24-hour search window only when the `Query` parameter
+    is exactly `*`.
+  ai_short_description: >-
+    Executes a Domain Specific Language (DSL) query against an ElasticSearch cluster
+    to retrieve logs and documents for threat hunting and data correlation.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from ElasticSearch by executing a DSL query. It does
+      not mutate external data, update internal entities, create insights, modify
+      alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It executes a search query against
+      ElasticSearch based on the provided parameters without referencing `siemplify.target_entities`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a search query to retrieve logs or documents from ElasticSearch,
+      which aligns with the 'Search Events' category. It does not enrich specific
+      IOCs or assets, nor does it mutate any external or internal state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Index | String | No | Search pattern for an elastic index. Defines in what index(es)
+    to search. It can be an exact name (e.g., "smp_playbooks-2019.06.13") or use a
+    (*) wildcard to search by a pattern (e.g., "smp*"). |
+
+    | Query | String | No | The DSL query to perform. The query must be a valid JSON,
+    or *. |
+
+    | Limit | Integer | No | Limits the document return count (e.g., 10). 0 = No limit.
+    |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Verifies connectivity to an Elasticsearch server. This action is used to ensure
+    that the Google SecOps platform can successfully communicate with the target Elasticsearch
+    instance using the provided configuration, including authentication and SSL settings.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the server address, authentication
+    credentials, and SSL configuration from the integration settings.
+
+    2. **Manager Initialization**: It initializes the `ElasticsearchManager` with
+    the provided connection details.
+
+    3. **Connectivity Test**: The manager executes a `test_connectivity` call, which
+    internally performs an `info()` request to the Elasticsearch API to verify the
+    service is reachable and responding.
+
+    4. **Result Reporting**: The action returns a success message and a boolean status
+    (`True`/`False`) indicating whether the connection was successful.
+
+
+    ### Additional Notes
+
+    - This action is a diagnostic tool and does not process or enrich entities.
+
+    - Either a combination of `Username`/`Password` or an `API Token` should be provided
+    if `Authenticate` is enabled.
+  ai_short_description: >-
+    Verifies connectivity to an Elasticsearch server to ensure that the Google SecOps
+    platform can successfully communicate with the target instance.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action tests connectivity by making an info request to the Elasticsearch
+      server. It does not fetch contextual data for alerts/entities, mutate external
+      data, mutate internal data, update entities, create insights, modify alert data,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It only tests connectivity to the Elasticsearch
+      server using integration-level configuration.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple ping/connectivity test. It does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Simple ES Search:
+  ai_description: >-
+    ### General Description
+
+    Searches through Elasticsearch indices using Lucene query syntax. This action
+    allows for broad data retrieval from an Elasticsearch cluster without time range
+    constraints. It is designed for general-purpose querying where the user specifies
+    the index pattern, the query string, and a result limit. The retrieved documents
+    are flattened and presented as a data table within the case and as a raw JSON
+    result for downstream processing.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Elasticsearch server using the provided
+    configuration (API Token or Username/Password) and validates SSL settings.
+
+    2. **Parameter Retrieval**: Extracts the `Index`, `Query`, and `Limit` parameters
+    from the action input.
+
+    3. **Execution**: Executes the Lucene query against the specified Elasticsearch
+    indices using the `simple_es_search` method via the Elasticsearch API.
+
+    4. **Data Processing**: Flattens the resulting JSON documents into a flat dictionary
+    structure for better readability.
+
+    5. **Output Generation**: Constructs a CSV-formatted data table from the flattened
+    results and attaches it to the action.
+
+    6. **Completion**: Returns the raw JSON results and a success message indicating
+    the number of hits found.
+
+
+    ### Additional Notes
+
+    - This action does not support time-range filtering. For time-sensitive searches,
+    use the 'Advanced ES Search' action.
+
+    - The action does not process specific entities from the case; it performs a global
+    search based on the provided parameters.
+  ai_short_description: >-
+    Searches through Elasticsearch indices using Lucene query syntax to retrieve documents
+    without time range constraints.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a search query to Elasticsearch to fetch matching documents
+      (fetches_data=true). It only performs a search query and does not modify any
+      data in Elasticsearch (can_mutate_external_data=false). It adds data tables
+      and JSON results to the case but does not mutate internal case data like entities
+      or alerts (can_mutate_internal_data=false). It does not call update_entities,
+      add_entity_insight, or add_case_comment.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `siemplify.target_entities` or any entity-specific
+      data. It performs a global search based on the provided parameters. Therefore,
+      all entity types and filters are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a Lucene query against Elasticsearch to retrieve historical
+      logs or telemetry data matching the search parameters. This matches the 'Search
+      Events' expected outcome. It does not enrich IOCs/assets, update alerts, manage
+      tickets, modify blocklists/allowlists, manage identities, contain hosts, manage
+      emails, submit files, send messages, or get alert information.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Index | String | No | Search pattern for a elastic index. This param defines
+    in what index(es) to search. It can be an exact name or a wildcard pattern. |
+
+    | Query | String | No | The search query to perform. It is in Lucene syntax. |
+
+    | Limit | String | No | Limits the document return count, ie: 10. 0 = No limit.
+    |
