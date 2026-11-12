@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import datetime
 import time
@@ -15,8 +29,8 @@ from TIPCommon import (
     flat_dict_to_csv,
     dict_to_flat,
 )
-from anomali_threat_stream.core.AnomaliThreatStreamManager import AnomaliManager
-from anomali_threat_stream.core.constants import (
+from ..core.AnomaliThreatStreamManager import AnomaliManager
+from ..core.constants import (
     INTEGRATION_NAME,
     SUBMIT_OBSERVABLES_SCRIPT_NAME,
     EMAIL_TYPE,
@@ -32,11 +46,11 @@ from anomali_threat_stream.core.constants import (
     SPACE_CHARACTER,
     JOB_STATUS_WAITING_INTERVAL,
 )
-from anomali_threat_stream.core.exceptions import (
+from ..core.exceptions import (
     AnomaliThreatStreamInvalidCredentialsException,
     AnomaliThreatStreamBadRequestException,
 )
-from anomali_threat_stream.core.utils import (
+from ..core.utils import (
     string_to_multi_value,
     datetime_to_string,
     get_entity_type,

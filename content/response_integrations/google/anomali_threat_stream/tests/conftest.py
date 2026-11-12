@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import dataclasses
 import json
@@ -5,6 +19,7 @@ import pathlib
 from typing import Any, Generator
 from unittest.mock import MagicMock
 import pytest
+import soar_sdk  # noqa: F401
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
 CONFIG: dict = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
@@ -70,7 +85,7 @@ def mock_siemplify(
     actions = ["EnrichEntities"]
     for action in actions:
         monkeypatch.setattr(
-            f"Integrations.AnomaliThreatStream.ActionsScripts.{action}.SiemplifyAction",
+            f"anomali_threat_stream.actions.{action}.SiemplifyAction",
             lambda: mock_api,
         )
 
@@ -81,7 +96,7 @@ def mock_siemplify(
             return CONFIG.get(param_name, default_value)
 
         monkeypatch.setattr(
-            f"Integrations.AnomaliThreatStream.ActionsScripts.{action}"
+            f"anomali_threat_stream.actions.{action}"
             ".extract_configuration_param",
             mock_extract_conf_param,
         )
@@ -94,7 +109,7 @@ def mock_siemplify(
             return default_value
 
         monkeypatch.setattr(
-            f"Integrations.AnomaliThreatStream.ActionsScripts.{action}"
+            f"anomali_threat_stream.actions.{action}"
             ".extract_action_param",
             mock_extract_action_param,
         )

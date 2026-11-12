@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import json
 import sys
@@ -11,8 +25,8 @@ from soar_sdk.ScriptResult import (
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes, InsightType, InsightSeverity
 from soar_sdk.SiemplifyUtils import output_handler, unix_now, convert_unixtime_to_datetime
-from anomali_threat_stream.core.AnomaliThreatStreamManager import AnomaliManager
-from anomali_threat_stream.core.constants import (
+from ..core.AnomaliThreatStreamManager import AnomaliManager
+from ..core.constants import (
     INTEGRATION_NAME,
     INTEGRATION_IDENTIFIER,
     GET_RELATED_ASSOCIATION_SCRIPT_NAME,
@@ -26,7 +40,7 @@ from anomali_threat_stream.core.constants import (
     MAX_STATISTICS_TO_RETURN_DEFAULT,
     NOT_ASSIGNED,
 )
-from anomali_threat_stream.core.utils import (
+from ..core.utils import (
     append_association_type_to_entities,
     get_entity_type,
     get_entity_original_identifier,
