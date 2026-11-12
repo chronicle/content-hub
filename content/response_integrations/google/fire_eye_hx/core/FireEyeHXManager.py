@@ -226,7 +226,7 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         payload = {"state": "contain"} if approve else None
 
         response = self.session.post(url, json=payload)
-        self.validate_response(response, f"Unable to contain host {agent_id}")
+        self.validate_response(response, f"Unable to contain host {agent_id}", host_scoped=True)
         return True
 
     def contain_host_by_name(self, host_name):
@@ -244,7 +244,7 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         """
         url = f"{self.api_root}/hosts/{agent_id}/containment"
         response = self.session.delete(url)
-        self.validate_response(response, f"Unable to cancel containment for host {agent_id}")
+        self.validate_response(response, f"Unable to cancel containment for host {agent_id}", host_scoped=True)
         return True
 
     def cancel_containment_by_name(self, host_name):
@@ -270,7 +270,7 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         """
         url = f"{self.api_root}/hosts/{agent_id}/containment"
         response = self.session.patch(url, json={"state": "contain"})
-        self.validate_response(response, f"Unable to approve containment for host {agent_id}")
+        self.validate_response(response, f"Unable to approve containment for host {agent_id}", host_scoped=True)
         return True
 
     def get_containment_status(self, agent_id):
@@ -280,7 +280,7 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         """
         url = f"{self.api_root}/hosts/{agent_id}/containment"
         response = self.session.get(url)
-        self.validate_response(response, f"Unable to get containment status for host {agent_id}")
+        self.validate_response(response, f"Unable to get containment status for host {agent_id}", host_scoped=True)
         return response.json().get("data", {})
 
     def resolve_agent_id_from_entities(self, target_entities, agent_id_param=None):
@@ -923,10 +923,11 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         return [self.parser.build_siemplify_group_obj(group) for group in alert_groups]
 
     @staticmethod
-    def validate_response(response, error_msg="An error occurred") -> None:
+    def validate_response(response, error_msg="An error occurred", host_scoped: bool = False) -> None:
         """Validate a response
         :param response: {requests.Response} The response
         :param error_msg: {unicode} The error message to display on failure.
+        :param host_scoped: {bool} Whether the request targets a specific host by ID.
         """
         try:
             response.raise_for_status()
@@ -937,14 +938,17 @@ class FireEyeHXManager(BulkAcquisitionMixin):
                 raise FireEyeHXManagerError(msg, status_code=response.status_code)
 
             try:
-                error_messages = ", ".join([err.get("message") for err in response.json().get("details", [])])
+                details = response.json().get("details") or []
+                error_messages = ", ".join([err.get("message") for err in details])
 
                 if not error_messages:
                     error_messages = response.json()["message"]
 
                 if response.status_code == 404:
                     msg = f"{error_msg}: {error_messages}"
-                    host_not_found = HOST_NOT_FOUND_MESSAGE in str(error_messages).lower()
+                    host_not_found = HOST_NOT_FOUND_MESSAGE in str(error_messages).lower() or (
+                        host_scoped and not details
+                    )
                     error_type = ErrorType.ENDPOINT_NOT_FOUND if host_not_found else None
                     raise FireEyeHXNotFoundError(msg, status_code=404, error_type=error_type)
 
