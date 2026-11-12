@@ -406,6 +406,11 @@ class TestManagerErrors:
         ("body", "expected_attr", "expected_classified"),
         [
             (b'{"details": [{"message": "Host not found"}]}', "ENDPOINT_NOT_FOUND", "ENDPOINT_NOT_FOUND"),
+            (
+                b'{"details": [], "route": "/hx/api/v3/hosts/agent_id/containment", "message": "Not Found"}',
+                "ENDPOINT_NOT_FOUND",
+                "ENDPOINT_NOT_FOUND",
+            ),
             (b'{"details": [{"message": "Containment state not found"}]}', None, "VENDOR_ERROR"),
         ],
     )
@@ -415,7 +420,7 @@ class TestManagerErrors:
         expected_attr: str | None,
         expected_classified: str,
     ) -> None:
-        """Verify HTTP 404 details map Host not found to ENDPOINT_NOT_FOUND and other details to VENDOR_ERROR.
+        """Verify HTTP 404 details map Host not found or host-scoped empty details to ENDPOINT_NOT_FOUND.
 
         Args:
             body: Raw JSON error response body.
@@ -431,6 +436,17 @@ class TestManagerErrors:
         assert raised.value.status_code == 404
         assert raised.value.error_type == expected_attr
         assert utils.classify_exception(raised.value) == (expected_classified, "FireEyeHXNotFoundError", 404)
+
+    def test_validate_response_404_empty_details_not_host_scoped(self) -> None:
+        """Verify non-host-scoped HTTP 404 with empty details stays VENDOR_ERROR."""
+        body = b'{"details": [], "message": "Not Found"}'
+
+        with pytest.raises(FireEyeHXNotFoundError) as raised:
+            FireEyeHXManager.validate_response(make_response(404, body), "Unable to get alerts")
+
+        assert raised.value.status_code == 404
+        assert raised.value.error_type is None
+        assert utils.classify_exception(raised.value) == ("VENDOR_ERROR", "FireEyeHXNotFoundError", 404)
 
     def test_validate_response_status_code(self) -> None:
         """Verifies that other HTTP errors keep their status code."""
