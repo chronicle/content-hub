@@ -18,9 +18,7 @@ import copy
 import sys
 from typing import TYPE_CHECKING
 
-import pytest
 import requests
-from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
@@ -28,6 +26,8 @@ from ...actions import GetCaseSla
 from ..common import ALERT_1_CONTEXT
 
 if TYPE_CHECKING:
+    import pytest
+    from integration_testing.platform.script_output import MockActionOutput
     from TIPCommon.types import SingleJson
 
     from ..core.product import Tools
@@ -44,11 +44,7 @@ NO_SLA_PAYLOAD: SingleJson = {
 }
 
 
-@set_metadata(
-    integration_config={},
-    parameters=dict(DEFAULT_PARAMS),
-    input_context=copy.deepcopy(ALERT_1_CONTEXT),
-)
+@set_metadata(integration_config={}, parameters=dict(DEFAULT_PARAMS), input_context=copy.deepcopy(ALERT_1_CONTEXT))
 def test_get_case_sla_one_platform_expands_sla_and_returns_formatted_timestamps(
     monkeypatch: pytest.MonkeyPatch,
     tools: Tools,
@@ -91,6 +87,40 @@ def test_get_case_sla_one_platform_expands_sla_and_returns_formatted_timestamps(
     )
 
 
+@set_metadata(integration_config={}, parameters=dict(DEFAULT_PARAMS), input_context=copy.deepcopy(ALERT_1_CONTEXT))
+def test_get_case_sla_active_sla_without_critical_sla_returns_none_for_critical_fields(
+    monkeypatch: pytest.MonkeyPatch,
+    tools: Tools,
+    action_output: MockActionOutput,
+) -> None:
+    monkeypatch.setattr(sys, "argv", [*sys.argv, "--onePlatformSupport"])
+    tools.set_case_metadata({
+        "id": 123,
+        "displayName": "Case Without Critical SLA",
+        "priority": 60,
+        "status": 1,
+        "sla": {
+            "expirationTime": SLA_EXPIRATION_MS,
+            "criticalExpirationTime": -1,
+            "expirationStatus": "OpenSla",
+            "remainingTimeSinceLastPause": -1,
+        },
+    })
+
+    GetCaseSla.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.result_value is True
+    assert action_output.results.json_output is not None
+    assert action_output.results.json_output.json_result == {
+        "SLA_unix": SLA_EXPIRATION_MS,
+        "SLA": "2026-10-27 07:56:16",
+        "critical_SLA_unix": None,
+        "critical_SLA": None,
+    }
+    assert action_output.results.output_message == "Stage SLA: 2026-10-27 07:56:16, Critical Stage SLA: None"
+
+
 @set_metadata(
     integration_config={},
     parameters={"DateTime Format": "%Y/%m/%d %H:%M"},
@@ -129,11 +159,7 @@ def test_get_case_sla_legacy_falls_back_to_stage_sla_when_case_sla_is_negative_o
     }
 
 
-@set_metadata(
-    integration_config={},
-    parameters=dict(DEFAULT_PARAMS),
-    input_context=copy.deepcopy(ALERT_1_CONTEXT),
-)
+@set_metadata(integration_config={}, parameters=dict(DEFAULT_PARAMS), input_context=copy.deepcopy(ALERT_1_CONTEXT))
 def test_get_case_sla_no_sla_configured_completes_with_false_result(
     monkeypatch: pytest.MonkeyPatch,
     tools: Tools,
@@ -156,11 +182,7 @@ def test_get_case_sla_no_sla_configured_completes_with_false_result(
     assert action_output.results.output_message == "SLA was not set for case 123."
 
 
-@set_metadata(
-    integration_config={},
-    parameters=dict(DEFAULT_PARAMS),
-    input_context=copy.deepcopy(ALERT_1_CONTEXT),
-)
+@set_metadata(integration_config={}, parameters=dict(DEFAULT_PARAMS), input_context=copy.deepcopy(ALERT_1_CONTEXT))
 def test_get_case_sla_api_error_fails_with_standard_error_message(
     monkeypatch: pytest.MonkeyPatch,
     tools: Tools,

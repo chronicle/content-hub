@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 from integration_testing import router
 from integration_testing.request import MockRequest
@@ -25,6 +25,8 @@ from integration_testing.requests.session import MockSession, Response, RouteFun
 from .product import Tools
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from TIPCommon.types import SingleJson
 
 
