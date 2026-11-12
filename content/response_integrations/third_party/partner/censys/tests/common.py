@@ -15,3 +15,6 @@ MOCK_RESPONSES_FILE = pathlib.Path.joinpath(MOCKS_PATH, "mock_responses.json")
 
 MOCK_RESPONSES: SingleJson = get_def_file_content(MOCK_RESPONSES_FILE)
 HOST_HISTORY_RESPONSE = MOCK_RESPONSES["host_history"]
+
+REPUTATION_EDGE_CASES: SingleJson = MOCK_RESPONSES["reputation_edge_cases"]
+REPUTATION_MULTI_IP_BATCH: SingleJson = REPUTATION_EDGE_CASES["multi_ip_batch"]
