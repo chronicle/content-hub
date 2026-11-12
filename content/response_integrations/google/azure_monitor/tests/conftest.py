@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import pytest
+import soar_sdk
 from integration_testing.common import use_live_api
 from integration_testing.logger import Logger
 from TIPCommon.base.utils import CreateSession
@@ -44,6 +45,11 @@ def azure_monitor_script_session(
     session = AzureMonitorSession(azure_monitor)
     if not use_live_api():
         monkeypatch.setattr(CreateSession, "create_session", lambda *_: session)
+        monkeypatch.setattr(
+            soar_sdk.SiemplifyBase.SiemplifyBase,
+            "create_session",
+            lambda *_: session,
+        )
     return session
 
 
