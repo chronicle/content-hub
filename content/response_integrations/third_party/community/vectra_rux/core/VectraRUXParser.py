@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from .datamodels import Assignment, Detection, Entity, Group, Note, Outcome, User
+from .datamodels import (
+    Assignment,
+    Detection,
+    DetectionEvent,
+    Entity,
+    Group,
+    InvestigationResult,
+    Note,
+    User
+)
 
 
 class VectraRUXParser:
@@ -99,25 +108,6 @@ class VectraRUXParser:
             last_login_timestamp=user_obj.get("last_login_timestamp"),
         )
 
-    def build_outcome_object(self, outcome_json):
-        """Builds an Outcome object from a JSON object representing a outcome.
-
-        Args:
-            outcome_json (dict): A JSON object representing a outcome.
-
-        Returns:
-            Outcome: An Outcome object representing the outcome.
-
-        """
-        return Outcome(
-            raw_data=outcome_json,
-            outcome_id=outcome_json.get("id"),
-            builtin=outcome_json.get("builtin"),
-            user_selectable=outcome_json.get("user_selectable"),
-            title=outcome_json.get("title"),
-            category=outcome_json.get("category"),
-        )
-
     def build_group_object(self, group_obj):
         """Builds a Group object from a dictionary of group data.
 
@@ -137,6 +127,32 @@ class VectraRUXParser:
             importance=group_obj.get("importance"),
         )
 
+    def build_detection_event_object(self, event_json):
+        """Builds a DetectionEvent object from a JSON object
+        representing a record from the events/detections endpoint.
+
+        Args:
+            event_json (dict): A JSON object representing a detection event.
+
+        Returns:
+            DetectionEvent: A DetectionEvent object representing the detection event.
+
+        """
+        return DetectionEvent(
+            raw_data=event_json,
+            event_id=event_json.get("id"),
+            detection_id=event_json.get("detection_id"),
+            entity_id=event_json.get("entity_id"),
+            entity_name=event_json.get("entity_name"),
+            entity_uid=event_json.get("entity_uid"),
+            detection_type=event_json.get("detection_type"),
+            category=event_json.get("category"),
+            threat=event_json.get("threat"),
+            certainty=event_json.get("certainty"),
+            event_timestamp=event_json.get("event_timestamp"),
+            change_type=event_json.get("change_type"),
+        )
+
     def build_note_object(self, entity_json):
         """Builds a note object based on the given json and type.
 
@@ -153,4 +169,29 @@ class VectraRUXParser:
             date_created=entity_json.get("date_created"),
             created_by=entity_json.get("created_by"),
             note=entity_json.get("note"),
+            date_modified=entity_json.get("date_modified"),
+            modified_by=entity_json.get("modified_by"),
+        )
+
+    def build_investigation_result_object(self, investigation_result_json):
+        """Builds an InvestigationResult object from a JSON object
+        representing an investigation result record.
+
+        Args:
+            investigation_result_json (dict): A JSON object representing an
+                investigation result record.
+
+        Returns:
+            InvestigationResult: An InvestigationResult object representing the record.
+
+        """
+        return InvestigationResult(
+            raw_data=investigation_result_json,
+            timestamp=investigation_result_json.get("timestamp"),
+            identity_principal=investigation_result_json.get("identity_principal"),
+            operation=investigation_result_json.get("operation"),
+            object_id=investigation_result_json.get("object_id"),
+            client_ip=investigation_result_json.get("client_ip"),
+            extended_properties=investigation_result_json.get("extended_properties"),
+            device_properties=investigation_result_json.get("device_properties"),
         )

@@ -5,18 +5,16 @@ import json
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon import extract_action_param, extract_configuration_param
 
 from ..core.constants import (
     ASSIGN_GROUP_SCRIPT_NAME,
     COMMON_ACTION_ERROR_MESSAGE,
     GROUP_TYPE_FIELD_MAPPING,
-    INTEGRATION_NAME,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
 )
 from ..core.GroupHTMLView import render_group_object_as_html
-from ..core.UtilsManager import process_action_parameter, validate_integer
+from ..core.UtilsManager import get_integration_params, process_action_parameter, validate_integer
 from ..core.VectraRUXExceptions import (
     BadRequestException,
     InvalidIntegerException,
@@ -32,42 +30,18 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration parameters
-    api_root = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Root",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_id = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client ID",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_secret = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client Secret",
-        print_value=False,
-        is_mandatory=True,
-    )
+    api_root, client_id, client_secret = get_integration_params(siemplify)
 
     # Action parameters
-    group_id = extract_action_param(
-        siemplify,
+    group_id = siemplify.extract_action_param(
         param_name="Group ID",
         input_type=str,
         is_mandatory=True,
-        print_value=True,
     )
-    members = extract_action_param(
-        siemplify,
+    members = siemplify.extract_action_param(
         param_name="Members",
         input_type=str,
         is_mandatory=True,
-        print_value=True,
     )
 
     members = process_action_parameter(members)

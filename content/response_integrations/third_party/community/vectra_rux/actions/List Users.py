@@ -5,16 +5,15 @@ import json
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+from TIPCommon.transformation import construct_csv
 
 from ..core.constants import (
     COMMON_ACTION_ERROR_MESSAGE,
-    INTEGRATION_NAME,
     LIST_USERS_SCRIPT_NAME,
     RESULT_VALUE_FALSE,
     RESULT_VALUE_TRUE,
 )
-from ..core.UtilsManager import validate_integer, validate_limit_param
+from ..core.UtilsManager import get_integration_params, validate_integer, validate_limit_param
 from ..core.VectraRUXExceptions import InvalidIntegerException, VectraRUXException
 from ..core.VectraRUXManager import VectraRUXManager
 
@@ -26,61 +25,37 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameters
-    api_root = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="API Root",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_id = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client ID",
-        input_type=str,
-        is_mandatory=True,
-    )
-    client_secret = extract_configuration_param(
-        siemplify,
-        provider_name=INTEGRATION_NAME,
-        param_name="Client Secret",
-        print_value=False,
-        is_mandatory=True,
-    )
+    api_root, client_id, client_secret = get_integration_params(siemplify)
 
     # Action parameters
-    role = extract_action_param(
-        siemplify,
+    role = siemplify.extract_action_param(
         param_name="Role",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    last_login_gte = extract_action_param(
-        siemplify,
+    last_login_gte = siemplify.extract_action_param(
         param_name="Last Login GTE",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    email = extract_action_param(
-        siemplify,
+    email = siemplify.extract_action_param(
         param_name="Email",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
-    result_limit = extract_action_param(
-        siemplify,
+    result_limit = siemplify.extract_action_param(
         param_name="Limit",
         input_type=str,
         is_mandatory=False,
-        print_value=True,
     )
 
     result_value = RESULT_VALUE_TRUE
     status = EXECUTION_STATE_COMPLETED
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
+
+    role = role.strip() if role else None
+    last_login_gte = last_login_gte.strip() if last_login_gte else None
+    email = email.strip() if email else None
 
     try:
         result_limit = validate_integer(
