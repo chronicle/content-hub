@@ -119,12 +119,15 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
     def build_unified_alerts_or_filter(
         start_timestamp_ms: int | None = None,
         lowest_severity: str | None = None,
+        statuses: list[str] | None = None,
     ) -> dict | None:
         """Build GraphQL OrFilterSelectionInput from parameters.
 
         Args:
             start_timestamp_ms (int, optional): The start timestamp in milliseconds.
             lowest_severity (str, optional): The lowest severity to fetch.
+            statuses (list[str], optional): SentinelOne status enums to fetch
+                (e.g. ["NEW", "IN_PROGRESS"]). If empty, all statuses are fetched.
 
         Returns:
             dict, optional: A dictionary representing the OrFilterSelectionInput payload,
@@ -143,6 +146,11 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
                             "stringIn": {"values": target_severities},
                         }
                     )
+
+        if statuses:
+            common_filters.append(
+                {"fieldId": "status", "stringIn": {"values": list(statuses)}}
+            )
 
         if start_timestamp_ms is None:
             if not common_filters:
@@ -209,6 +217,7 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
         limit: int | None = None,
         start_timestamp_ms: int | None = None,
         lowest_severity: str | None = None,
+        statuses: list[str] | None = None,
     ) -> Generator[dict, None, None]:
         """Stream unified alerts one-by-one from SentinelOne.
 
@@ -216,6 +225,7 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
             limit (int, optional): The maximum number of alerts to yield.
             start_timestamp_ms (int, optional): The start timestamp in milliseconds.
             lowest_severity (str, optional): The lowest severity to fetch.
+            statuses (list[str], optional): SentinelOne status enums to fetch.
 
         Yields:
             dict: An individual raw alert dictionary.
@@ -224,6 +234,7 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
         or_filter = self.build_unified_alerts_or_filter(
             start_timestamp_ms=start_timestamp_ms,
             lowest_severity=lowest_severity,
+            statuses=statuses,
         )
         variables = {
             "first": self.PAGE_SIZE,

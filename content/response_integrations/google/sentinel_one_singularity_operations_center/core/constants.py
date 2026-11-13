@@ -83,6 +83,16 @@ STATUS_MAP: Mapping[str, str] = {
     "Resolved": "RESOLVED",
 }
 
+# Connector "Status Filter" values (upper-cased) mapped to SentinelOne status enums.
+# "UNRESOLVED" is accepted as an alias of "NEW" for parity with the legacy connector.
+STATUS_FILTER_MAP: Mapping[str, str] = {
+    "NEW": "NEW",
+    "UNRESOLVED": "NEW",
+    "IN PROGRESS": "IN_PROGRESS",
+    "IN_PROGRESS": "IN_PROGRESS",
+    "RESOLVED": "RESOLVED",
+}
+
 VERDICT_MAP: Mapping[str, str] = {
     "True positive/Malware": "TRUE_POSITIVE_MALWARE",
     "True positive/Unauthorized access": "TRUE_POSITIVE_UNAUTHORIZED_ACCESS",
