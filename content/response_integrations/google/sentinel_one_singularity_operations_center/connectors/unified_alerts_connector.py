@@ -19,7 +19,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import dateutil.parser
-from SiemplifyUtils import convert_datetime_to_unix_time
+from SiemplifyUtils import convert_datetime_to_unix_time, unix_now
 from TIPCommon.base.connector import Connector
 from TIPCommon.consts import IDS_DB_KEY, IDS_FILE_NAME
 from TIPCommon.exceptions import ConnectorSetupError
@@ -38,7 +38,7 @@ from ..core.auth import (
     SessionAuthenticationParameters,
     build_auth_params,
 )
-from ..core.constants import SEVERITY_MAP
+from ..core.constants import SEVERITY_MAP, STATUS_FILTER_MAP
 from ..core.data_models import SentinelOneAlert
 from ..core.exceptions import SentinelOneSingularityOperationsCenterError
 
@@ -51,6 +51,8 @@ CONNECTOR_SCRIPT_NAME = (
 )
 MAX_CACHE_SIZE = 1100
 PRUNED_CACHE_SIZE = 1000
+MAX_PADDING_PERIOD_MINUTES = 1440
+MS_IN_MINUTE = 60_000
 
 
 class UnifiedAlertsConnector(Connector):
@@ -103,6 +105,58 @@ class UnifiedAlertsConnector(Connector):
             print_value=True,
         )
 
+        # Validate Padding Period (minutes of lookback applied to the last success time)
+        padding = getattr(self.params, "padding_period", None)
+        self.params.padding_period = (
+            self.param_validator.validate_range(
+                param_name="Padding Period",
+                value=padding,
+                min_limit=0,
+                max_limit=MAX_PADDING_PERIOD_MINUTES,
+                print_value=True,
+            )
+            if padding not in (None, "")
+            else 0
+        )
+
+        # Validate Status Filter
+        self.params.status_filter = self._parse_status_filter(
+            getattr(self.params, "status_filter", None)
+        )
+
+    @staticmethod
+    def _parse_status_filter(raw_value: str | None) -> list[str]:
+        """Parse the comma-separated Status Filter into SentinelOne status enums.
+
+        Args:
+            raw_value (str, optional): The raw parameter value.
+
+        Returns:
+            list[str]: Unique SentinelOne status enums. Empty list means all statuses.
+
+        Raises:
+            ConnectorSetupError: If an unsupported status is provided.
+        """
+        if not raw_value or not str(raw_value).strip():
+            return []
+
+        statuses: list[str] = []
+        for item in str(raw_value).split(","):
+            key = item.strip().upper()
+            if not key:
+                continue
+            if key not in STATUS_FILTER_MAP:
+                msg = (
+                    "Error executing connector: 'Unified Alerts Connector'. Reason: invalid "
+                    f"value '{item.strip()}' provided in 'Status Filter'. "
+                    "Supported values: New, In Progress, Resolved."
+                )
+                raise ConnectorSetupError(msg)
+            status = STATUS_FILTER_MAP[key]
+            if status not in statuses:
+                statuses.append(status)
+        return statuses
+
     def init_managers(self) -> None:
         """Initialize API client."""
         auth_params = build_auth_params(self.siemplify)
@@ -153,11 +207,18 @@ class UnifiedAlertsConnector(Connector):
                 del self.context.existing_ids[key]
 
     def store_alert_in_cache(self, processed_alert: SentinelOneAlert) -> None:
-        """Store processed alert ID and its lastSeenAt timestamp in cache."""
+        """Store processed alert ID and its lastSeenAt timestamp in cache.
+
+        The list-query `lastSeenAt` is stored (same value `_is_unprocessed` compares
+        against), and the key is re-inserted so pruning removes the least recently
+        seen alerts instead of the first ever inserted ones.
+        """
+        last_seen_at = (
+            processed_alert.raw_data.get("lastSeenAt") or processed_alert.last_seen_at
+        )
+        self.context.existing_ids.pop(processed_alert.alert_id, None)
         self.context.existing_ids[processed_alert.alert_id] = (
-            convert_datetime_to_unix_time(
-                dateutil.parser.parse(processed_alert.last_seen_at)
-            )
+            convert_datetime_to_unix_time(dateutil.parser.parse(last_seen_at))
         )
         if len(self.context.existing_ids) > MAX_CACHE_SIZE:
             self._prune_cache()
@@ -203,12 +264,21 @@ class UnifiedAlertsConnector(Connector):
     def is_overflow_alert(self, alert_info: AlertInfo) -> bool:
         """Check if alert is overflowed.
 
+        Updates of already ingested alerts are never counted towards overflow,
+        otherwise repeated updates of the same alert create overflow cases.
+
         Args:
             alert_info (AlertInfo): The alert info to evaluate.
 
         Returns:
             bool: True if overflowed, False otherwise.
         """
+        if alert_info.ticket_id in self._originally_cached_ids:
+            self.logger.info(
+                f"Alert {alert_info.ticket_id} is an update. Skipping overflow check."
+            )
+            return False
+
         return not self.params.disable_overflow and is_overflowed(
             self.siemplify,
             alert_info,
@@ -234,18 +304,31 @@ class UnifiedAlertsConnector(Connector):
         Returns:
             list[SentinelOneAlert]: The list of fetched alerts.
         """
-        start_timestamp_ms = convert_datetime_to_unix_time(
+        last_success_ms = convert_datetime_to_unix_time(
             self.context.last_success_timestamp
         )
+        # Lookback padding: SentinelOne indexes burst alerts out of order, so an alert
+        # can become searchable with a lastSeenAt older than the saved cursor.
+        # Re-scanning the padding window is safe; the ID cache filters re-fetched alerts.
+        start_timestamp_ms = last_success_ms
+        if self.params.padding_period:
+            start_timestamp_ms = min(
+                last_success_ms,
+                unix_now() - self.params.padding_period * MS_IN_MINUTE,
+            )
 
         self.logger.info(
             f"Fetching up to {self.params.max_alerts_to_fetch} unified alerts. "
-            f"Last run success time: {start_timestamp_ms} ms. Start timestamp: {start_timestamp_ms} ms."
+            f"Last run success time: {last_success_ms} ms. "
+            f"Padding period: {self.params.padding_period} min. "
+            f"Start timestamp: {start_timestamp_ms} ms. "
+            f"Status filter: {self.params.status_filter or 'ALL'}."
         )
 
         alerts_generator = self.manager.yield_unified_alerts(
             start_timestamp_ms=start_timestamp_ms,
             lowest_severity=self.params.lowest_severity_to_fetch,
+            statuses=self.params.status_filter,
         )
 
         enriched_alerts: list[SentinelOneAlert] = []
@@ -298,7 +381,19 @@ class UnifiedAlertsConnector(Connector):
             model=SimpleNamespace(classification=classification),
             model_key="classification",
             whitelist=whitelist,
-        )
+        ) or self._cache_filtered_alert(alert)
+
+    def _cache_filtered_alert(self, alert: SentinelOneAlert) -> bool:
+        """Cache an alert that failed filters so the padding window doesn't re-fetch it.
+
+        Args:
+            alert (SentinelOneAlert): The filtered-out alert.
+
+        Returns:
+            bool: Always False (the alert did not pass filters).
+        """
+        self.store_alert_in_cache(alert)
+        return False
 
     def create_alert_info(self, processed_alert: SentinelOneAlert) -> AlertInfo:
         """Map raw SentinelOne alert to Siemplify AlertInfo object.
