@@ -78,6 +78,7 @@ def new_state() -> SingleJson:
     Returns:
         The state. It has the requested file path, the target keys, the skipped entity count, the pending tasks
         by agent GUID, and the JSON result by target key.
+
     """
     return {"file_path": "", "keys": [], "skipped": 0, "pending": {}, "json_results": {}}
 
@@ -100,6 +101,7 @@ def build_failure_entry(
 
     Returns:
         The entity result.
+
     """
     return {
         "status": RESULT_FAILURE,
@@ -118,6 +120,7 @@ def record_result(state: SingleJson, keys: list[str], entry: SingleJson) -> None
         state: The async state.
         keys: The target keys (entity identifiers or Agent UUIDs) of one agent.
         entry: The entity result.
+
     """
     for key in keys:
         state["json_results"][key] = entry
@@ -131,6 +134,7 @@ def get_counts(state: SingleJson) -> tuple[int, int, list[str], int]:
 
     Returns:
         The target count, the success count, one error type per failed target, and the skipped entity count.
+
     """
     results = state["json_results"].values()
     succeeded = sum(result["status"] == RESULT_SUCCESS for result in results)
@@ -155,6 +159,7 @@ def resolve_targets(
 
     Returns:
         The target keys by agent GUID. Targets with the same agent GUID share one task.
+
     """
     targets: dict[str, list[str]] = {}
     for key, lookup in lookups.items():
@@ -191,6 +196,7 @@ def start_task(
         state: The async state.
         guid: The agent GUID.
         keys: The target keys of the agent.
+
     """
     try:
         task_url = manager.collect_file(
@@ -214,6 +220,7 @@ def start_acquisition(siemplify: SiemplifyAction, manager: TrendVisionOneManager
         siemplify: The action object.
         manager: The Trend Vision One manager.
         state: The async state to fill.
+
     """
     state["file_path"] = extract_action_param(siemplify, param_name="File Path", is_mandatory=True, print_value=True)
     agent_uuids = string_to_multi_value(extract_action_param(siemplify, param_name="Agent UUID", print_value=True))
@@ -238,6 +245,7 @@ def get_download_folder(siemplify: SiemplifyAction) -> pathlib.Path:
     Returns:
         The run folder of the action, or a downloads folder in the working directory if the run folder is not
         available.
+
     """
     try:
         folder = pathlib.Path(siemplify.run_folder)
@@ -257,6 +265,7 @@ def build_file_name(task_id: str, file_path: str) -> str:
 
     Returns:
         The file name. It has only letters, digits, dots, hyphens, and underscores.
+
     """
     base_name = re.split(r"[\\/]", file_path)[-1][:200] or "collected_file"
 
@@ -269,6 +278,7 @@ def attach_file(siemplify: SiemplifyAction, path: pathlib.Path) -> None:
     Args:
         siemplify: The action object.
         path: The local path of the archive.
+
     """
     try:
         size = path.stat().st_size
@@ -304,6 +314,7 @@ def download_file(
 
     Returns:
         The entity result.
+
     """
     raw_task = task.raw_data
     task_id = task.id or state["pending"][guid]["task_id"]
@@ -340,6 +351,7 @@ def build_task_failure(state: SingleJson, guid: str, task: Task) -> SingleJson:
 
     Returns:
         The entity result.
+
     """
     failure = get_task_failure(task)
     task_id = state["pending"][guid]["task_id"]
@@ -355,6 +367,7 @@ def is_transient_error(error: Exception) -> bool:
 
     Returns:
         True for connection errors, rate limits, download time limits, and HTTP 5xx.
+
     """
     error_type, _, http_status = classify_exception(error)
 
@@ -379,6 +392,7 @@ def poll_task(
         state: The async state.
         guid: The agent GUID.
         max_seconds: The time limit of the download, in seconds.
+
     """
     pending = state["pending"][guid]
     try:
@@ -415,6 +429,7 @@ def get_pending_keys(state: SingleJson) -> list[str]:
 
     Returns:
         The pending target keys.
+
     """
     return [key for pending in state["pending"].values() for key in pending["keys"]]
 
@@ -429,6 +444,7 @@ def build_output_message(state: SingleJson, succeeded: list[str], failed: list[s
 
     Returns:
         The output message.
+
     """
     if not succeeded and not failed:
         return "No suitable entities or Agent UUIDs were found to acquire the file from."
@@ -450,6 +466,7 @@ def get_time_left_ms(deadline_ms: int) -> float:
 
     Returns:
         The time left in milliseconds, or infinity if there is no deadline.
+
     """
     return deadline_ms - unix_now() - ACQUIRE_FILE_DEADLINE_MARGIN_MS if deadline_ms else math.inf
 
@@ -473,6 +490,7 @@ def poll_tasks(
 
     Raises:
         TrendVisionOneTimeoutException: If pending targets cannot be polled again before the async deadline.
+
     """
     for guid in list(state["pending"]):
         time_left_ms = min(
@@ -508,6 +526,7 @@ def handle_run_error(siemplify: SiemplifyAction, state: SingleJson, error: Excep
 
     Returns:
         The output message, the result value, and the execution state.
+
     """
     is_timeout = isinstance(error, TrendVisionOneTimeoutException)
     unfinished = [key for key in state["keys"] if key not in state["json_results"]]
@@ -539,6 +558,7 @@ def build_manager(siemplify: SiemplifyAction) -> TrendVisionOneManager:
 
     Returns:
         The manager.
+
     """
     return TrendVisionOneManager(
         api_root=extract_configuration_param(
@@ -576,6 +596,7 @@ def load_state(siemplify: SiemplifyAction) -> SingleJson:
 
     Returns:
         The state, with defaults for missing keys.
+
     """
     saved_state: SingleJson = json.loads(
         extract_action_param(siemplify, param_name="additional_data", default_value="{}")
@@ -594,6 +615,7 @@ def run_once(siemplify: SiemplifyAction, state: SingleJson, *, is_first_run: boo
 
     Returns:
         The output message, the result value, and the execution state.
+
     """
     if not is_first_run:
         state.update(load_state(siemplify))
@@ -610,6 +632,7 @@ def main(is_first_run: bool) -> None:
 
     Args:
         is_first_run: True for the first run, False for an async poll.
+
     """
     siemplify = SiemplifyAction()
     siemplify.script_name = ACQUIRE_FILE_SCRIPT_NAME

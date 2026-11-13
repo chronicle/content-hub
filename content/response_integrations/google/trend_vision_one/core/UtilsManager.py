@@ -181,6 +181,7 @@ def classify_exception(error: Exception) -> tuple[str, str, int | None]:
 
     Returns:
         The error type, the exception class name, and the HTTP status code or None.
+
     """
     underlying = error.__cause__ or error.__context__
     is_classifiable = hasattr(error, "error_type") or isinstance(error, requests.RequestException)
@@ -199,6 +200,7 @@ def _get_http_status(error: Exception) -> int | None:
 
     Returns:
         The HTTP status code, or None if there is none.
+
     """
     response = getattr(error, "response", None)
     if response is None:
@@ -220,6 +222,7 @@ def _get_error_type(error: Exception, http_status: int | None) -> str:
 
     Returns:
         The error type.
+
     """
     if getattr(error, "error_type", None):
         return error.error_type
@@ -242,6 +245,7 @@ def dominant_error_type(error_types: Iterable[str]) -> str:
 
     Returns:
         The dominant error type, or NONE if there are no error types. An unknown error type has the lowest precedence.
+
     """
     precedence = list(ErrorType)
 
@@ -278,6 +282,7 @@ def build_action_result_summary(
 
     Returns:
         The summary line, with enums and counts only.
+
     """
     failed = len(error_types)
     unfinished = max(targets - succeeded - failed, 0)
@@ -316,6 +321,7 @@ def log_action_result_summary(
         execution_state: The execution state that the run ends with.
         get_counts: Return (targets, succeeded, error_types, skipped).
         error: The exception that ended the run, if any.
+
     """
     if execution_state == EXECUTION_STATE_INPROGRESS:
         return
@@ -338,6 +344,7 @@ def log_timeout_marker_once(
         siemplify: The action object.
         state: The async state that the action saves for the next poll.
         get_counts: Return (targets, succeeded, error_types, skipped).
+
     """
     try:
         deadline = siemplify.async_total_duration_deadline
@@ -363,6 +370,7 @@ def count_skipped_entities(target_entities: Iterable[Any], supported_types: Cont
 
     Returns:
         The unsupported entity count.
+
     """
     return sum(getattr(entity, "entity_type", "") not in supported_types for entity in target_entities)
 
@@ -383,6 +391,7 @@ def get_summary_counts(
 
     Returns:
         The targets, the succeeded count, one error type for each failed target, and the skipped count.
+
     """
     json_results = result_data.get("json_results", {})
     error_types = [result["error_type"] for result in json_results.values() if result.get("error_type")]
@@ -411,6 +420,7 @@ def log_run_summary(
         targets: The number of distinct targets in scope.
         supported_entity_types: Entity types supported by the action.
         error: The exception that ended the run, if any.
+
     """
     skipped = count_skipped_entities(siemplify.target_entities, supported_entity_types)
     get_counts = partial(get_summary_counts, result_data, targets, skipped)
@@ -428,6 +438,7 @@ def add_unfinished_json_result(siemplify: SiemplifyAction, result_data: dict[str
         siemplify: The action object.
         result_data: The async state of the run.
         error: The exception that ended the run.
+
     """
     json_results = result_data.get("json_results", {})
     failure = {"error": str(error).strip(), "error_type": classify_exception(error)[0]}
@@ -445,6 +456,7 @@ def get_task_failure(task: datamodels.Task) -> dict[str, str]:
 
     Returns:
         The error and error_type keys of the JSON result.
+
     """
     message = (task.raw_data.get("error") or {}).get("message") or f"The task ended with status {task.status}."
 
@@ -459,6 +471,7 @@ def get_endpoint_search_args(target: Any) -> dict[str, str]:
 
     Returns:
         The keyword arguments of TrendVisionOneManager.search_endpoint.
+
     """
     if isinstance(target, str):
         return {"agent_id": target}

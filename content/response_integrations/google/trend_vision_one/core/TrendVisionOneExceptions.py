@@ -22,6 +22,7 @@ class TrendVisionOneException(Exception):
         Args:
             *args: The exception message arguments.
             error_type: The failure reason, if the code that raises the exception knows it.
+
         """
         super().__init__(*args)
         self.error_type = error_type

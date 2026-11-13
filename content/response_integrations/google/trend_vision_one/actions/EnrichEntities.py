@@ -63,6 +63,7 @@ def get_target_identifier(target: DomainEntityInfo | str) -> str:
 
     Returns:
         The Agent UUID, or the original identifier of the entity.
+
     """
     return target if isinstance(target, str) else get_entity_original_identifier(target)
 
@@ -84,6 +85,7 @@ class EnrichmentResult:
             identifier: The identifier of the target in the JSON result.
             error: The failure message.
             error_type: The failure reason.
+
         """
         self.failed.append(target)
         self.error_types.append(error_type)
@@ -95,6 +97,7 @@ class EnrichmentResult:
         Args:
             targets: The supported entities, then the Agent UUIDs.
             error: The exception that ended the run.
+
         """
         error_type = classify_exception(error)[0]
         for target in targets:
@@ -134,6 +137,7 @@ def get_isolation_status(siemplify: SiemplifyAction, manager: TrendVisionOneMana
 
     Returns:
         The isolation status, or unknown if the API has no value or the lookup fails.
+
     """
     try:
         return manager.get_endpoint_isolation_status(agent_guid) or UNKNOWN_ISOLATION_STATUS
@@ -158,6 +162,7 @@ def enrich_entity(
         identifier: The original identifier of the entity.
         endpoint: The endpoint of the entity.
         isolation_status: The isolation status of the endpoint.
+
     """
     siemplify.LOGGER.info(f"Enriching entity {identifier}")
     isolation = {ISOLATION_STATUS_KEY: isolation_status}
@@ -181,6 +186,7 @@ def enrich_targets(
 
     Returns:
         The successful and failed targets, the JSON result, and the failure reasons.
+
     """
     result = EnrichmentResult()
     for target in targets:

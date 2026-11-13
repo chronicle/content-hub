@@ -270,6 +270,7 @@ class TrendVisionOneManager:
 
         Raises:
             TrendVisionOneException: If the endpoint item of the multi-status response is not 2xx.
+
         """
         payload = [{"agentGuid": guid, "filePath": file_path, "description": description}]
         response = self.session.post(self._get_full_url("collect_file"), json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
@@ -307,6 +308,7 @@ class TrendVisionOneManager:
 
         Returns:
             The error type.
+
         """
         if status >= HTTPStatus.INTERNAL_SERVER_ERROR:
             return "VENDOR_ERROR"
@@ -341,6 +343,7 @@ class TrendVisionOneManager:
 
         Raises:
             TrendVisionOneException: If there is no location, the download fails, or it passes the time limit.
+
         """
         if not resource_location:
             message = "The collect file task has no download location."
@@ -369,6 +372,7 @@ class TrendVisionOneManager:
 
         Raises:
             TrendVisionOneException: If the response is not 2xx or the download passes the time limit.
+
         """
         deadline = time.monotonic() + max_seconds
         timeout = min(max_seconds, REQUEST_TIMEOUT_SECONDS)
@@ -627,6 +631,7 @@ class TrendVisionOneManager:
 
         Returns:
             The isolationStatus value (unknown, on, or off), or None if the response has no value.
+
         """
         response = self.session.get(
             self._get_full_url("endpoint_details", agent_guid=agent_guid),
