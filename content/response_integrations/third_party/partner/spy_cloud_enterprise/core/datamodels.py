@@ -13,9 +13,13 @@ Guiding principle (mirrors the connector/converter): never surface plaintext
 passwords, cookies, tokens, or other secrets. We only ever report metadata and
 booleans such as "plaintext password exposed: Yes".
 """
+
 from __future__ import annotations
 
 import html
+import re
+import string
+from datetime import datetime, timezone
 from typing import Any, Iterable
 
 from .spycloud_udm_converter import SpyCloudUdmConverter
@@ -39,6 +43,10 @@ SENSITIVE_KEY_FRAGMENTS = (
 )
 
 _CONVERTER = SpyCloudUdmConverter()
+
+# Fractional-seconds group in an ISO timestamp; used to trim producers that emit
+# more precision than ``datetime.fromisoformat`` accepts.
+_FRACTIONAL_SECONDS = re.compile(r"\.(\d+)")
 
 # Source severity -> malware/session-theft classification. Records at or above the
 # credential-exposure tier (20) are treated as high risk for entity flagging.
@@ -192,10 +200,7 @@ class SpyCloudExposure:
 
     @property
     def has_cookies(self) -> bool:
-        return any(
-            _clean_str(self.raw.get(key))
-            for key in ("cookies", "cookie_data", "form_cookies_data")
-        )
+        return any(_clean_str(self.raw.get(key)) for key in ("cookies", "cookie_data", "form_cookies_data"))
 
     @property
     def is_malware(self) -> bool:
@@ -215,22 +220,16 @@ class SpyCloudExposure:
 
     def to_json(self) -> dict[str, Any]:
         """Structured record with every sensitive field stripped out."""
-        safe = {
-            key: value
-            for key, value in self.raw.items()
-            if not _is_sensitive_key(key)
-        }
-        safe.update(
-            {
-                "breach_title": self.breach_title,
-                "breach_site": self.breach_site,
-                "severity_label": self.severity_label,
-                "risk_score": self.risk_score,
-                "has_password": self.has_password,
-                "has_plaintext_password": self.has_plaintext_password,
-                "has_cookies": self.has_cookies,
-            }
-        )
+        safe = {key: value for key, value in self.raw.items() if not _is_sensitive_key(key)}
+        safe.update({
+            "breach_title": self.breach_title,
+            "breach_site": self.breach_site,
+            "severity_label": self.severity_label,
+            "risk_score": self.risk_score,
+            "has_password": self.has_password,
+            "has_plaintext_password": self.has_plaintext_password,
+            "has_cookies": self.has_cookies,
+        })
         return safe
 
     def to_table(self) -> dict[str, Any]:
@@ -271,15 +270,9 @@ def summarize(exposures: Iterable[SpyCloudExposure]) -> dict[str, Any]:
 
     severities = [exp.severity for exp in exposures if exp.severity is not None]
     risk_scores = [exp.risk_score for exp in exposures if exp.risk_score is not None]
-    source_ids = {
-        _clean_str(exp.raw.get("source_id"))
-        for exp in exposures
-        if _clean_str(exp.raw.get("source_id"))
-    }
+    source_ids = {_clean_str(exp.raw.get("source_id")) for exp in exposures if _clean_str(exp.raw.get("source_id"))}
     publish_dates = sorted(exp.publish_date for exp in exposures if exp.publish_date)
-    titles = list(
-        dict.fromkeys(exp.breach_title for exp in exposures if exp.breach_title)
-    )
+    titles = list(dict.fromkeys(exp.breach_title for exp in exposures if exp.breach_title))
 
     max_severity = max(severities) if severities else None
     max_label = ""
@@ -327,8 +320,7 @@ def build_insight(identifier: str, exposures: Iterable[SpyCloudExposure]) -> str
 
     color = "#d9363e" if is_high_risk(exposures) else "#f5a623"
     rows = "".join(
-        f"<tr><td style='padding:2px 8px;'><strong>{key}</strong></td>"
-        f"<td style='padding:2px 8px;'>{value}</td></tr>"
+        f"<tr><td style='padding:2px 8px;'><strong>{key}</strong></td><td style='padding:2px 8px;'>{value}</td></tr>"
         for key, value in summary.items()
     )
     return (
@@ -419,6 +411,84 @@ def _truthy(value: Any) -> bool:
     return str(value).strip().lower() in ("true", "yes", "1", "t")
 
 
+# Flattened event keys that can carry the date SpyCloud published the record, in
+# precedence order. ``spycloud_publish_date`` is the field SpyCloud stamps at
+# publish time; the record dates are the fallbacks that older ingested cases
+# carry, and the infected time is the last resort for malware records.
+EVENT_PUBLISH_DATE_FIELDS = (
+    "spycloud_publish_date",
+    "spycloud_record_addition_date",
+    "spycloud_record_modification_date",
+    "spycloud_infected_time",
+)
+
+
+def parse_timestamp(value: Any) -> datetime | None:
+    """Parse a timestamp from any of the shapes SpyCloud and the IdPs emit.
+
+    Handles ISO-8601 with or without fractional seconds, a trailing ``Z`` or a
+    numeric UTC offset, bare calendar dates, and epoch seconds/milliseconds. A
+    value with no timezone is read as UTC, which is what every producer here
+    means by a naive timestamp.
+
+    Args:
+        value: The raw timestamp, typically a string off a case event or an IdP
+            action's JSON result.
+
+    Returns:
+        A timezone-aware ``datetime`` in UTC, or ``None`` when the value is
+        empty or cannot be understood.
+    """
+    text = _clean_str(value)
+    if not text:
+        return None
+
+    # Epoch seconds or milliseconds, e.g. an IdP returning 1717200000000.
+    if text.isdigit():
+        number = int(text)
+        if number > 10**11:  # milliseconds
+            number //= 1000
+        try:
+            return datetime.fromtimestamp(number, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
+
+    # ``fromisoformat`` accepts "Z" only from 3.11 on, and chokes on more than 6
+    # fractional digits, so normalize both before handing it over.
+    normalized = text.replace("z", "+00:00") if text.endswith("z") else text
+    normalized = normalized[:-1] + "+00:00" if normalized.endswith("Z") else normalized
+    normalized = _FRACTIONAL_SECONDS.sub(lambda match: "." + match.group(1)[:6], normalized)
+    if " " in normalized and "T" not in normalized:
+        normalized = normalized.replace(" ", "T", 1)
+
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def event_publish_date(props: dict[str, Any] | None) -> str:
+    """Return the raw publish date carried by one flattened SpyCloud event.
+
+    Args:
+        props: A security event's flattened ``spycloud_`` properties.
+
+    Returns:
+        The first non-empty publish-date value in ``EVENT_PUBLISH_DATE_FIELDS``
+        order, or an empty string when the event carries no date at all.
+    """
+    if not isinstance(props, dict):
+        return ""
+    for key in EVENT_PUBLISH_DATE_FIELDS:
+        value = _clean_str(props.get(key))
+        if value:
+            return value
+    return ""
+
+
 def is_spycloud_event(props: dict[str, Any] | None) -> bool:
     """Report whether a security event's properties came from the SpyCloud parser.
 
@@ -447,11 +517,7 @@ def event_row(alert_name: str, props: dict[str, Any]) -> dict[str, Any]:
     """
     has_plaintext = _truthy(props.get("spycloud_has_plaintext_password"))
     has_password = _truthy(props.get("spycloud_has_password")) or has_plaintext
-    publish_date = (
-        _clean_str(props.get("spycloud_record_addition_date"))
-        or _clean_str(props.get("spycloud_record_modification_date"))
-        or _clean_str(props.get("spycloud_infected_time"))
-    )
+    publish_date = event_publish_date(props)
     row = {
         "Alert": _clean_str(alert_name),
         "SpyCloud Severity": _clean_str(props.get("spycloud_source_severity")),
@@ -494,11 +560,7 @@ def event_json(props: dict[str, Any]) -> dict[str, Any]:
     Returns:
         A mapping of every ``spycloud_``-prefixed key to its value.
     """
-    return {
-        key: value
-        for key, value in props.items()
-        if str(key).startswith(SPYCLOUD_EVENT_PREFIX)
-    }
+    return {key: value for key, value in props.items() if str(key).startswith(SPYCLOUD_EVENT_PREFIX)}
 
 
 # Columns shown in the case-wall insight panel. The insight is a compact,
@@ -519,9 +581,8 @@ INSIGHT_MAX_ROWS = 25
 
 def _row_is_high_risk(row: dict[str, Any]) -> bool:
     """A rendered ``event_row`` represents a high-risk exposure."""
-    return (
-        str(row.get("Plaintext Password Exposed", "")).strip().lower() == "yes"
-        or bool(_clean_str(row.get("Malware Family")))
+    return str(row.get("Plaintext Password Exposed", "")).strip().lower() == "yes" or bool(
+        _clean_str(row.get("Malware Family"))
     )
 
 
@@ -554,10 +615,7 @@ def build_case_insight_html(rows: list[dict[str, Any]]) -> str:
     """
     total = len(rows)
     high_risk = sum(1 for row in rows if _row_is_high_risk(row))
-    with_password = sum(
-        1 for row in rows
-        if str(row.get("Plaintext Password Exposed", "")).strip().lower() == "yes"
-    )
+    with_password = sum(1 for row in rows if str(row.get("Plaintext Password Exposed", "")).strip().lower() == "yes")
 
     # Convey risk with a labelled badge, not title color alone: the word plus a
     # symbol stays legible for colorblind users and on any theme. The badge sets
@@ -576,16 +634,14 @@ def build_case_insight_html(rows: list[dict[str, Any]]) -> str:
         )
 
     header = "".join(
-        f"<th style='padding:4px 8px;text-align:left;border-bottom:1px solid #ccc;'>"
-        f"{html.escape(column)}</th>"
+        f"<th style='padding:4px 8px;text-align:left;border-bottom:1px solid #ccc;'>{html.escape(column)}</th>"
         for column in _INSIGHT_COLUMNS
     )
 
     body_rows: list[str] = []
     for row in rows[:INSIGHT_MAX_ROWS]:
         cells = "".join(
-            f"<td style='padding:2px 8px;border-bottom:1px solid #eee;'>"
-            f"{html.escape(_clean_str(row.get(column)))}</td>"
+            f"<td style='padding:2px 8px;border-bottom:1px solid #eee;'>{html.escape(_clean_str(row.get(column)))}</td>"
             for column in _INSIGHT_COLUMNS
         )
         body_rows.append(f"<tr>{cells}</tr>")
@@ -615,9 +671,7 @@ def build_case_insight_html(rows: list[dict[str, Any]]) -> str:
 def _rows_contain_secrets(rows: list[dict[str, Any]]) -> bool:
     """True if any row carries a non-empty value in a secret column."""
     secret_labels = [label for _key, label in SECRET_DISPLAY_FIELDS]
-    return any(
-        _clean_str(row.get(label)) for row in rows for label in secret_labels
-    )
+    return any(_clean_str(row.get(label)) for row in rows for label in secret_labels)
 
 
 def build_full_detail_html(rows: list[dict[str, Any]]) -> str:
@@ -667,3 +721,91 @@ def build_full_detail_html(rows: list[dict[str, Any]]) -> str:
         f"<thead><tr>{header}</tr></thead>"
         f"<tbody>{''.join(body_rows)}</tbody></table></div></details>"
     )
+
+
+# ---------------------------------------------------------------------------
+# Password policy filtering (Entra ID and Okta password response playbooks)
+#
+# The Entra ID and Okta password response playbooks reset a user's password only
+# when the case actually exposed a password that would still be valid under the
+# org's password policy. These helpers read the plaintext password values the connector
+# flattened onto the case events (present only when "Include Plaintext Secrets"
+# was enabled) and decide which survive a minimum-length / symbol policy.
+#
+# We never surface the plaintext values themselves; callers report only counts
+# and masked placeholders. See actions/FilterPasswordsByPolicy.py.
+# ---------------------------------------------------------------------------
+
+# Flattened event keys that carry an actual plaintext password value (a subset of
+# SECRET_DISPLAY_FIELDS restricted to password fields; cookies/tokens/PII are not
+# passwords and are excluded from policy filtering).
+PLAINTEXT_PASSWORD_FIELDS = (
+    "spycloud_password_plaintext",
+    "spycloud_password",
+    "spycloud_password_value",
+    "spycloud_password_raw",
+    "spycloud_new_password",
+    "spycloud_old_password",
+    "spycloud_account_password",
+)
+
+
+def has_symbol(password: str) -> bool:
+    """Report whether the password contains at least one punctuation symbol."""
+    return any(char in string.punctuation for char in password)
+
+
+def password_matches_policy(
+    password: str,
+    minimum_length: int,
+    require_symbol: bool,
+) -> bool:
+    """Report whether a password satisfies the configured password policy.
+
+    Args:
+        password: The plaintext password to evaluate.
+        minimum_length: The minimum acceptable password length.
+        require_symbol: Whether at least one punctuation symbol is required.
+
+    Returns:
+        ``True`` when the password meets the length (and, if required, symbol)
+        policy; ``False`` otherwise (including for empty passwords).
+    """
+    if not password:
+        return False
+    if len(password) < minimum_length:
+        return False
+    if require_symbol and not has_symbol(password):
+        return False
+    return True
+
+
+def collect_plaintext_passwords(props: dict[str, Any] | None) -> list[str]:
+    """Collect the non-empty plaintext password values from one SpyCloud event.
+
+    Args:
+        props: A security event's flattened ``spycloud_`` properties.
+
+    Returns:
+        The distinct plaintext password values present on the event, in the order
+        the password fields are defined. Empty when nothing was persisted (secret
+        retention off) or the event carries no password.
+    """
+    if not isinstance(props, dict):
+        return []
+    passwords: list[str] = []
+    for key in PLAINTEXT_PASSWORD_FIELDS:
+        value = _clean_str(props.get(key))
+        if value and value not in passwords:
+            passwords.append(value)
+    return passwords
+
+
+def mask_password(password: str) -> str:
+    """Render a length-preserving masked placeholder for a password.
+
+    The real value is never surfaced; only the length is conveyed so an analyst
+    can reason about the policy decision without seeing the secret.
+    """
+    length = len(password or "")
+    return f"******** (length {length})"
