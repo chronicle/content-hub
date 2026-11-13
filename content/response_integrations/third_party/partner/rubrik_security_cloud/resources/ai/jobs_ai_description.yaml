@@ -1,0 +1,73 @@
+"Rubrik Security Cloud - Close Duplicate Violation Alerts Job":
+  ai_description: >-
+    ### General Description
+
+    This job is a maintenance and deduplication utility for Google SecOps cases created
+    from Rubrik Security Cloud (RSC) DSPM and IR violations. The Rubrik connector raises
+    a separate alert for every status transition of a violation (for example detected,
+    in progress, remediated), so one violation can leave several open alerts and cases.
+    The job groups open cases' Rubrik violation alerts by their `activitySeriesId`,
+    and if the latest status for a violation is terminal (Remediated, Closed or Dismissed),
+    closes every case associated with that violation, unless the case also contains
+    a different violation that is still open. Classification alerts carry no violation
+    and are ignored. The job only reads and updates SOAR cases; it makes no API calls
+    to Rubrik.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Close Reason | String | Yes | Reason applied when auto-closing a case whose
+    violation(s) reached a terminal status in RSC. |
+
+    | Comment Prefix | String | No | Prefix used on the case comment and close comment
+    this job adds, for traceability in the case activity feed. |
+
+    | Rule Generator | String | No | Optional comma-separated list of values matched
+    as a case-insensitive substring of the alert's rule generator, to scope the job
+    to specific Rubrik violations. Leave empty to inspect every open case. |
+
+    | Max Cases To Process | Integer | Yes | Max open cases to fetch and inspect per
+    run. |
+
+    | Lookback Days | Integer | Yes | Number of days to look back when fetching open
+    cases. |
+
+    | Dry Run | Boolean | No | Set true for test run purposes only -- logs intended
+    comments/closures without calling add_comment or close_case. Otherwise false.
+    |
+
+    | Close Root Cause | String | Yes | Root cause applied when auto-closing a case
+    whose violation(s) reached a terminal status in RSC. |
+
+    | Environment | String | No | Optional comma-separated list of SOAR environments
+    to restrict the job to. Cases in other environments are never fetched or closed.
+    Leave empty to process cases across all environments. |
+
+
+    ### Flow Description
+
+    1. Queries SOAR for open cases created or updated since the last run (bounded by
+    `Lookback Days` and the optional `Environment` filter), oldest update first, capped
+    by `Max Cases To Process`.
+
+    2. Retrieves each case and extracts its Rubrik DSPM and IR violation alerts, optionally
+    filtered by `Rule Generator`, grouping them by `activitySeriesId`.
+
+    3. For every violation whose latest status is terminal, searches SOAR for other
+    open cases with the same case name and adds their matching alerts to the group,
+    confirming the violation by `activitySeriesId`. This catches earlier cases left
+    open because SOAR only groups alerts into a case within 24 hours.
+
+    4. Determines each violation's latest status. Violations with no status on any
+    alert are treated as still open.
+
+    5. Closes cases whose violations are all terminal, applying `Close Reason` and
+    `Close Root Cause` and adding a trace comment. Cases that also contain a still-open
+    violation are skipped.
+
+    6. If `Dry Run` is enabled, logs the intended comments and closures without modifying
+    any cases.

@@ -1,0 +1,80 @@
+"Rubrik - Fetch DSPM Classification and IR Violations":
+  ai_description: >-
+    ### General Description
+
+    This connector integrates with Rubrik Security Cloud (RSC) to ingest three types
+    of findings into Google SecOps as alerts: Sonar classification events, Data Security
+    Posture Management (DSPM) violations, and Identity Resilience (IR) violations.
+    All selected types are polled from the RSC activity series API in a single sweep
+    per run and routed by their activity type: `CLASSIFICATION` for classification,
+    `SECURITY_VIOLATION` for DSPM, and `IDENTITY_VIOLATION` / `IDENTITY_ALERTS` for
+    IR. Classification alerts are raised only for objects whose latest snapshot has
+    sensitive-data violations. DSPM and IR alerts are raised for each new lifecycle
+    transition of a violation (for example detected, in progress, remediated) and
+    carry the violation's current status, so every transition of one violation is
+    grouped into the same case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Service Account JSON | String | Yes | Rubrik Security Cloud service account
+    JSON. Must contain client_id, client_secret and access_token_uri; validated before
+    the run starts. |
+
+    | Verify SSL | Boolean | No | Whether to verify the SSL certificate when connecting
+    to Rubrik Security Cloud. |
+
+    | Search Time Period In Days | Integer | No | Number of past days to fetch findings
+    from, used only on the first run before a checkpoint exists. Must be a whole number
+    between 0 and 1. Default is 1 day. |
+
+    | RSC Fetch Types | String | Yes | Comma-separated list of RSC finding types to
+    ingest: Classification, DSPM, IR. At least one value is required; any other value
+    fails the run. All types share a single checkpoint, so a type that is deselected
+    and later re-selected resumes from the current checkpoint, not from where it was
+    deselected. |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product. |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type). Default is `eventName`. |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    Python process running the connector. |
+
+
+    ### Flow Description
+
+    1. Validates the Service Account JSON, the `RSC Fetch Types` selection and the
+    `Search Time Period In Days` value, then authenticates to Rubrik Security Cloud.
+
+    2. Determines the fetch window: from the last successful run's checkpoint (or now
+    minus `Search Time Period In Days` on the first run) up to the current time.
+
+    3. Fetches all activity series of the selected types updated in the window in a
+    single sweep, and routes each series to Classification, DSPM or IR by its activity
+    type.
+
+    4. Classification: keeps only series reporting available results, deduplicates
+    them per object (keeping the most recently updated), resolves the scanned snapshot,
+    retrieves the object's classification results, and creates an alert only when
+    the violation count is greater than zero. Alerts are grouped into cases by object.
+
+    5. DSPM and IR: for each series, looks up the violation's current status and selects
+    the latest activity entry inside the fetch window, ignoring entries created by
+    downloading remediation logs or snapshot results. Series with no qualifying entry
+    are skipped. Each alert is deduplicated on that entry's ID and grouped into cases
+    by activity series ID.
+
+    6. Enriches DSPM and classification alerts with the affected object's identity
+    from RSC (for example the SharePoint site URL or the OneDrive owner), and sets
+    alert priority from the violation severity.
+
+    7. Ingests the alerts and advances the shared checkpoint. If the process timeout
+    is approaching, the run exits without ingesting and leaves the checkpoint unchanged
+    so the next run retries the same window.
