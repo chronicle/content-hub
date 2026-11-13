@@ -35,9 +35,8 @@ from ..core.constants import (
     INTEGRATION_DISPLAY_NAME,
     UNISOLATE_ENDPOINT_SCRIPT_NAME,
     SUCCESS_STATUS,
-    FAILED_STATUS,
-    REJECTED_STATUS,
     RUNNING_STATUS,
+    ENDPOINT_NOT_FOUND_MESSAGE,
     GLOBAL_TIMEOUT_THRESHOLD_IN_MIN,
     DEFAULT_TIMEOUT,
 )
@@ -47,7 +46,16 @@ from ..core.TrendVisionOneExceptions import (
     TrendVisionOneTimeoutException,
 )
 from ..core.TrendVisionOneManager import TrendVisionOneManager
-from ..core.UtilsManager import get_entity_original_identifier, process_agents
+from ..core.UtilsManager import (
+    TASK_STATUS_ERROR_TYPES,
+    ErrorType,
+    add_unfinished_json_result,
+    classify_exception,
+    get_entity_original_identifier,
+    get_task_failure,
+    log_run_summary,
+    process_agents,
+)
 
 
 SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]
@@ -74,6 +82,7 @@ def unisolate_agents(
         agent_uids=agent_uuids,
     )
     result_data["failed"].extend(agents.failed_agents)
+    result_data["json_results"].update(agents.failures)
     for endpoint in agents.successful_agents:
         if endpoint.guid in result_data["result_endpoints"]:
             result_data["result_urls"][endpoint.guid] = result_data[
@@ -90,6 +99,7 @@ def unisolate_agents(
             except TrendVisionOneException as e:
                 if endpoint.guid not in result_data["failed"]:
                     result_data["failed"].append(endpoint.guid)
+                result_data["json_results"][endpoint.guid] = {"error": str(e), "error_type": classify_exception(e)[0]}
                 manager.siemplify.LOGGER.error(
                     f"UnIsolation failed no agent {endpoint.guid}"
                 )
@@ -106,14 +116,15 @@ def start_operation(
     description: str,
     suitable_entities: List,
     agent_uuids: list[str],
+    result_data: dict[str, Any],
 ) -> Tuple[str, bool, int]:
-    result_data = {
+    result_data.update({
         "result_urls": {},
         "result_endpoints": {},
         "json_results": {},
         "completed": [],
         "failed": [],
-    }
+    })
     for entity in suitable_entities:
         siemplify.LOGGER.info(f"Started processing entity: {entity.identifier}")
         entity_identifier = get_entity_original_identifier(entity)
@@ -136,11 +147,16 @@ def start_operation(
                     result_data["result_endpoints"][endpoint.guid] = result_url
             else:
                 result_data["failed"].append(entity.identifier)
+                result_data["json_results"][entity.identifier] = {
+                    "error": ENDPOINT_NOT_FOUND_MESSAGE,
+                    "error_type": ErrorType.ENDPOINT_NOT_FOUND,
+                }
                 siemplify.LOGGER.info(
                     f"No endpoint found for the entity: {entity.identifier}"
                 )
         except Exception as e:
             result_data["failed"].append(entity.identifier)
+            result_data["json_results"][entity.identifier] = {"error": str(e), "error_type": classify_exception(e)[0]}
             siemplify.LOGGER.error(f"An error occurred on entity {entity.identifier}")
             siemplify.LOGGER.exception(e)
         siemplify.LOGGER.info(f"Finished processing entity: {entity.identifier}")
@@ -190,11 +206,12 @@ def query_operation_status(
                     "task_id": task_details.id,
                     "status": task_details.status,
                 }
-            elif task_details.status in [FAILED_STATUS, REJECTED_STATUS]:
+            elif task_details.status in TASK_STATUS_ERROR_TYPES:
                 result_data["result_urls"][entity_identifier] = None
                 result_data["json_results"][entity_identifier] = {
                     "task_id": task_details.id,
                     "status": task_details.status,
+                    **get_task_failure(task_details),
                 }
                 result_data["failed"].append(entity_identifier)
 
@@ -289,6 +306,7 @@ def main(is_first_run):
     result_value = False
     result_data = {}
     status = EXECUTION_STATE_COMPLETED
+    error = None
     suitable_entities = [
         entity
         for entity in siemplify.target_entities
@@ -296,7 +314,7 @@ def main(is_first_run):
     ]
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     try:
-        if not suitable_entities:
+        if not suitable_entities and not agent_uuids:
             output_message = "No suitable entities found in the scope"
         else:
             manager = TrendVisionOneManager(
@@ -315,6 +333,7 @@ def main(is_first_run):
                     description=description,
                     suitable_entities=suitable_entities,
                     agent_uuids=agent_uuids,
+                    result_data=result_data,
                 )
             else:
                 result_data = json.loads(
@@ -330,16 +349,14 @@ def main(is_first_run):
                 )
 
     except TrendVisionOneTimeoutException as e:
+        error = e
         output_message = (
             f"Error executing action {UNISOLATE_ENDPOINT_SCRIPT_NAME}. Reason: {e}\n"
         )
         status = EXECUTION_STATE_FAILED
 
         if result_data:
-            json_results = result_data.get("json_results", {})
-            siemplify.result.add_result_json(
-                convert_dict_to_json_result_dict(json_results)
-            )
+            add_unfinished_json_result(siemplify, result_data, e)
 
             output_message_for_finished, _ = generate_output_message_and_result(
                 result_data
@@ -356,13 +373,19 @@ def main(is_first_run):
         siemplify.LOGGER.exception(e)
 
     except Exception as e:
+        error = e
         output_message = (
             f"Error executing action {UNISOLATE_ENDPOINT_SCRIPT_NAME}. Reason: {e}"
         )
         status = EXECUTION_STATE_FAILED
         result_value = False
+        add_unfinished_json_result(siemplify, result_data, e)
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
+    targets = len({entity.identifier for entity in suitable_entities} | set(agent_uuids))
+    log_run_summary(siemplify, status, result_data, targets, SUPPORTED_ENTITY_TYPES, error=error)
+    if status == EXECUTION_STATE_INPROGRESS:
+        result_value = json.dumps(result_data)
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  results: {result_value}\n  output_message: {output_message}"
