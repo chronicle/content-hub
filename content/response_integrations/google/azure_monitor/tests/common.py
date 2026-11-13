@@ -13,14 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-import json
-from integration_testing.common import get_def_file_content
 
 import pathlib
+from typing import TYPE_CHECKING
 
-from TIPCommon.types import SingleJson
-from azure_monitor.core.data_models import AzureLogEntry
 from integration_testing.common import get_def_file_content
+
+from azure_monitor.core.data_models import AzureLogEntry
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"

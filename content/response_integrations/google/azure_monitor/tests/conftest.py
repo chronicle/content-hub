@@ -12,44 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
-import importlib
-import soar_sdk
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
-import pytest
+from __future__ import annotations
 
+import pytest
+import soar_sdk
+from integration_testing.common import use_live_api
+from integration_testing.logger import Logger
 from TIPCommon.base.utils import CreateSession
 
 from azure_monitor.core.api_client import (
-    AzureMonitorApiClient,
     ApiParameters,
+    AzureMonitorApiClient,
 )
-from integration_testing.common import use_live_api
-from integration_testing.request import MockRequest
-from integration_testing.requests.response import MockResponse
-from integration_testing.logger import Logger
 from azure_monitor.tests.common import CONFIG
 from azure_monitor.tests.core.product import AzureMonitor
 from azure_monitor.tests.core.session import AzureMonitorSession
 
+pytest_plugins = ("integration_testing.conftest",)
+
 
 @pytest.fixture(name="azure_monitor")
 def azure_monitor_product() -> AzureMonitor:
-    yield AzureMonitor()
+    return AzureMonitor()
 
 
 @pytest.fixture(name="script_session", autouse=True)
@@ -57,23 +41,29 @@ def azure_monitor_script_session(
     monkeypatch: pytest.MonkeyPatch,
     azure_monitor: AzureMonitor,
 ) -> AzureMonitorSession:
+    """Create script session."""
     session = AzureMonitorSession(azure_monitor)
-    """Create script session"""
     if not use_live_api():
         monkeypatch.setattr(CreateSession, "create_session", lambda *_: session)
-    yield session
+        monkeypatch.setattr(
+            soar_sdk.SiemplifyBase.SiemplifyBase,
+            "create_session",
+            lambda *_: session,
+        )
+    return session
 
 
 @pytest.fixture(name="manager")
 def azure_monitor_manager(script_session: AzureMonitorSession) -> AzureMonitorApiClient:
-    """azure_monitor_ manager"""
+    """Create AzureMonitorApiClient fixture."""
     api_root: str = CONFIG["API Root"]
     workspace_id: str = CONFIG["Workspace ID"]
     logger = Logger()
     api_params: ApiParameters = ApiParameters(api_root, workspace_id)
 
-    yield AzureMonitorApiClient(script_session, api_params, logger)
+    return AzureMonitorApiClient(script_session, api_params, logger)
 
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
+
+@pytest.fixture(name="sdk_session", autouse=True)
+def sdk_session_fixture(script_session: AzureMonitorSession) -> AzureMonitorSession:
     return script_session
