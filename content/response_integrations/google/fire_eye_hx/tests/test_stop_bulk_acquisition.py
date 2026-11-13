@@ -53,7 +53,7 @@ class TestStopBulkAcquisition(unittest.TestCase):
 
         mock_manager.stop_bulk_acquisition.assert_called_once_with(42)
         mock_siemplify.end.assert_called_once_with(
-            "Successfully stopped bulk acquisition 42.",
+            'Successfully stopped bulk acquisition with ID "42" in FireEye HX.',
             "true",
             EXECUTION_STATE_COMPLETED,
         )

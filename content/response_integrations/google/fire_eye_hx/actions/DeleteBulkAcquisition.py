@@ -29,6 +29,7 @@ from ..core.FireEyeHXManager import FireEyeHXManager
 from ..core.UtilsManager import parse_bulk_acquisition_id
 
 INTEGRATION_NAME: str = "FireEyeHX"
+INTEGRATION_DISPLAY_NAME: str = "FireEye HX"
 SCRIPT_NAME: str = "Delete Bulk Acquisition"
 
 
@@ -85,10 +86,12 @@ def main() -> None:
         manager = _init_manager(siemplify)
         manager.delete_bulk_acquisition(clean_bulk_id)
         result_value = "true"
-        output_message = f"Successfully deleted bulk acquisition {clean_bulk_id}."
+        output_message = (
+            f'Successfully deleted bulk acquisition with ID "{clean_bulk_id}" in {INTEGRATION_DISPLAY_NAME}.'
+        )
 
     except Exception as err:
-        output_message = f"Error executing {SCRIPT_NAME}: {err}"
+        output_message = f'Error executing action "{SCRIPT_NAME}". Reason: {err}'
         siemplify.LOGGER.exception(output_message)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
