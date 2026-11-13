@@ -20,6 +20,11 @@ def main():
 
     sheet_id = siemplify.extract_action_param(param_name="Sheet Id", is_mandatory=True)
     worksheet_name = siemplify.extract_action_param(param_name="Worksheet Name")
+    return_raw_values = siemplify.extract_action_param(
+        param_name="Return Raw Values",
+        input_type=bool,
+        default_value=False,
+    )
 
     try:
         sheet = GoogleSheetFactory(credentials_json).create_spreadsheet(sheet_id)
@@ -27,8 +32,12 @@ def main():
             worksheet = sheet.worksheet(worksheet_name)
         else:
             worksheet = sheet.sheet1
-        list_of_dicts = worksheet.get_all_records()
-        siemplify.result.add_result_json(list_of_dicts)
+        rows = (
+            worksheet.get_all_values()
+            if return_raw_values
+            else worksheet.get_all_records()
+        )
+        siemplify.result.add_result_json(rows)
     except Exception as err:
         status = EXECUTION_STATE_FAILED
         message = str(err)
