@@ -122,7 +122,7 @@ def main() -> None:
 
             # get the corresponding domain entity
             for domain_model in domain_iris_models:
-                entity = extracted_domains[domain_model.name]
+                entity = extracted_domains[domain_model.domain]
                 siemplify.LOGGER.info(f"Processing entity: {entity.identifier}")
                 try:
                     domain_dict = domain_model.to_dict()
@@ -159,7 +159,7 @@ def main() -> None:
             if failed_entities:
                 output_message += (
                     f"Action wasn't able to enrich the following entities using information from "
-                    f"{INTEGRATION_NAME}: {', '.join(failed_entities)}\n"
+                    f"{INTEGRATION_NAME}: {', '.join(str(e.identifier) for e in failed_entities)}\n"
                 )
 
             # create a summary table for all entities enriched

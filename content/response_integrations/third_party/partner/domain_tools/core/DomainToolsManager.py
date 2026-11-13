@@ -8,9 +8,11 @@ from typing import Any
 from domaintools import API
 from domaintools.exceptions import NotFoundException
 
-from .datamodels import IrisInvestigateModel, ParsedDomainRDAPModel, WhoisHistoryModel
+from .constants import BULK_ENRICH_BATCH_SIZE, LICENSE_IRIS_ENRICH
+from .datamodels import EnrichedDomainSummary, IrisInvestigateModel, ParsedDomainRDAPModel, WhoisHistoryModel
 from .DomainToolsParser import DomainToolsParser
 from .exceptions import DomainToolsManagerError
+from .UtilsManager import chunks
 
 APP_PARTNER_NAME: str = "Google SecOps SOAR"
 APP_VERSION: str = "12.0"
@@ -96,7 +98,7 @@ class DomainToolsManager:
 
             return dt_available_products
         except Exception as e:
-            raise DomainToolsManager(f"Unable to get account info. Reason: {str(e)}")
+            raise DomainToolsManagerError(f"Unable to get account info. Reason: {str(e)}")
 
     def _check_license(self, product_name: str) -> None:
         """Checks if a specific product is available under the current license.
@@ -112,6 +114,27 @@ class DomainToolsManager:
             raise DomainToolsManagerError(
                 f"You don't have {product_name} - {self.available_api_calls} in your license."
             )
+
+    def enrich_domains_with_risk(
+        self,
+        domains: list[str],
+    ) -> list[EnrichedDomainSummary]:
+        try:
+            self._check_license(LICENSE_IRIS_ENRICH)
+            results = []
+            clean_domains = [d for d in domains if d and d.strip()]
+            if not clean_domains:
+                return results
+            for batch in chunks(clean_domains, BULK_ENRICH_BATCH_SIZE):
+                response = self._api.iris_enrich(*batch).response()
+                for raw in response.get("results", []):
+                    domain = raw.get("domain", "")
+                    results.append(self.parser.parse_iris_enrich_data(domain, raw))
+            return results
+        except DomainToolsManagerError:
+            raise
+        except Exception as e:
+            raise DomainToolsManagerError(f"Unable to enrich domains. Reason: {str(e)}")
 
     def investigate_domains(self, domains: list[str]) -> list[IrisInvestigateModel]:
         try:
@@ -137,9 +160,9 @@ class DomainToolsManager:
                 f"Unable to get parsed domain rdap for {domain}. Reason {str(e)}"
             )
 
-    def get_whois_history(self, domain: str):
+    def get_whois_history(self, domain: str) -> WhoisHistoryModel:
         try:
-            self._check_license("parsed-domain-rdap")
+            self._check_license("whois-history")
             response = self._api.whois_history(query=domain).response()
             return self.parser.parse_whois_history(raw_data=response)
         except NotFoundException:
