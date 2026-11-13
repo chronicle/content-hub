@@ -17,7 +17,11 @@ from __future__ import annotations
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.definitions import Mapping
+from ..core.definitions import (
+    Mapping,
+    get_fields,
+    get_mapping_rule,
+)
 from ..core.GitSyncManager import GitSyncManager
 
 SCRIPT_NAME = "Push Mappings"
@@ -35,35 +39,62 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
         siemplify.LOGGER.info(f"Pushing mappings of {source}")
-        records = [
-            x
-            for x in gitsync.api.get_ontology_records()
-            if x.get("source").lower() == source.lower()
-        ]
-        rules = []
-        for record in records:
-            record["exampleEventFields"] = []  # remove event assets
-            rule = gitsync.api.get_mapping_rules(
-                record["source"],
-                record["product"],
-                record["eventName"],
-            )
-            for r in rule["familyFields"] + rule["systemFields"]:
-                # remove bad rules with no source
-                if (
-                    r["mappingRule"]["source"]
-                    and r["mappingRule"]["source"].lower() == source.lower()
-                ):
-                    rules.append(rule)
+        all_records = gitsync.api.get_ontology_records(chronicle_soar=siemplify)
+        records_integrations = {x.get("source") for x in all_records if x.get("source")}
+
+        if source:
+            matched_integration = None
+            for integration in records_integrations:
+                if integration.lower() == source.lower():
+                    matched_integration = integration
                     break
 
-        if readme_addon:
-            siemplify.LOGGER.info(
-                "Readme addon found - adding to GitSync metadata file (GitSync.json)",
-            )
-            gitsync.content.metadata.set_readme_addon("Mappings", source, readme_addon)
+            if matched_integration:
+                records_integrations = {matched_integration}
+            else:
+                siemplify.LOGGER.warn(
+                    f"Source '{source}' not found in ontology records. Pushing nothing."
+                )
+                records_integrations = set()
 
-        gitsync.content.push_mapping(Mapping(source, records, rules))
+        for integration in records_integrations:
+            siemplify.LOGGER.info(f"Pushing {integration} mappings")
+            if integration:
+                records = [x for x in all_records if x["source"] == integration]
+                if not records:
+                    continue
+                rules = []
+                for record in records:
+                    record["exampleEventFields"] = []
+                    rule = gitsync.api.get_mapping_rules(
+                        source=record["source"],
+                        mr_id=record["id"],
+                        product=record["product"],
+                        event_name=record["eventName"],
+                    )
+
+                    for r in get_fields(rule):
+                        mapping_rule = get_mapping_rule(r)
+                        rule_source = mapping_rule.get("source")
+                        if (
+                            not rule_source
+                            or rule_source.lower() == integration.lower()
+                        ):
+                            if isinstance(rule, list):
+                                rules.append(r)
+                            else:
+                                rules.append(rule)
+                                break
+                if readme_addon:
+                    siemplify.LOGGER.info(
+                        "Readme addon found - "
+                        "adding to GitSync metadata file (GitSync.json)",
+                    )
+                    gitsync.content.metadata.set_readme_addon(
+                        "Mappings", integration, readme_addon
+                    )
+                gitsync.content.push_mapping(Mapping(integration, records, rules))
+
         gitsync.commit_and_push(commit_msg)
 
     except Exception as e:
