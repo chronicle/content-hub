@@ -1,164 +1,181 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
 import requests
+
+if TYPE_CHECKING:
+    from TIPCommon.types import ChronicleSOAR, SingleJson
+
+from .config import IntegrationConfig, create_auth_provider, validate_config
+from .constants import API_HOST
+from .http_client import HttpClient
 
 
 class DoppelManager:
-    def __init__(self, api_key: str, user_api_key: str | None, org_code: str | None) -> None:
-        """Initializes the DoppelManager with API credentials.
+    """Client for Doppel Vision v1 and v2 alert APIs."""
+
+    def __init__(
+        self,
+        config: IntegrationConfig,
+        siemplify: ChronicleSOAR | None = None,
+        session: requests.Session | None = None,
+        sleep: Callable[[float], None] | None = None,
+        persist_token: bool = True,
+    ) -> None:
+        """Initialize a manager from a validated integration configuration.
 
         Args:
-            api_key: The API key for authentication.
-            user_api_key: The User API key for authentication.
-            org_code: The organization code for multi-tenant setups.
+            config: Loaded integration configuration.
+            siemplify: Optional SOAR SDK object used for token persistence.
+            session: Optional shared requests session.
+            sleep: Optional sleep callable used by HTTP retries.
+            persist_token: Whether to persist OAuth tokens in SOAR context.
         """
-        self.base_url = "https://api.doppel.com/v1"
-        self.api_key = api_key
-        self.user_api_key = user_api_key
-        self.org_code = org_code
+        config = validate_config(config)
+        self.api_version = config.api_version
+        self.api_key = config.api_key
+        self.user_api_key = config.user_api_key
+        self.org_code = config.org_code
+        self.client_id = config.client_id
+        self.client_secret = config.client_secret
+        self.base_url = f"{API_HOST}/{config.api_version}"
+        session = session or requests.Session()
+        self.auth_provider = create_auth_provider(
+            config,
+            siemplify=siemplify,
+            session=session,
+            persist_token=persist_token,
+        )
+        self.http_client = HttpClient(auth_provider=self.auth_provider, session=session, sleep=sleep)
 
-    def get_alert(self, entity=None, alert_id=None):
-        """Fetches an alert using either the entity or the alert ID, but not both.
+    @classmethod
+    def from_config(
+        cls,
+        config: IntegrationConfig,
+        siemplify: ChronicleSOAR | None = None,
+        session: requests.Session | None = None,
+        sleep: Callable[[float], None] | None = None,
+        persist_token: bool = True,
+    ) -> DoppelManager:
+        """Create a manager from a validated integration configuration.
 
-        :param entity: (str) The entity for which to fetch the alert (usually a URL).
-        :param alert_id: (str) The alert ID to fetch the alert.
-        :return: (dict) The JSON response containing the alert if successful, otherwise None.
+        Args:
+            config: Loaded integration configuration.
+            siemplify: Optional SOAR SDK object used for token persistence.
+            session: Optional shared requests session.
+            sleep: Optional sleep callable used by HTTP retries.
+            persist_token: Whether to persist OAuth tokens in SOAR context.
+
+        Returns:
+            Configured DoppelManager instance.
+        """
+        return cls(config, siemplify=siemplify, session=session, sleep=sleep, persist_token=persist_token)
+
+    def connection_test(self) -> bool:
+        """Validate credentials by fetching a single alert.
+
+        Returns:
+            True if the connection succeeds.
+        """
+        self.http_client.request("GET", f"{self.base_url}/alerts", params={"page": 0, "page_size": 1})
+        return True
+
+    def get_alert(self, entity: str | None = None, alert_id: str | None = None) -> SingleJson:
+        """Fetch a single alert by ID or entity.
+
+        Args:
+            entity: Entity value.
+            alert_id: Alert ID.
+
+        Returns:
+            Raw alert payload dictionary.
+
+        Raises:
+            ValueError: If neither or both identifiers are provided, or the response is empty.
         """
         if entity and alert_id:
-            raise ValueError(
-                "Only one of 'entity' or 'alert_id' can be provided, not both.",
-            )
+            raise ValueError("Only one of 'entity' or 'alert_id' can be provided, not both.")
         if not entity and not alert_id:
             raise ValueError("Either 'entity' or 'alert_id' must be provided.")
 
-        url = f"{self.base_url}/alert"
         params = {"entity": entity} if entity else {"id": alert_id}
+        payload = self.http_client.request("GET", f"{self.base_url}/alert", params=params)
+        if not payload:
+            raise ValueError("Empty response or alert not found.")
+        return payload
 
-        try:
-            response = requests.get(url, headers=self._get_headers(), params=params)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            print(f"Failed to get alert: {e}")
-            return None
+    def get_alerts(self, filters: SingleJson | None = None) -> list[SingleJson]:
+        """Fetch a page of alerts matching the query parameters.
 
-    def connection_test(self):
-        """Tests the connectivity to Doppel and validates credentials.
-        Returns True if the request is successful and credentials are valid, otherwise False.
+        Args:
+            filters: Query filter parameters.
+
+        Returns:
+            List of raw alert dictionaries.
         """
-        url = f"{self.base_url}/alerts"
-        try:
-            response = requests.get(url, headers=self._get_headers())
-            response.raise_for_status()
-            return True
-        except requests.RequestException as e:
-            print(f"Connection Test failed: {e}")
-            return False
+        payload = self.http_client.request("GET", f"{self.base_url}/alerts", params=filters or None)
+        alerts = payload.get("alerts", []) if isinstance(payload, dict) else []
+        return alerts if isinstance(alerts, list) else []
 
-    def get_alerts(self, filters=None):
-        """Fetches multiple alerts from Doppel, optionally filtered by criteria.
+    def create_alert(self, entity: str) -> SingleJson:
+        """Create a new alert for a given entity.
 
-        :param filters: (dict) A dictionary of filter parameters
-        (e.g., {"search_key": "example", "tags": ["tag1", "tag2"]}).
-        :return: (list) A list of alerts if successful, otherwise None.
+        Args:
+            entity: Entity value to alert on.
+
+        Returns:
+            Raw created-alert payload dictionary.
+
+        Raises:
+            ValueError: If the response is empty.
         """
-        url = f"{self.base_url}/alerts"
-        try:
-            response = requests.get(url, headers=self._get_headers(), params=filters)
-            response.raise_for_status()
-            return response.json().get(
-                "alerts",
-                [],
-            )  # Assuming the API response contains an "alerts" key.
-        except requests.RequestException as e:
-            print(f"Failed to get alerts: {e}")
-            return None
+        payload = self.http_client.request("POST", f"{self.base_url}/alert", json_body={"entity": entity})
+        if not payload:
+            raise ValueError("Empty response or alert creation failed.")
+        return payload
 
-    def create_alert(self, entity):
-        """Creates a new alert for a given entity in Doppel.
+    def update_alert(
+        self,
+        queue_state: str | None = None,
+        entity_state: str | None = None,
+        entity: str | None = None,
+        alert_id: str | None = None,
+        comment: str | None = None,
+    ) -> SingleJson:
+        """Update an existing alert using either the entity or the alert ID.
 
-        :param entity: (str) The entity for which to create the alert.
-        :return: (dict) The JSON response from Doppel if successful, otherwise None.
-        """
-        url = f"{self.base_url}/alert"
-        payload = {"entity": entity}
-        try:
-            response = requests.post(
-                url,
-                headers=self._get_headers(content_type="application/json"),
-                json=payload,
-            )
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            print(f"Failed to create alert: {e}")
-            return None
+        Args:
+            queue_state: Optional queue state to apply.
+            entity_state: Optional entity state to apply.
+            entity: Entity value that identifies the alert.
+            alert_id: Alert ID that identifies the alert.
+            comment: Optional comment to send as the API `comment` field.
 
-    def update_alert(self, queue_state, entity_state, entity=None, alert_id=None):
-        """Updates an existing alert using either the entity or the alert ID.
+        Returns:
+            Raw updated-alert payload dictionary.
 
-        :param queue_state: (str) The queue state to update to.
-        :param entity_state: (str) The entity state to update to.
-        :param entity: (str) The entity for which to update the alert (optional).
-        :param alert_id: (str) The alert ID to update the alert (optional).
-        :return: (dict) The JSON response containing the updated alert if successful,
-        otherwise None.
+        Raises:
+            ValueError: If identifiers or update fields are invalid, or the response is empty.
         """
         if entity and alert_id:
-            raise ValueError(
-                "Only one of 'entity' or 'alert_id' can be provided, not both.",
-            )
+            raise ValueError("Only one of 'entity' or 'alert_id' can be provided, not both.")
         if not entity and not alert_id:
             raise ValueError("Either 'entity' or 'alert_id' must be provided.")
 
-        url = f"{self.base_url}/alert"
+        body: SingleJson = {}
+        if queue_state:
+            body["queue_state"] = queue_state
+        if entity_state:
+            body["entity_state"] = entity_state
+        if comment:
+            body["comment"] = comment
+        if not body:
+            raise ValueError("At least one of Queue_State, Entity_State, or Comment must be provided.")
+
         params = {"entity": entity} if entity else {"id": alert_id}
-        payload = {"queue_state": queue_state, "entity_state": entity_state}
-
-        try:
-            response = requests.put(
-                url,
-                headers=self._get_headers(content_type="application/json"),
-                params=params,
-                json=payload,
-            )
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            print(f"Failed to update alert: {e}")
-            return None
-
-    def create_abuse_alert(self, entity):
-        """Creates an abuse alert for a given entity in Doppel.
-
-        :param entity: (str) The entity for which to create the abuse alert.
-        :return: (dict) The JSON response from Doppel if successful, otherwise None.
-        """
-        url = f"{self.base_url}/alert/abuse"
-        payload = {"entity": entity}
-        try:
-            response = requests.post(
-                url,
-                headers=self._get_headers(content_type="application/json"),
-                json=payload,
-            )
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            print(f"Failed to create abuse alert: {e}")
-            return None
-
-    def _get_headers(self, content_type="application/json"):
-        """Generates headers for the API requests.
-
-        :param content_type: (str) The content type for the request. Defaults to 'application/json'.
-        :return: (dict) Headers including the API key and content type.
-        """
-        headers = {"accept": "application/json", "x-api-key": self.api_key}
-        if self.user_api_key:
-            headers["x-user-api-key"] = self.user_api_key
-        if self.org_code:
-            headers["x-organization-code"] = self.org_code
-        if content_type:
-            headers["content-type"] = content_type
-        return headers
+        payload = self.http_client.request("PUT", f"{self.base_url}/alert", params=params, json_body=body)
+        if not payload:
+            raise ValueError("Empty response or update failed.")
+        return payload
