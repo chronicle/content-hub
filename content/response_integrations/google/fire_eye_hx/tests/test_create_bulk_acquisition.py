@@ -79,7 +79,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
             "comment": "Created by Google SecOps",
         })
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 101. State: RUNNING.",
+            'Successfully created bulk acquisition with ID "101" in FireEye HX. State: RUNNING.',
             "101",
             EXECUTION_STATE_COMPLETED,
         )
@@ -122,7 +122,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         call_kwargs = mock_manager.create_bulk_acquisition.call_args[1]
         assert call_kwargs["agent_ids"] == ["agent-1", "agent-2"]
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 102. State: QUEUED.",
+            'Successfully created bulk acquisition with ID "102" in FireEye HX. State: QUEUED.',
             "102",
             EXECUTION_STATE_COMPLETED,
         )
@@ -357,7 +357,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         decoded = b64decode(call_kwargs["script_b64"]).decode("utf-8")
         assert decoded == '<?xml version="1.0"?><script><commands/></script>'
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 104. State: RUNNING.",
+            'Successfully created bulk acquisition with ID "104" in FireEye HX. State: RUNNING.',
             "104",
             EXECUTION_STATE_COMPLETED,
         )
@@ -396,7 +396,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         assert 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' in decoded
         assert 'xmlns:xsd="http://www.w3.org/2001/XMLSchema"' in decoded
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 105. State: RUNNING.",
+            'Successfully created bulk acquisition with ID "105" in FireEye HX. State: RUNNING.',
             "105",
             EXECUTION_STATE_COMPLETED,
         )
@@ -497,7 +497,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         decoded = b64decode(call_kwargs["script_b64"]).decode("utf-8")
         assert json.loads(decoded) == {"commands": [{"type": "fileCollection", "path": "/tmp/test"}]}
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 201. State: RUNNING.",
+            'Successfully created bulk acquisition with ID "201" in FireEye HX. State: RUNNING.',
             "201",
             EXECUTION_STATE_COMPLETED,
         )
@@ -540,7 +540,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         assert parsed["timeframe"]["start"] == "2026-10-25T01:00:00"
         assert parsed["timeframe"]["stop"] == "2026-10-25T23:00:00"
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 202. State: RUNNING.",
+            'Successfully created bulk acquisition with ID "202" in FireEye HX. State: RUNNING.',
             "202",
             EXECUTION_STATE_COMPLETED,
         )
@@ -577,7 +577,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         decoded = b64decode(call_kwargs["script_b64"]).decode("utf-8")
         assert json.loads(decoded) == {"commands": [{"type": "processList"}]}
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 203. State: RUNNING.",
+            'Successfully created bulk acquisition with ID "203" in FireEye HX. State: RUNNING.',
             "203",
             EXECUTION_STATE_COMPLETED,
         )
@@ -646,7 +646,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         decoded = b64decode(call_kwargs["script_b64"]).decode("utf-8")
         assert json.loads(decoded) == [{"cmd": "a"}, {"cmd": "b"}]
         mock_siemplify.end.assert_called_once_with(
-            "Successfully created bulk acquisition 204. State: RUNNING.",
+            'Successfully created bulk acquisition with ID "204" in FireEye HX. State: RUNNING.',
             "204",
             EXECUTION_STATE_COMPLETED,
         )

@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
 INTEGRATION_NAME: str = "FireEyeHX"
+INTEGRATION_DISPLAY_NAME: str = "FireEye HX"
 SCRIPT_NAME: str = "Create Bulk Acquisition"
 DEFAULT_HOST_SET_NAME: str = "all_hosts"
 DEFAULT_COMMENT: str = "Created by Google SecOps"
@@ -442,10 +443,13 @@ def main() -> None:
         state = acquisition_data.get("state", "UNKNOWN")
         result_value = str(bulk_id)
         siemplify.result.add_result_json(acquisition_data)
-        output_message = f"Successfully created bulk acquisition {bulk_id}. State: {state}."
+        output_message = (
+            f'Successfully created bulk acquisition with ID "{bulk_id}" in '
+            f"{INTEGRATION_DISPLAY_NAME}. State: {state}."
+        )
 
     except Exception as err:
-        output_message = f"Error executing {SCRIPT_NAME}: {err}"
+        output_message = f'Error executing action "{SCRIPT_NAME}". Reason: {err}'
         siemplify.LOGGER.exception(output_message)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

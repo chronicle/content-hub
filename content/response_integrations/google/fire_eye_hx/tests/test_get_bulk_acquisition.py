@@ -60,7 +60,7 @@ class TestGetBulkAcquisition(unittest.TestCase):
         mock_manager.get_bulk_acquisition.assert_called_once_with(42)
         mock_siemplify.result.add_result_json.assert_called_once()
         mock_siemplify.end.assert_called_once_with(
-            "Successfully retrieved bulk acquisition 42. State: COMPLETE",
+            'Successfully returned information about the bulk acquisition with ID "42" in FireEye HX. State: COMPLETE.',
             "COMPLETE",
             EXECUTION_STATE_COMPLETED,
         )
