@@ -21,11 +21,11 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param
-from TIPCommon.transformation import construct_csv
+from TIPCommon.transformation import construct_csv, string_to_multi_value
 
-from ..core.constants import GET_TRAINING_STATUS_SCRIPT_NAME
+from ..core.constants import GET_TRAINING_STATUS_SCRIPT_NAME, SUMMARY_FIELDS
 from ..core.exceptions import RansomLeakNotFoundError, RansomLeakValidationError
-from ..core.utils import build_manager, collect_emails, split_csv, user_summary
+from ..core.utils import build_manager, collect_emails, lookup_user_summary, map_concurrently, section
 
 ACTION_NAME = "Get Training Status"
 UUID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
@@ -45,7 +45,7 @@ def main() -> None:
     status = EXECUTION_STATE_COMPLETED
     try:
         emails, skipped = collect_emails(siemplify, emails_csv)
-        assignment_ids = split_csv(assignment_ids_csv)
+        assignment_ids = string_to_multi_value(assignment_ids_csv, only_unique=True)
         if not emails and not assignment_ids:
             msg = "Provide User entities with email identifiers, 'Email Addresses' or 'Assignment IDs'."
             raise RansomLeakValidationError(msg)
@@ -53,12 +53,13 @@ def main() -> None:
         manager = build_manager(siemplify)
         users: list[dict[str, Any]] = []
         not_found: list[str] = []
-        for email in emails:
-            user = manager.get_user_by_email(email)
-            if user is None:
+        for email, summary, error in map_concurrently(lambda e: lookup_user_summary(manager, e), emails):
+            if error is not None:
+                raise error
+            if summary is None:
                 not_found.append(email)
-                continue
-            users.append(user_summary(manager, user))
+            else:
+                users.append(summary)
 
         assignments: list[dict[str, Any]] = []
         for assignment_id in assignment_ids:
@@ -80,18 +81,7 @@ def main() -> None:
             siemplify.result.add_data_table(
                 "RansomLeak Training Status",
                 construct_csv([
-                    {
-                        "Email": u["email"],
-                        "Risk Score": u["risk_score"],
-                        "Risk Level": u["risk_level"],
-                        "Exercises Completed": u["exercises_completed"],
-                        "Campaigns Completed": u["campaigns_completed"],
-                        "Campaigns In Progress": u["campaigns_in_progress"],
-                        "Campaigns Overdue": u["campaigns_overdue"],
-                        "Average Quiz Score": u["average_quiz_score"],
-                        "Last Completed At": u["last_completed_at"],
-                    }
-                    for u in users
+                    {"Email": u["email"], **{label: u[key] for key, label in SUMMARY_FIELDS}} for u in users
                 ]),
             )
         if assignments:
@@ -115,14 +105,8 @@ def main() -> None:
             output_message = "Successfully retrieved RansomLeak training status for:\n" + "\n".join(found)
         else:
             output_message = "No training status was found in RansomLeak."
-        if not_found:
-            output_message += "\nThe following users or assignments were not found in RansomLeak:\n" + "\n".join(
-                not_found
-            )
-        if skipped:
-            output_message += "\nThe following values were skipped because they are not email addresses:\n" + (
-                "\n".join(skipped)
-            )
+        output_message += section("The following users or assignments were not found in RansomLeak", not_found)
+        output_message += section("The following values were skipped because they are not email addresses", skipped)
         result_value = bool(found)
     except Exception as error:
         siemplify.LOGGER.error(f'Error executing action "{ACTION_NAME}". Reason: {error}')

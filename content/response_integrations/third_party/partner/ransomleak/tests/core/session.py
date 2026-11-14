@@ -54,7 +54,7 @@ class RansomLeakSession(MockSession[MockRequest, MockResponse, RansomLeak]):
     def _unauthorized() -> MockResponse:
         return MockResponse(content={"message": "Invalid API token", "code": "INVALID_API_TOKEN"}, status_code=401)
 
-    @router.get(rf"{PREFIX}/grafana/health")
+    @router.get(rf"{PREFIX}/health")
     def health(self, request: MockRequest) -> MockResponse:
         if not self._authorized(request):
             return self._unauthorized()

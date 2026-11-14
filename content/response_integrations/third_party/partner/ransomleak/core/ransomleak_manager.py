@@ -26,7 +26,6 @@ from .constants import (
     ASSIGNMENT_SOURCE,
     ENDPOINTS,
     MAX_DUE_DAYS,
-    MAX_ENROLLMENT_BATCH,
     MIN_DUE_DAYS,
     REQUEST_TIMEOUT_SECONDS,
 )
@@ -233,17 +232,16 @@ class RansomLeakManager:
     def enroll_learning_path(
         self,
         learning_path_id: str,
-        emails: list[str] | None = None,
+        emails: list[str],
         due_days: int | None = None,
-        external_user_ids: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Enroll users, matched by email and/or RansomLeak `externalId`, in a learning path.
+        """Enroll users, matched by email, in a learning path.
 
         Args:
             learning_path_id: Learning path UUID.
-            emails: The users' email addresses (case-insensitive).
+            emails: The users' lower-cased email addresses (see utils.collect_emails),
+                at most MAX_ENROLLMENT_BATCH per call.
             due_days: Optional deadline in days from now (1-365).
-            external_user_ids: The users' external IDs.
 
         Returns:
             Counts of assigned, already enrolled and unlicensed users, identifiers not found,
@@ -254,19 +252,10 @@ class RansomLeakManager:
             RansomLeakValidationError: On invalid input.
 
         """
-        emails = [e.strip().lower() for e in emails or [] if e and e.strip()]
-        external_user_ids = [x for x in external_user_ids or [] if x]
-        if not emails and not external_user_ids:
+        if not emails:
             msg = "At least one user is required"
             raise RansomLeakValidationError(msg)
-        if len(emails) > MAX_ENROLLMENT_BATCH or len(external_user_ids) > MAX_ENROLLMENT_BATCH:
-            msg = f"At most {MAX_ENROLLMENT_BATCH} users can be enrolled per call"
-            raise RansomLeakValidationError(msg)
-        body: dict[str, Any] = {}
-        if emails:
-            body["emails"] = emails
-        if external_user_ids:
-            body["externalUserIds"] = external_user_ids
+        body: dict[str, Any] = {"emails": emails}
         if due_days is not None:
             if not MIN_DUE_DAYS <= due_days <= MAX_DUE_DAYS:
                 msg = f"Due In Days must be between {MIN_DUE_DAYS} and {MAX_DUE_DAYS}"

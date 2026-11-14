@@ -53,7 +53,7 @@ class TestConnectivity:
     ) -> None:
         assert manager.test_connectivity() is True
         request = script_session.request_history[-1].request
-        assert request.url.path == "/api/integration/grafana/health"
+        assert request.url.path == "/api/integration/health"
         assert request.headers["Authorization"] == f"Bearer {VALID_API_KEY}"
         assert request.kwargs["timeout"] == 30
 
@@ -63,7 +63,7 @@ class TestConnectivity:
 
     def test_api_root_trailing_slash_is_normalised(self, script_session: RansomLeakSession) -> None:
         RansomLeakManager(f"{API_ROOT}/", VALID_API_KEY).test_connectivity()
-        assert script_session.request_history[-1].request.url.geturl() == f"{API_ROOT}/api/integration/grafana/health"
+        assert script_session.request_history[-1].request.url.geturl() == f"{API_ROOT}/api/integration/health"
 
 
 class TestUsers:
@@ -119,7 +119,7 @@ class TestLearningPaths:
     def test_enroll_by_email_returns_per_user_results(
         self, manager: RansomLeakManager, seeded: RansomLeak, script_session: RansomLeakSession
     ) -> None:
-        result = manager.enroll_learning_path(LP_ID, emails=["JANE.doe@example.com", "ghost@example.com"], due_days=14)
+        result = manager.enroll_learning_path(LP_ID, emails=["jane.doe@example.com", "ghost@example.com"], due_days=14)
         body = script_session.request_history[-1].request.kwargs["json"]
         assert body == {"emails": ["jane.doe@example.com", "ghost@example.com"], "dueDays": 14}
         assert result["assigned"] == 1
@@ -135,11 +135,6 @@ class TestLearningPaths:
         ]
         again = manager.enroll_learning_path(LP_ID, emails=["jane.doe@example.com"])
         assert again["results"][0]["status"] == "already_enrolled"
-
-    def test_enroll_still_accepts_external_ids(self, manager: RansomLeakManager, seeded: RansomLeak) -> None:
-        result = manager.enroll_learning_path(LP_ID, external_user_ids=["emp-1", "ghost"])
-        assert result["assigned"] == 1
-        assert result["notFound"] == ["ghost"]
 
     @pytest.mark.parametrize("due_days", [0, 366])
     def test_enroll_rejects_out_of_range_due_days(self, manager: RansomLeakManager, due_days: int) -> None:

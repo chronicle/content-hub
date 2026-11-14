@@ -16,15 +16,26 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from TIPCommon.extraction import extract_configuration_param
+from TIPCommon.transformation import string_to_multi_value
 
-from .constants import DEFAULT_API_ROOT, ENRICHMENT_PREFIX, INTEGRATION_NAME, RECENT_HISTORY_LIMIT
+from .constants import (
+    DEFAULT_API_ROOT,
+    ENRICHMENT_PREFIX,
+    INTEGRATION_NAME,
+    MAX_LOOKUP_WORKERS,
+    RECENT_HISTORY_LIMIT,
+    SUMMARY_FIELDS,
+)
 from .ransomleak_manager import RansomLeakManager, is_email
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from soar_sdk.SiemplifyAction import SiemplifyAction
 
 
@@ -63,26 +74,6 @@ def build_manager(siemplify: SiemplifyAction) -> RansomLeakManager:
     return RansomLeakManager(api_root=api_root, api_key=api_key, verify_ssl=verify_ssl)
 
 
-def split_csv(value: str | None) -> list[str]:
-    """Split a comma-separated parameter into unique, trimmed, non-empty values.
-
-    Args:
-        value: The raw parameter value.
-
-    Returns:
-        The values, in their original order.
-
-    """
-    values: list[str] = []
-    seen: set[str] = set()
-    for raw in (value or "").split(","):
-        item = raw.strip()
-        if item and item.lower() not in seen:
-            seen.add(item.lower())
-            values.append(item)
-    return values
-
-
 def user_entities(siemplify: SiemplifyAction) -> list[Any]:
     """Return the USER entities in scope of the action.
 
@@ -107,20 +98,26 @@ def collect_emails(siemplify: SiemplifyAction, csv_value: str | None) -> tuple[l
         (emails, skipped): lower-cased email addresses, and values that are not email addresses.
 
     """
-    candidates = [e.identifier for e in user_entities(siemplify)] + split_csv(csv_value)
-    emails: list[str] = []
-    skipped: list[str] = []
-    seen: set[str] = set()
-    for candidate in candidates:
-        key = candidate.strip().lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        if is_email(candidate):
-            emails.append(key)
-        else:
-            skipped.append(candidate.strip())
+    candidates = [e.identifier.strip() for e in user_entities(siemplify)]
+    candidates += string_to_multi_value(csv_value, only_unique=True)
+    # Deduped once here (first-seen order); emails case-insensitively.
+    emails = list(dict.fromkeys(c.lower() for c in candidates if is_email(c)))
+    skipped = list(dict.fromkeys(c for c in candidates if not is_email(c)))
     return emails, skipped
+
+
+def section(title: str, values: list[str]) -> str:
+    """Format an output-message section listing values, or "" when there are none.
+
+    Args:
+        title: The section heading.
+        values: The values to list.
+
+    Returns:
+        A newline-prefixed section, or an empty string.
+
+    """
+    return f"\n{title}:\n" + "\n".join(values) if values else ""
 
 
 def training_summary(
@@ -210,19 +207,44 @@ def enrichment_properties(summary: dict[str, Any]) -> dict[str, Any]:
         Entity additional properties, without empty values.
 
     """
-    keys = (
-        "user_id",
-        "team_name",
-        "is_disabled",
-        "exercises_completed",
-        "learning_time_minutes",
-        "campaigns_completed",
-        "campaigns_in_progress",
-        "campaigns_overdue",
-        "average_quiz_score",
-        "last_completed_at",
-        "last_completed_exercise",
-        "risk_score",
-        "risk_level",
-    )
+    keys = ("user_id", "team_name", "is_disabled", *(key for key, _ in SUMMARY_FIELDS))
     return {f"{ENRICHMENT_PREFIX}{key}": summary[key] for key in keys if summary.get(key) not in (None, "")}
+
+
+def map_concurrently(fn: Callable[[str], Any], items: list[str]) -> list[tuple[str, Any, Exception | None]]:
+    """Run fn over items with a small thread pool, keeping input order.
+
+    Args:
+        fn: Called once per item.
+        items: The inputs.
+
+    Returns:
+        (item, result, error) per item, in input order; error is set (and result None) when fn raised.
+
+    """
+
+    def run(item: str) -> tuple[str, Any, Exception | None]:
+        try:
+            return item, fn(item), None
+        except Exception as error:  # noqa: BLE001 - reported per item by the caller
+            return item, None, error
+
+    if not items:
+        return []
+    with ThreadPoolExecutor(max_workers=min(MAX_LOOKUP_WORKERS, len(items))) as pool:
+        return list(pool.map(run, items))
+
+
+def lookup_user_summary(manager: RansomLeakManager, email: str) -> dict[str, Any] | None:
+    """Find a user by email and build their summary.
+
+    Args:
+        manager: The RansomLeak client.
+        email: The user's email address.
+
+    Returns:
+        Output of user_summary(), or None when no user matches.
+
+    """
+    user = manager.get_user_by_email(email)
+    return None if user is None else user_summary(manager, user)

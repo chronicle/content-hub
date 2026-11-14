@@ -24,7 +24,7 @@ from TIPCommon.extraction import extract_action_param
 from ..core.constants import ASSIGN_TRAINING_SCRIPT_NAME, MAX_ENROLLMENT_BATCH
 from ..core.exceptions import RansomLeakNotFoundError, RansomLeakValidationError
 from ..core.ransomleak_manager import RansomLeakManager
-from ..core.utils import build_manager, collect_emails
+from ..core.utils import build_manager, collect_emails, section
 
 ACTION_NAME = "Assign Training"
 # "submitted" is only reported by RansomLeak versions without per-user enrollment results.
@@ -167,13 +167,10 @@ def main() -> None:
             ("were not found in RansomLeak", "not_found"),
             ("were not enrolled for lack of a license", "skipped_unlicensed"),
         ):
-            matched = [u["email"] for u in result["users"] if u["status"] == state]
-            if matched:
-                output_message += f"\nThe following users {label}:\n" + "\n".join(matched)
-        if skipped:
-            output_message += "\nThe following values were skipped because they are not email addresses:\n" + (
-                "\n".join(skipped)
+            output_message += section(
+                f"The following users {label}", [u["email"] for u in result["users"] if u["status"] == state]
             )
+        output_message += section("The following values were skipped because they are not email addresses", skipped)
         result_value = bool(done)
     except Exception as error:
         siemplify.LOGGER.error(f'Error executing action "{ACTION_NAME}". Reason: {error}')

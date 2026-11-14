@@ -23,30 +23,25 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import convert_dict_to_json_result_dict
 
-from ..core.constants import ENRICH_USERS_SCRIPT_NAME
+from ..core.constants import ENRICH_USERS_SCRIPT_NAME, SUMMARY_FIELDS
 from ..core.exceptions import RansomLeakAuthError
 from ..core.ransomleak_manager import is_email
-from ..core.utils import build_manager, enrichment_properties, user_entities, user_summary
+from ..core.utils import (
+    build_manager,
+    enrichment_properties,
+    lookup_user_summary,
+    map_concurrently,
+    section,
+    user_entities,
+)
 
 
 def _insight_html(summary: dict[str, Any]) -> str:
-    rows = [
-        ("Human Risk Score", summary.get("risk_score")),
-        ("Risk level", summary.get("risk_level")),
-        ("Exercises completed", summary.get("exercises_completed")),
-        ("Learning time (min)", summary.get("learning_time_minutes")),
-        ("Campaigns completed", summary.get("campaigns_completed")),
-        ("Campaigns in progress", summary.get("campaigns_in_progress")),
-        ("Campaigns overdue", summary.get("campaigns_overdue")),
-        ("Average quiz score", summary.get("average_quiz_score")),
-        ("Last completed", summary.get("last_completed_exercise")),
-        ("Last completed at", summary.get("last_completed_at")),
-    ]
     body = "".join(
         f"<tr><td style='opacity:.65;padding-right:12px'>{html.escape(label)}</td>"
-        f"<td>{html.escape(str(value))}</td></tr>"
-        for label, value in rows
-        if value not in (None, "")
+        f"<td>{html.escape(str(summary[key]))}</td></tr>"
+        for key, label in SUMMARY_FIELDS
+        if summary.get(key) not in (None, "")
     )
     return f"<b>RansomLeak training status</b><table>{body}</table>"
 
@@ -75,29 +70,32 @@ def main() -> None:
 
     try:
         manager = build_manager(siemplify)
+        entities: dict[str, list[Any]] = {}
         for entity in user_entities(siemplify):
             identifier = entity.identifier.strip()
-            if not is_email(identifier):
+            if is_email(identifier):
+                entities.setdefault(identifier, []).append(entity)
+            else:
                 unsupported.append(identifier)
+        lookups = map_concurrently(lambda email: lookup_user_summary(manager, email), list(entities))
+        for identifier, summary, error in lookups:
+            if isinstance(error, RansomLeakAuthError):
+                raise error
+            if error is not None:
+                siemplify.LOGGER.error(f"Failed to enrich {identifier}: {error}")
+                siemplify.LOGGER.exception(error)
+                failed.append(identifier)
                 continue
-            try:
-                user = manager.get_user_by_email(identifier)
-                if user is None:
-                    not_found.append(identifier)
-                    continue
-                summary = user_summary(manager, user)
+            if summary is None:
+                not_found.append(identifier)
+                continue
+            json_results[identifier] = summary
+            for entity in entities[identifier]:
                 entity.additional_properties.update(enrichment_properties(summary))
                 entity.is_enriched = True
                 if create_insight:
                     siemplify.add_entity_insight(entity, _insight_html(summary))
-                json_results[identifier] = summary
                 enriched.append(entity)
-            except RansomLeakAuthError:
-                raise
-            except Exception as error:
-                siemplify.LOGGER.error(f"Failed to enrich {identifier}: {error}")
-                siemplify.LOGGER.exception(error)
-                failed.append(identifier)
 
         if enriched:
             siemplify.update_entities(enriched)
@@ -107,15 +105,11 @@ def main() -> None:
             )
         else:
             output_message = "None of the provided users were enriched."
-        if not_found:
-            output_message += "\nThe following users were not found in RansomLeak:\n" + "\n".join(not_found)
-        if unsupported:
-            output_message += (
-                "\nThe following entities were skipped because their identifier is not an email address:\n"
-                + "\n".join(unsupported)
-            )
-        if failed:
-            output_message += "\nAction wasn't able to enrich the following users:\n" + "\n".join(failed)
+        output_message += section("The following users were not found in RansomLeak", not_found)
+        output_message += section(
+            "The following entities were skipped because their identifier is not an email address", unsupported
+        )
+        output_message += section("Action wasn't able to enrich the following users", failed)
         result_value = bool(enriched)
     except Exception as error:
         siemplify.LOGGER.error(f'Error executing action "Enrich Users". Reason: {error}')

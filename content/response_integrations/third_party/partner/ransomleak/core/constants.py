@@ -30,7 +30,7 @@ LIST_LEARNING_PATHS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - List Learning Path
 # Partner API (all routes are relative to the API Root)
 API_PREFIX: str = "/api/integration"
 ENDPOINTS: dict[str, str] = {
-    "health": f"{API_PREFIX}/grafana/health",
+    "health": f"{API_PREFIX}/health",
     "users": f"{API_PREFIX}/users",
     "user": f"{API_PREFIX}/users/{{user_id}}",
     "user_analytics": f"{API_PREFIX}/users/{{user_id}}/analytics",
@@ -51,3 +51,20 @@ RECENT_HISTORY_LIMIT: int = 5
 ENRICHMENT_PREFIX: str = "RansomLeak_"
 # Key in the RansomLeak partner-source registry; shown to learners as "Google SecOps".
 ASSIGNMENT_SOURCE: str = "google_secops"
+
+# (summary key, display label) for the fields shown in entity enrichment,
+# the enrichment insight and the training status table.
+SUMMARY_FIELDS: tuple[tuple[str, str], ...] = (
+    ("risk_score", "Human Risk Score"),
+    ("risk_level", "Risk Level"),
+    ("exercises_completed", "Exercises Completed"),
+    ("learning_time_minutes", "Learning Time (min)"),
+    ("campaigns_completed", "Campaigns Completed"),
+    ("campaigns_in_progress", "Campaigns In Progress"),
+    ("campaigns_overdue", "Campaigns Overdue"),
+    ("average_quiz_score", "Average Quiz Score"),
+    ("last_completed_exercise", "Last Completed"),
+    ("last_completed_at", "Last Completed At"),
+)
+# Max concurrent per-user lookups in Enrich Users / Get Training Status.
+MAX_LOOKUP_WORKERS: int = 5
