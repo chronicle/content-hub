@@ -72,3 +72,24 @@ def convert_list_to_comma_string(values_list):
         if values_list and isinstance(values_list, list)
         else values_list
     )
+
+
+def parse_bulk_acquisition_id(bulk_id: str | int | None) -> int:
+    """Validate and parse a bulk acquisition ID into an integer.
+
+    Args:
+        bulk_id: Raw bulk acquisition ID.
+
+    Returns:
+        Validated integer bulk acquisition ID.
+
+    Raises:
+        ValueError: If the ID is empty or cannot be parsed as a numeric integer.
+    """
+    if not bulk_id or not str(bulk_id).strip():
+        raise ValueError("Bulk Acquisition ID must not be empty.")
+
+    try:
+        return int(str(bulk_id).strip())
+    except ValueError as value_error:
+        raise ValueError(f"Bulk Acquisition ID must be a number, got: {bulk_id}.") from value_error

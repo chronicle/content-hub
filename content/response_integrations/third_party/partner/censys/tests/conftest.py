@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
+from TIPCommon.types import SingleJson
 
 pytest_plugins = ("integration_testing.conftest",)
 
@@ -66,6 +67,9 @@ class CensysAPIManager:
         # Response data
         self.connectivity_response = None
         self.enrich_hosts_response = None
+        self.enrich_host_response = None
+        self.enrich_host_responses_by_ip = {}
+        self.should_fail_enrich_host_for_ip = {}
         self.enrich_web_properties_response = None
         self.enrich_certificates_response = None
         self.host_history_response = None
@@ -77,6 +81,7 @@ class CensysAPIManager:
         # Failure flags
         self.should_fail_connectivity = False
         self.should_fail_enrich_hosts = False
+        self.should_fail_enrich_host = False
         self.should_fail_enrich_web_properties = False
         self.should_fail_enrich_certificates = False
         self.should_fail_host_history = False
@@ -97,6 +102,16 @@ class CensysAPIManager:
     def set_enrich_hosts_response(self, response: dict):
         """Set enrich hosts response."""
         self.enrich_hosts_response = response
+
+    def set_enrich_host_response(self, response: SingleJson) -> None:
+        """Set enrich host (single host enrichment endpoint) response."""
+        self.enrich_host_response = response
+
+    def set_enrich_host_response_for_ip(
+        self, ip: str, response: SingleJson
+    ) -> None:
+        """Set enrich host response for a specific IP address (per-IP endpoint)."""
+        self.enrich_host_responses_by_ip[ip] = response
 
     def set_enrich_web_properties_response(self, response: dict):
         """Set enrich web properties response."""
@@ -141,6 +156,23 @@ class CensysAPIManager:
         self.should_fail_enrich_hosts = should_fail
         self.exception_type = exception_type
 
+    def simulate_enrich_host_failure(
+        self, should_fail: bool = True, exception_type: str = "generic"
+    ) -> None:
+        """Simulate enrich host (single host enrichment endpoint) failure."""
+        self.should_fail_enrich_host = should_fail
+        self.exception_type = exception_type
+
+    def simulate_enrich_host_failure_for_ip(
+        self, ip: str, exception_type: str
+    ) -> None:
+        """Simulate a failure for one specific IP only, leaving other IPs unaffected.
+
+        Useful for testing a mid-loop account-level abort: e.g. IP #1 succeeds,
+        IP #2 raises this exception, and IP #3 is never attempted.
+        """
+        self.should_fail_enrich_host_for_ip[ip] = exception_type
+
     def simulate_enrich_web_properties_failure(
         self, should_fail: bool = True, exception_type: str = "generic"
     ):
@@ -176,30 +208,49 @@ class CensysAPIManager:
         self.should_fail_rescan_status = should_fail
         self.exception_type = exception_type
 
-    def _raise_exception(self):
-        """Raise appropriate exception based on exception_type."""
-        import os
-        import sys
+    def _raise_exception(
+        self, override_exception_type: str | None = None
+    ) -> None:
+        """Raise appropriate exception based on exception_type.
 
-        # Add parent directory to path to import from censys module
-        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-        from core.censys_exceptions import (
+        Args:
+            override_exception_type: If provided, takes precedence over
+                self.exception_type (used for per-IP failure injection).
+        """
+        # Must import the exact same module path the action code imports from
+        # (censys.core.censys_exceptions), not a sys.path-hacked "core.censys_exceptions" -
+        # otherwise this raises a distinct class object with the same name, and
+        # the action's `except SpecificException` clauses silently miss it and
+        # fall through to the generic `except Exception` handler instead.
+        from censys.core.censys_exceptions import (
             CensysException,
+            FeatureNotEnabledException,
+            ForbiddenErrorException,
+            ItemNotFoundException,
             RateLimitException,
             UnauthorizedErrorException,
             ValidationException,
         )
 
-        if self.exception_type == "unauthorized":
+        exception_type = override_exception_type or self.exception_type
+
+        if exception_type == "unauthorized":
             raise UnauthorizedErrorException(
                 "Unauthorized, please verify your API Key and Organization ID."
             )
-        elif self.exception_type == "rate_limit":
-            raise RateLimitException("API rate limit exceeded")
-        elif self.exception_type == "validation":
+        elif exception_type == "forbidden":
+            raise ForbiddenErrorException(
+                "User does not have permission to access this data."
+            )
+        elif exception_type == "feature_not_enabled":
+            raise FeatureNotEnabledException("Feature not enabled.")
+        elif exception_type == "not_found":
+            raise ItemNotFoundException("Resource not found.")
+        elif exception_type == "rate_limit":
+            raise RateLimitException("Daily request limit reached.")
+        elif exception_type == "validation":
             raise ValidationException("Validation error: Invalid input parameters")
-        elif self.exception_type == "http_error":
+        elif exception_type == "http_error":
             response = MagicMock()
             response.status_code = 500
             raise requests.HTTPError("500 Server Error", response=response)
@@ -222,6 +273,16 @@ class CensysAPIManager:
         if self.should_fail_enrich_hosts:
             self._raise_exception()
         return self.enrich_hosts_response or {"result": []}
+
+    def get_host_enrichment(self, host_ip: str) -> SingleJson:
+        """Mock get_host_enrichment method."""
+        if self.should_fail_enrich_host:
+            self._raise_exception()
+        return (
+            self.enrich_host_responses_by_ip.get(host_ip)
+            or self.enrich_host_response
+            or {"result": {"resource": {}}}
+        )
 
     def enrich_web_properties(
         self, webproperty_ids: list, at_time: Optional[str] = None
@@ -303,6 +364,12 @@ def mock_requests_session(
             pass
 
         def request(self, method, url, **kwargs):
+            requested_host_ip = None
+            if "/asset/enrichment/host/" in url:
+                requested_host_ip = url.split("/asset/enrichment/host/")[-1].split(
+                    "?"
+                )[0]
+
             # Check for failure flags and raise exceptions if needed
             if (
                 "/accounts/organizations/" in url
@@ -315,6 +382,17 @@ def mock_requests_session(
                 and censys_manager.should_fail_enrich_hosts
             ):
                 censys_manager._raise_exception()
+            elif "/asset/enrichment/host/" in url and (
+                censys_manager.should_fail_enrich_host
+                or requested_host_ip in censys_manager.should_fail_enrich_host_for_ip
+            ):
+                censys_manager._raise_exception(
+                    override_exception_type=(
+                        censys_manager.should_fail_enrich_host_for_ip.get(
+                            requested_host_ip
+                        )
+                    )
+                )
             elif (
                 "/asset/webproperty" in url
                 and censys_manager.should_fail_enrich_web_properties
@@ -346,6 +424,16 @@ def mock_requests_session(
             elif "/asset/host" in url and method == "POST":
                 return MockResponse(
                     censys_manager.enrich_hosts_response or {"result": []}, 200
+                )
+            elif "/asset/enrichment/host/" in url:
+                per_ip_response = censys_manager.enrich_host_responses_by_ip.get(
+                    requested_host_ip
+                )
+                return MockResponse(
+                    per_ip_response
+                    or censys_manager.enrich_host_response
+                    or {"result": {"resource": {}}},
+                    200,
                 )
             elif "/asset/webproperty" in url:
                 return MockResponse(
@@ -427,17 +515,19 @@ def convert_entities(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(autouse=True)
-def mock_siemplify_methods(monkeypatch: pytest.MonkeyPatch):
+def mock_siemplify_methods(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock Siemplify methods that are not provided by integration_testing framework."""
-    # Mock update_entities
     mock_update = MagicMock(return_value=None)
-    monkeypatch.setattr(
-        "soar_sdk.SiemplifyAction.SiemplifyAction.update_entities", mock_update
-    )
-
     # Mock get_system_version to prevent API calls during APIManager initialization
     mock_version = MagicMock(return_value="1.0.0")
-    monkeypatch.setattr(
-        "soar_sdk.SiemplifyAction.SiemplifyAction.get_system_version",
-        mock_version,
-    )
+
+    # TIPCommon's Action base class instantiates SiemplifyAction through the
+    # top-level "SiemplifyAction" module, while the older actions use the
+    # "soar_sdk" path, so both classes are patched.
+    for module_path in ("soar_sdk.SiemplifyAction", "SiemplifyAction"):
+        monkeypatch.setattr(
+            f"{module_path}.SiemplifyAction.update_entities", mock_update
+        )
+        monkeypatch.setattr(
+            f"{module_path}.SiemplifyAction.get_system_version", mock_version
+        )

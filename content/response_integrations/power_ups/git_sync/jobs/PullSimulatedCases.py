@@ -42,10 +42,7 @@ def main():
         for case_name in case_names:
             siemplify.LOGGER.info(f"Pulling {case_name}")
             case = gitsync.content.get_simulated_case(case_name)
-            gitsync.api.import_simulated_case(
-                siemplify,
-                case
-            )
+            gitsync.api.import_simulated_case(case)
             siemplify.LOGGER.info(f"Successfully pulled simulated case: {case_name}")
 
     except Exception as e:
