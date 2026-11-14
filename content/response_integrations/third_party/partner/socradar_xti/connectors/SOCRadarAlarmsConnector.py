@@ -77,6 +77,31 @@ def _parse_int_csv(val: str | None, param_name: str) -> list[int] | None:
         ) from None
 
 
+def _is_excluded(
+    alarm: dict[str, Any],
+    excluded_main_types: set[str],
+    excluded_sub_types: set[str],
+    excluded_type_ids: set[str],
+) -> bool:
+    """Return True when the alarm matches an exclusion filter (case-insensitive names).
+
+    The API applies these filters too, but it HTML-escapes the excluded type names,
+    so names containing "&" (for example "Deep&Dark Web Monitoring") are not
+    excluded server-side. Checking again here keeps the filters reliable.
+    """
+    atd = alarm.get("alarm_type_details") or {}
+    if not isinstance(atd, dict):
+        atd = {}
+    main_type = _safe_str(atd.get("alarm_main_type")).lower()
+    sub_type = _safe_str(atd.get("alarm_sub_type")).lower()
+    type_id = _safe_str(alarm.get("alarm_type_id") or atd.get("alarm_type_id"))
+    return (
+        (bool(main_type) and main_type in excluded_main_types)
+        or (bool(sub_type) and sub_type in excluded_sub_types)
+        or (bool(type_id) and type_id in excluded_type_ids)
+    )
+
+
 def _is_public_ip(ip: str) -> bool:
     """Check if an IP address is globally routable."""
     try:
@@ -514,6 +539,10 @@ def main(is_test_run: bool = False) -> None:
         processed_set = {x for x in existing_ids.split(",") if x} if existing_ids else set()
 
         last_processed_ts = last_run
+        excluded_main_set = {s.lower() for s in excluded_main_types or []}
+        excluded_sub_set = {s.lower() for s in excluded_sub_types or []}
+        excluded_id_set = {str(i) for i in excluded_type_ids or []}
+        skipped_excluded = 0
         for alarm in alarms[:max_alerts]:
             if not isinstance(alarm, dict):
                 siemplify.LOGGER.warning(f"Skipping non-dict alarm entry: {type(alarm).__name__}")
@@ -525,6 +554,9 @@ def main(is_test_run: bool = False) -> None:
             alarm_ts = _parse_date_safe(alarm.get("date"))
             if alarm_ts and alarm_ts > last_processed_ts:
                 last_processed_ts = alarm_ts
+            if _is_excluded(alarm, excluded_main_set, excluded_sub_set, excluded_id_set):
+                skipped_excluded += 1
+                continue
             if alarm_id in processed_set:
                 continue
             try:
@@ -567,6 +599,8 @@ def main(is_test_run: bool = False) -> None:
                 siemplify.save_timestamp(
                     new_timestamp=int(time.time() * 1000)
                 )
+        if skipped_excluded:
+            siemplify.LOGGER.info(f"Skipped {skipped_excluded} alarms matching the exclusion filters")
         siemplify.LOGGER.info(f"Returning {len(alerts)} alerts")
 
     except SOCRadarManagerError as e:

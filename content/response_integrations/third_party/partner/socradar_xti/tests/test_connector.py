@@ -13,6 +13,7 @@ from socradar_xti.connectors.SOCRadarAlarmsConnector import (
     RISK_SCORE_MAP,
     SOAR_PRIORITY_MAP,
     _extract_indicators,
+    _is_excluded,
     _is_public_ip,
     _parse_date,
     _parse_date_safe,
@@ -264,3 +265,99 @@ def test_main_empty_type_filters_send_nothing(monkeypatch: pytest.MonkeyPatch) -
     kwargs = manager.get_all_incidents.call_args.kwargs
     for key in ("alarm_type_ids", "excluded_alarm_main_types", "excluded_alarm_sub_types", "excluded_alarm_type_ids"):
         assert kwargs[key] is None
+
+
+# -- Client-side exclusion guard --
+
+
+def _typed_alarm(alarm_id: int, main: str, sub: str, type_id: int, date: str) -> dict[str, Any]:
+    alarm = _make_alarm(alarm_id=alarm_id, date=date)
+    alarm["alarm_type_id"] = type_id
+    alarm["alarm_type_details"]["alarm_main_type"] = main
+    alarm["alarm_type_details"]["alarm_sub_type"] = sub
+    return alarm
+
+
+def test_is_excluded_matches_names_case_insensitively_including_ampersand() -> None:
+    alarm = _typed_alarm(1, "Deep&Dark Web Monitoring", "Stolen Credentials", 1272, "2026-05-26 12:00:00")
+    assert _is_excluded(alarm, {"deep&dark web monitoring"}, set(), set()) is True
+    assert _is_excluded(alarm, set(), {"stolen credentials"}, set()) is True
+    assert _is_excluded(alarm, set(), set(), {"1272"}) is True
+
+
+def test_is_excluded_false_when_no_filter_matches_or_filters_empty() -> None:
+    alarm = _typed_alarm(1, "Brand Protection", "Impersonating Domain", 1765, "2026-05-26 12:00:00")
+    assert _is_excluded(alarm, set(), set(), set()) is False
+    assert _is_excluded(alarm, {"deep&dark web monitoring"}, {"stolen credentials"}, {"1272"}) is False
+
+
+def test_is_excluded_handles_missing_type_details() -> None:
+    alarm = _make_alarm()
+    alarm["alarm_type_details"] = None
+    assert _is_excluded(alarm, {"brand protection"}, {"x"}, {"1"}) is False
+
+
+def _run_main(monkeypatch: pytest.MonkeyPatch, params: dict[str, str], alarms: list[dict[str, Any]],
+              is_test_run: bool = True, last_run_ms: int = 0) -> MagicMock:
+    siemplify = MagicMock()
+    siemplify.extract_connector_param.side_effect = (
+        lambda name, default_value=None, input_type=None: {"API Key": "k", "Company ID": "330", **params}.get(
+            name, default_value
+        )
+    )
+    siemplify.fetch_timestamp.return_value = last_run_ms
+    siemplify.get_connector_context_property.return_value = ""
+    siemplify.context.connector_info.environment = "Default Environment"
+    manager = MagicMock()
+    manager.get_all_incidents.return_value = (alarms, len(alarms))
+    monkeypatch.setattr(mod, "SiemplifyConnectorExecution", lambda: siemplify)
+    monkeypatch.setattr(mod, "SOCRadarManager", lambda *a, **k: manager)
+    mod.main(is_test_run=is_test_run)
+    return siemplify
+
+
+def _returned_ids(siemplify: MagicMock) -> list[str]:
+    return [a.display_id for a in siemplify.return_package.call_args.args[0]]
+
+
+def test_main_drops_excluded_main_type_the_api_did_not_filter(monkeypatch: pytest.MonkeyPatch) -> None:
+    alarms = [
+        _typed_alarm(1, "Deep&Dark Web Monitoring", "Stolen Credentials", 1272, "2026-05-26 12:00:00"),
+        _typed_alarm(2, "Brand Protection", "Impersonating Domain", 1765, "2026-05-26 12:00:01"),
+    ]
+    siemplify = _run_main(monkeypatch, {"Excluded Main Type Filter": "Deep&Dark Web Monitoring"}, alarms)
+    assert _returned_ids(siemplify) == ["2"]
+
+
+def test_main_drops_excluded_sub_types_and_ids(monkeypatch: pytest.MonkeyPatch) -> None:
+    alarms = [
+        _typed_alarm(1, "A", "Subdomain Takeover Check", 10, "2026-05-26 12:00:00"),
+        _typed_alarm(2, "A", "Other", 20, "2026-05-26 12:00:01"),
+        _typed_alarm(3, "A", "Kept", 30, "2026-05-26 12:00:02"),
+    ]
+    params = {"Excluded Sub Type Filter": "subdomain takeover check", "Excluded Alarm Type ID Filter": "20"}
+    siemplify = _run_main(monkeypatch, params, alarms)
+    assert _returned_ids(siemplify) == ["3"]
+
+
+def test_main_without_exclusion_filters_keeps_every_alarm(monkeypatch: pytest.MonkeyPatch) -> None:
+    alarms = [
+        _typed_alarm(i, "Deep&Dark Web Monitoring", "Stolen Credentials", 1272, f"2026-05-26 12:00:0{i}")
+        for i in range(1, 4)
+    ]
+    siemplify = _run_main(monkeypatch, {}, alarms)
+    assert _returned_ids(siemplify) == ["1", "2", "3"]
+
+
+def test_main_checkpoint_advances_past_excluded_alarms(monkeypatch: pytest.MonkeyPatch) -> None:
+    alarms = [
+        _typed_alarm(1, "A", "Kept", 30, "2026-05-26 12:00:00"),
+        _typed_alarm(2, "A", "Noise", 10, "2026-05-26 12:05:00"),
+    ]
+    start_ms = int(datetime(2026, 5, 26, 11, 0, tzinfo=timezone.utc).timestamp() * 1000)
+    siemplify = _run_main(
+        monkeypatch, {"Excluded Sub Type Filter": "Noise"}, alarms, is_test_run=False, last_run_ms=start_ms
+    )
+    assert _returned_ids(siemplify) == ["1"]
+    newest_ms = int(datetime(2026, 5, 26, 12, 5, tzinfo=timezone.utc).timestamp() * 1000)
+    siemplify.save_timestamp.assert_called_once_with(new_timestamp=newest_ms + 1000)
