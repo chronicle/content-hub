@@ -1,0 +1,928 @@
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!-- Custom Widget / Integration Version when it was updated 37.0 -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700,700i"
+        rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css?family=Source Sans Pro"
+        rel="stylesheet"/>
+  <title>List Host Vulnerabilities</title>
+  <style>
+    /* Root Variables */
+    :root {
+      /* Layout & Colors */
+      --widget-bg: #212c44;
+      --widget-font-family: 'Source Sans Pro', sans-serif;
+      --widget-text-color: #ffffff;
+      --scrollbar-bg-color: #6275a3;
+
+      /* Components */
+      --widget-row-highlight-bg: #2f3d5c;
+      --divider-border-colcor: #3a4a6c;
+      --divider-border-width: 1px;
+
+      /* Sidebar */
+      --sidebar-width: 167px;
+      --sidebar-item-active-bg: #3a4a6c;
+      --sidebar-toggle-bg: rgba(38, 51, 79, 1); /* Custom Widget specific */
+
+      /* Table */
+      --table-color-even-row: #26334f;
+
+      /* Logo */
+      --logo-size: 48px;
+      --logo-color: #ffffff;
+
+      /* UI Elements */
+      --input-border: #6275a3;
+      --dropdown-shadow: rgba(0, 0, 0, 0.6);
+      --modal-overlay: rgba(0, 0, 0, 0.5);
+
+      /* Status & Tags */
+      --tag-bg: #6a7180;
+      --status-text: #b5b5b5;
+      --tooltip-bg: #ccccda;
+      --tooltip-text: #161625;
+      
+      /* Content Gradients (Custom Widget specific) */
+      --content-list-gradient: linear-gradient(to left, rgb(34 43 62), rgba(33, 44, 68, 0));
+      --collapsing-gradient: linear-gradient(transparent, rgb(35 44 66));
+
+      /* Severity Colors (Dark Theme Default) */
+      --sev-unspec: #b2b6bd;
+      --sev-low: #78d9ec;
+      --sev-medium: #fff371;
+      --sev-high: #fa903e;
+      --sev-critical: #ec453b;
+      
+      /* Legacy Mappings */
+      --content-bg: var(--table-color-even-row);
+      --content-button-bg: var(--widget-row-highlight-bg);
+      --details-button-bg: var(--divider-border-colcor);
+      --modal-list-title-bg: var(--sidebar-item-active-bg);
+      
+      /* Font settings (Legacy) */
+      --widget-scrollbar-size: 12px;
+      --list-item-key-font: 600 14px/18px var(--widget-font-family);
+      --list-item-value-font: 400 14px/18px var(--widget-font-family);
+      --table-title-size: 600 14px/18px var(--widget-font-family);
+      --table-th-size: 600 14px/18px var(--widget-font-family);
+      --table-td-size: 400 14px/18px var(--widget-font-family);
+      --header-title-font: 600 16px/22px var(--widget-font-family);
+      --sidebar-item-text-style: 400 14px/18px var(--widget-font-family);
+      --sidebar-item-text-style-active: 600 14px/16px var(--widget-font-family);
+      --sidebar-item-padding: 10px;
+      --risk-score-text: var(--tooltip-text); 
+
+    }
+
+    /*Normalize CSS */
+    * {
+      margin: 0;
+      padding: 0;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    *:hover, *:focus, *:active {
+      outline: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+      table-layout: fixed;
+    }
+
+    ol, ul {
+      list-style: none;
+    }
+
+    button,
+    input,
+    textarea {
+      font-family: inherit;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      text-align: left;
+    }
+
+    button, a[href] {
+      cursor: pointer;
+    }
+
+    /*Normalize CSS */
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 18px;
+      height: 18px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(137, 151, 180, 1);
+      border: 6px solid var(--widget-bg);
+      border-radius: 63px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+      border: 4px solid transparent;
+      border-radius: 44px;
+    }
+
+    ::-webkit-scrollbar-corner {
+      background-color: transparent;
+      border-color: transparent;
+    }
+
+    body {
+      font-family: var(--widget-font-family), serif;
+      color: var(--widget-text-color);
+      background-color: var(--widget-bg);
+      overflow: hidden;
+    }
+
+    /*Global styles*/
+    .text-ellipsis {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .divider-border-style {
+      border: 0;
+      border-color: var(--divider-border-colcor);
+      border-style: solid;
+    }
+
+    .tooltip {
+      max-width: 100%;
+      position: absolute;
+      padding: 8px 16px 8px 16px;
+      border-radius: 4px;
+      background-color: var(--tooltip-bg);
+      color: var(--tooltip-text);
+      font: 400 14px/18px var(--widget-font-family);
+      z-index: 99;
+      word-wrap: break-word;
+    }
+
+    .tooltip-triangle {
+      position: absolute;
+      top: 100%;
+      border-top: solid 8px rgb(195, 210, 232);
+      border-left: solid 8px transparent;
+      border-right: solid 8px transparent;
+    }
+
+    .link {
+      color: #669DF6;
+      text-decoration-line: underline;
+      display: flex;
+      align-items: center;
+      gap: 4px
+    }
+
+    .link-icon {
+      min-width: 14px;
+      max-height: 14px
+    }
+
+    /*Global styles*/
+    .wrapper {
+      display: flex;
+      height: 100vh;
+    }
+
+    /*left sidebar*/
+    .left-side {
+      min-width: var(--sidebar-width);
+      max-width: var(--sidebar-width);
+      overflow-y: auto;
+      padding-right: 6px;
+      border-right-width: var(--divider-border-width);
+    }
+
+    .left-side-item {
+      width: 100%;
+      padding: var(--sidebar-item-padding);
+      font: var(--sidebar-item-text-style);
+    }
+
+    .left-side-item.active {
+      background-color: var(--sidebar-item-active-bg);
+      font: var(--sidebar-item-text-style-active);
+    }
+
+    /*left sidebar*/
+    .right-side {
+      width: calc(100% - 168px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /*Table*/
+    .table-wrapper {
+      margin-top: 8px;
+      position: relative;
+    }
+
+    .table-container {
+      overflow: auto;
+      max-height: calc(100vh - 120px);
+    }
+
+    .table thead {
+      position: sticky;
+      top: 0;
+      z-index: 9;
+    }
+
+    .table th {
+      width: 150px;
+      background-color: var(--widget-row-highlight-bg);
+      color: var(--widget-text-color);
+      font: var(--table-th-size);
+      padding: 6px 12px;
+      text-transform: uppercase;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .table tr:nth-child(even) {
+      background-color: var(--table-color-even-row);
+    }
+
+    .table td {
+      padding: 8px 12px;
+      font: var(--table-td-size);
+      color: var(--widget-text-color);
+      vertical-align: top;
+    }
+
+    .table-severity {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-left: 6px;
+      border-bottom-width: var(--divider-border-width);
+    }
+
+    .header-title {
+      font: var(--header-title-font);
+      word-break: break-word;
+      padding: 0 6px;
+    }
+
+    .logo {
+      min-width: var(--logo-size);
+      min-height: var(--logo-size);
+      max-width: var(--logo-size);
+      max-height: var(--logo-size);
+      color: var(--logo-color);
+    }
+
+    .counter {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .counter-number {
+      font: 600 20px/24px var(--widget-font-family);
+      text-align: center;
+    }
+
+    .counter-title {
+      font: 600 16px/22px var(--widget-font-family);
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .table-events {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 8px;
+      margin-bottom: 12px;
+      padding: 0 6px;
+    }
+
+    .table-events-risk-score {
+      display: flex;
+      gap: 4px;
+      padding-right: 4px;
+      border-radius: 2px;
+      border-width: 1px;
+      border-style: solid;
+    }
+
+    .table-events-risk-score-count {
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      font: 600 12px / 12px var(--widget-font-family);
+      color: var(--tooltip-text);
+    }
+
+    .table-events-risk-score-value-text {
+      font: 600 12px / 16px var(--widget-font-family);
+    }
+  
+
+    html.light-theme {
+      --widget-bg: #ffffff !important;
+      --widget-text-color: #0f1029;
+      --scrollbar-bg-color: #d3d8ea;
+      --widget-row-highlight-bg: #e5e8f2;
+      --divider-border-colcor: #d3d8ea;
+      --sidebar-item-active-bg: #d3d8ea;
+      --sidebar-toggle-bg: #d3d8ea;
+      --table-color-even-row: #f4f5fa;
+      --logo-color: #4e4f63;
+      --input-border: #d3d8ea;
+      --tag-bg: #7a8294;
+      --status-text: #6b6d7a;
+      --tooltip-bg: #4e4f63;
+      --tooltip-text: #ffffff;
+      --dropdown-shadow: rgba(0, 0, 0, 0.1);
+      --modal-overlay: rgba(0, 0, 0, 0.2);
+      
+      --content-list-gradient: linear-gradient(to left, #ffffff, rgba(255, 255, 255, 0));
+      --collapsing-gradient: linear-gradient(transparent, #ffffff);
+      
+      /* Severity Colors (Light) */
+      --sev-unspec: #95a5a6;
+      --sev-low: #0088a5; 
+      --sev-medium: #d6a000; 
+      --sev-high: #d35400; 
+      --sev-critical: #c0392b; 
+    }
+
+    html.light-theme body {
+      background-color: #ffffff !important;
+      color: var(--widget-text-color);
+    }
+
+    html.dark-theme {
+      --widget-bg: #232330 !important;
+      --widget-text-color: #ffffff;
+      --scrollbar-bg-color: #303045;
+      --widget-row-highlight-bg: #5f6368;
+      --divider-border-colcor: #303045;
+      --sidebar-item-active-bg: #5f6368;
+      --sidebar-toggle-bg: #303045;
+      --table-color-even-row: #3c4043;
+      --logo-color: #ffffff;
+      --input-border: #80808b;
+      --tooltip-bg: #e8eaed;
+      --tooltip-text: #131314;
+      
+      --content-list-gradient: linear-gradient(to left, #232330, rgba(35, 35, 48, 0));
+      --collapsing-gradient: linear-gradient(transparent, #232330);
+    }
+    
+    html.dark-theme body {
+       background-color: var(--widget-bg) !important;
+       color: var(--widget-text-color);
+    }
+    
+    /* --- CUSTOM WIDGET SPECIFIC FIXES --- */
+    
+    html.light-theme span[class*="risk-score-value-text"],
+    html.light-theme span[class*="risk-score-text"] {
+        color: var(--logo-color) !important;
+    }
+    
+    html.light-theme .additional-tooltip {
+        background-color: var(--widget-row-highlight-bg) !important;
+        color: var(--widget-text-color) !important;
+    }
+    
+    html.light-theme .level-cell[style*="120, 217, 236"] { background-color: #4ebede !important; }
+    html.light-theme .level-cell[style*="255, 243, 113"] { background-color: #f1c40f !important; }
+    html.light-theme .level-cell[style*="250, 144, 62"] { background-color: #e67e22 !important; }
+    html.light-theme .level-cell[style*="236, 69, 59"] { background-color: #e74c3c !important; }
+
+    html.light-theme .indicator-icon {
+        background-color: var(--logo-color) !important;
+    }
+    html.light-theme .indicator-icon::after {
+        border-top-color: var(--logo-color) !important;
+    }
+    
+    html.light-theme .list-item-screenshot {
+        color: var(--logo-color) !important; 
+        background-color: var(--table-color-even-row) !important;
+        border: 1px solid var(--input-border) !important;
+    }
+    
+    html.light-theme .tag-item {
+        background-color: transparent !important;
+        color: inherit !important;
+        border: none !important;
+    }
+    
+    /* --- SCROLLBAR IMPROVEMENTS --- */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-bg-color) transparent;
+    }
+    
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background-color: var(--scrollbar-bg-color); border-radius: 4px; border: none; }
+    ::-webkit-scrollbar-corner { background: transparent; }
+    
+    /* --- GLOBAL ELEMENT FIXES --- */
+    body {
+        font-family: var(--widget-font-family), serif;
+        color: var(--widget-text-color);
+        background-color: var(--widget-bg);
+    }
+    
+    span.container-list-item {
+        color: var(--widget-text-color) !important;
+    }
+    
+    /* FIX: More comprehensive table header selector */
+    .table th, .table thead th, .main-table th, .main-table thead th {
+        background-color: var(--widget-row-highlight-bg) !important;
+        color: var(--widget-text-color) !important;
+    }
+    
+    .left-side-item.active { background-color: var(--sidebar-item-active-bg); }
+    .left-side { border-right-color: var(--divider-border-colcor); }
+    .header { border-bottom-color: var(--divider-border-colcor); }
+    
+    /* MitreAttck Specific Fixes */
+    .fieldName, .descriptionText, .leftMenu, .chainName {
+        color: var(--status-text) !important;
+    }
+    .leftMenu.active {
+        color: var(--widget-text-color) !important;
+    }
+    .chainCircle {
+        border-color: var(--status-text) !important;
+    }
+    .separator {
+        background-color: var(--status-text) !important;
+    }
+
+</style>
+</head>
+<body>
+<div id="container" class="wrapper">
+  <div class="left-side divider-border-style" id="leftSide"></div>
+  <div class="right-side" id="mainContent"></div>
+</div>
+<script>
+
+    const ThemeSettings = {
+        LIGHT_THEME_CLASS: 'light-theme',
+        DARK_THEME_CLASS: 'dark-theme',
+    };
+    
+    const LIGHT_THEME_HEX = "#e5e8f2";
+    const DARK_THEME_HEX = "#282837";
+    const GRAY_THEME_HEX = "#2f3d5c";
+
+    function handleThemeUpdate(event) {
+        if (event.source !== window.parent) {
+            return;
+        }
+        const styles = event.data;
+        if (typeof styles !== 'object' || styles === null) return;
+        const bg = styles.background || styles.backgroundColor || '';
+        let isLight = false;
+        let isDark = false;
+        let isGray = false;
+        const colorString = bg.toLowerCase();
+        if (colorString === LIGHT_THEME_HEX) isLight = true;
+        else if (colorString === DARK_THEME_HEX) isDark = true;
+        else if (colorString === GRAY_THEME_HEX) isGray = true;
+        else {
+            let r, g, b;
+            const rgbMatch = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            if (rgbMatch) { r = parseInt(rgbMatch[1]); g = parseInt(rgbMatch[2]); b = parseInt(rgbMatch[3]); }
+            else if (bg.startsWith('#')) {
+                const hex = bg.replace('#', '');
+                const fH = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+                if (fH.length === 6) { r = parseInt(fH.substring(0, 2), 16); g = parseInt(fH.substring(2, 4), 16); b = parseInt(fH.substring(4, 6), 16); }
+            }
+            if (r !== undefined) {
+                const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                if (brightness > 128) isLight = true;
+            }
+        }
+        const html = document.documentElement;
+        if (isLight) {
+            html.classList.add(ThemeSettings.LIGHT_THEME_CLASS); html.classList.remove(ThemeSettings.DARK_THEME_CLASS);
+        } else if (isDark) {
+            html.classList.add(ThemeSettings.DARK_THEME_CLASS); html.classList.remove(ThemeSettings.LIGHT_THEME_CLASS);
+        } else {
+            html.classList.remove(ThemeSettings.LIGHT_THEME_CLASS); html.classList.remove(ThemeSettings.DARK_THEME_CLASS);
+        }
+
+        const prismLink = document.querySelector('link[href*="/themes/prism"]');
+        if (prismLink) {
+            if (isLight && prismLink.href.includes('prism-tomorrow')) {
+                prismLink.href = prismLink.href.replace('prism-tomorrow.min.css', 'prism.min.css').replace('prism-tomorrow.css', 'prism.css');
+            } else if (!isLight && !prismLink.href.includes('prism-tomorrow')) {
+                prismLink.href = prismLink.href.replace('prism.min.css', 'prism-tomorrow.min.css').replace('prism.css', 'prism-tomorrow.css');
+            }
+        }
+    }
+    window.addEventListener('message', handleThemeUpdate);
+    window.onmessage = handleThemeUpdate;
+    document.addEventListener("DOMContentLoaded", function() {
+        var paths = document.querySelectorAll('svg path');
+        paths.forEach(function(path) {
+            var fill = path.getAttribute('fill');
+            if (fill === 'white' || fill === '#fff' || fill === '#ffffff' || fill === 'rgb(255, 255, 255)') {
+                path.setAttribute('fill', 'currentColor');
+            }
+        });
+    });
+
+  window.addEventListener("load", init, false);
+
+  const vulnerabilitiesData = [{stepInstanceName}.JsonResult];
+
+  let activeItem;
+
+  // Constants for tooltip positioning
+  const tooltipGap = 25;
+  const tooltipTriangleHeight = 8;
+  const tooltipTriangleMinGap = 5;
+  const triangleWidth = 16;
+  let tooltipTimeout = undefined;
+
+  const tooltipDetectResizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const target = entry.target;
+      if (target) {
+        const {offsetWidth, scrollWidth} = target;
+        if (scrollWidth > offsetWidth) {
+          target.addEventListener("mouseover", createTooltipListener);
+          target.addEventListener("mouseout", removeTooltipListener);
+        } else {
+          target.removeEventListener("mouseover", createTooltipListener);
+          target.removeEventListener("mouseout", removeTooltipListener);
+        }
+      }
+    }
+  });
+
+  const severityOrder = {
+    "CRITICAL": 1,
+    "IMPORTANT": 2,
+    "MODERATE": 3,
+    "LOW": 4,
+    "UNKNOWN": 5,
+  };
+
+  function init() {
+    setVulnerabilitiesData();
+  }
+
+  function setVulnerabilitiesData() {
+    setListElements();
+    addListenerToListElement();
+    setFirstItemData();
+  }
+
+  function setFirstItemData() {
+    setContent(vulnerabilitiesData[0].Entity);
+    setActiveItem(leftSide.children[0]);
+  }
+
+  if (vulnerabilitiesData.length === 1) {
+    leftSide.style.display = "none";
+    mainContent.style.width = "100%";
+  }
+
+  function setListElements() {
+    leftSide.innerHTML = "";
+    vulnerabilitiesData.forEach((item) => {
+      const listItemButton = document.createElement("button");
+      listItemButton.classList.add("left-side-item");
+      listItemButton.setAttribute("data-id", item.Entity);
+      listItemButton.innerText = item.Entity;
+      leftSide.appendChild(listItemButton);
+      renderWithTooltip(listItemButton, item.Entity);
+    });
+  }
+
+
+  function addListenerToListElement() {
+    leftSide.addEventListener("click", onListClick);
+  }
+
+  function onListClick(event) {
+    const targetElement = event.target;
+    if (targetElement.dataset.hasOwnProperty("id")) {
+      activeItem.classList.remove("active");
+      const identifier = event.target.dataset.id;
+      targetElement.classList.add("active");
+      setActiveItem(targetElement);
+      setContent(identifier);
+    }
+  }
+
+  function setActiveItem(item) {
+    activeItem = item;
+    activeItem.classList.add("active");
+  }
+
+  function setContent(identifier) {
+    const activeItem = vulnerabilitiesData.find(item => item.Entity === identifier);
+    mainContent.innerHTML = getContentHtml(activeItem);
+    const tdCell = document.querySelectorAll("[data-tooltip=\"target\"]");
+    tdCell.forEach((td) => {
+      const tooltipText = td.textContent;
+      renderWithTooltip(td, tooltipText);
+    });
+  }
+
+  function getContentHtml(dataItem) {
+    return getVulnerabilitiesCountHtml(dataItem?.EntityResult?.details?.length, dataItem) + getVulnerabilitySeveritiesHtml(dataItem?.EntityResult?.statistics?.severity) + getVulnerabilityTableHtml(dataItem?.EntityResult?.details);
+  }
+
+  function getVulnerabilitiesCountHtml(count, item) {
+    return `<div class="header divider-border-style"> <h1 class="header-title">${item.Entity}</h1><svg class="logo" fill="currentColor" viewbox="0 0 25 25" x="0px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M3.8,8.8c-0.3-0.6-1-0.9-1.6-0.6c-0.7,0.3-0.9,1-0.6,1.6l2.7,5.8c0.4,0.9,0.9,1.4,1.7,1.4c0.9,0,1.3-0.5,1.7-1.4 c0,0,2.3-5.1,2.4-5.1c0,0,0.1-0.2,0.3-0.2c0.2,0,0.3,0.2,0.3,0.4v4.9c0,0.7,0.4,1.4,1.2,1.4c0.8,0,1.3-0.6,1.3-1.4v-4.1 c0-0.8,0.6-1.3,1.3-1.3c0.7,0,1.3,0.5,1.3,1.3v4.1c0,0.7,0.4,1.4,1.2,1.4c0.8,0,1.3-0.6,1.3-1.4v-4.1c0-0.8,0.6-1.3,1.3-1.3 s1.3,0.5,1.3,1.3v4.1c0,0.7,0.4,1.4,1.2,1.4c0.8,0,1.3-0.6,1.3-1.4V11c0-1.7-1.4-2.9-3-2.9s-2.7,1.1-2.7,1.1 c-0.6-0.7-1.3-1.1-2.6-1.1c-1.4,0-2.5,1.1-2.5,1.1c-0.5-0.7-1.5-1.1-2.2-1.1c-1.2,0-2.1,0.5-2.7,1.8l-1.7,4L3.8,8.8"></path></svg></div> <div class="counter"> <h2 class="counter-number">${count || 0}</h2> <h3 class="counter-title">VULNERABILITIES FOUND</h3> </div>`;
+  }
+
+  function getVulnerabilitySeveritiesHtml(severities) {
+    return `<div class="table-events"><div class="table-events-risk-score" style="border-color: var(--sev-critical)"><span class="table-events-risk-score-count" style="background-color: var(--sev-critical)">${severities.critical}</span><span class="table-events-risk-score-value-text" style="color: var(--sev-critical)">Critical</span></div><div class="table-events-risk-score" style="border-color: var(--sev-high)"><span class="table-events-risk-score-count" style="background-color: var(--sev-high)">${severities.important}</span><span class="table-events-risk-score-value-text" style="color: var(--sev-high)">Important</span></div><div class="table-events-risk-score" style="border-color: var(--sev-medium)"><span class="table-events-risk-score-count" style="background-color: var(--sev-medium)">${severities.moderate}</span><span class="table-events-risk-score-value-text" style="color: var(--sev-medium)">Moderate</span></div><div class="table-events-risk-score" style="border-color: var(--sev-low)"><span class="table-events-risk-score-count" style="background-color: var(--sev-low)">${severities.low}</span><span class="table-events-risk-score-value-text" style="color: var(--sev-low)">Low</span></div></div>`;
+  }
+
+  function getVulnerabilityTableHtml(tableData) {
+    // Sorting the table data based on severity
+    tableData.sort((a, b) => {
+      const severityA = a?.vuln_info?.severity?.toUpperCase() || "UNKNOWN";
+      const severityB = b?.vuln_info?.severity?.toUpperCase() || "UNKNOWN";
+      return severityOrder[severityA] - severityOrder[severityB];
+    });
+
+    // Create the table container and table structure
+    const tableContainer = document.createElement("div");
+    tableContainer.classList.add("table-container");
+
+    const table = document.createElement("table");
+    table.classList.add("table");
+
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    const headers = ["Severity", "CVE", "Risk Score", "Description", "Solution", "Exploitable", "Event Time"];
+
+    headers.forEach(headerText => {
+      const th = document.createElement("th");
+      th.innerText = headerText;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+
+    tableData.forEach((rowData) => {
+      const severity = rowData?.vuln_info?.severity?.toUpperCase() || "UNKNOWN";
+      const displaySeverity = severity === "UNKNOWN" ? "UNSPECIFIED" : severity;
+      const row = document.createElement("tr");
+
+      let severityIcon = "";
+      switch (severity) {
+        case "CRITICAL":
+          severityIcon = `<svg width="27" height="6" viewBox="0 0 27 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="3" cy="3" r="3" fill="var(--sev-critical)"/>
+                          <circle cx="10" cy="3" r="3" fill="var(--sev-critical)"/>
+                          <circle cx="17" cy="3" r="3" fill="var(--sev-critical)"/>
+                          <circle cx="24" cy="3" r="3" fill="var(--sev-critical)"/>
+                        </svg>`;
+          break;
+        case "IMPORTANT":
+          severityIcon = `<svg width="27" height="6" viewBox="0 0 27 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="3" cy="3" r="3" fill="var(--sev-high)"/>
+                          <circle cx="10" cy="3" r="3" fill="var(--sev-high)"/>
+                          <circle cx="17" cy="3" r="3" fill="var(--sev-high)"/>
+                          <circle cx="24" cy="3" r="3" fill="var(--sev-unspec)"/>
+                        </svg>`;
+          break;
+        case "MODERATE":
+          severityIcon = `<svg width="27" height="6" viewBox="0 0 27 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="3" cy="3" r="3" fill="var(--sev-medium)"/>
+                          <circle cx="10" cy="3" r="3" fill="var(--sev-medium)"/>
+                          <circle cx="17" cy="3" r="3" fill="var(--sev-unspec)"/>
+                          <circle cx="24" cy="3" r="3" fill="var(--sev-unspec)"/>
+                        </svg>`;
+          break;
+        case "LOW":
+          severityIcon = `<svg width="27" height="6" viewBox="0 0 27 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="3" cy="3" r="3" fill="var(--sev-low)"/>
+                          <circle cx="10" cy="3" r="3" fill="var(--sev-unspec)"/>
+                          <circle cx="17" cy="3" r="3" fill="var(--sev-unspec)"/>
+                          <circle cx="24" cy="3" r="3" fill="var(--sev-unspec)"/>
+                        </svg>`;
+          break;
+        case "UNKNOWN":
+          severityIcon = `<svg width="27" height="6" viewBox="0 0 27 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="3" cy="3" r="3" fill="var(--sev-unspec)"/>
+                          <circle cx="10" cy="3" r="3" fill="var(--sev-unspec)"/>
+                          <circle cx="17" cy="3" r="3" fill="var(--sev-unspec)"/>
+                          <circle cx="24" cy="3" r="3" fill="var(--sev-unspec)"/>
+                        </svg>`;
+          break;
+      }
+
+      const tdSeverity = document.createElement("td");
+      tdSeverity.innerHTML = `<span class="table-severity">${severityIcon} ${displaySeverity}</span>`;
+      row.appendChild(tdSeverity);
+
+      const tdId = document.createElement("td");
+      tdId.innerHTML = `<a class="link" target="_blank" href="${rowData.vuln_info.nvd_link ? rowData?.vuln_info?.nvd_link : ""}"><span data-tooltip="target">${rowData?.vuln_info?.cve_id}</span> <svg class="link-icon" width="14" height="14" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.3744 14.25H3.87482V3.75H9.12463V2.25H3.87482C3.04235 2.25 2.37488 2.925 2.37488 3.75V14.25C2.37488 15.075 3.04235 15.75 3.87482 15.75H14.3744C15.1994 15.75 15.8744 15.075 15.8744 14.25V9H14.3744V14.25Z" fill="#8AB4F8"/><path d="M10.6251 2.25V3.75H13.3175L5.94525 11.1225L7.00271 12.18L14.3749 4.8075V7.5H15.8749V2.25H10.6251Z" fill="#8AB4F8"/></svg></a>`;
+      row.appendChild(tdId);
+
+      const tdExploitStatus = document.createElement("td");
+      tdExploitStatus.setAttribute("data-tooltip", "target");
+      tdExploitStatus.innerText = getExploitStatus(rowData?.vuln_info?.risk_meter_score) || "N/A";
+      row.appendChild(tdExploitStatus);
+
+      const tdDescription = document.createElement("td");
+      tdDescription.setAttribute("data-tooltip", "target");
+      tdDescription.innerText = cleanText(rowData?.vuln_info?.cve_description) || "N/A";
+      row.appendChild(tdDescription);
+
+      const tdSolution = document.createElement("td");
+      tdSolution.setAttribute("data-tooltip", "target");
+      tdSolution.innerText = rowData?.vuln_info?.solution || "N/A";
+      row.appendChild(tdSolution);
+
+      const tdCreatedExploitable = document.createElement("td");
+      tdCreatedExploitable.setAttribute("data-tooltip", "target");
+      tdCreatedExploitable.innerText = rowData?.vuln_info?.easily_exploitable || "N/A";
+      row.appendChild(tdCreatedExploitable);
+
+      const tdCreatedTimestamp = document.createElement("td");
+      tdCreatedTimestamp.setAttribute("data-tooltip", "target");
+      tdCreatedTimestamp.innerText = rowData?.vuln_info?.created_at;
+      row.appendChild(tdCreatedTimestamp);
+
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
+
+    return tableContainer.outerHTML;
+  }
+
+  function cleanText(value) {
+    if (!value) return "";
+    return value.replace(/<\/?[^>]+(>|$)/g, '').replace(/\n/g, ' ').trim();
+  }
+
+  function getExploitStatus(status) {
+    if (status === 30) {
+      return "Available";
+    }
+    if (status === 60) {
+      return "Easily Accessible";
+    }
+    if (status === 90) {
+      return "Actively Used";
+    }
+    return "Unproven";
+  }
+
+  /**
+   * Creates a tooltip with given text and position.
+   */
+  function createTooltip(text, x, y, trianglePointX, placeAtBottom, contentOverflowWindow) {
+    removeTooltip();
+    const tooltip = document.createElement("div");
+    tooltip.classList.add("tooltip");
+    tooltip.textContent = text;
+    tooltip.style.left = `${x}px`;
+    tooltip.style.top = `${y}px`;
+    if (contentOverflowWindow) {
+      tooltip.style.right = `${tooltipGap}px`;
+    }
+    const tooltipTriangle = document.createElement("span");
+    tooltipTriangle.classList.add("tooltip-triangle");
+    tooltipTriangle.style.left = `${trianglePointX}px`;
+    if (placeAtBottom) {
+      tooltipTriangle.style.top = "-8px";
+      tooltipTriangle.style.borderTop = "0";
+      tooltipTriangle.style.borderBottom = "solid 8px rgb(195, 210, 232)";
+    }
+    tooltip.append(tooltipTriangle);
+    document.body.append(tooltip);
+  }
+
+  /**
+   * Removes any existing tooltip from the DOM.
+   */
+  function removeTooltip() {
+    const tooltip = document.querySelectorAll(".tooltip");
+    tooltip.forEach((item) => {
+      if (item) {
+        item.remove();
+      }
+    });
+  }
+
+  /**
+   * Sets a timeout to calculate and show tooltip position after a delay.
+   */
+  function createTooltipListener(event) {
+    tooltipTimeout = setTimeout(() => calculateTooltipPosition(event), 1000);
+  }
+
+  /**
+   * Clears any existing tooltip timeout and removes the tooltip.
+   */
+  function removeTooltipListener() {
+    if (tooltipTimeout) {
+      clearTimeout(tooltipTimeout);
+    }
+    removeTooltip();
+  }
+
+  /**
+   * Calculates and positions the tooltip relative to the event target.
+   */
+  function calculateTooltipPosition(event) {
+    const target = event.target;
+    if (!target) {
+      return;
+    }
+    const viewportWidth = window.innerWidth;
+    const rect = target.getBoundingClientRect();
+    const tooltipContent = document.createElement("div");
+    tooltipContent.classList.add("tooltip");
+    tooltipContent.style.top = "0";
+    tooltipContent.textContent = target.textContent;
+    document.body.appendChild(tooltipContent);
+    let contentOverflowWindow = false;
+    // Determine if window width would not be enough for content of tooltip
+    if (tooltipGap * 2 + tooltipContent.offsetWidth >= viewportWidth) {
+      // setting left, right positions to get correct tooltipContentWidth and tooltipContentHeight
+      tooltipContent.style.left = `${tooltipGap}px`;
+      tooltipContent.style.right = `${tooltipGap}px`;
+      contentOverflowWindow = true;
+    }
+    const tooltipContentWidth = tooltipContent.offsetWidth;
+    const tooltipContentHeight = tooltipContent.offsetHeight;
+    tooltipContent.remove();
+    const elementMidX = rect.left + (rect.width / 2);
+    const placeOnRight = elementMidX + tooltipContentWidth / 2 + tooltipGap > viewportWidth;
+    const x = Math.max(tooltipGap, placeOnRight ? viewportWidth - tooltipContentWidth - tooltipGap : elementMidX - tooltipContentWidth / 2);
+    const placeAtBottom = rect.top < tooltipContentHeight;
+    const y = placeAtBottom ? rect.bottom + tooltipTriangleHeight : rect.top - tooltipContentHeight;
+    // Calculating trianglePointX relative to window width, to guarantee that it is not out of window
+    const trianglePointX = Math.min(Math.max(elementMidX - x, tooltipTriangleMinGap), tooltipContentWidth - tooltipTriangleMinGap - triangleWidth);
+    createTooltip(target.textContent, x, y, trianglePointX, placeAtBottom, contentOverflowWindow);
+  }
+
+  /**
+   * Renders an item with text and sets up tooltip behavior.
+   */
+  function renderWithTooltip(item, text) {
+    item.innerText = text;
+    item.classList.add("text-ellipsis");
+    tooltipDetectResizeObserver.observe(item);
+  }
+</script>
+</body>
+</html>

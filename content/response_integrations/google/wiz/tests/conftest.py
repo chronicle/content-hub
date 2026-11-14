@@ -39,7 +39,7 @@ def wiz_product() -> Wiz:
     return Wiz()
 
 
-@pytest.fixture(name="script_session", autouse=True)
+@pytest.fixture(name="script_session")
 def wiz_script_session(
     monkeypatch: pytest.MonkeyPatch,
     wiz: Wiz,

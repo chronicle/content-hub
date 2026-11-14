@@ -31,6 +31,7 @@ import pathlib
 
 import requests
 
+from .BulkAcquisitionMixin import BulkAcquisitionMixin
 from .FireEyeHXParser import FireEyeHXParser
 from .UtilsManager import get_earliest_event_at_datetime
 
@@ -54,7 +55,7 @@ class FireEyeHXNotFoundError(Exception):
     """Not Found Exception for FireEye HX manager."""
 
 
-class FireEyeHXManager:
+class FireEyeHXManager(BulkAcquisitionMixin):
     """FireEye HX Manager."""
 
     def __init__(self, api_root, username, password, version="v3", verify_ssl=False) -> None:
