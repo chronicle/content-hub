@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google SecOps SOAR - Rule Coverage Assessment</title>
+    <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: var(--background, #f8fafc);
+            color: var(--foreground, #0f172a);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+        }
+        .surface-card {
+            background-color: var(--card, #ffffff);
+            color: var(--foreground, #0f172a);
+            border: 1px solid var(--border, #e2e8f0);
+        }
+        .surface-subtle {
+            background-color: var(--secondary, rgba(148, 163, 184, 0.12));
+            border: 1px solid var(--border, #e2e8f0);
+        }
+        .text-muted {
+            color: var(--muted-foreground, #64748b);
+        }
+        /* YARA-L Syntax Highlighting */
+        .yl-keyword { color: #7c3aed; font-weight: 700; }
+        .yl-variable { color: #0284c7; font-weight: 600; }
+        .yl-string { color: #059669; }
+        .yl-comment { color: #94a3b8; font-style: italic; }
+        .dark .yl-keyword { color: #a78bfa; }
+        .dark .yl-variable { color: #38bdf8; }
+        .dark .yl-string { color: #34d399; }
+        pre::-webkit-scrollbar { width: 6px; height: 6px; }
+        pre::-webkit-scrollbar-thumb { background: var(--border, #cbd5e1); border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6">
+
+    <!-- SOAR DATA BINDING -->
+    <script type="application/json" id="soar-tdo-data">[Generate TDO.JsonResult]</script>
+    <script type="application/json" id="soar-lro-data">[Alert.LRO_Result]</script>
+    <script type="application/json" id="soar-matched-rules">[ [Alert.Matched_Rules_Details] ]</script>
+    <script type="application/json" id="soar-generated-rules-bundle">[ [Alert.Generated_Rules_Details] ]</script>
+    <script type="application/json" id="soar-last-generated-rule">[Generate Rules.JsonResult]</script>
+    <script type="application/json" id="soar-events-bundle">[ [Alert.TDO_Events_Bundle] ]</script>
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        <!-- EXECUTIVE HEADER & SCOREBOARD -->
+        <div class="surface-card rounded-2xl p-6 shadow-sm space-y-6">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-[var(--border)]">
+                <div class="space-y-1.5">
+                    <div id="overall-status-pill" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+                        <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                        Step 3 &amp; 4 · Coverage Evaluation
+                    </div>
+                    <h1 class="text-2xl font-bold tracking-tight text-[var(--foreground)]">Rule Coverage Assessment &amp; Compensating Controls</h1>
+                    <p class="text-sm text-muted">Evaluation of existing Chronicle rules, live enablement &amp; alerting posture, and AI-generated YARA-L 2.0 rules for uncovered TDOs.</p>
+                </div>
+
+                <!-- VIEW FILTER TABS -->
+                <div class="flex flex-wrap gap-1.5 surface-subtle p-1.5 rounded-xl self-start">
+                    <button id="tab-all" onclick="setViewMode('all')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm transition-all">
+                        All TDOs
+                    </button>
+                    <button id="tab-gaps" onclick="setViewMode('gaps')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-[var(--foreground)] hover:opacity-80 transition-all">
+                        Missed TDOs &amp; Generated Rules
+                    </button>
+                    <button id="tab-covered" onclick="setViewMode('covered')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-[var(--foreground)] hover:opacity-80 transition-all">
+                        Covered TDOs
+                    </button>
+                    <button id="tab-noteval" onclick="setViewMode('noteval')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-[var(--foreground)] hover:opacity-80 transition-all">
+                        Not Evaluated TDOs
+                    </button>
+                    <button id="tab-rules" onclick="setViewMode('rules')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-[var(--foreground)] hover:opacity-80 transition-all">
+                        Matched Rules Inventory
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI CARDS -->
+            <div id="coverage-kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
+            <!-- COVERAGE PROGRESS BAR -->
+            <div id="coverage-progress-bar" class="space-y-2"></div>
+        </div>
+
+        <!-- MAIN DYNAMIC VIEW CONTAINER -->
+        <div id="assessment-container" class="space-y-5"></div>
+    </div>
+
+    <script>
+        let state = {
+            tdos: [],
+            coverageResults: [],
+            rulesById: {},
+            generatedByTdo: {},
+            skippedReasonsByTdo: {},
+            notEvaluated: {},
+            viewMode: 'all'
+        };
+
+        // TDOs for which no synthetic events could be generated (first bundle entry per TDO wins,
+        // same rule as the "Build Coverage Events" playbook step). Returns { tdoId: reason }.
+        function parseNotEvaluated(bundleRaw) {
+            const result = {};
+            const seen = new Set();
+            (Array.isArray(bundleRaw) ? bundleRaw : []).forEach(entry => {
+                if (!entry || typeof entry !== 'object') return;
+                const tid = String(entry.threatDetectionOpportunityId || '').toLowerCase();
+                if (!tid || seen.has(tid)) return;
+                seen.add(tid);
+                const udms = Array.isArray(entry.udmsJson) ? entry.udmsJson.filter(Boolean) : [];
+                if (udms.length === 0) {
+                    result[tid] = entry.error || 'No synthetic events could be generated for this TDO.';
+                }
+            });
+            return result;
+        }
+
+        // 'covered' | 'noteval' | 'gap'
+        function getTdoStatus(tid, matchesByTdo) {
+            if ((matchesByTdo[tid] || []).length > 0) return 'covered';
+            if (state.notEvaluated[tid]) return 'noteval';
+            return 'gap';
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function loadSoarJson(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return null;
+            let raw = el.textContent.trim();
+            if (!raw || raw.includes('.JsonResult') || raw.includes('Alert.')) {
+                return null;
+            }
+            // Strip sentinel reset tokens (NULLVALUE or RESET) injected by Context Value initialization
+            raw = raw
+                .replace(/^\[\s*"?(?:NULLVALUE|RESET)"?\s*,\s*/, '[')
+                .replace(/^\[\s*"?(?:NULLVALUE|RESET)"?\s*\]$/, '[]')
+                .trim();
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length === 0) return null;
+                return parsed;
+            } catch {
+                return null;
+            }
+        }
+
+        function isLroDone(rawLro) {
+            if (!rawLro) return false;
+            try {
+                const sc = rawLro.response_data?.result?.structuredContent || rawLro.result?.structuredContent || rawLro;
+                if (sc.done === true) return true;
+                if (rawLro.response_data?.result?.content?.[0]?.text) {
+                    const parsed = JSON.parse(rawLro.response_data.result.content[0].text);
+                    if (parsed.done === true) return true;
+                }
+            } catch {}
+            return false;
+        }
+
+        function renderPendingState(messageTitle, messageSub) {
+            document.getElementById('coverage-kpis').innerHTML = '';
+            document.getElementById('coverage-progress-bar').innerHTML = '';
+            document.getElementById('assessment-container').innerHTML = `
+                <div class="flex flex-col items-center justify-center p-16 surface-card rounded-2xl text-center space-y-4">
+                    <div class="animate-spin rounded-full h-9 w-9 border-2 border-blue-500 border-t-transparent"></div>
+                    <div class="space-y-1">
+                        <h3 class="text-base font-bold text-[var(--foreground)]">${escapeHtml(messageTitle)}</h3>
+                        <p class="text-xs text-muted">${escapeHtml(messageSub)}</p>
+                    </div>
+                </div>`;
+        }
+
+        function parseTdos(raw) {
+            if (!raw) return [];
+            try {
+                const res = raw.response_data?.result || raw.result || raw;
+                if (res.structuredContent?.threatDetectionOpportunities) return res.structuredContent.threatDetectionOpportunities;
+                if (res.content?.[0]?.text) {
+                    const p = JSON.parse(res.content[0].text);
+                    if (p.threatDetectionOpportunities) return p.threatDetectionOpportunities;
+                }
+                if (raw.threatDetectionOpportunities) return raw.threatDetectionOpportunities;
+            } catch {}
+            return [];
+        }
+
+        function parseCoverageResults(raw) {
+            if (!raw) return [];
+            try {
+                const root = raw.response_data?.result?.structuredContent || raw.result?.structuredContent || raw;
+                if (Array.isArray(root.coverageResults)) return root.coverageResults;
+                if (Array.isArray(root.response?.coverageResults)) return root.response.coverageResults;
+                if (raw.response_data?.result?.content?.[0]?.text) {
+                    const p = JSON.parse(raw.response_data.result.content[0].text);
+                    return p.response?.coverageResults || p.coverageResults || [];
+                }
+            } catch {}
+            return [];
+        }
+
+        function parseMatchedRules(raw) {
+            const map = {};
+            const list = Array.isArray(raw) ? raw : [];
+            list.forEach(r => {
+                if (!r) return;
+                const sc = r.response_data?.result?.structuredContent || r;
+                const fullId = sc.ruleId || sc.name || '';
+                const shortId = fullId.split('/').pop();
+                if (shortId) {
+                    map[shortId] = {
+                        ruleId: shortId,
+                        displayName: sc.displayName || sc.metadata?.rule_name || shortId,
+                        liveModeEnabled: Boolean(sc.liveModeEnabled),
+                        alertingEnabled: Boolean(sc.alertingEnabled),
+                        executionState: sc.compilationState === 'FAILED' ? 'COMPILATION_FAILED' : (sc.executionState || (sc.liveModeEnabled ? 'LIVE' : 'DISABLED')),
+                        severity: sc.severity?.displayName || sc.severity || sc.metadata?.severity || null
+                    };
+                }
+            });
+            return map;
+        }
+
+        function formatReasonSentence(str) {
+            const trimmed = String(str ?? '').trim();
+            if (!trimmed) return '';
+            return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+        }
+
+        // Extracts ONLY the "reason" field from nested MCP / gRPC Status JSON strings
+        function extractOnlyReason(input) {
+            if (!input) return '';
+            if (typeof input === 'object') {
+                if (typeof input.reason === 'string' && input.reason.trim()) {
+                    return formatReasonSentence(input.reason);
+                }
+                if (typeof input.error?.reason === 'string' && input.error.reason.trim()) {
+                    return formatReasonSentence(input.error.reason);
+                }
+                if (Array.isArray(input.error?.details)) {
+                    for (const d of input.error.details) {
+                        if (typeof d?.reason === 'string' && d.reason.trim()) {
+                            return formatReasonSentence(d.reason);
+                        }
+                    }
+                }
+                if (typeof input.error?.message === 'string') {
+                    return extractOnlyReason(input.error.message);
+                }
+                if (typeof input.message === 'string') {
+                    return extractOnlyReason(input.message);
+                }
+                return '';
+            }
+
+            const str = String(input).trim();
+            try {
+                const parsed = JSON.parse(str);
+                const fromObj = extractOnlyReason(parsed);
+                if (fromObj) return fromObj;
+            } catch {}
+
+            // Regex extraction if "reason" is embedded inside an unparsed or escaped JSON string
+            const unescaped = str.replace(/\\"/g, '"');
+            const reasonMatch = unescaped.match(/"reason"\s*:\s*"([^"]+)"/);
+            if (reasonMatch && reasonMatch[1]) {
+                return formatReasonSentence(reasonMatch[1]);
+            }
+
+            return formatReasonSentence(str);
+        }
+
+        function extractSkippedReasonFromEntry(entry) {
+            if (!entry) return null;
+            if (typeof entry.errorMessage === 'string' && entry.errorMessage.trim()) {
+                return extractOnlyReason(entry.errorMessage);
+            }
+            if (typeof entry.reason === 'string' && entry.reason.trim()) {
+                return extractOnlyReason(entry.reason);
+            }
+            const res = entry.response_data?.result || entry.result || entry;
+            const isErr = res?.isError === true || String(res?.isError).toLowerCase() === 'true' ||
+                          entry?.isError === true || String(entry?.isError).toLowerCase() === 'true' ||
+                          Boolean(entry?.response_data?.error || entry?.error);
+            if (!isErr) return null;
+
+            const rawSource = res?.content?.[0]?.text ||
+                              res?.structuredContent?.error ||
+                              entry?.response_data?.error ||
+                              entry?.error ||
+                              'Use IOC matching for atomic indicators instead of hardcoded behavioral rules.';
+            return extractOnlyReason(rawSource);
+        }
+
+        function parseGeneratedRulesAndReasons(bundleRaw, lastGenRaw, missingTdoIds) {
+            const byTdo = {};
+            const skippedReasonsByTdo = {};
+
+            if (Array.isArray(bundleRaw) && bundleRaw.length > 0) {
+                bundleRaw.forEach(item => {
+                    if (!item) return;
+                    const tdoId = (item.tdoId || item.threatDetectionOpportunityId || '').toLowerCase();
+                    const reasonText = extractSkippedReasonFromEntry(item);
+                    if (reasonText && tdoId) {
+                        skippedReasonsByTdo[tdoId] = reasonText;
+                    }
+                    const rules = item.generatedRules || (item.ruleText ? [{ ruleText: item.ruleText }] : []);
+                    if (tdoId && Array.isArray(rules) && rules.length > 0) {
+                        byTdo[tdoId] = (byTdo[tdoId] || []).concat(rules);
+                    }
+                });
+            }
+
+            if (lastGenRaw) {
+                const entries = Array.isArray(lastGenRaw) ? lastGenRaw : [lastGenRaw];
+                entries.forEach(entry => {
+                    if (!entry) return;
+                    const rpcId = String(entry.response_data?.id || entry.id || '');
+                    const idFromRpc = rpcId.startsWith('gen-rule-') ? rpcId.replace('gen-rule-', '').toLowerCase() : '';
+
+                    const reasonText = extractSkippedReasonFromEntry(entry);
+                    if (reasonText) {
+                        if (idFromRpc) {
+                            skippedReasonsByTdo[idFromRpc] = reasonText;
+                        } else {
+                            missingTdoIds.forEach(tid => {
+                                const k = tid.toLowerCase();
+                                if (!byTdo[k] || byTdo[k].length === 0) {
+                                    skippedReasonsByTdo[k] = reasonText;
+                                }
+                            });
+                            skippedReasonsByTdo['unmatched'] = reasonText;
+                        }
+                        return;
+                    }
+
+                    try {
+                        const res = entry.response_data?.result || entry.result || entry;
+                        let genList = res.structuredContent?.generatedRules;
+                        if (!genList && res.content?.[0]?.text) {
+                            genList = JSON.parse(res.content[0].text).generatedRules;
+                        }
+                        if (Array.isArray(genList) && genList.length > 0) {
+                            const targetTdo = idFromRpc || missingTdoIds[0] || 'unmatched';
+                            if (!byTdo[targetTdo] || byTdo[targetTdo].length === 0) {
+                                byTdo[targetTdo] = genList;
+                            }
+                        }
+                    } catch {}
+                });
+            }
+
+            return { byTdo, skippedReasonsByTdo };
+        }
+
+        function highlightYaraL(code) {
+            if (!code) return '';
+            const regex = /(\/\/.*|\/\*[\s\S]*?\*\/)|("[^"]*"|`[^`]*`)|(\$[a-zA-Z0-9_]+)|(\b(?:rule|meta|events|outcome|condition|options|if|then|else|and|or|not|nocase|any|all|max|min|array_distinct|re|regex|strings|arrays)\b)/g;
+            return escapeHtml(code).replace(/&quot;/g, '"').replace(regex, (match, comment, string, variable, keyword) => {
+                if (comment) return `<span class="yl-comment">${comment}</span>`;
+                if (string) return `<span class="yl-string">${string}</span>`;
+                if (variable) return `<span class="yl-variable">${variable}</span>`;
+                if (keyword) return `<span class="yl-keyword">${keyword}</span>`;
+                return match;
+            });
+        }
+
+        function copyCode(btn, b64) {
+            const text = decodeURIComponent(escape(atob(b64)));
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = btn.innerHTML;
+                btn.innerHTML = '✓ Copied';
+                setTimeout(() => { btn.innerHTML = orig; }, 1500);
+            });
+        }
+
+        function setViewMode(mode) {
+            state.viewMode = mode;
+            ['all', 'gaps', 'covered', 'noteval', 'rules'].forEach(m => {
+                const btn = document.getElementById(`tab-${m}`);
+                if (!btn) return;
+                btn.className = (m === mode)
+                    ? 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm transition-all'
+                    : 'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-[var(--foreground)] hover:opacity-80 transition-all';
+            });
+            renderMainView();
+        }
+
+        function renderScoreboard() {
+            const totalTdos = state.tdos.length;
+            const coveredTdoSet = new Set(state.coverageResults.map(c => (c.threatDetectionOpportunityId || '').toLowerCase()).filter(Boolean));
+            const coveredCount = state.tdos.filter((t, i) => coveredTdoSet.has((t.id || `t0${i+1}`).toLowerCase())).length;
+            const notEvalCount = state.tdos.filter((t, i) => {
+                const tid = (t.id || `t0${i+1}`).toLowerCase();
+                return !coveredTdoSet.has(tid) && state.notEvaluated[tid];
+            }).length;
+            const evaluatedCount = totalTdos - notEvalCount;
+            const missedCount = evaluatedCount - coveredCount;
+            const pct = evaluatedCount > 0 ? Math.round((coveredCount / evaluatedCount) * 100) : 0;
+            const coveredBarPct = totalTdos > 0 ? (coveredCount / totalTdos) * 100 : 0;
+            const notEvalBarPct = totalTdos > 0 ? (notEvalCount / totalTdos) * 100 : 0;
+            const missedBarPct = totalTdos > 0 ? (missedCount / totalTdos) * 100 : 0;
+            const notEvalSuffix = notEvalCount > 0 ? ` · ${notEvalCount} Not Evaluated` : '';
+
+            const uniqueRuleIds = [...new Set(state.coverageResults.map(c => (c.matchedRule || '').split('/').pop()).filter(Boolean))];
+            const uniqueRules = uniqueRuleIds.map(id => state.rulesById[id] || { ruleId: id, displayName: id, liveModeEnabled: false, alertingEnabled: false, executionState: 'UNKNOWN' });
+            const liveAlertingCount = uniqueRules.filter(r => r.liveModeEnabled && r.alertingEnabled).length;
+            const liveOnlyCount = uniqueRules.filter(r => r.liveModeEnabled && !r.alertingEnabled).length;
+            const disabledCount = uniqueRules.filter(r => !r.liveModeEnabled).length;
+
+            const totalGeneratedRules = Object.values(state.generatedByTdo).reduce((acc, arr) => acc + (arr?.length || 0), 0);
+            const totalSkippedTdos = Object.keys(state.skippedReasonsByTdo).filter(k => k !== 'unmatched').length;
+
+            const pillEl = document.getElementById('overall-status-pill');
+            if (evaluatedCount === 0 && totalTdos > 0) {
+                pillEl.className = 'inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-500/10 text-slate-400 border border-slate-500/30';
+                pillEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span> Not Evaluated (0/${totalTdos} TDOs with Synthetic Events)`;
+            } else if (missedCount === 0 && coveredCount > 0) {
+                pillEl.className = 'inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25';
+                pillEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Full Threat Coverage (${pct}% of Evaluated TDOs${notEvalSuffix})`;
+            } else if (coveredCount > 0) {
+                pillEl.className = 'inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25';
+                pillEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Partial Coverage (${coveredCount}/${evaluatedCount} Evaluated TDOs · ${missedCount} Gap${missedCount > 1 ? 's' : ''}${notEvalSuffix})`;
+            } else {
+                pillEl.className = 'inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/25';
+                pillEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> Critical Coverage Gap (0/${evaluatedCount} Evaluated TDOs Covered${notEvalSuffix})`;
+            }
+
+            document.getElementById('coverage-kpis').className = `grid grid-cols-1 sm:grid-cols-2 ${notEvalCount > 0 ? 'lg:grid-cols-3 2xl:grid-cols-5' : 'lg:grid-cols-4'} gap-4`;
+            document.getElementById('coverage-kpis').innerHTML = `
+                <div class="p-4 rounded-xl surface-subtle flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-muted">TDO Coverage Rate</span>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">${pct}%</span>
+                    </div>
+                    <p class="text-2xl font-bold text-[var(--foreground)] mt-2">${coveredCount} <span class="text-sm font-medium text-muted">/ ${evaluatedCount} ${notEvalCount > 0 ? 'Evaluated ' : ''}TDOs Covered</span></p>
+                </div>
+
+                <div class="p-4 rounded-xl surface-subtle flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-muted">Rules Covering Threat</span>
+                        <span class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">${liveAlertingCount} Live+Alerting</span>
+                    </div>
+                    <p class="text-2xl font-bold text-[var(--foreground)] mt-2">${uniqueRules.length} <span class="text-xs font-medium text-muted">(${liveOnlyCount} Live-Only · ${disabledCount} Off)</span></p>
+                </div>
+
+                <div class="p-4 rounded-xl ${missedCount > 0 ? 'bg-red-500/10 border border-red-500/30' : 'surface-subtle'} flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider ${missedCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted'}">Missed Coverage</span>
+                        <span class="text-xs font-bold ${missedCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600'}">${missedCount > 0 ? 'Action Required' : 'None'}</span>
+                    </div>
+                    <p class="text-2xl font-bold ${missedCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-[var(--foreground)]'} mt-2">${missedCount} <span class="text-sm font-medium text-muted">Uncovered TDO${missedCount === 1 ? '' : 's'}</span></p>
+                </div>
+
+                ${notEvalCount > 0 ? `
+                <div class="p-4 rounded-xl bg-slate-500/10 border border-slate-500/30 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Not Evaluated</span>
+                        <span class="text-xs font-bold text-slate-400">No Synthetic Events</span>
+                    </div>
+                    <p class="text-2xl font-bold text-slate-400 mt-2">${notEvalCount} <span class="text-sm font-medium text-muted">TDO${notEvalCount === 1 ? '' : 's'}</span></p>
+                </div>` : ''}
+
+                <div class="p-4 rounded-xl bg-purple-500/10 border border-purple-500/25 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">Generated YARA-L Rules</span>
+                        <span class="text-xs font-bold text-purple-600 dark:text-purple-400">${totalSkippedTdos > 0 ? totalSkippedTdos + ' Skipped' : 'Compensating'}</span>
+                    </div>
+                    <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-2">${totalGeneratedRules} <span class="text-sm font-medium text-muted">New Rule${totalGeneratedRules === 1 ? '' : 's'}</span></p>
+                </div>
+            `;
+
+            document.getElementById('coverage-progress-bar').innerHTML = `
+                <div class="flex flex-wrap justify-between gap-2 text-xs font-semibold">
+                    <span class="text-emerald-600 dark:text-emerald-400">${coveredCount} Covered TDOs</span>
+                    <span class="flex flex-wrap gap-4">
+                        <span class="${missedCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted'}">${missedCount} Missed TDOs</span>
+                        ${notEvalCount > 0 ? `<span class="text-slate-500 dark:text-slate-400">${notEvalCount} Not Evaluated</span>` : ''}
+                    </span>
+                </div>
+                <div class="w-full h-2.5 bg-[var(--secondary)] rounded-full overflow-hidden flex">
+                    <div class="h-full bg-emerald-500 transition-all duration-500" style="width: ${coveredBarPct}%" title="Covered"></div>
+                    <div class="h-full bg-red-500/60 transition-all duration-500" style="width: ${missedBarPct}%" title="Missed"></div>
+                    <div class="h-full bg-slate-400/60 transition-all duration-500" style="width: ${notEvalBarPct}%" title="Not Evaluated"></div>
+                </div>
+            `;
+        }
+
+        function renderRuleRow(ruleId) {
+            const r = state.rulesById[ruleId];
+            if (!r) {
+                return `
+                    <div class="p-4 rounded-xl surface-subtle flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <code class="text-xs font-mono font-bold text-[var(--foreground)]">${escapeHtml(ruleId)}</code>
+                            <span class="text-xs text-muted italic">(Retrieving rule details via Get Rule...)</span>
+                        </div>
+                    </div>`;
+            }
+
+            const liveBadge = r.liveModeEnabled
+                ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live: Enabled
+                   </span>`
+                : `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-500 border border-slate-500/25">
+                     <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Live: Disabled
+                   </span>`;
+
+            const alertBadge = r.alertingEnabled
+                ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+                     🔔 Alerting: ON
+                   </span>`
+                : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+                     🔕 Alerting: OFF
+                   </span>`;
+
+            const execFailed = (r.executionState || '').includes('FAIL');
+            const execBadge = execFailed
+                ? `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/25">⚠️ ${escapeHtml(r.executionState)}</span>`
+                : (r.executionState && r.executionState !== 'UNKNOWN'
+                    ? `<span class="px-2.5 py-1 rounded-full text-xs font-mono font-medium surface-card text-muted">${escapeHtml(r.executionState)}</span>`
+                    : '');
+
+            return `
+                <div class="p-4 rounded-xl surface-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="space-y-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-sm font-bold text-[var(--foreground)]">${escapeHtml(r.displayName)}</span>
+                            <code class="text-xs font-mono px-2 py-0.5 rounded surface-card text-muted">${escapeHtml(r.ruleId)}</code>
+                            ${r.severity ? `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">${escapeHtml(r.severity)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        ${liveBadge}
+                        ${alertBadge}
+                        ${execBadge}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGeneratedRulesForTdo(tdoId) {
+            const key = tdoId.toLowerCase();
+            const skippedReason = state.skippedReasonsByTdo[key] || state.skippedReasonsByTdo['unmatched'];
+            const rules = state.generatedByTdo[key] || state.generatedByTdo['unmatched'] || [];
+
+            if (skippedReason && (!rules || rules.length === 0)) {
+                return `
+                    <div class="rounded-xl border border-blue-500/30 bg-blue-500/5 overflow-hidden shadow-sm">
+                        <div class="px-4 py-3 bg-blue-500/10 border-b border-blue-500/20 flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2.5">
+                                <span class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-600 text-white">ℹ️ YARA-L rule Generation Skipped</span>
+                                <code class="text-xs font-mono font-bold text-[var(--foreground)]">${escapeHtml(tdoId.toUpperCase())}</code>
+                            </div>
+                            <span class="text-xs font-semibold text-blue-600 dark:text-blue-400">Detection Engineering Guidance</span>
+                        </div>
+                        <div class="p-4 text-sm leading-relaxed text-[var(--foreground)]">
+                            <span class="font-semibold text-muted">Recommendation: </span>${escapeHtml(skippedReason)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (!rules || rules.length === 0) {
+                return `
+                    <div class="p-4 rounded-xl surface-subtle flex items-center gap-3 text-xs text-muted">
+                        <div class="animate-spin rounded-full h-4 w-4 border-2 border-purple-500 border-t-transparent shrink-0"></div>
+                        <span>Generating compensating YARA-L 2.0 rule for <strong>${escapeHtml(tdoId.toUpperCase())}</strong>...</span>
+                    </div>`;
+            }
+
+            return rules.map((r, idx) => {
+                const ruleText = typeof r === 'string' ? r : (r.ruleText || r.text || '');
+                const nameMatch = ruleText.match(/rule\s+([a-zA-Z0-9_]+)/);
+                const ruleName = nameMatch ? nameMatch[1] : `generated_${tdoId}_rule_${idx + 1}`;
+                const b64 = btoa(unescape(encodeURIComponent(ruleText)));
+
+                return `
+                    <div class="rounded-xl border border-purple-500/30 surface-card overflow-hidden shadow-sm">
+                        <div class="px-4 py-3 bg-purple-500/10 border-b border-purple-500/20 flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2.5">
+                                <span class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-purple-600 text-white">AI Generated YARA-L 2.0</span>
+                                <code class="text-xs font-mono font-bold text-[var(--foreground)]">${escapeHtml(ruleName)}</code>
+                            </div>
+                            <button onclick="copyCode(this, '${b64}')"
+                                class="px-3 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                                Copy YARA-L Rule
+                            </button>
+                        </div>
+                        <pre class="p-4 text-xs font-mono leading-relaxed overflow-x-auto max-h-96 surface-subtle border-0 text-[var(--foreground)] whitespace-pre-wrap break-all">${highlightYaraL(ruleText)}</pre>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderMainView() {
+            const container = document.getElementById('assessment-container');
+
+            const matchesByTdo = {};
+            state.coverageResults.forEach(item => {
+                const tid = (item.threatDetectionOpportunityId || '').toLowerCase();
+                const rid = (item.matchedRule || '').split('/').pop();
+                if (!tid || !rid) return;
+                if (!matchesByTdo[tid]) matchesByTdo[tid] = [];
+                if (!matchesByTdo[tid].includes(rid)) matchesByTdo[tid].push(rid);
+            });
+
+            if (state.viewMode === 'rules') {
+                const uniqueRuleIds = [...new Set(state.coverageResults.map(c => (c.matchedRule || '').split('/').pop()).filter(Boolean))];
+                if (uniqueRuleIds.length === 0) {
+                    container.innerHTML = `<div class="p-12 text-center surface-card rounded-2xl text-muted">0 Existing Rules Matched Across All TDOs.</div>`;
+                    return;
+                }
+                container.innerHTML = `
+                    <div class="surface-card rounded-2xl p-6 space-y-4 shadow-sm">
+                        <h2 class="text-lg font-bold text-[var(--foreground)]">Unique Matched Rules Inventory (${uniqueRuleIds.length})</h2>
+                        <div class="space-y-3">
+                            ${uniqueRuleIds.map(rid => renderRuleRow(rid)).join('')}
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            const filteredTdos = state.tdos.filter((tdo, idx) => {
+                const tid = (tdo.id || `t0${idx + 1}`).toLowerCase();
+                const status = getTdoStatus(tid, matchesByTdo);
+                if (state.viewMode === 'covered') return status === 'covered';
+                if (state.viewMode === 'gaps') return status === 'gap';
+                if (state.viewMode === 'noteval') return status === 'noteval';
+                return true;
+            });
+
+            if (filteredTdos.length === 0) {
+                container.innerHTML = `<div class="p-12 text-center surface-card rounded-2xl text-muted">No TDOs in this view.</div>`;
+                return;
+            }
+
+            container.innerHTML = filteredTdos.map((tdo, idx) => {
+                const tid = (tdo.id || `t0${idx + 1}`).toLowerCase();
+                const matchedRuleIds = matchesByTdo[tid] || [];
+                const status = getTdoStatus(tid, matchesByTdo);
+                const isCovered = status === 'covered';
+                const mitre = tdo.mitreInfo || {};
+
+                if (status === 'noteval') {
+                    return `
+                <div class="surface-card border-slate-500/40 rounded-2xl shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 bg-slate-500/10 border-b border-slate-500/25 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-500 text-white">
+                                ${escapeHtml(tid.toUpperCase())}
+                            </span>
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-lg surface-card">
+                                ${escapeHtml((mitre.techniques || [])[0] || mitre.platform || 'TDO')}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-slate-500/15 text-slate-400 border border-slate-500/30">
+                                ⊘ Not Evaluated (No Synthetic Events)
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="p-6 space-y-5">
+                        <p class="text-base font-bold text-[var(--foreground)] leading-snug">${escapeHtml(tdo.summary)}</p>
+                        <div class="p-4 rounded-xl bg-slate-500/10 border border-slate-500/30 text-sm leading-relaxed text-[var(--foreground)] space-y-2">
+                            <p><span class="font-semibold">Rule coverage could not be evaluated for this TDO.</span> No synthetic events could be generated, typically because no parser exists in this tenant for the log source required by the TDO${(tdo.logTypes || []).length ? ` (<code class="text-xs font-mono">${escapeHtml(tdo.logTypes.join(', '))}</code>)` : ''}. No YARA-L rule was generated.</p>
+                            <p class="text-xs text-muted"><span class="font-semibold">Reason:</span> ${escapeHtml(state.notEvaluated[tid])}</p>
+                            <p class="text-xs text-muted"><span class="font-semibold">Next step:</span> onboard the log source (or enable its parser) and re-run the playbook to assess coverage for this TDO.</p>
+                        </div>
+                    </div>
+                </div>`;
+                }
+
+                return `
+                <div class="surface-card ${isCovered ? '' : 'border-red-500/40'} rounded-2xl shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 ${isCovered ? 'bg-emerald-500/10 border-b border-[var(--border)]' : 'bg-red-500/10 border-b border-red-500/25'} flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold ${isCovered ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}">
+                                ${escapeHtml(tid.toUpperCase())}
+                            </span>
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-lg surface-card">
+                                ${escapeHtml((mitre.techniques || [])[0] || mitre.platform || 'TDO')}
+                            </span>
+                        </div>
+                        <div>
+                            ${isCovered
+                                ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                     ✓ Covered (${matchedRuleIds.length} Matched Rule${matchedRuleIds.length > 1 ? 's' : ''})
+                                   </span>`
+                                : `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
+                                     ✕ Coverage Gap (0 Matched Rules)
+                                   </span>`
+                            }
+                        </div>
+                    </div>
+
+                    <div class="p-6 space-y-5">
+                        <p class="text-base font-bold text-[var(--foreground)] leading-snug">${escapeHtml(tdo.summary)}</p>
+
+                        ${isCovered ? `
+                            <div class="space-y-3">
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-muted">
+                                    Matched Existing Chronicle Rules (${matchedRuleIds.length})
+                                </h4>
+                                <div class="space-y-2.5">
+                                    ${matchedRuleIds.map(rid => renderRuleRow(rid)).join('')}
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                                        Compensating Control — Relative Generated YARA-L 2.0 Rule(s) for ${escapeHtml(tid.toUpperCase())}
+                                    </h4>
+                                </div>
+                                ${renderGeneratedRulesForTdo(tid)}
+                            </div>
+                        `}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // SOAR Host Theme Listener
+        const soarThemes = {
+            light: { '--background': '#f8fafc', '--foreground': '#0f172a', '--card': '#ffffff', '--secondary': '#f1f5f9', '--muted-foreground': '#64748b', '--border': '#e2e8f0' },
+            dark: { '--background': '#020817', '--foreground': '#f8fafc', '--card': '#0f172a', '--secondary': '#1e293b', '--muted-foreground': '#94a3b8', '--border': '#1e293b' }
+        };
+        function isColorDark(hexColor) {
+            if (!hexColor || hexColor.length < 4) return false;
+            let hex = hexColor.replace('#', '');
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            const r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16);
+            return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+        }
+        window.addEventListener('message', evt => {
+            if (evt.data && evt.data.background) {
+                const dark = isColorDark(evt.data.background);
+                const t = dark ? soarThemes.dark : soarThemes.light;
+                for (const [k, v] of Object.entries(t)) document.documentElement.style.setProperty(k, v);
+                document.documentElement.classList.toggle('dark', dark);
+            }
+        });
+
+        const rawTdo = loadSoarJson('soar-tdo-data');
+        const rawLro = loadSoarJson('soar-lro-data');
+        const rawMatchedRules = loadSoarJson('soar-matched-rules');
+        const rawGenBundle = loadSoarJson('soar-generated-rules-bundle');
+        const rawLastGen = loadSoarJson('soar-last-generated-rule');
+        const rawEventsBundle = loadSoarJson('soar-events-bundle');
+
+        if (!rawTdo) {
+            renderPendingState('Waiting for "Generate TDO" Step...', 'Coverage assessment will begin after TDOs and synthetic events are generated.');
+        } else if (!rawLro || !isLroDone(rawLro)) {
+            renderPendingState('Evaluating Rule Coverage in Chronicle...', 'Long-Running Operation (Get Operation) is currently in progress. Results will appear once done = true.');
+        } else {
+            state.tdos = parseTdos(rawTdo);
+            state.coverageResults = parseCoverageResults(rawLro);
+            state.rulesById = parseMatchedRules(rawMatchedRules);
+            state.notEvaluated = parseNotEvaluated(rawEventsBundle);
+
+            const coveredSet = new Set(state.coverageResults.map(c => (c.threatDetectionOpportunityId || '').toLowerCase()));
+            const missingIds = state.tdos
+                .map((t, i) => (t.id || `t0${i + 1}`).toLowerCase())
+                .filter(id => !coveredSet.has(id) && !state.notEvaluated[id]);
+
+            const parsedGen = parseGeneratedRulesAndReasons(rawGenBundle, rawLastGen, missingIds);
+            state.generatedByTdo = parsedGen.byTdo;
+            state.skippedReasonsByTdo = parsedGen.skippedReasonsByTdo;
+
+            renderScoreboard();
+            renderMainView();
+        }
+    </script>
+</body>
+</html>
