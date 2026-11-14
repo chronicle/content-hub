@@ -6,6 +6,22 @@ from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
+
+from socradar_xti.connectors import SOCRadarAlarmsConnector as mod
+from socradar_xti.connectors.SOCRadarAlarmsConnector import (
+    RISK_SCORE_MAP,
+    SOAR_PRIORITY_MAP,
+    _extract_indicators,
+    _is_public_ip,
+    _parse_date,
+    _parse_date_safe,
+    _parse_int_csv,
+    _safe_str,
+    _split_csv,
+    build_alert,
+)
+
 
 def _make_alarm(
     alarm_id: int = 12345, risk: str = "HIGH", status: str = "OPEN", date: str = "2026-05-26 12:00:00"
@@ -44,7 +60,6 @@ def _make_alarm(
 
 
 def test_parse_date() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import _parse_date
 
     # Valid date
     ts = _parse_date("2026-05-26 12:00:00")
@@ -53,21 +68,18 @@ def test_parse_date() -> None:
 
 
 def test_parse_date_none() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import _parse_date
 
     ts = _parse_date(None)
     assert ts > 0  # Returns unix_now()
 
 
 def test_parse_date_invalid() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import _parse_date
 
     ts = _parse_date("not-a-date")
     assert ts > 0  # Returns unix_now()
 
 
 def test_parse_date_safe() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import _parse_date_safe
 
     assert _parse_date_safe(None) == 0
     assert _parse_date_safe("invalid") == 0
@@ -75,7 +87,6 @@ def test_parse_date_safe() -> None:
 
 
 def test_is_public_ip() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import _is_public_ip
 
     assert _is_public_ip("8.8.8.8") is True
     assert _is_public_ip("192.168.1.1") is False
@@ -85,7 +96,6 @@ def test_is_public_ip() -> None:
 
 
 def test_split_csv() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import _split_csv
 
     assert _split_csv(None) == []
     assert _split_csv("a,b,c") == ["a", "b", "c"]
@@ -94,7 +104,6 @@ def test_split_csv() -> None:
 
 
 def test_safe_str() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import _safe_str
 
     assert _safe_str(None) == ""
     assert _safe_str("hello") == "hello"
@@ -106,7 +115,6 @@ def test_safe_str() -> None:
 
 
 def test_extract_indicators() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import _extract_indicators
 
     alarm = _make_alarm()
     indicators = _extract_indicators(alarm)
@@ -115,7 +123,6 @@ def test_extract_indicators() -> None:
 
 
 def test_extract_indicators_empty() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import _extract_indicators
 
     alarm = {"content": {}, "alarm_text": ""}
     indicators = _extract_indicators(alarm)
@@ -127,7 +134,6 @@ def test_extract_indicators_empty() -> None:
 
 
 def test_build_alert() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import build_alert
 
     siemplify = MagicMock()
     siemplify.extract_connector_param = MagicMock(return_value="")
@@ -147,7 +153,6 @@ def test_build_alert() -> None:
 
 
 def test_build_alert_no_indicators() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import build_alert
 
     siemplify = MagicMock()
     siemplify.extract_connector_param = MagicMock(return_value="")
@@ -160,7 +165,6 @@ def test_build_alert_no_indicators() -> None:
 
 
 def test_build_alert_missing_atd() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import build_alert
 
     siemplify = MagicMock()
     siemplify.extract_connector_param = MagicMock(return_value="")
@@ -176,7 +180,6 @@ def test_build_alert_missing_atd() -> None:
 
 
 def test_risk_score_mapping() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import RISK_SCORE_MAP
 
     assert RISK_SCORE_MAP["CRITICAL"] == 90
     assert RISK_SCORE_MAP["HIGH"] == 70
@@ -186,13 +189,11 @@ def test_risk_score_mapping() -> None:
 
 
 def test_soar_priority_mapping() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import SOAR_PRIORITY_MAP
 
     assert SOAR_PRIORITY_MAP == {"CRITICAL": 100, "HIGH": 80, "MEDIUM": 60, "LOW": 40, "INFO": -1}
 
 
 def test_build_alert_unknown_risk_level_defaults_to_medium() -> None:
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import build_alert
 
     siemplify = MagicMock()
     siemplify.context.connector_info.environment = "Default Environment"
@@ -206,9 +207,6 @@ def test_build_alert_unknown_risk_level_defaults_to_medium() -> None:
 
 
 def test_parse_int_csv() -> None:
-    import pytest
-
-    from socradar_xti.connectors.SOCRadarAlarmsConnector import _parse_int_csv
 
     assert _parse_int_csv("", "X") is None
     assert _parse_int_csv(None, "X") is None
@@ -217,9 +215,7 @@ def test_parse_int_csv() -> None:
         _parse_int_csv("12, abc", "X")
 
 
-def test_main_passes_type_filters_to_api(monkeypatch) -> None:
-    from socradar_xti.connectors import SOCRadarAlarmsConnector as mod
-
+def test_main_passes_type_filters_to_api(monkeypatch: pytest.MonkeyPatch) -> None:
     params = {
         "API Key": "k",
         "Company ID": "330",
@@ -250,9 +246,7 @@ def test_main_passes_type_filters_to_api(monkeypatch) -> None:
     assert kwargs["excluded_alarm_type_ids"] == [7]
 
 
-def test_main_empty_type_filters_send_nothing(monkeypatch) -> None:
-    from socradar_xti.connectors import SOCRadarAlarmsConnector as mod
-
+def test_main_empty_type_filters_send_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     siemplify = MagicMock()
     siemplify.extract_connector_param.side_effect = lambda name, default_value=None, input_type=None: {
         "API Key": "k",

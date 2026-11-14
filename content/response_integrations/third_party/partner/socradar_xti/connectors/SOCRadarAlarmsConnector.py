@@ -74,7 +74,7 @@ def _parse_int_csv(val: str | None, param_name: str) -> list[int] | None:
     except ValueError:
         raise ValueError(
             f"{param_name} must be a comma-separated list of numeric alarm type IDs, got: {val!r}"
-        )
+        ) from None
 
 
 def _is_public_ip(ip: str) -> bool:
