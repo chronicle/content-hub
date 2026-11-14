@@ -74,11 +74,16 @@ def main() -> None:
         for entity in user_entities(siemplify):
             identifier = entity.identifier.strip()
             if is_email(identifier):
-                entities.setdefault(identifier, []).append(entity)
+                # Case variants of one address share a single lookup.
+                entities.setdefault(identifier.lower(), []).append(entity)
             else:
                 unsupported.append(identifier)
+        if entities:
+            # Fail fast on a bad key instead of fanning out N failing lookups.
+            manager.test_connectivity()
         lookups = map_concurrently(lambda email: lookup_user_summary(manager, email), list(entities))
-        for identifier, summary, error in lookups:
+        for key, summary, error in lookups:
+            identifier = entities[key][0].identifier.strip()  # first-seen spelling, for messages/results
             if isinstance(error, RansomLeakAuthError):
                 raise error
             if error is not None:
@@ -90,7 +95,7 @@ def main() -> None:
                 not_found.append(identifier)
                 continue
             json_results[identifier] = summary
-            for entity in entities[identifier]:
+            for entity in entities[key]:
                 entity.additional_properties.update(enrichment_properties(summary))
                 entity.is_enriched = True
                 if create_insight:

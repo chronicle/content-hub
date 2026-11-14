@@ -87,6 +87,26 @@ def user_entities(siemplify: SiemplifyAction) -> list[Any]:
     return [e for e in siemplify.target_entities if e.entity_type == EntityTypes.USER]
 
 
+def unique_values(csv_value: str | None) -> list[str]:
+    """Split a comma-separated parameter, deduped case-insensitively (first-seen spelling kept).
+
+    Args:
+        csv_value: The raw comma-separated parameter.
+
+    Returns:
+        The distinct values, in input order.
+
+    """
+    return _dedupe_casefold(string_to_multi_value(csv_value, only_unique=True))
+
+
+def _dedupe_casefold(values: list[str]) -> list[str]:
+    seen: dict[str, str] = {}
+    for value in values:
+        seen.setdefault(value.lower(), value)
+    return list(seen.values())
+
+
 def collect_emails(siemplify: SiemplifyAction, csv_value: str | None) -> tuple[list[str], list[str]]:
     """Collect email addresses from USER entities plus a comma-separated parameter.
 
@@ -100,9 +120,9 @@ def collect_emails(siemplify: SiemplifyAction, csv_value: str | None) -> tuple[l
     """
     candidates = [e.identifier.strip() for e in user_entities(siemplify)]
     candidates += string_to_multi_value(csv_value, only_unique=True)
-    # Deduped once here (first-seen order); emails case-insensitively.
+    # Deduped once here (first-seen order), case-insensitively; emails are lower-cased.
     emails = list(dict.fromkeys(c.lower() for c in candidates if is_email(c)))
-    skipped = list(dict.fromkeys(c for c in candidates if not is_email(c)))
+    skipped = _dedupe_casefold([c for c in candidates if not is_email(c)])
     return emails, skipped
 
 

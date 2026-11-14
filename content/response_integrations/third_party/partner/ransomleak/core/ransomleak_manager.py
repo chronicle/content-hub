@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import re
+import threading
 from typing import Any
 from urllib.parse import urljoin
 
@@ -76,14 +77,25 @@ class RansomLeakManager:
         """
         self.api_root = api_root.rstrip("/") + "/"
         self.timeout = timeout
-        self.session = requests.Session()
-        self.session.verify = verify_ssl
-        self.session.headers.update({
+        self._verify_ssl = verify_ssl
+        self._headers = {
             "Authorization": f"Bearer {api_key}",
             "Accept": "application/json",
             "Content-Type": "application/json",
             "User-Agent": "RansomLeak-GoogleSecOps/1.0",
-        })
+        }
+        self._local = threading.local()
+
+    @property
+    def session(self) -> requests.Session:
+        """Return this thread's HTTP session (requests.Session is not thread-safe)."""
+        session = getattr(self._local, "session", None)
+        if session is None:
+            session = requests.Session()
+            session.verify = self._verify_ssl
+            session.headers.update(self._headers)
+            self._local.session = session
+        return session
 
     def _url(self, endpoint: str, **kwargs: str) -> str:
         return urljoin(self.api_root, ENDPOINTS[endpoint].format(**kwargs).lstrip("/"))
@@ -140,11 +152,17 @@ class RansomLeakManager:
     def test_connectivity(self) -> bool:
         """Call an authenticated endpoint so an invalid key fails.
 
+        Falls back to the Grafana health probe on backends that predate
+        `/api/integration/health` (404).
+
         Returns:
             True when the API key is accepted.
 
         """
-        self._request("GET", "health")
+        try:
+            self._request("GET", "health")
+        except RansomLeakNotFoundError:
+            self._request("GET", "legacy_health")
         return True
 
     # ------------------------------------------------------------------ users

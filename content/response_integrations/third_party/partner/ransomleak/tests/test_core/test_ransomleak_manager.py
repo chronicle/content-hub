@@ -61,6 +61,18 @@ class TestConnectivity:
         with pytest.raises(RansomLeakAuthError, match="HTTP 401"):
             RansomLeakManager(API_ROOT, "bad-key").test_connectivity()
 
+    def test_falls_back_to_grafana_health_on_older_backend(
+        self, manager: RansomLeakManager, ransomleak: RansomLeak, script_session: RansomLeakSession
+    ) -> None:
+        ransomleak.health_endpoint_available = False
+        assert manager.test_connectivity() is True
+        assert script_session.request_history[-1].request.url.path == "/api/integration/grafana/health"
+
+    def test_fallback_still_rejects_invalid_key(self, ransomleak: RansomLeak) -> None:
+        ransomleak.health_endpoint_available = False
+        with pytest.raises(RansomLeakAuthError, match="HTTP 401"):
+            RansomLeakManager(API_ROOT, "bad-key").test_connectivity()
+
     def test_api_root_trailing_slash_is_normalised(self, script_session: RansomLeakSession) -> None:
         RansomLeakManager(f"{API_ROOT}/", VALID_API_KEY).test_connectivity()
         assert script_session.request_history[-1].request.url.geturl() == f"{API_ROOT}/api/integration/health"

@@ -34,6 +34,7 @@ class RansomLeak:
     enrollments: list[dict[str, Any]] = dataclasses.field(default_factory=list)
     risks: dict[str, dict[str, Any]] = dataclasses.field(default_factory=dict)
     risk_endpoint_available: bool = True
+    health_endpoint_available: bool = True
     api_key: str = VALID_API_KEY
 
     def add_user(self, user: dict[str, Any], analytics: dict[str, Any] | None = None) -> None:

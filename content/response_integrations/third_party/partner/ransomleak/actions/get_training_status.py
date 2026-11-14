@@ -21,11 +21,18 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param
-from TIPCommon.transformation import construct_csv, string_to_multi_value
+from TIPCommon.transformation import construct_csv
 
 from ..core.constants import GET_TRAINING_STATUS_SCRIPT_NAME, SUMMARY_FIELDS
 from ..core.exceptions import RansomLeakNotFoundError, RansomLeakValidationError
-from ..core.utils import build_manager, collect_emails, lookup_user_summary, map_concurrently, section
+from ..core.utils import (
+    build_manager,
+    collect_emails,
+    lookup_user_summary,
+    map_concurrently,
+    section,
+    unique_values,
+)
 
 ACTION_NAME = "Get Training Status"
 UUID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
@@ -45,12 +52,14 @@ def main() -> None:
     status = EXECUTION_STATE_COMPLETED
     try:
         emails, skipped = collect_emails(siemplify, emails_csv)
-        assignment_ids = string_to_multi_value(assignment_ids_csv, only_unique=True)
+        assignment_ids = unique_values(assignment_ids_csv)
         if not emails and not assignment_ids:
             msg = "Provide User entities with email identifiers, 'Email Addresses' or 'Assignment IDs'."
             raise RansomLeakValidationError(msg)
 
         manager = build_manager(siemplify)
+        # Fail fast on a bad key instead of fanning out N failing lookups.
+        manager.test_connectivity()
         users: list[dict[str, Any]] = []
         not_found: list[str] = []
         for email, summary, error in map_concurrently(lambda e: lookup_user_summary(manager, e), emails):
@@ -62,14 +71,15 @@ def main() -> None:
                 users.append(summary)
 
         assignments: list[dict[str, Any]] = []
-        for assignment_id in assignment_ids:
-            if not UUID_PATTERN.match(assignment_id):
+        valid_ids = [a for a in assignment_ids if UUID_PATTERN.match(a)]
+        not_found += [a for a in assignment_ids if not UUID_PATTERN.match(a)]
+        for assignment_id, assignment, error in map_concurrently(manager.get_assignment, valid_ids):
+            if isinstance(error, RansomLeakNotFoundError):
                 not_found.append(assignment_id)
-                continue
-            try:
-                assignments.append(manager.get_assignment(assignment_id))
-            except RansomLeakNotFoundError:
-                not_found.append(assignment_id)
+            elif error is not None:
+                raise error
+            else:
+                assignments.append(assignment)
 
         siemplify.result.add_result_json({
             "users": users,

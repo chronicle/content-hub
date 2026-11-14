@@ -37,6 +37,7 @@ class RansomLeakSession(MockSession[MockRequest, MockResponse, RansomLeak]):
     def get_routed_functions(self) -> Iterable[RouteFunction[Response]]:
         return [
             self.health,
+            self.grafana_health,
             self.list_users,
             self.user_analytics,
             self.user_risk,
@@ -56,6 +57,14 @@ class RansomLeakSession(MockSession[MockRequest, MockResponse, RansomLeak]):
 
     @router.get(rf"{PREFIX}/health")
     def health(self, request: MockRequest) -> MockResponse:
+        if not self._product.health_endpoint_available:
+            return MockResponse(content={"message": "Cannot GET /api/integration/health"}, status_code=404)
+        if not self._authorized(request):
+            return self._unauthorized()
+        return MockResponse(content={"status": "ok"})
+
+    @router.get(rf"{PREFIX}/grafana/health")
+    def grafana_health(self, request: MockRequest) -> MockResponse:
         if not self._authorized(request):
             return self._unauthorized()
         return MockResponse(content={"status": "ok"})

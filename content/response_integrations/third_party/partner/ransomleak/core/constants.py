@@ -31,6 +31,8 @@ LIST_LEARNING_PATHS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - List Learning Path
 API_PREFIX: str = "/api/integration"
 ENDPOINTS: dict[str, str] = {
     "health": f"{API_PREFIX}/health",
+    # Older backends only expose the Grafana data-source probe; Ping falls back to it on 404.
+    "legacy_health": f"{API_PREFIX}/grafana/health",
     "users": f"{API_PREFIX}/users",
     "user": f"{API_PREFIX}/users/{{user_id}}",
     "user_analytics": f"{API_PREFIX}/users/{{user_id}}/analytics",
