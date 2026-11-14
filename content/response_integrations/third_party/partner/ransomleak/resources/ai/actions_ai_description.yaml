@@ -1,0 +1,712 @@
+# Copyright 2026 RansomLeak
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Assign Training:
+  ai_description: >-
+    ### General Description
+
+
+    Assigns RansomLeak security awareness training to users involved in a case. Either enrolls
+    the users in a RansomLeak learning path (selected by ID or exact name, with an optional
+    deadline) or creates a one-off remediation assignment for a single exercise, which emails
+    the user a signed link to the exercise.
+
+
+
+    ### Flow Description
+
+
+    1. Reads the Learning Path, Exercise Slug, Email Addresses and Due In Days parameters
+    and validates that exactly one of Learning Path or Exercise Slug is set.
+
+
+    2. Collects email addresses from User entities in scope and the Email Addresses parameter,
+    skipping values that are not email addresses.
+
+
+    3. For a learning path: resolves the learning path (`GET /api/integration/learning-paths`)
+    and enrolls users by email (`POST /api/integration/learning-paths/{id}/enrollments`),
+    mapping the per-user results (enrolled, already_enrolled, skipped_unlicensed, not_found).
+
+
+    4. For an exercise: creates an assignment per user (`POST /api/integration/assignments`)
+    with an idempotency key derived from the case, exercise and email, so re-runs return the
+    same assignment.
+
+
+    5. Returns a JSON result with per-user outcomes and assignment IDs.
+
+
+
+    ### Additional Notes
+
+
+    Users must already exist in RansomLeak; they are matched by email address
+    (case-insensitive).
+  ai_short_description: >-
+    Enrolls users in a RansomLeak learning path or assigns them a remediation exercise.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Enrolls users in a RansomLeak learning path or creates exercise assignments in RansomLeak,
+      which may email the user.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action sends POST requests that create enrollments or assignments in RansomLeak,
+      mutating external data. It reads users and learning paths but does not update entities,
+      insights or alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over target entities, keeps those with `entity_type == USER` and
+      uses identifiers that are valid email addresses.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: true
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+    reasoning: >-
+      The action assigns training in RansomLeak; exercise assignments email the user a training
+      link, the closest outcome is Send Email.
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+
+    | --- | --- | --- | --- |
+
+
+    | Learning Path | String | No | ID or exact name of the learning path to enroll users
+    in. |
+
+
+    | Exercise Slug | String | No | Slug of a single exercise to assign as a remediation assignment.
+    |
+
+
+    | Email Addresses | String | No | Comma-separated email addresses in addition to User
+    entities. |
+
+
+    | Due In Days | String | No | Deadline for learning path enrollment in days from now (1-365).
+    |
+Enrich Users:
+  ai_description: >-
+    ### General Description
+
+
+    Enriches User entities with RansomLeak security awareness training data, including exercises
+    completed, learning time, campaign completion, in-progress and overdue counts, average
+    quiz score and the most recent completion, plus the user's Human Risk Score
+    (`RansomLeak_risk_score`) and risk level (`RansomLeak_risk_level`).
+
+
+
+    ### Flow Description
+
+
+    1. Reads the Create Insight parameter.
+
+
+    2. Iterates over User entities whose identifier is an email address.
+
+
+    3. Looks up each user by email (`GET /api/integration/users?email=`) and fetches training
+    analytics (`GET /api/integration/users/{id}/analytics`) and the Human Risk Score
+    (`GET /api/integration/users/{id}/risk`).
+
+
+    4. Adds `RansomLeak_`-prefixed properties to the entity, marks it as enriched and optionally
+    creates an insight.
+
+
+    5. Updates the entities and returns a JSON result per entity.
+
+
+
+    ### Additional Notes
+
+
+    Users that do not exist in RansomLeak are reported as not found without failing the action.
+    Risk fields are omitted when risk scoring is disabled, no score has been calculated yet, or
+    the RansomLeak version does not expose risk scores.
+  ai_short_description: Enriches User entities with RansomLeak training status.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates User entity additional properties and the is_enriched flag, and optionally creates
+      insights.
+    reasoning: >-
+      The action only reads from RansomLeak (GET requests) and updates entity properties and
+      insights in Google SecOps.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over target entities, keeps those with `entity_type == USER` and
+      processes only identifiers that are valid email addresses.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+    reasoning: >-
+      The action enriches User entities with contextual training data, which matches Enrich
+      Asset.
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+
+    | --- | --- | --- | --- |
+
+
+    | Create Insight | Boolean | No | If enabled, creates an insight with the training summary
+    for each enriched user. |
+Get Training Status:
+  ai_description: >-
+    ### General Description
+
+
+    Retrieves RansomLeak training progress for users and remediation assignments.
+
+
+
+    ### Flow Description
+
+
+    1. Collects email addresses from User entities and the Email Addresses parameter, and
+    assignment IDs from the Assignment IDs parameter.
+
+
+    2. For each email, looks up the user (`GET /api/integration/users?email=`), their analytics
+    (`GET /api/integration/users/{id}/analytics`) and Human Risk Score
+    (`GET /api/integration/users/{id}/risk`; skipped when unavailable).
+
+
+    3. For each assignment ID, fetches its status (`GET /api/integration/assignments/{id}`).
+
+
+    4. Returns a JSON result and data tables with the training status.
+
+
+
+    ### Additional Notes
+
+
+    Entities are not updated; use Enrich Users for entity enrichment.
+  ai_short_description: Gets RansomLeak training progress for users and assignment IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only performs GET requests against RansomLeak and returns results; it does
+      not mutate data or update entities.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over target entities, keeps those with `entity_type == USER` and
+      uses identifiers that are valid email addresses.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+    reasoning: >-
+      The action reports training status and does not match an enrichment or response outcome.
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+
+    | --- | --- | --- | --- |
+
+
+    | Email Addresses | String | No | Comma-separated email addresses in addition to User
+    entities. |
+
+
+    | Assignment IDs | String | No | Comma-separated assignment IDs returned by Assign Training.
+    |
+List Learning Paths:
+  ai_description: >-
+    ### General Description
+
+
+    Lists the published RansomLeak learning paths that users can be enrolled in.
+
+
+
+    ### Flow Description
+
+
+    1. Fetches learning paths (`GET /api/integration/learning-paths`).
+
+
+    2. Filters them by name using Filter Value and limits the output to Max Results To Return.
+
+
+    3. Returns a JSON result and a data table.
+  ai_short_description: Lists RansomLeak learning paths with their IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only performs a GET request and returns the list; it does not mutate data
+      or use entities.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: The action does not use entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+    reasoning: The action lists configuration data and does not match an outcome category.
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+
+    | --- | --- | --- | --- |
+
+
+    | Filter Value | String | No | Case-insensitive substring to match against learning path
+    names. |
+
+
+    | Max Results To Return | String | No | Maximum number of learning paths to return. Default
+    is 50. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+
+    Tests connectivity to RansomLeak with the configured API Root, API Key and Verify SSL
+    parameters.
+
+
+
+    ### Flow Description
+
+
+    1. Builds the RansomLeak client from the integration configuration.
+
+
+    2. Sends an authenticated GET request (`/api/integration/grafana/health`) so an invalid
+    API key fails.
+
+
+    3. Completes with a success message, or fails with the error.
+  ai_short_description: Tests connectivity to the RansomLeak API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only verifies connectivity with a GET request; it fetches no contextual data
+      and mutates nothing.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: The action does not use entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+    reasoning: Ping does not match any outcome category.
+  parameters_description: There are no parameters for this action
