@@ -1,154 +1,72 @@
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
+from ..core.base_action import RubrikAction, validate_uuid_param
+from ..core.constants import STATUS_ENUM_MAP, UPDATE_VIOLATION_STATUS_SCRIPT_NAME
+from ..core.rubrik_exceptions import InvalidValueException
 
-from ..core.api_manager import APIManager
-from ..core.constants import (
-    COMMON_ACTION_ERROR_MESSAGE,
-    RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE,
-    STATUS_ENUM_MAP,
-    UPDATE_VIOLATION_STATUS_SCRIPT_NAME,
-)
-from ..core.rubrik_exceptions import (
-    GraphQLQueryException,
-    InvalidValueException,
-    RubrikException,
-    UnauthorizedErrorException,
-)
-from ..core.utils import (
-    format_authentication_failure_message,
-    format_graphql_error_message,
-    get_integration_params,
-    validate_required_string,
-    validate_uuid_format,
-)
+VALID_STATUS_LABELS: list[str] = list(STATUS_ENUM_MAP.keys())
 
 
-@output_handler
-def main() -> None:
-    siemplify = SiemplifyAction()
-    siemplify.script_name = UPDATE_VIOLATION_STATUS_SCRIPT_NAME
-    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
+class UpdateViolationStatus(RubrikAction):
+    graphql_error_prefix = "Failed to update violation status"
 
-    output_message = ""
-    status = EXECUTION_STATE_COMPLETED
-    result_value = RESULT_VALUE_TRUE
-    json_results: dict = {}
+    def __init__(self) -> None:
+        super().__init__(UPDATE_VIOLATION_STATUS_SCRIPT_NAME)
 
-    try:
-        service_account_json, verify_ssl = get_integration_params(siemplify)
+    def _extract_action_parameters(self) -> None:
+        super()._extract_action_parameters()
+        self.params.violation_id = self._extract_string_param("Violation ID", is_mandatory=True)
+        self.params.new_status_label = self._extract_string_param("New Status", is_mandatory=True)
 
-        violation_id = siemplify.extract_action_param(
-            param_name="Violation ID",
-            input_type=str,
-            is_mandatory=True,
-            print_value=True,
-        )
-        new_status_label = siemplify.extract_action_param(
-            param_name="New Status",
-            input_type=str,
-            is_mandatory=True,
-            print_value=True,
-        )
+    def _validate_params(self) -> None:
+        self.params.violation_id = validate_uuid_param(self.params.violation_id, "Violation ID")
+        self.params.new_status = validate_new_status(self.params.new_status_label)
 
-        siemplify.LOGGER.info("----------------- Main - Started -----------------")
-
-        violation_id = validate_required_string(violation_id, "Violation ID")
-        violation_id = validate_uuid_format(violation_id, "Violation ID")
-        new_status_api = validate_new_status(new_status_label)
-
-        manager = APIManager(
-            service_account_json,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
-
+    def _perform_action(self, _: object = None) -> None:
+        violation_id: str = self.params.violation_id
         # bulkUpdatePolicyViolations is shared across DSPM and IR violation types —
         # RSC's mutation only cares about policyViolationIds + newPolicyViolationStatus,
         # so this single action works for a violation ID from either source.
-        manager.update_violation_status(
+        self.api_client.update_violation_status(
             violation_ids=[violation_id],
-            new_status=new_status_api,
+            new_status=self.params.new_status,
         )
 
-        output_message = (
-            f"Violation status updated to '{new_status_label}' "
+        self.output_message = (
+            f"Violation status updated to '{self.params.new_status_label}' "
             f"for violation ID: {violation_id}."
         )
-        siemplify.LOGGER.info(output_message)
-
-    except (InvalidValueException, ValueError) as e:
-        output_message = str(e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-
-    except UnauthorizedErrorException as e:
-        output_message = format_authentication_failure_message(e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    except GraphQLQueryException as e:
-        output_message = format_graphql_error_message(
-            "Failed to update violation status", e
-        )
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    except RubrikException as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            UPDATE_VIOLATION_STATUS_SCRIPT_NAME, e
-        )
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    except Exception as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            UPDATE_VIOLATION_STATUS_SCRIPT_NAME, e
-        )
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    finally:
-        siemplify.result.add_result_json(json_results)
-        siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-        siemplify.LOGGER.info(f"Status: {status}")
-        siemplify.LOGGER.info(f"result_value: {result_value}")
-        siemplify.LOGGER.info(f"Output Message: {output_message}")
-        siemplify.end(output_message, result_value, status)
+        self.logger.info(self.output_message)
 
 
-def validate_new_status(new_status_label) -> str:
+def validate_new_status(new_status_label: str | None) -> str:
     """Validate & map the New Status parameter per the Update Violation Status spec.
+
+    Args:
+        new_status_label: Raw New Status label, e.g. "In Progress".
+
+    Returns:
+        The matching RSC policy violation status enum value.
 
     Raises:
         InvalidValueException: With the exact wording required by the action's
             case wall output message contract.
     """
-    valid_labels = list(STATUS_ENUM_MAP.keys())
-
     if not new_status_label or not new_status_label.strip():
-        raise InvalidValueException(f"New Status is required. Valid values: {valid_labels}")
+        raise InvalidValueException(f"New Status is required. Valid values: {VALID_STATUS_LABELS}")
 
     new_status_label = new_status_label.strip()
     if new_status_label not in STATUS_ENUM_MAP:
         raise InvalidValueException(
             f"Invalid value '{new_status_label}' for parameter 'New Status'. "
-            f"Valid values: {valid_labels}"
+            f"Valid values: {VALID_STATUS_LABELS}"
         )
 
     return STATUS_ENUM_MAP[new_status_label]
+
+
+def main() -> None:
+    UpdateViolationStatus().run()
 
 
 if __name__ == "__main__":

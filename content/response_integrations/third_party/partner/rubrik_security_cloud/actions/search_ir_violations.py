@@ -1,33 +1,21 @@
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from typing import TYPE_CHECKING
 
-from ..core.api_manager import APIManager
+from TIPCommon.base.action.data_models import DataTable
+from TIPCommon.transformation import construct_csv
+
+from ..core.base_action import RubrikAction
 from ..core.constants import (
-    COMMON_ACTION_ERROR_MESSAGE,
     DEFAULT_MAX_RESULTS,
     ERROR_DETECTION_DATE_ORDER,
     ERROR_UPDATE_DATE_ORDER,
     MAX_TABLE_RECORDS,
     MAX_VIOLATIONS,
-    RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE,
     SEARCH_IR_VIOLATIONS_SCRIPT_NAME,
 )
-from ..core.datamodels import IRViolation
-from ..core.rubrik_exceptions import (
-    GraphQLQueryException,
-    InvalidIntegerException,
-    InvalidValueException,
-    RubrikException,
-    UnauthorizedErrorException,
-)
-from ..core.utils import (
-    format_authentication_failure_message,
-    format_graphql_error_message,
-    get_integration_params,
+from ..core.validators import (
+    parse_connection,
     parse_dspm_severity_param,
     parse_ir_category_param,
     parse_ir_identity_provider_param,
@@ -36,192 +24,88 @@ from ..core.utils import (
     parse_ir_sort_by_param,
     parse_sort_order_param,
     parse_status_param,
-    validate_date_order,
-    validate_date_pair_required,
-    validate_iso_datetime,
+    validate_date_ranges,
     validate_max_results,
 )
+from ..core.violation_datamodels import IRViolation
+from ..core.violations_api import IRViolationSearchFilter, Page, SortSpec
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+# (start parameter, end parameter, error when end is not after start)
+DATE_RANGE_PARAMS: tuple[tuple[str, str, str], ...] = (
+    ("Detection Start Date", "Detection End Date", ERROR_DETECTION_DATE_ORDER),
+    ("Update Start Date", "Update End Date", ERROR_UPDATE_DATE_ORDER),
+)
+TABLE_TITLE: str = "IR Violations"
+NO_RESULTS_MESSAGE: str = "No IR violations found matching the applied filters."
 
 
-@output_handler
-def main() -> None:
-    siemplify = SiemplifyAction()
-    siemplify.script_name = SEARCH_IR_VIOLATIONS_SCRIPT_NAME
-    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
+class SearchIRViolations(RubrikAction):
+    graphql_error_prefix = "API error during Search IR Violations"
 
-    output_message = ""
-    status = EXECUTION_STATE_COMPLETED
-    result_value = RESULT_VALUE_TRUE
-    json_results: list = []
+    def __init__(self) -> None:
+        super().__init__(SEARCH_IR_VIOLATIONS_SCRIPT_NAME)
+        self.json_results: list[SingleJson] = []
 
-    try:
-        service_account_json, verify_ssl = get_integration_params(siemplify)
+    def _extract_action_parameters(self) -> None:
+        super()._extract_action_parameters()
+        self.params.raw_dates = {
+            name: self._extract_string_param(name) for start, end, _ in DATE_RANGE_PARAMS for name in (start, end)
+        }
+        self.params.max_results = self._extract_string_param("Max Results")
+        self.params.next_page_token = self._extract_string_param("Next Page Token")
 
-        policy_types = parse_ir_policy_types_param(siemplify)
-        statuses = parse_status_param(siemplify)
-        severities = parse_dspm_severity_param(siemplify)
-        categories = parse_ir_category_param(siemplify)
-        idp_types = parse_ir_identity_provider_param(siemplify)
-        identity_tags = parse_ir_identity_tag_param(siemplify)
-
-        detection_start_date = siemplify.extract_action_param(
-            param_name="Detection Start Date",
-            input_type=str,
-            is_mandatory=False,
-            print_value=True,
+    def _validate_params(self) -> None:
+        soar_action = self.soar_action
+        search_filter = IRViolationSearchFilter(
+            policy_types=parse_ir_policy_types_param(soar_action),
+            statuses=parse_status_param(soar_action),
+            severities=parse_dspm_severity_param(soar_action),
+            categories=parse_ir_category_param(soar_action),
+            idp_types=parse_ir_identity_provider_param(soar_action),
+            identity_tags=parse_ir_identity_tag_param(soar_action),
+            sort=SortSpec(
+                sort_by=parse_ir_sort_by_param(soar_action),
+                sort_order=parse_sort_order_param(soar_action),
+            ),
         )
-        detection_end_date = siemplify.extract_action_param(
-            param_name="Detection End Date",
-            input_type=str,
-            is_mandatory=False,
-            print_value=True,
+        # Dates are validated after the enum parameters, matching the original error order.
+        search_filter.detection_date, search_filter.update_date = validate_date_ranges(
+            self.params.raw_dates, DATE_RANGE_PARAMS
         )
-        update_start_date = siemplify.extract_action_param(
-            param_name="Update Start Date",
-            input_type=str,
-            is_mandatory=False,
-            print_value=True,
-        )
-        update_end_date = siemplify.extract_action_param(
-            param_name="Update End Date",
-            input_type=str,
-            is_mandatory=False,
-            print_value=True,
-        )
-        sort_by = parse_ir_sort_by_param(siemplify)
-        sort_order = parse_sort_order_param(siemplify)
-
-        max_results_raw = siemplify.extract_action_param(
-            param_name="Max Results",
-            input_type=str,
-            is_mandatory=False,
-            print_value=True,
-        )
-        next_page_token = siemplify.extract_action_param(
-            param_name="Next Page Token",
-            input_type=str,
-            is_mandatory=False,
-            print_value=True,
+        self.params.search_filter = search_filter
+        self.params.page = Page(
+            first=validate_max_results(
+                self.params.max_results, default=DEFAULT_MAX_RESULTS, max_allowed=MAX_VIOLATIONS
+            ),
+            after_cursor=self.params.next_page_token or None,
         )
 
-        siemplify.LOGGER.info("----------------- Main - Started -----------------")
-
-        detection_start_date = validate_iso_datetime(detection_start_date, "Detection Start Date")
-        detection_end_date = validate_iso_datetime(detection_end_date, "Detection End Date")
-        update_start_date = validate_iso_datetime(update_start_date, "Update Start Date")
-        update_end_date = validate_iso_datetime(update_end_date, "Update End Date")
-
-        validate_date_pair_required(
-            detection_start_date, detection_end_date, "Detection Start Date", "Detection End Date"
-        )
-        validate_date_pair_required(
-            update_start_date, update_end_date, "Update Start Date", "Update End Date"
-        )
-
-        validate_date_order(detection_start_date, detection_end_date, ERROR_DETECTION_DATE_ORDER)
-        validate_date_order(update_start_date, update_end_date, ERROR_UPDATE_DATE_ORDER)
-
-        max_results = validate_max_results(
-            max_results_raw, default=DEFAULT_MAX_RESULTS, max_allowed=MAX_VIOLATIONS
-        )
-
-        manager = APIManager(
-            service_account_json,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
-
-        data = manager.search_ir_violations(
-            policy_types=policy_types,
-            statuses=statuses,
-            severities=severities,
-            categories=categories,
-            start_date=detection_start_date or None,
-            end_date=detection_end_date or None,
-            update_start_date=update_start_date or None,
-            update_end_date=update_end_date or None,
-            idp_types=idp_types,
-            identity_tags=identity_tags,
-            sort_by=sort_by,
-            sort_order=sort_order,
-            first=max_results,
-            after_cursor=next_page_token or None,
-        )
-
-        policy_violations = data.get("policyViolations") or {}
-        total_count = policy_violations.get("count", 0)
-        edges = policy_violations.get("edges") or []
-        nodes = [edge.get("node", {}) for edge in edges if edge.get("node")]
-        page_info = policy_violations.get("pageInfo") or {}
-        has_next_page = page_info.get("hasNextPage", False)
-        end_cursor = page_info.get("endCursor")
-
+    def _perform_action(self, _: object = None) -> None:
+        data: SingleJson = self.api_client.search_ir_violations(self.params.search_filter, self.params.page)
+        policy_violations: SingleJson = data.get("policyViolations") or {}
+        nodes, next_cursor = parse_connection(policy_violations)
         if not nodes:
-            output_message = "No IR violations found matching the applied filters."
-        else:
-            json_results = nodes
-            violation_models = [IRViolation(node) for node in nodes]
-            table_data = [v.to_csv() for v in violation_models]
-            table_data = table_data[:MAX_TABLE_RECORDS]
-            siemplify.result.add_data_table(
-                "IR Violations", construct_csv(table_data)
-            )
-            output_message = (
-                f"Successfully retrieved {len(nodes)} IR violation(s) "
-                f"(total matching: {total_count})."
-            )
-            if has_next_page and end_cursor:
-                output_message += (
-                    f" Use Next Page Token '{end_cursor}' to retrieve the next page."
-                )
+            # Keep an empty JSON result, as before, so playbooks can always read it.
+            self.soar_action.result.add_result_json([])
+            self.output_message = NO_RESULTS_MESSAGE
+            return
 
-        siemplify.LOGGER.info(output_message)
-
-    except (InvalidValueException, InvalidIntegerException) as e:
-        output_message = str(e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-
-    except UnauthorizedErrorException as e:
-        output_message = format_authentication_failure_message(e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    except GraphQLQueryException as e:
-        output_message = format_graphql_error_message("API error during Search IR Violations", e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    except RubrikException as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            SEARCH_IR_VIOLATIONS_SCRIPT_NAME, e
+        self.json_results = nodes
+        table_rows = [IRViolation(node).to_csv() for node in nodes][:MAX_TABLE_RECORDS]
+        self.data_tables.append(DataTable(title=TABLE_TITLE, data_table=construct_csv(table_rows)))
+        self.output_message = (
+            f"Successfully retrieved {len(nodes)} IR violation(s) "
+            f"(total matching: {policy_violations.get('count', 0)})."
         )
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
+        if next_cursor:
+            self.output_message += f" Use Next Page Token '{next_cursor}' to retrieve the next page."
 
-    except Exception as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            SEARCH_IR_VIOLATIONS_SCRIPT_NAME, e
-        )
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
 
-    finally:
-        siemplify.result.add_result_json(json_results)
-        siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-        siemplify.LOGGER.info(f"Status: {status}")
-        siemplify.LOGGER.info(f"result_value: {result_value}")
-        siemplify.LOGGER.info(f"Output Message: {output_message}")
-        siemplify.end(output_message, result_value, status)
+def main() -> None:
+    SearchIRViolations().run()
 
 
 if __name__ == "__main__":

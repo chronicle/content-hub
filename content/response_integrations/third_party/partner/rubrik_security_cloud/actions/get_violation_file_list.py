@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from typing import TYPE_CHECKING
 
-from ..core.api_manager import APIManager
+from TIPCommon.base.action.data_models import DataTable
+from TIPCommon.transformation import construct_csv
+
+from ..core.base_action import RubrikAction, validate_uuid_param
 from ..core.constants import (
-    COMMON_ACTION_ERROR_MESSAGE,
     DEFAULT_FILE_LIST_MAX_RESULTS,
     ERROR_CREATION_DATE_ORDER,
     ERROR_LAST_ACCESS_DATE_ORDER,
@@ -15,269 +15,125 @@ from ..core.constants import (
     GET_VIOLATION_FILE_LIST_SCRIPT_NAME,
     MAX_FILES,
     MAX_TABLE_RECORDS,
-    RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE,
 )
-from ..core.datamodels import FileEntry
-from ..core.rubrik_exceptions import (
-    GraphQLQueryException,
-    InvalidIntegerException,
-    InvalidValueException,
-    RubrikException,
-    UnauthorizedErrorException,
-)
-from ..core.utils import (
-    format_authentication_failure_message,
-    format_graphql_error_message,
-    get_integration_params,
+from ..core.utils import validate_uuid_format
+from ..core.validators import (
+    parse_connection,
     parse_file_access_via_param,
     parse_file_exposure_param,
     parse_file_risk_level_param,
     parse_file_sort_by_param,
     parse_sort_order_param,
-    validate_date_order,
-    validate_date_pair_required,
-    validate_iso_datetime,
+    validate_date_ranges,
     validate_max_results,
-    validate_required_string,
-    validate_uuid_format,
+)
+from ..core.violation_datamodels import FileEntry
+from ..core.violations_api import Page, SortSpec, ViolationFileListFilter
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+# (start parameter, end parameter, error when end is not after start), in the order of
+# ViolationFileListFilter's last_access / last_updated / creation / last_scan fields.
+DATE_RANGE_PARAMS: tuple[tuple[str, str, str], ...] = (
+    ("Last Access Start Date", "Last Access End Date", ERROR_LAST_ACCESS_DATE_ORDER),
+    ("Last Updated Start Date", "Last Updated End Date", ERROR_LAST_UPDATED_DATE_ORDER),
+    ("Creation Start Date", "Creation End Date", ERROR_CREATION_DATE_ORDER),
+    ("Last Scan Start Date", "Last Scan End Date", ERROR_LAST_SCAN_DATE_ORDER),
+)
+DEFAULT_SORT_BY: str = "HITS"
+DEFAULT_SORT_ORDER: str = "DESC"
+TABLE_TITLE: str = "Violation Files"
+NO_RESULTS_MESSAGE: str = "No files found matching the applied filters."
+SHA1_NOTE: str = (
+    "Note: SHA1 hash is not returned by this action. For NTFS quarantine "
+    "flows, SHA1 must be resolved via Defender ATP Advanced Hunting query."
 )
 
 
-@output_handler
-def main() -> None:
-    siemplify = SiemplifyAction()
-    siemplify.script_name = GET_VIOLATION_FILE_LIST_SCRIPT_NAME
-    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
+class GetViolationFileList(RubrikAction):
+    graphql_error_prefix = "API error during Get Violation File List"
 
-    output_message = ""
-    status = EXECUTION_STATE_COMPLETED
-    result_value = RESULT_VALUE_TRUE
-    json_results: list = []
+    def __init__(self) -> None:
+        super().__init__(GET_VIOLATION_FILE_LIST_SCRIPT_NAME)
+        self.json_results: list[SingleJson] = []
 
-    try:
-        service_account_json, verify_ssl = get_integration_params(siemplify)
+    def _extract_action_parameters(self) -> None:
+        super()._extract_action_parameters()
+        self.params.object_id = self._extract_string_param("Object ID", is_mandatory=True)
+        self.params.violation_id = self._extract_string_param("Violation ID")
+        self.params.snapshot_id = self._extract_string_param("Snapshot ID", is_mandatory=True)
+        self.params.file_name_filter = self._extract_string_param("File Name Filter")
+        self.params.max_results = self._extract_string_param("Max Results")
+        self.params.next_page_token = self._extract_string_param("Next Page Token")
+        self.params.raw_dates = {
+            name: self._extract_string_param(name) for start, end, _ in DATE_RANGE_PARAMS for name in (start, end)
+        }
 
-        object_id = siemplify.extract_action_param(
-            param_name="Object ID",
-            input_type=str,
-            is_mandatory=True,
-            print_value=True,
+    def _validate_params(self) -> None:
+        soar_action = self.soar_action
+        file_filter = ViolationFileListFilter(
+            snappable_fid=self.params.object_id,
+            snapshot_fid=self.params.snapshot_id,
+            filename_filter=self.params.file_name_filter or None,
+            risk_levels=parse_file_risk_level_param(soar_action),
+            exposures=parse_file_exposure_param(soar_action),
+            access_via=parse_file_access_via_param(soar_action),
+            sort=SortSpec(
+                sort_by=parse_file_sort_by_param(soar_action, default=DEFAULT_SORT_BY),
+                sort_order=parse_sort_order_param(soar_action, default=DEFAULT_SORT_ORDER),
+            ),
         )
-        violation_id = siemplify.extract_action_param(
-            param_name="Violation ID",
-            input_type=str,
-            is_mandatory=False,
-            print_value=True,
-        )
-        snapshot_id = siemplify.extract_action_param(
-            param_name="Snapshot ID",
-            input_type=str,
-            is_mandatory=True,
-            print_value=True,
-        )
-        file_name_filter = siemplify.extract_action_param(
-            param_name="File Name Filter",
-            input_type=str,
-            is_mandatory=False,
-            print_value=True,
-        )
-        risk_levels = parse_file_risk_level_param(siemplify)
-        exposure_filter = parse_file_exposure_param(siemplify)
-        access_via = parse_file_access_via_param(siemplify)
-        sort_by = parse_file_sort_by_param(siemplify, default="HITS")
-        sort_order = parse_sort_order_param(siemplify, default="DESC")
-
-        max_results_raw = siemplify.extract_action_param(
-            param_name="Max Results",
-            input_type=str,
-            is_mandatory=False,
-            print_value=True,
-        )
-        next_page_token = siemplify.extract_action_param(
-            param_name="Next Page Token",
-            input_type=str,
-            is_mandatory=False,
-            print_value=True,
+        file_filter.snappable_fid = validate_uuid_param(file_filter.snappable_fid, "Object ID")
+        file_filter.snapshot_fid = validate_uuid_param(file_filter.snapshot_fid, "Snapshot ID")
+        # Violation ID is optional: validated only when given, omitted from the filter otherwise.
+        self.params.violation_id = validate_optional_uuid(self.params.violation_id, "Violation ID")
+        file_filter.violation_id = self.params.violation_id or None
+        (
+            file_filter.last_access,
+            file_filter.last_updated,
+            file_filter.creation,
+            file_filter.last_scan,
+        ) = validate_date_ranges(self.params.raw_dates, DATE_RANGE_PARAMS)
+        self.params.file_filter = file_filter
+        self.params.page = Page(
+            first=validate_max_results(
+                self.params.max_results,
+                default=DEFAULT_FILE_LIST_MAX_RESULTS,
+                max_allowed=MAX_FILES,
+            ),
+            after_cursor=self.params.next_page_token or None,
         )
 
-        last_access_start = siemplify.extract_action_param(
-            param_name="Last Access Start Date", input_type=str, is_mandatory=False, print_value=True
-        )
-        last_access_end = siemplify.extract_action_param(
-            param_name="Last Access End Date", input_type=str, is_mandatory=False, print_value=True
-        )
-        last_updated_start = siemplify.extract_action_param(
-            param_name="Last Updated Start Date", input_type=str, is_mandatory=False, print_value=True
-        )
-        last_updated_end = siemplify.extract_action_param(
-            param_name="Last Updated End Date", input_type=str, is_mandatory=False, print_value=True
-        )
-        creation_start = siemplify.extract_action_param(
-            param_name="Creation Start Date", input_type=str, is_mandatory=False, print_value=True
-        )
-        creation_end = siemplify.extract_action_param(
-            param_name="Creation End Date", input_type=str, is_mandatory=False, print_value=True
-        )
-        last_scan_start = siemplify.extract_action_param(
-            param_name="Last Scan Start Date", input_type=str, is_mandatory=False, print_value=True
-        )
-        last_scan_end = siemplify.extract_action_param(
-            param_name="Last Scan End Date", input_type=str, is_mandatory=False, print_value=True
-        )
-
-        siemplify.LOGGER.info("----------------- Main - Started -----------------")
-
-        object_id = validate_uuid_format(
-            validate_required_string(object_id, "Object ID"), "Object ID"
-        )
-        snapshot_id = validate_uuid_format(
-            validate_required_string(snapshot_id, "Snapshot ID"), "Snapshot ID"
-        )
-        # Violation ID is optional; validate its format only when provided and omit
-        # it from the filter otherwise (handled in get_violation_file_list).
-        violation_id = violation_id.strip() if violation_id else ""
-        if violation_id:
-            violation_id = validate_uuid_format(violation_id, "Violation ID")
-
-        last_access_start = validate_iso_datetime(last_access_start, "Last Access Start Date")
-        last_access_end = validate_iso_datetime(last_access_end, "Last Access End Date")
-        last_updated_start = validate_iso_datetime(last_updated_start, "Last Updated Start Date")
-        last_updated_end = validate_iso_datetime(last_updated_end, "Last Updated End Date")
-        creation_start = validate_iso_datetime(creation_start, "Creation Start Date")
-        creation_end = validate_iso_datetime(creation_end, "Creation End Date")
-        last_scan_start = validate_iso_datetime(last_scan_start, "Last Scan Start Date")
-        last_scan_end = validate_iso_datetime(last_scan_end, "Last Scan End Date")
-
-        validate_date_pair_required(
-            last_access_start, last_access_end, "Last Access Start Date", "Last Access End Date"
-        )
-        validate_date_pair_required(
-            last_updated_start, last_updated_end, "Last Updated Start Date", "Last Updated End Date"
-        )
-        validate_date_pair_required(
-            creation_start, creation_end, "Creation Start Date", "Creation End Date"
-        )
-        validate_date_pair_required(
-            last_scan_start, last_scan_end, "Last Scan Start Date", "Last Scan End Date"
-        )
-
-        validate_date_order(last_access_start, last_access_end, ERROR_LAST_ACCESS_DATE_ORDER)
-        validate_date_order(last_updated_start, last_updated_end, ERROR_LAST_UPDATED_DATE_ORDER)
-        validate_date_order(creation_start, creation_end, ERROR_CREATION_DATE_ORDER)
-        validate_date_order(last_scan_start, last_scan_end, ERROR_LAST_SCAN_DATE_ORDER)
-
-        max_results = validate_max_results(
-            max_results_raw,
-            default=DEFAULT_FILE_LIST_MAX_RESULTS,
-            max_allowed=MAX_FILES,
-        )
-
-        manager = APIManager(
-            service_account_json,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
-
-        data = manager.get_violation_file_list(
-            snappable_fid=object_id,
-            snapshot_fid=snapshot_id,
-            violation_id=violation_id or None,
-            filename_filter=file_name_filter or None,
-            risk_levels=risk_levels,
-            exposures=exposure_filter,
-            access_via=access_via,
-            last_access_start=last_access_start,
-            last_access_end=last_access_end,
-            last_updated_start=last_updated_start,
-            last_updated_end=last_updated_end,
-            creation_start=creation_start,
-            creation_end=creation_end,
-            last_scan_start=last_scan_start,
-            last_scan_end=last_scan_end,
-            sort_by=sort_by,
-            sort_order=sort_order,
-            first=max_results,
-            after_cursor=next_page_token or None,
-        )
-
-        policy_obj = data.get("policyObj") or {}
-        file_connection = policy_obj.get("fileResultConnection") or {}
-        edges = file_connection.get("edges") or []
-        nodes = [edge.get("node", {}) for edge in edges if edge.get("node")]
-        page_info = file_connection.get("pageInfo") or {}
-        has_next_page = page_info.get("hasNextPage", False)
-        end_cursor = page_info.get("endCursor")
-
+    def _perform_action(self, _: object = None) -> None:
+        data: SingleJson = self.api_client.get_violation_file_list(self.params.file_filter, self.params.page)
+        policy_obj: SingleJson = data.get("policyObj") or {}
+        nodes, next_cursor = parse_connection(policy_obj.get("fileResultConnection") or {})
         if not nodes:
-            output_message = "No files found matching the applied filters."
-        else:
-            json_results = nodes
-            file_models = [FileEntry(node) for node in nodes]
-            table_data = [f.to_csv() for f in file_models]
-            table_data = table_data[:MAX_TABLE_RECORDS]
-            siemplify.result.add_data_table(
-                "Violation Files", construct_csv(table_data)
-            )
-            output_message = (
-                f"Successfully retrieved {len(nodes)} file(s) for violation ID: {violation_id}."
-            )
-            if has_next_page and end_cursor:
-                output_message += (
-                    f" Use Next Page Token '{end_cursor}' to retrieve the next page."
-                )
-            siemplify.LOGGER.info(
-                "Note: SHA1 hash is not returned by this action. For NTFS quarantine "
-                "flows, SHA1 must be resolved via Defender ATP Advanced Hunting query."
-            )
+            # Keep an empty JSON result, as before, so playbooks can always read it.
+            self.soar_action.result.add_result_json([])
+            self.output_message = NO_RESULTS_MESSAGE
+            return
 
-        siemplify.LOGGER.info(output_message)
-
-    except (InvalidValueException, InvalidIntegerException) as e:
-        output_message = str(e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-
-    except UnauthorizedErrorException as e:
-        output_message = format_authentication_failure_message(e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    except GraphQLQueryException as e:
-        output_message = format_graphql_error_message("API error during Get Violation File List", e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    except RubrikException as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            GET_VIOLATION_FILE_LIST_SCRIPT_NAME, e
+        self.json_results = nodes
+        table_rows = [FileEntry(node).to_csv() for node in nodes][:MAX_TABLE_RECORDS]
+        self.data_tables.append(DataTable(title=TABLE_TITLE, data_table=construct_csv(table_rows)))
+        self.output_message = (
+            f"Successfully retrieved {len(nodes)} file(s) for violation ID: {self.params.violation_id}."
         )
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
+        if next_cursor:
+            self.output_message += f" Use Next Page Token '{next_cursor}' to retrieve the next page."
+        self.logger.info(SHA1_NOTE)
 
-    except Exception as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            GET_VIOLATION_FILE_LIST_SCRIPT_NAME, e
-        )
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
 
-    finally:
-        siemplify.result.add_result_json(json_results)
-        siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-        siemplify.LOGGER.info(f"Status: {status}")
-        siemplify.LOGGER.info(f"result_value: {result_value}")
-        siemplify.LOGGER.info(f"Output Message: {output_message}")
-        siemplify.end(output_message, result_value, status)
+def validate_optional_uuid(raw_value: str | None, param_name: str) -> str:
+    """Return the stripped value, checking its UUID format only when it is not empty."""
+    value = raw_value.strip() if raw_value else ""
+    return validate_uuid_format(value, param_name) if value else ""
+
+
+def main() -> None:
+    GetViolationFileList().run()
 
 
 if __name__ == "__main__":

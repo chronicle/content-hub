@@ -1,135 +1,70 @@
 from __future__ import annotations
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+from typing import TYPE_CHECKING
 
-from ..core.api_manager import APIManager
-from ..core.constants import (
-    COMMON_ACTION_ERROR_MESSAGE,
-    GET_IR_VIOLATION_DETAILS_SCRIPT_NAME,
-    RESULT_VALUE_FALSE,
-    RESULT_VALUE_TRUE,
-)
-from ..core.datamodels import IRViolationDetails
-from ..core.rubrik_exceptions import (
-    GraphQLQueryException,
-    InvalidValueException,
-    ItemNotFoundException,
-    RubrikException,
-    UnauthorizedErrorException,
-)
-from ..core.utils import (
-    format_authentication_failure_message,
-    format_graphql_error_message,
-    get_integration_params,
-    parse_ir_policy_types_param,
-    validate_required_string,
-    validate_uuid_format,
-)
+from TIPCommon.base.action.data_models import DataTable
+from TIPCommon.transformation import construct_csv
+
+from ..core.base_action import RubrikAction, validate_uuid_param
+from ..core.constants import GET_IR_VIOLATION_DETAILS_SCRIPT_NAME
+from ..core.validators import map_ir_policy_types
+from ..core.violation_datamodels import IRViolationDetails
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
-@output_handler
-def main():
-    siemplify = SiemplifyAction()
-    siemplify.script_name = GET_IR_VIOLATION_DETAILS_SCRIPT_NAME
-    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
+class GetIRViolationDetails(RubrikAction):
+    graphql_error_prefix = "API error during Get IR Violation Details"
 
-    output_message = ""
-    status = EXECUTION_STATE_COMPLETED
-    result_value = RESULT_VALUE_TRUE
-    json_results: list = []
+    def __init__(self) -> None:
+        super().__init__(GET_IR_VIOLATION_DETAILS_SCRIPT_NAME)
 
-    try:
-        service_account_json, verify_ssl = get_integration_params(siemplify)
+    def _extract_action_parameters(self) -> None:
+        super()._extract_action_parameters()
+        self.params.violation_id = self._extract_string_param("Violation ID", is_mandatory=True)
+        # Non-mandatory so an unselected value falls back to the default policy types.
+        self.params.policy_types = self._extract_string_param("Policy Types")
 
-        violation_id = siemplify.extract_action_param(
-            param_name="Violation ID",
-            input_type=str,
-            is_mandatory=True,
-            print_value=True,
+    def _validate_params(self) -> None:
+        self.params.policy_types = map_ir_policy_types(self.params.policy_types)
+        self.params.violation_id = validate_uuid_param(self.params.violation_id, "Violation ID")
+
+    def _perform_action(self, _: object = None) -> None:
+        violation_id: str = self.params.violation_id
+        data: SingleJson = self.api_client.get_ir_violation_details(
+            violation_id, self.params.policy_types
         )
-        policy_types = parse_ir_policy_types_param(siemplify)
+        self.json_results = [data]
+        details_model = IRViolationDetails(data.get("policyViolation", {}))
 
-        siemplify.LOGGER.info("----------------- Main - Started -----------------")
-
-        violation_id = validate_uuid_format(
-            validate_required_string(violation_id, "Violation ID"), "Violation ID"
-        )
-
-        manager = APIManager(
-            service_account_json,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
-
-        data = manager.get_ir_violation_details(violation_id, policy_types)
-        json_results = [data]
-        violation_raw = data.get("policyViolation", {})
-        details_model = IRViolationDetails(violation_raw)
-        table_data = [details_model.to_csv()]
-        siemplify.result.add_data_table("IR Violation Details", construct_csv(table_data))
-
-        if details_model.manual_remediation:
-            siemplify.add_comment(
-                f"RSC IR Remediation Guidance:\n{details_model.manual_remediation}"
+        self.data_tables.append(
+            DataTable(
+                title="IR Violation Details",
+                data_table=construct_csv([details_model.to_csv()]),
             )
-            siemplify.LOGGER.info("Added manual remediation process as case comment.")
+        )
+        self._add_remediation_comment(details_model.manual_remediation)
 
-        output_message = (
+        self.output_message = (
             f"Successfully retrieved IR violation details for ID: {violation_id}. "
             f"Identity: {details_model.display_name or 'N/A'} "
             f"({details_model.user_principal_name or 'N/A'})."
         )
         # The identity (display name / UPN) stays in the case wall message only;
         # the log line omits it so no PII is written to the logs.
-        siemplify.LOGGER.info(f"Successfully retrieved IR violation details for ID: {violation_id}.")
+        self.logger.info(f"Successfully retrieved IR violation details for ID: {violation_id}.")
 
-    except (InvalidValueException, ItemNotFoundException, ValueError) as e:
-        output_message = str(e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
+    def _add_remediation_comment(self, manual_remediation: str | None) -> None:
+        """Add the RSC manual remediation guidance to the case wall, if any."""
+        if not manual_remediation:
+            return
+        self.soar_action.add_comment(f"RSC IR Remediation Guidance:\n{manual_remediation}")
+        self.logger.info("Added manual remediation process as case comment.")
 
-    except UnauthorizedErrorException as e:
-        output_message = format_authentication_failure_message(e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
 
-    except GraphQLQueryException as e:
-        output_message = format_graphql_error_message("API error during Get IR Violation Details", e)
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    except RubrikException as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            GET_IR_VIOLATION_DETAILS_SCRIPT_NAME, e
-        )
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    except Exception as e:
-        output_message = COMMON_ACTION_ERROR_MESSAGE.format(
-            GET_IR_VIOLATION_DETAILS_SCRIPT_NAME, e
-        )
-        result_value = RESULT_VALUE_FALSE
-        status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
-
-    finally:
-        siemplify.result.add_result_json(json_results)
-        siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-        siemplify.LOGGER.info(f"Status: {status}")
-        siemplify.LOGGER.info(f"result_value: {result_value}")
-        siemplify.LOGGER.info(f"Output Message: {output_message}")
-        siemplify.end(output_message, result_value, status)
+def main() -> None:
+    GetIRViolationDetails().run()
 
 
 if __name__ == "__main__":

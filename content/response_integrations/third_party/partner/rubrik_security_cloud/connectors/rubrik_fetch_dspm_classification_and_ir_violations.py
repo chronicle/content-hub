@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Callable
 
 from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
@@ -13,6 +15,14 @@ from TIPCommon.smp_time import is_approaching_timeout
 from TIPCommon.utils import is_overflowed
 
 from ..core.api_manager import APIManager
+from ..core.connector_helpers import (
+    TIME_FORMAT,
+    extract_multi_select_param,
+    read_checkpoint,
+    validate_search_time_period,
+    validate_service_account_json,
+    write_checkpoint,
+)
 from ..core.constants import (
     ACTIVITY_STATUS_SUCCESS,
     ACTIVITY_SWEEP_SORT_ORDER,
@@ -22,221 +32,74 @@ from ..core.constants import (
     CONNECTOR_NAME,
     CONNECTOR_VERSION,
     ERROR_NO_RSC_FETCH_TYPES,
-    ERROR_SERVICE_ACCOUNT_MISSING_KEYS,
     EVENTS_PAGE_SIZE,
-    MAX_SEARCH_TIME_PERIOD_DAYS,
-    MIN_SEARCH_TIME_PERIOD_DAYS,
     RSC_FETCH_TYPE_ACTIVITY_TYPES,
     RSC_FETCH_TYPE_CLASSIFICATION,
     RSC_FETCH_TYPE_DSPM,
     RSC_FETCH_TYPE_ENUM_MAP,
     RSC_FETCH_TYPE_IR,
-    SERVICE_ACCOUNT_REQUIRED_KEYS,
 )
-from ..core.datamodels import (
+from ..core.violation_datamodels import (
     RubrikActivityViolationAlertDatamodel,
     RubrikClassificationAlertDatamodel,
 )
-from ..core.utils import string_to_multi_select, validate_json
+
+if TYPE_CHECKING:
+    from EnvironmentCommon.EnvironmentHandle import EnvironmentHandle
+    from TIPCommon.types import SingleJson
+
+    AlertDatamodel = RubrikClassificationAlertDatamodel | RubrikActivityViolationAlertDatamodel
+    BuildPhase = tuple[str, str, Callable[[list[SingleJson]], tuple[list[AlertInfo], bool]]]
 
 connector_starting_time = unix_now()
 
-TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.000Z"
 
+@dataclass
+class ConnectorContext:
+    """Connector parameters plus the per-run state shared by every helper.
 
-def validate_search_time_period(days: str | int | None) -> int:
-    """Validate 'Search Time Period In Days': must be a whole number within bounds."""
-    if days is None or str(days).strip() == "":
-        return MIN_SEARCH_TIME_PERIOD_DAYS
-    try:
-        days = int(str(days).strip())
-    except (TypeError, ValueError):
-        raise ValueError(
-            f"'Search Time Period In Days' must be a whole number. Received: {days}."
-        )
-    if days > MAX_SEARCH_TIME_PERIOD_DAYS:
-        raise ValueError(
-            f"'Search Time Period In Days' cannot exceed {MAX_SEARCH_TIME_PERIOD_DAYS} days. "
-            f"Received: {days}."
-        )
-    if days < MIN_SEARCH_TIME_PERIOD_DAYS:
-        raise ValueError(
-            f"'Search Time Period In Days' cannot be negative. Received: {days}."
-        )
-    return days
-
-
-def validate_service_account_json(raw_value):
-    """Validate 'Service Account JSON': a JSON object carrying RSC credentials.
-
-    Checked before any other work so a malformed or partial credential fails with
-    a message naming the parameter, rather than surfacing later as a connection
-    error from the API layer.
-
-    Returns:
-        The raw value, unchanged, ready to hand to APIManager.
-
-    Raises:
-        ValueError: If the value is not valid JSON or omits a required field.
+    Populated in stages: the parameters by extract_connector_params, then the
+    validated inputs, API manager, time window and environment manager by
+    prepare_run. Grouped here so helpers take one context argument instead of
+    threading siemplify / manager / mapping fields / test-run flag separately.
     """
-    service_account = validate_json(raw_value, "Service Account JSON", is_mandatory=True)
-    missing = [key for key in SERVICE_ACCOUNT_REQUIRED_KEYS if not service_account.get(key)]
-    if missing:
-        raise ValueError(ERROR_SERVICE_ACCOUNT_MISSING_KEYS.format(", ".join(missing)))
-    return raw_value
+
+    siemplify: SiemplifyConnectorExecution
+    is_test_run: bool
+    # Raw connector parameters.
+    service_account_json: str | None = None
+    verify_ssl: bool = True
+    search_time_period_days: str | int | None = None
+    python_process_timeout: int | None = None
+    event_field_parameter: str | None = None
+    product_field_name: str | None = None
+    # Per-run state.
+    fetch_types: list[str] = field(default_factory=list)
+    deselected_labels: list[str] = field(default_factory=list)
+    manager: APIManager | None = None
+    environment_common: EnvironmentHandle | None = None
+    from_iso: str = ""
+    to_iso: str = ""
 
 
-def _checkpoint_identity(siemplify):
-    """(context_type, identifier) addressing this connector's server-side context.
-
-    context_type 4 is SiemplifyConnectorExecution.CONTEXT_TYPE; the identifier is
-    the connector instance's own id, so two instances of this connector keep
-    independent checkpoints.
-    """
-    return (
-        getattr(siemplify, "CONTEXT_TYPE", 4),
-        siemplify.context.connector_info.identifier,
-    )
-
-
-def read_checkpoint(siemplify):
-    """Read the {from_timestamp} checkpoint. Returns {} if none has been saved.
-
-    Held in the SOAR server's context store, NOT on disk. A Remote connector runs
-    in a fresh pod with a clean filesystem, so anything written locally is gone by
-    the next run: the window is re-swept every time, the same alerts are re-emitted
-    and overflow protection trips.
-
-    get_context_property_from_server is used in preference to the plain
-    get_context_property / fetch_timestamp wrappers because those branch on the
-    deployment mode:
-
-        if (not is_remote_publisher_sdk) or is_locally_scheduled_remote_connector:
-            -> server DB
-        else:
-            -> <RUN_FOLDER>/context_file.json      # still the pod's local disk
-
-    A remote agent connector that is not locally scheduled takes that second path,
-    which is the very failure being fixed. The *_from_server / *_in_server variants
-    skip the branch and always talk to the server, so one code path is correct in
-    all three deployment modes.
-
-    Falls back to the branching wrapper if the direct server call fails, so a mode
-    where the session cannot reach the API degrades to today's behaviour instead of
-    failing the run outright -- logged as an error, because that degraded state
-    silently re-ingests.
-    """
-    context_type, identifier = _checkpoint_identity(siemplify)
-    try:
-        raw = siemplify.get_context_property_from_server(
-            context_type, identifier, siemplify.TIMESTAMP_KEY
-        )
-    except Exception as err:
-        siemplify.LOGGER.error(
-            f"Could not read the checkpoint from the server context store ({err}). "
-            "Falling back to the SDK's mode-dependent store, which on a Remote "
-            "agent is pod-local and will cause the window to be re-ingested."
-        )
-        raw = None
-        try:
-            raw = siemplify.fetch_timestamp() or None
-        except Exception as fallback_err:
-            siemplify.LOGGER.error(f"Fallback checkpoint read also failed: {fallback_err}")
-
-    last_run_unix_ms = _coerce_unix_ms(raw)
-    if not last_run_unix_ms:
-        return {}
-
-    from_timestamp = datetime.fromtimestamp(
-        last_run_unix_ms / 1000, tz=timezone.utc
-    ).strftime(TIME_FORMAT)
-    return {"from_timestamp": from_timestamp}
-
-
-def _coerce_unix_ms(raw):
-    """Normalise whatever the context store returns into unix milliseconds.
-
-    The value is written with json.dumps, so it comes back as the string "1756…"
-    rather than an int, and a 204 from the server surfaces as None. Anything
-    unparseable is treated as "no checkpoint" rather than raising, since a corrupt
-    value should cost one re-swept window, not every subsequent run.
-    """
-    if raw in (None, "", 0):
-        return 0
-    try:
-        return int(raw)
-    except (TypeError, ValueError):
-        pass
-    try:
-        return int(json.loads(raw))
-    except Exception:
-        return 0
-
-
-def write_checkpoint(siemplify, from_timestamp):
-    """Persist the from_timestamp the next run should start from.
-
-    Written straight to the server context store for the reason set out in
-    read_checkpoint. Encoded with json.dumps to match what the SDK's own
-    save_timestamp writes, so the two remain interchangeable.
-    """
-    parsed = datetime.strptime(from_timestamp, TIME_FORMAT).replace(tzinfo=timezone.utc)
-    unix_ms = int(parsed.timestamp() * 1000)
-    context_type, identifier = _checkpoint_identity(siemplify)
-
-    try:
-        siemplify.set_context_property_in_server(
-            context_type, identifier, siemplify.TIMESTAMP_KEY, json.dumps(unix_ms)
-        )
-    except Exception as err:
-        siemplify.LOGGER.error(
-            f"Could not write the checkpoint to the server context store ({err}). "
-            "Falling back to the SDK's mode-dependent store."
-        )
-        siemplify.save_timestamp(new_timestamp=unix_ms)
-
-    siemplify.LOGGER.info(f"Checkpoint updated: from_timestamp set to '{from_timestamp}'.")
-
-
-def extract_multi_select_param(siemplify, param_name, enum_map, default_value=None):
-    """Extract a multi-select connector parameter and map its labels to API enums.
-
-    Connector parameters have no dropdown type, so the values arrive as a
-    comma-separated (or JSON array) string of the labels documented in the
-    parameter description. string_to_multi_select handles both forms and rejects
-    unknown labels.
-
-    Returns:
-        List of mapped API enum values, or None when the parameter is empty.
-    """
-    raw = extract_connector_param(
-        siemplify,
-        param_name=param_name,
-        input_type=str,
-        is_mandatory=False,
-        default_value=default_value,
-        print_value=True,
-    )
-    return string_to_multi_select(raw, enum_map, param_name)
+def is_timeout_approaching(context: ConnectorContext) -> bool:
+    """True once the run is close enough to PythonProcessTimeout to stop working."""
+    return is_approaching_timeout(connector_starting_time, context.python_process_timeout)
 
 
 def build_alert_info(
-    siemplify,
-    datamodel,
-    environment_common,
-    event_field_parameter,
-    product_field_name,
-    is_test_run,
-):
+    context: ConnectorContext, datamodel: AlertDatamodel
+) -> AlertInfo | None:
     """Build an AlertInfo from a datamodel, returning None if it overflows."""
+    siemplify = context.siemplify
     alert_info = datamodel.get_alert_info(
         AlertInfo(),
-        environment_common,
-        event_field_parameter,
-        product_field_name,
+        context.environment_common,
+        context.event_field_parameter,
+        context.product_field_name,
     )
 
-    if is_overflowed(siemplify, alert_info, is_test_run):
+    if is_overflowed(siemplify, alert_info, context.is_test_run):
         siemplify.LOGGER.info(
             f"{alert_info.rule_generator}-{alert_info.ticket_id}"
             f"-{alert_info.environment}-{alert_info.device_product}"
@@ -247,41 +110,30 @@ def build_alert_info(
     return alert_info
 
 
-def fetch_activity_series(siemplify, manager, activity_types, from_iso, to_iso):
+def fetch_activity_series(
+    context: ConnectorContext, activity_types: list[str]
+) -> list[SingleJson]:
     """Walk every page of activitySeriesConnection for the selected activity types.
 
     All three fetch types come from this one endpoint, so they are fetched in a
     single paginated sweep and routed afterwards rather than queried separately --
-    one pass over the window instead of one per fetch type.
-
-    Args:
-        siemplify: Connector execution instance, used for logging.
-        manager: APIManager instance.
-        activity_types: lastActivityType values to filter on, already unioned
-            across the selected fetch types.
-        from_iso: Window start (lastUpdatedTimeGt).
-        to_iso: Window end (lastUpdatedTimeLt).
+    one pass over the window instead of one per fetch type. The window is
+    context.from_iso (lastUpdatedTimeGt) to context.to_iso (lastUpdatedTimeLt);
+    activity_types is already unioned across the selected fetch types.
 
     Returns:
         List of activitySeriesConnection nodes across every page.
     """
+    siemplify = context.siemplify
     siemplify.LOGGER.info(
-        f"Fetching activity series {activity_types} from {from_iso} to {to_iso}."
+        f"Fetching activity series {activity_types} from {context.from_iso} to {context.to_iso}."
     )
 
     nodes = []
     next_page_token = None
 
     while True:
-        response = manager.list_events(
-            activity_types=activity_types,
-            activity_statuses=[ACTIVITY_STATUS_SUCCESS],
-            start_date=from_iso,
-            end_date=to_iso,
-            sort_order=ACTIVITY_SWEEP_SORT_ORDER,
-            limit=EVENTS_PAGE_SIZE,
-            next_page_token=next_page_token,
-        )
+        response = _fetch_activity_page(context, activity_types, next_page_token)
 
         connection = response.get("data", {}).get("activitySeriesConnection", {})
         page_nodes = [
@@ -302,7 +154,26 @@ def fetch_activity_series(siemplify, manager, activity_types, from_iso, to_iso):
     return nodes
 
 
-def partition_by_fetch_type(siemplify, event_nodes, fetch_types):
+def _fetch_activity_page(
+    context: ConnectorContext, activity_types: list[str], next_page_token: str | None
+) -> SingleJson:
+    """Request one page of activitySeriesConnection for this run's window."""
+    return context.manager.list_events(
+        activity_types=activity_types,
+        activity_statuses=[ACTIVITY_STATUS_SUCCESS],
+        start_date=context.from_iso,
+        end_date=context.to_iso,
+        sort_order=ACTIVITY_SWEEP_SORT_ORDER,
+        limit=EVENTS_PAGE_SIZE,
+        next_page_token=next_page_token,
+    )
+
+
+def partition_by_fetch_type(
+    siemplify: SiemplifyConnectorExecution,
+    event_nodes: list[SingleJson],
+    fetch_types: list[str],
+) -> dict[str, list[SingleJson]]:
     """Route each fetched series to the RSC fetch type its lastActivityType maps to.
 
     Matched case-insensitively: RSC echoes lastActivityType back in its own casing
@@ -332,7 +203,7 @@ def partition_by_fetch_type(siemplify, event_nodes, fetch_types):
     return partitioned
 
 
-def fetch_snappable_identity(siemplify, manager, object_id):
+def fetch_snappable_identity(context: ConnectorContext, object_id: str | None) -> SingleJson:
     """Resolve the hierarchy identity for a series' objectId.
 
     Adds the identifying detail the activity series does not carry -- the
@@ -348,10 +219,11 @@ def fetch_snappable_identity(siemplify, manager, object_id):
         The hierarchyObject dict, or {} if it could not be resolved -- a failure
         degrades the event rather than dropping the alert.
     """
+    siemplify = context.siemplify
     if not object_id:
         return {}
     try:
-        response = manager.get_snappable_identity(fid=object_id)
+        response = context.manager.get_snappable_identity(fid=object_id)
         hierarchy_object = (response or {}).get("data", {}).get("hierarchyObject") or {}
         if not hierarchy_object:
             siemplify.LOGGER.info(f"No hierarchyObject returned for fid {object_id}.")
@@ -363,7 +235,9 @@ def fetch_snappable_identity(siemplify, manager, object_id):
         return {}
 
 
-def _snapshot_fid_from_activity_info(siemplify, event_node):
+def _snapshot_fid_from_activity_info(
+    siemplify: SiemplifyConnectorExecution, event_node: SingleJson
+) -> str | None:
     """Read the classified snapshot FID off the ClassficationResultsAvailable activity.
 
     RSC persists ClassificationResultsEventInfo as JSON on the activity's
@@ -399,24 +273,14 @@ def _snapshot_fid_from_activity_info(siemplify, event_node):
     return None
 
 
-def build_classification_alerts(
-    siemplify,
-    manager,
-    environment_common,
-    event_nodes,
-    event_field_parameter,
-    product_field_name,
-    is_test_run,
-):
-    """Build alerts from already-fetched Sonar classification activity series.
+def _latest_classification_per_object(
+    siemplify: SiemplifyConnectorExecution, event_nodes: list[SingleJson]
+) -> dict[str, SingleJson]:
+    """Filter by classification message, then dedup by objectId.
 
-    Unchanged pipeline: keep the series whose activity message reports available
-    results, dedup by objectId, resolve the closest snapshot, then read policyObj
-    and alert on violations > 0. Only the fetch moved out -- the CLASSIFICATION
-    series now arrive from the shared activitySeriesConnection sweep in main().
+    Keeps, per objectId, the latest-lastUpdated series that reports available
+    results.
     """
-    alerts = []
-
     # ----------------------------------------------------------------
     # Step 1 + 2: Filter by classification message, then dedup by
     #             objectId keeping the latest-lastUpdated entry.
@@ -449,6 +313,23 @@ def build_classification_alerts(
         f"Classification: {len(event_nodes)} series; {len(latest_per_object)} unique "
         "objects after filter + dedup."
     )
+    return latest_per_object
+
+
+def build_classification_alerts(
+    context: ConnectorContext, event_nodes: list[SingleJson]
+) -> list[AlertInfo]:
+    """Build alerts from already-fetched Sonar classification activity series.
+
+    Unchanged pipeline: keep the series whose activity message reports available
+    results, dedup by objectId, resolve the closest snapshot, then read policyObj
+    and alert on violations > 0. Only the fetch moved out -- the CLASSIFICATION
+    series now arrive from the shared activitySeriesConnection sweep in main().
+    """
+    siemplify = context.siemplify
+    alerts = []
+
+    latest_per_object = _latest_classification_per_object(siemplify, event_nodes)
 
     # ----------------------------------------------------------------
     # Steps 3-4: For each deduplicated object, resolve snapshot ->
@@ -457,7 +338,6 @@ def build_classification_alerts(
     for event_node in latest_per_object.values():
         activity_series_id = event_node.get("activitySeriesId") or event_node.get("id", "")
         object_id = event_node.get("objectId", "")
-        last_updated = event_node.get("lastUpdated", "")
 
         siemplify.LOGGER.info(
             f"Processing event: {activity_series_id} "
@@ -465,85 +345,108 @@ def build_classification_alerts(
         )
 
         try:
-            # Step 4: Retrieve snapshot FID from the event
-            snapshot_id = _snapshot_fid_from_activity_info(siemplify, event_node)
-
-            if not snapshot_id:
-                siemplify.LOGGER.info(
-                    f"Skipping {activity_series_id}: no snapshot for {object_id}."
-                )
-                continue
-
-            # Step 5: Fetch policyObj and check violations
-            policy_obj = {}
-            try:
-                pol_response = manager.get_classification_object_detail(
-                    snappable_fid=object_id,
-                    snapshot_fid=snapshot_id,
-                )
-                policy_obj = pol_response.get("data", {}).get("policyObj") or {}
-            except Exception as pol_err:
-                siemplify.LOGGER.error(
-                    f"Could not retrieve policyObj for {object_id}/{snapshot_id}: {pol_err}"
-                )
-
-            if not policy_obj:
-                siemplify.LOGGER.info(f"Skipping {activity_series_id}: no policyObj data.")
-                continue
-
-            violations = (
-                policy_obj.get("rootFileResult", {}).get("hits", {}).get("violations", 0)
-            )
-
-            siemplify.LOGGER.info(
-                f"Checking violation count for object {object_id}: violations={violations}."
-            )
-            if violations > 0:
-                siemplify.LOGGER.info(
-                    f"Object {object_id} has violations > 0; proceeding to build alert."
-                )
-            else:
-                siemplify.LOGGER.info(
-                    f"Object {object_id} has no violations (count not greater than 0). "
-                    f"Skipping {activity_series_id}."
-                )
-                continue
-
-            # Only now, with the alert certain to be raised, is the identity
-            # lookup worth a call -- deduped and past the violations > 0 gate.
-            hierarchy_object = fetch_snappable_identity(siemplify, manager, object_id)
-
-            # Build AlertInfo
-            alert_info = build_alert_info(
-                siemplify,
-                RubrikClassificationAlertDatamodel(
-                    event_node, policy_obj, snapshot_id, hierarchy_object
-                ),
-                environment_common,
-                event_field_parameter,
-                product_field_name,
-                is_test_run,
-            )
-            if alert_info is None:
-                continue
-
-            alerts.append(alert_info)
-            siemplify.LOGGER.info(
-                f"Alert added: {alert_info.ticket_id} "
-                f"({violations} violations, riskLevel={policy_obj.get('riskLevel')})"
-            )
-
+            _process_classification_event(context, event_node, alerts)
         except Exception as e:
             siemplify.LOGGER.error(f"Failed to process event {activity_series_id}. Error: {e}")
             siemplify.LOGGER.exception(e)
-            if is_test_run:
+            if context.is_test_run:
                 raise
 
     siemplify.LOGGER.info(f"Classification events produced {len(alerts)} alert(s).")
     return alerts
 
 
-def fetch_violation_status(siemplify, manager, series_id, violation_type):
+def _process_classification_event(
+    context: ConnectorContext, event_node: SingleJson, alerts: list[AlertInfo]
+) -> None:
+    """Resolve snapshot and policyObj for one series; append its alert, if any, to `alerts`."""
+    siemplify = context.siemplify
+    activity_series_id = event_node.get("activitySeriesId") or event_node.get("id", "")
+    object_id = event_node.get("objectId", "")
+
+    # Step 4: Retrieve snapshot FID from the event
+    snapshot_id = _snapshot_fid_from_activity_info(siemplify, event_node)
+
+    if not snapshot_id:
+        siemplify.LOGGER.info(
+            f"Skipping {activity_series_id}: no snapshot for {object_id}."
+        )
+        return
+
+    # Step 5: Fetch policyObj and check violations
+    policy_obj = _fetch_policy_obj(context, object_id, snapshot_id)
+
+    if not policy_obj:
+        siemplify.LOGGER.info(f"Skipping {activity_series_id}: no policyObj data.")
+        return
+
+    violations = policy_obj.get("rootFileResult", {}).get("hits", {}).get("violations", 0)
+    if not _has_violations(siemplify, event_node, violations):
+        return
+
+    # Only now, with the alert certain to be raised, is the identity
+    # lookup worth a call -- deduped and past the violations > 0 gate.
+    hierarchy_object = fetch_snappable_identity(context, object_id)
+
+    # Build AlertInfo
+    alert_info = build_alert_info(
+        context,
+        RubrikClassificationAlertDatamodel(
+            event_node, policy_obj, snapshot_id, hierarchy_object
+        ),
+    )
+    if alert_info is None:
+        return
+
+    alerts.append(alert_info)
+    siemplify.LOGGER.info(
+        f"Alert added: {alert_info.ticket_id} "
+        f"({violations} violations, riskLevel={policy_obj.get('riskLevel')})"
+    )
+
+
+def _fetch_policy_obj(context: ConnectorContext, object_id: str, snapshot_id: str) -> SingleJson:
+    """Fetch the classification policyObj for an object's snapshot; {} on failure."""
+    policy_obj = {}
+    try:
+        pol_response = context.manager.get_classification_object_detail(
+            snappable_fid=object_id,
+            snapshot_fid=snapshot_id,
+        )
+        policy_obj = pol_response.get("data", {}).get("policyObj") or {}
+    except Exception as pol_err:
+        context.siemplify.LOGGER.error(
+            f"Could not retrieve policyObj for {object_id}/{snapshot_id}: {pol_err}"
+        )
+    return policy_obj
+
+
+def _has_violations(
+    siemplify: SiemplifyConnectorExecution, event_node: SingleJson, violations: int
+) -> bool:
+    """Log the violation count for a series' object; True if it is greater than 0."""
+    activity_series_id = event_node.get("activitySeriesId") or event_node.get("id", "")
+    object_id = event_node.get("objectId", "")
+
+    siemplify.LOGGER.info(
+        f"Checking violation count for object {object_id}: violations={violations}."
+    )
+    if violations > 0:
+        siemplify.LOGGER.info(
+            f"Object {object_id} has violations > 0; proceeding to build alert."
+        )
+        return True
+
+    siemplify.LOGGER.info(
+        f"Object {object_id} has no violations (count not greater than 0). "
+        f"Skipping {activity_series_id}."
+    )
+    return False
+
+
+def fetch_violation_status(
+    context: ConnectorContext, series_id: str, violation_type: str
+) -> str:
     """Look up one field -- the violation's status -- for an activity series.
 
     The activity series carries no status enum, and the Close Duplicate Violation
@@ -562,6 +465,7 @@ def fetch_violation_status(siemplify, manager, series_id, violation_type):
         a failed lookup degrades the alert (no status) rather than failing the
         whole series.
     """
+    manager = context.manager
     try:
         if violation_type == RSC_FETCH_TYPE_DSPM:
             data = manager.get_dspm_violation_details(series_id)
@@ -569,7 +473,7 @@ def fetch_violation_status(siemplify, manager, series_id, violation_type):
             data = manager.get_ir_violation_details(series_id, ALL_IR_POLICY_TYPES)
         return ((data or {}).get("policyViolation") or {}).get("status") or ""
     except Exception as err:
-        siemplify.LOGGER.error(
+        context.siemplify.LOGGER.error(
             f"Could not resolve {violation_type} violation status for series "
             f"{series_id}: {err}"
         )
@@ -577,17 +481,8 @@ def fetch_violation_status(siemplify, manager, series_id, violation_type):
 
 
 def build_violation_alerts(
-    siemplify,
-    manager,
-    environment_common,
-    event_nodes,
-    violation_type,
-    event_field_parameter,
-    product_field_name,
-    is_test_run,
-    is_timed_out=None,
-    window=None,
-):
+    context: ConnectorContext, event_nodes: list[SingleJson], violation_type: str
+) -> tuple[list[AlertInfo], bool]:
     """Build DSPM / IR alerts from already-fetched activity series nodes.
 
     One builder covers both: DSPM (SECURITY_VIOLATION) and IR (IDENTITY_VIOLATION
@@ -595,21 +490,20 @@ def build_violation_alerts(
     lastActivityType that routed them here.
 
     Each series costs one extra API call to resolve its violation status (see
-    fetch_violation_status), so is_timed_out is polled per series: enrichment is
-    the most expensive part of a run, and a large window can hold hundreds of
-    series.
+    fetch_violation_status), so the timeout is polled per series: enrichment is the
+    most expensive part of a run, and a large window can hold hundreds of series.
 
     Returns:
-        (alerts, timed_out) -- timed_out is True if the loop stopped early, which
-        makes main() discard the run rather than ingest a partially enriched
-        batch.
+        (alerts, timed_out) -- timed_out is True if the loop stopped early, which makes
+        main() discard the run rather than ingest a partially enriched batch.
     """
+    siemplify = context.siemplify
     alerts = []
 
     for event_node in event_nodes:
         series_id = event_node.get("activitySeriesId") or event_node.get("id", "")
 
-        if is_timed_out is not None and is_timed_out():
+        if is_timeout_approaching(context):
             siemplify.LOGGER.info(
                 f"Timeout is approaching while enriching {violation_type} "
                 f"({len(alerts)} of {len(event_nodes)} series done). Stopping."
@@ -617,60 +511,16 @@ def build_violation_alerts(
             return alerts, True
 
         try:
-            violation_status = fetch_violation_status(
-                siemplify, manager, series_id, violation_type
-            )
-            # DSPM findings are about a snappable, so the hierarchy identity
-            # applies. IR series describe an identity and carry their own
-            # resourceMetadata, so the lookup is skipped for them.
-            hierarchy_object = (
-                fetch_snappable_identity(siemplify, manager, event_node.get("objectId"))
-                if violation_type == RSC_FETCH_TYPE_DSPM
-                else {}
-            )
-            datamodel = RubrikActivityViolationAlertDatamodel(
-                event_node, violation_type, violation_status, hierarchy_object, window
-            )
-            latest = datamodel.get_latest_activity_node()
-
-            # A series can be pulled in by activity that is not itself alertable --
-            # an audit-log download, or an entry that predates this window and was
-            # ingested by an earlier run. Both leave nothing to raise, and building
-            # an alert anyway would re-emit an old entry on every run.
-            if not latest:
-                siemplify.LOGGER.info(
-                    f"Skipping {violation_type} series {series_id}: no activity entry "
-                    "inside this run's window once audit-log entries are excluded."
-                )
-                continue
-
-            siemplify.LOGGER.info(
-                f"Processing {violation_type} series {series_id}: "
-                f"latest activity {latest.get('id')} at {latest.get('time')} "
-                f"({event_node.get('lastActivityType')}), "
-                f"status {violation_status or 'unresolved'}."
-            )
-
-            alert_info = build_alert_info(
-                siemplify,
-                datamodel,
-                environment_common,
-                event_field_parameter,
-                product_field_name,
-                is_test_run,
-            )
+            alert_info = _build_violation_alert(context, event_node, violation_type)
             if alert_info is None:
                 continue
 
             alerts.append(alert_info)
             siemplify.LOGGER.info(f"Alert added: {alert_info.ticket_id} ({alert_info.name}).")
-
         except Exception as e:
-            siemplify.LOGGER.error(
-                f"Failed to process {violation_type} series {series_id}. Error: {e}"
-            )
+            siemplify.LOGGER.error(f"Failed to process {violation_type} series {series_id}. Error: {e}")
             siemplify.LOGGER.exception(e)
-            if is_test_run:
+            if context.is_test_run:
                 raise
 
     siemplify.LOGGER.info(
@@ -680,8 +530,54 @@ def build_violation_alerts(
     return alerts, False
 
 
-@output_handler
-def main(is_test_run):
+def _build_violation_alert(
+    context: ConnectorContext, event_node: SingleJson, violation_type: str
+) -> AlertInfo | None:
+    """Enrich one DSPM / IR series and build its alert; None if nothing to raise."""
+    siemplify = context.siemplify
+    series_id = event_node.get("activitySeriesId") or event_node.get("id", "")
+
+    violation_status = fetch_violation_status(context, series_id, violation_type)
+    # DSPM findings are about a snappable, so the hierarchy identity
+    # applies. IR series describe an identity and carry their own
+    # resourceMetadata, so the lookup is skipped for them.
+    hierarchy_object = (
+        fetch_snappable_identity(context, event_node.get("objectId"))
+        if violation_type == RSC_FETCH_TYPE_DSPM
+        else {}
+    )
+    datamodel = RubrikActivityViolationAlertDatamodel(
+        event_node,
+        violation_type,
+        violation_status,
+        hierarchy_object,
+        (context.from_iso, context.to_iso),
+    )
+    latest = datamodel.get_latest_activity_node()
+
+    # A series can be pulled in by activity that is not itself alertable --
+    # an audit-log download, or an entry that predates this window and was
+    # ingested by an earlier run. Both leave nothing to raise, and building
+    # an alert anyway would re-emit an old entry on every run.
+    if not latest:
+        siemplify.LOGGER.info(
+            f"Skipping {violation_type} series {series_id}: no activity entry "
+            "inside this run's window once audit-log entries are excluded."
+        )
+        return None
+
+    siemplify.LOGGER.info(
+        f"Processing {violation_type} series {series_id}: "
+        f"latest activity {latest.get('id')} at {latest.get('time')} "
+        f"({event_node.get('lastActivityType')}), "
+        f"status {violation_status or 'unresolved'}."
+    )
+
+    return build_alert_info(context, datamodel)
+
+
+def init_siemplify(is_test_run: bool) -> SiemplifyConnectorExecution:
+    """Create the connector execution and log the run header."""
     siemplify = SiemplifyConnectorExecution()
     siemplify.script_name = CONNECTOR_NAME
     siemplify.LOGGER.info(f"Connector version: {CONNECTOR_VERSION}")
@@ -692,8 +588,23 @@ def main(is_test_run):
         )
 
     siemplify.LOGGER.info("==================== Main - Param Init ====================")
+    return siemplify
 
-    service_account_json = extract_connector_param(
+
+def extract_connector_params(
+    siemplify: SiemplifyConnectorExecution, is_test_run: bool
+) -> ConnectorContext:
+    """Extract every connector parameter into a new ConnectorContext."""
+    context = ConnectorContext(siemplify=siemplify, is_test_run=is_test_run)
+    _extract_connection_params(context)
+    _extract_mapping_params(context)
+    return context
+
+
+def _extract_connection_params(context: ConnectorContext) -> None:
+    """Extract the credential, SSL, search-period and timeout parameters."""
+    siemplify = context.siemplify
+    context.service_account_json = extract_connector_param(
         siemplify,
         param_name="Service Account JSON",
         input_type=str,
@@ -701,7 +612,7 @@ def main(is_test_run):
         print_value=False,
     )
 
-    verify_ssl = extract_connector_param(
+    context.verify_ssl = extract_connector_param(
         siemplify,
         param_name="Verify SSL",
         input_type=bool,
@@ -710,7 +621,7 @@ def main(is_test_run):
         print_value=True,
     )
 
-    search_time_period_days = extract_connector_param(
+    context.search_time_period_days = extract_connector_param(
         siemplify,
         param_name="Search Time Period In Days",
         default_value="1",
@@ -719,7 +630,7 @@ def main(is_test_run):
         print_value=True,
     )
 
-    python_process_timeout = extract_connector_param(
+    context.python_process_timeout = extract_connector_param(
         siemplify,
         param_name="PythonProcessTimeout",
         input_type=int,
@@ -727,9 +638,12 @@ def main(is_test_run):
         print_value=False,
     )
 
+
+def _extract_mapping_params(context: ConnectorContext) -> None:
+    """Extract the built-in event / product field-name mapping parameters."""
     # Backed by the built-in "Event Field Name" UI field (param name: EventClassId).
-    event_field_parameter = extract_connector_param(
-        siemplify,
+    context.event_field_parameter = extract_connector_param(
+        context.siemplify,
         param_name="EventClassId",
         input_type=str,
         is_mandatory=False,
@@ -738,8 +652,8 @@ def main(is_test_run):
     )
 
     # Backed by the built-in "Product Field Name" UI field (param name: DeviceProductField).
-    product_field_name = extract_connector_param(
-        siemplify,
+    context.product_field_name = extract_connector_param(
+        context.siemplify,
         param_name="DeviceProductField",
         input_type=str,
         is_mandatory=False,
@@ -747,226 +661,265 @@ def main(is_test_run):
         print_value=True,
     )
 
-    siemplify.LOGGER.info("------------------- Main - Started -------------------")
 
+def validate_inputs(context: ConnectorContext) -> None:
+    """Validate the credential, fetch-type and search-period inputs in place."""
+    siemplify = context.siemplify
+    # ----------------------------------------------------------------
+    # Validate every input before touching the API. SecOps has no
+    # multi-select input type for connectors, so each filter arrives as
+    # hand-typed comma-separated text and is checked against the exact
+    # values its parameter description documents; an unrecognised value
+    # fails the run naming the parameter and listing what is accepted.
+    # ----------------------------------------------------------------
+    context.service_account_json = validate_service_account_json(context.service_account_json)
+
+    # Which sources to ingest. Required, with no default: extracted as
+    # non-mandatory so an empty value produces the message below instead of a
+    # raw "mandatory parameter missing" error.
+    fetch_types = extract_multi_select_param(
+        siemplify,
+        "RSC Fetch Types",
+        RSC_FETCH_TYPE_ENUM_MAP,
+    )
+    if not fetch_types:
+        raise ValueError(
+            ERROR_NO_RSC_FETCH_TYPES.format(", ".join(RSC_FETCH_TYPE_ENUM_MAP.keys()))
+        )
+    siemplify.LOGGER.info(f"Selected RSC fetch types: {', '.join(fetch_types)}.")
+    context.fetch_types = fetch_types
+
+    # The severity / category / sensitivity / policy-type / identity-tag
+    # filters are gone: activitySeriesConnection's ActivitySeriesFilter has no
+    # equivalent inputs, so they could not be honoured against this endpoint.
+    # Every series of the selected activity types is fetched instead.
+
+    # Validate the search window (must not exceed MAX_SEARCH_TIME_PERIOD_DAYS).
+    context.search_time_period_days = validate_search_time_period(
+        context.search_time_period_days
+    )
+
+
+def prepare_run(context: ConnectorContext) -> None:
+    """Validate inputs, then set up the API manager, time window and environment."""
+    validate_inputs(context)
+
+    now_dt = datetime.now(timezone.utc)
+    now_iso = now_dt.strftime(TIME_FORMAT)
+    default_start_iso = (
+        now_dt - timedelta(days=context.search_time_period_days)
+    ).strftime(TIME_FORMAT)
+
+    context.manager = APIManager(
+        service_account_json=context.service_account_json,
+        verify_ssl=context.verify_ssl,
+        siemplify=context.siemplify,
+    )
+
+    resolve_window(context, now_iso, default_start_iso)
+
+    context.environment_common = GetEnvironmentCommonFactory.create_environment_manager(
+        context.siemplify,
+        "",
+        "",
+    )
+
+
+def resolve_window(context: ConnectorContext, now_iso: str, default_start_iso: str) -> None:
+    """Set context.from_iso / context.to_iso from the checkpoint or the default."""
+    siemplify = context.siemplify
+    # ----------------------------------------------------------------
+    # Time window, shared by all three sources. from_timestamp comes from
+    # the checkpoint (last run's window end) or falls back to now - search
+    # period on the first run. to_timestamp is always now.
+    # ----------------------------------------------------------------
+    checkpoint = {} if context.is_test_run else read_checkpoint(siemplify)
+    checkpoint_from = checkpoint.get("from_timestamp")
+    if checkpoint_from:
+        siemplify.LOGGER.info(f"Fetched from_timestamp '{checkpoint_from}' from checkpoint.")
+    else:
+        siemplify.LOGGER.info(
+            "No from_timestamp found in checkpoint; "
+            f"defaulting to '{default_start_iso}' "
+            f"(now - {context.search_time_period_days} day)."
+        )
+    context.from_iso = checkpoint_from or default_start_iso
+    context.to_iso = now_iso
+
+
+def select_activity_types(context: ConnectorContext) -> list[str]:
+    """Record the deselected fetch types and return the activity types to sweep."""
+    # ----------------------------------------------------------------
+    # All three fetch types come from activitySeriesConnection, so the
+    # window is swept once for the union of the selected types' activity
+    # types and the results routed afterwards -- rather than one sweep per
+    # type over the same window.
+    #
+    # A type not selected is simply never requested. Note the checkpoint is
+    # a single timestamp shared by all three (by design), so it still
+    # advances at the end of a successful run even though a deselected type
+    # was never fetched; that type's coverage for this window is then
+    # permanently lost if it is re-selected on a later run. This is an
+    # accepted trade-off of the single shared checkpoint, not a bug to be
+    # fixed per-type; deselected_labels below only makes the risk visible in
+    # the log when it applies.
+    # ----------------------------------------------------------------
+    context.deselected_labels = [
+        fetch_type
+        for fetch_type in RSC_FETCH_TYPE_ACTIVITY_TYPES
+        if fetch_type not in context.fetch_types
+    ]
+    for fetch_type in context.deselected_labels:
+        context.siemplify.LOGGER.info(f"{fetch_type} not selected in 'RSC Fetch Types'. Skipping.")
+
+    return [
+        activity_type
+        for fetch_type in RSC_FETCH_TYPE_ACTIVITY_TYPES
+        if fetch_type in context.fetch_types
+        for activity_type in RSC_FETCH_TYPE_ACTIVITY_TYPES[fetch_type]
+    ]
+
+
+def sweep_activity_series(
+    context: ConnectorContext, activity_types: list[str]
+) -> tuple[dict[str, list[SingleJson]], bool]:
+    """Fetch and route the window's series unless the timeout is already near.
+
+    Returns:
+        (partitioned, timed_out) -- partitioned is {} when the sweep was skipped.
+    """
+    siemplify = context.siemplify
+    timed_out = is_timeout_approaching(context)
+    partitioned = {}
+
+    if timed_out:
+        siemplify.LOGGER.info(
+            "Timeout is approaching before fetching. Skipping the activity series sweep."
+        )
+    else:
+        siemplify.LOGGER.info("=============== Activity Series Sweep ===============")
+        event_nodes = fetch_activity_series(context, activity_types)
+        partitioned = partition_by_fetch_type(siemplify, event_nodes, context.fetch_types)
+
+    return partitioned, timed_out
+
+
+def build_phases(context: ConnectorContext) -> tuple[BuildPhase, ...]:
+    """(fetch type, log label, alert builder) for each type, in build order.
+
+    Every builder makes per-series enrichment calls -- Classification resolves
+    snapshot + policyObj, and DSPM/IR resolve the policyViolation record for its
+    status -- so each builder reports whether it stopped early on the timeout.
+    """
+    return (
+        (
+            RSC_FETCH_TYPE_CLASSIFICATION,
+            "Classification Events",
+            lambda nodes: (build_classification_alerts(context, nodes), False),
+        ),
+        (
+            RSC_FETCH_TYPE_DSPM,
+            "DSPM Violations",
+            lambda nodes: build_violation_alerts(context, nodes, RSC_FETCH_TYPE_DSPM),
+        ),
+        (
+            RSC_FETCH_TYPE_IR,
+            "IR Violations",
+            lambda nodes: build_violation_alerts(context, nodes, RSC_FETCH_TYPE_IR),
+        ),
+    )
+
+
+def build_alerts(
+    context: ConnectorContext,
+    partitioned: dict[str, list[SingleJson]],
+    timed_out: bool,
+) -> tuple[list[AlertInfo], bool]:
+    """Build alerts per selected type, skipping the rest once the timeout nears.
+
+    Returns:
+        (alerts, timed_out) -- timed_out is True if any phase was skipped or
+        stopped early, or it was already True on entry.
+    """
+    siemplify = context.siemplify
     alerts = []
 
+    for fetch_type, label, build_phase_alerts in build_phases(context):
+        nodes = partitioned.get(fetch_type)
+        if not nodes:
+            continue
+
+        siemplify.LOGGER.info(f"=============== {label} ===============")
+
+        if timed_out or is_timeout_approaching(context):
+            timed_out = True
+            siemplify.LOGGER.info(f"Timeout is approaching. Skipping {label}.")
+            continue
+
+        phase_alerts, phase_timed_out = build_phase_alerts(nodes)
+        alerts.extend(phase_alerts)
+        timed_out = timed_out or phase_timed_out
+
+    return alerts, timed_out
+
+
+def finalize_package(
+    context: ConnectorContext, alerts: list[AlertInfo], timed_out: bool
+) -> list[AlertInfo]:
+    """Return the alerts to ingest, advancing the checkpoint when they are ingested."""
+    siemplify = context.siemplify
+    from_iso, to_iso = context.from_iso, context.to_iso
+    # ----------------------------------------------------------------
+    # All alerts gathered. Ingest only if we are not approaching the
+    # process timeout; otherwise exit gracefully without ingesting or
+    # advancing the checkpoint so the next run redoes this window.
+    # ----------------------------------------------------------------
+    if timed_out or is_timeout_approaching(context):
+        siemplify.LOGGER.info(
+            "Timeout is approaching. Exiting gracefully without ingesting; "
+            "checkpoint unchanged."
+        )
+        return []
+
+    if context.deselected_labels:
+        siemplify.LOGGER.info(
+            "WARNING: advancing the shared checkpoint to "
+            f"'{to_iso}' despite {', '.join(context.deselected_labels)} being "
+            "absent from this run's 'RSC Fetch Types' selection. "
+            "Classification, DSPM and IR share a single checkpoint "
+            "timestamp by design, so if it is re-selected on a later "
+            f"run it will resume from '{to_iso}' onward -- anything "
+            f"updated in RSC between '{from_iso}' and '{to_iso}' for "
+            "that source will never be fetched."
+        )
+    siemplify.LOGGER.info(f"Ingesting {len(alerts)} alerts.")
+    if not context.is_test_run:
+        write_checkpoint(siemplify, to_iso)
+    return alerts
+
+
+def run_connector(context: ConnectorContext) -> list[AlertInfo]:
+    """Run one connector cycle and return the package to hand to return_package."""
+    prepare_run(context)
+    activity_types = select_activity_types(context)
+    partitioned, timed_out = sweep_activity_series(context, activity_types)
+    alerts, timed_out = build_alerts(context, partitioned, timed_out)
+    return finalize_package(context, alerts, timed_out)
+
+
+@output_handler
+def main(is_test_run: bool) -> None:
+    siemplify = init_siemplify(is_test_run)
+    context = extract_connector_params(siemplify, is_test_run)
+
+    siemplify.LOGGER.info("------------------- Main - Started -------------------")
+
     try:
-        # ----------------------------------------------------------------
-        # Validate every input before touching the API. SecOps has no
-        # multi-select input type for connectors, so each filter arrives as
-        # hand-typed comma-separated text and is checked against the exact
-        # values its parameter description documents; an unrecognised value
-        # fails the run naming the parameter and listing what is accepted.
-        # ----------------------------------------------------------------
-        service_account_json = validate_service_account_json(service_account_json)
+        package = run_connector(context)
 
-        # Which sources to ingest. Required, with no default: extracted as
-        # non-mandatory so an empty value produces the message below instead of a
-        # raw "mandatory parameter missing" error.
-        fetch_types = extract_multi_select_param(
-            siemplify,
-            "RSC Fetch Types",
-            RSC_FETCH_TYPE_ENUM_MAP,
-        )
-        if not fetch_types:
-            raise ValueError(
-                ERROR_NO_RSC_FETCH_TYPES.format(", ".join(RSC_FETCH_TYPE_ENUM_MAP.keys()))
-            )
-        siemplify.LOGGER.info(f"Selected RSC fetch types: {', '.join(fetch_types)}.")
-
-        # The severity / category / sensitivity / policy-type / identity-tag
-        # filters are gone: activitySeriesConnection's ActivitySeriesFilter has no
-        # equivalent inputs, so they could not be honoured against this endpoint.
-        # Every series of the selected activity types is fetched instead.
-
-        # Validate the search window (must not exceed MAX_SEARCH_TIME_PERIOD_DAYS).
-        search_time_period_days = validate_search_time_period(search_time_period_days)
-
-        now_dt = datetime.now(timezone.utc)
-        now_iso = now_dt.strftime(TIME_FORMAT)
-        default_start_iso = (now_dt - timedelta(days=search_time_period_days)).strftime(TIME_FORMAT)
-
-        manager = APIManager(
-            service_account_json=service_account_json,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
-
-        # ----------------------------------------------------------------
-        # Time window, shared by all three sources. from_timestamp comes from
-        # the checkpoint (last run's window end) or falls back to now - search
-        # period on the first run. to_timestamp is always now.
-        # ----------------------------------------------------------------
-        checkpoint = {} if is_test_run else read_checkpoint(siemplify)
-        checkpoint_from = checkpoint.get("from_timestamp")
-        if checkpoint_from:
-            siemplify.LOGGER.info(f"Fetched from_timestamp '{checkpoint_from}' from checkpoint.")
-        else:
-            siemplify.LOGGER.info(
-                "No from_timestamp found in checkpoint; "
-                f"defaulting to '{default_start_iso}' (now - {search_time_period_days} day)."
-            )
-        from_iso = checkpoint_from or default_start_iso
-        to_iso = now_iso
-
-        environment_common = GetEnvironmentCommonFactory.create_environment_manager(
-            siemplify,
-            "",
-            "",
-        )
-
-        # ----------------------------------------------------------------
-        # All three fetch types come from activitySeriesConnection, so the
-        # window is swept once for the union of the selected types' activity
-        # types and the results routed afterwards -- rather than one sweep per
-        # type over the same window.
-        #
-        # A type not selected is simply never requested. Note the checkpoint is
-        # a single timestamp shared by all three (by design), so it still
-        # advances at the end of a successful run even though a deselected type
-        # was never fetched; that type's coverage for this window is then
-        # permanently lost if it is re-selected on a later run. This is an
-        # accepted trade-off of the single shared checkpoint, not a bug to be
-        # fixed per-type; deselected_labels below only makes the risk visible in
-        # the log when it applies.
-        # ----------------------------------------------------------------
-        deselected_labels = [
-            fetch_type
-            for fetch_type in RSC_FETCH_TYPE_ACTIVITY_TYPES
-            if fetch_type not in fetch_types
-        ]
-        for fetch_type in deselected_labels:
-            siemplify.LOGGER.info(f"{fetch_type} not selected in 'RSC Fetch Types'. Skipping.")
-
-        activity_types = [
-            activity_type
-            for fetch_type in RSC_FETCH_TYPE_ACTIVITY_TYPES
-            if fetch_type in fetch_types
-            for activity_type in RSC_FETCH_TYPE_ACTIVITY_TYPES[fetch_type]
-        ]
-
-        timed_out = is_approaching_timeout(connector_starting_time, python_process_timeout)
-        partitioned = {}
-
-        if timed_out:
-            siemplify.LOGGER.info(
-                "Timeout is approaching before fetching. Skipping the activity series sweep."
-            )
-        else:
-            siemplify.LOGGER.info("=============== Activity Series Sweep ===============")
-            event_nodes = fetch_activity_series(
-                siemplify, manager, activity_types, from_iso, to_iso
-            )
-            partitioned = partition_by_fetch_type(siemplify, event_nodes, fetch_types)
-
-        # Build alerts per selected type. Every builder now makes per-series
-        # enrichment calls -- Classification resolves snapshot + policyObj, and
-        # DSPM/IR resolve the policyViolation record for its status -- so each
-        # builder polls the timeout itself and reports whether it stopped early.
-        def violation_timeout_check():
-            return is_approaching_timeout(connector_starting_time, python_process_timeout)
-
-        build_phases = (
-            (
-                RSC_FETCH_TYPE_CLASSIFICATION,
-                "Classification Events",
-                lambda nodes: (
-                    build_classification_alerts(
-                        siemplify,
-                        manager,
-                        environment_common,
-                        nodes,
-                        event_field_parameter,
-                        product_field_name,
-                        is_test_run,
-                    ),
-                    False,
-                ),
-            ),
-            (
-                RSC_FETCH_TYPE_DSPM,
-                "DSPM Violations",
-                lambda nodes: build_violation_alerts(
-                    siemplify,
-                    manager,
-                    environment_common,
-                    nodes,
-                    RSC_FETCH_TYPE_DSPM,
-                    event_field_parameter,
-                    product_field_name,
-                    is_test_run,
-                    violation_timeout_check,
-                    (from_iso, to_iso),
-                ),
-            ),
-            (
-                RSC_FETCH_TYPE_IR,
-                "IR Violations",
-                lambda nodes: build_violation_alerts(
-                    siemplify,
-                    manager,
-                    environment_common,
-                    nodes,
-                    RSC_FETCH_TYPE_IR,
-                    event_field_parameter,
-                    product_field_name,
-                    is_test_run,
-                    violation_timeout_check,
-                    (from_iso, to_iso),
-                ),
-            ),
-        )
-
-        for fetch_type, label, build_alerts in build_phases:
-            nodes = partitioned.get(fetch_type)
-            if not nodes:
-                continue
-
-            siemplify.LOGGER.info(f"=============== {label} ===============")
-
-            if timed_out or is_approaching_timeout(
-                connector_starting_time, python_process_timeout
-            ):
-                timed_out = True
-                siemplify.LOGGER.info(f"Timeout is approaching. Skipping {label}.")
-                continue
-
-            phase_alerts, phase_timed_out = build_alerts(nodes)
-            alerts.extend(phase_alerts)
-            timed_out = timed_out or phase_timed_out
-
-        # ----------------------------------------------------------------
-        # All alerts gathered. Ingest only if we are not approaching the
-        # process timeout; otherwise exit gracefully without ingesting or
-        # advancing the checkpoint so the next run redoes this window.
-        # ----------------------------------------------------------------
         # NOTE: return_package finalizes and flushes the connector output, so
         # any logging or checkpoint write MUST happen before it — otherwise
         # those log lines never reach the debug output.
-        if timed_out or is_approaching_timeout(connector_starting_time, python_process_timeout):
-            siemplify.LOGGER.info(
-                "Timeout is approaching. Exiting gracefully without ingesting; "
-                "checkpoint unchanged."
-            )
-            package = []
-        else:
-            if deselected_labels:
-                siemplify.LOGGER.info(
-                    "WARNING: advancing the shared checkpoint to "
-                    f"'{to_iso}' despite {', '.join(deselected_labels)} being "
-                    "absent from this run's 'RSC Fetch Types' selection. "
-                    "Classification, DSPM and IR share a single checkpoint "
-                    "timestamp by design, so if it is re-selected on a later "
-                    f"run it will resume from '{to_iso}' onward -- anything "
-                    f"updated in RSC between '{from_iso}' and '{to_iso}' for "
-                    "that source will never be fetched."
-                )
-            siemplify.LOGGER.info(f"Ingesting {len(alerts)} alerts.")
-            if not is_test_run:
-                write_checkpoint(siemplify, to_iso)
-            package = alerts
-
         siemplify.LOGGER.info("------------------- Main - Finished -------------------")
         siemplify.return_package(package)
 
