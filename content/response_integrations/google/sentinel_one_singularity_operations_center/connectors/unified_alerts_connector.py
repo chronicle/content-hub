@@ -105,7 +105,6 @@ class UnifiedAlertsConnector(Connector):
             print_value=True,
         )
 
-        # Validate Padding Period (minutes of lookback applied to the last success time)
         padding = getattr(self.params, "padding_period", None)
         self.params.padding_period = (
             self.param_validator.validate_range(
@@ -119,7 +118,6 @@ class UnifiedAlertsConnector(Connector):
             else 0
         )
 
-        # Validate Status Filter
         self.params.status_filter = self._parse_status_filter(
             getattr(self.params, "status_filter", None)
         )
@@ -137,11 +135,11 @@ class UnifiedAlertsConnector(Connector):
         Raises:
             ConnectorSetupError: If an unsupported status is provided.
         """
-        if not raw_value or not str(raw_value).strip():
+        if not raw_value or not raw_value.strip():
             return []
 
         statuses: list[str] = []
-        for item in str(raw_value).split(","):
+        for item in raw_value.split(","):
             key = item.strip().upper()
             if not key:
                 continue
@@ -214,7 +212,8 @@ class UnifiedAlertsConnector(Connector):
         seen alerts instead of the first ever inserted ones.
         """
         last_seen_at = (
-            processed_alert.raw_data.get("lastSeenAt") or processed_alert.last_seen_at
+            (processed_alert.raw_data or {}).get("lastSeenAt")
+            or processed_alert.last_seen_at
         )
         self.context.existing_ids.pop(processed_alert.alert_id, None)
         self.context.existing_ids[processed_alert.alert_id] = (
@@ -307,9 +306,6 @@ class UnifiedAlertsConnector(Connector):
         last_success_ms = convert_datetime_to_unix_time(
             self.context.last_success_timestamp
         )
-        # Lookback padding: SentinelOne indexes burst alerts out of order, so an alert
-        # can become searchable with a lastSeenAt older than the saved cursor.
-        # Re-scanning the padding window is safe; the ID cache filters re-fetched alerts.
         start_timestamp_ms = last_success_ms
         if self.params.padding_period:
             start_timestamp_ms = min(

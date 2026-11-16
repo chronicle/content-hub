@@ -36,6 +36,9 @@ from sentinel_one_singularity_operations_center.core.api.api_client import (
     SentinelOneSingularityOperationsCenterApiClient,
 )
 from sentinel_one_singularity_operations_center.core.constants import EventType
+from sentinel_one_singularity_operations_center.core.data_models import (
+    AlertObservable,
+)
 from sentinel_one_singularity_operations_center.tests.common import (
     DUPLICATE_INDICATOR_OBSERVABLE,
     HOSTNAME_SCOPE_OBSERVABLES,
@@ -668,10 +671,6 @@ def test_duplicate_observable_keeps_indicator_context(
 
 def test_alert_observable_dedup_key() -> None:
     """Verify dedup_key property encapsulates type, value, and name."""
-    from sentinel_one_singularity_operations_center.core.data_models import (
-        AlertObservable,
-    )
-
     obs = AlertObservable({"type": "ip", "value": "198.51.100.1", "name": "source_ip"})
     assert obs.dedup_key == ("IP", "198.51.100.1", "source_ip")
 
@@ -847,7 +846,6 @@ def test_padding_period_moves_start_time_back(
 
     variables = _get_list_request_variables(script_session)
     start = variables["orFilter"]["or"][0]["and"][0]["dateTimeRange"]["start"]
-    # Last success time is now - 1h (Max Hours Backwards), padding of 120 min wins.
     assert before_ms <= start <= after_ms
 
 

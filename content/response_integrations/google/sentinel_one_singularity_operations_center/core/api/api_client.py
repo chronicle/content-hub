@@ -149,7 +149,7 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
 
         if statuses:
             common_filters.append(
-                {"fieldId": "status", "stringIn": {"values": list(statuses)}}
+                {"fieldId": "status", "stringIn": {"values": statuses}}
             )
 
         if start_timestamp_ms is None:
