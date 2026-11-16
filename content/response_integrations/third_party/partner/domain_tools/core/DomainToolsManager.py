@@ -115,13 +115,21 @@ class DomainToolsManager:
                 f"You don't have {product_name} - {self.available_api_calls} in your license."
             )
 
-    def enrich_domains_with_risk(
-        self,
-        domains: list[str],
-    ) -> list[EnrichedDomainSummary]:
+    def enrich_domains_with_risk(self, domains: list[str]) -> list[EnrichedDomainSummary]:
+        """Enriches a list of domains with risk scores using the Iris Enrich API.
+
+        Args:
+            domains (list[str]): Domain names to enrich.
+
+        Returns:
+            list[EnrichedDomainSummary]: Parsed risk summaries, one per returned domain.
+
+        Raises:
+            DomainToolsManagerError: If the license check fails or the API call errors.
+        """
         try:
             self._check_license(LICENSE_IRIS_ENRICH)
-            results = []
+            results: list[EnrichedDomainSummary] = []
             clean_domains = [d for d in domains if d and d.strip()]
             if not clean_domains:
                 return results
@@ -134,7 +142,7 @@ class DomainToolsManager:
         except DomainToolsManagerError:
             raise
         except Exception as e:
-            raise DomainToolsManagerError(f"Unable to enrich domains. Reason: {str(e)}")
+            raise DomainToolsManagerError(f"Unable to enrich domains. Reason: {str(e)}") from e
 
     def investigate_domains(self, domains: list[str]) -> list[IrisInvestigateModel]:
         try:

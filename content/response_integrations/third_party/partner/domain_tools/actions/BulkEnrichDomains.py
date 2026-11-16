@@ -7,7 +7,7 @@ by risk category, plus per-domain enrichment details.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
@@ -119,20 +119,23 @@ def _enrich_and_summarize(
 
 def _write_results(
     siemplify: SiemplifyAction,
-    enriched_results: list,
-    include_young: bool,
-    summary: dict[str, Any],
+    filtered_results: list[EnrichedDomainSummary],
+    summary: SingleJson,
 ) -> None:
     """Write JSON result and CSV data table to the SOAR case."""
-    filtered = [e for e in enriched_results if include_young or e.risk_category != RISK_CATEGORY_YOUNG]
-    json_result = [{"Entity": "BulkEnrichment", "EntityResult": {"summary": summary, "domains": [e.to_dict() for e in filtered]}}]
+    json_result: list[SingleJson] = [
+        {
+            "Entity": "BulkEnrichment",
+            "EntityResult": {"summary": summary, "domains": [e.to_dict() for e in filtered_results]},
+        }
+    ]
     siemplify.result.add_result_json(json_result)
-    csv_rows = [e.to_table_data() for e in filtered]
+    csv_rows = [e.to_table_data() for e in filtered_results]
     if csv_rows:
         siemplify.result.add_data_table("Bulk Domain Enrichment", construct_csv(csv_rows))
 
 
-def _format_output_message(summary: dict[str, Any], missing_domains: list[str]) -> str:
+def _format_output_message(summary: SingleJson, missing_domains: list[str]) -> str:
     """Format the action output message with risk category counts and any missing domains."""
     msg = (
         f"Enriched {summary['total_domains']} domain(s): "
@@ -161,7 +164,9 @@ def main() -> None:
 
     try:
         dt_manager = DomainToolsManager(
-            username=username, api_key=api_key, verify_ssl=verify_ssl,
+            username=username,
+            api_key=api_key,
+            verify_ssl=verify_ssl,
             siemplify_logger=siemplify.LOGGER,
         )
 
@@ -178,7 +183,8 @@ def main() -> None:
             domains = domains[:max_domains]
 
         enriched_results, summary, missing_domains = _enrich_and_summarize(dt_manager, domains)
-        _write_results(siemplify, enriched_results, include_young, summary)
+        filtered_results = [e for e in enriched_results if include_young or e.risk_category != RISK_CATEGORY_YOUNG]
+        _write_results(siemplify, filtered_results, summary)
         output_message = _format_output_message(summary, missing_domains)
 
     except Exception as err:

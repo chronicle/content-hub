@@ -6,8 +6,9 @@ Builds a comprehensive dossier for each in-scope domain using DomainTools Iris I
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -20,25 +21,52 @@ from ..core.constants import GET_DOMAIN_PROFILE_SCRIPT_NAME, INTEGRATION_NAME
 from ..core.DomainToolsManager import DomainToolsManager
 from ..core.UtilsManager import classify_domain_risk, extract_domain_from_string, parse_domain_age_days
 
+if TYPE_CHECKING:
+    from soar_sdk.SiemplifyDataModel import DomainEntityInfo
+    from TIPCommon.types import SingleJson
+
+    from ..core.datamodels import IrisInvestigateModel
+
 SUPPORTED_ENTITY_TYPES: list[str] = [EntityTypes.URL, EntityTypes.HOSTNAME, EntityTypes.DOMAIN]
 
 
-def _extract_params(siemplify: SiemplifyAction) -> tuple:
-    username = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="Username",
-        is_mandatory=True, print_value=True,
+@dataclass(slots=True)
+class _ProfileOutcome:
+    json_results: list[SingleJson] = field(default_factory=list)
+    csv_rows: list[SingleJson] = field(default_factory=list)
+    success_entities: list[DomainEntityInfo] = field(default_factory=list)
+    failed_entities: list[DomainEntityInfo] = field(default_factory=list)
+    missing_domains: list[str] = field(default_factory=list)
+
+
+def _extract_params(
+    siemplify: SiemplifyAction,
+) -> tuple[str, str, str]:
+    username: str = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Username",
+        is_mandatory=True,
+        print_value=True,
     )
-    api_key = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="ApiToken",
-        is_mandatory=True, print_value=True,
+    api_key: str = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="ApiToken",
+        is_mandatory=True,
+        print_value=True,
     )
-    verify_ssl = extract_configuration_param(
+    verify_ssl: str = extract_configuration_param(
         siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
     )
     return username, api_key, verify_ssl
 
 
-def _build_domain_profile(iris_model: Any, domain_age_days: int | None, risk_category: str) -> dict[str, Any]:
+def _build_domain_profile(
+    iris_model: IrisInvestigateModel,
+    domain_age_days: int | None,
+    risk_category: str,
+) -> SingleJson:
     return {
         "risk": {
             "overall_risk_score": iris_model.analytics.overall_risk_score,
@@ -78,32 +106,24 @@ def _build_domain_profile(iris_model: Any, domain_age_days: int | None, risk_cat
     }
 
 
-def _write_results(
-    siemplify: SiemplifyAction,
-    json_results: list[dict[str, Any]],
-    csv_rows: list[dict],
-    success_entities: list,
-    missing_domains: list[str],
-) -> None:
-    siemplify.update_entities(success_entities)
-    if missing_domains:
-        json_results.append({"Entity": "MissingDomains", "EntityResult": {"missing_domains": missing_domains}})
-    siemplify.result.add_result_json(json_results)
-    if csv_rows:
-        siemplify.result.add_data_table("Domain Profile", construct_csv(csv_rows))
+def _write_results(siemplify: SiemplifyAction, outcome: _ProfileOutcome) -> None:
+    siemplify.update_entities(outcome.success_entities)
+    if outcome.missing_domains:
+        outcome.json_results.append(
+            {"Entity": "MissingDomains", "EntityResult": {"missing_domains": outcome.missing_domains}}
+        )
+    siemplify.result.add_result_json(outcome.json_results)
+    if outcome.csv_rows:
+        siemplify.result.add_data_table("Domain Profile", construct_csv(outcome.csv_rows))
 
 
-def _build_summary_message(
-    success_entities: list,
-    failed_entities: list,
-    missing_domains: list[str],
-) -> str:
-    total = len(success_entities) + len(failed_entities) + len(missing_domains)
-    msg = f"Successfully built profiles for {len(success_entities)} of {total} domain(s)."
-    if failed_entities:
-        msg += f"\nFailed to profile: {', '.join(str(e.identifier) for e in failed_entities)}"
-    if missing_domains:
-        msg += f"\nNot returned by API: {', '.join(missing_domains)}"
+def _build_summary_message(outcome: _ProfileOutcome) -> str:
+    total = len(outcome.success_entities) + len(outcome.failed_entities) + len(outcome.missing_domains)
+    msg = f"Successfully built profiles for {len(outcome.success_entities)} of {total} domain(s)."
+    if outcome.failed_entities:
+        msg += f"\nFailed to profile: {', '.join(str(e.identifier) for e in outcome.failed_entities)}"
+    if outcome.missing_domains:
+        msg += f"\nNot returned by API: {', '.join(outcome.missing_domains)}"
     return msg
 
 
@@ -118,22 +138,27 @@ def main() -> None:
     status: int = EXECUTION_STATE_COMPLETED
     output_message: str = ""
     result_value: bool = True
-    json_results: list[dict[str, Any]] = []
-    csv_rows: list[dict] = []
-    success_entities: list = []
-    failed_entities: list = []
-    missing_domains: list[str] = []
 
-    domain_entity_map: dict[str, Any] = {
-        domain: entity
-        for entity in siemplify.target_entities
-        if entity.entity_type in SUPPORTED_ENTITY_TYPES
-        if (domain := extract_domain_from_string(entity.identifier))
-    }
+    domain_entity_map: dict[str, list[DomainEntityInfo]] = {}
+    for entity in siemplify.target_entities:
+        if entity.entity_type not in SUPPORTED_ENTITY_TYPES:
+            continue
+        if domain := extract_domain_from_string(entity.identifier):
+            domain_entity_map.setdefault(domain, []).append(entity)
+
+    if not domain_entity_map:
+        output_message = "No domain profiles could be built."
+        result_value = False
+        siemplify.end(output_message, result_value, status)
+        return
+
+    outcome = _ProfileOutcome()
 
     try:
         dt_manager = DomainToolsManager(
-            username=username, api_key=api_key, verify_ssl=verify_ssl,
+            username=username,
+            api_key=api_key,
+            verify_ssl=verify_ssl,
             siemplify_logger=siemplify.LOGGER,
         )
 
@@ -147,10 +172,9 @@ def main() -> None:
             return
 
         iris_model_map = {m.domain: m for m in iris_models}
+        outcome.missing_domains = [d for d in domain_entity_map if d not in iris_model_map]
 
-        missing_domains = [d for d in domain_entity_map if d not in iris_model_map]
-
-        for domain, entity in domain_entity_map.items():
+        for domain, entities in domain_entity_map.items():
             iris_model = iris_model_map.get(domain)
             if not iris_model:
                 continue
@@ -159,18 +183,19 @@ def main() -> None:
                 domain_age_days = parse_domain_age_days(iris_model.registration.create_date)
                 risk_category = classify_domain_risk(iris_model.analytics.overall_risk_score, domain_age_days)
                 profile = _build_domain_profile(iris_model, domain_age_days, risk_category)
-                json_results.append({"Entity": entity.identifier, "EntityResult": profile})
-                csv_rows.append(iris_model.to_table_data())
-                entity.is_enriched = True
-                success_entities.append(entity)
+                outcome.csv_rows.append(iris_model.to_table_data())
+                for entity in entities:
+                    outcome.json_results.append({"Entity": entity.identifier, "EntityResult": profile})
+                    entity.is_enriched = True
+                    outcome.success_entities.append(entity)
             except Exception as e:
-                failed_entities.append(entity)
+                outcome.failed_entities.extend(entities)
                 siemplify.LOGGER.error(f"Failed to build profile for {domain}. Reason: {str(e)}")
                 siemplify.LOGGER.exception(e)
 
-        if success_entities:
-            _write_results(siemplify, json_results, csv_rows, success_entities, missing_domains)
-            output_message = _build_summary_message(success_entities, failed_entities, missing_domains)
+        if outcome.success_entities:
+            _write_results(siemplify, outcome)
+            output_message = _build_summary_message(outcome)
         else:
             output_message = "No domain profiles could be built."
             result_value = False

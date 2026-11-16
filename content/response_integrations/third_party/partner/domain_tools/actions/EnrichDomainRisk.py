@@ -7,15 +7,13 @@ Enriches domain entities with risk scores and classifies them into risk categori
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler
-
-if TYPE_CHECKING:
-    from soar_sdk.SiemplifyDataModel import DomainEntityInfo
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from TIPCommon.transformation import add_prefix_to_dict_keys, construct_csv, dict_to_flat
 
@@ -27,22 +25,45 @@ from ..core.constants import (
 from ..core.DomainToolsManager import DomainToolsManager
 from ..core.UtilsManager import extract_domain_from_string
 
+if TYPE_CHECKING:
+    from soar_sdk.SiemplifyDataModel import DomainEntityInfo
+    from TIPCommon.types import SingleJson
+
+    from ..core.datamodels import EnrichedDomainSummary
+
 SUPPORTED_ENTITY_TYPES: list[str] = [EntityTypes.URL, EntityTypes.HOSTNAME, EntityTypes.DOMAIN]
 
 
-def _extract_params(siemplify: SiemplifyAction) -> tuple:
-    username = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="Username",
-        is_mandatory=True, print_value=True,
+@dataclass(slots=True)
+class _RiskEnrichmentOutcome:
+    enriched_results: list[EnrichedDomainSummary] = field(default_factory=list)
+    success_entities: list[DomainEntityInfo] = field(default_factory=list)
+    failed_entities: list[DomainEntityInfo] = field(default_factory=list)
+    missing_domains: list[str] = field(default_factory=list)
+    json_results: list[SingleJson] = field(default_factory=list)
+
+
+def _extract_params(
+    siemplify: SiemplifyAction,
+) -> tuple[str, str, str, int]:
+    username: str = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Username",
+        is_mandatory=True,
+        print_value=True,
     )
-    api_key = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="ApiToken",
-        is_mandatory=True, print_value=True,
+    api_key: str = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="ApiToken",
+        is_mandatory=True,
+        print_value=True,
     )
-    verify_ssl = extract_configuration_param(
+    verify_ssl: str = extract_configuration_param(
         siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
     )
-    risk_threshold = extract_action_param(
+    risk_threshold: int = extract_action_param(
         siemplify,
         "Risk Threshold",
         default_value=RISK_SCORE_HIGH,
@@ -64,16 +85,14 @@ def _extract_unique_domains(siemplify: SiemplifyAction) -> dict[str, list[Domain
 
 
 def _enrich_and_mark_entities(
+    siemplify: SiemplifyAction,
     dt_manager: DomainToolsManager,
     extracted_domains: dict[str, list[DomainEntityInfo]],
     risk_threshold: int,
-    logger: Any,
-) -> tuple[list, list, list, list[str], list[dict[str, Any]]]:
-    enriched_results = dt_manager.enrich_domains_with_risk(list(extracted_domains.keys()))
-    success_entities: list = []
-    failed_entities: list = []
-    json_results: list[dict[str, Any]] = []
-    for enriched in enriched_results:
+) -> _RiskEnrichmentOutcome:
+    outcome = _RiskEnrichmentOutcome()
+    outcome.enriched_results = dt_manager.enrich_domains_with_risk(list(extracted_domains.keys()))
+    for enriched in outcome.enriched_results:
         entities = extracted_domains.get(enriched.domain)
         if not entities:
             continue
@@ -83,56 +102,52 @@ def _enrich_and_mark_entities(
         enriched.is_suspicious = is_suspicious
         for entity in entities:
             try:
-                json_results.append({"Entity": entity.identifier, "EntityResult": enriched_dict})
+                outcome.json_results.append({"Entity": entity.identifier, "EntityResult": enriched_dict})
                 entity.additional_properties.update(prefixed)
                 entity.is_enriched = True
                 entity.is_suspicious = is_suspicious
-                success_entities.append(entity)
+                outcome.success_entities.append(entity)
             except Exception as e:
-                failed_entities.append(entity)
-                logger.error(f"Unable to enrich entity: {entity.identifier}. Reason: {str(e)}")
-                logger.exception(e)
-    missing_domains = [d for d in extracted_domains if d not in {e.domain for e in enriched_results}]
-    return enriched_results, success_entities, failed_entities, missing_domains, json_results
+                outcome.failed_entities.append(entity)
+                siemplify.LOGGER.error(f"Unable to enrich entity: {entity.identifier}. Reason: {str(e)}")
+                siemplify.LOGGER.exception(e)
+    outcome.missing_domains = [
+        d for d in extracted_domains if d not in {e.domain for e in outcome.enriched_results}
+    ]
+    return outcome
 
 
 def _write_results(
     siemplify: SiemplifyAction,
-    enriched_results: list,
     extracted_domains: dict[str, list[DomainEntityInfo]],
-    success_entities: list,
-    missing_domains: list[str],
-    json_results: list[dict[str, Any]],
+    outcome: _RiskEnrichmentOutcome,
 ) -> None:
-    siemplify.update_entities(success_entities)
-    if missing_domains:
-        json_results.append({"Entity": "MissingDomains", "EntityResult": {"missing_domains": missing_domains}})
-    siemplify.result.add_result_json(json_results)
-    success_set = set(id(e) for e in success_entities)
+    siemplify.update_entities(outcome.success_entities)
+    if outcome.missing_domains:
+        outcome.json_results.append(
+            {"Entity": "MissingDomains", "EntityResult": {"missing_domains": outcome.missing_domains}}
+        )
+    siemplify.result.add_result_json(outcome.json_results)
+    success_set = set(id(e) for e in outcome.success_entities)
     csv_rows = [
         enriched.to_table_data()
-        for enriched in enriched_results
+        for enriched in outcome.enriched_results
         if any(id(e) in success_set for e in extracted_domains.get(enriched.domain, []))
     ]
     if csv_rows:
         siemplify.result.add_data_table("Domain Risk Enrichment", construct_csv(csv_rows))
 
 
-def _build_summary_message(
-    success_entities: list,
-    risk_threshold: int,
-    failed_entities: list,
-    missing_domains: list[str],
-) -> str:
-    suspicious_count = sum(1 for e in success_entities if e.is_suspicious)
+def _build_summary_message(outcome: _RiskEnrichmentOutcome, risk_threshold: int) -> str:
+    suspicious_count = sum(1 for e in outcome.success_entities if e.is_suspicious)
     msg = (
-        f"Successfully enriched {len(success_entities)} domain(s). "
+        f"Successfully enriched {len(outcome.success_entities)} domain(s). "
         f"{suspicious_count} marked as suspicious based on the given threshold of {risk_threshold}. \n"
     )
-    if failed_entities:
-        msg += f"\nFailed to enrich: {', '.join(str(e.identifier) for e in failed_entities)}"
-    if missing_domains:
-        msg += f"\nNot returned by API: {', '.join(missing_domains)}"
+    if outcome.failed_entities:
+        msg += f"\nFailed to enrich: {', '.join(str(e.identifier) for e in outcome.failed_entities)}"
+    if outcome.missing_domains:
+        msg += f"\nNot returned by API: {', '.join(outcome.missing_domains)}"
     return msg
 
 
@@ -150,7 +165,9 @@ def main() -> None:
 
     try:
         dt_manager = DomainToolsManager(
-            username=username, api_key=api_key, verify_ssl=verify_ssl,
+            username=username,
+            api_key=api_key,
+            verify_ssl=verify_ssl,
             siemplify_logger=siemplify.LOGGER,
         )
 
@@ -161,13 +178,11 @@ def main() -> None:
             siemplify.end(output_message, result_value, status)
             return
 
-        enriched_results, success_entities, failed_entities, missing_domains, json_results = (
-            _enrich_and_mark_entities(dt_manager, extracted_domains, risk_threshold, siemplify.LOGGER)
-        )
+        outcome = _enrich_and_mark_entities(siemplify, dt_manager, extracted_domains, risk_threshold)
 
-        if success_entities:
-            _write_results(siemplify, enriched_results, extracted_domains, success_entities, missing_domains, json_results)
-            output_message = _build_summary_message(success_entities, risk_threshold, failed_entities, missing_domains)
+        if outcome.success_entities:
+            _write_results(siemplify, extracted_domains, outcome)
+            output_message = _build_summary_message(outcome, risk_threshold)
         else:
             output_message = "No entities were enriched."
             result_value = False
