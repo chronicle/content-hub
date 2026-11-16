@@ -32,7 +32,7 @@ def main() -> None:
     result_value = True
 
     try:
-        hide_disabled = siemplify.extract_action_param(
+        hide_disabled: bool = siemplify.extract_action_param(
             param_name="Hide Disabled Users",
             default_value=True,
             input_type=bool,
@@ -46,9 +46,7 @@ def main() -> None:
             page_size=1000,
             should_hide_disabled_users=hide_disabled,
         )
-        siemplify.result.add_result_json(
-            {"siemplifyUsers": [s_user.to_json() for s_user in siemplify_users]},
-        )
+        siemplify.result.add_result_json({"siemplifyUsers": [s_user.to_json() for s_user in siemplify_users]})
         output_message = "Returned Siemplify Users."
 
     except Exception as e:

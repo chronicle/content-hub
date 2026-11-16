@@ -25,15 +25,9 @@ from TIPCommon.base.action import ExecutionState
 from ...actions import GetSiemplifyUsers
 
 
-@set_metadata(
-    integration_config={},
-    parameters={"Hide Disabled Users": "true"},
-)
+@set_metadata(integration_config={}, parameters={"Hide Disabled Users": "true"})
 @patch.object(GetSiemplifyUsers, "get_siemplify_user_details")
-def test_get_siemplify_users_success(
-    mock_get_users: MagicMock,
-    action_output: MockActionOutput,
-) -> None:
+def test_get_siemplify_users_success(mock_get_users: MagicMock, action_output: MockActionOutput) -> None:
     """Verify successful lookup returns users JSON and COMPLETED state."""
     mock_user = MagicMock()
     mock_user.to_json.return_value = {
@@ -88,10 +82,7 @@ def test_get_siemplify_users_success(
         ),
     ],
 )
-@set_metadata(
-    integration_config={},
-    parameters={"Hide Disabled Users": "false"},
-)
+@set_metadata(integration_config={}, parameters={"Hide Disabled Users": "false"})
 @patch("TIPCommon.rest.soar_platform_clients.api_client_factory.platform_supports_1p_api", return_value=True)
 @patch("TIPCommon.utils.platform_supports_1p_api", return_value=True)
 def test_get_siemplify_users_1p_http_error_fails_action(

@@ -68,10 +68,7 @@ def test_assign_case_to_user_success_empty_204_response(
     },
 )
 @patch.object(AssignCaseToUser, "assign_case_to_user")
-def test_assign_case_to_user_success_with_api_payload(
-    mock_assign: MagicMock,
-    action_output: MockActionOutput,
-) -> None:
+def test_assign_case_to_user_success_with_api_payload(mock_assign: MagicMock, action_output: MockActionOutput) -> None:
     """Verify non-empty API response data is included in JsonResult."""
     mock_assign.return_value = {"updatedCases": [42]}
 

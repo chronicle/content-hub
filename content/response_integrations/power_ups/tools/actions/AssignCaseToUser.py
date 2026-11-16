@@ -14,12 +14,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import assign_case_to_user
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 ACTION_NAME = "AssignCaseToUser"
 
@@ -34,22 +37,14 @@ def main() -> None:
     result_value = True
 
     try:
-        case_id = siemplify.extract_action_param(
-            param_name="Case Id",
-            is_mandatory=True,
-            print_value=True,
-        )
-        assign_to = siemplify.extract_action_param(
+        case_id: str = siemplify.extract_action_param(param_name="Case Id", is_mandatory=True, print_value=True)
+        assign_to: str = siemplify.extract_action_param(
             param_name="Assign To",
             default_value="@Admin",
             is_mandatory=True,
             print_value=True,
         )
-        alert_id = siemplify.extract_action_param(
-            param_name="Alert Id",
-            default_value="id",
-            print_value=True,
-        )
+        alert_id: str = siemplify.extract_action_param(param_name="Alert Id", default_value="id", print_value=True)
 
         response = assign_case_to_user(
             chronicle_soar=siemplify,
@@ -59,7 +54,7 @@ def main() -> None:
         )
         siemplify.LOGGER.info(f"Assign case response: {response}")
 
-        json_result: dict[str, Any] = {
+        json_result: SingleJson = {
             "caseId": case_id,
             "assignedTo": assign_to,
         }
