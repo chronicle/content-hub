@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from integration_testing.common import get_def_file_content
 

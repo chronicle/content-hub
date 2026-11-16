@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import urllib.parse
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 from domaintools import utils
 
@@ -124,10 +127,17 @@ def get_domain_risk_score_details(domain_risk: dict[str, Any]) -> dict[str, Any]
     return risk_scores
 
 
-def parse_domain_age_days(create_date_raw: Any) -> int | None:
-    """Return domain age in days from a raw create_date value, or None if unparseable."""
+def parse_domain_age_days(create_date_raw: SingleJson | str | None) -> int | None:
+    """Return domain age in days from a raw create_date value, or None if unparseable.
+
+    Args:
+        create_date_raw: Raw create_date string or DomainTools ``{value, count}`` dict.
+
+    Returns:
+        Domain age in days, or ``None`` when missing or invalid.
+    """
     create_date_str = create_date_raw.get("value") if isinstance(create_date_raw, dict) else create_date_raw
-    if not create_date_str:
+    if not isinstance(create_date_str, str) or not create_date_str:
         return None
     try:
         created = datetime.strptime(create_date_str[:10], "%Y-%m-%d")

@@ -50,7 +50,7 @@ class DomainToolsParser:
         return val if isinstance(val, list) else [{"value": val}]
 
     @staticmethod
-    def _to_single_json(val: Any) -> SingleJson | None:
+    def _to_single_json(val: SingleJson | str | None) -> SingleJson | None:
         """Normalize a raw API value (str or {value, count} dict) to SingleJson or None.
 
         Handles APIs that return a field as either a plain string or a pivot dict
@@ -159,7 +159,7 @@ class DomainToolsParser:
             ),
         )
 
-    def _parse_iris_enrich_contact(self, contact_data: dict) -> Contact | None:
+    def _parse_iris_enrich_contact(self, contact_data: SingleJson) -> Contact | None:
         """Parse an iris_enrich contact where each field is wrapped in {value: ...}."""
         if not contact_data:
             return None
@@ -183,7 +183,7 @@ class DomainToolsParser:
         )
 
     @staticmethod
-    def _parse_risk_components(risk_details: dict[str, Any]) -> dict[str, Any]:
+    def _parse_risk_components(risk_details: SingleJson) -> SingleJson:
         """Extract and normalize risk scores, threats, and evidence from risk_details."""
         threats_raw = risk_details.get("threat_profile_threats", "")
         evidence_raw = risk_details.get("threat_profile_evidence", "")
@@ -209,10 +209,14 @@ class DomainToolsParser:
         """Return (create_date_str, domain_age_days) from raw API data."""
         create_date_raw = raw_data.get("create_date") or {}
         domain_age_days = parse_domain_age_days(create_date_raw)
-        create_date = create_date_raw.get("value") or None if isinstance(create_date_raw, dict) else create_date_raw or None
+        create_date = (
+            create_date_raw.get("value") or None
+            if isinstance(create_date_raw, dict)
+            else create_date_raw or None
+        )
         return create_date, domain_age_days
 
-    def _extract_identity_fields(self, raw_data: SingleJson) -> dict[str, Any]:
+    def _extract_identity_fields(self, raw_data: SingleJson) -> SingleJson:
         """Extract registrant, registrar, and contact fields."""
         registrant_org_raw = raw_data.get("registrant_org") or {}
         registrant_org = (
@@ -229,7 +233,7 @@ class DomainToolsParser:
             "billing_contact": self._parse_iris_enrich_contact(raw_data.get("billing_contact") or {}),
         }
 
-    def _extract_infrastructure_fields(self, raw_data: SingleJson) -> dict[str, Any]:
+    def _extract_infrastructure_fields(self, raw_data: SingleJson) -> SingleJson:
         """Extract hosting metadata, tracking codes, and infrastructure fields."""
         ips = raw_data.get("ip") or []
         ip_cc = ips[0].get("country_code", {}).get("value", "") if ips else ""
@@ -264,7 +268,15 @@ class DomainToolsParser:
         }
 
     def parse_iris_enrich_data(self, domain: str, raw_data: SingleJson) -> EnrichedDomainSummary:
-        """Parse a single iris_enrich result into an EnrichedDomainSummary."""
+        """Parse a single iris_enrich result into an EnrichedDomainSummary.
+
+        Args:
+            domain (str): The domain name being enriched.
+            raw_data (SingleJson): Raw result dict from the iris_enrich API response.
+
+        Returns:
+            EnrichedDomainSummary: Parsed risk and identity data for the domain.
+        """
         risk_details = get_domain_risk_score_details(raw_data.get("domain_risk") or {})
         risk = self._parse_risk_components(risk_details)
         create_date, domain_age_days = self._calculate_domain_age(raw_data)
@@ -288,40 +300,8 @@ class DomainToolsParser:
             domain_age_days=domain_age_days,
             is_young_domain=(risk_category == "young_domain"),
             iris_investigate_link=iris_link,
-            registrant_name=identity["registrant_name"],
-            registrant_org=identity["registrant_org"],
-            registrar=identity["registrar"],
-            registrar_status=identity["registrar_status"],
-            registrant_contact=identity["registrant_contact"],
-            admin_contact=identity["admin_contact"],
-            technical_contact=identity["technical_contact"],
-            billing_contact=identity["billing_contact"],
-            ip_country_code=infra["ip_country_code"],
-            website_title=infra["website_title"],
-            server_type=infra["server_type"],
-            first_seen=infra["first_seen"],
-            redirect=infra["redirect"],
-            redirect_domain=infra["redirect_domain"],
-            expiration_date=infra["expiration_date"],
-            spf_info=infra["spf_info"],
-            ssl_info=infra["ssl_info"],
-            tld=infra["tld"],
-            active=infra["active"],
-            whois_url=infra["whois_url"],
-            popularity_rank=infra["popularity_rank"],
-            alexa=infra["alexa"],
-            adsense=infra["adsense"],
-            google_analytics=infra["google_analytics"],
-            ga4=infra["ga4"],
-            gtm_codes=infra["gtm_codes"],
-            fb_codes=infra["fb_codes"],
-            hotjar_codes=infra["hotjar_codes"],
-            baidu_codes=infra["baidu_codes"],
-            yandex_codes=infra["yandex_codes"],
-            matomo_codes=infra["matomo_codes"],
-            statcounter_project_codes=infra["statcounter_project_codes"],
-            statcounter_security_codes=infra["statcounter_security_codes"],
-            tags=infra["tags"],
+            **identity,
+            **infra,
         )
 
     def parse_domain_rdap_data(self, raw_data: dict[str, Any]) -> ParsedDomainRDAPModel:
