@@ -444,8 +444,7 @@ def main() -> None:
         result_value = str(bulk_id)
         siemplify.result.add_result_json(acquisition_data)
         output_message = (
-            f'Successfully created bulk acquisition with ID "{bulk_id}" in '
-            f"{INTEGRATION_DISPLAY_NAME}. State: {state}."
+            f'Successfully created bulk acquisition with ID "{bulk_id}" in {INTEGRATION_DISPLAY_NAME}. State: {state}.'
         )
 
     except Exception as err:

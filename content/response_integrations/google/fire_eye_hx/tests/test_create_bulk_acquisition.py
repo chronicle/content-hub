@@ -155,6 +155,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_manager.create_bulk_acquisition.assert_not_called()
         mock_siemplify.end.assert_called_once()
         end_call = mock_siemplify.end.call_args[0]
+        assert end_call[0].startswith('Error executing action "Create Bulk Acquisition". Reason: ')
         assert "Agent IDs must contain at least one agent ID" in end_call[0]
         assert end_call[1] == "false"
         assert end_call[2] == EXECUTION_STATE_FAILED
@@ -191,6 +192,7 @@ class TestCreateBulkAcquisition(unittest.TestCase):
         mock_manager.create_bulk_acquisition.assert_not_called()
         mock_siemplify.end.assert_called_once()
         end_call = mock_siemplify.end.call_args[0]
+        assert end_call[0].startswith('Error executing action "Create Bulk Acquisition". Reason: ')
         assert "Provide Agent IDs, Host Set ID or Host Set Name" in end_call[0]
         assert end_call[1] == "false"
         assert end_call[2] == EXECUTION_STATE_FAILED
