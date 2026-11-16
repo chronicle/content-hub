@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import requests
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from TIPCommon.types import ChronicleSOAR, SingleJson
 
 from .config import IntegrationConfig, create_auth_provider, validate_config

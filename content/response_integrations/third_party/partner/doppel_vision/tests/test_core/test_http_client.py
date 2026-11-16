@@ -39,7 +39,7 @@ def test_v1_401_does_not_refresh() -> None:
 
 
 def test_v2_401_refreshes_token_and_retries() -> None:
-    cache = TokenCache(now=lambda: 1_000)
+    cache = TokenCache(now=lambda: 1_000, secret="id:secret")
     cache.set_token("expired", 86400)
     session = MagicMock()
     session.request.side_effect = [
@@ -81,3 +81,27 @@ def test_retries_5xx_then_raises() -> None:
         client.request("GET", "https://api.doppel.com/v1/alerts")
     assert exc_info.value.status_code == 500
     assert session.request.call_count == 3
+
+
+def test_v2_401_on_final_attempt_still_refreshes() -> None:
+    cache = TokenCache(now=lambda: 1_000, secret="id:secret")
+    cache.set_token("expired", 86400)
+    session = MagicMock()
+    session.request.side_effect = [
+        FakeResponse(429, {"message": "slow down"}, headers={"Retry-After": "0"}),
+        FakeResponse(429, {"message": "slow down"}, headers={"Retry-After": "0"}),
+        FakeResponse(401, {"message": "expired"}),
+        FakeResponse(200, {"alerts": []}),
+    ]
+    session.post.return_value = MagicMock(
+        ok=True,
+        status_code=200,
+        content=b"{}",
+        json=lambda: {"access_token": "fresh", "expires_in": 86400},
+    )
+    provider = AuthProviderV2("id", "secret", token_cache=cache, session=session)
+    client = HttpClient(provider, session=session, sleep=lambda _seconds: None)
+    payload = client.request("GET", "https://api.doppel.com/v2/alerts")
+    assert payload == {"alerts": []}
+    assert session.request.call_count == 4
+    assert session.request.call_args.kwargs["headers"]["Authorization"] == "Bearer fresh"

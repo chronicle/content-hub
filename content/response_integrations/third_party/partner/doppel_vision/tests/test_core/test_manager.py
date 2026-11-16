@@ -3,9 +3,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from core.DoppelManager import DoppelManager
 from core.config import IntegrationConfig
 from core.constants import API_VERSION_V1, API_VERSION_V2
+from core.DoppelManager import DoppelManager
 from core.exceptions import DoppelConfigError, DoppelHttpError
 
 

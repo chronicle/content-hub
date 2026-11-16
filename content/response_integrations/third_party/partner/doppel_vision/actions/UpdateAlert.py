@@ -8,7 +8,7 @@ from ..core.config import _clean, create_manager_from_siemplify
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = "Update Alert Action"
 

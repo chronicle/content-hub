@@ -5,8 +5,6 @@ from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import requests
-
 from .auth_provider_v1 import AuthProviderV1
 from .auth_provider_v2 import AuthProviderV2
 from .constants import (
@@ -25,6 +23,7 @@ from .exceptions import DoppelConfigError
 from .token_cache import TokenCache
 
 if TYPE_CHECKING:
+    import requests
     from TIPCommon.types import ChronicleSOAR, SingleJson
 
     from .DoppelManager import DoppelManager
@@ -123,14 +122,15 @@ def _configuration_mapping(siemplify: ChronicleSOAR) -> SingleJson | None:
     Action and connector objects expose ``siemplify.configuration`` directly.
     Job objects (``SiemplifyJob``) only expose it via ``get_configuration()``.
     """
-    getter = getattr(siemplify, "get_configuration", None)
+    getter: object = getattr(siemplify, "get_configuration", None)
     if not callable(getter):
         return None
     buf = io.StringIO()
     try:
         with redirect_stdout(buf), redirect_stderr(buf):
             configuration = getter(INTEGRATION_NAME)
-    except Exception:
+    except Exception as e:
+        del e
         return None
     if isinstance(configuration, dict):
         return configuration
@@ -148,7 +148,8 @@ def _extract_param(siemplify: ChronicleSOAR, param_name: str) -> str | None:
                 is_mandatory=False,
                 print_value=False,
             )
-    except Exception:
+    except Exception as e:
+        del e
         val = ""
     return _clean(val)
 
@@ -203,17 +204,17 @@ def create_auth_provider(
         return AuthProviderV2(
             client_id=config.client_id or "",
             client_secret=config.client_secret or "",
-            token_cache=TokenCache(siemplify=siemplify, use_context=persist_token),
+            token_cache=TokenCache(
+                siemplify=siemplify,
+                use_context=persist_token,
+                secret=f"{config.client_id}:{config.client_secret}",
+            ),
             session=session,
         )
     return AuthProviderV1(api_key=config.api_key or "", user_api_key=config.user_api_key, org_code=config.org_code)
 
 
-def create_manager_from_siemplify(
-    siemplify: ChronicleSOAR,
-    *,
-    persist_token: bool = True,
-) -> DoppelManager:
+def create_manager_from_siemplify(siemplify: ChronicleSOAR, *, persist_token: bool = True) -> DoppelManager:
     """Create a configured DoppelManager instance from a SOAR SDK object."""
     from .DoppelManager import DoppelManager
 

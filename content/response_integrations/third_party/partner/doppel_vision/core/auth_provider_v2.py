@@ -58,6 +58,7 @@ class AuthProviderV2:
         self.client_id = client_id
         self.client_secret = client_secret
         self.token_cache = token_cache or TokenCache()
+        self.token_cache.bind_secret(f"{client_id}:{client_secret}")
         self.session = session or requests.Session()
 
     def get_auth_headers(self, force_refresh: bool = False) -> dict[str, str]:

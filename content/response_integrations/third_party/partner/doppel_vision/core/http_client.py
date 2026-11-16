@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import requests
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from TIPCommon.types import SingleJson
 
 from .auth_provider_v1 import AuthProviderV1
@@ -17,22 +19,12 @@ from .exceptions import DoppelHttpError
 AuthProvider = AuthProviderV1 | AuthProviderV2
 
 
-def _error_message(status_code: int, payload: object, auth_error_message: str, url: str) -> str:
-    api_message: object = None
-    if isinstance(payload, dict):
-        api_message = payload.get("message") or payload.get("error")
-    detail = str(api_message) if api_message else auth_error_message
-    if status_code == 401:
-        return f"{url} failed (HTTP 401): {detail}"
-    if status_code == 403:
-        return f"{url} failed (HTTP 403): {detail if api_message else 'Forbidden'}"
-    if status_code == 404:
-        return f"{url} failed (HTTP 404): {detail if api_message else 'Not found'}"
-    if status_code == 429:
-        return f"{url} failed (HTTP 429): {detail if api_message else 'Rate limit exceeded'}"
-    if status_code >= 500:
-        return f"{url} failed (HTTP {status_code}): {detail if api_message else 'Doppel API server error'}"
-    return f"{url} failed (HTTP {status_code}): {detail if api_message else 'Doppel API request failed'}"
+@dataclass(frozen=True, slots=True)
+class _RequestSpec:
+    method: str
+    url: str
+    params: SingleJson | None = None
+    json_body: SingleJson | None = None
 
 
 def _retry_after_seconds(response: requests.Response) -> float:
@@ -94,51 +86,53 @@ class HttpClient:
         """
         unauthorized_retried = False
         headers = self.auth_provider.get_auth_headers()
+        spec = _RequestSpec(method=method, url=url, params=params, json_body=json_body)
 
         for attempt in range(MAX_HTTP_RETRIES):
-            response = self._send(method, url, headers, params, json_body, attempt)
-            if response is None:
+            response, payload, headers, unauthorized_retried = self._send_with_refresh(
+                spec, headers, attempt, unauthorized_retried
+            )
+            if response is None or self._sleep_for_retry(response, attempt):
                 continue
-
-            payload = self._parse_payload(response)
-            refreshed = self._refresh_headers_if_unauthorized(response, unauthorized_retried)
-            if refreshed is not None:
-                headers = refreshed
-                unauthorized_retried = True
-                continue
-
-            if self._sleep_for_retry(response, attempt):
-                continue
-
             if not response.ok:
                 raise DoppelHttpError(
                     response.status_code,
-                    _error_message(response.status_code, payload, self._auth_error_message, url),
+                    self._error_message(response.status_code, payload, spec.url),
                 )
             return payload if payload != {} or response.content else {}
 
         raise DoppelHttpError(0, "Doppel API request failed after retries")
 
-    def _send(
+    def _send_with_refresh(
         self,
-        method: str,
-        url: str,
+        spec: _RequestSpec,
         headers: dict[str, str],
-        params: SingleJson | None,
-        json_body: SingleJson | None,
         attempt: int,
-    ) -> requests.Response | None:
+        unauthorized_retried: bool,
+    ) -> tuple[requests.Response | None, SingleJson, dict[str, str], bool]:
+        response = self._send(spec, headers, attempt)
+        if response is None:
+            return None, {}, headers, unauthorized_retried
+        payload = self._parse_payload(response)
+        refreshed = self._refresh_headers_if_unauthorized(response, unauthorized_retried)
+        if refreshed is None:
+            return response, payload, headers, unauthorized_retried
+        response = self._send(spec, refreshed, attempt)
+        payload = self._parse_payload(response) if response is not None else {}
+        return response, payload, refreshed, True
+
+    def _send(self, spec: _RequestSpec, headers: dict[str, str], attempt: int) -> requests.Response | None:
         try:
             return self.session.request(
-                method=method.upper(),
-                url=url,
+                method=spec.method.upper(),
+                url=spec.url,
                 headers={
                     "Content-Type": "application/json",
                     "x-doppel-client": DOPPEL_CLIENT_HEADER,
                     **headers,
                 },
-                params=params,
-                json=json_body,
+                params=spec.params,
+                json=spec.json_body,
                 timeout=HTTP_TIMEOUT_SECONDS,
             )
         except requests.RequestException as exc:
@@ -175,3 +169,20 @@ class HttpClient:
             self._sleep(attempt + 1)
             return True
         return False
+
+    def _error_message(self, status_code: int, payload: object, url: str) -> str:
+        api_message: object = None
+        if isinstance(payload, dict):
+            api_message = payload.get("message") or payload.get("error")
+        detail = str(api_message) if api_message else self._auth_error_message
+        if status_code == 401:
+            return f"{url} failed (HTTP 401): {detail}"
+        if status_code == 403:
+            return f"{url} failed (HTTP 403): {detail if api_message else 'Forbidden'}"
+        if status_code == 404:
+            return f"{url} failed (HTTP 404): {detail if api_message else 'Not found'}"
+        if status_code == 429:
+            return f"{url} failed (HTTP 429): {detail if api_message else 'Rate limit exceeded'}"
+        if status_code >= 500:
+            return f"{url} failed (HTTP {status_code}): {detail if api_message else 'Doppel API server error'}"
+        return f"{url} failed (HTTP {status_code}): {detail if api_message else 'Doppel API request failed'}"

@@ -90,13 +90,7 @@ def test_normalize_alert_maps_v1_and_v2_aliases() -> None:
             "assignee": "a@x.com",
         },
     )
-    v1 = normalize_alert(
-        {
-            "id": "ACM-1",
-            "note": "Legacy note",
-            "last_activity_timestamp": "2026-01-02T00:00:00",
-        },
-    )
+    v1 = normalize_alert({"id": "ACM-1", "note": "Legacy note", "last_activity_timestamp": "2026-01-02T00:00:00"})
     assert v2["notes"] == "Analyst note"
     assert v2["last_activity_timestamp"] == "2026-01-01T00:00:00"
     assert v2["assignee"] == "a@x.com"

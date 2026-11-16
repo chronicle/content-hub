@@ -6,7 +6,13 @@ from unittest.mock import MagicMock
 
 from core.auth_provider_v2 import AuthProviderV2
 from core.constants import TOKEN_CACHE_PROPERTY_KEY
-from core.token_cache import TokenCache
+from core.token_cache import TokenCache, encrypt_context_value
+
+SECRET = "id:secret"
+
+
+def _encrypted_record(record: dict[str, object], secret: str = SECRET) -> str:
+    return encrypt_context_value(json.dumps(record), secret)
 
 
 class ContextStore:
@@ -50,13 +56,18 @@ class SetOnlyContextStore:
 def test_token_cache_uses_memory_then_context() -> None:
     siemplify = MagicMock()
     siemplify.integration_instance = "instance-1"
-    siemplify.get_context_property.return_value = json.dumps({"access_token": "ctx-token", "expires_at": 10_000})
-    cache = TokenCache(siemplify=siemplify, now=lambda: 1_000)
+    credential_hash = TokenCache(secret=SECRET)._credential_hash
+    siemplify.get_context_property.return_value = _encrypted_record(
+        {"access_token": "ctx-token", "expires_at": 10_000, "credential_hash": credential_hash},
+    )
+    cache = TokenCache(siemplify=siemplify, now=lambda: 1_000, secret=SECRET)
     assert cache.get_token() == "ctx-token"
 
     cache.set_token("mem-token", 86400)
     siemplify.try_set_context_property.assert_called()
     assert TOKEN_CACHE_PROPERTY_KEY in siemplify.try_set_context_property.call_args[0]
+    persisted = siemplify.try_set_context_property.call_args[0][-1]
+    assert "mem-token" not in persisted
     assert cache.get_token() == "mem-token"
     siemplify.get_context_property.reset_mock()
     cache.get_token()
@@ -64,7 +75,7 @@ def test_token_cache_uses_memory_then_context() -> None:
 
 
 def test_token_cache_expires_with_buffer() -> None:
-    cache = TokenCache(now=lambda: 1_000)
+    cache = TokenCache(now=lambda: 1_000, secret=SECRET)
     cache.set_token("tok", 200)
     assert cache.get_token() is None
 
@@ -72,7 +83,7 @@ def test_token_cache_expires_with_buffer() -> None:
 def test_token_cache_invalidate_clears_context() -> None:
     siemplify = MagicMock()
     siemplify.integration_instance = "instance-1"
-    cache = TokenCache(siemplify=siemplify, now=lambda: 1_000)
+    cache = TokenCache(siemplify=siemplify, now=lambda: 1_000, secret=SECRET)
     cache.set_token("tok", 86400)
     cache.invalidate()
     assert cache.get_token() is None
@@ -81,7 +92,7 @@ def test_token_cache_invalidate_clears_context() -> None:
 
 def test_token_cache_skips_context_when_disabled() -> None:
     siemplify = MagicMock()
-    cache = TokenCache(siemplify=siemplify, now=lambda: 1_000, use_context=False)
+    cache = TokenCache(siemplify=siemplify, now=lambda: 1_000, use_context=False, secret=SECRET)
     cache.set_token("tok", 86400)
     assert cache.get_token() == "tok"
     siemplify.get_context_property.assert_not_called()
@@ -91,18 +102,26 @@ def test_token_cache_skips_context_when_disabled() -> None:
 
 def test_token_cache_falls_back_to_set_context_property() -> None:
     siemplify = SetOnlyContextStore()
-    writer = TokenCache(siemplify=siemplify, now=lambda: 1_000)
+    writer = TokenCache(siemplify=siemplify, now=lambda: 1_000, secret=SECRET)
     writer.set_token("tok-1", 86400)
-    reader = TokenCache(siemplify=siemplify, now=lambda: 1_100)
+    reader = TokenCache(siemplify=siemplify, now=lambda: 1_100, secret=SECRET)
     assert reader.get_token() == "tok-1"
 
 
 def test_token_reused_across_new_cache_instances() -> None:
     siemplify = ContextStore()
-    first = TokenCache(siemplify=siemplify, now=lambda: 1_000)
+    first = TokenCache(siemplify=siemplify, now=lambda: 1_000, secret=SECRET)
     first.set_token("tok-1", 86400)
-    second = TokenCache(siemplify=siemplify, now=lambda: 1_100)
+    second = TokenCache(siemplify=siemplify, now=lambda: 1_100, secret=SECRET)
     assert second.get_token() == "tok-1"
+
+
+def test_token_cache_ignores_stale_credentials() -> None:
+    siemplify = ContextStore()
+    first = TokenCache(siemplify=siemplify, now=lambda: 1_000, secret=SECRET)
+    first.set_token("tok-1", 86400)
+    second = TokenCache(siemplify=siemplify, now=lambda: 1_100, secret="id:other-secret")
+    assert second.get_token() is None
 
 
 def test_token_cache_survives_missing_context_property() -> None:
@@ -110,10 +129,11 @@ def test_token_cache_survives_missing_context_property() -> None:
     siemplify.integration_instance = "instance-1"
     siemplify.get_context_property.side_effect = Exception("property not found")
     siemplify.try_set_context_property.side_effect = Exception("cannot set")
-    cache = TokenCache(siemplify=siemplify, now=lambda: 1_000)
+    cache = TokenCache(siemplify=siemplify, now=lambda: 1_000, secret=SECRET)
     assert cache.get_token() is None
     cache.set_token("tok", 86400)
     assert cache.get_token() == "tok"
+    siemplify.LOGGER.warn.assert_called()
 
 
 def test_v2_auth_reuses_token_across_playbook_runs() -> None:
@@ -125,22 +145,12 @@ def test_v2_auth_reuses_token_across_playbook_runs() -> None:
         content=b"{}",
         json=lambda: {"access_token": "tok-1", "expires_in": 86400},
     )
-    first = AuthProviderV2(
-        "id",
-        "secret",
-        token_cache=TokenCache(siemplify=store, now=lambda: 1_000),
-        session=session,
-    )
+    first = AuthProviderV2("id", "secret", token_cache=TokenCache(siemplify=store, now=lambda: 1_000), session=session)
     assert first.get_auth_headers()["Authorization"] == "Bearer tok-1"
     session.post.assert_called_once()
     session.post.reset_mock()
 
-    second = AuthProviderV2(
-        "id",
-        "secret",
-        token_cache=TokenCache(siemplify=store, now=lambda: 1_100),
-        session=session,
-    )
+    second = AuthProviderV2("id", "secret", token_cache=TokenCache(siemplify=store, now=lambda: 1_100), session=session)
     assert second.get_auth_headers()["Authorization"] == "Bearer tok-1"
     session.post.assert_not_called()
 
@@ -148,3 +158,5 @@ def test_v2_auth_reuses_token_across_playbook_runs() -> None:
 def test_ping_does_not_disable_token_persist() -> None:
     source = (Path(__file__).resolve().parents[2] / "actions" / "Ping.py").read_text(encoding="utf-8")
     assert "persist_token=False" not in source
+    assert "Successfully connected to the {INTEGRATION_NAME} server with the provided" in source
+    assert "Failed to connect to the {INTEGRATION_NAME} server! Error is" in source

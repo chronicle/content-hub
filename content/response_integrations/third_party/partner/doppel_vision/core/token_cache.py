@@ -1,14 +1,12 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import io
 import json
 import time
-from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from TIPCommon.types import ChronicleSOAR, SingleJson
 
 from .constants import (
     GLOBAL_CONTEXT_SCOPE,
@@ -16,6 +14,13 @@ from .constants import (
     TOKEN_CACHE_PROPERTY_KEY,
     TOKEN_EXPIRY_BUFFER_SECONDS,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from TIPCommon.types import ChronicleSOAR, SingleJson
+
+_BLOCK_SIZE = 16
 
 
 def _invoke(fn: Callable[..., object], positional: tuple[object, ...], named: SingleJson) -> object:
@@ -25,11 +30,67 @@ def _invoke(fn: Callable[..., object], positional: tuple[object, ...], named: Si
         return fn(**named)
 
 
+def _credential_hash(secret: str) -> str:
+    return hashlib.sha256(secret.encode()).hexdigest()
+
+
+def _pad(value: str) -> str:
+    padding = _BLOCK_SIZE - len(value) % _BLOCK_SIZE
+    return value + chr(padding) * padding
+
+
+def _unpad(value: str) -> str:
+    return value[: -ord(value[-1:])]
+
+
+def _aes_key(secret: str) -> bytes:
+    from Crypto.Protocol.KDF import PBKDF2
+
+    return PBKDF2(secret, b"this is a salt", dkLen=_BLOCK_SIZE * 4)[:32]
+
+
+def encrypt_context_value(payload: str, secret: str) -> str:
+    """Encrypt a token-cache payload using the TIPCommon AES-GCM construction."""
+    try:
+        from TIPCommon.encryption import encrypt
+
+        return encrypt(payload, secret).decode()
+    except Exception as e:
+        del e
+        from Crypto import Random
+        from Crypto.Cipher import AES
+
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(_aes_key(secret), AES.MODE_GCM, iv)
+        encrypted = cipher.encrypt(_pad(payload).encode())
+        return base64.b64encode(iv + encrypted).decode()
+
+
+def decrypt_context_value(raw: str, secret: str) -> str:
+    """Decrypt a token-cache payload using the TIPCommon AES-GCM construction."""
+    try:
+        from TIPCommon.encryption import decrypt
+
+        return decrypt(raw.encode(), secret)
+    except Exception as e:
+        del e
+        from Crypto.Cipher import AES
+
+        data = base64.b64decode(raw.encode())
+        cipher = AES.new(_aes_key(secret), AES.MODE_GCM, data[:16])
+        return _unpad(cipher.decrypt(data[16:]).decode())
+
+
 class TokenCache:
     """In-process plus SOAR-context cache for v2 OAuth access tokens."""
 
     def __init__(
-        self, siemplify: ChronicleSOAR | None = None, now: Callable[[], float] | None = None, use_context: bool = True
+        self,
+        siemplify: ChronicleSOAR | None = None,
+        now: Callable[[], float] | None = None,
+        *,
+        use_context: bool = True,
+        secret: str | None = None,
     ) -> None:
         """Initialize the cache, optionally backed by SOAR context.
 
@@ -37,10 +98,20 @@ class TokenCache:
             siemplify: Optional SOAR SDK object used to persist tokens.
             now: Optional clock used for expiry checks. Defaults to time.time.
             use_context: When False, skip SOAR context reads and writes.
+            secret: Client credentials used to encrypt tokens and bind the cache.
         """
         self.siemplify = siemplify if use_context else None
         self._now = now or time.time
         self._memory: SingleJson | None = None
+        self._secret: str | None = None
+        self._credential_hash: str | None = None
+        if secret:
+            self.bind_secret(secret)
+
+    def bind_secret(self, secret: str) -> None:
+        """Bind the cache to client credentials used for encryption and freshness."""
+        self._secret = secret
+        self._credential_hash = _credential_hash(secret)
 
     def _identifier(self) -> str:
         identifier: object = getattr(self.siemplify, "integration_instance", None)
@@ -75,6 +146,8 @@ class TokenCache:
             "access_token": access_token,
             "expires_at": self._now() + expires_in,
         }
+        if self._credential_hash:
+            record["credential_hash"] = self._credential_hash
         self._memory = record
         self._write_context(record)
 
@@ -85,6 +158,8 @@ class TokenCache:
 
     def _is_fresh(self, record: SingleJson | None) -> bool:
         if not record or not record.get("access_token") or not record.get("expires_at"):
+            return False
+        if self._credential_hash and record.get("credential_hash") != self._credential_hash:
             return False
         return self._now() < float(record["expires_at"]) - TOKEN_EXPIRY_BUFFER_SECONDS
 
@@ -101,13 +176,14 @@ class TokenCache:
         if not raw:
             return None
         try:
-            data = json.loads(raw) if isinstance(raw, str) else raw
+            payload = self._decrypt_payload(raw)
+            data = json.loads(payload) if isinstance(payload, str) else payload
         except (TypeError, ValueError, json.JSONDecodeError):
             return None
         return data if isinstance(data, dict) else None
 
     def _write_context(self, record: SingleJson | None) -> None:
-        value = "" if record is None else json.dumps(record)
+        value = "" if record is None else self._encrypt_payload(json.dumps(record))
         self._call_context(
             ("try_set_context_property", "set_context_property"),
             (
@@ -124,12 +200,19 @@ class TokenCache:
             },
         )
 
-    def _call_context(
-        self,
-        method_names: tuple[str, ...],
-        positional: tuple[object, ...],
-        named: SingleJson,
-    ) -> object:
+    def _encrypt_payload(self, payload: str) -> str:
+        if not self._secret:
+            return payload
+        return encrypt_context_value(payload, self._secret)
+
+    def _decrypt_payload(self, raw: object) -> object:
+        if not self._secret:
+            return raw
+        if not isinstance(raw, str):
+            raise ValueError("Encrypted token cache value must be a string")
+        return decrypt_context_value(raw, self._secret)
+
+    def _call_context(self, method_names: tuple[str, ...], positional: tuple[object, ...], named: SingleJson) -> object:
         if self.siemplify is None:
             return None
         buf = io.StringIO()
@@ -140,6 +223,10 @@ class TokenCache:
                     continue
                 try:
                     return _invoke(fn, positional, named)
-                except Exception:
+                except Exception as exc:
+                    logger = getattr(self.siemplify, "LOGGER", None)
+                    warn = getattr(logger, "warn", None) or getattr(logger, "warning", None)
+                    if callable(warn):
+                        warn(f"Failed to access Doppel OAuth token context via {name}: {exc}")
                     continue
         return None
