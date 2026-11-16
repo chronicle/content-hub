@@ -7,7 +7,12 @@ by risk category, plus per-domain enrichment details.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+    from ..core.datamodels import EnrichedDomainSummary
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -31,31 +36,41 @@ from ..core.UtilsManager import extract_domain_from_string
 SUPPORTED_ENTITY_TYPES: list[str] = [EntityTypes.URL, EntityTypes.HOSTNAME, EntityTypes.DOMAIN]
 
 
-def _extract_params(siemplify: SiemplifyAction) -> tuple:
+def _extract_params(
+    siemplify: SiemplifyAction,
+) -> tuple[str, str, str, str | None, bool, bool]:
     """Extract integration configuration and action parameters from the SOAR context."""
-    username = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="Username",
-        is_mandatory=True, print_value=True,
+    username: str = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Username",
+        is_mandatory=True,
+        print_value=True,
     )
-    api_key = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="ApiToken",
-        is_mandatory=True, print_value=True,
+    api_key: str = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="ApiToken",
+        is_mandatory=True,
+        print_value=True,
     )
-    verify_ssl = extract_configuration_param(
+    verify_ssl: str = extract_configuration_param(
         siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
     )
-    manual_domains_str = extract_action_param(siemplify, "Domains", print_value=True)
-    include_young = extract_action_param(
+    manual_domains_str: str | None = extract_action_param(siemplify, "Domains", print_value=True)
+    include_young: bool = extract_action_param(
         siemplify, param_name="Include Young Domains", input_type=bool, default_value=True
     )
-    merge_with_entities = extract_action_param(
+    merge_with_entities: bool = extract_action_param(
         siemplify, param_name="Merge With Case Entities", input_type=bool, default_value=False
     )
     return username, api_key, verify_ssl, manual_domains_str, include_young, merge_with_entities
 
 
 def _collect_domains(
-    siemplify: SiemplifyAction, manual_domains_str: str | None, merge_with_entities: bool
+    siemplify: SiemplifyAction,
+    manual_domains_str: str | None,
+    merge_with_entities: bool,
 ) -> list[str]:
     """Build the deduplicated domain list from manual input, case entities, or both."""
     manual = [d.strip() for d in manual_domains_str.split(",") if d.strip()] if manual_domains_str else []
@@ -71,12 +86,13 @@ def _collect_domains(
 
 
 def _enrich_and_summarize(
-    dt_manager: DomainToolsManager, domains: list[str]
-) -> tuple[list, dict[str, Any], list[str]]:
+    dt_manager: DomainToolsManager,
+    domains: list[str],
+) -> tuple[list[EnrichedDomainSummary], SingleJson, list[str]]:
     """Enrich domains via the API and return results, a risk category summary, and any missing domains."""
     enriched_results = dt_manager.enrich_domains_with_risk(domains)
     missing_domains = [d for d in domains if d not in {e.domain for e in enriched_results}]
-    summary: dict[str, Any] = {
+    summary: SingleJson = {
         "total_domains": len(enriched_results),
         "high_risk_count": 0,
         "medium_risk_count": 0,
