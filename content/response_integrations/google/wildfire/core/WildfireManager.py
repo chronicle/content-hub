@@ -14,60 +14,79 @@
 
 from __future__ import annotations
 
-import os
+import pathlib
 import re
 import string
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
+import xmltodict
 from requests.auth import HTTPBasicAuth
 from TIPCommon.extraction import extract_configuration_param
-import xmltodict
 
-# =====================================
-#              CONSTS                 #
-# =====================================
-
-DEFAULT_API_ROOT = "https://wildfire.paloaltonetworks.com"
-DEFAULT_TOKEN_URL = "https://auth.apps.paloaltonetworks.com/am/oauth2/access_token"
-
-
-# =====================================
-#              CLASSES                #
-# =====================================
+DEFAULT_API_ROOT: str = "https://wildfire.paloaltonetworks.com"
+DEFAULT_TOKEN_URL: str = "https://auth.apps.paloaltonetworks.com/am/oauth2/access_token"
+CONNECTIVITY_TEST_HASH: str = "44d88612fea8a8f36de82e1278abb02f"
 
 
 class WildfireManagerError(Exception):
     """General exception for Wildfire Manager."""
 
-    pass
-
 
 class WildfireNotFoundError(WildfireManagerError):
     """Raised when a sample or report is not found on WildFire."""
 
-    pass
+
+def validate_hash(hash_value: str) -> None:
+    """Validate that the hash is 32 (MD5) or 64 (SHA256) hex characters.
+
+    Args:
+        hash_value: The hash string to validate.
+
+    Raises:
+        WildfireManagerError: If hash is invalid.
+
+    """
+    if not hash_value or len(hash_value) not in {32, 64} or not all(c in string.hexdigits for c in hash_value):
+        msg = f"Invalid hash '{hash_value}'. Must be 32 (MD5) or 64 (SHA256) hex characters."
+        raise WildfireManagerError(msg)
+
+
+def extract_filename_from_response(response: requests.Response, default_name: str) -> str:
+    """Extract filename from Content-Disposition header if available.
+
+    Args:
+        response: The HTTP response.
+        default_name: Fallback filename.
+
+    Returns:
+        The extracted or default filename.
+
+    """
+    cd = response.headers.get("Content-Disposition")
+    if cd:
+        match = re.search(r'filename=["\']?([^"\';]+)["\']?', cd)
+        if match:
+            return match.group(1).strip()
+    return default_name
 
 
 class WildfireManager:
-    """Responsible for all Wildfire operations functionality.
-
-    Supports both legacy API Key authentication (standalone WildFire portal)
-    and modern OAuth2 token-based authentication via Strata Cloud Manager (SCM).
-    """
+    """Responsible for all Wildfire operations functionality."""
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
-        tsg_id: Optional[str] = None,
-        api_root: Optional[str] = None,
-        token_url: Optional[str] = None,
+        api_key: str | None = None,
+        *,
+        client_id: str | None = None,
+        client_secret: str | None = None,
+        tsg_id: str | None = None,
+        api_root: str | None = None,
+        token_url: str | None = None,
         verify_ssl: bool = True,
-        session: Optional[requests.Session] = None,
-    ):
+        session: requests.Session | None = None,
+    ) -> None:
         self.api_key = api_key
         self.client_id = client_id
         self.client_secret = client_secret
@@ -78,17 +97,16 @@ class WildfireManager:
         self.session = session or requests.Session()
         self.session.verify = self.verify_ssl
 
-        # Token caching for SCM OAuth2
-        self._token: Optional[str] = None
+        self._token: str | None = None
         self._token_expires_at: float = 0.0
-
-        self.is_scm = bool(self.client_id and self.client_secret and self.tsg_id)
+        self.is_scm: bool = bool(self.client_id and self.client_secret and self.tsg_id)
 
         if not self.is_scm and not self.api_key:
-            raise WildfireManagerError(
+            msg = (
                 "Either 'Api Key' or ('Client ID', 'Client Secret', and 'TSG ID') "
                 "must be provided for WildFire authentication."
             )
+            raise WildfireManagerError(msg)
 
     @classmethod
     def from_siemplify(cls, siemplify: Any) -> WildfireManager:
@@ -142,15 +160,12 @@ class WildfireManager:
             verify_ssl=verify_ssl,
         )
 
-    # -------------------------------------------------------------
-    # SCM OAuth2 Token Management
-    # -------------------------------------------------------------
     def get_token(self) -> str:
         """Fetch or return cached OAuth2 access token for Strata Cloud Manager."""
         if not self.is_scm:
-            raise WildfireManagerError("SCM credentials are not configured on this instance.")
+            msg = "SCM credentials are not configured on this instance."
+            raise WildfireManagerError(msg)
 
-        # Return cached token if valid (with 60-second buffer)
         if self._token and time.time() < (self._token_expires_at - 60):
             return self._token
 
@@ -168,78 +183,82 @@ class WildfireManager:
                 timeout=30,
             )
         except Exception as e:
-            raise WildfireManagerError(f"Failed to connect to authentication server ({self.token_url}): {e}") from e
+            msg = f"Failed to connect to authentication server ({self.token_url}): {e}"
+            raise WildfireManagerError(msg) from e
 
         if not response.ok:
-            raise WildfireManagerError(
-                f"Authentication failed: HTTP {response.status_code} - {response.text}"
-            )
+            msg = f"Authentication failed: HTTP {response.status_code} - {response.text}"
+            raise WildfireManagerError(msg)
 
         try:
             token_json = response.json()
             access_token = token_json["access_token"]
             expires_in = int(token_json.get("expires_in", 3600))
         except (KeyError, ValueError) as err:
-            raise WildfireManagerError(f"Unexpected token response from auth server: {response.text}") from err
+            msg = f"Unexpected token response from auth server: {response.text}"
+            raise WildfireManagerError(msg) from err
 
         self._token = access_token
         self._token_expires_at = time.time() + expires_in
         return self._token
 
-    # -------------------------------------------------------------
-    # HTTP Request Dispatcher
-    # -------------------------------------------------------------
+    def _build_url(self, endpoint: str) -> str:
+        clean_endpoint = endpoint.lstrip("/")
+        if self.api_root.endswith("/publicapi"):
+            return f"{self.api_root}/{clean_endpoint}"
+        return f"{self.api_root}/publicapi/{clean_endpoint}"
+
+    def _apply_auth(
+        self,
+        method: str,
+        params: dict[str, Any],
+        data: dict[str, Any],
+        headers: dict[str, str],
+    ) -> None:
+        if self.is_scm:
+            headers["Authorization"] = f"Bearer {self.get_token()}"
+        elif method.upper() == "GET":
+            params["apikey"] = self.api_key
+        else:
+            data["apikey"] = self.api_key
+
     def _make_request(
         self,
         endpoint: str,
+        *,
         method: str = "POST",
-        params: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        files: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
+        params: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> requests.Response:
         """Execute an authenticated HTTP request to WildFire."""
-        endpoint = endpoint.lstrip("/")
-        # If api_root doesn't include /publicapi, append it unless already included
-        base_url = self.api_root
-        if not base_url.endswith("/publicapi"):
-            url = f"{base_url}/publicapi/{endpoint}"
-        else:
-            url = f"{base_url}/{endpoint}"
+        url = self._build_url(endpoint)
+        req_headers = headers.copy() if headers else {}
+        req_data = data.copy() if data else {}
+        req_params = params.copy() if params else {}
 
-        headers = headers or {}
-        data = data.copy() if data else {}
-        params = params.copy() if params else {}
-
-        if self.is_scm:
-            token = self.get_token()
-            headers["Authorization"] = f"Bearer {token}"
-            headers["X-PAN-KEY"] = token
-        else:
-            # Legacy API key authentication
-            if method.upper() == "GET":
-                params["apikey"] = self.api_key
-            else:
-                data["apikey"] = self.api_key
+        self._apply_auth(method, req_params, req_data, req_headers)
 
         try:
             response = self.session.request(
                 method=method,
                 url=url,
-                params=params,
-                data=data,
+                params=req_params,
+                data=req_data,
                 files=files,
-                headers=headers,
+                headers=req_headers,
                 timeout=60,
             )
         except requests.exceptions.RequestException as e:
-            raise WildfireManagerError(f"Request to {url} failed: {e}") from e
+            msg = f"Request to {url} failed: {e}"
+            raise WildfireManagerError(msg) from e
 
         if response.status_code == 404:
-            raise WildfireNotFoundError(f"Requested resource not found on Wildfire ({endpoint})")
+            msg = f"Requested resource not found on Wildfire ({endpoint})"
+            raise WildfireNotFoundError(msg)
 
         if not response.ok:
-            # Try to extract error message from WildFire XML error response
             error_message = response.text
             try:
                 parsed = xmltodict.parse(response.content)
@@ -247,62 +266,32 @@ class WildfireManager:
                     error_message = parsed["wildfire"]["error"].get("error-message", response.text)
             except Exception:
                 pass
-            raise WildfireManagerError(
-                f"Wildfire request failed with status code {response.status_code}: {error_message}"
-            )
+            msg = f"Wildfire request failed with status code {response.status_code}: {error_message}"
+            raise WildfireManagerError(msg)
 
         return response
 
-    # -------------------------------------------------------------
-    # Helper Methods
-    # -------------------------------------------------------------
-    @staticmethod
-    def _validate_hash(hash_value: str) -> None:
-        if not hash_value or not (
-            (len(hash_value) == 32 and all(c in string.hexdigits for c in hash_value))
-            or (len(hash_value) == 64 and all(c in string.hexdigits for c in hash_value))
-        ):
-            raise WildfireManagerError(f"Invalid hash '{hash_value}'. Must be 32 (MD5) or 64 (SHA256) hex characters.")
-
-    @staticmethod
-    def _extract_filename(response: requests.Response, default_name: str) -> str:
-        cd = response.headers.get("Content-Disposition") or response.headers.get("content-disposition", "")
-        if cd:
-            match = re.search(r'filename=["\']?([^"\';]+)["\']?', cd)
-            if match:
-                return match.group(1).strip()
-        return default_name
-
-    # -------------------------------------------------------------
-    # Public Operations
-    # -------------------------------------------------------------
-    def get_sample(self, hash_value: str) -> Dict[str, Any]:
-        """Download binary sample file for a given file hash.
-
-        :param hash_value: MD5 or SHA-256 hash string
-        :return: Dict containing 'filename' and 'content' (bytes)
-        """
-        self._validate_hash(hash_value)
+    def get_sample(self, hash_value: str) -> dict[str, Any]:
+        """Download binary sample file for a given file hash."""
+        validate_hash(hash_value)
         try:
             response = self._make_request("get/sample", method="POST", data={"hash": hash_value})
-        except WildfireNotFoundError:
-            raise WildfireManagerError(f"Sample is not available for {hash_value}")
+        except WildfireNotFoundError as error:
+            msg = f"Sample is not available for {hash_value}"
+            raise WildfireNotFoundError(msg) from error
         except Exception as e:
-            raise WildfireManagerError(f"Unable to get sample of {hash_value}:\n{e}") from e
+            msg = f"Unable to get sample of {hash_value}:\n{e}"
+            raise WildfireManagerError(msg) from e
 
-        filename = self._extract_filename(response, f"{hash_value}.tar")
+        filename = extract_filename_from_response(response, f"{hash_value}.tar")
         return {
             "filename": filename,
             "content": response.content,
         }
 
-    def get_report(self, hash_value: str) -> Dict[str, Any]:
-        """Fetch XML detonation report and return parsed dictionary.
-
-        :param hash_value: MD5 or SHA-256 hash string
-        :return: Dict of report details
-        """
-        self._validate_hash(hash_value)
+    def get_report(self, hash_value: str) -> dict[str, Any]:
+        """Fetch XML detonation report and return parsed dictionary."""
+        validate_hash(hash_value)
         try:
             response = self._make_request(
                 "get/report",
@@ -311,67 +300,63 @@ class WildfireManager:
             )
             parsed = xmltodict.parse(response.content)
             return dict(parsed.get("wildfire", {}))
-        except WildfireNotFoundError:
-            raise WildfireManagerError(f"Report is not available for {hash_value}")
+        except WildfireNotFoundError as error:
+            msg = f"Report is not available for {hash_value}"
+            raise WildfireNotFoundError(msg) from error
         except Exception as e:
-            raise WildfireManagerError(f"Unable to get report for {hash_value}:\n{e}") from e
+            msg = f"Unable to get report for {hash_value}:\n{e}"
+            raise WildfireManagerError(msg) from e
 
-    def get_pdf_report(self, hash_value: str) -> Dict[str, Any]:
-        """Fetch PDF detonation report.
-
-        :param hash_value: MD5 or SHA-256 hash string
-        :return: Dict containing 'filename' and 'content' (bytes)
-        """
-        self._validate_hash(hash_value)
+    def get_pdf_report(self, hash_value: str) -> dict[str, Any]:
+        """Fetch PDF detonation report."""
+        validate_hash(hash_value)
         try:
             response = self._make_request(
                 "get/report",
                 method="POST",
                 data={"hash": hash_value, "format": "pdf"},
             )
-        except WildfireNotFoundError:
-            raise WildfireManagerError(f"PDF report is not available for {hash_value}")
+        except WildfireNotFoundError as error:
+            msg = f"PDF report is not available for {hash_value}"
+            raise WildfireNotFoundError(msg) from error
         except Exception as e:
-            raise WildfireManagerError(f"Unable to get report for {hash_value}:\n{e}") from e
+            msg = f"Unable to get report for {hash_value}:\n{e}"
+            raise WildfireManagerError(msg) from e
 
-        filename = self._extract_filename(response, f"{hash_value}.pdf")
+        filename = extract_filename_from_response(response, f"{hash_value}.pdf")
         return {
             "filename": filename,
             "content": response.content,
         }
 
-    def get_pcap(self, hash_value: str) -> Dict[str, Any]:
-        """Retrieve PCAP file for a previously submitted file sample.
-
-        :param hash_value: MD5 or SHA-256 hash string
-        :return: Dict containing 'filename' and 'content' (bytes)
-        """
-        self._validate_hash(hash_value)
+    def get_pcap(self, hash_value: str) -> dict[str, Any]:
+        """Retrieve PCAP file for a previously submitted file sample."""
+        validate_hash(hash_value)
         try:
             response = self._make_request("get/pcap", method="POST", data={"hash": hash_value})
-        except WildfireNotFoundError:
-            raise WildfireManagerError(f"PCAP is not available for {hash_value}")
+        except WildfireNotFoundError as error:
+            msg = f"PCAP is not available for {hash_value}"
+            raise WildfireNotFoundError(msg) from error
         except Exception as e:
-            raise WildfireManagerError(f"Unable to get PCAP for {hash_value}:\n{e}") from e
+            msg = f"Unable to get PCAP for {hash_value}:\n{e}"
+            raise WildfireManagerError(msg) from e
 
-        filename = self._extract_filename(response, f"{hash_value}.pcap")
+        filename = extract_filename_from_response(response, f"{hash_value}.pcap")
         return {
             "filename": filename,
             "content": response.content,
         }
 
-    def submit_file(self, file_path: str) -> Dict[str, Any]:
-        """Submit a file sample to WildFire for analysis.
+    def submit_file(self, file_path: str) -> dict[str, Any]:
+        """Submit a file sample to WildFire for analysis."""
+        path_obj = pathlib.Path(file_path)
+        if not path_obj.exists():
+            msg = f"File not found: {file_path}"
+            raise WildfireManagerError(msg)
 
-        :param file_path: Path to file to submit
-        :return: Dict with upload file info
-        """
-        if not os.path.exists(file_path):
-            raise WildfireManagerError(f"File not found: {file_path}")
-
-        filename = os.path.basename(file_path)
+        filename = path_obj.name
         try:
-            with open(file_path, "rb") as f:
+            with path_obj.open("rb") as f:
                 response = self._make_request(
                     "submit/file",
                     method="POST",
@@ -380,20 +365,13 @@ class WildfireManager:
             parsed = xmltodict.parse(response.content)
             return dict(parsed["wildfire"]["upload-file-info"])
         except Exception as e:
-            raise WildfireManagerError(f"Unable to submit file {file_path}:\n{e}") from e
+            msg = f"Unable to submit file {file_path}:\n{e}"
+            raise WildfireManagerError(msg) from e
 
     def test_connectivity(self) -> bool:
-        """Validate connectivity and authentication against WildFire.
-
-        For SCM, validates token generation and queries the verdicts endpoint.
-        For legacy API Key, queries the verdicts endpoint.
-        :return: True if successful
-        """
+        """Validate connectivity and authentication against WildFire."""
         if self.is_scm:
-            # Ensure SCM token generation succeeds
             self.get_token()
 
-        # Query verdicts endpoint for a dummy benign hash to verify API credentials
-        test_hash = "44d88612fea8a8f36de82e1278abb02f"  # standard test hash
-        self._make_request("get/verdicts", method="POST", data={"hash": test_hash})
+        self._make_request("get/verdict", method="POST", data={"hash": CONNECTIVITY_TEST_HASH})
         return True

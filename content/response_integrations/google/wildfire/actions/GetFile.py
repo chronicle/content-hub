@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import base64
-from typing import List
+from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -29,8 +29,80 @@ INTEGRATION_NAME = "Wildfire"
 ACTION_NAME = "Get File"
 
 
+def _process_file_hash(
+    siemplify: SiemplifyAction,
+    wildfire_manager: WildfireManager,
+    file_hash: str,
+) -> tuple[str, bool, int]:
+    try:
+        sample = wildfire_manager.get_sample(file_hash)
+    except Exception as e:
+        siemplify.LOGGER.exception(f"Failed to download sample for hash {file_hash}")
+        return f"Error executing action '{ACTION_NAME}'. Reason: {e}", False, EXECUTION_STATE_FAILED
+
+    b64_content = base64.b64encode(sample["content"]).decode("utf-8")
+    siemplify.result.add_attachment(f"WildFire sample {file_hash}", sample["filename"], b64_content)
+
+    for entity in siemplify.target_entities:
+        if entity.entity_type == EntityTypes.FILEHASH and entity.identifier.lower() == file_hash.lower():
+            siemplify.result.add_entity_attachment(entity.identifier, sample["filename"], b64_content)
+
+    json_results = [
+        {
+            "file_hash": file_hash,
+            "filename": sample["filename"],
+            "downloaded": True,
+        }
+    ]
+    siemplify.result.add_result_json(json_results)
+    return f"Successfully downloaded file sample for {file_hash} from Wildfire.", True, EXECUTION_STATE_COMPLETED
+
+
+def _process_entities(
+    siemplify: SiemplifyAction,
+    wildfire_manager: WildfireManager,
+) -> tuple[str, bool, int]:
+    enriched_entities = []
+    errors: list[str] = []
+    json_results: list[dict[str, Any]] = []
+
+    for entity in siemplify.target_entities:
+        if entity.entity_type == EntityTypes.FILEHASH and len(entity.identifier) in {32, 64}:
+            try:
+                sample = wildfire_manager.get_sample(entity.identifier)
+                b64_content = base64.b64encode(sample["content"]).decode("utf-8")
+                siemplify.result.add_entity_attachment(entity.identifier, sample["filename"], b64_content)
+                enriched_entities.append(entity)
+                json_results.append(
+                    {
+                        "file_hash": entity.identifier,
+                        "filename": sample["filename"],
+                        "downloaded": True,
+                    }
+                )
+            except Exception as e:
+                siemplify.LOGGER.exception(f"Failed to download sample for entity {entity.identifier}")
+                errors.append(f"{entity.identifier}: {e}")
+
+    if json_results:
+        siemplify.result.add_result_json(json_results)
+
+    if enriched_entities:
+        entities_names = [entity.identifier for entity in enriched_entities]
+        msg = "Files were downloaded for the following entities:\n" + "\n".join(entities_names)
+        if errors:
+            msg += "\nErrors:\n" + "\n".join(errors)
+        return msg, True, EXECUTION_STATE_COMPLETED
+
+    msg = "No files were downloaded."
+    if errors:
+        msg += "\nErrors:\n" + "\n".join(errors)
+    status = EXECUTION_STATE_FAILED if errors else EXECUTION_STATE_COMPLETED
+    return msg, False, status
+
+
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {ACTION_NAME}"
 
@@ -41,71 +113,19 @@ def main():
         print_value=True,
     )
 
-    wildfire_manager = WildfireManager.from_siemplify(siemplify)
+    try:
+        wildfire_manager = WildfireManager.from_siemplify(siemplify)
+    except Exception as e:
+        siemplify.LOGGER.exception("Failed to initialize Wildfire manager")
+        siemplify.end(f"Error executing action '{ACTION_NAME}'. Reason: {e}", False, EXECUTION_STATE_FAILED)
+        return
 
-    errors: List[str] = []
-    enriched_entities = []
-    status = EXECUTION_STATE_COMPLETED
-    json_results = {}
-
-    # Case 1: An explicit File Hash parameter is provided
     if file_hash:
-        try:
-            sample = wildfire_manager.get_sample(file_hash)
-            b64_content = base64.b64encode(sample["content"]).decode("utf-8")
-            siemplify.result.add_attachment(sample["filename"], b64_content)
-
-            # If an entity in the case matches this hash, attach directly to the entity too
-            for entity in siemplify.target_entities:
-                if entity.entity_type == EntityTypes.FILEHASH and entity.identifier.lower() == file_hash.lower():
-                    siemplify.result.add_entity_attachment(entity.identifier, sample["filename"], b64_content)
-                    enriched_entities.append(entity)
-
-            json_results = {
-                "file_hash": file_hash,
-                "filename": sample["filename"],
-                "downloaded": True,
-            }
-            output_message = f"Successfully downloaded file sample for {file_hash} from Wildfire."
-            siemplify.result.add_result_json(json_results)
-            siemplify.end(output_message, True, status)
-            return
-
-        except Exception as e:
-            siemplify.LOGGER.exception(f"Failed to download sample for hash {file_hash}")
-            output_message = f"Error executing action '{ACTION_NAME}'. Reason: {e}"
-            siemplify.end(output_message, False, EXECUTION_STATE_FAILED)
-            return
-
-    # Case 2: Process target FILEHASH entities
-    for entity in siemplify.target_entities:
-        if entity.entity_type == EntityTypes.FILEHASH:
-            if len(entity.identifier) in (32, 64):
-                try:
-                    sample = wildfire_manager.get_sample(entity.identifier)
-                    siemplify.result.add_entity_attachment(
-                        entity.identifier,
-                        sample["filename"],
-                        base64.b64encode(sample["content"]).decode("utf-8"),
-                    )
-                    enriched_entities.append(entity)
-                except Exception as e:
-                    siemplify.LOGGER.exception(f"Failed to download sample for entity {entity.identifier}")
-                    errors.append(f"{entity.identifier}: {e}")
-
-    if enriched_entities:
-        entities_names = [entity.identifier for entity in enriched_entities]
-        output_message = "Files were downloaded for the following entities:\n" + "\n".join(entities_names)
-        if errors:
-            output_message += "\nErrors:\n" + "\n".join(errors)
-        result_value = True
+        msg, is_success, status = _process_file_hash(siemplify, wildfire_manager, file_hash)
     else:
-        output_message = "No files were downloaded."
-        if errors:
-            output_message += "\nErrors:\n" + "\n".join(errors)
-        result_value = False
+        msg, is_success, status = _process_entities(siemplify, wildfire_manager)
 
-    siemplify.end(output_message, result_value, status)
+    siemplify.end(msg, is_success, status)
 
 
 if __name__ == "__main__":

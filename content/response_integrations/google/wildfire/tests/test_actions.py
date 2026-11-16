@@ -16,36 +16,39 @@ from __future__ import annotations
 
 import base64
 import sys
+from typing import Any
+
 import pytest
 import soar_sdk
 
 if soar_sdk.__path__[0] not in sys.path:
     sys.path.insert(0, soar_sdk.__path__[0])
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED, ScriptResult
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
-from ..actions import GetFile, GetReport, Ping
+from ..actions import DetonateFile, GetFile, GetPcap, GetReport, Ping
 
 SAMPLE_MD5 = "44d88612fea8a8f36de82e1278abb02f"
 SAMPLE_SHA256 = "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f"
 
 
 class MockEntity:
-    def __init__(self, identifier: str, entity_type: int = EntityTypes.FILEHASH):
+    def __init__(self, identifier: str, entity_type: int = EntityTypes.FILEHASH) -> None:
         self.identifier = identifier
         self.entity_type = entity_type
-        self.additional_properties = {}
+        self.additional_properties: dict[str, Any] = {}
         self.is_suspicious = False
 
 
 @pytest.fixture(autouse=True)
-def mock_sys_argv(monkeypatch):
+def mock_sys_argv(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sys, "argv", ["script.py", "test_api_key"])
 
 
-def test_get_file_action_with_param(mocker):
+def test_get_file_action_with_param(mocker: Any) -> None:
     mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
     mock_siemplify.parameters = {"File Hash": SAMPLE_SHA256}
     mock_siemplify.target_entities = []
 
@@ -67,7 +70,18 @@ def test_get_file_action_with_param(mocker):
 
     mock_mgr.get_sample.assert_called_once_with(SAMPLE_SHA256)
     expected_b64 = base64.b64encode(b"sample_bytes").decode("utf-8")
-    mock_siemplify.result.add_attachment.assert_called_once_with("sample.tar", expected_b64)
+    mock_siemplify.result.add_attachment.assert_called_once_with(
+        f"WildFire sample {SAMPLE_SHA256}", "sample.tar", expected_b64
+    )
+    mock_siemplify.result.add_result_json.assert_called_once_with(
+        [
+            {
+                "file_hash": SAMPLE_SHA256,
+                "filename": "sample.tar",
+                "downloaded": True,
+            }
+        ]
+    )
     mock_siemplify.end.assert_called_once_with(
         f"Successfully downloaded file sample for {SAMPLE_SHA256} from Wildfire.",
         True,
@@ -75,9 +89,10 @@ def test_get_file_action_with_param(mocker):
     )
 
 
-def test_get_file_action_with_entities(mocker):
+def test_get_file_action_with_entities(mocker: Any) -> None:
     entity = MockEntity(SAMPLE_MD5, EntityTypes.FILEHASH)
     mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
     mock_siemplify.parameters = {}
     mock_siemplify.target_entities = [entity]
 
@@ -102,21 +117,59 @@ def test_get_file_action_with_entities(mocker):
     mock_siemplify.result.add_entity_attachment.assert_called_once_with(
         SAMPLE_MD5, f"{SAMPLE_MD5}.tar", expected_b64
     )
-    assert mock_siemplify.end.called
+    mock_siemplify.result.add_result_json.assert_called_once_with(
+        [
+            {
+                "file_hash": SAMPLE_MD5,
+                "filename": f"{SAMPLE_MD5}.tar",
+                "downloaded": True,
+            }
+        ]
+    )
+    mock_siemplify.end.assert_called_once_with(
+        f"Files were downloaded for the following entities:\n{SAMPLE_MD5}",
+        True,
+        EXECUTION_STATE_COMPLETED,
+    )
 
 
-def test_get_report_action_with_param(mocker):
+def test_get_file_action_failure(mocker: Any) -> None:
     mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
+    mock_siemplify.parameters = {"File Hash": SAMPLE_MD5}
+    mock_siemplify.target_entities = []
+
+    mocker.patch.object(GetFile, "SiemplifyAction", return_value=mock_siemplify)
+    mocker.patch.object(GetFile, "extract_action_param", return_value=SAMPLE_MD5)
+
+    mock_mgr = mocker.Mock()
+    mock_mgr.get_sample.side_effect = RuntimeError("WildFire 404 sample not found")
+    mocker.patch.object(GetFile.WildfireManager, "from_siemplify", return_value=mock_mgr)
+
+    GetFile.main()
+
+    mock_siemplify.end.assert_called_once_with(
+        "Error executing action 'Get File'. Reason: WildFire 404 sample not found",
+        False,
+        EXECUTION_STATE_FAILED,
+    )
+
+
+def test_get_report_action_with_param(mocker: Any) -> None:
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
     mock_siemplify.parameters = {"File Hash": SAMPLE_MD5}
     mock_siemplify.target_entities = []
 
     mocker.patch.object(GetReport, "SiemplifyAction", return_value=mock_siemplify)
     mocker.patch.object(GetReport, "extract_action_param", return_value=SAMPLE_MD5)
 
-    mock_mgr = mocker.Mock()
-    mock_mgr.get_report.return_value = {
-        "file_info": {"malware": "yes", "md5": SAMPLE_MD5}
+    report_data = {
+        "file_info": {"malware": "yes", "md5": SAMPLE_MD5},
+        "task_info": {"report": {"verdict": "malware"}},
     }
+    mock_mgr = mocker.Mock()
+    mock_mgr.get_report.return_value = report_data
     mock_mgr.get_pdf_report.return_value = {
         "filename": f"{SAMPLE_MD5}.pdf",
         "content": b"%PDF data",
@@ -130,9 +183,10 @@ def test_get_report_action_with_param(mocker):
     GetReport.main()
 
     mock_mgr.get_report.assert_called_once_with(SAMPLE_MD5)
-    mock_siemplify.result.add_result_json.assert_called_once_with(
-        {"file_info": {"malware": "yes", "md5": SAMPLE_MD5}}
-    )
+    mock_mgr.get_pdf_report.assert_called_once_with(SAMPLE_MD5)
+    mock_siemplify.result.add_result_json.assert_called_once_with([report_data])
+    mock_siemplify.result.add_attachment.assert_called_once()
+    mock_siemplify.result.add_data_table.assert_called_once()
     mock_siemplify.end.assert_called_once_with(
         f"Successfully downloaded report for {SAMPLE_MD5} from Wildfire.",
         True,
@@ -140,7 +194,118 @@ def test_get_report_action_with_param(mocker):
     )
 
 
-def test_ping_action_success(mocker):
+def test_get_report_action_with_entities(mocker: Any) -> None:
+    entity = MockEntity(SAMPLE_MD5, EntityTypes.FILEHASH)
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
+    mock_siemplify.parameters = {}
+    mock_siemplify.target_entities = [entity]
+
+    mocker.patch.object(GetReport, "SiemplifyAction", return_value=mock_siemplify)
+    mocker.patch.object(GetReport, "extract_action_param", return_value="")
+
+    report_data = {
+        "file_info": {"malware": "yes", "md5": SAMPLE_MD5},
+        "task_info": {"report": {"verdict": "malware"}},
+    }
+    mock_mgr = mocker.Mock()
+    mock_mgr.get_report.return_value = report_data
+    mock_mgr.get_pdf_report.return_value = {
+        "filename": f"{SAMPLE_MD5}.pdf",
+        "content": b"%PDF data",
+    }
+    mocker.patch.object(
+        GetReport.WildfireManager,
+        "from_siemplify",
+        return_value=mock_mgr,
+    )
+
+    GetReport.main()
+
+    mock_mgr.get_report.assert_called_once_with(SAMPLE_MD5)
+    mock_mgr.get_pdf_report.assert_called_once_with(SAMPLE_MD5)
+    mock_siemplify.result.add_result_json.assert_called_once_with([report_data])
+    mock_siemplify.result.add_entity_attachment.assert_called_once()
+    mock_siemplify.result.add_entity_table.assert_called_once()
+    mock_siemplify.end.assert_called_once_with(
+        f"Report was saved for the following entities:\n{SAMPLE_MD5}",
+        True,
+        EXECUTION_STATE_COMPLETED,
+    )
+
+
+def test_get_report_action_failure(mocker: Any) -> None:
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
+    mock_siemplify.parameters = {"File Hash": SAMPLE_MD5}
+    mock_siemplify.target_entities = []
+
+    mocker.patch.object(GetReport, "SiemplifyAction", return_value=mock_siemplify)
+    mocker.patch.object(GetReport, "extract_action_param", return_value=SAMPLE_MD5)
+
+    mock_mgr = mocker.Mock()
+    mock_mgr.get_report.side_effect = RuntimeError("WildFire report unavailable")
+    mocker.patch.object(GetReport.WildfireManager, "from_siemplify", return_value=mock_mgr)
+
+    GetReport.main()
+
+    mock_siemplify.end.assert_called_once_with(
+        "Error executing action 'Get Report'. Reason: WildFire report unavailable",
+        False,
+        EXECUTION_STATE_FAILED,
+    )
+
+
+def test_detonate_file_action(mocker: Any) -> None:
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
+    mock_siemplify.parameters = {"File Paths": "test.exe"}
+    mock_siemplify.case_id = "12345"
+
+    mocker.patch.object(DetonateFile, "SiemplifyAction", return_value=mock_siemplify)
+
+    mock_mgr = mocker.Mock()
+    mock_mgr.submit_file.return_value = {"md5": SAMPLE_MD5}
+    mock_mgr.get_report.return_value = {
+        "file_info": {"malware": "no", "md5": SAMPLE_MD5},
+        "task_info": {"report": {"verdict": "benign"}},
+    }
+    mock_mgr.get_pdf_report.return_value = {
+        "filename": "test.pdf",
+        "content": b"%PDF data",
+    }
+    mocker.patch.object(DetonateFile.WildfireManager, "from_siemplify", return_value=mock_mgr)
+
+    DetonateFile.main()
+
+    mock_mgr.submit_file.assert_called_once_with("test.exe")
+    mock_siemplify.result.add_attachment.assert_called_once()
+    mock_siemplify.end.assert_called_once()
+
+
+def test_get_pcap_action(mocker: Any) -> None:
+    entity = MockEntity(SAMPLE_MD5, EntityTypes.FILEHASH)
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
+    mock_siemplify.target_entities = [entity]
+
+    mocker.patch.object(GetPcap, "SiemplifyAction", return_value=mock_siemplify)
+
+    mock_mgr = mocker.Mock()
+    mock_mgr.get_pcap.return_value = {
+        "filename": f"{SAMPLE_MD5}.pcap",
+        "content": b"PCAPDATA",
+    }
+    mocker.patch.object(GetPcap.WildfireManager, "from_siemplify", return_value=mock_mgr)
+
+    GetPcap.main()
+
+    mock_mgr.get_pcap.assert_called_once_with(SAMPLE_MD5)
+    mock_siemplify.result.add_entity_attachment.assert_called_once()
+    mock_siemplify.end.assert_called_once()
+
+
+def test_ping_action_success(mocker: Any) -> None:
     mock_siemplify = mocker.Mock()
     mocker.patch.object(Ping, "SiemplifyAction", return_value=mock_siemplify)
 
@@ -159,7 +324,7 @@ def test_ping_action_success(mocker):
     )
 
 
-def test_ping_action_failure(mocker):
+def test_ping_action_failure(mocker: Any) -> None:
     mock_siemplify = mocker.Mock()
     mocker.patch.object(Ping, "SiemplifyAction", return_value=mock_siemplify)
 

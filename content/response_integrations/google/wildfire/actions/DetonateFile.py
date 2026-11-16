@@ -13,24 +13,28 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import InsightSeverity, InsightType
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv
-from ..core.WildfireManager import WildfireManager, WildfireManagerError
+
 import base64
 import time
+
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import InsightSeverity, InsightType
+from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv, output_handler
+
+from ..core.WildfireManager import WildfireManager, WildfireManagerError
 
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    conf = siemplify.get_configuration("Wildfire")
-    api_key = conf["Api Key"]
     file_paths = siemplify.parameters.get("File Paths", "").split(",")
 
-    # Connect to Wildfire
-    wildfire_manager = WildfireManager(api_key)
+    try:
+        wildfire_manager = WildfireManager.from_siemplify(siemplify)
+    except Exception as e:
+        siemplify.LOGGER.exception("Failed to initialize Wildfire manager")
+        siemplify.end(f"Error executing action 'Detonate File'. Reason: {e}", False)
+        return
 
     file_infos = {}
 

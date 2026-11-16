@@ -13,40 +13,44 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.WildfireManager import WildfireManager
+
 import base64
+
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import output_handler
+
+from ..core.WildfireManager import WildfireManager
 
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    conf = siemplify.get_configuration("Wildfire")
-    api_key = conf["Api Key"]
 
     errors = ""
     enriched_entities = []
 
-    # Connect to Wildfire
-    wildfire_manager = WildfireManager(api_key)
+    try:
+        wildfire_manager = WildfireManager.from_siemplify(siemplify)
+    except Exception as e:
+        siemplify.LOGGER.exception("Failed to initialize Wildfire manager")
+        siemplify.end(f"Error executing action 'Get Pcap'. Reason: {e}", False)
+        return
 
     for entity in siemplify.target_entities:
-        if entity.entity_type == EntityTypes.FILEHASH:
-            if len(entity.identifier) == 32 or len(entity.identifier) == 64:
-                try:
-                    # Hash is md5 or sha256
-                    pcap_file = wildfire_manager.get_pcap(entity.identifier)
-                    siemplify.result.add_entity_attachment(
-                        entity.identifier,
-                        pcap_file["filename"],
-                        base64.b64encode(pcap_file["content"]).decode("utf-8"),
-                    )
-                    enriched_entities.append(entity)
+        if entity.entity_type == EntityTypes.FILEHASH and len(entity.identifier) in {32, 64}:
+            try:
+                # Hash is md5 or sha256
+                pcap_file = wildfire_manager.get_pcap(entity.identifier)
+                siemplify.result.add_entity_attachment(
+                    entity.identifier,
+                    pcap_file["filename"],
+                    base64.b64encode(pcap_file["content"]).decode("utf-8"),
+                )
+                enriched_entities.append(entity)
 
-                except Exception as e:
-                    errors += str(e) + "\n"
+            except Exception as e:
+                errors += str(e) + "\n"
 
     if enriched_entities:
         entities_names = [entity.identifier for entity in enriched_entities]

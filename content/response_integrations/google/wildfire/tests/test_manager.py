@@ -15,15 +15,13 @@
 from __future__ import annotations
 
 import time
+
 import pytest
-import requests
 
 from ..core.WildfireManager import (
     DEFAULT_API_ROOT,
-    DEFAULT_TOKEN_URL,
     WildfireManager,
     WildfireManagerError,
-    WildfireNotFoundError,
 )
 
 SAMPLE_MD5 = "44d88612fea8a8f36de82e1278abb02f"
