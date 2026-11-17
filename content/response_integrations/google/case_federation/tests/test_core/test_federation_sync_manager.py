@@ -14,13 +14,13 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock
 
 import pytest
 import requests
 from google.auth.exceptions import RefreshError, TransportError
 
+from ...core import auth as auth_module
 from ...core import federation_sync_manager as manager_module
 from ...core.constants import (
     CLIENT_ADDRESS_ENV_VAR,
@@ -30,7 +30,7 @@ from ...core.constants import (
     SYNC_REQUEST_ERROR_MESSAGE,
 )
 from ...core.exceptions import CaseFederationError
-from ...core.federation_sync_manager import ApiClientParameters, AuthParameters, FederationSyncManager
+from ...core.federation_sync_manager import ApiClientParameters, FederationSyncManager
 from ..core.mocks import GetFederationCasesStub, MockHttpClient, PatchFederationCasesStub
 
 SYNC_API_ROOT: str = "https://primary.example.com"
@@ -55,61 +55,31 @@ def federation_cases(monkeypatch: pytest.MonkeyPatch) -> GetFederationCasesStub:
 @pytest.fixture
 def manager(monkeypatch: pytest.MonkeyPatch, mock_http_client: MockHttpClient) -> FederationSyncManager:
     monkeypatch.setenv(CLIENT_ADDRESS_ENV_VAR, SECONDARY_CLIENT_ADDRESS)
-    monkeypatch.setattr(FederationSyncManager, "_get_credentials_using_p4sa", lambda self: None)
-    monkeypatch.setattr(FederationSyncManager, "_prepare_http_client", lambda self, _credentials: mock_http_client)
+    monkeypatch.setattr(manager_module, "create_p4sa_authorized_session", lambda *_args, **_kwargs: mock_http_client)
     return FederationSyncManager(
-        session=MagicMock(),
         logger=MagicMock(),
         api_client_parameters=ApiClientParameters(sync_api_root=SYNC_API_ROOT, verify_ssl=True),
         chronicle_soar=MagicMock(),
     )
 
 
-def test_get_credentials_using_p4sa(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_init_creates_p4sa_authorized_session_when_api_key_is_none(monkeypatch: pytest.MonkeyPatch) -> None:
     # Arrange
-    mock_creds = MagicMock()
-    mock_get_creds = MagicMock(return_value=mock_creds)
-    mock_prepare_http_client = MagicMock()
+    mock_session = MagicMock()
+    mock_create_session = MagicMock(return_value=mock_session)
     mock_soar = MagicMock()
-    monkeypatch.setenv("GCP_PROJECT_ID", "test-gcp-project")
-    monkeypatch.setattr(manager_module, "get_secops_siem_tenant_credentials", mock_get_creds)
-    monkeypatch.setattr(FederationSyncManager, "_prepare_http_client", mock_prepare_http_client)
-
-    # Act
-    FederationSyncManager(
-        session=MagicMock(),
-        logger=MagicMock(),
-        api_client_parameters=ApiClientParameters(sync_api_root=SYNC_API_ROOT, verify_ssl=True),
-        chronicle_soar=mock_soar,
-    )
-
-    # Assert
-    mock_get_creds.assert_called_once_with(
-        chronicle_soar=mock_soar,
-        target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
-        quota_project_id="test-gcp-project",
-    )
-    mock_prepare_http_client.assert_called_once_with(mock_creds)
-
-
-def test_prepare_http_client(monkeypatch: pytest.MonkeyPatch, script_session: requests.Session) -> None:
-    # Arrange
-    mock_creds = MagicMock()
-    monkeypatch.setattr(FederationSyncManager, "_get_credentials_using_p4sa", lambda self: mock_creds)
+    monkeypatch.setattr(manager_module, "create_p4sa_authorized_session", mock_create_session)
 
     # Act
     sync_manager = FederationSyncManager(
-        session=MagicMock(),
         logger=MagicMock(),
         api_client_parameters=ApiClientParameters(sync_api_root=SYNC_API_ROOT, verify_ssl=False),
-        chronicle_soar=MagicMock(),
+        chronicle_soar=mock_soar,
     )
 
     # Assert
-    assert script_session.verify is False
-    assert isinstance(sync_manager.http_client, manager_module.AuthorizedSession)
-    assert sync_manager.http_client.credentials is mock_creds
-    assert sync_manager.http_client.verify is False
+    mock_create_session.assert_called_once_with(mock_soar, verify_ssl=False)
+    assert sync_manager.http_client is mock_session
 
 
 def test_no_cases_returns_success_without_sync_request(
@@ -125,10 +95,33 @@ def test_no_cases_returns_success_without_sync_request(
 
     # Assert
     assert result.status_code == SUCCESS_STATUS_CODE
-    assert result.execution_data is not None
     assert result.execution_data.continuation_token is None
     assert result.cases_payload is None
     assert result.response_text is None
+    assert not mock_http_client.requests
+
+
+def test_null_cases_in_response_falls_back_safely(
+    manager: FederationSyncManager,
+    federation_cases: GetFederationCasesStub,
+    mock_http_client: MockHttpClient,
+) -> None:
+    # Arrange
+    federation_cases.response.json.return_value = {
+        "cases": None,
+        "legacyFederatedCases": None,
+        "continuationToken": None,
+        "nextPageToken": None,
+        "executionMessage": None,
+    }
+
+    # Act
+    result = manager.sync_cases_from(continuation_token=None)
+
+    # Assert
+    assert result.status_code == SUCCESS_STATUS_CODE
+    assert result.execution_data.continuation_token is None
+    assert result.execution_data.execution_message == "No additional execution details available."
     assert not mock_http_client.requests
 
 
@@ -163,13 +156,13 @@ def test_sync_posts_cases_and_normalizes_sla_statuses(
     assert request["method"] == "POST"
     assert request["url"] == f"{SYNC_API_ROOT}/legacyFederatedCases:legacyBatchPatchFederatedCases"
     assert request["headers"] == {REMOTE_PLATFORM_BACKSTORY_REDIRECT_HEADER: SECONDARY_CLIENT_ADDRESS}
-    payload = json.loads(request["data"])
+    assert "data" not in request
+    payload = request["json"]
     assert payload["cases"][0]["alertsSla"]["expirationStatus"] == "not_expired"
     assert payload["cases"][0]["caseSla"]["expirationStatus"] == "already_expired"
 
     # Assert - the result
     assert result.status_code == 200
-    assert result.execution_data is not None
     assert result.execution_data.continuation_token == DEFAULT_NEXT_CONTINUATION
     assert result.execution_data.execution_message == "message"
     assert result.cases_payload == payload["cases"]
@@ -220,9 +213,11 @@ def test_legacy_response_keys_are_supported(
     federation_cases: GetFederationCasesStub,
     mock_http_client: MockHttpClient,
 ) -> None:
-    # Arrange - response uses the legacy keys
+    # Arrange - response uses the legacy keys (even if primary keys are null)
     federation_cases.response.json.return_value = {
+        "cases": None,
         "legacyFederatedCases": [{"id": 7}],
+        "continuationToken": None,
         "nextPageToken": DEFAULT_LEGACY_CONTINUATION,
     }
     mock_http_client.response.status_code = 200
@@ -232,9 +227,8 @@ def test_legacy_response_keys_are_supported(
 
     # Assert
     assert len(mock_http_client.requests) == 1
-    payload = json.loads(mock_http_client.requests[0]["data"])
+    payload = mock_http_client.requests[0]["json"]
     assert payload["cases"] == [{"id": 7}]
-    assert result.execution_data is not None
     assert result.execution_data.continuation_token == DEFAULT_LEGACY_CONTINUATION
 
 
@@ -266,7 +260,7 @@ def test_legacy_api_key_sync_uses_patch_federation_cases_without_p4sa(
     mock_get_creds = MagicMock()
     mock_soar = MagicMock()
     monkeypatch.setattr(manager_module, "patch_federation_cases", patch_stub)
-    monkeypatch.setattr(manager_module, "get_secops_siem_tenant_credentials", mock_get_creds)
+    monkeypatch.setattr(auth_module, "get_secops_siem_tenant_credentials", mock_get_creds)
 
     cases = [
         {"id": 42, "alertsSla": {"expirationStatus": "notExpired"}, "caseSla": {"expirationStatus": "alreadyExpired"}},
@@ -278,11 +272,12 @@ def test_legacy_api_key_sync_uses_patch_federation_cases_without_p4sa(
     }
 
     sync_manager = FederationSyncManager(
-        session=MagicMock(),
         logger=MagicMock(),
-        api_client_parameters=ApiClientParameters(sync_api_root="https://primary.example.com/api"),
+        api_client_parameters=ApiClientParameters(
+            sync_api_root="https://primary.example.com/api",
+            api_key="secret-api-key",
+        ),
         chronicle_soar=mock_soar,
-        auth_parameters=AuthParameters(api_key="secret-api-key"),
     )
 
     # Act
@@ -301,5 +296,4 @@ def test_legacy_api_key_sync_uses_patch_federation_cases_without_p4sa(
     assert cases[0]["alertsSla"]["expirationStatus"] == "notExpired"
     assert cases[0]["caseSla"]["expirationStatus"] == "alreadyExpired"
     assert result.status_code == 200
-    assert result.execution_data is not None
     assert result.execution_data.continuation_token == DEFAULT_NEXT_CONTINUATION

@@ -22,7 +22,8 @@ from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
 from ...actions import ping
-from ...core.constants import GCP_PROJECT_ID_ENV_VAR
+from ...core import auth as auth_module
+from ...core.constants import CLOUD_PLATFORM_SCOPE, GCP_PROJECT_ID_ENV_VAR
 
 if TYPE_CHECKING:
     import pytest
@@ -39,11 +40,12 @@ def test_ping_success(
     mock_creds = MagicMock()
     mock_get_creds = MagicMock(return_value=mock_creds)
     monkeypatch.setenv(GCP_PROJECT_ID_ENV_VAR, "test-gcp-project")
-    monkeypatch.setattr(ping, "get_secops_siem_tenant_credentials", mock_get_creds)
+    monkeypatch.setattr(auth_module, "get_secops_siem_tenant_credentials", mock_get_creds)
 
     ping.main()
 
     mock_get_creds.assert_called_once()
+    assert mock_get_creds.call_args.kwargs["target_scopes"] == [CLOUD_PLATFORM_SCOPE]
     assert mock_get_creds.call_args.kwargs["quota_project_id"] == "test-gcp-project"
     mock_creds.refresh.assert_called_once()
     assert script_session.verify is True
@@ -63,7 +65,7 @@ def test_ping_verify_ssl_false(
 ) -> None:
     mock_creds = MagicMock()
     mock_get_creds = MagicMock(return_value=mock_creds)
-    monkeypatch.setattr(ping, "get_secops_siem_tenant_credentials", mock_get_creds)
+    monkeypatch.setattr(auth_module, "get_secops_siem_tenant_credentials", mock_get_creds)
 
     ping.main()
 
@@ -81,7 +83,7 @@ def test_ping_verify_ssl_false(
 def test_ping_failure(monkeypatch: pytest.MonkeyPatch, action_output: MockActionOutput) -> None:
     error_reason = "SIEM tenant short-lived service account email not found in SOAR context"
     mock_get_creds = MagicMock(side_effect=RuntimeError(error_reason))
-    monkeypatch.setattr(ping, "get_secops_siem_tenant_credentials", mock_get_creds)
+    monkeypatch.setattr(auth_module, "get_secops_siem_tenant_credentials", mock_get_creds)
 
     ping.main()
 

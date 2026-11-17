@@ -20,6 +20,7 @@ import re
 from urllib.parse import urlparse
 
 from TIPCommon.base.job import Job
+from TIPCommon.base.utils import get_param_value_from_vault
 from TIPCommon.extraction import extract_job_param
 
 from ..core.constants import (
@@ -38,7 +39,6 @@ from ..core.constants import (
 from ..core.exceptions import InvalidParameterError, MissingParameterError
 from ..core.federation_sync_manager import (
     ApiClientParameters,
-    AuthParameters,
     FederationSyncExecutionData,
     FederationSyncManager,
 )
@@ -71,7 +71,13 @@ class CaseFederationSyncJob(Job):
             param_name="Target Platform",
             print_value=True,
         )
-        self.params.api_key = extract_job_param(siemplify=self.soar_job, param_name="API Key", remove_whitespaces=False)
+        api_key = extract_job_param(siemplify=self.soar_job, param_name="API Key", remove_whitespaces=False)
+        vault_settings = self.soar_job.vault_settings
+        self.params.api_key = (
+            get_param_value_from_vault(vault_settings, api_key)
+            if api_key and vault_settings is not None
+            else api_key
+        )
         self.params.verify_ssl = extract_job_param(
             siemplify=self.soar_job,
             param_name="Verify SSL",
@@ -80,7 +86,7 @@ class CaseFederationSyncJob(Job):
             print_value=True,
         )
 
-    def _validate_params(self) -> None:
+    def _validate_job_params(self) -> None:
         """Validate job params.
 
         Raises:
@@ -116,13 +122,11 @@ class CaseFederationSyncJob(Job):
             The initialized federation synchronization manager.
 
         """
-        self._validate_params()
-        session = self.soar_job.session
+        self._validate_job_params()
         verify_ssl: bool = getattr(self.params, "verify_ssl", True)
 
         if self.params.chronicle_api_url:
             return FederationSyncManager(
-                session,
                 self.logger,
                 ApiClientParameters(
                     sync_api_root=build_sync_api_root(self.params.chronicle_api_url),
@@ -132,11 +136,13 @@ class CaseFederationSyncJob(Job):
             )
 
         return FederationSyncManager(
-            session,
             self.logger,
-            ApiClientParameters(sync_api_root=f"https://{self.params.target_platform}/api", verify_ssl=verify_ssl),
+            ApiClientParameters(
+                sync_api_root=f"https://{self.params.target_platform}/api",
+                verify_ssl=verify_ssl,
+                api_key=self.params.api_key,
+            ),
             chronicle_soar=self.soar_job,
-            auth_parameters=AuthParameters(api_key=self.params.api_key),
         )
 
     def _perform_job(self) -> None:

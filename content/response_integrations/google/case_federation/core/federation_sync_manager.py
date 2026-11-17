@@ -15,25 +15,21 @@
 from __future__ import annotations
 
 import dataclasses
-import json
 import os
 from typing import TYPE_CHECKING
 
 import requests
 from google.auth.exceptions import RefreshError, TransportError
-from google.auth.transport.requests import AuthorizedSession, Request
-from TIPCommon.base.utils import CreateSession
-from TIPCommon.rest.auth import get_secops_siem_tenant_credentials
 from TIPCommon.rest.soar_api import get_federation_cases, patch_federation_cases
 from TIPCommon.transformation import convert_list_to_comma_string
 from TIPCommon.utils import camel_to_snake_case
 
+from .auth import create_p4sa_authorized_session
 from .constants import (
     BATCH_PATCH_FEDERATED_CASES_ENDPOINT_SUFFIX,
     CLIENT_ADDRESS_ENV_VAR,
     CLIENT_ADDRESS_NOT_FOUND_ERROR_MESSAGE,
     CREDENTIALS_REFRESH_ERROR_MESSAGE,
-    GCP_PROJECT_ID_ENV_VAR,
     REMOTE_PLATFORM_BACKSTORY_REDIRECT_HEADER,
     SUCCESS_STATUS_CODE,
     SYNC_REQUEST_ERROR_MESSAGE,
@@ -41,31 +37,26 @@ from .constants import (
 from .exceptions import CaseFederationError
 
 if TYPE_CHECKING:
-    import google.auth.credentials
     import TIPCommon.types
     from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class ApiClientParameters:
     sync_api_root: str
     verify_ssl: bool = True
+    api_key: str | None = None
 
 
-@dataclasses.dataclass
-class AuthParameters:
-    api_key: str | None
-
-
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class FederationSyncResult:
     status_code: int
-    execution_data: FederationSyncExecutionData | None
+    execution_data: FederationSyncExecutionData
     cases_payload: list[TIPCommon.types.SingleJson] | None = None
     response_text: str | None = None
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class FederationSyncExecutionData:
     continuation_token: str | None
     execution_message: str | None
@@ -74,20 +65,19 @@ class FederationSyncExecutionData:
 class FederationSyncManager:
     def __init__(
         self,
-        session: requests.Session,
         logger: SiemplifyLogger,
         api_client_parameters: ApiClientParameters,
         chronicle_soar: TIPCommon.types.ChronicleSOAR,
-        auth_parameters: AuthParameters | None = None,
     ) -> None:
-        self.session = session
         self.logger = logger
         self.sync_endpoint = api_client_parameters.sync_api_root
-        self.api_key = auth_parameters.api_key if auth_parameters is not None else None
+        self.api_key = api_client_parameters.api_key
         self.chronicle_soar = chronicle_soar
         self.verify_ssl = api_client_parameters.verify_ssl
         self.http_client = (
-            None if auth_parameters is not None else self._prepare_http_client(self._get_credentials_using_p4sa())
+            None
+            if self.api_key is not None
+            else create_p4sa_authorized_session(self.chronicle_soar, verify_ssl=self.verify_ssl)
         )
 
     def sync_cases_from(self, continuation_token: str | None) -> FederationSyncResult:
@@ -101,10 +91,10 @@ class FederationSyncManager:
 
         """
         fetch_body = self._get_cases_to_sync(continuation_token)
-        updated_cases = fetch_body.get("cases", fetch_body.get("legacyFederatedCases", []))
+        updated_cases = fetch_body.get("cases") or fetch_body.get("legacyFederatedCases") or []
         execution_data = FederationSyncExecutionData(
-            continuation_token=fetch_body.get("continuationToken", fetch_body.get("nextPageToken")),
-            execution_message=fetch_body.get("executionMessage", "No additional execution details available."),
+            continuation_token=fetch_body.get("continuationToken") or fetch_body.get("nextPageToken"),
+            execution_message=fetch_body.get("executionMessage") or "No additional execution details available.",
         )
         case_ids = convert_list_to_comma_string([case["id"] for case in updated_cases])
         self.logger.info(f"Modified cases IDs: {case_ids}")
@@ -142,7 +132,7 @@ class FederationSyncManager:
         self.logger.info(f"Response status code: {fetch_result.status_code}")
         return fetch_result.json()
 
-    def _sync(self, cases_payload: TIPCommon.types.SingleJson) -> requests.Response:
+    def _sync(self, cases_payload: list[TIPCommon.types.SingleJson]) -> requests.Response:
         """Sync the updated cases.
 
         Args:
@@ -169,42 +159,10 @@ class FederationSyncManager:
             raise CaseFederationError(CLIENT_ADDRESS_NOT_FOUND_ERROR_MESSAGE)
 
         url = f"{self.sync_endpoint.rstrip('/')}{BATCH_PATCH_FEDERATED_CASES_ENDPOINT_SUFFIX}"
-        payload = json.dumps({"cases": cases_payload})
         header = {REMOTE_PLATFORM_BACKSTORY_REDIRECT_HEADER: client_address}
         try:
-            return self.http_client.request("POST", url, data=payload, headers=header)
+            return self.http_client.request("POST", url, json={"cases": cases_payload}, headers=header)
         except RefreshError as error:
             raise CaseFederationError(CREDENTIALS_REFRESH_ERROR_MESSAGE) from error
         except (TransportError, requests.RequestException) as error:
             raise CaseFederationError(SYNC_REQUEST_ERROR_MESSAGE) from error
-
-    def _get_credentials_using_p4sa(self) -> google.auth.credentials.Credentials:
-        """Retrieve short-lived SIEM tenant credentials using the P4SA.
-
-        Returns:
-            The short-lived Google auth credentials for the SIEM tenant.
-
-        """
-        project_id = os.getenv(GCP_PROJECT_ID_ENV_VAR)
-
-        return get_secops_siem_tenant_credentials(
-            chronicle_soar=self.chronicle_soar,
-            target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
-            quota_project_id=project_id,
-        )
-
-    def _prepare_http_client(self, credentials: google.auth.credentials.Credentials) -> AuthorizedSession:
-        """Create and configure an AuthorizedSession for syncing federated cases.
-
-        Args:
-            credentials: Credentials used to authorize outgoing HTTP requests.
-
-        Returns:
-            The configured authorized HTTP session.
-
-        """
-        auth_session = CreateSession.create_session()
-        auth_session.verify = self.verify_ssl
-        http_client = AuthorizedSession(credentials, auth_request=Request(session=auth_session))
-        http_client.verify = self.verify_ssl
-        return http_client

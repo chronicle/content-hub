@@ -28,8 +28,7 @@ def mock_http_client(monkeypatch: pytest.MonkeyPatch) -> MockHttpClient:
     """Mock HTTP client that bypasses GCP credentials and replaces the AuthorizedSession."""
     client = MockHttpClient()
     monkeypatch.setenv(CLIENT_ADDRESS_ENV_VAR, "https://secondary.backstory.chronicle.security")
-    monkeypatch.setattr(manager_module.FederationSyncManager, "_get_credentials_using_p4sa", lambda self: None)
-    monkeypatch.setattr(manager_module.FederationSyncManager, "_prepare_http_client", lambda self, _credentials: client)
+    monkeypatch.setattr(manager_module, "create_p4sa_authorized_session", lambda *_args, **_kwargs: client)
     return client
 
 

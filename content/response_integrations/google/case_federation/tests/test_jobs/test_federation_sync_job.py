@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 import pytest
 from integration_testing.set_meta import set_metadata
@@ -72,7 +73,7 @@ def test_missing_parameters_fails(
     job.params.api_key = api_key
 
     with pytest.raises(MissingParameterError):
-        job._validate_params()
+        job._validate_job_params()
 
 
 @pytest.mark.parametrize(
@@ -95,7 +96,7 @@ def test_invalid_chronicle_api_url_format_fails(
     job.params.chronicle_api_url = invalid_url
 
     with pytest.raises(InvalidParameterError):
-        job._validate_params()
+        job._validate_job_params()
 
 
 @pytest.mark.parametrize(
@@ -195,7 +196,7 @@ def test_sync_success_sends_cases_and_saves_execution_data(
     assert request["method"] == "POST"
     assert request["url"] == SYNC_URL
 
-    payload = json.loads(request["data"])
+    payload = request["json"]
     synced_case = payload["cases"][0]
     assert synced_case["alertsSla"]["expirationStatus"] == "not_expired"
     assert synced_case["caseSla"]["expirationStatus"] == "already_expired"
@@ -499,3 +500,74 @@ def test_chronicle_api_url_takes_precedence_over_legacy_params(
     assert not patch_cases.calls
     assert len(mock_http_client.requests) == 1
     assert mock_http_client.requests[0]["url"] == SYNC_URL
+
+
+def test_legacy_api_key_resolves_from_vault_when_vault_settings_configured(
+    monkeypatch: pytest.MonkeyPatch,
+    federation_cases: GetFederationCasesStub,
+    patch_cases: PatchFederationCasesStub,
+    mock_http_client: MockHttpClient,
+    job_context: dict[tuple[str, str], str],
+) -> None:
+    vault_placeholder = "[Vault:::placeholder:::api-key]"
+    resolved_api_key = "resolved-secret-from-vault"
+    mock_vault_settings = MagicMock(
+        api_root="https://vault.example.com",
+        verify_ssl=True,
+        username="vault-user",
+        client_ca_certificate=None,
+        client_certificate=None,
+        client_certificate_passphrase=None,
+    )
+    mock_vault_settings.password = None
+    mock_get_from_vault = MagicMock(return_value=resolved_api_key)
+    monkeypatch.setattr(federation_sync_job, "get_param_value_from_vault", mock_get_from_vault)
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        input_context={"vault_settings": mock_vault_settings},
+        parameters={
+            "Chronicle API URL": None,
+            "Target Platform": LEGACY_TARGET_PLATFORM,
+            "API Key": vault_placeholder,
+            "Verify SSL": "True",
+        },
+    )
+    def run_job() -> None:
+        job = federation_sync_job.CaseFederationSyncJob(FEDERATION_SYNC_JOB_SCRIPT_NAME)
+        job_context[job.name_id, LAST_EXECUTION_DATA_KEY] = PREVIOUS_EXECUTION_JSON
+        federation_sync_job.main()
+
+    federation_cases.response.json.return_value = {"cases": [{"id": 1}], "continuationToken": DEFAULT_CONTINUATION}
+    patch_cases.response.status_code = 200
+
+    run_job()
+
+    mock_get_from_vault.assert_called_once()
+    assert mock_get_from_vault.call_args.args[1] == vault_placeholder
+    assert not mock_http_client.requests
+    assert len(patch_cases.calls) == 1
+    assert patch_cases.calls[0]["api_key"] == resolved_api_key
+
+
+@set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
+def test_job_validates_parameters_once_per_run(
+    monkeypatch: pytest.MonkeyPatch,
+    federation_cases: GetFederationCasesStub,
+    mock_http_client: MockHttpClient,
+    job_context: dict[tuple[str, str], str],
+) -> None:
+    validation_calls = 0
+    original_validate = federation_sync_job.CaseFederationSyncJob._validate_job_params
+
+    def spy_validate(self: federation_sync_job.CaseFederationSyncJob) -> None:
+        nonlocal validation_calls
+        validation_calls += 1
+        original_validate(self)
+
+    monkeypatch.setattr(federation_sync_job.CaseFederationSyncJob, "_validate_job_params", spy_validate)
+    federation_cases.response.json.return_value = {"cases": [], "continuationToken": None}
+
+    federation_sync_job.main()
+
+    assert validation_calls == 1

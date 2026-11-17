@@ -14,15 +14,11 @@
 
 from __future__ import annotations
 
-import os
-
-from google.auth.transport.requests import Request
 from TIPCommon.base.action import Action
-from TIPCommon.base.utils import CreateSession
 from TIPCommon.extraction import extract_configuration_param
-from TIPCommon.rest.auth import get_secops_siem_tenant_credentials
 
-from ..core.constants import GCP_PROJECT_ID_ENV_VAR, INTEGRATION_NAME, PING_SCRIPT_NAME
+from ..core.auth import refresh_p4sa_credentials
+from ..core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
 
 SUCCESS_MESSAGE: str = "Successfully connected to the API Service server with the provided connection parameters!"
 ERROR_MESSAGE: str = "Failed to connect to the API Service server!"
@@ -48,11 +44,7 @@ class Ping(Action):
 
     def _perform_action(self, _: str | None = None) -> None:
         self.error_output_message = ERROR_MESSAGE
-        project_id = os.getenv(GCP_PROJECT_ID_ENV_VAR)
-        credentials = get_secops_siem_tenant_credentials(chronicle_soar=self.soar_action, quota_project_id=project_id)
-        auth_session = CreateSession.create_session()
-        auth_session.verify = getattr(self.params, "verify_ssl", True)
-        credentials.refresh(Request(session=auth_session))
+        refresh_p4sa_credentials(self.soar_action, verify_ssl=self.params.verify_ssl)
         self.output_message = SUCCESS_MESSAGE
 
 
