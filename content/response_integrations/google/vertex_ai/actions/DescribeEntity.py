@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import base64
@@ -9,19 +23,11 @@ from TIPCommon.rest.soar_api import get_entity_data
 from TIPCommon.types import Entity, SingleJson
 from TIPCommon.utils import get_entity_original_identifier, is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
-from vertex_ai.core.VertexAIApiManager import ApiManager
-from vertex_ai.core.VertexAIBaseAction import BaseAction
-from vertex_ai.core.VertexAIConstants import DESCRIBE_ENTITY_SCRIPT_NAME
-from vertex_ai.core.VertexAIDatamodels import (
-    GenerationCache,
-    GenerationConfig,
-    Prompt,
-)
-from vertex_ai.core.VertexAIUtils import (
-    exclude_fields_from_entity,
-    flatten_entity_data_for_generation,
-    get_publisher_name,
-)
+from ..core.VertexAIApiManager import ApiManager
+from ..core.VertexAIBaseAction import BaseAction
+from ..core.VertexAIConstants import DESCRIBE_ENTITY_SCRIPT_NAME
+from ..core.VertexAIDatamodels import GenerationCache, GenerationConfig, Prompt
+from ..core.VertexAIUtils import exclude_fields_from_entity, flatten_entity_data_for_generation, get_publisher_name
 
 SUCCESS_MESSAGE = (
     "Successfully summarized the entity based on the available information using "

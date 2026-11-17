@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import re
 from abc import ABC
@@ -6,10 +20,10 @@ from TIPCommon.base.action import Action
 from TIPCommon.base.interfaces import ApiClient
 from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.types import Contains
-from vertex_ai.core.VertexAIApiManager import ApiManager
-from vertex_ai.core.VertexAIAuthManager import AuthManager, build_auth_manager_params
-from vertex_ai.core.VertexAIConstants import API_ROOT_REGEX, DEFAULT_LOCATION, INTEGRATION_IDENTIFIER
-from vertex_ai.core.VertexAIExceptions import VertexAIValidationException
+from .VertexAIApiManager import ApiManager
+from .VertexAIAuthManager import AuthManager, build_auth_manager_params
+from .VertexAIConstants import API_ROOT_REGEX, DEFAULT_LOCATION, INTEGRATION_IDENTIFIER
+from .VertexAIExceptions import VertexAIValidationException
 
 
 class BaseAction(Action, ABC):
