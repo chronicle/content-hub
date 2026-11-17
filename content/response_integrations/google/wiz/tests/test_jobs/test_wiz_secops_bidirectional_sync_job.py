@@ -638,3 +638,46 @@ class TestWizSecopsBidirectionalSyncJob:
             resolution_reason="Malicious Threat",
             resolution_note="Closed via SecOps Case Sync",
         )
+
+    def test_get_wiz_threat_id_from_source_grouping_identifier(self) -> None:
+        """Verifies threat ID extraction from top-level sourceGroupingIdentifier."""
+        job = _make_job()
+        alert = AlertCard.from_json(
+            {
+                "id": 1,
+                "identifier": "alert_1",
+                "sourceGroupingIdentifier": "fb6da1cc-6674-5af5-92fa-83cefe445ffe",
+                "additionalProperties": json.dumps({"Name": "Wiz Alert"}),
+            }
+        )
+
+        assert job._get_wiz_threat_id(alert) == "fb6da1cc-6674-5af5-92fa-83cefe445ffe"
+
+    def test_get_wiz_threat_id_from_fields_groups(self) -> None:
+        """Verifies threat ID extraction fallback from alert.fields_groups."""
+        job = _make_job()
+        alert = AlertCard.from_json(
+            {
+                "id": 2,
+                "identifier": "alert_2",
+                "additionalProperties": None,
+                "fieldsGroups": [
+                    {
+                        "order": 1,
+                        "groupName": "Main",
+                        "isIntegration": False,
+                        "isHighlight": True,
+                        "hideOptions": 0,
+                        "items": [
+                            {
+                                "originalName": "SourceGroupingIdentifier",
+                                "name": "Source Grouping Identifier",
+                                "value": "f722236b-ac5a-5e6a-adbc-0b6d9668a251",
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
+        assert job._get_wiz_threat_id(alert) == "f722236b-ac5a-5e6a-adbc-0b6d9668a251"
