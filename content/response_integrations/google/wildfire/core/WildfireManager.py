@@ -18,7 +18,9 @@ import pathlib
 import re
 import string
 import time
+from http import HTTPStatus
 from typing import Any
+from xml.parsers.expat import ExpatError
 
 import requests
 import xmltodict
@@ -51,6 +53,17 @@ def validate_hash(hash_value: str) -> None:
     if not hash_value or len(hash_value) not in {32, 64} or not all(c in string.hexdigits for c in hash_value):
         msg = f"Invalid hash '{hash_value}'. Must be 32 (MD5) or 64 (SHA256) hex characters."
         raise WildfireManagerError(msg)
+
+
+def _extract_error_message(response: requests.Response) -> str:
+    """Extract error message from XML response if available."""
+    try:
+        parsed = xmltodict.parse(response.content)
+    except ExpatError:
+        return response.text
+    wildfire = parsed.get("wildfire")
+    error = wildfire.get("error") if isinstance(wildfire, dict) else None
+    return error.get("error-message", response.text) if isinstance(error, dict) else response.text
 
 
 def extract_filename_from_response(response: requests.Response, default_name: str) -> str:
@@ -254,18 +267,12 @@ class WildfireManager:
             msg = f"Request to {url} failed: {e}"
             raise WildfireManagerError(msg) from e
 
-        if response.status_code == 404:
+        if response.status_code == HTTPStatus.NOT_FOUND:
             msg = f"Requested resource not found on Wildfire ({endpoint})"
             raise WildfireNotFoundError(msg)
 
         if not response.ok:
-            error_message = response.text
-            try:
-                parsed = xmltodict.parse(response.content)
-                if "wildfire" in parsed and "error" in parsed["wildfire"]:
-                    error_message = parsed["wildfire"]["error"].get("error-message", response.text)
-            except Exception:
-                pass
+            error_message = _extract_error_message(response)
             msg = f"Wildfire request failed with status code {response.status_code}: {error_message}"
             raise WildfireManagerError(msg)
 

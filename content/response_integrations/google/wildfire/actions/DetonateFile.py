@@ -17,6 +17,7 @@ from __future__ import annotations
 import base64
 import time
 
+from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import InsightSeverity, InsightType
 from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv, output_handler
@@ -33,7 +34,7 @@ def main():
         wildfire_manager = WildfireManager.from_siemplify(siemplify)
     except Exception as e:
         siemplify.LOGGER.exception("Failed to initialize Wildfire manager")
-        siemplify.end(f"Error executing action 'Detonate File'. Reason: {e}", False)
+        siemplify.end(f"Error executing action 'Detonate File'. Reason: {e}", False, EXECUTION_STATE_FAILED)
         return
 
     file_infos = {}

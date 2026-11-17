@@ -16,11 +16,12 @@ from __future__ import annotations
 
 import base64
 
+from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.WildfireManager import WildfireManager
+from ..core.WildfireManager import WildfireManager, WildfireManagerError
 
 
 @output_handler
@@ -34,13 +35,12 @@ def main():
         wildfire_manager = WildfireManager.from_siemplify(siemplify)
     except Exception as e:
         siemplify.LOGGER.exception("Failed to initialize Wildfire manager")
-        siemplify.end(f"Error executing action 'Get Pcap'. Reason: {e}", False)
+        siemplify.end(f"Error executing action 'Get Pcap'. Reason: {e}", False, EXECUTION_STATE_FAILED)
         return
 
     for entity in siemplify.target_entities:
         if entity.entity_type == EntityTypes.FILEHASH and len(entity.identifier) in {32, 64}:
             try:
-                # Hash is md5 or sha256
                 pcap_file = wildfire_manager.get_pcap(entity.identifier)
                 siemplify.result.add_entity_attachment(
                     entity.identifier,
@@ -49,8 +49,8 @@ def main():
                 )
                 enriched_entities.append(entity)
 
-            except Exception as e:
-                errors += str(e) + "\n"
+            except WildfireManagerError as e:
+                errors += f"{e}\n"
 
     if enriched_entities:
         entities_names = [entity.identifier for entity in enriched_entities]

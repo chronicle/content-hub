@@ -73,13 +73,11 @@ def _process_entities(
                 b64_content = base64.b64encode(sample["content"]).decode("utf-8")
                 siemplify.result.add_entity_attachment(entity.identifier, sample["filename"], b64_content)
                 enriched_entities.append(entity)
-                json_results.append(
-                    {
-                        "file_hash": entity.identifier,
-                        "filename": sample["filename"],
-                        "downloaded": True,
-                    }
-                )
+                json_results.append({
+                    "file_hash": entity.identifier,
+                    "filename": sample["filename"],
+                    "downloaded": True,
+                })
             except Exception as e:
                 siemplify.LOGGER.exception(f"Failed to download sample for entity {entity.identifier}")
                 errors.append(f"{entity.identifier}: {e}")

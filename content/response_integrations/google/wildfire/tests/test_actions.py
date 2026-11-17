@@ -18,7 +18,6 @@ import base64
 import sys
 from typing import Any
 
-import pytest
 import soar_sdk
 
 if soar_sdk.__path__[0] not in sys.path:
@@ -39,11 +38,6 @@ class MockEntity:
         self.entity_type = entity_type
         self.additional_properties: dict[str, Any] = {}
         self.is_suspicious = False
-
-
-@pytest.fixture(autouse=True)
-def mock_sys_argv(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(sys, "argv", ["script.py", "test_api_key"])
 
 
 def test_get_file_action_with_param(mocker: Any) -> None:
@@ -73,15 +67,13 @@ def test_get_file_action_with_param(mocker: Any) -> None:
     mock_siemplify.result.add_attachment.assert_called_once_with(
         f"WildFire sample {SAMPLE_SHA256}", "sample.tar", expected_b64
     )
-    mock_siemplify.result.add_result_json.assert_called_once_with(
-        [
-            {
-                "file_hash": SAMPLE_SHA256,
-                "filename": "sample.tar",
-                "downloaded": True,
-            }
-        ]
-    )
+    mock_siemplify.result.add_result_json.assert_called_once_with([
+        {
+            "file_hash": SAMPLE_SHA256,
+            "filename": "sample.tar",
+            "downloaded": True,
+        }
+    ])
     mock_siemplify.end.assert_called_once_with(
         f"Successfully downloaded file sample for {SAMPLE_SHA256} from Wildfire.",
         True,
@@ -114,18 +106,14 @@ def test_get_file_action_with_entities(mocker: Any) -> None:
 
     mock_mgr.get_sample.assert_called_once_with(SAMPLE_MD5)
     expected_b64 = base64.b64encode(b"sample_bytes_entity").decode("utf-8")
-    mock_siemplify.result.add_entity_attachment.assert_called_once_with(
-        SAMPLE_MD5, f"{SAMPLE_MD5}.tar", expected_b64
-    )
-    mock_siemplify.result.add_result_json.assert_called_once_with(
-        [
-            {
-                "file_hash": SAMPLE_MD5,
-                "filename": f"{SAMPLE_MD5}.tar",
-                "downloaded": True,
-            }
-        ]
-    )
+    mock_siemplify.result.add_entity_attachment.assert_called_once_with(SAMPLE_MD5, f"{SAMPLE_MD5}.tar", expected_b64)
+    mock_siemplify.result.add_result_json.assert_called_once_with([
+        {
+            "file_hash": SAMPLE_MD5,
+            "filename": f"{SAMPLE_MD5}.tar",
+            "downloaded": True,
+        }
+    ])
     mock_siemplify.end.assert_called_once_with(
         f"Files were downloaded for the following entities:\n{SAMPLE_MD5}",
         True,
@@ -257,6 +245,7 @@ def test_get_report_action_failure(mocker: Any) -> None:
 
 
 def test_detonate_file_action(mocker: Any) -> None:
+    mocker.patch.object(DetonateFile.time, "sleep")
     mock_siemplify = mocker.Mock()
     mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
     mock_siemplify.parameters = {"File Paths": "test.exe"}
@@ -280,7 +269,20 @@ def test_detonate_file_action(mocker: Any) -> None:
 
     mock_mgr.submit_file.assert_called_once_with("test.exe")
     mock_siemplify.result.add_attachment.assert_called_once()
-    mock_siemplify.end.assert_called_once()
+    mock_siemplify.end.assert_called_once_with("Uploaded test.exe and downloaded reports", "true")
+
+
+def test_detonate_file_action_init_failure(mocker: Any) -> None:
+    mock_siemplify = mocker.Mock()
+    mock_siemplify.parameters = {"File Paths": "test.exe"}
+    mocker.patch.object(DetonateFile, "SiemplifyAction", return_value=mock_siemplify)
+    mocker.patch.object(DetonateFile.WildfireManager, "from_siemplify", side_effect=Exception("Missing config"))
+
+    DetonateFile.main()
+
+    mock_siemplify.end.assert_called_once_with(
+        "Error executing action 'Detonate File'. Reason: Missing config", False, EXECUTION_STATE_FAILED
+    )
 
 
 def test_get_pcap_action(mocker: Any) -> None:
@@ -302,7 +304,19 @@ def test_get_pcap_action(mocker: Any) -> None:
 
     mock_mgr.get_pcap.assert_called_once_with(SAMPLE_MD5)
     mock_siemplify.result.add_entity_attachment.assert_called_once()
-    mock_siemplify.end.assert_called_once()
+    mock_siemplify.end.assert_called_once_with(f"Report was saved for the following entities:\n{SAMPLE_MD5}", "true")
+
+
+def test_get_pcap_action_init_failure(mocker: Any) -> None:
+    mock_siemplify = mocker.Mock()
+    mocker.patch.object(GetPcap, "SiemplifyAction", return_value=mock_siemplify)
+    mocker.patch.object(GetPcap.WildfireManager, "from_siemplify", side_effect=Exception("Missing config"))
+
+    GetPcap.main()
+
+    mock_siemplify.end.assert_called_once_with(
+        "Error executing action 'Get Pcap'. Reason: Missing config", False, EXECUTION_STATE_FAILED
+    )
 
 
 def test_ping_action_success(mocker: Any) -> None:

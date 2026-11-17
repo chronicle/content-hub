@@ -29,20 +29,28 @@ INTEGRATION_NAME = "Wildfire"
 ACTION_NAME = "Get Report"
 
 
-def _attach_pdf_report(
+def _attach_pdf_to_case(
     siemplify: SiemplifyAction,
     wildfire_manager: WildfireManager,
     identifier: str,
-    *,
-    is_entity: bool,
 ) -> None:
     try:
         pdf_report = wildfire_manager.get_pdf_report(identifier)
         b64_pdf = base64.b64encode(pdf_report["content"]).decode("utf-8")
-        if is_entity:
-            siemplify.result.add_entity_attachment(identifier, pdf_report["filename"], b64_pdf)
-        else:
-            siemplify.result.add_attachment(f"WildFire report {identifier}", pdf_report["filename"], b64_pdf)
+        siemplify.result.add_attachment(f"WildFire report {identifier}", pdf_report["filename"], b64_pdf)
+    except WildfireManagerError as pdf_err:
+        siemplify.LOGGER.warn(f"Could not retrieve PDF report for {identifier}: {pdf_err}")
+
+
+def _attach_pdf_to_entity(
+    siemplify: SiemplifyAction,
+    wildfire_manager: WildfireManager,
+    identifier: str,
+) -> None:
+    try:
+        pdf_report = wildfire_manager.get_pdf_report(identifier)
+        b64_pdf = base64.b64encode(pdf_report["content"]).decode("utf-8")
+        siemplify.result.add_entity_attachment(identifier, pdf_report["filename"], b64_pdf)
     except WildfireManagerError as pdf_err:
         siemplify.LOGGER.warn(f"Could not retrieve PDF report for {identifier}: {pdf_err}")
 
@@ -65,7 +73,7 @@ def _process_file_hash(
         csv_output = flat_dict_to_csv(flat_reports)
         siemplify.result.add_data_table("WildFire Task Info", csv_output)
 
-    _attach_pdf_report(siemplify, wildfire_manager, file_hash, is_entity=False)
+    _attach_pdf_to_case(siemplify, wildfire_manager, file_hash)
 
     enriched_entities = []
     for entity in siemplify.target_entities:
@@ -114,7 +122,7 @@ def _process_entities(
                     csv_output = flat_dict_to_csv(flat_reports)
                     siemplify.result.add_entity_table(entity.identifier, csv_output)
 
-                _attach_pdf_report(siemplify, wildfire_manager, entity.identifier, is_entity=True)
+                _attach_pdf_to_entity(siemplify, wildfire_manager, entity.identifier)
                 enriched_entities.append(entity)
                 json_results.append(report)
 
