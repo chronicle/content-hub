@@ -1,48 +1,31 @@
-from __future__ import annotations
-pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
-import importlib
-import soar_sdk
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+from __future__ import annotations
+
+import sys
+import pkgutil
+import soar_sdk
 import sys
 import types
 import pkgutil
-
-# Polyfill/mock imghdr module for Python 3.13+ where it's removed but needed by jira-python client
-if "imghdr" not in sys.modules:
-    imghdr_mock = types.ModuleType("imghdr")
-    imghdr_mock.what = lambda file, h=None: None
-    sys.modules["imghdr"] = imghdr_mock
-
-# Polyfill pkgutil.ImpImporter for Python 3.13+ where it's removed but needed by setuptools/pkg_resources
-if not hasattr(pkgutil, "ImpImporter"):
-    class DummyImpImporter:
-        pass
-    pkgutil.ImpImporter = DummyImpImporter
-
 import pathlib
 import unittest.mock
-
 import google.auth.transport.requests as google_requests
 import pytest
-
 from TIPCommon.base.utils import CreateSession
 from TIPCommon.types import SingleJson
-
 from scc_enterprise.core.GoogleSecurityCommandCenterManager import (
     GoogleSecurityCommandCenterManager
 )
@@ -52,15 +35,30 @@ from scc_enterprise.tests.core.session import (
 )
 from integration_testing.common import get_def_file_content, use_live_api
 
+pytest_plugins = ("integration_testing.conftest",)
+
+sdk_dir = soar_sdk.__path__[0]
+
+if sdk_dir not in sys.path:
+    sys.path.insert(0, sdk_dir)
+
+if "imghdr" not in sys.modules:
+    imghdr_mock = types.ModuleType("imghdr")
+    imghdr_mock.what = lambda file, h=None: None
+    sys.modules["imghdr"] = imghdr_mock
+
+if not hasattr(pkgutil, "ImpImporter"):
+    class DummyImpImporter:
+        pass
+    pkgutil.ImpImporter = DummyImpImporter
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
-CONFIG: SingleJson = get_def_file_content(CONFIG_PATH)
 
+CONFIG: SingleJson = get_def_file_content(CONFIG_PATH)
 
 @pytest.fixture
 def google_security_command_center_product() -> GoogleSecurityCommandCenter:
     yield GoogleSecurityCommandCenter()
-
 
 @pytest.fixture(autouse=True)
 def script_session(
@@ -78,7 +76,6 @@ def script_session(
             lambda *args, **kwargs: session
         )
     yield session
-
 
 @pytest.fixture
 def google_security_command_center_manager(

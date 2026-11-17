@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 from scc_enterprise.tests.core.product import GoogleSecurityCommandCenter
@@ -21,6 +35,7 @@ class GoogleSecurityCommandCenterSession(
             self.delete_config,
             self.get_config,
             self.patch_config,
+            self.get_default_service_account_email,
         ]
 
     @router.get(r"/v2/organizations/\d+/sources")
@@ -112,3 +127,11 @@ class GoogleSecurityCommandCenterSession(
                 "token_type": "Bearer"
             }
         )
+
+    @router.get("/computeMetadata/v1/instance/service-accounts/default/email")
+    def get_default_service_account_email(
+        self,
+        request: MockRequest,
+        **_kwargs,
+    ) -> MockResponse:
+        return MockResponse(content="mock-sa@example.iam.gserviceaccount.com")

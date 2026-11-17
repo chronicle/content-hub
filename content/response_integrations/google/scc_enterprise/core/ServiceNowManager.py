@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -13,19 +27,13 @@ from soar_sdk.SiemplifyUtils import pytz
 from TIPCommon.base.utils import CreateSession, NewLineLogger
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
 from TIPCommon.types import SingleJson
-from scc_enterprise.core import SCCEnterpriseConsts
-from scc_enterprise.core import ServiceNowConsts
-from scc_enterprise.core import ServiceNowDatamodels
-from scc_enterprise.core import ServiceNowTableFields
-from scc_enterprise.core import ServiceNowParser as parser
-from scc_enterprise.core.SCCEnterpriseExceptions import SCCEnterpriseManagerException
-from scc_enterprise.core.ServiceNowExceptions import (
-    SNowException,
-    SNowNotFoundException,
-    SNowPermissionDeniedException,
-    SNowRecordNotFoundException,
-    SNowTableNotFoundException,
-)
+from . import SCCEnterpriseConsts
+from . import ServiceNowConsts
+from . import ServiceNowDatamodels
+from . import ServiceNowTableFields
+from . import ServiceNowParser as parser
+from .SCCEnterpriseExceptions import SCCEnterpriseManagerException
+from .ServiceNowExceptions import SNowException, SNowNotFoundException, SNowPermissionDeniedException, SNowRecordNotFoundException, SNowTableNotFoundException
 
 
 SNowDataModel = TypeVar("SNowDataModel", bound=ServiceNowDatamodels.SNBaseEntry)

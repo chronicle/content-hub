@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """BiDi Sync job SOAR <-> ServiceNow"""
 from __future__ import annotations
 
@@ -14,17 +28,17 @@ from TIPCommon import validation
 from TIPCommon.consts import SOAR_COMMENT_PREFIX
 from TIPCommon.smp_time import change_timezone
 
-from scc_enterprise.core.BaseSoarItsmJob import SyncSoarITSM
-from scc_enterprise.core.SCCEnterpriseConsts import SYNC_SCC_SNOW_TICKETS_SCRIPT_NAME
-from scc_enterprise.core.SCCEnterpriseConsts import CLOSED_BY_SCCE_COMMENT
-from scc_enterprise.core.SCCEnterpriseDatamodels import FindingContext, ITSMTicketDetailsForSCC
-from scc_enterprise.core.SCCEnterpriseUtils import create_html_table, update_html_desc_table
-from scc_enterprise.core.ServiceNowConsts import DATETIME_FORMAT, UTC_TZ
-from scc_enterprise.core.ServiceNowConsts import INTEGRATION_NAME
-from scc_enterprise.core.ServiceNowDatamodels import Incident
-from scc_enterprise.core.ServiceNowExceptions import SNowRecordNotFoundException
-from scc_enterprise.core.ServiceNowManager import ServiceNowManager
-from scc_enterprise.core.ServiceNowUtils import convert_sn_time_to_unix_utc_timestamp
+from ..core.BaseSoarItsmJob import SyncSoarITSM
+from ..core.SCCEnterpriseConsts import SYNC_SCC_SNOW_TICKETS_SCRIPT_NAME
+from ..core.SCCEnterpriseConsts import CLOSED_BY_SCCE_COMMENT
+from ..core.SCCEnterpriseDatamodels import FindingContext, ITSMTicketDetailsForSCC
+from ..core.SCCEnterpriseUtils import create_html_table, update_html_desc_table
+from ..core.ServiceNowConsts import DATETIME_FORMAT, UTC_TZ
+from ..core.ServiceNowConsts import INTEGRATION_NAME
+from ..core.ServiceNowDatamodels import Incident
+from ..core.ServiceNowExceptions import SNowRecordNotFoundException
+from ..core.ServiceNowManager import ServiceNowManager
+from ..core.ServiceNowUtils import convert_sn_time_to_unix_utc_timestamp
 
 
 TICKETS_LIMIT_IN_REQUEST = 100

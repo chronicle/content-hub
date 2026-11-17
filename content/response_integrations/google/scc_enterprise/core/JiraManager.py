@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Manager for Jira API using Jira's python package"""
 from __future__ import annotations
 
@@ -14,11 +28,11 @@ from soar_sdk.SiemplifyLogger import SiemplifyLogger
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
 from TIPCommon.base.utils import NewLineLogger
 from TIPCommon.types import SingleJson
-from scc_enterprise.core import JiraDatamodels
-from scc_enterprise.core import JiraParser as parser
-from scc_enterprise.core.JiraApiClient import JiraApiClient
-from scc_enterprise.core.JiraConstants import DATETIME_FORMAT, MAX_RESULTS, UNAUTHORIZED
-from scc_enterprise.core.JiraExceptions import JiraManagerError
+from . import JiraDatamodels
+from . import JiraParser as parser
+from .JiraApiClient import JiraApiClient
+from .JiraConstants import DATETIME_FORMAT, MAX_RESULTS, UNAUTHORIZED
+from .JiraExceptions import JiraManagerError
 
 
 class JiraManager:

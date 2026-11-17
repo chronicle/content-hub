@@ -1,10 +1,24 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import functools
 import urllib.parse
 
 from requests import HTTPError
-from scc_enterprise.core import SCCEnterpriseDatamodels
+from ..core import SCCEnterpriseDatamodels
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 
@@ -21,12 +35,12 @@ from TIPCommon.exceptions import (
 from TIPCommon.rest.soar_api import get_case_overview_details
 from TIPCommon.smp_io import read_ids, read_content, write_ids, write_content
 from TIPCommon.utils import is_empty_string_or_none
-from scc_enterprise.core import GoogleSecurityCommandCenterConstants as constants
-from scc_enterprise.core import GoogleSecurityCommandCenterDatamodels as datamodels
-from scc_enterprise.core.GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException
-from scc_enterprise.core.GoogleSecurityCommandCenterManager import GoogleSecurityCommandCenterManager
-from scc_enterprise.core.SCCEnterpriseConsts import URGENT_POSTURE_CONNECTOR_NAME, FINDINGS_CONTEXT_KEY
-from scc_enterprise.core.SCCEnterpriseUtils import soar_supports_scce_phase_2, load_findings_context
+from ..core import GoogleSecurityCommandCenterConstants as constants
+from ..core import GoogleSecurityCommandCenterDatamodels as datamodels
+from ..core.GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException
+from ..core.GoogleSecurityCommandCenterManager import GoogleSecurityCommandCenterManager
+from ..core.SCCEnterpriseConsts import URGENT_POSTURE_CONNECTOR_NAME, FINDINGS_CONTEXT_KEY
+from ..core.SCCEnterpriseUtils import soar_supports_scce_phase_2, load_findings_context
 
 
 class UrgentPostureFindingConnector(Connector):

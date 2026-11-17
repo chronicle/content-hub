@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import re
@@ -15,25 +29,11 @@ from TIPCommon.transformation import (
 )
 from TIPCommon.types import SingleJson
 from TIPCommon.validation import is_valid_email
-from scc_enterprise.core.GoogleSecurityCommandCenterConstants import (
-    DEFAULT_FALLBACK_SEVERITY,
-    SEVERITY_MAPPING,
-    VULNERABILITY_CLASS,
-    URGENT_POSTURE_RULE_GENERATOR,
-    URGENT_POSTURE_DEFAULT_DEVICE_PRODUCT,
-    STATE_MAPPING,
-    TOXIC_COMBINATION_CONFIG_KEY,
-    MUTED,
-    TOXIC_COMBINATION_GROUP,
-    TOXIC_COMBINATION_CLASS,
-)
-from scc_enterprise.core.GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException
-from scc_enterprise.core.GoogleSecurityCommandCenterUtilsManager import (
-    get_asset_resource_name,
-    get_non_gcp_resource_name,
-)
-from scc_enterprise.core.SCCEnterpriseConsts import CLOUD_PROVIDER
-from scc_enterprise.core.SCCEnterpriseDatamodels import CloudProviderEnum
+from .GoogleSecurityCommandCenterConstants import DEFAULT_FALLBACK_SEVERITY, SEVERITY_MAPPING, VULNERABILITY_CLASS, URGENT_POSTURE_RULE_GENERATOR, URGENT_POSTURE_DEFAULT_DEVICE_PRODUCT, STATE_MAPPING, TOXIC_COMBINATION_CONFIG_KEY, MUTED, TOXIC_COMBINATION_GROUP, TOXIC_COMBINATION_CLASS
+from .GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException
+from .GoogleSecurityCommandCenterUtilsManager import get_asset_resource_name, get_non_gcp_resource_name
+from .SCCEnterpriseConsts import CLOUD_PROVIDER
+from .SCCEnterpriseDatamodels import CloudProviderEnum
 
 
 FINDING_SOURCE_NAME_PATTERN = re.compile(r"organizations/\d+/sources/\d+")

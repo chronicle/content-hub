@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -10,19 +24,11 @@ import TIPCommon.base.action
 import TIPCommon.extraction
 import TIPCommon.validation
 from TIPCommon.types import SingleJson
-from scc_enterprise.core import SCCEnterpriseConsts
-from scc_enterprise.core import SCCEnterpriseDatamodels as SCCEDatamodels
-from scc_enterprise.core import SCCEnterpriseDescParams
-from scc_enterprise.core.SCCEnterpriseDescCreation import get_create_desc_fn
-from scc_enterprise.core.SCCEnterpriseUtils import (
-    create_html_table,
-    create_jwm_table,
-    get_alert_source_group_identifier,
-    get_cloud_provider_from_source_group_id,
-    get_first_event_data,
-    update_html_desc_table,
-    update_jira_wiki_desc_table,
-)
+from ..core import SCCEnterpriseConsts
+from ..core import SCCEnterpriseDatamodels as SCCEDatamodels
+from ..core import SCCEnterpriseDescParams
+from ..core.SCCEnterpriseDescCreation import get_create_desc_fn
+from ..core.SCCEnterpriseUtils import create_html_table, create_jwm_table, get_alert_source_group_identifier, get_cloud_provider_from_source_group_id, get_first_event_data, update_html_desc_table, update_jira_wiki_desc_table
 
 
 class GetCaseContextError(Exception):

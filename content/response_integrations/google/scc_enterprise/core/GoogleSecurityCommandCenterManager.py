@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -17,31 +31,14 @@ from TIPCommon.rest.gcp import get_workload_sa_email
 from TIPCommon.types import ChronicleSOAR, SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 
-from scc_enterprise.core.GoogleSecurityCommandCenterParser import GoogleSecurityCommandCenterParser
-from scc_enterprise.core.GoogleSecurityCommandCenterExceptions import (
-    GoogleSecurityCommandCenterException,
-    GoogleSecurityCommandCenterNotFound,
-)
-from scc_enterprise.core.GoogleSecurityCommandCenterUtilsManager import (
-    parse_string_to_dict,
-    validate_response,
-)
-from scc_enterprise.core.GoogleSecurityCommandCenterConstants import (
-    API_ROOT_REGEX,
-    ENDPOINTS,
-    ORIGIN_HEADERS,
-    PUB_SUB_PULL_TIMEOUT,
-    SCOPES,
-)
-from scc_enterprise.core.GoogleSecurityCommandCenterDatamodels import FindingDetails, Source
+from .GoogleSecurityCommandCenterParser import GoogleSecurityCommandCenterParser
+from .GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException, GoogleSecurityCommandCenterNotFound
+from .GoogleSecurityCommandCenterUtilsManager import parse_string_to_dict, validate_response
+from .GoogleSecurityCommandCenterConstants import API_ROOT_REGEX, ENDPOINTS, ORIGIN_HEADERS, PUB_SUB_PULL_TIMEOUT, SCOPES
+from .GoogleSecurityCommandCenterDatamodels import FindingDetails, Source
 
-from scc_enterprise.core.SCCEnterpriseExceptions import ProjectNotFound
-from scc_enterprise.core.SCCEnterpriseUtils import (
-    get_scce_sa_email,
-    get_scce_tenant_credentials,
-    parse_project_from_sa,
-    add_params_to_url,
-)
+from .SCCEnterpriseExceptions import ProjectNotFound
+from .SCCEnterpriseUtils import get_scce_sa_email, get_scce_tenant_credentials, parse_project_from_sa, add_params_to_url
 
 
 class GoogleSecurityCommandCenterManager:

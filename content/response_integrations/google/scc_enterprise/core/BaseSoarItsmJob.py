@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Module that defines and abstract class for an ITSM job that will be
 implemented by different products
@@ -45,33 +59,9 @@ from TIPCommon.soar_ops import (
 from TIPCommon.types import JSON
 from TIPCommon.utils import get_unique_items_by_difference, none_to_default_value
 
-from scc_enterprise.core.SCCEnterpriseConsts import (
-    BACKLOG_RETRIES_LIMIT,
-    CASE_FAILURE_BACKLOG_DB_KEY,
-    CASE_FAILURE_BACKLOG_FILE_NAME,
-    CASE_PRIORITY_TO_TICKET_SEVERITY,
-    CASE_SLO_DAYS_INTERVALS,
-    CASE_TICKET_MAP_DB_KEY,
-    CASE_TICKET_MAP_FILE_NAME,
-    CLOSED_BY_SCCE_COMMENT,
-    CLOSED_STATUSES,
-    EXTERNAL_SCC_TICKET_INFO,
-    FINDINGS_CONTEXT_KEY,
-    SCCE_COMMENT_PREFIX,
-    NOT_AVAILABLE,
-    RESOLVED_STATUS,
-)
-from scc_enterprise.core.SCCEnterpriseDatamodels import (
-    CaseIterationResult,
-    CaseIterationSetup,
-    ExternalSCCTicketInfo,
-    FindingContext,
-    ITSMTicketDetailsForSCC,
-    SOARCaseDetailsForSCC,
-    TicketIterationResult,
-    TicketIterationSetup,
-)
-from scc_enterprise.core.SCCEnterpriseUtils import construct_soar_case_url, soar_supports_scce_phase_2
+from .SCCEnterpriseConsts import BACKLOG_RETRIES_LIMIT, CASE_FAILURE_BACKLOG_DB_KEY, CASE_FAILURE_BACKLOG_FILE_NAME, CASE_PRIORITY_TO_TICKET_SEVERITY, CASE_SLO_DAYS_INTERVALS, CASE_TICKET_MAP_DB_KEY, CASE_TICKET_MAP_FILE_NAME, CLOSED_BY_SCCE_COMMENT, CLOSED_STATUSES, EXTERNAL_SCC_TICKET_INFO, FINDINGS_CONTEXT_KEY, SCCE_COMMENT_PREFIX, NOT_AVAILABLE, RESOLVED_STATUS
+from .SCCEnterpriseDatamodels import CaseIterationResult, CaseIterationSetup, ExternalSCCTicketInfo, FindingContext, ITSMTicketDetailsForSCC, SOARCaseDetailsForSCC, TicketIterationResult, TicketIterationSetup
+from .SCCEnterpriseUtils import construct_soar_case_url, soar_supports_scce_phase_2
 
 
 CLOSE_CASE_ROOT_CAUSE = CloseCaseOrAlertMaintenanceRootCauses.OTHER.value

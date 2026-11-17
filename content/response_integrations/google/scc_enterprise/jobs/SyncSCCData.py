@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import dataclasses
@@ -6,7 +20,7 @@ from decimal import Decimal
 import json
 from requests import HTTPError
 import urllib.parse
-from scc_enterprise.core import SCCEnterpriseDatamodels
+from ..core import SCCEnterpriseDatamodels
 from soar_sdk.Siemplify import CASE_FILTER_MAX_RESULTS
 from soar_sdk.SiemplifyDataModel import (
     CaseFilterOperatorEnum,
@@ -40,26 +54,14 @@ from TIPCommon.smp_time import is_approaching_timeout, unix_now
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
 
-from scc_enterprise.core.BaseSoarItsmJob import CLOSE_CASE_REASON, CLOSE_CASE_ROOT_CAUSE
-from scc_enterprise.core import GoogleSecurityCommandCenterConstants as GSCCConstants
-from scc_enterprise.core import GoogleSecurityCommandCenterDatamodels as GSCCDatamodels
-from scc_enterprise.core.GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException
-from scc_enterprise.core.GoogleSecurityCommandCenterManager import GoogleSecurityCommandCenterManager
-from scc_enterprise.core.SCCEnterpriseConsts import (
-    CLOSED_BY_SCCE_COMMENT,
-    EXTERNAL_SCC_TICKET_INFO,
-    FINDINGS_CONTEXT_KEY,
-    INTERNAL_SCC_TICKET_INFO,
-    SYNC_DATA_JOB_NAME,
-    SCCE_COMMENT_PREFIX,
-)
-from scc_enterprise.core.SCCEnterpriseDatamodels import ExternalSCCTicketInfo, FindingContext
-from scc_enterprise.core.SCCEnterpriseUtils import (
-    build_case_details_for_scc,
-    create_scc_finding_state_json,
-    load_findings_context,
-    soar_supports_scce_phase_2,
-)
+from ..core.BaseSoarItsmJob import CLOSE_CASE_REASON, CLOSE_CASE_ROOT_CAUSE
+from ..core import GoogleSecurityCommandCenterConstants as GSCCConstants
+from ..core import GoogleSecurityCommandCenterDatamodels as GSCCDatamodels
+from ..core.GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException
+from ..core.GoogleSecurityCommandCenterManager import GoogleSecurityCommandCenterManager
+from ..core.SCCEnterpriseConsts import CLOSED_BY_SCCE_COMMENT, EXTERNAL_SCC_TICKET_INFO, FINDINGS_CONTEXT_KEY, INTERNAL_SCC_TICKET_INFO, SYNC_DATA_JOB_NAME, SCCE_COMMENT_PREFIX
+from ..core.SCCEnterpriseDatamodels import ExternalSCCTicketInfo, FindingContext
+from ..core.SCCEnterpriseUtils import build_case_details_for_scc, create_scc_finding_state_json, load_findings_context, soar_supports_scce_phase_2
 
 
 DEFAULT_HOURS_BACKWARDS = 0

@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import html
@@ -29,27 +43,9 @@ from TIPCommon.transformation import removesuffix
 from TIPCommon.types import ChronicleSOAR, SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 
-from scc_enterprise.core.SCCEnterpriseConsts import (
-    CASE_URL_TEMPLATE,
-    CLOUD_PROVIDER_AWS,
-    CLOUD_PROVIDER_AZURE,
-    CLOUD_PROVIDER_GCP,
-    CLOUD_PROVIDER_OTHER,
-    NOT_AVAILABLE,
-    OOTB_AUTH_ID_SCCE,
-    OOTB_AUTH_KEY_SCCE,
-    V_EMOJI,
-    X_EMOJI,
-    MUTE_EMOJI,
-    FINDING_SEVERITY_COLOR_MAPPING,
-)
-from scc_enterprise.core.SCCEnterpriseDatamodels import (
-    CloudProviderEnum,
-    FindingContext,
-    SOARCaseDetailsForSCC,
-    WorkflowInstance,
-)
-from scc_enterprise.core.SCCEnterpriseExceptions import ProjectNotFound
+from .SCCEnterpriseConsts import CASE_URL_TEMPLATE, CLOUD_PROVIDER_AWS, CLOUD_PROVIDER_AZURE, CLOUD_PROVIDER_GCP, CLOUD_PROVIDER_OTHER, NOT_AVAILABLE, OOTB_AUTH_ID_SCCE, OOTB_AUTH_KEY_SCCE, V_EMOJI, X_EMOJI, MUTE_EMOJI, FINDING_SEVERITY_COLOR_MAPPING
+from .SCCEnterpriseDatamodels import CloudProviderEnum, FindingContext, SOARCaseDetailsForSCC, WorkflowInstance
+from .SCCEnterpriseExceptions import ProjectNotFound
 
 
 __scce_sa_email = None

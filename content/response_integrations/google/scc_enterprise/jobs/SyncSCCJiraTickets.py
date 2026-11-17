@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """BiDi Sync job SOAR <-> Jira"""
 from __future__ import annotations
 
@@ -11,13 +25,13 @@ from soar_sdk.SiemplifyJob import SiemplifyJob
 from TIPCommon import extraction
 from TIPCommon import validation
 from TIPCommon import consts
-from scc_enterprise.core import JiraConstants
-from scc_enterprise.core import JiraDatamodels
-from scc_enterprise.core import SCCEnterpriseDatamodels
-from scc_enterprise.core import SCCEnterpriseUtils
-from scc_enterprise.core.BaseSoarItsmJob import SyncSoarITSM
-from scc_enterprise.core.JiraManager import JiraManager
-from scc_enterprise.core.SCCEnterpriseConsts import NOT_AVAILABLE, RESOLVED_STATUS, SYNC_SCC_JIRA_TICKETS
+from ..core import JiraConstants
+from ..core import JiraDatamodels
+from ..core import SCCEnterpriseDatamodels
+from ..core import SCCEnterpriseUtils
+from ..core.BaseSoarItsmJob import SyncSoarITSM
+from ..core.JiraManager import JiraManager
+from ..core.SCCEnterpriseConsts import NOT_AVAILABLE, RESOLVED_STATUS, SYNC_SCC_JIRA_TICKETS
 
 
 @dataclasses.dataclass
