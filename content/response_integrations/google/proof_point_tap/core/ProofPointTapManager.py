@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import dataclasses
 import requests
@@ -5,15 +19,11 @@ from urllib.parse import urljoin
 
 from TIPCommon.types import SingleJson
 
-from proof_point_tap.core.constants import API_EVENT_TYPE_MAPPING, ENDPOINTS
-from proof_point_tap.core import datamodels
-from proof_point_tap.core.exceptions import (
-    ProofPointTapManagerError,
-    ProofPointTapNotFoundError,
-    ThreatIdNotFoundError,
-)
-from proof_point_tap.core import ProofPointTapParser as parser
-from proof_point_tap.core.utils import get_time_range, generate_time_intervals, resolve_threat_statuses
+from .constants import API_EVENT_TYPE_MAPPING, ENDPOINTS
+from . import datamodels
+from .exceptions import ProofPointTapManagerError, ProofPointTapNotFoundError, ThreatIdNotFoundError
+from . import ProofPointTapParser as parser
+from .utils import get_time_range, generate_time_intervals, resolve_threat_statuses
 
 
 @dataclasses.dataclass(slots=True)

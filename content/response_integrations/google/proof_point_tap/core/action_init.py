@@ -1,10 +1,24 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 from TIPCommon.types import ChronicleSOAR
 
-from proof_point_tap.core.AuthenticationManager import AuthenticateSession
-from proof_point_tap.core.utils import get_integration_parameters
-from proof_point_tap.core import ProofPointTapManager as api_manager
-from proof_point_tap.core.datamodels import IntegrationParameters
+from .AuthenticationManager import AuthenticateSession
+from .utils import get_integration_parameters
+from . import ProofPointTapManager as api_manager
+from .datamodels import IntegrationParameters
 
 
 def create_api_client(soar_action: ChronicleSOAR) -> api_manager.ProofPointTapManager:
