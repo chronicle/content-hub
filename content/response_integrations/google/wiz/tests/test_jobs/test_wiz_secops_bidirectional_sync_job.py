@@ -653,6 +653,20 @@ class TestWizSecopsBidirectionalSyncJob:
 
         assert job._get_wiz_threat_id(alert) == "fb6da1cc-6674-5af5-92fa-83cefe445ffe"
 
+    def test_get_wiz_threat_id_skips_whitespace_additional_properties(self) -> None:
+        """Verifies whitespace-only additional_properties falls back to sourceGroupingIdentifier."""
+        job = _make_job()
+        alert = AlertCard.from_json(
+            {
+                "id": 3,
+                "identifier": "alert_3",
+                "sourceGroupingIdentifier": "fb6da1cc-6674-5af5-92fa-83cefe445ffe",
+                "additionalProperties": json.dumps({"security_result_threat_id": "   "}),
+            }
+        )
+
+        assert job._get_wiz_threat_id(alert) == "fb6da1cc-6674-5af5-92fa-83cefe445ffe"
+
     def test_get_wiz_threat_id_from_fields_groups(self) -> None:
         """Verifies threat ID extraction fallback from alert.fields_groups."""
         job = _make_job()
