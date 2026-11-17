@@ -944,4 +944,6 @@ class FireEyeHXManager(BulkAcquisitionMixin):
             except Exception:
                 # Unable to parse JSON - return content of response
                 msg = f"{error_msg}: {error} {response.content}"
-                raise FireEyeHXManagerError(msg)
+                if response.status_code == 404:
+                    raise FireEyeHXNotFoundError(msg) from error
+                raise FireEyeHXManagerError(msg) from error

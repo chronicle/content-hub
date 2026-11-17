@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import requests
 
-from ..core.FireEyeHXManager import FireEyeHXManager
+from ..core.FireEyeHXManager import FireEyeHXManager, FireEyeHXNotFoundError
 
 
 class TestFireEyeHXManagerBulk(unittest.TestCase):
@@ -167,6 +167,37 @@ class TestFireEyeHXManagerBulk(unittest.TestCase):
 
         self.mock_session.get.assert_called_once_with(f"{self.api_root}/acqs/bulk/42")
         self.assertEqual(result["_id"], 42)
+
+    def test_get_bulk_acquisition_null_data_returns_empty_dict(self) -> None:
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"data": None}
+        mock_response.status_code = 200
+        self.mock_session.get.return_value = mock_response
+
+        result = self.manager.get_bulk_acquisition(42)
+
+        self.assertEqual(result, {})
+
+    def test_get_bulk_acquisition_not_found_json_raises_not_found_error(self) -> None:
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.raise_for_status.side_effect = requests.HTTPError("404 Client Error")
+        mock_response.json.return_value = {"message": "Bulk acquisition not found"}
+        self.mock_session.get.return_value = mock_response
+
+        with self.assertRaises(FireEyeHXNotFoundError):
+            self.manager.get_bulk_acquisition(9999)
+
+    def test_get_bulk_acquisition_not_found_non_json_raises_not_found_error(self) -> None:
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.content = b"Not Found"
+        mock_response.raise_for_status.side_effect = requests.HTTPError("404 Client Error")
+        mock_response.json.side_effect = ValueError("No JSON")
+        self.mock_session.get.return_value = mock_response
+
+        with self.assertRaises(FireEyeHXNotFoundError):
+            self.manager.get_bulk_acquisition(9999)
 
     def test_stop_bulk_acquisition(self) -> None:
         mock_response = MagicMock()
