@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
 AUTHENTICATION_FAILURE_PREFIX: str = "Authentication failed"
+MISSING_POLLING_STATE_MESSAGE: str = "Missing async polling state in additional_data."
 
 # How long after triggering to keep looking for the file (and to keep retrying RSC calls
 # that fail transiently) before giving up. Each async run makes one attempt; the step's
@@ -131,7 +132,7 @@ class RubrikFileDownloadAction(RubrikAction, ABC):
         self.context: SingleJson = {}
 
     @Action.result_value.setter
-    def result_value(self, value: object) -> None:
+    def result_value(self, value: bool | str) -> None:
         """Allow the JSON polling state to be returned as the result value."""
         self._result_value = value
 
@@ -235,7 +236,10 @@ class RubrikFileDownloadAction(RubrikAction, ABC):
 
     def _poll_file(self) -> SingleJson | None:
         """Make this run's single attempt to locate the file and read its state."""
-        started_at = datetime.fromisoformat(self.context["started_at"])
+        started_at_raw = self.context.get("started_at")
+        if not started_at_raw or not self.context.get("target_file_name"):
+            raise RubrikException(MISSING_POLLING_STATE_MESSAGE)
+        started_at = datetime.fromisoformat(started_at_raw)
         elapsed = (datetime.now(timezone.utc) - started_at).total_seconds()
         try:
             external_id = self.context.get("external_id") or self._locate_file(
@@ -255,7 +259,9 @@ class RubrikFileDownloadAction(RubrikAction, ABC):
 
     def _locate_file(self, started_at: datetime, elapsed: float) -> str | None:
         """Find the triggered file's externalId in allUserFiles, if listed yet."""
-        target_file_name = self.context["target_file_name"]
+        target_file_name = self.context.get("target_file_name")
+        if not target_file_name:
+            raise RubrikException(MISSING_POLLING_STATE_MESSAGE)
         self.logger.info(
             f"Step 3: Locating triggered {self.file_label} (matching filename "
             f"containing '{target_file_name}', {elapsed:.0f}s after trigger)."

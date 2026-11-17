@@ -10,6 +10,8 @@ REMEDIATION_LOG_FILENAME_SUFFIX: str = " actions log"
 
 
 class DownloadRemediationLog(RubrikFileDownloadAction):
+    """Generate a violation's remediation log in RSC and attach it to the case."""
+
     rubrik_error_prefix = "Failed to generate remediation log"
     file_type = USER_FILE_TYPE_LOG
     file_label = "remediation log"

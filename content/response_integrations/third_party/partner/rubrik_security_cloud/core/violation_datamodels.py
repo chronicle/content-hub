@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING
 from urllib.parse import quote
+
+from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 
 from .constants import (
     ACTIONS_LOG_DOWNLOAD_MESSAGE_PREFIX,
@@ -20,17 +23,18 @@ from .constants import (
 )
 
 if TYPE_CHECKING:
+    from EnvironmentCommon.EnvironmentHandle import EnvironmentHandle
     from TIPCommon.types import SingleJson
 
-DEVICE_VENDOR = "Rubrik Security Cloud"
-DEVICE_PRODUCT = "RSC"
+DEVICE_VENDOR: str = "Rubrik Security Cloud"
+DEVICE_PRODUCT: str = "RSC"
 
 # The snapshot time inside a classification activity message, e.g.
 # "... on the snapshot at Friday 19-Jun-26 20:01 UTC." Tried in order: the text
 # following "snapshot at", then a bare weekday-prefixed timestamp anywhere in
 # the message.
-_SNAPSHOT_AT_PATTERN = re.compile(r"snapshot\s+at\s+(?P<time>[^.]+)", re.IGNORECASE)
-_SNAPSHOT_TIME_PATTERN = re.compile(
+_SNAPSHOT_AT_PATTERN: re.Pattern[str] = re.compile(r"snapshot\s+at\s+(?P<time>[^.]+)", re.IGNORECASE)
+_SNAPSHOT_TIME_PATTERN: re.Pattern[str] = re.compile(
     r"(?:Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\s+\d{1,2}-[A-Za-z]{3}-\d{2,4}"
     r"\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s+[A-Za-z]{2,5})?"
 )
@@ -40,7 +44,7 @@ _SNAPSHOT_TIME_PATTERN = re.compile(
 # severity field describes the activity (reported as "Info" even for a Low or
 # Critical violation), so the message is the only place the severity that
 # matters for triage appears.
-_MESSAGE_SEVERITY_PATTERN = re.compile(r"^\s*(?P<severity>[A-Za-z]+)\s+severity\b")
+_MESSAGE_SEVERITY_PATTERN: re.Pattern[str] = re.compile(r"^\s*(?P<severity>[A-Za-z]+)\s+severity\b")
 
 # Severity and policy name are only available inside the activity message, which
 # RSC rewords for every lifecycle transition:
@@ -67,11 +71,11 @@ _MESSAGE_SEVERITY_PATTERN = re.compile(r"^\s*(?P<severity>[A-Za-z]+)\s+severity\
 # ("Privileged users that don't require a password"), which a non-greedy match
 # would truncate at "don". Greedy backtracks to the rightmost valid
 # "' [detected] on '<target>'" split, which is the correct delimiter.
-_ACTIVITY_VIOLATION_MESSAGE_PATTERN = re.compile(
+_ACTIVITY_VIOLATION_MESSAGE_PATTERN: re.Pattern[str] = re.compile(
     r"^\s*(?P<severity>[A-Za-z]+)\s+severity\s+violation\s+of\s+policy\s+"
     r"'(?P<policy>.+)'(?:\s+detected)?\s+on\s+'[^']+'.*$"
 )
-_ACTIVITY_EVENT_MESSAGE_PATTERN = re.compile(
+_ACTIVITY_EVENT_MESSAGE_PATTERN: re.Pattern[str] = re.compile(
     r"^\s*'(?P<policy>.+)'(?:\s+detected)?\s+on\s+'[^']+'.*$"
 )
 
@@ -86,7 +90,7 @@ def _iso_to_unix_ms(iso_str: str) -> int:
         return 0
 
 
-def _stringify(value: Any) -> str:
+def _stringify(value: object) -> str:
     """Convert any value to a string suitable for CSV / event display."""
     if value is None:
         return ""
@@ -98,7 +102,7 @@ def _stringify(value: Any) -> str:
         return str(value)
 
 
-def _flatten_payload(payload: Any, prefix: str = "") -> Dict[str, Any]:
+def _flatten_payload(payload: object, prefix: str = "") -> SingleJson:
     """Flatten a nested API payload into scalar event fields.
 
     Lets an alert carry everything RSC returned instead of a hand-picked subset.
@@ -119,7 +123,7 @@ def _flatten_payload(payload: Any, prefix: str = "") -> Dict[str, Any]:
     None and empty containers become empty strings, so a field RSC returned as
     null is still visible in the alert rather than silently missing.
     """
-    flat: Dict[str, Any] = {}
+    flat: SingleJson = {}
 
     if isinstance(payload, dict):
         if not payload and prefix:
@@ -139,7 +143,7 @@ def _flatten_payload(payload: Any, prefix: str = "") -> Dict[str, Any]:
     return flat
 
 
-def _first_non_empty(*values: Any) -> str:
+def _first_non_empty(*values: object) -> str:
     """Return the first value that is a non-blank string, else UNKNOWN_LABEL."""
     for value in values:
         if value and str(value).strip():
@@ -147,7 +151,7 @@ def _first_non_empty(*values: Any) -> str:
     return UNKNOWN_LABEL
 
 
-def _extract_snapshot_time(*messages: Optional[str]) -> str:
+def _extract_snapshot_time(*messages: str | None) -> str:
     """Trim the snapshot timestamp out of classification activity messages.
 
     RSC reports the snapshot inline, e.g. "Data security violations found for
@@ -171,7 +175,7 @@ def _extract_snapshot_time(*messages: Optional[str]) -> str:
     return ""
 
 
-def _extract_message_severity(message: Optional[str]) -> str:
+def _extract_message_severity(message: str | None) -> str:
     """Pull the leading '<Severity> severity ...' word out of an activity message.
 
     Returns "" when the message does not start that way (e.g. a classification
@@ -181,7 +185,7 @@ def _extract_message_severity(message: Optional[str]) -> str:
     return match.group("severity") if match else ""
 
 
-def _build_violation_alert_name(message: Optional[str], object_name: Optional[str]) -> str:
+def _build_violation_alert_name(message: str | None, object_name: str | None) -> str:
     """Build a DSPM / IR alert name from the activity message and the series object.
 
     Composes "<Severity> severity violation of policy '<P>' detected on
@@ -225,7 +229,7 @@ def _build_violation_alert_name(message: Optional[str], object_name: Optional[st
     return message
 
 
-def _hierarchy_fields(hierarchy_object: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def _hierarchy_fields(hierarchy_object: SingleJson | None) -> SingleJson:
     """Event fields from the SnappableIdentity lookup for a series' objectId.
 
     Prefixed with `hierarchy_` rather than merged flat: the payload's id, name and
@@ -265,23 +269,18 @@ def _hierarchy_fields(hierarchy_object: Optional[Dict[str, Any]]) -> Dict[str, A
 class BaseModel:
     """Base model for all Rubrik datamodels."""
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         self.raw_data = raw_data
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> SingleJson:
         """Return the raw data dict."""
         return self.raw_data
-
-    @staticmethod
-    def _stringify(value: Any) -> str:
-        """Convert any value to a string suitable for CSV display."""
-        return _stringify(value)
 
 
 class DSPMViolation(BaseModel):
     """Model for a single DSPM violation from the list query."""
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         super().__init__(raw_data)
         self.violation_id: str = raw_data.get("policyViolationId", "")
         self.status: str = raw_data.get("status", "")
@@ -299,7 +298,7 @@ class DSPMViolation(BaseModel):
         details = raw_data.get("details") or {}
         self.snapshot_id: str = details.get("snapshotId", "")
 
-    def to_csv(self) -> Dict[str, Any]:
+    def to_csv(self) -> SingleJson:
         """Return a flat dict suitable for SOAR data table display."""
         return {
             "Violation ID": self.violation_id,
@@ -318,7 +317,7 @@ class DSPMViolation(BaseModel):
 class DSPMViolationDetails(BaseModel):
     """Model for the full details of a single DSPM violation."""
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         super().__init__(raw_data)
         self.violation_id: str = raw_data.get("policyViolationId", "")
         self.status: str = raw_data.get("status", "")
@@ -335,7 +334,7 @@ class DSPMViolationDetails(BaseModel):
         self.platform: str = metadata.get("platform", "")
         self.physical_host: str = metadata.get("physicalHost", "")
 
-    def to_csv(self) -> Dict[str, Any]:
+    def to_csv(self) -> SingleJson:
         """Return a flat dict suitable for SOAR data table display."""
         return {
             "Violation Id": self.violation_id,
@@ -355,7 +354,7 @@ class DSPMViolationDetails(BaseModel):
 class IRViolation(BaseModel):
     """Model for a single IR violation from the list query."""
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         super().__init__(raw_data)
         self.violation_id: str = raw_data.get("policyViolationId", "")
         self.status: str = raw_data.get("status", "")
@@ -369,7 +368,7 @@ class IRViolation(BaseModel):
         self.idp_type: str = metadata.get("idpType", "")
         self.user_principal_name: str = metadata.get("userPrincipalName", "")
 
-    def to_csv(self) -> Dict[str, Any]:
+    def to_csv(self) -> SingleJson:
         """Return a flat dict suitable for SOAR data table display."""
         return {
             "Violation ID": self.violation_id,
@@ -387,7 +386,7 @@ class IRViolation(BaseModel):
 class IRViolationDetails(BaseModel):
     """Model for the full details of a single IR violation."""
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         super().__init__(raw_data)
         self.violation_id: str = raw_data.get("policyViolationId", "")
         self.status: str = raw_data.get("status", "")
@@ -404,7 +403,7 @@ class IRViolationDetails(BaseModel):
         self.principal_type: str = metadata.get("principalType", "")
         self.user_principal_name: str = metadata.get("userPrincipalName", "")
 
-    def to_csv(self) -> Dict[str, Any]:
+    def to_csv(self) -> SingleJson:
         """Return a flat dict suitable for SOAR data table display."""
         return {
             "Violation ID": self.violation_id,
@@ -425,7 +424,7 @@ class IRViolationDetails(BaseModel):
 class FileEntry(BaseModel):
     """Model for a single file entry from the violation file list query."""
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         super().__init__(raw_data)
         self.filename: str = raw_data.get("filename", "")
         self.native_path: str = raw_data.get("nativePath", "")
@@ -445,7 +444,7 @@ class FileEntry(BaseModel):
         self.open_access_type: str = raw_data.get("openAccessType", "")
         self.staleness_type: str = raw_data.get("stalenessType", "")
 
-    def to_csv(self) -> Dict[str, Any]:
+    def to_csv(self) -> SingleJson:
         """Return a flat dict suitable for SOAR data table display."""
         return {
             "File Name": self.filename,
@@ -463,21 +462,28 @@ class FileEntry(BaseModel):
         }
 
 
-class UserFile:
-    """Internal model for a file entry from allUserFiles (async polling only)."""
+@dataclass(slots=True)
+class SeriesContext:
+    """Per-series context the connector resolves alongside an activity series.
 
-    def __init__(self, raw_data: Dict[str, Any]) -> None:
-        self.external_id: Optional[str] = raw_data.get("externalId")
-        self.filename: str = raw_data.get("filename", "")
-        self.file_type: str = raw_data.get("type", "")
-        self.state: str = raw_data.get("state", "")
-        self.created_at: str = raw_data.get("createdAt", "")
+    Grouped so the alert datamodel constructors stay small; each datamodel reads
+    only the fields that apply to it.
 
-    def is_ready(self) -> bool:
-        return self.state == "READY"
+    Attributes:
+        snapshot_id: The classified snapshot FID (classification alerts only).
+        hierarchy_object: SnappableIdentity hierarchyObject for the series'
+            objectId. Optional so a failed identity lookup degrades the event
+            rather than dropping the alert.
+        violation_status: POLICY_VIOLATION_STATUS_* value for a DSPM / IR
+            series, or "" when it could not be resolved.
+        window: (from_iso, to_iso) for this run, or None to disable the
+            activity-entry window filter.
+    """
 
-    def is_failed(self) -> bool:
-        return self.state == "FAILED"
+    snapshot_id: str = ""
+    hierarchy_object: SingleJson | None = None
+    violation_status: str = ""
+    window: tuple[str, str] | None = None
 
 
 class RubrikClassificationAlertDatamodel:
@@ -487,28 +493,27 @@ class RubrikClassificationAlertDatamodel:
         self,
         event_node: SingleJson,
         policy_obj: SingleJson,
-        snapshot_id: str,
-        hierarchy_object: Optional[SingleJson] = None,
+        series_context: SeriesContext,
     ) -> None:
         self.event_node = event_node
         self.policy_obj = policy_obj
-        self.snapshot_id = snapshot_id
+        self.snapshot_id = series_context.snapshot_id
         # Optional so a failed identity lookup degrades the event rather than
         # dropping the alert.
-        self.hierarchy_object = hierarchy_object or {}
+        self.hierarchy_object = series_context.hierarchy_object or {}
 
     def get_alert_info(
         self,
-        alert_info: Any,
-        environment_common: Any,
+        environment_common: EnvironmentHandle,
         event_field_parameter: str = "",
         product_field_name: str = "",
-    ) -> Any:
+    ) -> AlertInfo:
         """Convert raw data to Siemplify AlertInfo format."""
         fields = self._series_fields()
         fields.update(self._activity_fields(fields))
         fields.update(self._policy_fields())
 
+        alert_info = AlertInfo()
         self._set_alert_fields(alert_info, fields, environment_common)
         alert_info.event_field_name = event_field_parameter
         alert_info.source_system_name = product_field_name
@@ -604,7 +609,10 @@ class RubrikClassificationAlertDatamodel:
         }
 
     def _set_alert_fields(
-        self, alert_info: Any, fields: SingleJson, environment_common: Any
+        self,
+        alert_info: AlertInfo,
+        fields: SingleJson,
+        environment_common: EnvironmentHandle,
     ) -> None:
         """Set the SecOps alert-level fields, up to and including the grouping key."""
         # Priority from node.severity (Field 10)
@@ -717,16 +725,16 @@ class RubrikActivityViolationAlertDatamodel:
         self,
         event_node: SingleJson,
         violation_type: str,
-        violation_status: str = "",
-        hierarchy_object: Optional[SingleJson] = None,
-        window: Optional[Tuple[str, str]] = None,
+        series_context: SeriesContext | None = None,
     ) -> None:
+        series_context = series_context or SeriesContext()
+        window = series_context.window
         self.event_node = event_node or {}
         self.violation_type = violation_type
-        self.violation_status = violation_status or ""
+        self.violation_status = series_context.violation_status or ""
         # Resolved for DSPM (SECURITY_VIOLATION) only; IR series identify their
         # subject through the message and resourceMetadata instead.
-        self.hierarchy_object = hierarchy_object or {}
+        self.hierarchy_object = series_context.hierarchy_object or {}
         # (from_iso, to_iso) for this run. RSC filters the SERIES by lastUpdated,
         # not its entries, so a series returns its whole activityConnection
         # history -- entries from long before this window included. Kept as unix
@@ -824,14 +832,14 @@ class RubrikActivityViolationAlertDatamodel:
 
     def get_alert_info(
         self,
-        alert_info: Any,
-        environment_common: Any,
+        environment_common: EnvironmentHandle,
         event_field_parameter: str = "",
         product_field_name: str = "",
-    ) -> Any:
+    ) -> AlertInfo:
         """Convert an activitySeries node to Siemplify AlertInfo format."""
         fields = self._alert_fields(self.get_latest_activity_node())
 
+        alert_info = AlertInfo()
         self._set_alert_fields(alert_info, fields, environment_common)
         alert_info.event_field_name = event_field_parameter
         alert_info.source_system_name = product_field_name
@@ -873,7 +881,10 @@ class RubrikActivityViolationAlertDatamodel:
         }
 
     def _set_alert_fields(
-        self, alert_info: Any, fields: SingleJson, environment_common: Any
+        self,
+        alert_info: AlertInfo,
+        fields: SingleJson,
+        environment_common: EnvironmentHandle,
     ) -> None:
         """Set the SecOps alert-level fields, up to and including the grouping key."""
         # --- AlertInfo fields (SecOps alert-level mapping) ---

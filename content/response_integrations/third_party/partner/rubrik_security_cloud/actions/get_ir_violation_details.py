@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 
 class GetIRViolationDetails(RubrikAction):
+    """Retrieve the details of a single IR violation by its ID."""
+
     graphql_error_prefix = "API error during Get IR Violation Details"
 
     def __init__(self) -> None:

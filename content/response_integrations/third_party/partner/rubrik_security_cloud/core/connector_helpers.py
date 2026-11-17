@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from TIPCommon.extraction import extract_connector_param
 
@@ -29,10 +29,10 @@ def validate_search_time_period(days: str | int | None) -> int:
         return MIN_SEARCH_TIME_PERIOD_DAYS
     try:
         days = int(str(days).strip())
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as err:
         raise ValueError(
             f"'Search Time Period In Days' must be a whole number. Received: {days}."
-        )
+        ) from err
     if days > MAX_SEARCH_TIME_PERIOD_DAYS:
         raise ValueError(
             f"'Search Time Period In Days' cannot exceed {MAX_SEARCH_TIME_PERIOD_DAYS} days. "
@@ -112,7 +112,7 @@ def read_checkpoint(siemplify: SiemplifyConnectorExecution) -> dict[str, str]:
     return {"from_timestamp": from_timestamp}
 
 
-def _read_raw_checkpoint(siemplify: SiemplifyConnectorExecution) -> Any:
+def _read_raw_checkpoint(siemplify: SiemplifyConnectorExecution) -> object:
     """Fetch the stored checkpoint value as-is from the server context store.
 
     Falls back to the branching wrapper if the direct server call fails, so a mode
@@ -131,7 +131,7 @@ def _read_raw_checkpoint(siemplify: SiemplifyConnectorExecution) -> Any:
             "Falling back to the SDK's mode-dependent store, which on a Remote "
             "agent is pod-local and will cause the window to be re-ingested."
         )
-        raw = None
+        raw: object = None
         try:
             raw = siemplify.fetch_timestamp() or None
         except Exception as fallback_err:
@@ -139,7 +139,7 @@ def _read_raw_checkpoint(siemplify: SiemplifyConnectorExecution) -> Any:
     return raw
 
 
-def _coerce_unix_ms(raw: Any) -> int:
+def _coerce_unix_ms(raw: object) -> int:
     """Normalise whatever the context store returns into unix milliseconds.
 
     The value is written with json.dumps, so it comes back as the string "1756…"
@@ -199,7 +199,7 @@ def extract_multi_select_param(
     Returns:
         List of mapped API enum values, or None when the parameter is empty.
     """
-    raw = extract_connector_param(
+    raw: str | None = extract_connector_param(
         siemplify,
         param_name=param_name,
         input_type=str,

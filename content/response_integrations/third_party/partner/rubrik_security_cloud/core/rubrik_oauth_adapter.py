@@ -117,7 +117,7 @@ class RubrikOAuthAdapter(OAuthAdapter):
             raise ConnectionTimeoutException(
                 f"Unable to connect to Rubrik at {url}. Please verify the endpoint is "
                 f"reachable and the Service Account JSON is valid. Details: {e}"
-            )
+            ) from e
         response.raise_for_status()
 
         # Extract access token

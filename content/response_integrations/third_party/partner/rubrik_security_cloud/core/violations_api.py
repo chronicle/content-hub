@@ -20,18 +20,14 @@ from .constants import (
     DEFAULT_REQUEST_TIMEOUT,
     ERROR_NO_VIOLATION_FOUND,
     FILE_DOWNLOAD_ENDPOINT,
-    FILE_STATE_FAILED,
-    FILE_STATE_READY,
     FILE_TYPE_HITS,
     GET_CLASSIFICATION_OBJECT_DETAIL_ACTION_IDENTIFIER,
-    GET_CLOSEST_SNAPSHOT_ACTION_IDENTIFIER,
     GET_SNAPPABLE_IDENTITY_ACTION_IDENTIFIER,
     REMEDIATION_TARGET_TYPE_VIOLATION,
     REMEDIATION_TYPE_EXPORT_LOG,
 )
 from .graphql_queries import (
     CLASSIFICATION_OBJECT_DETAIL_QUERY,
-    CLOSEST_SNAPSHOT_QUERY,
     SNAPPABLE_IDENTITY_QUERY,
 )
 from .rubrik_exceptions import (
@@ -196,6 +192,47 @@ def _parse_user_file_created_at(created_at: str | None) -> datetime | None:
         return None
 
 
+def _filter_matching_user_files(
+    all_files: list[SingleJson],
+    file_type: str,
+    filename_contains: str,
+    created_after: datetime | None,
+) -> list[SingleJson]:
+    """Keep entries of `file_type` whose filename contains `filename_contains`.
+
+    When `created_after` is provided, only entries created strictly after it are
+    kept; entries with a missing or unparseable createdAt are treated as oldest.
+    """
+    candidates = [
+        f
+        for f in all_files
+        if f.get("type") == file_type
+        and filename_contains.lower() in (f.get("filename") or "").lower()
+    ]
+    if created_after is None:
+        return candidates
+    oldest = datetime.min.replace(tzinfo=timezone.utc)
+    return [
+        f
+        for f in candidates
+        if (_parse_user_file_created_at(f.get("createdAt")) or oldest) > created_after
+    ]
+
+
+def _raise_if_ambiguous(candidates: list[SingleJson], filename_contains: str) -> None:
+    """Raise AmbiguousFileMatchException when more than one candidate remains."""
+    if len(candidates) <= 1:
+        return
+    filenames = ", ".join(
+        f"{f.get('filename')!r} (createdAt={f.get('createdAt')})" for f in candidates
+    )
+    raise AmbiguousFileMatchException(
+        f"Found {len(candidates)} files matching '{filename_contains}' created after "
+        f"the action started; cannot determine which one belongs to this request. "
+        f"Matches: {filenames}."
+    )
+
+
 class ViolationsApiMixin:
     """DSPM / IR violation, user-file and classification calls for APIManager."""
 
@@ -234,8 +271,7 @@ class ViolationsApiMixin:
         violation_ids: list[str],
         new_status: str,
     ) -> None:
-        """
-        Update the status of one or more DSPM or IR violations.
+        """Update the status of one or more DSPM or IR violations.
 
         The bulkUpdatePolicyViolations mutation returns null on success.
         Raises GraphQLQueryException if the response contains errors.
@@ -255,8 +291,7 @@ class ViolationsApiMixin:
         snapshot_fid: str,
         violation_id: str,
     ) -> bool:
-        """
-        Trigger async CSV generation for files at risk in a snapshot.
+        """Trigger async CSV generation for files at risk in a snapshot.
 
         Returns:
             True if isSuccessful was returned as true.
@@ -285,73 +320,16 @@ class ViolationsApiMixin:
             )
         return True
 
-    def get_ready_user_file(
-        self, file_type: str, filename_contains: str | None = None
-    ) -> SingleJson | None:
-        """
-        Check once whether a matching user file has reached READY or FAILED state.
-
-        This is a single, non-blocking check intended to be called on each
-        invocation of a native async action — the Chronicle SOAR platform is
-        responsible for re-invoking the action until this returns a result.
-
-        `allUserFiles` returns every user's in-flight/recent downloads across
-        the whole RSC account, not just the ones triggered by this action run —
-        `downloads` groups are flattened across all groups before filtering.
-
-        Args:
-            file_type: One of USER_FILE_TYPE_CSV or USER_FILE_TYPE_LOG.
-            filename_contains: When provided, this is a HARD filter — only
-                entries whose filename contains this value (case-insensitive)
-                are considered at all. There is no fallback to an unrelated
-                file: if nothing matches, this returns None (treated as "not
-                ready yet") even if other files of the same file_type are
-                READY/FAILED, since those belong to concurrent downloads for
-                other objects and must never be picked up by mistake.
-
-        Returns:
-            Dict with externalId, filename, type, state, createdAt if a matching
-            file has reached READY or FAILED state, otherwise None.
-        """
-        all_files = _flatten_user_files(self._execute_graphql(DOWNLOAD_BAR_QUERY, {}))
-
-        candidates = [f for f in all_files if f.get("type") == file_type]
-
-        if filename_contains:
-            candidates = [
-                f
-                for f in candidates
-                if filename_contains.lower() in (f.get("filename") or "").lower()
-            ]
-
-        matching = [
-            f for f in candidates if f.get("state") in (FILE_STATE_READY, FILE_STATE_FAILED)
-        ]
-
-        if not matching:
-            self._log(
-                f"File not ready yet (file_type={file_type}, "
-                f"filename_contains={filename_contains!r})."
-            )
-            return None
-
-        matching.sort(key=lambda f: f.get("createdAt", ""), reverse=True)
-        entry = matching[0]
-        self._log(
-            f"File check complete: state={entry.get('state')} "
-            f"externalId={entry.get('externalId')} filename={entry.get('filename')}"
-        )
-        return entry
-
     def find_user_file_by_filename(
         self,
         file_type: str,
         filename_contains: str,
         created_after: datetime | None = None,
     ) -> SingleJson | None:
-        """
-        Locate a user file entry by type + filename pattern, in whatever state
-        it currently happens to be (READY, FAILED, or still generating).
+        """Locate a user file entry by type + filename pattern, in any state.
+
+        The entry is returned in whatever state it currently happens to be
+        (READY, FAILED, or still generating).
 
         Intended to be called only until a matching entry is found at all —
         once found, callers should persist its externalId and switch to
@@ -382,21 +360,9 @@ class ViolationsApiMixin:
                 than one matching entry was created after it.
         """
         all_files = _flatten_user_files(self._execute_graphql(DOWNLOAD_BAR_QUERY, {}))
-
-        candidates = [
-            f
-            for f in all_files
-            if f.get("type") == file_type
-            and filename_contains.lower() in (f.get("filename") or "").lower()
-        ]
-
-        if created_after is not None:
-            oldest = datetime.min.replace(tzinfo=timezone.utc)
-            candidates = [
-                f
-                for f in candidates
-                if (_parse_user_file_created_at(f.get("createdAt")) or oldest) > created_after
-            ]
+        candidates = _filter_matching_user_files(
+            all_files, file_type, filename_contains, created_after
+        )
 
         if not candidates:
             self._log(
@@ -405,15 +371,8 @@ class ViolationsApiMixin:
             )
             return None
 
-        if created_after is not None and len(candidates) > 1:
-            filenames = ", ".join(
-                f"{f.get('filename')!r} (createdAt={f.get('createdAt')})" for f in candidates
-            )
-            raise AmbiguousFileMatchException(
-                f"Found {len(candidates)} files matching '{filename_contains}' created after "
-                f"the action started; cannot determine which one belongs to this request. "
-                f"Matches: {filenames}."
-            )
+        if created_after is not None:
+            _raise_if_ambiguous(candidates, filename_contains)
 
         candidates.sort(key=lambda f: f.get("createdAt", ""), reverse=True)
         entry = candidates[0]
@@ -424,8 +383,7 @@ class ViolationsApiMixin:
         return entry
 
     def get_user_file_by_external_id(self, external_id: str) -> SingleJson | None:
-        """
-        Look up a specific, already-identified user file entry by its externalId.
+        """Look up a specific, already-identified user file entry by its externalId.
 
         Args:
             external_id: The externalId captured from a prior
@@ -443,8 +401,7 @@ class ViolationsApiMixin:
         return None
 
     def download_file(self, external_id: str) -> bytes:
-        """
-        Download a generated file from /file-downloads/{external_id}.
+        """Download a generated file from /file-downloads/{external_id}.
 
         Returns:
             Binary content of the file.
@@ -463,7 +420,7 @@ class ViolationsApiMixin:
             raise ConnectionTimeoutException(
                 f"Unable to connect to Rubrik at {url}. Please verify the endpoint is "
                 f"reachable and the Service Account JSON is valid. Details: {e}"
-            )
+            ) from e
         if not response.ok:
             raise RubrikException(
                 f"File download failed. Status: {response.status_code}. Body: {response.text}"
@@ -475,8 +432,7 @@ class ViolationsApiMixin:
         violation_id: str,
         resource_id: str,
     ) -> str:
-        """
-        Trigger async remediation log CSV generation.
+        """Trigger async remediation log CSV generation.
 
         Returns:
             The remediationId string.
@@ -563,8 +519,7 @@ class ViolationsApiMixin:
         violation_id: str,
         policy_types: list[str],
     ) -> SingleJson:
-        """
-        Retrieve full details for a single IR violation.
+        """Retrieve full details for a single IR violation.
 
         Uses the same DataSecurityViolationGetQuery operation as DSPM details,
         but with IR policy types which drives the IR-specific response schema.
@@ -578,19 +533,6 @@ class ViolationsApiMixin:
         if not data.get("policyViolation"):
             raise ItemNotFoundException(ERROR_NO_VIOLATION_FOUND.format(violation_id))
         return data
-
-    def get_closest_snapshot(self, snappable_id: str, before_time: str) -> SingleJson:
-        variables = {
-            "snappableId": snappable_id,
-            "beforeTime": before_time,
-        }
-        payload = json.dumps({"query": CLOSEST_SNAPSHOT_QUERY, "variables": variables})
-        return self._make_rest_call(
-            GET_CLOSEST_SNAPSHOT_ACTION_IDENTIFIER,
-            "POST",
-            self.graphql_url,
-            data=payload,
-        )
 
     def get_snappable_identity(self, fid: str) -> SingleJson:
         """Resolve a snappable's hierarchy identity from its fid.
@@ -613,12 +555,11 @@ class ViolationsApiMixin:
         self,
         snappable_fid: str,
         snapshot_fid: str,
-        include_whitelisted: bool = False,
     ) -> SingleJson:
         variables = {
             "snappableFid": snappable_fid,
             "snapshotFid": snapshot_fid,
-            "includeWhitelistedResults": include_whitelisted,
+            "includeWhitelistedResults": False,
         }
         payload = json.dumps({"query": CLASSIFICATION_OBJECT_DETAIL_QUERY, "variables": variables})
         return self._make_rest_call(

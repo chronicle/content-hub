@@ -29,17 +29,17 @@ if TYPE_CHECKING:
 # ONLY bound on the work that step can create: get_cases_by_filter has no
 # server-side max_results, and the search is not time-bounded either. Cases beyond
 # the ceiling are picked up by later runs; the run log says how many were skipped.
-MAX_RELATED_CASES_TO_INSPECT = 500
+MAX_RELATED_CASES_TO_INSPECT: int = 500
 
 # SOAR case status codes for get_cases_by_filter's `statuses` filter. Note this is
 # a DIFFERENT encoding from get_cases_ids_by_filter, which takes the strings
 # "OPEN"/"CLOSE"/"BOTH" -- mixing the two silently returns nothing.
-CASE_STATUS_FILTER_OPEN = 1
+CASE_STATUS_FILTER_OPEN: int = 1
 
 
 # Case status integer returned by `_get_case_by_id` for OPEN cases (matches
 # the constant already used by the DRP Deduplication Job for the same SDK).
-STATUS_OPEN = 1
+STATUS_OPEN: int = 1
 
 # Event fields read off an ingested alert, looked up inside a security_event's
 # `additional_properties` bag, e.g.:
@@ -68,29 +68,29 @@ STATUS_OPEN = 1
 # fields under their full path, so an identity's own status arrives as
 # violation_resourceMetadata_metadata_status and cannot be confused with the
 # violation's.
-_SERIES_ID_KEYS = ("activitySeriesId",)
-_STATUS_KEYS = ("status",)
-_EVENT_NAME_KEYS = ("eventName",)
-_VIOLATION_TYPE_KEYS = ("violationType",)
+_SERIES_ID_KEYS: tuple[str, ...] = ("activitySeriesId",)
+_STATUS_KEYS: tuple[str, ...] = ("status",)
+_EVENT_NAME_KEYS: tuple[str, ...] = ("eventName",)
+_VIOLATION_TYPE_KEYS: tuple[str, ...] = ("violationType",)
 
 # The alert's own name, used by Step 2b to find the violation's other cases. The
 # connector composes it from the message's severity and policy plus the series'
 # objectName, so it is IDENTICAL across every transition of one violation -- which
 # is what makes it usable as a case-name search key. Read off the alert rather
 # than an event field because it is the case's name that is being matched.
-_ALERT_NAME_KEYS = ("name", "Name")
+_ALERT_NAME_KEYS: tuple[str, ...] = ("name", "Name")
 
 # Only these violationType values get a violation id at all -- see
 # extract_violation_id for why classification must be excluded.
-_VIOLATION_TYPES = {RSC_FETCH_TYPE_DSPM, RSC_FETCH_TYPE_IR}
+_VIOLATION_TYPES: set[str] = {RSC_FETCH_TYPE_DSPM, RSC_FETCH_TYPE_IR}
 
 # Fallback source for the violation id: the GenericEntity the TDD's Ontology
 # Mapping section uses to enforce case grouping by violation id. Kept so a case
 # whose alert carries the id only as a mapped entity still groups correctly.
-_GENERIC_ENTITY_TYPES = {"genericentity", "generic_entity", "generic entity"}
+_GENERIC_ENTITY_TYPES: set[str] = {"genericentity", "generic_entity", "generic entity"}
 
 
-@dataclass
+@dataclass(slots=True)
 class DedupRunState:
     """State shared by Steps 2-4 of one job run.
 
@@ -117,7 +117,7 @@ class DedupRunState:
     last_case_timestamp: int | None = None
 
 
-@dataclass
+@dataclass(slots=True)
 class ClosureOptions:
     """The job params that shape how Step 4 closes a case."""
 
@@ -127,7 +127,7 @@ class ClosureOptions:
     dry_run: bool
 
 
-@dataclass
+@dataclass(slots=True)
 class ClosureCounts:
     """Step 4's tallies, reported in the job's summary message."""
 
@@ -136,7 +136,7 @@ class ClosureCounts:
     failed: int = 0
 
 
-@dataclass
+@dataclass(slots=True)
 class _ExpansionProgress:
     """Step 2b's running tallies across the alert names it searches."""
 
@@ -216,13 +216,13 @@ def inspect_case(state: DedupRunState, cid: int | str) -> bool:
     try:
         full_case = siemplify._get_case_by_id(case_id)
     except Exception as e:
-        siemplify.LOGGER.info("Could not fetch case {}: {}".format(case_id, e))
+        siemplify.LOGGER.info(f"Could not fetch case {case_id}: {e}")
         return False
 
     if full_case.get("status") != STATUS_OPEN:
         siemplify.LOGGER.info(
-            "Fetched case {} but its status is not OPEN. SOAR filter anomaly or "
-            "concurrent close? Skipping.".format(case_id)
+            f"Fetched case {case_id} but its status is not OPEN. SOAR filter anomaly or "
+            "concurrent close? Skipping."
         )
         return False
 
@@ -335,8 +335,8 @@ def expand_to_related_cases(state: DedupRunState) -> None:
         return
 
     siemplify.LOGGER.info(
-        "Searching {} distinct alert name(s) for earlier cases of terminal "
-        "violations.".format(len(names_to_search))
+        f"Searching {len(names_to_search)} distinct alert name(s) for earlier cases of "
+        "terminal violations."
     )
 
     progress = _search_related_cases(state, names_to_search)
@@ -359,7 +359,7 @@ def _collect_terminal_alert_names(
     """Distinct alert names of every violation whose latest status is terminal."""
     # Group by name, not by violation: many violations share an alert name (same
     # policy, same object), and one lookup per distinct name collapses the calls.
-    names_to_search = set()
+    names_to_search: set[str] = set()
     for records in alerts_by_violation.values():
         latest = latest_status_record(records)
         if not latest or latest["status"] not in TERMINAL_POLICY_VIOLATION_STATUSES:
@@ -386,10 +386,8 @@ def _inspect_related_cases_for_name(
     # while matched>0 with new=0 means the filter works and the only case
     # bearing this name is one already inspected this run.
     state.siemplify.LOGGER.info(
-        "Name {!r}: {} case(s) matched the filter, {} of them not yet "
-        "inspected. Matched ids: {}".format(
-            alert_name, len(candidate_ids), len(new_ids), candidate_ids
-        )
+        f"Name {alert_name!r}: {len(candidate_ids)} case(s) matched the filter, "
+        f"{len(new_ids)} of them not yet inspected. Matched ids: {candidate_ids}"
     )
 
     for cid in new_ids:
@@ -408,18 +406,15 @@ def _log_expansion_summary(
     """Log Step 2b's outcome, including any cases left for the next run."""
     if progress.budget_exhausted:
         siemplify.LOGGER.info(
-            "Hit MAX_RELATED_CASES_TO_INSPECT ({}). {} further related case(s) were "
-            "found but NOT inspected this run -- the next run picks them up.".format(
-                MAX_RELATED_CASES_TO_INSPECT, progress.found - progress.inspected
-            )
+            f"Hit MAX_RELATED_CASES_TO_INSPECT ({MAX_RELATED_CASES_TO_INSPECT}). "
+            f"{progress.found - progress.inspected} further related case(s) were "
+            "found but NOT inspected this run -- the next run picks them up."
         )
 
     siemplify.LOGGER.info(
-        "Related-case expansion: {} name(s) searched, {} previously-unseen case(s) "
-        "found, {} inspected. Cases whose alerts belong to a different violation are "
-        "grouped separately and left alone.".format(
-            names_searched, progress.found, progress.inspected
-        )
+        f"Related-case expansion: {names_searched} name(s) searched, {progress.found} "
+        f"previously-unseen case(s) found, {progress.inspected} inspected. Cases whose "
+        "alerts belong to a different violation are grouped separately and left alone."
     )
 
 
@@ -444,7 +439,7 @@ def _find_related_case_ids(state: DedupRunState, alert_name: str) -> list[str]:
         response = _search_open_cases_by_name(state, alert_name)
     except Exception as e:
         siemplify.LOGGER.error(
-            "Related-case lookup failed for alert name {!r}: {}".format(alert_name, e)
+            f"Related-case lookup failed for alert name {alert_name!r}: {e}"
         )
         return []
 
@@ -454,10 +449,8 @@ def _find_related_case_ids(state: DedupRunState, alert_name: str) -> list[str]:
         # the count alone, and normalize_case_ids returns [] for both. Show the
         # raw payload so a shape mismatch cannot masquerade as "no matches".
         siemplify.LOGGER.info(
-            "Name search for {!r} yielded no case ids. Raw response type={}, "
-            "value={}".format(
-                alert_name, type(response).__name__, str(response)[:500]
-            )
+            f"Name search for {alert_name!r} yielded no case ids. Raw response "
+            f"type={type(response).__name__}, value={str(response)[:500]}"
         )
     return case_ids
 
@@ -515,7 +508,7 @@ def normalize_case_ids(response: object) -> list[str]:
     if not isinstance(response, list):
         return []
 
-    case_ids = []
+    case_ids: list[str] = []
     for entry in response:
         if isinstance(entry, dict):
             value = entry.get("identifier") or entry.get("id") or entry.get("caseId")
@@ -594,7 +587,7 @@ def resolve_violation_statuses(state: DedupRunState) -> dict[str, SingleJson]:
     # status at all are ignored for this decision rather than treated as open --
     # otherwise one unresolvable alert would pin an otherwise-remediated
     # violation open forever.
-    violation_status = {}
+    violation_status: dict[str, SingleJson] = {}
     no_status_violations = 0
     for violation_id, records in state.alerts_by_violation.items():
         latest = latest_status_record(records)
@@ -621,12 +614,9 @@ def resolve_violation_statuses(state: DedupRunState) -> dict[str, SingleJson]:
 
     terminal_count = sum(1 for v in violation_status.values() if v["is_terminal"])
     state.siemplify.LOGGER.info(
-        "Violation statuses resolved: {} terminal, {} still open, {} with no status "
-        "field on any alert (left open).".format(
-            terminal_count,
-            len(violation_status) - terminal_count - no_status_violations,
-            no_status_violations,
-        )
+        f"Violation statuses resolved: {terminal_count} terminal, "
+        f"{len(violation_status) - terminal_count - no_status_violations} still open, "
+        f"{no_status_violations} with no status field on any alert (left open)."
     )
     return violation_status
 
@@ -644,7 +634,7 @@ def _format_timestamp(timestamp_ms: int | str | None) -> str:
         return str(timestamp_ms)
 
 
-@dataclass
+@dataclass(slots=True)
 class _ClosureRun:
     """Everything Step 4 shares across the cases it decides on."""
 
@@ -653,7 +643,7 @@ class _ClosureRun:
     counts: ClosureCounts = field(default_factory=ClosureCounts)
 
 
-@dataclass
+@dataclass(slots=True)
 class _CaseToClose:
     """One case whose every violation has reached a terminal status."""
 
@@ -681,7 +671,7 @@ def decide_and_apply_case_closures(
 
     Returns the closed, skipped-mixed and failed case counts.
     """
-    case_to_violations = {}
+    case_to_violations: dict[str, set[str]] = {}
     for violation_id, records in state.alerts_by_violation.items():
         for record in records:
             case_to_violations.setdefault(record["case_id"], set()).add(violation_id)
@@ -715,10 +705,9 @@ def _all_violations_terminal(
     if non_terminal:
         if len(violation_ids) > 1:
             run.state.siemplify.LOGGER.info(
-                "Case {}: skipping -- contains {} still-open violation(s) "
-                "alongside {} terminal one(s). Leaving case open.".format(
-                    case_id, len(non_terminal), len(violation_ids) - len(non_terminal)
-                )
+                f"Case {case_id}: skipping -- contains {len(non_terminal)} still-open "
+                f"violation(s) alongside {len(violation_ids) - len(non_terminal)} "
+                "terminal one(s). Leaving case open."
             )
             run.counts.skipped_mixed += 1
         # else: the single violation in this case simply isn't terminal yet
@@ -731,22 +720,15 @@ def _build_case_comment(case: _CaseToClose, comment_prefix: str) -> str:
     """The case comment explaining why this case is being auto-closed."""
     statuses = case.statuses
     breakdown_lines = "\n".join(
-        "  - violation {}: latest status={} (event={}) at {}".format(
-            vid,
-            statuses[vid]["status"],
-            statuses[vid]["event_name"] or "N/A",
-            _format_timestamp(statuses[vid]["timestamp"]),
-        )
+        f"  - violation {vid}: latest status={statuses[vid]['status']} "
+        f"(event={statuses[vid]['event_name'] or 'N/A'}) "
+        f"at {_format_timestamp(statuses[vid]['timestamp'])}"
         for vid in sorted(case.violation_ids)
     )
     return (
-        "{prefix} Attempting to auto-close this case -- every Rubrik violation in it "
-        "has reached a terminal status in RSC:\n{breakdown}\n"
-        "Closing {n} matching alert(s) in this case.".format(
-            prefix=comment_prefix,
-            breakdown=breakdown_lines,
-            n=len(case.records_in_case),
-        )
+        f"{comment_prefix} Attempting to auto-close this case -- every Rubrik violation "
+        f"in it has reached a terminal status in RSC:\n{breakdown_lines}\n"
+        f"Closing {len(case.records_in_case)} matching alert(s) in this case."
     )
 
 
@@ -756,10 +738,9 @@ def _close_case(run: _ClosureRun, case: _CaseToClose) -> None:
     case_comment = _build_case_comment(case, run.options.comment_prefix)
     if run.options.dry_run:
         run.state.siemplify.LOGGER.info(
-            "[DRY RUN] Would add comment and close case {} ({} alert(s), "
-            "violation(s) {}).".format(
-                case_id, len(case.records_in_case), sorted(case.violation_ids)
-            )
+            f"[DRY RUN] Would add comment and close case {case_id} "
+            f"({len(case.records_in_case)} alert(s), "
+            f"violation(s) {sorted(case.violation_ids)})."
         )
         run.counts.closed += 1
         return
@@ -778,8 +759,8 @@ def _apply_case_closure(run: _ClosureRun, case: _CaseToClose, case_comment: str)
     options = run.options
     case_id = case.case_id
     representative_alert_id = case.representative_alert_id
-    close_comment = "{} Duplicate/stale violation alert(s) -- see case comment.".format(
-        options.comment_prefix
+    close_comment = (
+        f"{options.comment_prefix} Duplicate/stale violation alert(s) -- see case comment."
     )
 
     siemplify.add_comment(case_comment, case_id, representative_alert_id)
@@ -791,9 +772,8 @@ def _apply_case_closure(run: _ClosureRun, case: _CaseToClose, case_comment: str)
         alert_identifier=representative_alert_id,
     )
     siemplify.LOGGER.info(
-        "Closed case {} ({} alert(s), violation(s) {}).".format(
-            case_id, len(case.records_in_case), sorted(case.violation_ids)
-        )
+        f"Closed case {case_id} ({len(case.records_in_case)} alert(s), "
+        f"violation(s) {sorted(case.violation_ids)})."
     )
 
 
@@ -803,16 +783,13 @@ def _report_closure_failure(run: _ClosureRun, case: _CaseToClose, error: Excepti
     case_id = case.case_id
     representative_alert_id = case.representative_alert_id
     failure_comment = (
-        "{} Failed to auto-close this case -- see job logs for details.".format(
-            run.options.comment_prefix
-        )
+        f"{run.options.comment_prefix} Failed to auto-close this case -- see job logs "
+        "for details."
     )
-    siemplify.LOGGER.error("Failed to close case {}: {}".format(case_id, error))
+    siemplify.LOGGER.error(f"Failed to close case {case_id}: {error}")
     try:
         siemplify.add_comment(failure_comment, case_id, representative_alert_id)
     except Exception as comment_err:
         siemplify.LOGGER.error(
-            "Additionally failed to add failure comment to case {}: {}".format(
-                case_id, comment_err
-            )
+            f"Additionally failed to add failure comment to case {case_id}: {comment_err}"
         )

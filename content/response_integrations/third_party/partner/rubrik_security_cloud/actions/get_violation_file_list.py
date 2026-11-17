@@ -16,7 +16,6 @@ from ..core.constants import (
     MAX_FILES,
     MAX_TABLE_RECORDS,
 )
-from ..core.utils import validate_uuid_format
 from ..core.validators import (
     parse_connection,
     parse_file_access_via_param,
@@ -26,6 +25,7 @@ from ..core.validators import (
     parse_sort_order_param,
     validate_date_ranges,
     validate_max_results,
+    validate_optional_uuid,
 )
 from ..core.violation_datamodels import FileEntry
 from ..core.violations_api import Page, SortSpec, ViolationFileListFilter
@@ -52,6 +52,8 @@ SHA1_NOTE: str = (
 
 
 class GetViolationFileList(RubrikAction):
+    """Retrieve a paginated list of files involved in a DSPM violation."""
+
     graphql_error_prefix = "API error during Get Violation File List"
 
     def __init__(self) -> None:
@@ -118,18 +120,13 @@ class GetViolationFileList(RubrikAction):
         self.json_results = nodes
         table_rows = [FileEntry(node).to_csv() for node in nodes][:MAX_TABLE_RECORDS]
         self.data_tables.append(DataTable(title=TABLE_TITLE, data_table=construct_csv(table_rows)))
-        self.output_message = (
-            f"Successfully retrieved {len(nodes)} file(s) for violation ID: {self.params.violation_id}."
+        violation_suffix = (
+            f" for violation ID: {self.params.violation_id}" if self.params.violation_id else ""
         )
+        self.output_message = f"Successfully retrieved {len(nodes)} file(s){violation_suffix}."
         if next_cursor:
             self.output_message += f" Use Next Page Token '{next_cursor}' to retrieve the next page."
         self.logger.info(SHA1_NOTE)
-
-
-def validate_optional_uuid(raw_value: str | None, param_name: str) -> str:
-    """Return the stripped value, checking its UUID format only when it is not empty."""
-    value = raw_value.strip() if raw_value else ""
-    return validate_uuid_format(value, param_name) if value else ""
 
 
 def main() -> None:

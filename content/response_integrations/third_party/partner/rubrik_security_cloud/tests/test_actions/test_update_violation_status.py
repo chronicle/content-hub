@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
 from integration_testing.common import get_request_payload
 from integration_testing.platform.script_output import MockActionOutput
@@ -15,10 +16,14 @@ from rubrik_security_cloud.tests.common import (
 from rubrik_security_cloud.tests.core.product import RubrikSecurityCloud
 from rubrik_security_cloud.tests.core.session import RubrikSession
 
+if TYPE_CHECKING:
+    from integration_testing.request import MockRequest
+    from TIPCommon.types import SingleJson
+
 DEFAULT_PARAMETERS = {"Violation ID": DSPM_VIOLATION_ID, "New Status": "In Progress"}
 
 
-def _graphql_payload(request) -> dict:
+def _graphql_payload(request: MockRequest) -> SingleJson:
     """GraphQL body of a recorded request; APIManager sends it as a JSON string in `data`."""
     payload = get_request_payload(request)
     if payload:

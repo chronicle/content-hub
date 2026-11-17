@@ -11,6 +11,8 @@ SNAPSHOT_CSV_FILENAME_SUFFIX: str = "-violating-files_file_results"
 
 
 class DownloadSnapshotResultsCsv(RubrikFileDownloadAction):
+    """Generate a violation's snapshot results CSV in RSC and attach it to the case."""
+
     rubrik_error_prefix = "Failed to generate snapshot results CSV"
     file_type = USER_FILE_TYPE_CSV
     file_label = "snapshot results CSV"

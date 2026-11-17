@@ -7,7 +7,7 @@ these methods rely on.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING
 
 from .constants import (
     ADVANCE_IOC_SCAN_ACTION_IDENTIFIER,
@@ -22,18 +22,21 @@ from .graphql_queries import (
 )
 from .rubrik_exceptions import GraphQLQueryException
 
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
 
 class ThreatHuntApiMixin:
     """Turbo / advanced IOC scan calls for APIManager."""
 
     def start_turbo_ioc_scan(
         self,
-        ioc_list: List[str],
-        scan_name: Optional[str] = None,
-        cluster_ids: Optional[List[str]] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        max_snapshots_per_object: Optional[int] = None,
+        ioc_list: list[str],
+        scan_name: str | None = None,
+        cluster_ids: list[str] | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        max_snapshots_per_object: int | None = None,
     ) -> str:
         """Start a new Turbo Threat Hunt scan.
 
@@ -53,7 +56,7 @@ class ThreatHuntApiMixin:
         """
         formatted_iocs = [{"iocKind": "IOC_HASH", "iocValue": ioc} for ioc in ioc_list]
 
-        base_config: Dict[str, Any] = {
+        base_config: SingleJson = {
             "name": scan_name,
             "ioc": {"iocList": {"indicatorsOfCompromise": formatted_iocs}},
             "threatHuntType": "TURBO_THREAT_HUNT",
@@ -61,7 +64,7 @@ class ThreatHuntApiMixin:
         }
 
         if start_time or end_time or max_snapshots_per_object:
-            scan_config: Dict[str, Any] = {}
+            scan_config: SingleJson = {}
             if start_time:
                 scan_config["startTime"] = start_time
             if end_time:
@@ -71,7 +74,7 @@ class ThreatHuntApiMixin:
 
             base_config["snapshotScanLimit"]["scanConfig"] = scan_config
 
-        input_vars: Dict[str, Any] = {
+        input_vars: SingleJson = {
             "config": {
                 "baseConfig": base_config,
                 "objectsToScan": [
@@ -98,7 +101,9 @@ class ThreatHuntApiMixin:
             TURBO_IOC_SCAN_ACTION_IDENTIFIER, "POST", self.graphql_url, data=payload
         )
 
-    def _process_ioc_value(self, mapped_kind: str, value: Any) -> List[Dict[str, str]]:
+    def _process_ioc_value(
+        self, mapped_kind: str, value: str | list[str] | None
+    ) -> list[dict[str, str]]:
         """Process IOC value(s) into standardized indicator format.
 
         Args:
@@ -108,7 +113,7 @@ class ThreatHuntApiMixin:
         Returns:
             List of IOC indicator dictionaries
         """
-        indicators = []
+        indicators: list[dict[str, str]] = []
         if isinstance(value, list):
             for item in value:
                 if item:
@@ -118,7 +123,7 @@ class ThreatHuntApiMixin:
                 indicators.append({"iocKind": mapped_kind, "iocValue": value})
         return indicators
 
-    def _parse_advance_ioc_json(self, advance_ioc_json: dict) -> List[Dict[str, str]]:
+    def _parse_advance_ioc_json(self, advance_ioc_json: SingleJson) -> list[dict[str, str]]:
         """Parse advanced IOC JSON and extract indicators.
 
         Args:
@@ -127,7 +132,7 @@ class ThreatHuntApiMixin:
         Returns:
             List of IOC indicator dictionaries
         """
-        indicators = []
+        indicators: list[dict[str, str]] = []
         for k, v in advance_ioc_json.items():
             mapped_kind = IOC_TYPE_MAP.get(k, k)
             indicators.extend(self._process_ioc_value(mapped_kind, v))
@@ -135,10 +140,10 @@ class ThreatHuntApiMixin:
 
     def _build_ioc_list(
         self,
-        advance_ioc_json: Optional[str],
-        ioc_type: Optional[str],
-        ioc_value: Optional[str],
-    ) -> List[Dict[str, str]]:
+        advance_ioc_json: str | None,
+        ioc_type: str | None,
+        ioc_value: str | None,
+    ) -> list[dict[str, str]]:
         """Build IOC indicators from JSON dict or individual type/value pair.
 
         Args:
@@ -152,14 +157,14 @@ class ThreatHuntApiMixin:
         Raises:
             GraphQLQueryException: If JSON parsing fails
         """
-        indicators: List[Dict[str, str]] = []
+        indicators: list[dict[str, str]] = []
 
         if advance_ioc_json:
             try:
                 if isinstance(advance_ioc_json, dict):
                     indicators = self._parse_advance_ioc_json(advance_ioc_json)
             except Exception as e:
-                raise GraphQLQueryException(f"Invalid Advanced IOC JSON. Error: {str(e)}")
+                raise GraphQLQueryException(f"Invalid Advanced IOC JSON. Error: {str(e)}") from e
         elif ioc_type and ioc_value:
             mapped_kind = IOC_TYPE_MAP.get(ioc_type, ioc_type)
             indicators.append({"iocKind": mapped_kind, "iocValue": ioc_value})
@@ -168,12 +173,12 @@ class ThreatHuntApiMixin:
 
     def _build_file_scan_criteria(
         self,
-        min_file_size: Optional[int],
-        max_file_size: Optional[int],
-        paths_to_include: Optional[List[str]],
-        paths_to_exclude: Optional[List[str]],
-        paths_to_exempt: Optional[List[str]],
-    ) -> Dict[str, Any]:
+        min_file_size: int | None,
+        max_file_size: int | None,
+        paths_to_include: list[str] | None,
+        paths_to_exclude: list[str] | None,
+        paths_to_exempt: list[str] | None,
+    ) -> SingleJson:
         """Build file scan criteria configuration for threat hunts.
 
         Args:
@@ -186,13 +191,13 @@ class ThreatHuntApiMixin:
         Returns:
             Dict with fileSizeLimits and pathFilter configurations.
         """
-        file_size_limits: Dict[str, int] = {}
+        file_size_limits: dict[str, int] = {}
         if min_file_size:
             file_size_limits["minimumSizeInBytes"] = min_file_size
         if max_file_size:
             file_size_limits["maximumSizeInBytes"] = max_file_size
 
-        path_filter: Dict[str, List[str]] = {}
+        path_filter: dict[str, list[str]] = {}
         if paths_to_include:
             path_filter["inclusions"] = paths_to_include
         if paths_to_exclude:
@@ -200,7 +205,7 @@ class ThreatHuntApiMixin:
         if paths_to_exempt:
             path_filter["exemptions"] = paths_to_exempt
 
-        file_scan_criteria: Dict[str, Any] = {}
+        file_scan_criteria: SingleJson = {}
         if file_size_limits:
             file_scan_criteria["fileSizeLimits"] = file_size_limits
         if path_filter:
@@ -210,10 +215,10 @@ class ThreatHuntApiMixin:
 
     def _build_scan_config(
         self,
-        start_date: Optional[str],
-        end_date: Optional[str],
-        max_snapshots_per_object: Optional[int],
-    ) -> Dict[str, Any]:
+        start_date: str | None,
+        end_date: str | None,
+        max_snapshots_per_object: int | None,
+    ) -> SingleJson:
         """Build snapshot scan configuration for threat hunts.
 
         Args:
@@ -224,7 +229,7 @@ class ThreatHuntApiMixin:
         Returns:
             Dict with startTime, endTime, and maxSnapshotsPerObject configuration.
         """
-        scan_config: Dict[str, Any] = {}
+        scan_config: SingleJson = {}
         if start_date:
             scan_config["startTime"] = start_date
         if end_date:
@@ -235,21 +240,21 @@ class ThreatHuntApiMixin:
 
     def start_advance_ioc_scan(
         self,
-        object_id: List[str],
-        ioc_type: Optional[str] = None,
-        ioc_value: Optional[str] = None,
-        scan_name: Optional[str] = None,
-        advance_ioc_json: Optional[str] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        max_snapshots_per_object: Optional[int] = None,
-        min_file_size: Optional[int] = None,
-        max_file_size: Optional[int] = None,
-        paths_to_include: Optional[List[str]] = None,
-        paths_to_exclude: Optional[List[str]] = None,
-        paths_to_exempt: Optional[List[str]] = None,
-        max_matches_per_snapshot: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        object_id: list[str],
+        ioc_type: str | None = None,
+        ioc_value: str | None = None,
+        scan_name: str | None = None,
+        advance_ioc_json: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        max_snapshots_per_object: int | None = None,
+        min_file_size: int | None = None,
+        max_file_size: int | None = None,
+        paths_to_include: list[str] | None = None,
+        paths_to_exclude: list[str] | None = None,
+        paths_to_exempt: list[str] | None = None,
+        max_matches_per_snapshot: int | None = None,
+    ) -> SingleJson:
         """Start an Advanced Threat Hunt (THREAT_HUNT_V2).
 
         Args:
@@ -281,7 +286,7 @@ class ThreatHuntApiMixin:
                 "or the combination of IOC Type and IOC Value parameters.",
             )
 
-        base_config: Dict[str, Any] = {
+        base_config: SingleJson = {
             "name": scan_name,
             "threatHuntType": "THREAT_HUNT_V2",
             "ioc": {"iocList": {"indicatorsOfCompromise": indicators}},
@@ -315,7 +320,7 @@ class ThreatHuntApiMixin:
             ADVANCE_IOC_SCAN_ACTION_IDENTIFIER, "POST", self.graphql_url, data=payload
         )
 
-    def get_ioc_scan_results(self, hunt_id: str) -> Dict[str, Any]:
+    def get_ioc_scan_results(self, hunt_id: str) -> SingleJson:
         """Retrieve threat hunt details and metrics.
 
         Args:

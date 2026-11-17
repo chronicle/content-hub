@@ -43,6 +43,8 @@ NO_RESULTS_MESSAGE: str = "No IR violations found matching the applied filters."
 
 
 class SearchIRViolations(RubrikAction):
+    """Search IR violations in Rubrik Security Cloud using the given filters."""
+
     graphql_error_prefix = "API error during Search IR Violations"
 
     def __init__(self) -> None:
@@ -73,12 +75,15 @@ class SearchIRViolations(RubrikAction):
         )
         # Dates are validated after the enum parameters, matching the original error order.
         search_filter.detection_date, search_filter.update_date = validate_date_ranges(
-            self.params.raw_dates, DATE_RANGE_PARAMS
+            self.params.raw_dates,
+            DATE_RANGE_PARAMS,
         )
         self.params.search_filter = search_filter
         self.params.page = Page(
             first=validate_max_results(
-                self.params.max_results, default=DEFAULT_MAX_RESULTS, max_allowed=MAX_VIOLATIONS
+                self.params.max_results,
+                default=DEFAULT_MAX_RESULTS,
+                max_allowed=MAX_VIOLATIONS,
             ),
             after_cursor=self.params.next_page_token or None,
         )

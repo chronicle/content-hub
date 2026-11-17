@@ -512,29 +512,13 @@ SONAR_OBJECT_DETAIL_QUERY = (
 }"""
 )
 
-CLOSEST_SNAPSHOT_QUERY = (
-    """query GoogleSecOpsResolveSnapshot($snappableId: String!, $beforeTime: DateTime!) {"""
-    """allSnapshotsClosestToPointInTime(
-    snappableIds: [$snappableId]
-    beforeTime: $beforeTime
-  ) {
-    snappableId
-    error
-    snapshot {
-      id
-      date
-    }
-  }
-}"""
-)
-
 # Object hierarchy identity for a snappable, keyed on its fid (the activity
 # series' objectId). Adds the identifying detail RSC does not put on the activity
 # series itself -- the SharePoint site URL for an O365Site, the drive owner for an
 # O365Onedrive -- so an analyst can tell which tenant object a finding is about.
 # The inline fragments are type-conditional: a snappable of any other objectType
 # simply returns the three common fields.
-SNAPPABLE_IDENTITY_QUERY = (
+SNAPPABLE_IDENTITY_QUERY: str = (
     """query SnappableIdentity($fid: UUID!) {"""
     """hierarchyObject(fid: $fid) {
     id
@@ -553,7 +537,7 @@ SNAPPABLE_IDENTITY_QUERY = (
 }"""
 )
 
-CLASSIFICATION_OBJECT_DETAIL_QUERY = (
+CLASSIFICATION_OBJECT_DETAIL_QUERY: str = (
     """query GoogleSecOpsClassificationObjectDetail("""
     """$snappableFid: String!, $snapshotFid: String!, $includeWhitelistedResults: Boolean) {"""
     """policyObj(

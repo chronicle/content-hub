@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 
 class GetDSPMViolationDetails(RubrikAction):
+    """Retrieve the details of a single DSPM violation by its ID."""
+
     graphql_error_prefix = "API error during Get DSPM Violation Details"
 
     def __init__(self) -> None:

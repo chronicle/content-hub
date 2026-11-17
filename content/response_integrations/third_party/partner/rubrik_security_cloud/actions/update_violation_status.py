@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from ..core.base_action import RubrikAction, validate_uuid_param
-from ..core.constants import STATUS_ENUM_MAP, UPDATE_VIOLATION_STATUS_SCRIPT_NAME
-from ..core.rubrik_exceptions import InvalidValueException
-
-VALID_STATUS_LABELS: list[str] = list(STATUS_ENUM_MAP.keys())
+from ..core.constants import UPDATE_VIOLATION_STATUS_SCRIPT_NAME
+from ..core.validators import validate_new_status
 
 
 class UpdateViolationStatus(RubrikAction):
+    """Update the status of a DSPM or IR violation in Rubrik Security Cloud."""
+
     graphql_error_prefix = "Failed to update violation status"
 
     def __init__(self) -> None:
@@ -37,32 +37,6 @@ class UpdateViolationStatus(RubrikAction):
             f"for violation ID: {violation_id}."
         )
         self.logger.info(self.output_message)
-
-
-def validate_new_status(new_status_label: str | None) -> str:
-    """Validate & map the New Status parameter per the Update Violation Status spec.
-
-    Args:
-        new_status_label: Raw New Status label, e.g. "In Progress".
-
-    Returns:
-        The matching RSC policy violation status enum value.
-
-    Raises:
-        InvalidValueException: With the exact wording required by the action's
-            case wall output message contract.
-    """
-    if not new_status_label or not new_status_label.strip():
-        raise InvalidValueException(f"New Status is required. Valid values: {VALID_STATUS_LABELS}")
-
-    new_status_label = new_status_label.strip()
-    if new_status_label not in STATUS_ENUM_MAP:
-        raise InvalidValueException(
-            f"Invalid value '{new_status_label}' for parameter 'New Status'. "
-            f"Valid values: {VALID_STATUS_LABELS}"
-        )
-
-    return STATUS_ENUM_MAP[new_status_label]
 
 
 def main() -> None:

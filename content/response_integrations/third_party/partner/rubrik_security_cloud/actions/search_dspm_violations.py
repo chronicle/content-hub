@@ -7,17 +7,11 @@ from TIPCommon.transformation import construct_csv
 
 from ..core.base_action import RubrikAction
 from ..core.constants import (
-    DEFAULT_MAX_RESULTS,
     ERROR_DETECTION_DATE_ORDER,
-    ERROR_MAX_RESULTS_NOT_INTEGER,
-    ERROR_MAX_RESULTS_TOO_HIGH,
-    ERROR_MAX_RESULTS_TOO_LOW,
     ERROR_UPDATE_DATE_ORDER,
     MAX_TABLE_RECORDS,
-    MAX_VIOLATIONS,
     SEARCH_DSPM_VIOLATIONS_SCRIPT_NAME,
 )
-from ..core.rubrik_exceptions import InvalidIntegerException
 from ..core.validators import (
     parse_connection,
     parse_dspm_category_param,
@@ -28,6 +22,7 @@ from ..core.validators import (
     parse_sort_order_param,
     parse_status_param,
     validate_date_ranges,
+    validate_max_results,
 )
 from ..core.violation_datamodels import DSPMViolation
 from ..core.violations_api import DSPMViolationSearchFilter, Page, SortSpec
@@ -45,6 +40,8 @@ NO_RESULTS_MESSAGE: str = "No DSPM violations found matching the applied filters
 
 
 class SearchDSPMViolations(RubrikAction):
+    """Search DSPM violations in Rubrik Security Cloud using the given filters."""
+
     graphql_error_prefix = "API error during Search DSPM Violations"
 
     def __init__(self) -> None:
@@ -74,7 +71,8 @@ class SearchDSPMViolations(RubrikAction):
         )
         # Dates are validated after the enum parameters, matching the original error order.
         search_filter.detection_date, search_filter.update_date = validate_date_ranges(
-            self.params.raw_dates, DATE_RANGE_PARAMS
+            self.params.raw_dates,
+            DATE_RANGE_PARAMS,
         )
         self.params.search_filter = search_filter
         self.params.page = Page(
@@ -101,30 +99,6 @@ class SearchDSPMViolations(RubrikAction):
         )
         if next_cursor:
             self.output_message += f" Use Next Page Token '{next_cursor}' to retrieve the next page."
-
-
-def validate_max_results(raw_value: str | None) -> int:
-    """Validate the Max Results parameter per the Search DSPM Violations spec.
-
-    Raises:
-        InvalidIntegerException: With the exact wording required by the action's
-            case wall output message contract.
-    """
-    if raw_value is None or not str(raw_value).strip():
-        return DEFAULT_MAX_RESULTS
-
-    raw_value = str(raw_value).strip()
-    try:
-        value = int(raw_value)
-    except ValueError:
-        raise InvalidIntegerException(ERROR_MAX_RESULTS_NOT_INTEGER.format(raw_value))
-
-    if value < 1:
-        raise InvalidIntegerException(ERROR_MAX_RESULTS_TOO_LOW)
-    if value > MAX_VIOLATIONS:
-        raise InvalidIntegerException(ERROR_MAX_RESULTS_TOO_HIGH.format(MAX_VIOLATIONS, raw_value))
-
-    return value
 
 
 def main() -> None:

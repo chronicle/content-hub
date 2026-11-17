@@ -55,6 +55,13 @@ from soar_sdk.SiemplifyDataModel import (
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
 
+from ..core.constants import (
+    CASES_TIMESTAMP_DB_KEY,
+    CLOSE_DUPLICATE_VIOLATION_ALERTS_JOB_SCRIPT_NAME,
+    FETCH_MAX_RESULTS,
+    MAX_LOOKBACK_DAYS,
+    MS_PER_DAY,
+)
 from ..core.duplicate_violation_helpers import (
     ClosureCounts,
     ClosureOptions,
@@ -65,29 +72,8 @@ from ..core.duplicate_violation_helpers import (
     resolve_violation_statuses,
 )
 
-SCRIPT_NAME = "Rubrik Security Cloud - Close Duplicate Violation Alerts Job"
 
-MS_PER_DAY = 24 * 60 * 60 * 1000
-
-# Hard ceiling on how many candidate open case IDs are fetched from SOAR in
-# Step 1, independent of the "Max Cases To Process" job param -- see
-# _validate_job_params for how the two interact.
-FETCH_MAX_RESULTS = 10000
-
-# Hard ceiling on "Lookback Days" -- large values don't change how many cases
-# are fetched (still capped at FETCH_MAX_RESULTS), but they do make Step 1's
-# SOAR query scan a much wider case history for no benefit, contributing to
-# the same processing-timeout risk as an oversized "Max Cases To Process".
-MAX_LOOKBACK_DAYS = 100
-
-# Job-scoped context key the checkpoint is persisted under -- same key naming
-# convention as CASES_TIMESTAMP_DB_KEY in the Vectra RUX "Expire Inactive
-# Detections" job, which uses the identical get/set_scoped_job_context_property
-# checkpoint pattern this job now mirrors.
-CASES_TIMESTAMP_DB_KEY = "cases_timestamp"
-
-
-@dataclass
+@dataclass(slots=True)
 class JobParams:
     """The job's parameters, parsed into the shapes the steps consume."""
 
@@ -109,26 +95,22 @@ def _validate_job_params(siemplify: SiemplifyJob, max_cases: int, lookback_days:
     FETCH_MAX_RESULTS candidate cases, each fetched and inspected in a
     synchronous per-case loop in Step 2.
     """
-    errors = []
+    errors: list[str] = []
     if max_cases <= 0:
         errors.append(
-            "'Max Cases To Process' must be a positive integer, got {}.".format(max_cases)
+            f"'Max Cases To Process' must be a positive integer, got {max_cases}."
         )
     elif max_cases > FETCH_MAX_RESULTS:
         errors.append(
-            "'Max Cases To Process' must not exceed {}, got {}.".format(
-                FETCH_MAX_RESULTS, max_cases
-            )
+            f"'Max Cases To Process' must not exceed {FETCH_MAX_RESULTS}, got {max_cases}."
         )
     if lookback_days <= 0:
         errors.append(
-            "'Lookback Days' must be a positive integer, got {}.".format(lookback_days)
+            f"'Lookback Days' must be a positive integer, got {lookback_days}."
         )
     elif lookback_days > MAX_LOOKBACK_DAYS:
         errors.append(
-            "'Lookback Days' must not exceed {}, got {}.".format(
-                MAX_LOOKBACK_DAYS, lookback_days
-            )
+            f"'Lookback Days' must not exceed {MAX_LOOKBACK_DAYS}, got {lookback_days}."
         )
     if errors:
         for err in errors:
@@ -141,7 +123,7 @@ def _fetch_checkpoint_timestamp(siemplify: SiemplifyJob) -> int:
     try:
         raw = siemplify.get_scoped_job_context_property(property_key=CASES_TIMESTAMP_DB_KEY)
     except Exception as e:
-        siemplify.LOGGER.error("Failed reading checkpoint: {}".format(e))
+        siemplify.LOGGER.error(f"Failed reading checkpoint: {e}")
         return 0
     if raw is None:
         return 0
@@ -173,9 +155,9 @@ def _save_checkpoint_timestamp(siemplify: SiemplifyJob, new_timestamp: int) -> N
             property_key=CASES_TIMESTAMP_DB_KEY,
             property_value=json.dumps(new_timestamp),
         )
-        siemplify.LOGGER.info("Saved checkpoint - {}.".format(new_timestamp))
+        siemplify.LOGGER.info(f"Saved checkpoint - {new_timestamp}.")
     except Exception as e:
-        siemplify.LOGGER.error("Failed saving checkpoint: {}".format(e))
+        siemplify.LOGGER.error(f"Failed saving checkpoint: {e}")
 
 
 def _extract_scope_params(siemplify: SiemplifyJob) -> tuple[str, str, int, int]:
@@ -280,9 +262,9 @@ def _log_scope(siemplify: SiemplifyJob, params: JobParams) -> None:
     rule_generator_allowlist = params.rule_generator_allowlist
     if environments:
         siemplify.LOGGER.info(
-            "Scoping to cases in environment(s) {}. Cases in any other environment "
-            "are not fetched, so their violations are neither inspected nor "
-            "closed.".format(environments)
+            f"Scoping to cases in environment(s) {environments}. Cases in any other "
+            "environment are not fetched, so their violations are neither inspected "
+            "nor closed."
         )
     else:
         siemplify.LOGGER.info(
@@ -291,8 +273,8 @@ def _log_scope(siemplify: SiemplifyJob, params: JobParams) -> None:
 
     if rule_generator_allowlist:
         siemplify.LOGGER.info(
-            "Scoping to alerts whose rule_generator contains any of {} "
-            "(case-insensitive substring match).".format(rule_generator_allowlist)
+            "Scoping to alerts whose rule_generator contains any of "
+            f"{rule_generator_allowlist} (case-insensitive substring match)."
         )
     else:
         siemplify.LOGGER.info(
@@ -319,8 +301,8 @@ def _fetch_candidate_case_ids(siemplify: SiemplifyJob, params: JobParams) -> lis
     lookback_days = params.lookback_days
     lookback_ms = _get_last_success_time(siemplify, lookback_days)
     siemplify.LOGGER.info(
-        "Using checkpoint - {} (bounded by lookback {} days) to fetch open "
-        "cases.".format(lookback_ms, lookback_days)
+        f"Using checkpoint - {lookback_ms} (bounded by lookback {lookback_days} days) "
+        "to fetch open cases."
     )
     try:
         all_ids = (
@@ -337,12 +319,12 @@ def _fetch_candidate_case_ids(siemplify: SiemplifyJob, params: JobParams) -> lis
             or []
         )
     except Exception as e:
-        siemplify.LOGGER.error("Failed to fetch case IDs: {}".format(e))
+        siemplify.LOGGER.error(f"Failed to fetch case IDs: {e}")
         raise
 
     all_ids = list(dict.fromkeys(all_ids))  # dedupe, preserve order
     siemplify.LOGGER.info(
-        "Fetched {} open case IDs (lookback {} days).".format(len(all_ids), lookback_days)
+        f"Fetched {len(all_ids)} open case IDs (lookback {lookback_days} days)."
     )
     return _cap_case_ids(siemplify, all_ids, params.max_cases)
 
@@ -350,7 +332,7 @@ def _fetch_candidate_case_ids(siemplify: SiemplifyJob, params: JobParams) -> lis
 def _cap_case_ids(siemplify: SiemplifyJob, all_ids: list[str], max_cases: int) -> list[str]:
     """Truncate the candidate list to "Max Cases To Process"."""
     if len(all_ids) > max_cases:
-        siemplify.LOGGER.info("Capping to {} cases (Max Cases To Process).".format(max_cases))
+        siemplify.LOGGER.info(f"Capping to {max_cases} cases (Max Cases To Process).")
         all_ids = all_ids[:max_cases]
     return all_ids
 
@@ -358,25 +340,20 @@ def _cap_case_ids(siemplify: SiemplifyJob, all_ids: list[str], max_cases: int) -
 def _log_inspection_summary(state: DedupRunState) -> None:
     """Log what Steps 2 and 2b found across all inspected cases."""
     state.siemplify.LOGGER.info(
-        "Inspected {} open case(s) with matching Rubrik alerts. Found {} distinct "
-        "violation(s). Skipped {} alert(s) with no activitySeriesId (non-Rubrik, or "
-        "classification, which carries no violation).".format(
-            state.inspected_cases,
-            len(state.alerts_by_violation),
-            state.skipped_no_violation_id,
-        )
+        f"Inspected {state.inspected_cases} open case(s) with matching Rubrik alerts. "
+        f"Found {len(state.alerts_by_violation)} distinct violation(s). "
+        f"Skipped {state.skipped_no_violation_id} alert(s) with no activitySeriesId "
+        "(non-Rubrik, or classification, which carries no violation)."
     )
 
 
 def _finish_run(siemplify: SiemplifyJob, counts: ClosureCounts, dry_run: bool) -> None:
     """Log the run summary and end the job, failing it if any closure failed."""
     summary_message = (
-        "Done. Cases closed: {} | Cases skipped (mixed open+terminal violations): {} "
-        "| Failed: {} | Dry Run: {}".format(
-            counts.closed, counts.skipped_mixed, counts.failed, dry_run
-        )
+        f"Done. Cases closed: {counts.closed} | Cases skipped (mixed open+terminal "
+        f"violations): {counts.skipped_mixed} | Failed: {counts.failed} | Dry Run: {dry_run}"
     )
-    siemplify.LOGGER.info("=== {} ===".format(summary_message))
+    siemplify.LOGGER.info(f"=== {summary_message} ===")
 
     if counts.failed > 0:
         # SiemplifyJob.end_script() always sys.exit(0), so writing
@@ -398,7 +375,7 @@ def _finish_run(siemplify: SiemplifyJob, counts: ClosureCounts, dry_run: bool) -
 @output_handler
 def main() -> None:
     siemplify = SiemplifyJob()
-    siemplify.script_name = SCRIPT_NAME
+    siemplify.script_name = CLOSE_DUPLICATE_VIOLATION_ALERTS_JOB_SCRIPT_NAME
     siemplify.LOGGER.info("=== Rubrik Close Duplicate Violation Alerts Job started ===")
 
     params = _extract_job_params(siemplify)

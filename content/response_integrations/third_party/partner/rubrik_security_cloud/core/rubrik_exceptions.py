@@ -70,22 +70,8 @@ class UnauthorizedErrorException(RubrikException):
     pass
 
 
-class TokenExpiredException(RubrikException):
-    """Exception raised when a token cannot be refreshed."""
-
-    pass
-
-
 class InvalidValueException(RubrikException):
     """Exception for invalid enum or dropdown parameter values."""
-
-    pass
-
-
-class InvalidFormatException(RubrikException):
-    """Exception for invalid format of parameter values."""
-
-    pass
 
 
 class AmbiguousFileMatchException(RubrikException):

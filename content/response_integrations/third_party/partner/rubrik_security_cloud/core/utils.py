@@ -100,24 +100,23 @@ def validate_required_string(value: Optional[str], param_name: str) -> str:
     return value.strip()
 
 
-_UUID_PATTERN = re.compile(
+_UUID_PATTERN: re.Pattern[str] = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
 
 
 def validate_uuid_format(value: str, param_name: str) -> str:
-    """
-    Validate that a string parameter is a well-formed UUID (RSC violation/policy/
-    resource IDs all follow this format).
+    """Validate that a string parameter is a well-formed UUID.
 
-    Shared across actions so any ID param can be format-checked identically.
+    RSC violation/policy/resource IDs all follow this format. Shared across
+    actions so any ID param can be format-checked identically.
 
     Args:
-        value (str): The already-required, stripped value to validate.
-        param_name (str): The name of the parameter for error messages.
+        value: The already-required, stripped value to validate.
+        param_name: The name of the parameter for error messages.
 
     Returns:
-        str: The validated value, unchanged.
+        The validated value, unchanged.
 
     Raises:
         ValueError: If the value does not match the UUID format.

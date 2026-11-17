@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Callable
 
 from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
-from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
 from TIPCommon.extraction import extract_connector_param
 from TIPCommon.smp_time import is_approaching_timeout
@@ -42,16 +41,18 @@ from ..core.constants import (
 from ..core.violation_datamodels import (
     RubrikActivityViolationAlertDatamodel,
     RubrikClassificationAlertDatamodel,
+    SeriesContext,
 )
 
 if TYPE_CHECKING:
     from EnvironmentCommon.EnvironmentHandle import EnvironmentHandle
+    from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
     from TIPCommon.types import SingleJson
 
     AlertDatamodel = RubrikClassificationAlertDatamodel | RubrikActivityViolationAlertDatamodel
     BuildPhase = tuple[str, str, Callable[[list[SingleJson]], tuple[list[AlertInfo], bool]]]
 
-connector_starting_time = unix_now()
+connector_starting_time: int = unix_now()
 
 
 @dataclass
@@ -93,7 +94,6 @@ def build_alert_info(
     """Build an AlertInfo from a datamodel, returning None if it overflows."""
     siemplify = context.siemplify
     alert_info = datamodel.get_alert_info(
-        AlertInfo(),
         context.environment_common,
         context.event_field_parameter,
         context.product_field_name,
@@ -129,8 +129,8 @@ def fetch_activity_series(
         f"Fetching activity series {activity_types} from {context.from_iso} to {context.to_iso}."
     )
 
-    nodes = []
-    next_page_token = None
+    nodes: list[SingleJson] = []
+    next_page_token: str | None = None
 
     while True:
         response = _fetch_activity_page(context, activity_types, next_page_token)
@@ -155,7 +155,9 @@ def fetch_activity_series(
 
 
 def _fetch_activity_page(
-    context: ConnectorContext, activity_types: list[str], next_page_token: str | None
+    context: ConnectorContext,
+    activity_types: list[str],
+    next_page_token: str | None,
 ) -> SingleJson:
     """Request one page of activitySeriesConnection for this run's window."""
     return context.manager.list_events(
@@ -258,7 +260,7 @@ def _snapshot_fid_from_activity_info(
         if not raw:
             continue
         try:
-            info = json.loads(raw)
+            info: SingleJson = json.loads(raw)
         except (TypeError, ValueError) as err:
             siemplify.LOGGER.error(
                 f"activityInfo is not JSON: {raw!r} ({err})"
@@ -274,7 +276,8 @@ def _snapshot_fid_from_activity_info(
 
 
 def _latest_classification_per_object(
-    siemplify: SiemplifyConnectorExecution, event_nodes: list[SingleJson]
+    siemplify: SiemplifyConnectorExecution,
+    event_nodes: list[SingleJson],
 ) -> dict[str, SingleJson]:
     """Filter by classification message, then dedup by objectId.
 
@@ -285,7 +288,7 @@ def _latest_classification_per_object(
     # Step 1 + 2: Filter by classification message, then dedup by
     #             objectId keeping the latest-lastUpdated entry.
     # ----------------------------------------------------------------
-    latest_per_object = {}
+    latest_per_object: dict[str, SingleJson] = {}
 
     for node in event_nodes:
         object_id = node.get("objectId", "")
@@ -327,7 +330,7 @@ def build_classification_alerts(
     series now arrive from the shared activitySeriesConnection sweep in main().
     """
     siemplify = context.siemplify
-    alerts = []
+    alerts: list[AlertInfo] = []
 
     latest_per_object = _latest_classification_per_object(siemplify, event_nodes)
 
@@ -347,8 +350,9 @@ def build_classification_alerts(
         try:
             _process_classification_event(context, event_node, alerts)
         except Exception as e:
-            siemplify.LOGGER.error(f"Failed to process event {activity_series_id}. Error: {e}")
-            siemplify.LOGGER.exception(e)
+            siemplify.LOGGER.exception(
+                f"Failed to process event {activity_series_id}. Error: {e}"
+            )
             if context.is_test_run:
                 raise
 
@@ -392,7 +396,9 @@ def _process_classification_event(
     alert_info = build_alert_info(
         context,
         RubrikClassificationAlertDatamodel(
-            event_node, policy_obj, snapshot_id, hierarchy_object
+            event_node,
+            policy_obj,
+            SeriesContext(snapshot_id=snapshot_id, hierarchy_object=hierarchy_object),
         ),
     )
     if alert_info is None:
@@ -407,7 +413,7 @@ def _process_classification_event(
 
 def _fetch_policy_obj(context: ConnectorContext, object_id: str, snapshot_id: str) -> SingleJson:
     """Fetch the classification policyObj for an object's snapshot; {} on failure."""
-    policy_obj = {}
+    policy_obj: SingleJson = {}
     try:
         pol_response = context.manager.get_classification_object_detail(
             snappable_fid=object_id,
@@ -481,7 +487,9 @@ def fetch_violation_status(
 
 
 def build_violation_alerts(
-    context: ConnectorContext, event_nodes: list[SingleJson], violation_type: str
+    context: ConnectorContext,
+    event_nodes: list[SingleJson],
+    violation_type: str,
 ) -> tuple[list[AlertInfo], bool]:
     """Build DSPM / IR alerts from already-fetched activity series nodes.
 
@@ -498,7 +506,7 @@ def build_violation_alerts(
         main() discard the run rather than ingest a partially enriched batch.
     """
     siemplify = context.siemplify
-    alerts = []
+    alerts: list[AlertInfo] = []
 
     for event_node in event_nodes:
         series_id = event_node.get("activitySeriesId") or event_node.get("id", "")
@@ -518,8 +526,9 @@ def build_violation_alerts(
             alerts.append(alert_info)
             siemplify.LOGGER.info(f"Alert added: {alert_info.ticket_id} ({alert_info.name}).")
         except Exception as e:
-            siemplify.LOGGER.error(f"Failed to process {violation_type} series {series_id}. Error: {e}")
-            siemplify.LOGGER.exception(e)
+            siemplify.LOGGER.exception(
+                f"Failed to process {violation_type} series {series_id}. Error: {e}"
+            )
             if context.is_test_run:
                 raise
 
@@ -549,9 +558,11 @@ def _build_violation_alert(
     datamodel = RubrikActivityViolationAlertDatamodel(
         event_node,
         violation_type,
-        violation_status,
-        hierarchy_object,
-        (context.from_iso, context.to_iso),
+        SeriesContext(
+            hierarchy_object=hierarchy_object,
+            violation_status=violation_status,
+            window=(context.from_iso, context.to_iso),
+        ),
     )
     latest = datamodel.get_latest_activity_node()
 
@@ -781,27 +792,18 @@ def select_activity_types(context: ConnectorContext) -> list[str]:
 
 
 def sweep_activity_series(
-    context: ConnectorContext, activity_types: list[str]
-) -> tuple[dict[str, list[SingleJson]], bool]:
-    """Fetch and route the window's series unless the timeout is already near.
+    context: ConnectorContext,
+    activity_types: list[str],
+) -> dict[str, list[SingleJson]]:
+    """Fetch the window's series and route them by fetch type.
 
     Returns:
-        (partitioned, timed_out) -- partitioned is {} when the sweep was skipped.
+        Dict of fetch type -> list of series nodes (see partition_by_fetch_type).
     """
     siemplify = context.siemplify
-    timed_out = is_timeout_approaching(context)
-    partitioned = {}
-
-    if timed_out:
-        siemplify.LOGGER.info(
-            "Timeout is approaching before fetching. Skipping the activity series sweep."
-        )
-    else:
-        siemplify.LOGGER.info("=============== Activity Series Sweep ===============")
-        event_nodes = fetch_activity_series(context, activity_types)
-        partitioned = partition_by_fetch_type(siemplify, event_nodes, context.fetch_types)
-
-    return partitioned, timed_out
+    siemplify.LOGGER.info("=============== Activity Series Sweep ===============")
+    event_nodes = fetch_activity_series(context, activity_types)
+    return partition_by_fetch_type(siemplify, event_nodes, context.fetch_types)
 
 
 def build_phases(context: ConnectorContext) -> tuple[BuildPhase, ...]:
@@ -833,16 +835,16 @@ def build_phases(context: ConnectorContext) -> tuple[BuildPhase, ...]:
 def build_alerts(
     context: ConnectorContext,
     partitioned: dict[str, list[SingleJson]],
-    timed_out: bool,
 ) -> tuple[list[AlertInfo], bool]:
     """Build alerts per selected type, skipping the rest once the timeout nears.
 
     Returns:
         (alerts, timed_out) -- timed_out is True if any phase was skipped or
-        stopped early, or it was already True on entry.
+        stopped early.
     """
     siemplify = context.siemplify
-    alerts = []
+    alerts: list[AlertInfo] = []
+    timed_out = False
 
     for fetch_type, label, build_phase_alerts in build_phases(context):
         nodes = partitioned.get(fetch_type)
@@ -863,27 +865,26 @@ def build_alerts(
     return alerts, timed_out
 
 
-def finalize_package(
-    context: ConnectorContext, alerts: list[AlertInfo], timed_out: bool
-) -> list[AlertInfo]:
-    """Return the alerts to ingest, advancing the checkpoint when they are ingested."""
+def exit_on_timeout(context: ConnectorContext) -> list[AlertInfo]:
+    """Discard the run without ingesting or advancing the checkpoint.
+
+    The next run then redoes this window instead of ingesting a partial batch.
+    """
+    context.siemplify.LOGGER.info(
+        "Timeout is approaching. Exiting gracefully without ingesting; "
+        "checkpoint unchanged."
+    )
+    return []
+
+
+def finalize_package(context: ConnectorContext, alerts: list[AlertInfo]) -> list[AlertInfo]:
+    """Return the alerts to ingest and advance the checkpoint (non-test runs)."""
     siemplify = context.siemplify
     from_iso, to_iso = context.from_iso, context.to_iso
-    # ----------------------------------------------------------------
-    # All alerts gathered. Ingest only if we are not approaching the
-    # process timeout; otherwise exit gracefully without ingesting or
-    # advancing the checkpoint so the next run redoes this window.
-    # ----------------------------------------------------------------
-    if timed_out or is_timeout_approaching(context):
-        siemplify.LOGGER.info(
-            "Timeout is approaching. Exiting gracefully without ingesting; "
-            "checkpoint unchanged."
-        )
-        return []
 
     if context.deselected_labels:
-        siemplify.LOGGER.info(
-            "WARNING: advancing the shared checkpoint to "
+        siemplify.LOGGER.warn(
+            "Advancing the shared checkpoint to "
             f"'{to_iso}' despite {', '.join(context.deselected_labels)} being "
             "absent from this run's 'RSC Fetch Types' selection. "
             "Classification, DSPM and IR share a single checkpoint "
@@ -902,9 +903,25 @@ def run_connector(context: ConnectorContext) -> list[AlertInfo]:
     """Run one connector cycle and return the package to hand to return_package."""
     prepare_run(context)
     activity_types = select_activity_types(context)
-    partitioned, timed_out = sweep_activity_series(context, activity_types)
-    alerts, timed_out = build_alerts(context, partitioned, timed_out)
-    return finalize_package(context, alerts, timed_out)
+
+    if is_timeout_approaching(context):
+        context.siemplify.LOGGER.info(
+            "Timeout is approaching before fetching. Skipping the activity series sweep."
+        )
+        return exit_on_timeout(context)
+
+    partitioned = sweep_activity_series(context, activity_types)
+    alerts, timed_out = build_alerts(context, partitioned)
+
+    # ----------------------------------------------------------------
+    # All alerts gathered. Ingest only if we are not approaching the
+    # process timeout; otherwise exit gracefully without ingesting or
+    # advancing the checkpoint so the next run redoes this window.
+    # ----------------------------------------------------------------
+    if timed_out or is_timeout_approaching(context):
+        return exit_on_timeout(context)
+
+    return finalize_package(context, alerts)
 
 
 @output_handler
@@ -924,8 +941,7 @@ def main(is_test_run: bool) -> None:
         siemplify.return_package(package)
 
     except Exception as e:
-        siemplify.LOGGER.error(f"Got exception on main handler. Error: {e}")
-        siemplify.LOGGER.exception(e)
+        siemplify.LOGGER.exception(f"Got exception on main handler. Error: {e}")
         if is_test_run:
             raise
         # On a scheduled run, always hand the framework a valid (empty) package

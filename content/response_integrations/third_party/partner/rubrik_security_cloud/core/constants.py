@@ -255,7 +255,6 @@ LIST_EVENTS_ACTION_IDENTIFIER = "list_events"
 GET_CDM_CLUSTER_LOCATION_ACTION_IDENTIFIER = "get_cdm_cluster_location"
 GET_CDM_CLUSTER_CONNECTION_STATE_ACTION_IDENTIFIER = "get_cdm_cluster_connection_state"
 GET_SONAR_SENSITIVE_HITS_ACTION_IDENTIFIER = "get_sonar_sensitive_hits"
-GET_CLOSEST_SNAPSHOT_ACTION_IDENTIFIER: str = "get_closest_snapshot"
 GET_CLASSIFICATION_OBJECT_DETAIL_ACTION_IDENTIFIER: str = "get_classification_object_detail"
 GET_SNAPPABLE_IDENTITY_ACTION_IDENTIFIER: str = "get_snappable_identity"
 
@@ -277,19 +276,6 @@ IOC_TYPE_MAP = {
 SORT_ORDER_ENUM = ["ASC", "DESC"]
 
 
-# GraphQL Operations
-GRAPHQL_DSPM_LIST_OPERATION: str = "DataSecurityViolationsListQuery"
-GRAPHQL_DSPM_GET_OPERATION: str = "DataSecurityViolationGetQuery"
-GRAPHQL_IR_LIST_OPERATION: str = "IRViolationsListQuery"
-GRAPHQL_UPDATE_VIOLATIONS_OPERATION: str = "UpdatePolicyViolationsMutation"
-GRAPHQL_DOWNLOAD_CSV_OPERATION: str = "DownloadFullSnapshotResultsCsvMutation"
-GRAPHQL_DOWNLOAD_BAR_OPERATION: str = "DownloadBarQuery"
-GRAPHQL_CREATE_REMEDIATION_OPERATION: str = "CreateViolationRemediationMutation"
-GRAPHQL_FILE_LIST_OPERATION: str = "DSPMViolationFileListQuery"
-
-# Policy Types — Fixed for DSPM
-DSPM_POLICY_TYPE: str = "POLICY_TYPE_DATAGOV"
-
 # Status Enum Mapping (UI label → API value)
 STATUS_ENUM_MAP: dict[str, str] = {
     "Open": "POLICY_VIOLATION_STATUS_OPEN",
@@ -300,7 +286,7 @@ STATUS_ENUM_MAP: dict[str, str] = {
 }
 
 # Severity Enum Mapping
-SEVERITY_ENUM_MAP: dict[str, str] = {
+DSPM_SEVERITY_MAP: dict[str, str] = {
     "Low": "LOW",
     "Medium": "MEDIUM",
     "High": "HIGH",
@@ -308,7 +294,7 @@ SEVERITY_ENUM_MAP: dict[str, str] = {
 }
 
 # DSPM Category Enum Mapping
-DSPM_CATEGORY_ENUM_MAP: dict[str, str] = {
+DSPM_CATEGORY_MAP: dict[str, str] = {
     "Misplaced": "MISPLACED",
     "Redundant": "REDUNDANT",
     "Overexposed": "OVEREXPOSED",
@@ -316,7 +302,7 @@ DSPM_CATEGORY_ENUM_MAP: dict[str, str] = {
 }
 
 # Sensitivity Level Enum Mapping
-SENSITIVITY_LEVEL_ENUM_MAP: dict[str, str] = {
+SENSITIVITY_LEVEL_MAP: dict[str, str] = {
     "High Sensitivity": "HIGH_SENSITIVITY",
     "Medium Sensitivity": "MEDIUM_SENSITIVITY",
     "Low Sensitivity": "LOW_SENSITIVITY",
@@ -324,7 +310,7 @@ SENSITIVITY_LEVEL_ENUM_MAP: dict[str, str] = {
 }
 
 # DSPM Sort By Enum Mapping
-DSPM_SORT_BY_ENUM_MAP: dict[str, str] = {
+DSPM_SORT_BY_MAP: dict[str, str] = {
     "Detection Time": "SORT_DETECTION_TIME",
     "Update Time": "SORT_UPDATE_TIME",
     "Severity": "SORT_SEVERITY",
@@ -335,7 +321,7 @@ DSPM_SORT_BY_ENUM_MAP: dict[str, str] = {
 }
 
 # IR Sort By Enum Mapping
-IR_SORT_BY_ENUM_MAP: dict[str, str] = {
+IR_SORT_BY_MAP: dict[str, str] = {
     "Detection Time": "SORT_DETECTION_TIME",
     "Update Time": "SORT_UPDATE_TIME",
     "Severity": "SORT_SEVERITY",
@@ -345,13 +331,13 @@ IR_SORT_BY_ENUM_MAP: dict[str, str] = {
 }
 
 # Sort Order Enum Mapping
-SORT_ORDER_ENUM_MAP: dict[str, str] = {
+SORT_ORDER_MAP: dict[str, str] = {
     "Ascending": "ASC",
     "Descending": "DESC",
 }
 
 # IR Policy Types Enum Mapping
-IR_POLICY_TYPE_ENUM_MAP: dict[str, str] = {
+IR_POLICY_TYPE_MAP: dict[str, str] = {
     "Identity": "POLICY_TYPE_IDENTITY",
     "IDP": "POLICY_TYPE_IDP",
     "Identity Event": "POLICY_TYPE_IDENTITY_EVENT",
@@ -360,10 +346,10 @@ IR_POLICY_TYPE_ENUM_MAP: dict[str, str] = {
 # Every IR policy type, sent when the connector looks an IR violation up by id:
 # the details query requires policyTypes, and the activity series does not say
 # which one applies, so all three are passed and RSC resolves it.
-ALL_IR_POLICY_TYPES: list[str] = list(IR_POLICY_TYPE_ENUM_MAP.values())
+ALL_IR_POLICY_TYPES: list[str] = list(IR_POLICY_TYPE_MAP.values())
 
 # IR Category Enum Mapping
-IR_CATEGORY_ENUM_MAP: dict[str, str] = {
+IR_CATEGORY_MAP: dict[str, str] = {
     "Identity Hygiene": "IDENTITY_HYGIENE",
     "Authentication and Secret Management": "AUTHENTICATION_AND_SECRET_MANAGEMENT",
     "Identity Provider Security": "IDENTITY_PROVIDER_SECURITY",
@@ -391,7 +377,7 @@ IR_IDENTITY_TAG_ENUM_MAP: dict[str, str] = {
 }
 
 # File List Risk Level Enum Mapping
-FILE_RISK_LEVEL_ENUM_MAP: dict[str, str] = {
+FILE_RISK_LEVEL_MAP: dict[str, str] = {
     "Unknown Risk": "UNKNOWN_RISK",
     "High Risk": "HIGH_RISK",
     "Medium Risk": "MEDIUM_RISK",
@@ -400,7 +386,7 @@ FILE_RISK_LEVEL_ENUM_MAP: dict[str, str] = {
 }
 
 # File List Exposure Enum Mapping
-FILE_EXPOSURE_ENUM_MAP: dict[str, str] = {
+FILE_EXPOSURE_MAP: dict[str, str] = {
     "Explicit": "EXPLICIT",
     "Inherited": "INHERITED",
     "Not Open": "NOT_OPEN",
@@ -409,7 +395,7 @@ FILE_EXPOSURE_ENUM_MAP: dict[str, str] = {
 }
 
 # File List Access Via Enum Mapping
-FILE_ACCESS_VIA_ENUM_MAP: dict[str, str] = {
+FILE_ACCESS_VIA_MAP: dict[str, str] = {
     "Unspecified": "ACCESS_TYPE_UNSPECIFIED",
     "Direct": "DIRECT",
     "Group": "GROUP",
@@ -417,7 +403,7 @@ FILE_ACCESS_VIA_ENUM_MAP: dict[str, str] = {
 }
 
 # File List Sort By Enum Mapping
-FILE_SORT_BY_ENUM_MAP: dict[str, str] = {
+FILE_SORT_BY_MAP: dict[str, str] = {
     "Hits": "HITS",
     "Name": "NAME",
     "Last Access Time": "LAST_ACCESS_TIME",
@@ -425,10 +411,6 @@ FILE_SORT_BY_ENUM_MAP: dict[str, str] = {
     "Creation Time": "CREATION_TIME",
     "Last Scan Time": "LAST_SCAN_TIME",
 }
-
-# File download types (for polling)
-CSV_FILE_TYPE_SNAPSHOT: str = "SNAPSHOT_RESULTS_CSV"
-CSV_FILE_TYPE_REMEDIATION: str = "REMEDIATION_ACTIONS_LOG_CSV"
 
 # Remediation type for log export
 REMEDIATION_TYPE_EXPORT_LOG: str = "REMEDIATION_TYPE_EXPORT_ACTIONS_LOG_TO_CSV"
@@ -438,35 +420,13 @@ REMEDIATION_TARGET_TYPE_VIOLATION: str = "REMEDIATION_TARGET_TYPE_VIOLATION"
 FILE_STATE_READY: str = "READY"
 FILE_STATE_FAILED: str = "FAILED"
 
-# Backward-compatible enum maps for utils.py
-DSPM_SEVERITY_MAP: dict[str, str] = {
-    "Low": "LOW",
-    "Medium": "MEDIUM",
-    "High": "HIGH",
-    "Critical": "CRITICAL",
-}
-
-DSPM_CATEGORY_MAP: dict[str, str] = DSPM_CATEGORY_ENUM_MAP
-SENSITIVITY_LEVEL_MAP: dict[str, str] = SENSITIVITY_LEVEL_ENUM_MAP
-DSPM_SORT_BY_MAP: dict[str, str] = DSPM_SORT_BY_ENUM_MAP
-IR_SORT_BY_MAP: dict[str, str] = IR_SORT_BY_ENUM_MAP
-SORT_ORDER_MAP: dict[str, str] = SORT_ORDER_ENUM_MAP
-IR_POLICY_TYPE_MAP: dict[str, str] = IR_POLICY_TYPE_ENUM_MAP
-IR_CATEGORY_MAP: dict[str, str] = IR_CATEGORY_ENUM_MAP
-FILE_RISK_LEVEL_MAP: dict[str, str] = FILE_RISK_LEVEL_ENUM_MAP
-FILE_EXPOSURE_MAP: dict[str, str] = FILE_EXPOSURE_ENUM_MAP
-FILE_SORT_BY_MAP: dict[str, str] = FILE_SORT_BY_ENUM_MAP
-FILE_ACCESS_VIA_MAP: dict[str, str] = FILE_ACCESS_VIA_ENUM_MAP
 
 # Default IR policy types
 DEFAULT_IR_POLICY_TYPES: list[str] = ["POLICY_TYPE_IDENTITY", "POLICY_TYPE_IDP"]
 
 # Error Messages
 ERROR_NO_VIOLATION_FOUND: str = "No violation found with ID: {}"
-ERROR_INVALID_STATUS: str = "Invalid status value: {}. Valid values: {}"
 ERROR_INVALID_ENUM: str = "Invalid value '{}' for parameter '{}'. Valid values: {}"
-ERROR_DATE_RANGE_REQUIRED: str = "Both Detection Start Date and Detection End Date must be provided together."
-ERROR_UPDATE_DATE_RANGE_REQUIRED: str = "Both Update Start Date and Update End Date must be provided together."
 ERROR_DETECTION_DATE_ORDER: str = "Detection End Date must be later than Detection Start Date."
 ERROR_UPDATE_DATE_ORDER: str = "Update End Date must be later than Update Start Date."
 
@@ -475,15 +435,6 @@ ERROR_LAST_ACCESS_DATE_ORDER: str = "Last Access End Date must be later than Las
 ERROR_LAST_UPDATED_DATE_ORDER: str = "Last Updated End Date must be later than Last Updated Start Date."
 ERROR_CREATION_DATE_ORDER: str = "Creation End Date must be later than Creation Start Date."
 ERROR_LAST_SCAN_DATE_ORDER: str = "Last Scan End Date must be later than Last Scan Start Date."
-ERROR_POLL_TIMEOUT: str = "Timed out waiting for file generation after {} seconds."
-ERROR_FILE_GENERATION_FAILED: str = "File generation failed with state: {}"
-ERROR_CSV_TRIGGER_FAILED: str = "Failed to trigger CSV generation: {}"
-ERROR_REMEDIATION_LOG_FAILED: str = "Failed to create remediation log: {}"
-
-# Max Results validation messages (Search DSPM Violations)
-ERROR_MAX_RESULTS_NOT_INTEGER: str = "Max Results must be an integer. Got: {}"
-ERROR_MAX_RESULTS_TOO_LOW: str = "Max Results must be at least 1."
-ERROR_MAX_RESULTS_TOO_HIGH: str = "Max Results cannot exceed {}. Received: {}"
 
 # DSPM Object Type Enum Mapping (values are used verbatim as the API enum)
 DSPM_OBJECT_TYPE_VALUES: list[str] = [
@@ -514,3 +465,27 @@ DSPM_OBJECT_TYPE_VALUES: list[str] = [
     "K8S_PROTECTION_SET",
 ]
 DSPM_OBJECT_TYPE_ENUM_MAP: dict[str, str] = {value: value for value in DSPM_OBJECT_TYPE_VALUES}
+
+# ── Close Duplicate Violation Alerts Job ─────────────────────────────────────
+CLOSE_DUPLICATE_VIOLATION_ALERTS_JOB_SCRIPT_NAME: str = (
+    f"{INTEGRATION_NAME} - Close Duplicate Violation Alerts Job"
+)
+
+MS_PER_DAY: int = 24 * 60 * 60 * 1000
+
+# Hard ceiling on how many candidate open case IDs are fetched from SOAR in
+# Step 1, independent of the "Max Cases To Process" job param -- see
+# _validate_job_params for how the two interact.
+FETCH_MAX_RESULTS: int = 10000
+
+# Hard ceiling on "Lookback Days" -- large values don't change how many cases
+# are fetched (still capped at FETCH_MAX_RESULTS), but they do make Step 1's
+# SOAR query scan a much wider case history for no benefit, contributing to
+# the same processing-timeout risk as an oversized "Max Cases To Process".
+MAX_LOOKBACK_DAYS: int = 100
+
+# Job-scoped context key the checkpoint is persisted under -- same key naming
+# convention as CASES_TIMESTAMP_DB_KEY in the Vectra RUX "Expire Inactive
+# Detections" job, which uses the identical get/set_scoped_job_context_property
+# checkpoint pattern this job now mirrors.
+CASES_TIMESTAMP_DB_KEY: str = "cases_timestamp"

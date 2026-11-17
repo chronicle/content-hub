@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import requests
 from TIPCommon.oauth import CredStorage
@@ -54,6 +54,9 @@ from .utils import (
     validate_json,
 )
 from .violations_api import ViolationsApiMixin
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 class APIManager(ThreatHuntApiMixin, ViolationsApiMixin):
@@ -132,9 +135,9 @@ class APIManager(ThreatHuntApiMixin, ViolationsApiMixin):
     def _execute_graphql(
         self,
         query: str,
-        variables: Dict[str, Any],
+        variables: SingleJson,
         api_identifier: str = "GraphQL Query",
-    ) -> Dict[str, Any]:
+    ) -> SingleJson:
         """Execute a GraphQL query/mutation and return the unwrapped 'data' payload.
 
         Args:
@@ -207,7 +210,7 @@ class APIManager(ThreatHuntApiMixin, ViolationsApiMixin):
             raise ConnectionTimeoutException(
                 f"Unable to connect to Rubrik at {url}. Please verify the endpoint is "
                 f"reachable and the Service Account JSON is valid. Details: {e}"
-            )
+            ) from e
 
         try:
             self.validate_response(api_identifier, response)

@@ -1,34 +1,45 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional
 
 from TIPCommon.types import SingleJson
+
+
+def _empty_violations_list() -> SingleJson:
+    return {
+        "data": {
+            "policyViolations": {
+                "count": 0,
+                "edges": [],
+                "pageInfo": {"hasNextPage": False, "endCursor": None},
+            }
+        }
+    }
 
 
 @dataclasses.dataclass(slots=True)
 class RubrikSecurityCloud:
     deployment_version: str = "8.0.0"
-    token_response: Optional[SingleJson] = None
-    cdm_cluster_location_response: Optional[SingleJson] = None
-    cdm_cluster_connection_state_response: Optional[SingleJson] = None
-    sonar_policy_objects_list_response: Optional[SingleJson] = None
-    sonar_object_detail_response: Optional[SingleJson] = None
-    ioc_scan_results_response: Optional[SingleJson] = None
-    turbo_ioc_scan_response: Optional[SingleJson] = None
-    list_events_response: Optional[SingleJson] = None
-    list_object_snapshots_response: Optional[SingleJson] = None
-    list_sonar_file_contexts_response: Optional[SingleJson] = None
-    advanced_ioc_scan_response: Optional[SingleJson] = None
-    search_dspm_violations_response: Optional[SingleJson] = None
-    dspm_violation_details_response: Optional[SingleJson] = None
-    search_ir_violations_response: Optional[SingleJson] = None
-    ir_violation_details_response: Optional[SingleJson] = None
-    violation_file_list_response: Optional[SingleJson] = None
-    update_violation_status_response: Optional[SingleJson] = None
-    download_snapshot_results_csv_response: Optional[SingleJson] = None
-    create_violation_remediation_response: Optional[SingleJson] = None
-    user_files: Optional[list] = None
+    token_response: SingleJson | None = None
+    cdm_cluster_location_response: SingleJson | None = None
+    cdm_cluster_connection_state_response: SingleJson | None = None
+    sonar_policy_objects_list_response: SingleJson | None = None
+    sonar_object_detail_response: SingleJson | None = None
+    ioc_scan_results_response: SingleJson | None = None
+    turbo_ioc_scan_response: SingleJson | None = None
+    list_events_response: SingleJson | None = None
+    list_object_snapshots_response: SingleJson | None = None
+    list_sonar_file_contexts_response: SingleJson | None = None
+    advanced_ioc_scan_response: SingleJson | None = None
+    search_dspm_violations_response: SingleJson | None = None
+    dspm_violation_details_response: SingleJson | None = None
+    search_ir_violations_response: SingleJson | None = None
+    ir_violation_details_response: SingleJson | None = None
+    violation_file_list_response: SingleJson | None = None
+    update_violation_status_response: SingleJson | None = None
+    download_snapshot_results_csv_response: SingleJson | None = None
+    create_violation_remediation_response: SingleJson | None = None
+    user_files: list[SingleJson] | None = None
     file_download_content: str = ""
 
     def get_deployment_version(self) -> SingleJson:
@@ -106,22 +117,10 @@ class RubrikSecurityCloud:
             return self.advanced_ioc_scan_response
         return {"data": {"startBulkThreatHunt": {"huntId": "", "status": "PENDING"}}}
 
-    @staticmethod
-    def _empty_violations_list() -> SingleJson:
-        return {
-            "data": {
-                "policyViolations": {
-                    "count": 0,
-                    "edges": [],
-                    "pageInfo": {"hasNextPage": False, "endCursor": None},
-                }
-            }
-        }
-
     def get_search_dspm_violations(self) -> SingleJson:
         if self.search_dspm_violations_response:
             return self.search_dspm_violations_response
-        return self._empty_violations_list()
+        return _empty_violations_list()
 
     def get_dspm_violation_details(self) -> SingleJson:
         if self.dspm_violation_details_response:
@@ -131,7 +130,7 @@ class RubrikSecurityCloud:
     def get_search_ir_violations(self) -> SingleJson:
         if self.search_ir_violations_response:
             return self.search_ir_violations_response
-        return self._empty_violations_list()
+        return _empty_violations_list()
 
     def get_ir_violation_details(self) -> SingleJson:
         if self.ir_violation_details_response:
