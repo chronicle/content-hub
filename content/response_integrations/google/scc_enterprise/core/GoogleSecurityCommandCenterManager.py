@@ -32,13 +32,30 @@ from TIPCommon.types import ChronicleSOAR, SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 
 from .GoogleSecurityCommandCenterParser import GoogleSecurityCommandCenterParser
-from .GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException, GoogleSecurityCommandCenterNotFound
-from .GoogleSecurityCommandCenterUtilsManager import parse_string_to_dict, validate_response
-from .GoogleSecurityCommandCenterConstants import API_ROOT_REGEX, ENDPOINTS, ORIGIN_HEADERS, PUB_SUB_PULL_TIMEOUT, SCOPES
+from .GoogleSecurityCommandCenterExceptions import (
+    GoogleSecurityCommandCenterException,
+    GoogleSecurityCommandCenterNotFound,
+)
+from .GoogleSecurityCommandCenterUtilsManager import (
+    parse_string_to_dict,
+    validate_response,
+)
+from .GoogleSecurityCommandCenterConstants import (
+    API_ROOT_REGEX,
+    ENDPOINTS,
+    ORIGIN_HEADERS,
+    PUB_SUB_PULL_TIMEOUT,
+    SCOPES,
+)
 from .GoogleSecurityCommandCenterDatamodels import FindingDetails, Source
 
 from .SCCEnterpriseExceptions import ProjectNotFound
-from .SCCEnterpriseUtils import get_scce_sa_email, get_scce_tenant_credentials, parse_project_from_sa, add_params_to_url
+from .SCCEnterpriseUtils import (
+    get_scce_sa_email,
+    get_scce_tenant_credentials,
+    parse_project_from_sa,
+    add_params_to_url,
+)
 
 
 class GoogleSecurityCommandCenterManager:

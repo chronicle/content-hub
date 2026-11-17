@@ -18,7 +18,10 @@ import json
 from TIPCommon.adapters.pubsub import data_models
 from TIPCommon.types import SingleJson
 
-from .GoogleSecurityCommandCenterConstants import EXTERNAL_SYSTEMS_KEY, URGENT_POSTURE_DEFAULT_CASE_ID
+from .GoogleSecurityCommandCenterConstants import (
+    EXTERNAL_SYSTEMS_KEY,
+    URGENT_POSTURE_DEFAULT_CASE_ID,
+)
 from .GoogleSecurityCommandCenterDatamodels import *
 from .SCCEnterpriseUtils import get_finding_value_by_key
 

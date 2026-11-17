@@ -1,26 +1,40 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import json
 import sys
 from typing import TYPE_CHECKING
 
-from open_search.core.constants import (
+from ..core.constants import (
     DLS_CONNECTOR_NAME,
     INTEGRATION_NAME,
     SEVERITY_MAP,
     STORED_ALERT_IDS_LIMIT,
 )
-from open_search.core.data_models import IntegrationParameters
+from ..core.data_models import IntegrationParameters
 from EnvironmentCommon import GetEnvironmentCommonFactory
-from open_search.core.exceptions import OpenSearchDSLConnectorException
-from open_search.core.os_client import OpenSearchManager
+from ..core.exceptions import OpenSearchDSLConnectorException
+from ..core.os_client import OpenSearchManager
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from TIPCommon.base.connector import Connector
 from TIPCommon.smp_io import read_ids, write_ids
 from TIPCommon.smp_time import unix_now
 from TIPCommon.utils import is_overflowed, is_test_run
-from open_search.core.utils import (
+from ..core.utils import (
     DEFAULT_SEVERITY_VALUE,
     get_field_value,
     load_custom_severity_configuration,

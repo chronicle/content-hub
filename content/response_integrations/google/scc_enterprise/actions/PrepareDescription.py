@@ -28,7 +28,15 @@ from ..core import SCCEnterpriseConsts
 from ..core import SCCEnterpriseDatamodels as SCCEDatamodels
 from ..core import SCCEnterpriseDescParams
 from ..core.SCCEnterpriseDescCreation import get_create_desc_fn
-from ..core.SCCEnterpriseUtils import create_html_table, create_jwm_table, get_alert_source_group_identifier, get_cloud_provider_from_source_group_id, get_first_event_data, update_html_desc_table, update_jira_wiki_desc_table
+from ..core.SCCEnterpriseUtils import (
+    create_html_table,
+    create_jwm_table,
+    get_alert_source_group_identifier,
+    get_cloud_provider_from_source_group_id,
+    get_first_event_data,
+    update_html_desc_table,
+    update_jira_wiki_desc_table,
+)
 
 
 class GetCaseContextError(Exception):

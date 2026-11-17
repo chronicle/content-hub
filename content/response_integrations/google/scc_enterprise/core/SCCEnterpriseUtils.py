@@ -43,8 +43,26 @@ from TIPCommon.transformation import removesuffix
 from TIPCommon.types import ChronicleSOAR, SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 
-from .SCCEnterpriseConsts import CASE_URL_TEMPLATE, CLOUD_PROVIDER_AWS, CLOUD_PROVIDER_AZURE, CLOUD_PROVIDER_GCP, CLOUD_PROVIDER_OTHER, NOT_AVAILABLE, OOTB_AUTH_ID_SCCE, OOTB_AUTH_KEY_SCCE, V_EMOJI, X_EMOJI, MUTE_EMOJI, FINDING_SEVERITY_COLOR_MAPPING
-from .SCCEnterpriseDatamodels import CloudProviderEnum, FindingContext, SOARCaseDetailsForSCC, WorkflowInstance
+from .SCCEnterpriseConsts import (
+    CASE_URL_TEMPLATE,
+    CLOUD_PROVIDER_AWS,
+    CLOUD_PROVIDER_AZURE,
+    CLOUD_PROVIDER_GCP,
+    CLOUD_PROVIDER_OTHER,
+    NOT_AVAILABLE,
+    OOTB_AUTH_ID_SCCE,
+    OOTB_AUTH_KEY_SCCE,
+    V_EMOJI,
+    X_EMOJI,
+    MUTE_EMOJI,
+    FINDING_SEVERITY_COLOR_MAPPING,
+)
+from .SCCEnterpriseDatamodels import (
+    CloudProviderEnum,
+    FindingContext,
+    SOARCaseDetailsForSCC,
+    WorkflowInstance,
+)
 from .SCCEnterpriseExceptions import ProjectNotFound
 
 

@@ -59,8 +59,32 @@ from TIPCommon.soar_ops import (
 from TIPCommon.types import JSON
 from TIPCommon.utils import get_unique_items_by_difference, none_to_default_value
 
-from .SCCEnterpriseConsts import BACKLOG_RETRIES_LIMIT, CASE_FAILURE_BACKLOG_DB_KEY, CASE_FAILURE_BACKLOG_FILE_NAME, CASE_PRIORITY_TO_TICKET_SEVERITY, CASE_SLO_DAYS_INTERVALS, CASE_TICKET_MAP_DB_KEY, CASE_TICKET_MAP_FILE_NAME, CLOSED_BY_SCCE_COMMENT, CLOSED_STATUSES, EXTERNAL_SCC_TICKET_INFO, FINDINGS_CONTEXT_KEY, SCCE_COMMENT_PREFIX, NOT_AVAILABLE, RESOLVED_STATUS
-from .SCCEnterpriseDatamodels import CaseIterationResult, CaseIterationSetup, ExternalSCCTicketInfo, FindingContext, ITSMTicketDetailsForSCC, SOARCaseDetailsForSCC, TicketIterationResult, TicketIterationSetup
+from .SCCEnterpriseConsts import (
+    BACKLOG_RETRIES_LIMIT,
+    CASE_FAILURE_BACKLOG_DB_KEY,
+    CASE_FAILURE_BACKLOG_FILE_NAME,
+    CASE_PRIORITY_TO_TICKET_SEVERITY,
+    CASE_SLO_DAYS_INTERVALS,
+    CASE_TICKET_MAP_DB_KEY,
+    CASE_TICKET_MAP_FILE_NAME,
+    CLOSED_BY_SCCE_COMMENT,
+    CLOSED_STATUSES,
+    EXTERNAL_SCC_TICKET_INFO,
+    FINDINGS_CONTEXT_KEY,
+    SCCE_COMMENT_PREFIX,
+    NOT_AVAILABLE,
+    RESOLVED_STATUS,
+)
+from .SCCEnterpriseDatamodels import (
+    CaseIterationResult,
+    CaseIterationSetup,
+    ExternalSCCTicketInfo,
+    FindingContext,
+    ITSMTicketDetailsForSCC,
+    SOARCaseDetailsForSCC,
+    TicketIterationResult,
+    TicketIterationSetup,
+)
 from .SCCEnterpriseUtils import construct_soar_case_url, soar_supports_scce_phase_2
 
 

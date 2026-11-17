@@ -27,7 +27,11 @@ from ..core.VertexAIApiManager import ApiManager
 from ..core.VertexAIBaseAction import BaseAction
 from ..core.VertexAIConstants import DESCRIBE_ENTITY_SCRIPT_NAME
 from ..core.VertexAIDatamodels import GenerationCache, GenerationConfig, Prompt
-from ..core.VertexAIUtils import exclude_fields_from_entity, flatten_entity_data_for_generation, get_publisher_name
+from ..core.VertexAIUtils import (
+    exclude_fields_from_entity,
+    flatten_entity_data_for_generation,
+    get_publisher_name,
+)
 
 SUCCESS_MESSAGE = (
     "Successfully summarized the entity based on the available information using "

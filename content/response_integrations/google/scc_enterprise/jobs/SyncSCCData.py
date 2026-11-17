@@ -59,9 +59,21 @@ from ..core import GoogleSecurityCommandCenterConstants as GSCCConstants
 from ..core import GoogleSecurityCommandCenterDatamodels as GSCCDatamodels
 from ..core.GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException
 from ..core.GoogleSecurityCommandCenterManager import GoogleSecurityCommandCenterManager
-from ..core.SCCEnterpriseConsts import CLOSED_BY_SCCE_COMMENT, EXTERNAL_SCC_TICKET_INFO, FINDINGS_CONTEXT_KEY, INTERNAL_SCC_TICKET_INFO, SYNC_DATA_JOB_NAME, SCCE_COMMENT_PREFIX
+from ..core.SCCEnterpriseConsts import (
+    CLOSED_BY_SCCE_COMMENT,
+    EXTERNAL_SCC_TICKET_INFO,
+    FINDINGS_CONTEXT_KEY,
+    INTERNAL_SCC_TICKET_INFO,
+    SYNC_DATA_JOB_NAME,
+    SCCE_COMMENT_PREFIX,
+)
 from ..core.SCCEnterpriseDatamodels import ExternalSCCTicketInfo, FindingContext
-from ..core.SCCEnterpriseUtils import build_case_details_for_scc, create_scc_finding_state_json, load_findings_context, soar_supports_scce_phase_2
+from ..core.SCCEnterpriseUtils import (
+    build_case_details_for_scc,
+    create_scc_finding_state_json,
+    load_findings_context,
+    soar_supports_scce_phase_2,
+)
 
 
 DEFAULT_HOURS_BACKWARDS = 0

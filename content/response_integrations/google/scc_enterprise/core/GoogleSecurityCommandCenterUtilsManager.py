@@ -21,8 +21,17 @@ from bs4 import BeautifulSoup
 
 from TIPCommon.exceptions import BadGatewayError, DeadlineExceededError
 
-from .GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException, GoogleSecurityCommandCenterInvalidJsonException, GoogleSecurityCommandCenterInvalidProject, GoogleSecurityCommandCenterNotFound
-from .GoogleSecurityCommandCenterConstants import SUCCESS_STATUSES, CAI_AWS_RESOURCE_TEMPLATE, CAI_AZURE_RESOURCE_TEMPLATE
+from .GoogleSecurityCommandCenterExceptions import (
+    GoogleSecurityCommandCenterException,
+    GoogleSecurityCommandCenterInvalidJsonException,
+    GoogleSecurityCommandCenterInvalidProject,
+    GoogleSecurityCommandCenterNotFound,
+)
+from .GoogleSecurityCommandCenterConstants import (
+    SUCCESS_STATUSES,
+    CAI_AWS_RESOURCE_TEMPLATE,
+    CAI_AZURE_RESOURCE_TEMPLATE,
+)
 from .SCCEnterpriseDatamodels import CloudProviderEnum
 
 

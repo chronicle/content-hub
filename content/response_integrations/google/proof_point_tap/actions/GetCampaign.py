@@ -21,7 +21,14 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from TIPCommon.transformation import construct_csv, string_to_multi_value
 from ..core import AuthenticationManager as auth_manager
-from ..core.constants import CAMPAIGN_EVIDENCE_TABLE_NAME, CAMPAIGNS_TABLE_NAME, GET_CAMPAIGN_SCRIPT_NAME, INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME, MAX_LIMIT
+from ..core.constants import (
+    CAMPAIGN_EVIDENCE_TABLE_NAME,
+    CAMPAIGNS_TABLE_NAME,
+    GET_CAMPAIGN_SCRIPT_NAME,
+    INTEGRATION_DISPLAY_NAME,
+    INTEGRATION_NAME,
+    MAX_LIMIT,
+)
 from ..core.ProofPointTapManager import ApiParameters, ProofPointTapManager
 from ..core.utils import validate_positive_integer
 

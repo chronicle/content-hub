@@ -21,7 +21,11 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from TIPCommon.transformation import string_to_multi_value
 from ..core import AuthenticationManager as auth_manager
-from ..core.constants import DECODE_URL_SCRIPT_NAME, INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME
+from ..core.constants import (
+    DECODE_URL_SCRIPT_NAME,
+    INTEGRATION_DISPLAY_NAME,
+    INTEGRATION_NAME,
+)
 from ..core.ProofPointTapManager import ApiParameters, ProofPointTapManager
 from ..core.utils import get_entity_original_identifier
 

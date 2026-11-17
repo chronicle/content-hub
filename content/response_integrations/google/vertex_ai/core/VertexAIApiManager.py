@@ -22,7 +22,11 @@ from google.auth.transport.requests import AuthorizedSession
 from TIPCommon.base.interfaces import Apiable
 from TIPCommon.base.utils import NewLineLogger
 from TIPCommon.types import SingleJson
-from .VertexAIConstants import ANTHROPIC_VERSION, DEFAULT_MAX_OUTPUT_TOKENS, VERTEX_SDK_PUBLISHERS
+from .VertexAIConstants import (
+    ANTHROPIC_VERSION,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    VERTEX_SDK_PUBLISHERS,
+)
 from .VertexAIDatamodels import GenerationConfig, GenerationResult, Prompt
 from .VertexAIExceptions import VertexAIManagerException
 

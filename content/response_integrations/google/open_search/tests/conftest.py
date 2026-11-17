@@ -1,38 +1,54 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
-pytest_plugins = ("integration_testing.conftest",)
+
 import sys
 import os
-import pkgutil
-import importlib
 import soar_sdk
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
-
 import json
-import os
 from collections import namedtuple
 from urllib.parse import urlencode
-
 import pytest
-
+import integration_testing.common as integration_testing_common
 from open_search.core.os_client import OpenSearchManager
 from open_search.tests.core.product import OpenSearchProduct
 from open_search.tests.core.session import OpenSearchSession
 from integration_testing.logger import Logger
 
+pytest_plugins = ("integration_testing.conftest",)
+
+sdk_dir = soar_sdk.__path__[0]
+
+if sdk_dir not in sys.path:
+    sys.path.insert(0, sdk_dir)
+
 CONNECTION_PERFORM_REQUEST_PATH = (
     "opensearchpy.connection.Urllib3HttpConnection.perform_request"
 )
+
+YAML_PARAM_TYPE_MAP = {
+    "boolean": 0,
+    "integer": 1,
+    "string": 2,
+    "password": 3,
+    "ip": 4,
+    "host": 5,
+    "url": 6,
+    "domain": 7,
+    "email": 8,
+}
 
 OpenSearchConfigParameters = namedtuple(
     "OpenSearchConfigParameters",
@@ -46,7 +62,6 @@ OpenSearchConfigParameters = namedtuple(
         "api_token",
     ],
 )
-
 
 def read_config(config_path: str) -> OpenSearchConfigParameters:
     """
@@ -72,17 +87,14 @@ def read_config(config_path: str) -> OpenSearchConfigParameters:
         api_token=config.get("API/Jwt Tokens"),
     )
 
-
 @pytest.fixture
 def opensearch_product() -> OpenSearchProduct:
     yield OpenSearchProduct()
-
 
 @pytest.fixture(autouse=True)
 def script_session(
     monkeypatch: pytest.MonkeyPatch, opensearch_product: OpenSearchProduct  # pylint: disable=redefined-outer-name
 ) -> OpenSearchSession:
-    session = OpenSearchSession(opensearch_product)
     """
     A pytest fixture that creates and yields a mock `OpenSearchSession`.
 
@@ -98,17 +110,55 @@ def script_session(
     Yields:
         An instance of `OpenSearchSession` for use in tests.
     """
+    session = OpenSearchSession(opensearch_product)
+    original_get_def_file_content = integration_testing_common.get_def_file_content
 
+    def normalized_get_def_file_content(def_file_path):
+        data = original_get_def_file_content(def_file_path)
+        if isinstance(data, dict) and "Parameters" not in data and isinstance(data.get("parameters"), list):
+            data["Parameters"] = [
+                {
+                    "Name": param["name"],
+                    "Type": YAML_PARAM_TYPE_MAP.get(str(param.get("type", "string")).lower(), 2),
+                    "DefaultValue": param.get("default_value", ""),
+                    "IsMandatory": param.get("is_mandatory", False),
+                    "Mode": 2 if param.get("mode") == "script" else 0,
+                }
+                for param in data["parameters"]
+            ]
+        return data
+
+    def bridge_perform_request(
+        self, method, url, params=None, body=None, headers=None, **kwargs
+    ):
+        full_url = f"{self.scheme}://{self.host}:{self.port}{url}"
+        if params:
+            full_url += f"?{urlencode(params)}"
+
+        request_kwargs = kwargs
+        if body:
+            request_kwargs["json"] = body
+        if params:
+            request_kwargs["params"] = params
+        if headers:
+            request_kwargs["headers"] = headers
+
+        response = session.request(method, full_url, **request_kwargs)
+        return response.status_code, response.headers, response.text
+
+    monkeypatch.setattr(
+        integration_testing_common,
+        "get_def_file_content",
+        normalized_get_def_file_content,
+    )
     monkeypatch.setattr(CONNECTION_PERFORM_REQUEST_PATH, bridge_perform_request)
     yield session
-
 
 @pytest.fixture
 def manager() -> OpenSearchManager:
     config_path = os.path.join(os.path.dirname(__file__), "config.json")
     config = read_config(config_path)
     return OpenSearchManager(integration_parameters=config, logger=Logger())
-
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     """

@@ -1,8 +1,22 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import base64
 import json
 
-from open_search.core.constants import (
+from .constants import (
     CA_CERTIFICATE_FILE_PATH,
     DEFAULT_MAX_LIMIT,
     DEFAULT_TIMEOUT,
@@ -14,9 +28,9 @@ from open_search.core.constants import (
     SEARCHFIELD,
     TIMESTAMPFIELD,
 )
-from open_search.core.data_models import IntegrationParameters
-from open_search.core.data_parser import OpenSearchParser
-from open_search.core.exceptions import OpenSearchManagerError
+from .data_models import IntegrationParameters
+from .data_parser import OpenSearchParser
+from .exceptions import OpenSearchManagerError
 from opensearch_dsl import Q, Search
 from opensearchpy import OpenSearch
 from TIPCommon.base.interfaces import ScriptLogger

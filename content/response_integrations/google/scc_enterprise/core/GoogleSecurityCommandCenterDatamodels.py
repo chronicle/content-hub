@@ -29,9 +29,23 @@ from TIPCommon.transformation import (
 )
 from TIPCommon.types import SingleJson
 from TIPCommon.validation import is_valid_email
-from .GoogleSecurityCommandCenterConstants import DEFAULT_FALLBACK_SEVERITY, SEVERITY_MAPPING, VULNERABILITY_CLASS, URGENT_POSTURE_RULE_GENERATOR, URGENT_POSTURE_DEFAULT_DEVICE_PRODUCT, STATE_MAPPING, TOXIC_COMBINATION_CONFIG_KEY, MUTED, TOXIC_COMBINATION_GROUP, TOXIC_COMBINATION_CLASS
+from .GoogleSecurityCommandCenterConstants import (
+    DEFAULT_FALLBACK_SEVERITY,
+    SEVERITY_MAPPING,
+    VULNERABILITY_CLASS,
+    URGENT_POSTURE_RULE_GENERATOR,
+    URGENT_POSTURE_DEFAULT_DEVICE_PRODUCT,
+    STATE_MAPPING,
+    TOXIC_COMBINATION_CONFIG_KEY,
+    MUTED,
+    TOXIC_COMBINATION_GROUP,
+    TOXIC_COMBINATION_CLASS,
+)
 from .GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException
-from .GoogleSecurityCommandCenterUtilsManager import get_asset_resource_name, get_non_gcp_resource_name
+from .GoogleSecurityCommandCenterUtilsManager import (
+    get_asset_resource_name,
+    get_non_gcp_resource_name,
+)
 from .SCCEnterpriseConsts import CLOUD_PROVIDER
 from .SCCEnterpriseDatamodels import CloudProviderEnum
 

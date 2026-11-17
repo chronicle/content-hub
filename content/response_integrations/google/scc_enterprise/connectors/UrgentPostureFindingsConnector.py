@@ -39,7 +39,10 @@ from ..core import GoogleSecurityCommandCenterConstants as constants
 from ..core import GoogleSecurityCommandCenterDatamodels as datamodels
 from ..core.GoogleSecurityCommandCenterExceptions import GoogleSecurityCommandCenterException
 from ..core.GoogleSecurityCommandCenterManager import GoogleSecurityCommandCenterManager
-from ..core.SCCEnterpriseConsts import URGENT_POSTURE_CONNECTOR_NAME, FINDINGS_CONTEXT_KEY
+from ..core.SCCEnterpriseConsts import (
+    URGENT_POSTURE_CONNECTOR_NAME,
+    FINDINGS_CONTEXT_KEY,
+)
 from ..core.SCCEnterpriseUtils import soar_supports_scce_phase_2, load_findings_context
 
 

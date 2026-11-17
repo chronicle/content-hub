@@ -19,7 +19,13 @@ import json
 from TIPCommon.base.action import Action
 from ..core import SCCEnterpriseConsts
 from ..core.SCCEnterpriseDatamodels import FindingContext
-from ..core.SCCEnterpriseUtils import create_scc_finding_state_json, get_alert_source_group_identifier, get_cloud_provider_from_source_group_id, get_first_event_data, load_findings_context
+from ..core.SCCEnterpriseUtils import (
+    create_scc_finding_state_json,
+    get_alert_source_group_identifier,
+    get_cloud_provider_from_source_group_id,
+    get_first_event_data,
+    load_findings_context,
+)
 
 
 class PopulateFindingsContext(Action):

@@ -21,7 +21,11 @@ from TIPCommon.types import SingleJson
 
 from .constants import API_EVENT_TYPE_MAPPING, ENDPOINTS
 from . import datamodels
-from .exceptions import ProofPointTapManagerError, ProofPointTapNotFoundError, ThreatIdNotFoundError
+from .exceptions import (
+    ProofPointTapManagerError,
+    ProofPointTapNotFoundError,
+    ThreatIdNotFoundError,
+)
 from . import ProofPointTapParser as parser
 from .utils import get_time_range, generate_time_intervals, resolve_threat_statuses
 
