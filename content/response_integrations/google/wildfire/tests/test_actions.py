@@ -245,7 +245,7 @@ def test_get_report_action_failure(mocker: Any) -> None:
 
 
 def test_detonate_file_action(mocker: Any) -> None:
-    mocker.patch.object(DetonateFile.time, "sleep")
+    mocker.patch.object(DetonateFile, "time", mocker.Mock(sleep=mocker.Mock()))
     mock_siemplify = mocker.Mock()
     mock_siemplify.result = mocker.create_autospec(ScriptResult, instance=True)
     mock_siemplify.parameters = {"File Paths": "test.exe"}
