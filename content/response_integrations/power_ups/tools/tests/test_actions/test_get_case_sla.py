@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 
 SLA_EXPIRATION_MS = 1793087776558
 CRITICAL_SLA_EXPIRATION_MS = 1793015776558
+PAUSED_REMAINING_TIME_MS = 5643358
 DEFAULT_PARAMS: dict[str, str] = {"DateTime Format": "%Y-%m-%d %H:%M:%S"}
 NO_SLA_PAYLOAD: SingleJson = {
     "slaExpirationTime": -1,
@@ -80,6 +81,9 @@ def test_get_case_sla_one_platform_expands_sla_and_returns_formatted_timestamps(
         "SLA": "2026-10-27 07:56:16",
         "critical_SLA_unix": CRITICAL_SLA_EXPIRATION_MS,
         "critical_SLA": "2026-10-26 11:56:16",
+        "expiration_status": "OpenSla",
+        "remaining_time_since_last_pause_ms": None,
+        "remaining_time_since_last_pause": None,
     }
     assert (
         action_output.results.output_message
@@ -117,8 +121,132 @@ def test_get_case_sla_active_sla_without_critical_sla_returns_none_for_critical_
         "SLA": "2026-10-27 07:56:16",
         "critical_SLA_unix": None,
         "critical_SLA": None,
+        "expiration_status": "OpenSla",
+        "remaining_time_since_last_pause_ms": None,
+        "remaining_time_since_last_pause": None,
     }
     assert action_output.results.output_message == "Stage SLA: 2026-10-27 07:56:16, Critical Stage SLA: None"
+
+
+@set_metadata(integration_config={}, parameters=dict(DEFAULT_PARAMS), input_context=copy.deepcopy(ALERT_1_CONTEXT))
+def test_get_case_sla_paused_one_platform_returns_paused_status_and_remaining_time(
+    monkeypatch: pytest.MonkeyPatch,
+    tools: Tools,
+    action_output: MockActionOutput,
+) -> None:
+    monkeypatch.setattr(sys, "argv", [*sys.argv, "--onePlatformSupport"])
+    tools.set_case_metadata({
+        "id": 123,
+        "displayName": "Paused SLA Case",
+        "priority": 60,
+        "status": 1,
+        "sla": {
+            "expirationTime": -1,
+            "criticalExpirationTime": -1,
+            "expirationStatus": "Paused",
+            "remainingTimeSinceLastPause": PAUSED_REMAINING_TIME_MS,
+        },
+    })
+
+    GetCaseSla.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.result_value is True
+    assert action_output.results.json_output is not None
+    assert action_output.results.json_output.json_result == {
+        "SLA_unix": None,
+        "SLA": None,
+        "critical_SLA_unix": None,
+        "critical_SLA": None,
+        "expiration_status": "Paused",
+        "remaining_time_since_last_pause_ms": PAUSED_REMAINING_TIME_MS,
+        "remaining_time_since_last_pause": "1:34:03",
+    }
+    assert (
+        action_output.results.output_message == "SLA is paused for case 123. Remaining time since last pause: 1:34:03."
+    )
+
+
+@set_metadata(integration_config={}, parameters=dict(DEFAULT_PARAMS), input_context=copy.deepcopy(ALERT_1_CONTEXT))
+def test_get_case_sla_paused_without_remaining_time_returns_paused_message(
+    monkeypatch: pytest.MonkeyPatch,
+    tools: Tools,
+    action_output: MockActionOutput,
+) -> None:
+    monkeypatch.setattr(sys, "argv", [*sys.argv, "--onePlatformSupport"])
+    tools.set_case_metadata({
+        "id": 123,
+        "displayName": "Paused SLA Without Remaining Time",
+        "priority": 60,
+        "status": 1,
+        "sla": {
+            "expirationTime": -1,
+            "criticalExpirationTime": -1,
+            "expirationStatus": "Paused",
+            "remainingTimeSinceLastPause": -1,
+        },
+    })
+
+    GetCaseSla.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.result_value is True
+    assert action_output.results.json_output is not None
+    assert action_output.results.json_output.json_result == {
+        "SLA_unix": None,
+        "SLA": None,
+        "critical_SLA_unix": None,
+        "critical_SLA": None,
+        "expiration_status": "Paused",
+        "remaining_time_since_last_pause_ms": None,
+        "remaining_time_since_last_pause": None,
+    }
+    assert action_output.results.output_message == "SLA is paused for case 123."
+
+
+@set_metadata(integration_config={}, parameters=dict(DEFAULT_PARAMS), input_context=copy.deepcopy(ALERT_1_CONTEXT))
+def test_get_case_sla_legacy_paused_with_numeric_status_returns_paused_json_result(
+    monkeypatch: pytest.MonkeyPatch,
+    tools: Tools,
+    action_output: MockActionOutput,
+) -> None:
+    monkeypatch.setattr(sys, "argv", [arg for arg in sys.argv if arg != "--onePlatformSupport"])
+    tools.set_case_metadata({
+        "id": 123,
+        "name": "Legacy Paused SLA Case",
+        "priority": 60,
+        "status": 1,
+        "sla": {
+            "slaExpirationTime": None,
+            "criticalExpirationTime": None,
+            "expirationStatus": 4,
+            "remainingTimeSinceLastPause": PAUSED_REMAINING_TIME_MS,
+        },
+        "stageSla": {
+            "slaExpirationTime": None,
+            "criticalExpirationTime": None,
+            "expirationStatus": 2,
+            "remainingTimeSinceLastPause": None,
+        },
+    })
+
+    GetCaseSla.main()
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.result_value is True
+    assert action_output.results.json_output is not None
+    assert action_output.results.json_output.json_result == {
+        "SLA_unix": None,
+        "SLA": None,
+        "critical_SLA_unix": None,
+        "critical_SLA": None,
+        "expiration_status": "Paused",
+        "remaining_time_since_last_pause_ms": PAUSED_REMAINING_TIME_MS,
+        "remaining_time_since_last_pause": "1:34:03",
+    }
+    assert (
+        action_output.results.output_message == "SLA is paused for case 123. Remaining time since last pause: 1:34:03."
+    )
 
 
 @set_metadata(
@@ -156,6 +284,9 @@ def test_get_case_sla_legacy_falls_back_to_stage_sla_when_case_sla_is_negative_o
         "SLA": "2026/10/27 07:56",
         "critical_SLA_unix": CRITICAL_SLA_EXPIRATION_MS,
         "critical_SLA": "2026/10/26 11:56",
+        "expiration_status": "OpenSla",
+        "remaining_time_since_last_pause_ms": None,
+        "remaining_time_since_last_pause": None,
     }
 
 
