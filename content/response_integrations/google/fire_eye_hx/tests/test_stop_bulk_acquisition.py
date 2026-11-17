@@ -53,7 +53,7 @@ class TestStopBulkAcquisition(unittest.TestCase):
 
         mock_manager.stop_bulk_acquisition.assert_called_once_with(42)
         mock_siemplify.end.assert_called_once_with(
-            "Successfully stopped bulk acquisition 42.",
+            'Successfully stopped bulk acquisition with ID "42" in FireEye HX.',
             "true",
             EXECUTION_STATE_COMPLETED,
         )
@@ -84,6 +84,7 @@ class TestStopBulkAcquisition(unittest.TestCase):
         mock_manager.stop_bulk_acquisition.assert_not_called()
         mock_siemplify.end.assert_called_once()
         end_call = mock_siemplify.end.call_args[0]
+        assert end_call[0].startswith('Error executing action "Stop Bulk Acquisition". Reason: ')
         assert "must not be empty" in end_call[0]
         assert end_call[1] == "false"
         assert end_call[2] == EXECUTION_STATE_FAILED
@@ -114,6 +115,7 @@ class TestStopBulkAcquisition(unittest.TestCase):
         mock_manager.stop_bulk_acquisition.assert_not_called()
         mock_siemplify.end.assert_called_once()
         end_call = mock_siemplify.end.call_args[0]
+        assert end_call[0].startswith('Error executing action "Stop Bulk Acquisition". Reason: ')
         assert "must be a number" in end_call[0]
         assert end_call[1] == "false"
         assert end_call[2] == EXECUTION_STATE_FAILED
