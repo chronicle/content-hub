@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import sys
 import uuid
@@ -7,18 +21,18 @@ from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
-from splunk.core.SplunkManager import SplunkManager
+from ..core.SplunkManager import SplunkManager
 from TIPCommon.extraction import extract_connector_param
 from TIPCommon.smp_io import read_ids, write_ids
 from TIPCommon.utils import is_overflowed
-from splunk.core.UtilsManager import (
+from ..core.UtilsManager import (
     clean_duplicated_keys,
     get_last_success_time_for_queries,
     get_query_identifier,
     is_approaching_timeout,
     save_query_timestamp,
 )
-from splunk.core.constants import DEFAULT_DEVICE_VENDOR, QUERY_CONNECTOR_SCRIPT_NAME
+from ..core.constants import DEFAULT_DEVICE_VENDOR, QUERY_CONNECTOR_SCRIPT_NAME
 
 
 connector_starting_time = unix_now()
