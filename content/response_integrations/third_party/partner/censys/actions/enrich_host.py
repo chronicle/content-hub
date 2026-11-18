@@ -202,13 +202,8 @@ class EnrichHost(Action):
         if not self.params.enable_new_api:
             return None
 
-        api_key, organization_id, verify_ssl = get_integration_params(self.soar_action)
-        return APIManager(
-            api_key=api_key,
-            organization_id=organization_id,
-            verify_ssl=verify_ssl,
-            siemplify=self.soar_action,
-        )
+        params = get_integration_params(self.soar_action)
+        return APIManager(params, siemplify=self.soar_action)
 
     def _perform_action(self, _: Entity | None = None) -> None:
         if not self.params.enable_new_api:

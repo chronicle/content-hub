@@ -13,9 +13,10 @@ from .censys_exceptions import (
     InvalidIntegerException,
 )
 from .constants import ENRICHMENT_PREFIX, INTEGRATION_NAME, PING_ACTION_IDENTIFIER
+from .params import IntegrationParams
 
 
-def get_integration_params(siemplify: Any) -> Tuple[str, str, bool]:
+def get_integration_params(siemplify: Any) -> IntegrationParams:
     """
     Retrieve the integration parameters from Siemplify configuration.
 
@@ -23,12 +24,27 @@ def get_integration_params(siemplify: Any) -> Tuple[str, str, bool]:
         siemplify (SiemplifyAction): SiemplifyAction instance
 
     Returns:
-        tuple: A tuple containing the integration parameters (api_key,
-        organization_id, verify_ssl).
+        IntegrationParams: The integration configuration (authentication settings,
+        organization ID and SSL verification).
     """
+    use_oauth = siemplify.extract_configuration_param(
+        INTEGRATION_NAME, "Use OAuth Authentication", input_type=bool, is_mandatory=False
+    ) or False
+
     api_key = siemplify.extract_configuration_param(
-        INTEGRATION_NAME, "API Key", input_type=str, is_mandatory=True
-    ).strip()
+        INTEGRATION_NAME, "API Key", input_type=str, is_mandatory=False
+    ) or ""
+    api_key = api_key.strip()
+
+    client_id = siemplify.extract_configuration_param(
+        INTEGRATION_NAME, "Client ID", input_type=str, is_mandatory=False
+    ) or ""
+    client_id = client_id.strip()
+
+    client_secret = siemplify.extract_configuration_param(
+        INTEGRATION_NAME, "Client Secret", input_type=str, is_mandatory=False
+    ) or ""
+    client_secret = client_secret.strip()
 
     organization_id = siemplify.extract_configuration_param(
         INTEGRATION_NAME, "Organization Id", input_type=str, is_mandatory=True
@@ -38,7 +54,14 @@ def get_integration_params(siemplify: Any) -> Tuple[str, str, bool]:
         INTEGRATION_NAME, "Verify SSL", input_type=bool, is_mandatory=True
     )
 
-    return api_key, organization_id, verify_ssl
+    return IntegrationParams(
+        organization_id=organization_id,
+        verify_ssl=verify_ssl,
+        use_oauth=use_oauth,
+        api_key=api_key,
+        client_id=client_id,
+        client_secret=client_secret,
+    )
 
 
 def validate_required_string(value: str, param_name: str) -> str:

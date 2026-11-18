@@ -30,18 +30,13 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
 
     # Configuration Parameters
-    api_key, organization_id, verify_ssl = get_integration_params(siemplify)
+    params = get_integration_params(siemplify)
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     status = EXECUTION_STATE_COMPLETED
     connectivity_result = False
     try:
-        censys_manager = APIManager(
-            api_key,
-            organization_id,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
+        censys_manager = APIManager(params, siemplify=siemplify)
         censys_manager.test_connectivity()
         output_message = "Successfully connected to the Censys"
         connectivity_result = True

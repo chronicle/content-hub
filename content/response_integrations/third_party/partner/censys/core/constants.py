@@ -2,10 +2,18 @@ from __future__ import annotations
 
 INTEGRATION_NAME = "Censys"
 
-INTEGRATION_VERSION: str = "5.0"
+INTEGRATION_VERSION: str = "6.0"
 
 # API Configuration
 API_ROOT = "https://api.platform.censys.io"
+
+# OAuth Configuration
+DEFAULT_AUTH_URL: str = "https://oauth2.censys.io"
+AUTH_ENDPOINT: str = "/oauth2/token"
+OAUTH_SCOPE: str = "censys.api"
+OAUTH_AUDIENCE: str = API_ROOT
+OAUTH_DEFAULT_EXPIRY_SECONDS: int = 3600
+OAUTH_TOKEN_EXPIRY_BUFFER_SECONDS: int = 60
 
 RESULT_VALUE_TRUE = True
 RESULT_VALUE_FALSE = False

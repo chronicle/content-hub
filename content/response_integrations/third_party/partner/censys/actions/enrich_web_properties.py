@@ -143,7 +143,7 @@ def main():
     result_value = RESULT_VALUE_TRUE
     output_message = ""
 
-    api_key, organization_id, verify_ssl = get_integration_params(siemplify)
+    params = get_integration_params(siemplify)
 
     ports_param = siemplify.extract_action_param(
         "Port", default_value=DEFAULT_PORTS, input_type=str
@@ -162,12 +162,7 @@ def main():
     ports = []
 
     try:
-        censys_manager = APIManager(
-            api_key=api_key,
-            organization_id=organization_id,
-            verify_ssl=verify_ssl,
-            siemplify=siemplify,
-        )
+        censys_manager = APIManager(params, siemplify=siemplify)
 
         entities = get_web_property_entities(siemplify)
 
