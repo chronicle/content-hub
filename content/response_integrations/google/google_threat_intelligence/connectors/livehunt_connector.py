@@ -1,11 +1,25 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import copy
 import sys
 
-from google_threat_intelligence.core.api_manager import ApiManager
-from google_threat_intelligence.core.auth_manager import AuthManager, AuthManagerParams
-from google_threat_intelligence.core.constants import (
+from ..core.api_manager import ApiManager
+from ..core.auth_manager import AuthManager, AuthManagerParams
+from ..core.constants import (
     DEFAULT_DEVICE_VENDOR,
     DEFAULT_HOURS_BACKWARDS,
     DEFAULT_NOTIFICATIONS_LIMIT,
@@ -13,7 +27,7 @@ from google_threat_intelligence.core.constants import (
     LIVEHUNT_CONNECTOR_DEFAULT_DEVICE_PRODUCT,
     STORED_IDS_LIMIT,
 )
-from google_threat_intelligence.core.data_models import Notification
+from ..core.data_models import Notification
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from TIPCommon.base.connector import Connector
 from TIPCommon.consts import TIMEOUT_THRESHOLD, UNIX_FORMAT

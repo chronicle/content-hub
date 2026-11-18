@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import pathlib
@@ -6,83 +20,83 @@ from TIPCommon.types import SingleJson
 
 from google_threat_intelligence.tests.common import get_json_file_content
 
-NON_MALICIOUS_IP_RESPONSE: SingleJson = get_def_file_content(
+NON_MALICIOUS_IP_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/non_malicious_ip.json"
 )
 
-MALICIOUS_IP_RESPONSE: SingleJson = get_def_file_content(
+MALICIOUS_IP_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/malicious_ip.json"
 )
 
-NON_MALICIOUS_URL_RESPONSE: SingleJson = get_def_file_content(
+NON_MALICIOUS_URL_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/non_malicious_url.json"
 )
 
-NON_MALICIOUS_PRIVATE_URL_RESPONSE: SingleJson = get_def_file_content(
+NON_MALICIOUS_PRIVATE_URL_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent
     / "data/non_malicious_private_url.json"
 )
 
-MALICIOUS_URL_RESPONSE: SingleJson = get_def_file_content(
+MALICIOUS_URL_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/malicious_url.json"
 )
 
-MALICIOUS_PRIVATE_URL_RESPONSE: SingleJson = get_def_file_content(
+MALICIOUS_PRIVATE_URL_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent
     / "data/malicious_private_url.json"
 )
 
-NON_MALICIOUS_FILE_HASH_RESPONSE: SingleJson = get_def_file_content(
+NON_MALICIOUS_FILE_HASH_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent
     / "data/non_malicious_file_hash.json"
 )
 
-MALICIOUS_FILE_HASH_RESPONSE = get_def_file_content(
+MALICIOUS_FILE_HASH_RESPONSE = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent
     / "data/malicious_file_hash.json"
 )
 
-MALICIOUS_DOMAIN_RESPONSE: SingleJson = get_def_file_content(
+MALICIOUS_DOMAIN_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/malicious_domain.json"
 )
 
-NON_MALICIOUS_DOMAIN_RESPONSE: SingleJson = get_def_file_content(
+NON_MALICIOUS_DOMAIN_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent
     / "data/non_malicious_domain.json"
 )
 
-DTM_ALERTS_RESPONSE: SingleJson = get_def_file_content(
+DTM_ALERTS_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/dtm_alerts.json"
 )
 
-DTM_ALERT_RESPONSE: SingleJson = get_def_file_content(
+DTM_ALERT_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/dtm_alert.json"
 )
 
-DTM_MONITOR_RESPONSE: SingleJson = get_def_file_content(
+DTM_MONITOR_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/dtm_list_monitors.json"
 )
 
-GTI_ALERTS_COMPREHENSIVE_RESPONSE: SingleJson = get_def_file_content(
+GTI_ALERTS_COMPREHENSIVE_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/gti_alerts_comprehensive.json"
 )
 
-GTI_ALERTS_DEFAULT_RESPONSE: SingleJson = get_def_file_content(
+GTI_ALERTS_DEFAULT_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/gti_alerts_default.json"
 )
 
 
-RELATED_ASSOCIATIONS_RESPONSE: SingleJson = get_def_file_content(
+RELATED_ASSOCIATIONS_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent
     / "data/related_associations.json"
 )
 
-RELATED_ASSOCIATIONS_REPORTS_RESPONSE: SingleJson = get_def_file_content(
+RELATED_ASSOCIATIONS_REPORTS_RESPONSE: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent
     / "data/related_associations_reports.json"
 )
 
-SDK_MOCK_DATA: SingleJson = get_def_file_content(
+SDK_MOCK_DATA: SingleJson = get_json_file_content(
     json_file_path=pathlib.Path(__file__).parent.parent / "data/sdk_mock_data.json"
 )
 

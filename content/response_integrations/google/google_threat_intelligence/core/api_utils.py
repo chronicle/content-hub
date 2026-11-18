@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import re
@@ -5,17 +19,18 @@ import urllib.parse
 from json import JSONDecodeError
 
 import requests
-from google_threat_intelligence.core.constants import AGENT_HTTP_ERROR_MESSAGE, EMAIL_ENTITY_TYPE, ENDPOINTS, QUERY_JOIN_PARAMETER
-from google_threat_intelligence.core.exceptions import (
+from .constants import AGENT_HTTP_ERROR_MESSAGE, EMAIL_ENTITY_TYPE, ENDPOINTS, QUERY_JOIN_PARAMETER
+from .exceptions import (
     GoogleThreatIntelligenceBadRequestException,
     GoogleThreatIntelligenceHTTPException,
     GoogleThreatIntelligenceNotFoundException,
     GoogleThreatIntelligencePermissionException,
+    GoogleThreatIntelligenceTransientException,
 )
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from TIPCommon.types import Entity
 from TIPCommon.utils import get_entity_original_identifier
-from google_threat_intelligence.core.utils import get_entity_type
+from .utils import get_entity_type
 
 ENTITY_TYPE_TO_QUERY_KEY_MAPPING = {
     EntityTypes.FILEHASH: "file",
@@ -31,6 +46,14 @@ FORBIDDEN_STATUS_CODE = 403
 NOT_FOUND_STATUS_CODE = 404
 UNAUTHORIZED_STATUS_CODE = 401
 BAD_REQUEST = 400
+TOO_MANY_REQUESTS_STATUS_CODE: int = 429
+SERVICE_UNAVAILABLE_STATUS_CODE: int = 503
+GATEWAY_TIMEOUT_STATUS_CODE: int = 504
+TRANSIENT_STATUS_CODES: set[int] = {
+    TOO_MANY_REQUESTS_STATUS_CODE,
+    SERVICE_UNAVAILABLE_STATUS_CODE,
+    GATEWAY_TIMEOUT_STATUS_CODE,
+}
 
 GTI_HTTP_EXCEPTION_MAPPING = {
     BAD_REQUEST: GoogleThreatIntelligenceBadRequestException,
@@ -104,10 +127,14 @@ def validate_response(
 
         if response.status_code == FORBIDDEN_STATUS_CODE:
             raise GoogleThreatIntelligencePermissionException(error) from error
-        raise GoogleThreatIntelligenceHTTPException(
-            f"{error_msg}: {error} {error.response.content}",
-            status_code=error.response.status_code,
-        ) from error
+
+        error_message = f"{error_msg}: {error} {error.response.content}"
+        if response.status_code in TRANSIENT_STATUS_CODES:
+            raise GoogleThreatIntelligenceTransientException(
+                error_message,
+                status_code=error.response.status_code,
+            ) from error
+        raise GoogleThreatIntelligenceHTTPException(error_message, status_code=error.response.status_code) from error
 
 
 def validate_gti_response(

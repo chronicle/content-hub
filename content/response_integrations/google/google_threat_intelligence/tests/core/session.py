@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 from typing import Iterable
@@ -30,6 +44,9 @@ class GoogleThreatIntelligenceSession(
             self.get_private_urls,
             self.get_analyses,
             self.get_private_analyses,
+            self.get_file_upload_url,
+            self.get_private_file_upload_url,
+            self.upload_file,
             self.get_non_asm_ping_result,
             self.get_ip_addresses,
             self.get_search_query,
@@ -282,7 +299,7 @@ class GoogleThreatIntelligenceSession(
             return MockResponse(content=response, status_code=200)
         return MockResponse(content=response, status_code=404)
 
-    @router.get("/api/v3/analyses/[a-zA-Z0-9]+")
+    @router.get("/api/v3/analyses/[a-zA-Z0-9_-]+")
     def get_analyses(self, request: MockRequest) -> MockResponse:
         """Return response for public analysis requests."""
         analysis_id: str = request.real_url.split("/")[-1]
@@ -291,7 +308,7 @@ class GoogleThreatIntelligenceSession(
             return MockResponse(content=response, status_code=200)
         return MockResponse(content={"data": {"attributes": {"status": "completed"}}}, status_code=200)
 
-    @router.get("/api/v3/private/analyses/[a-zA-Z0-9]+")
+    @router.get("/api/v3/private/analyses/[a-zA-Z0-9_-]+")
     def get_private_analyses(self, request: MockRequest) -> MockResponse:
         """Return response for private analysis requests."""
         analysis_id: str = request.real_url.split("/")[-1]
@@ -299,6 +316,25 @@ class GoogleThreatIntelligenceSession(
         if response:
             return MockResponse(content=response, status_code=200)
         return MockResponse(content={"data": {"attributes": {"status": "completed"}}}, status_code=200)
+
+    @router.get("/api/v3/files/upload_url")
+    def get_file_upload_url(self, _: MockRequest) -> MockResponse:
+        """Return upload URL for public file submission."""
+        return MockResponse(content={"data": "https://www.virustotal.com/_ah/upload/test_upload_url"}, status_code=200)
+
+    @router.get("/api/v3/private/files/upload_url")
+    def get_private_file_upload_url(self, _: MockRequest) -> MockResponse:
+        """Return upload URL for private file submission."""
+        return MockResponse(
+            content={"data": "https://www.virustotal.com/_ah/upload/test_private_upload_url"},
+            status_code=200,
+        )
+
+    @router.post("/_ah/upload/[a-zA-Z0-9_-]+")
+    def upload_file(self, _: MockRequest) -> MockResponse:
+        """Return configured response for file upload."""
+        content, status_code = self._product.get_file_upload_response()
+        return MockResponse(content=content, status_code=status_code)
 
     @router.get("/api/v3/files/[a-zA-Z0-9']+")
     def get_file_hash(self, request: MockRequest) -> MockResponse:

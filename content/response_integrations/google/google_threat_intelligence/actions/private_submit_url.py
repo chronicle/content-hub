@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -15,15 +29,15 @@ from TIPCommon import validation
 from TIPCommon.base.action import ExecutionState, Link
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.smp_time import is_approaching_action_timeout
-from google_threat_intelligence.core.api_manager import ApiManager
-from google_threat_intelligence.core.base_action import BaseAction
-from google_threat_intelligence.core.constants import PRIVATE_SUBMIT_URL_SCRIPT_NAME, SUSPICIOUS_VERDICTS
-from google_threat_intelligence.core.data_models import URL
-from google_threat_intelligence.core.exceptions import (
+from ..core.api_manager import ApiManager
+from ..core.base_action import BaseAction
+from ..core.constants import PRIVATE_SUBMIT_URL_SCRIPT_NAME, SUSPICIOUS_VERDICTS
+from ..core.data_models import URL
+from ..core.exceptions import (
     EntityNotFoundOrEmptyResults,
     GoogleThreatIntelligenceNotFoundException,
 )
-from google_threat_intelligence.core.utils import convert_days_to_milliseconds, encode_url
+from ..core.utils import convert_days_to_milliseconds, encode_url
 
 
 SHOW_ENTITY_STATUS = True

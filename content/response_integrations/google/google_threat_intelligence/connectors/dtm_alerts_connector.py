@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import copy
@@ -5,9 +19,9 @@ import datetime
 import sys
 import uuid
 
-from google_threat_intelligence.core.api_manager import ApiManager
-from google_threat_intelligence.core.auth_manager import AuthManager, AuthManagerParams
-from google_threat_intelligence.core.constants import (
+from ..core.api_manager import ApiManager
+from ..core.auth_manager import AuthManager, AuthManagerParams
+from ..core.constants import (
     DEFAULT_DEVICE_PRODUCT,
     DEFAULT_DEVICE_VENDOR,
     DTM_ALERTS_CONNECTOR,
@@ -20,7 +34,7 @@ from google_threat_intelligence.core.constants import (
     SEVERITY_MAPPING,
     STORED_IDS_LIMIT,
 )
-from google_threat_intelligence.core.data_models import DTMAlert
+from ..core.data_models import DTMAlert
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from TIPCommon.base.connector import Connector
 from TIPCommon.consts import DATETIME_FORMAT, TIMEOUT_THRESHOLD
@@ -35,7 +49,7 @@ from TIPCommon.transformation import (
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import is_empty_string_or_none, is_test_run
 
-from google_threat_intelligence.core.utils import (
+from ..core.utils import (
     anonymize_compromised_credentials,
     parse_entity_filters,
     prepare_entity_filter,

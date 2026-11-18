@@ -1,11 +1,26 @@
-from __future__ import annotations
-import abc
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+from __future__ import annotations
+
+import abc
+import base64
 import ipaddress
 import re
-import base64
 
 from TIPCommon.types import SingleJson
+
 from google_threat_intelligence.tests.responses.api import common_responses
 
 
@@ -19,6 +34,7 @@ class GoogleThreatIntelligenceProduct(abc.ABC):
         self._asm_entities: list[SingleJson] = []
         self._asm_search_error: str | None = None
         self._analyses: dict[str, SingleJson] = {}
+        self._upload_responses: list[tuple[SingleJson, int]] = [({"data": {"id": "test_analysis_id"}}, 200)]
 
     def add_analysis(self, analysis_id: str, response: SingleJson) -> None:
         """Add an analysis response for a specific analysis ID."""
@@ -27,6 +43,23 @@ class GoogleThreatIntelligenceProduct(abc.ABC):
     def get_analysis(self, analysis_id: str) -> SingleJson | None:
         """Return the stored analysis response for the given analysis ID."""
         return self._analyses.get(analysis_id)
+
+    def set_file_upload_response(
+        self,
+        content: SingleJson | list[tuple[SingleJson, int]],
+        status_code: int = 200,
+    ) -> None:
+        """Configure the mock response(s) and HTTP status code(s) for file uploads."""
+        if isinstance(content, list):
+            self._upload_responses = list(content)
+        else:
+            self._upload_responses = [(content, status_code)]
+
+    def get_file_upload_response(self) -> tuple[SingleJson, int]:
+        """Return the next configured mock response and HTTP status code for file uploads."""
+        if len(self._upload_responses) > 1:
+            return self._upload_responses.pop(0)
+        return self._upload_responses[0]
 
     def add_search_query_response(self, response: dict) -> dict:
         self.query_response = response

@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import datetime
@@ -15,9 +29,9 @@ from TIPCommon.transformation import dict_to_flat
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import is_empty_string_or_none, is_test_run
 
-from google_threat_intelligence.core.api_manager import ApiManager
-from google_threat_intelligence.core.auth_manager import AuthManager, AuthManagerParams
-from google_threat_intelligence.core.constants import (
+from ..core.api_manager import ApiManager
+from ..core.auth_manager import AuthManager, AuthManagerParams
+from ..core.constants import (
     GTI_ALERTS_CONNECTOR_SCRIPT_NAME,
     GTI_ALERTS_DEFAULT_DEVICE_PRODUCT,
     GTI_ALERTS_DEFAULT_LIMIT,
@@ -27,9 +41,9 @@ from google_threat_intelligence.core.constants import (
     SEVERITY_MAPPING,
     STORED_IDS_LIMIT,
 )
-from google_threat_intelligence.core.data_models import GTIAlert
-from google_threat_intelligence.core.exceptions import GoogleThreatIntelligenceExceptions
-from google_threat_intelligence.core.utils import parse_entity_filters, prepare_entity_filter
+from ..core.data_models import GTIAlert
+from ..core.exceptions import GoogleThreatIntelligenceExceptions
+from ..core.utils import parse_entity_filters, prepare_entity_filter
 
 
 class GTIAlertsConnector(Connector):

@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import contextlib
@@ -8,15 +22,15 @@ from typing import Any, BinaryIO, Callable, Generator
 
 import requests
 from requests import Session
-from google_threat_intelligence.core import api_data_parser as parser
-from google_threat_intelligence.core import data_models
+from . import api_data_parser as parser
+from . import data_models
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from TIPCommon.base.utils import NewLineLogger
 from TIPCommon.filters import filter_old_alerts
 from TIPCommon.smp_time import is_approaching_timeout
 from TIPCommon.types import Entity, SingleJson
-from google_threat_intelligence.core.api_utils import (
+from .api_utils import (
     build_asm_entity_query_string,
     build_query_for_single_params,
     build_query_string,
@@ -26,7 +40,7 @@ from google_threat_intelligence.core.api_utils import (
     validate_gti_response,
     validate_response,
 )
-from google_threat_intelligence.core.constants import (
+from .constants import (
     AGENT_JSON_ACCEPT_HEADERS,
     AGENT_REQUEST_TIMEOUT_IN_SECONDS,
     AGENT_SESSION_ID_HEADER,
@@ -52,7 +66,7 @@ from google_threat_intelligence.core.constants import (
     VOTE_ENDPOINTS_MAPPING,
     WIDGET_CHRONICLE_THEME_COLORS,
 )
-from google_threat_intelligence.core.data_models import (
+from .data_models import (
     ASMEntity,
     ASMIssue,
     DTMAlert,
@@ -61,12 +75,12 @@ from google_threat_intelligence.core.data_models import (
     IOCSearchResult,
     ThreatActor,
 )
-from google_threat_intelligence.core.exceptions import (
+from .exceptions import (
     FileSubmissionError,
     GoogleThreatIntelligenceExceptions,
     ProjectNotFoundError,
 )
-from google_threat_intelligence.core.utils import (
+from .utils import (
     WidgetComponentPreprocessor,
     adjust_time,
     fetch_mitre_data,

@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import pathlib
@@ -67,7 +81,9 @@ def count_search_requests(session: GoogleThreatIntelligenceSession) -> int:
 
 @pytest.fixture(name="pinned_now")
 def pin_now(mocker: MockerFixture) -> datetime:
-    mocked_datetime = mocker.patch("api_manager.datetime", wraps=datetime)
+    mocked_datetime = mocker.patch(
+        "google_threat_intelligence.core.api_manager.datetime", wraps=datetime
+    )
     mocked_datetime.utcnow.return_value = NOW
     return NOW
 

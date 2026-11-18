@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import re
@@ -5,7 +19,7 @@ from typing import Any
 
 from requests.exceptions import HTTPError
 
-from google_threat_intelligence.core.exceptions import GoogleThreatIntelligenceExceptions
+from ..core.exceptions import GoogleThreatIntelligenceExceptions
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from TIPCommon.base.action import EntityTypesEnum
 from TIPCommon.exceptions import ParameterValidationError, SDKWrapperError
@@ -13,9 +27,9 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.utils import get_entity_original_identifier
 from TIPCommon.validation import ParameterValidator
 
-from google_threat_intelligence.core.data_models import EntityAssociations, IOCRelatedAssociations
-from google_threat_intelligence.core.base_action import BaseAction
-from google_threat_intelligence.core.constants import (
+from ..core.data_models import EntityAssociations, IOCRelatedAssociations
+from ..core.base_action import BaseAction
+from ..core.constants import (
     EXTEND_GRAPH_URL,
     INTEGRATION_DISPLAY_NAME,
     GET_RELATED_ASSOCIATIONS_SCRIPT_NAME,
@@ -23,7 +37,7 @@ from google_threat_intelligence.core.constants import (
     MAX_ASSOCIATIONS_TO_RETURN_LIMIT,
     MIN_ASSOCIATIONS_TO_RETURN_LIMIT,
 )
-from google_threat_intelligence.core.utils import (
+from ..core.utils import (
     get_entity_type,
     prepare_entity_for_manager,
     map_by_case_insensitive_keys,

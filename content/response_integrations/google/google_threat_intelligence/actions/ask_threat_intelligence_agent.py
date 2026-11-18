@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import os
@@ -7,9 +21,9 @@ import requests
 
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
-from google_threat_intelligence.core import api_data_parser as parser
-from google_threat_intelligence.core.base_action import BaseAction
-from google_threat_intelligence.core.constants import (
+from ..core import api_data_parser as parser
+from ..core.base_action import BaseAction
+from ..core.constants import (
     AGENT_CONNECTIVITY_ERROR_MESSAGE,
     AGENT_DIRECTORY_PATHS_ERROR_MESSAGE,
     AGENT_EMPTY_FILES_ERROR_MESSAGE,
@@ -19,13 +33,13 @@ from google_threat_intelligence.core.constants import (
     ASK_THREAT_INTELLIGENCE_AGENT_SCRIPT_NAME,
     INTEGRATION_DISPLAY_NAME,
 )
-from google_threat_intelligence.core.exceptions import GoogleThreatIntelligenceExceptions
-from google_threat_intelligence.core.utils import clean_file_path, verify_paths_accessibility
+from ..core.exceptions import GoogleThreatIntelligenceExceptions
+from ..core.utils import clean_file_path, verify_paths_accessibility
 
 if TYPE_CHECKING:
     from TIPCommon.types import Entity
 
-    from google_threat_intelligence.core.data_models import AgenticSession
+    from ..core.data_models import AgenticSession
 
 
 class AskThreatIntelligenceAgent(BaseAction):
