@@ -90,7 +90,10 @@ class HttpClient:
 
         for attempt in range(MAX_HTTP_RETRIES):
             response, payload, headers, unauthorized_retried = self._send_with_refresh(
-                spec, headers, attempt, unauthorized_retried
+                spec,
+                headers,
+                attempt,
+                unauthorized_retried,
             )
             if response is None or self._sleep_for_retry(response, attempt):
                 continue

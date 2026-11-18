@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import io
 import json
 import time
 from contextlib import redirect_stderr, redirect_stdout
 from typing import TYPE_CHECKING
+
+from TIPCommon.encryption import decrypt, encrypt
 
 from .constants import (
     GLOBAL_CONTEXT_SCOPE,
@@ -20,8 +21,6 @@ if TYPE_CHECKING:
 
     from TIPCommon.types import ChronicleSOAR, SingleJson
 
-_BLOCK_SIZE = 16
-
 
 def _invoke(fn: Callable[..., object], positional: tuple[object, ...], named: SingleJson) -> object:
     try:
@@ -34,51 +33,14 @@ def _credential_hash(secret: str) -> str:
     return hashlib.sha256(secret.encode()).hexdigest()
 
 
-def _pad(value: str) -> str:
-    padding = _BLOCK_SIZE - len(value) % _BLOCK_SIZE
-    return value + chr(padding) * padding
-
-
-def _unpad(value: str) -> str:
-    return value[: -ord(value[-1:])]
-
-
-def _aes_key(secret: str) -> bytes:
-    from Crypto.Protocol.KDF import PBKDF2
-
-    return PBKDF2(secret, b"this is a salt", dkLen=_BLOCK_SIZE * 4)[:32]
-
-
 def encrypt_context_value(payload: str, secret: str) -> str:
-    """Encrypt a token-cache payload using the TIPCommon AES-GCM construction."""
-    try:
-        from TIPCommon.encryption import encrypt
-
-        return encrypt(payload, secret).decode()
-    except Exception as e:
-        del e
-        from Crypto import Random
-        from Crypto.Cipher import AES
-
-        iv = Random.new().read(AES.block_size)
-        cipher = AES.new(_aes_key(secret), AES.MODE_GCM, iv)
-        encrypted = cipher.encrypt(_pad(payload).encode())
-        return base64.b64encode(iv + encrypted).decode()
+    """Encrypt a token-cache payload using TIPCommon AES-GCM encryption."""
+    return encrypt(payload, secret).decode()
 
 
 def decrypt_context_value(raw: str, secret: str) -> str:
-    """Decrypt a token-cache payload using the TIPCommon AES-GCM construction."""
-    try:
-        from TIPCommon.encryption import decrypt
-
-        return decrypt(raw.encode(), secret)
-    except Exception as e:
-        del e
-        from Crypto.Cipher import AES
-
-        data = base64.b64decode(raw.encode())
-        cipher = AES.new(_aes_key(secret), AES.MODE_GCM, data[:16])
-        return _unpad(cipher.decrypt(data[16:]).decode())
+    """Decrypt a token-cache payload using TIPCommon AES-GCM encryption."""
+    return decrypt(raw.encode(), secret)
 
 
 class TokenCache:
@@ -224,8 +186,8 @@ class TokenCache:
                 try:
                     return _invoke(fn, positional, named)
                 except Exception as exc:
-                    logger = getattr(self.siemplify, "LOGGER", None)
-                    warn = getattr(logger, "warn", None) or getattr(logger, "warning", None)
+                    logger: object = getattr(self.siemplify, "LOGGER", None)
+                    warn: object = getattr(logger, "warn", None) or getattr(logger, "warning", None)
                     if callable(warn):
                         warn(f"Failed to access Doppel OAuth token context via {name}: {exc}")
                     continue
