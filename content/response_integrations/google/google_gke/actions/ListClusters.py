@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 from TIPCommon.base.action.data_models import DataTable
@@ -6,17 +20,17 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import construct_csv
 from TIPCommon.validation import ParameterValidator
 
-from google_gke.core.GKEBaseAction import GKEBaseAction
-from google_gke.core.GKEConsts import (
+from ..core.GKEBaseAction import GKEBaseAction
+from ..core.GKEConsts import (
     INTEGRATION_IDENTIFIER,
     INTEGRATION_DISPLAY_NAME,
     LIST_CLUSTERS_SCRIPT_NAME,
     NOT_SPECIFIED,
 )
-from google_gke.core.GKEDatamodels import FilterLogicParam, KubeCluster
-from google_gke.core.GKEExceptions import GoogleGKEInvalidZoneError
-from google_gke.core.GKEServices import GKEClustersService
-from google_gke.core.GKEUtils import get_filtered_objects
+from ..core.GKEDatamodels import FilterLogicParam, KubeCluster
+from ..core.GKEExceptions import GoogleGKEInvalidZoneError
+from ..core.GKEServices import GKEClustersService
+from ..core.GKEUtils import get_filtered_objects
 
 
 class ListClusters(GKEBaseAction):

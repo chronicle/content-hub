@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import json
 import sys
@@ -11,8 +25,8 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param
 
-from google_gke.core.GKEAuth import build_auth_manager
-from google_gke.core.GKEConsts import (
+from ..core.GKEAuth import build_auth_manager
+from ..core.GKEConsts import (
     ENABLED,
     DISABLED,
     INTEGRATION_IDENTIFIER,
@@ -20,15 +34,15 @@ from google_gke.core.GKEConsts import (
     MAP_CLOUD_RUN_CONFIG_PARAMS,
     SET_CLUSTER_ADDONS_SCRIPT_NAME,
 )
-from google_gke.core.GKEExceptions import (
+from ..core.GKEExceptions import (
     GoogleGKEManagerError,
     GoogleGKEInvalidZoneError,
     GoogleGKEInvalidClusterNameError,
     MissingParametersException,
 )
-from google_gke.core.GKEManagers import GKEApiManager
-from google_gke.core.GKEServices import GKEClustersService, GKEOperationService
-from google_gke.core.GKEUtils import is_action_approaching_timeout
+from ..core.GKEManagers import GKEApiManager
+from ..core.GKEServices import GKEClustersService, GKEOperationService
+from ..core.GKEUtils import is_action_approaching_timeout
 
 
 @output_handler
