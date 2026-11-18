@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import re
+import urllib.parse
 from typing import Any
 
 from soar_sdk.SiemplifyDataModel import Alert
@@ -29,7 +30,7 @@ from ..core.SCCEnterpriseUtils import parse_project_from_sa
 
 EVENT_PRINCIPAL_EMAIL_KEY = "event_principal_user_emailAddresses"
 EVENT_TARGET_EMAIL_KEY = "event_target_user_emailAddresses"
-SA_EMAIL_RE_PATTERN = re.compile(r"@[\w\-_0-9]+.iam.gserviceaccount.com")
+SA_EMAIL_RE_PATTERN: re.Pattern[str] = re.compile(r"@[\w-]+\.iam\.gserviceaccount\.com")
 SA_RESOURCE_FORMAT = "//iam.googleapis.com/projects/{}/serviceAccounts/{}"
 ADDITIONAL_PROPERTY_GCP_RESOURCE_NAME = "GCP_ResourceName"
 ADDITIONAL_PROPERTY_AWS_EC2_SHORTNAME = "AWS_EC2_ShortName"
@@ -53,6 +54,36 @@ AWS_ARN_PATTERN = re.compile(r"^arn:aws:[a-zA-Z0-9-:/]+")
 
 # Azure
 AZURE_RESOURCE_PATTERN = re.compile(r"^/subscriptions/.*?/providers/Microsoft\.")
+
+_GCP_SERVICE_ENTITY_TYPES: dict[str, EntityTypesEnum] = {
+    "cloudresourcemanager.googleapis.com": EntityTypesEnum.DEPLOYMENT,
+    "storage.googleapis.com": EntityTypesEnum.DATABASE,
+    "bigquery.googleapis.com": EntityTypesEnum.DATABASE,
+    "container.googleapis.com": EntityTypesEnum.CONTAINER,
+    "iam.googleapis.com": EntityTypesEnum.USER,
+    "accesscontextmanager.googleapis.com": EntityTypesEnum.DEPLOYMENT,
+    "cloudsql.googleapis.com": EntityTypesEnum.DATABASE,
+}
+
+
+def _get_gcp_entity_type(property_value: str) -> EntityTypesEnum | None:
+    if not property_value.startswith("//"):
+        return None
+
+    parsed_resource = urllib.parse.urlparse(property_value)
+    host = parsed_resource.hostname
+    if parsed_resource.scheme or not host or parsed_resource.netloc != host:
+        return None
+
+    path = parsed_resource.path
+    if not path.startswith("/"):
+        return None
+
+    if host == "compute.googleapis.com":
+        return EntityTypesEnum.HOST_NAME if "/instances/" in path else EntityTypesEnum.DEPLOYMENT
+    if host == "k8s.io" and "/clusterroles/" in path:
+        return EntityTypesEnum.DEPLOYMENT
+    return _GCP_SERVICE_ENTITY_TYPES.get(host)
 
 
 def parse_ec2_instance_full_arn(instance_name: str, current_alert: Alert) -> str:
@@ -241,26 +272,9 @@ class CloudEntityParser(Action):
             EntityTypesEnum | None: Entity type. If the entity type cannot be discerned,
                 None is returned.
         """
-        if property_value.startswith("//cloudresourcemanager.googleapis.com/"):
-            return EntityTypesEnum.DEPLOYMENT
-        if property_value.startswith("//storage.googleapis.com/"):
-            return EntityTypesEnum.DATABASE
-        if property_value.startswith("//compute.googleapis.com/"):
-            if "/instances/" in property_value:
-                return EntityTypesEnum.HOST_NAME
-            return EntityTypesEnum.DEPLOYMENT
-        if property_value.startswith("//bigquery.googleapis.com/"):
-            return EntityTypesEnum.DATABASE
-        if property_value.startswith("//k8s.io") and "/clusterroles/" in property_value:
-            return EntityTypesEnum.DEPLOYMENT
-        if property_value.startswith("//container.googleapis.com/"):
-            return EntityTypesEnum.CONTAINER
-        if property_value.startswith("//iam.googleapis.com/"):
-            return EntityTypesEnum.USER
-        if property_value.startswith("//accesscontextmanager.googleapis.com/"):
-            return EntityTypesEnum.DEPLOYMENT
-        if property_value.startswith("//cloudsql.googleapis.com/"):
-            return EntityTypesEnum.DATABASE
+        gcp_entity_type = _get_gcp_entity_type(property_value)
+        if gcp_entity_type is not None:
+            return gcp_entity_type
 
         if AWS_USER_ARN_PATTERN.match(property_value):
             return EntityTypesEnum.USER
