@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import datetime
 import json
@@ -8,16 +22,16 @@ import uuid
 import defusedxml.ElementTree as ET
 import xmltodict
 
-from palo_alto_ngfw.core.constants import ITEMS_PER_REQUEST
-from palo_alto_ngfw.core.exceptions import (
+from .constants import ITEMS_PER_REQUEST
+from .exceptions import (
     AlreadyExistsException,
     CategoryNotExistsException,
     GroupNotExistsException,
     NGFWException,
 )
 
-from palo_alto_ngfw.core.NGFWAuth import NGFWAuth
-from palo_alto_ngfw.core.NGFWSession import NGFWSession
+from .NGFWAuth import NGFWAuth
+from .NGFWSession import NGFWSession
 
 
 class NGFWManager:

@@ -1,4 +1,19 @@
-# pylint: disable=redefined-outer-name
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
 from dataclasses import dataclass
 from unittest.mock import Mock, patch
 
@@ -92,7 +107,7 @@ def test_init_no_context(
     assert mock_request.called
 
 
-@patch("NGFWAuth.NGFWAuth._decrypt")
+@patch("palo_alto_ngfw.core.NGFWAuth.NGFWAuth._decrypt")
 @patch("requests.Session.request")
 def test_init_with_context(
     mock_request: Mock,
@@ -116,7 +131,7 @@ def test_init_with_context(
     mock_request.assert_not_called()
 
 
-@patch("NGFWAuth.NGFWAuth._decrypt")
+@patch("palo_alto_ngfw.core.NGFWAuth.NGFWAuth._decrypt")
 @patch("requests.Session.request")
 def test_session_reuse_and_403_refresh(
     mock_request: Mock,
