@@ -31,6 +31,8 @@ from scc_enterprise.actions.CloudEntityParser import (
     CloudEntityParser,
 )
 from scc_enterprise.core.SCCEnterpriseConsts import CLOUD_ENTITY_PARSER_SCRIPT_NAME
+from scc_enterprise.core.SCCEnterpriseExceptions import ProjectNotFound
+from scc_enterprise.core.SCCEnterpriseUtils import parse_project_from_sa
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -171,6 +173,15 @@ class TestServiceAccountEmailPattern:
     def test_rejects_unescaped_dot_spoofed_domain(self) -> None:
         spoofed = "runner-sa@my-project-123XiamYgserviceaccountZcom"
         assert SA_EMAIL_RE_PATTERN.search(spoofed) is None
+
+    def test_parse_project_from_sa_extracts_project_id(self) -> None:
+        email = "runner-sa_01@my-project-123.iam.gserviceaccount.com"
+        assert parse_project_from_sa(email) == "my-project-123"
+
+    @pytest.mark.parametrize("invalid_email", ["runner-sa@my-project-123", "not-an-email", ""])
+    def test_parse_project_from_sa_raises_for_malformed_email(self, invalid_email: str) -> None:
+        with pytest.raises(ProjectNotFound):
+            parse_project_from_sa(invalid_email)
 
 
 class TestCloudEntityParserAction:

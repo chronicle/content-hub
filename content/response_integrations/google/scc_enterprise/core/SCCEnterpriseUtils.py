@@ -102,7 +102,7 @@ def parse_project_from_sa(service_account_email: str) -> str:
         ProjectNotFound: Could not parse the project name ouf of the SA email
     """
     try:
-        res = re.findall(r"@([\w0-9\-_]+).", service_account_email)
+        res = re.findall(r"@([\w-]+)\.", service_account_email)
         return res[0]
 
     except (TypeError, IndexError) as e:
