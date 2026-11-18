@@ -31,11 +31,7 @@ from ..core import SCCEnterpriseDatamodels
 from ..core import SCCEnterpriseUtils
 from ..core.BaseSoarItsmJob import SyncSoarITSM
 from ..core.JiraManager import JiraManager
-from ..core.SCCEnterpriseConsts import (
-    NOT_AVAILABLE,
-    RESOLVED_STATUS,
-    SYNC_SCC_JIRA_TICKETS,
-)
+from ..core.SCCEnterpriseConsts import NOT_AVAILABLE, RESOLVED_STATUS, SYNC_SCC_JIRA_TICKETS
 
 
 @dataclasses.dataclass

@@ -35,7 +35,6 @@ class GoogleSecurityCommandCenterSession(
             self.delete_config,
             self.get_config,
             self.patch_config,
-            self.get_default_service_account_email,
         ]
 
     @router.get(r"/v2/organizations/\d+/sources")
@@ -127,11 +126,3 @@ class GoogleSecurityCommandCenterSession(
                 "token_type": "Bearer"
             }
         )
-
-    @router.get("/computeMetadata/v1/instance/service-accounts/default/email")
-    def get_default_service_account_email(
-        self,
-        request: MockRequest,
-        **_kwargs,
-    ) -> MockResponse:
-        return MockResponse(content="mock-sa@example.iam.gserviceaccount.com")

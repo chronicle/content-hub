@@ -14,18 +14,35 @@
 
 from __future__ import annotations
 
-import sys
 import pkgutil
-import soar_sdk
 import sys
 import types
-import pkgutil
+
+import soar_sdk  # noqa: F401
+
+pytest_plugins = ("integration_testing.conftest",)
+
+# Polyfill/mock imghdr module for Python 3.13+ where it's removed but needed by jira-python client
+if "imghdr" not in sys.modules:
+    imghdr_mock = types.ModuleType("imghdr")
+    imghdr_mock.what = lambda file, h=None: None
+    sys.modules["imghdr"] = imghdr_mock
+
+# Polyfill pkgutil.ImpImporter for Python 3.13+ where it's removed but needed by setuptools/pkg_resources
+if not hasattr(pkgutil, "ImpImporter"):
+    class DummyImpImporter:
+        pass
+    pkgutil.ImpImporter = DummyImpImporter
+
 import pathlib
 import unittest.mock
+
 import google.auth.transport.requests as google_requests
 import pytest
+
 from TIPCommon.base.utils import CreateSession
 from TIPCommon.types import SingleJson
+
 from scc_enterprise.core.GoogleSecurityCommandCenterManager import (
     GoogleSecurityCommandCenterManager
 )
@@ -35,30 +52,15 @@ from scc_enterprise.tests.core.session import (
 )
 from integration_testing.common import get_def_file_content, use_live_api
 
-pytest_plugins = ("integration_testing.conftest",)
-
-sdk_dir = soar_sdk.__path__[0]
-
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-
-if "imghdr" not in sys.modules:
-    imghdr_mock = types.ModuleType("imghdr")
-    imghdr_mock.what = lambda file, h=None: None
-    sys.modules["imghdr"] = imghdr_mock
-
-if not hasattr(pkgutil, "ImpImporter"):
-    class DummyImpImporter:
-        pass
-    pkgutil.ImpImporter = DummyImpImporter
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
-
 CONFIG: SingleJson = get_def_file_content(CONFIG_PATH)
+
 
 @pytest.fixture
 def google_security_command_center_product() -> GoogleSecurityCommandCenter:
     yield GoogleSecurityCommandCenter()
+
 
 @pytest.fixture(autouse=True)
 def script_session(
@@ -76,6 +78,7 @@ def script_session(
             lambda *args, **kwargs: session
         )
     yield session
+
 
 @pytest.fixture
 def google_security_command_center_manager(
