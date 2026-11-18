@@ -34,7 +34,7 @@ from TIPCommon.utils import get_entity_original_identifier
 from ..core import constants
 from ..core.base_action import BaseAction
 from ..core.constants import ErrorType
-from ..core.exceptions import DefenderNotFoundException
+from ..core.exceptions import DefenderException, DefenderNotFoundException
 from ..core.UtilsManager import (
     ActionResultSummaryInput,
     classify_exception,
@@ -209,7 +209,9 @@ class AcquireFileAction(BaseAction):
         Returns:
             True if the action fetches the requested path (case-insensitive).
         """
-        commands = machine_action.get("commands") or [{}]
+        commands = machine_action.get("commands")
+        if not isinstance(commands, list) or not commands or not isinstance(commands[0], dict):
+            return False
         command = commands[0].get("command")
         if not isinstance(command, dict) or command.get("type") != "GetFile":
             return False
@@ -250,7 +252,10 @@ class AcquireFileAction(BaseAction):
         """
         try:
             link = self.api_client.get_live_response_result_download_link(action["id"])
-            raw = self.api_client.get_live_response_result(link["value"])
+            download_url = link.get("value") if isinstance(link, dict) else None
+            if not download_url:
+                raise DefenderException("Missing download link URL.")
+            raw = self.api_client.get_live_response_result(download_url)
             hashes = hash_acquired_file(raw)
             download_path = self._save_file(raw, hashes["is_gzip"])
         except Exception as error:  # pylint: disable=broad-except
@@ -289,13 +294,15 @@ class AcquireFileAction(BaseAction):
         Returns:
             The local path of the saved file.
         """
+        filename = f"{uuid.uuid4()}.{'gz' if is_gzip else 'bin'}"
         try:
-            folder = self.soar_action.run_folder
+            download_path = os.path.join(self.soar_action.run_folder, filename)
+            with open(download_path, "wb") as file:
+                file.write(raw)
         except (AttributeError, PermissionError, OSError):
-            folder = tempfile.gettempdir()
-        download_path = os.path.join(folder, f"{uuid.uuid4()}.{'gz' if is_gzip else 'bin'}")
-        with open(download_path, "wb") as file:
-            file.write(raw)
+            download_path = os.path.join(tempfile.gettempdir(), filename)
+            with open(download_path, "wb") as file:
+                file.write(raw)
 
         return download_path
 
@@ -417,7 +424,7 @@ class AcquireFileAction(BaseAction):
         results = {e: t["result"] for t in targets if t.get("result") for e in t["entities"]}
         failed = {**self.state["failed"]}
         failed.update({e: t["error"] for t in targets if t["error"] for e in t["entities"]})
-        error_types = {**self.state.get(constants.ERROR_TYPES_STATE_KEY, {})}
+        error_types = {**(self.state.get(constants.ERROR_TYPES_STATE_KEY) or {})}
         error_types.update({e: t.get("error_type") for t in targets if t["error"] for e in t["entities"]})
         all_results = dict(results)
         for entity, reason in failed.items():

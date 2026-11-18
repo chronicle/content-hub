@@ -1538,13 +1538,14 @@ class MicrosoftDefenderATPManager:
                 ) from error
 
             try:
-                response = response.json()
-                error_info = response.get("error", {})
+                payload = response.json()
+                error_info = payload.get("error", {}) if isinstance(payload, dict) else {}
+                error_message = error_info.get("message", "") if isinstance(error_info, dict) else error_info
                 raise MicrosoftDefenderATPError(
-                    f'{error_msg}. {error_info.get("message", "") if isinstance(error_info, dict) else error_info}',
+                    f"{error_msg}. {error_message}" if error_message else error_msg,
                     status_code=status_code,
                 ) from error
-            except ValueError:
+            except (ValueError, AttributeError):
                 raise MicrosoftDefenderATPError(
                     f"{error_msg}: {error} - {response.content}",
                     status_code=status_code,

@@ -229,6 +229,7 @@ def test_log_action_result_summary_never_raises() -> None:
     ("response", "message"),
     [
         (MockResponse({"error": {"message": "Forbidden"}}, status_code=403), "Failed to fetch. Forbidden"),
+        (MockResponse(["unexpected"], status_code=502), "Failed to fetch"),
         (MockResponse("not json", status_code=500), "Failed to fetch: "),
         (MockResponse({}, status_code=429), "Action ran into rate limiting. Please try again in a few minutes."),
     ],

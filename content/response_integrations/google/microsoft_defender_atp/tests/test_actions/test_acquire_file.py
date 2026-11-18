@@ -1106,3 +1106,104 @@ def test_acquire_file_poll_with_previous_version_state_counts_current_entities(
     assert common.get_summary_lines(caplog) == [
         common.expected_summary("SUCCESS", "NONE", "COMPLETED", targets=1, failed=0, skipped=1),
     ]
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters={"File Path": WIN_INI, "Machine ID": MACHINE_ID},
+    input_context=_context(),
+)
+def test_acquire_file_unwritable_run_folder_falls_back_to_tempdir(
+    microsoft_defender_atp: MicrosoftDefenderATP,
+    action_output: MockActionOutput,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> None:
+    """If writing inside run_folder raises OSError, the file is saved under tempdir."""
+    fallback = tmp_path / "fallback"
+    fallback.mkdir()
+    monkeypatch.setattr(SiemplifyBase, "run_folder", str(tmp_path / "missing_dir" / "nested"))
+    monkeypatch.setattr(tempfile, "tempdir", str(fallback))
+
+    AcquireFile.main()
+    microsoft_defender_atp.set_live_response_final_status("Succeeded")
+    _poll(action_output, monkeypatch)
+
+    download_path = pathlib.Path(_entity_results(action_output)[MACHINE_ID]["download_path"])
+    assert download_path.parent == fallback
+    assert download_path.is_file()
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters={"File Path": WIN_INI, "Machine ID": MACHINE_ID},
+    input_context=_context(),
+)
+def test_acquire_file_malformed_active_commands_waits_without_crashing(
+    action_output: MockActionOutput,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Non-list commands on an active action do not crash matching and keep the target waiting."""
+    monkeypatch.setattr(
+        "microsoft_defender_atp.core.MicrosoftDefenderATPManager.MicrosoftDefenderATPManager."
+        "get_active_machine_actions",
+        lambda *_: [{"id": "other-action", "status": "Pending", "commands": "unexpected"}],
+    )
+
+    AcquireFile.main()
+
+    assert action_output.results.execution_state == ExecutionState.IN_PROGRESS
+    assert _state(action_output)["targets"][MACHINE_ID]["action_id"] is None
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters={"File Path": WIN_INI, "Machine ID": MACHINE_ID},
+    input_context=_context(),
+)
+def test_acquire_file_missing_download_url_fails_as_vendor_error(
+    microsoft_defender_atp: MicrosoftDefenderATP,
+    action_output: MockActionOutput,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A download link response missing value fails the target with VENDOR_ERROR."""
+    monkeypatch.setattr(
+        "microsoft_defender_atp.core.MicrosoftDefenderATPManager.MicrosoftDefenderATPManager."
+        "get_live_response_result_download_link",
+        lambda *_: {},
+    )
+
+    AcquireFile.main()
+    microsoft_defender_atp.set_live_response_final_status("Succeeded")
+    _poll(action_output, monkeypatch)
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.result_value is False
+    assert _entity_results(action_output) == {
+        MACHINE_ID: _failure(
+            "Failed to retrieve the acquired file: Missing download link URL.",
+            "VENDOR_ERROR",
+        ),
+    }
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters={"File Path": WIN_INI, "Machine ID": MACHINE_ID},
+    input_context=_context(),
+)
+def test_acquire_file_null_error_types_in_state(
+    microsoft_defender_atp: MicrosoftDefenderATP,
+    action_output: MockActionOutput,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Saved async state with error_types=None is handled safely during outcome collection."""
+    AcquireFile.main()
+    state = _state(action_output)
+    state[AcquireFile.constants.ERROR_TYPES_STATE_KEY] = None
+    microsoft_defender_atp.set_live_response_final_status("Failed", errors=["File could not be located"])
+    _poll(action_output, monkeypatch, additional_data=json.dumps(state))
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.result_value is False
+    assert _entity_results(action_output)[MACHINE_ID]["error_type"] == "FILE_NOT_FOUND"

@@ -45,7 +45,7 @@ IP_ENTITY = create_entity(
     type_=EntityTypesEnum.ADDRESS,
 )
 NOT_FOUND_ENTITY = create_entity(
-    identifier="notfound.example.com",
+    identifier="missing-host",
     type_=EntityTypesEnum.HOST_NAME,
 )
 SAME_MACHINE_IP_ENTITY = create_entity(
@@ -336,8 +336,15 @@ def test_create_isolate_machine_task_partial_not_found(
     CreateIsolateMachineTask.main()
 
     assert action_output.results.result_value in (True, "true")
-    assert "not found in ATP" in action_output.results.output_message
-    assert "NOTFOUND.EXAMPLE.COM" in action_output.results.output_message
+    task_id = action_output.results.json_output.json_result[0]["id"]
+    assert action_output.results.output_message == (
+        f"Isolate machine task {task_id} was created successfully on Defender ATP Server "
+        f"for {HOSTNAME_ENTITY.identifier}\n"
+        f"Failed to find machine ATP by {NOT_FOUND_ENTITY.identifier} entity with type {NOT_FOUND_ENTITY.entity_type}\n"
+        "1 entities were successfully processed\n"
+        "1 entities were not found in ATP\n"
+        "Action completed successfully"
+    )
 
 
 @set_metadata(
