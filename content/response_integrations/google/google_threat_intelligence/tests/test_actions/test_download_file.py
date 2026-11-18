@@ -121,7 +121,10 @@ def test_download_file_valid_hash_name(
     action_output: MockActionOutput,
 ) -> None:
     mock_file_open = mock_open(read_data="some file content")
-    with patch("google_threat_intelligence.core.utils.open", mock_file_open):
+    with (
+        patch("google_threat_intelligence.core.utils.open", mock_file_open),
+        patch("os.path.exists", return_value=True),
+    ):
         download_file.main()
 
     assert len(script_session.request_history) == 2
