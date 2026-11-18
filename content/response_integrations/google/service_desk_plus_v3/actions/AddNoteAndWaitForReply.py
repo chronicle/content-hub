@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 import json
 import sys
@@ -12,9 +26,9 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
-from service_desk_plus_v3.core.constants import INTEGRATION_NAME, ADD_NOTE_AND_WAIT_ACTION
-from service_desk_plus_v3.core.ServiceDeskPlusV3Exceptions import NoteNotFoundException
-from service_desk_plus_v3.core.ServiceDeskPlusManagerV3 import ServiceDeskPlusManagerV3
+from ..core.constants import INTEGRATION_NAME, ADD_NOTE_AND_WAIT_ACTION
+from ..core.ServiceDeskPlusV3Exceptions import NoteNotFoundException
+from ..core.ServiceDeskPlusManagerV3 import ServiceDeskPlusManagerV3
 
 
 def start_operation(
