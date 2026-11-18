@@ -15,12 +15,10 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
-from requests import Session
-
 from . import api_manager
 from .authentication_manager import AuthenticateSession
 from .datamodels import IntegrationParameters
+from requests import Session
 from .utils import get_integration_parameters
 
 if TYPE_CHECKING:

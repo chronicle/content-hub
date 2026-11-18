@@ -20,8 +20,11 @@ from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.validation import ParameterValidator
-
-from ..core import action_init, constants, datamodels, exceptions, utils
+from ..core import action_init
+from ..core import constants
+from ..core import datamodels
+from ..core import exceptions
+from ..core import utils
 
 
 class ActivateNetworkList(Action):

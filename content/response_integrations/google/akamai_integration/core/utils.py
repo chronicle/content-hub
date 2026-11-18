@@ -18,8 +18,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from TIPCommon.extraction import extract_configuration_param
-
-from . import constants, exceptions
+from . import constants
+from . import exceptions
 from .datamodels import IntegrationParameters
 
 if TYPE_CHECKING:

@@ -17,8 +17,8 @@ from __future__ import annotations
 from typing import Any, NoReturn
 
 from TIPCommon.base.action import Action
-
-from ..core import action_init, api_manager
+from ..core import action_init
+from ..core import api_manager
 from ..core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
 
 

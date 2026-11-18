@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from urllib.parse import urljoin
-
 import requests
 
 from .constants import ENDPOINTS, FAILED_TO_TAKE_REQUEST_DOWN_ERR

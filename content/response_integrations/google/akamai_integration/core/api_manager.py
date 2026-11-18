@@ -18,10 +18,12 @@ import dataclasses
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
-import requests
 from TIPCommon.base.interfaces import ScriptLogger
-
-from . import api_utils, constants, data_parser, datamodels
+from . import data_parser
+from . import api_utils
+from . import constants
+from . import datamodels
+import requests
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson

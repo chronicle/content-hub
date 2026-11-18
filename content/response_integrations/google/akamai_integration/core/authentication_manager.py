@@ -18,6 +18,7 @@ import dataclasses
 
 import requests
 from akamai.edgegrid import EdgeGridAuth
+
 from TIPCommon.base.interfaces import Authable
 from TIPCommon.base.utils import CreateSession
 

@@ -19,8 +19,10 @@ from typing import Any, NoReturn
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
-
-from ..core import action_init, constants, exceptions, utils
+from ..core import action_init
+from ..core import constants
+from ..core import exceptions
+from ..core import utils
 
 
 class RemoveItemsFromNetworkLists(Action):

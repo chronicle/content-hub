@@ -20,8 +20,10 @@ from typing import TYPE_CHECKING, Any, NoReturn
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
-
-from ..core import action_init, api_manager, exceptions, utils
+from ..core import action_init
+from ..core import api_manager
+from ..core import exceptions
+from ..core import utils
 from ..core.constants import (
     ADD_ITEMS_TO_CLIENT_LISTS_SCRIPT_NAME,
 )

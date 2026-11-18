@@ -15,14 +15,14 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import Any, NoReturn, TYPE_CHECKING
 
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.validation import ParameterValidator
-
-from ..core import action_init, api_manager
+from ..core import action_init
+from ..core import api_manager
 from ..core.constants import (
     CLIENT_LIST_TYPE_MAPPING,
     DEFAULT_RESULTS_TO_RETURN,
