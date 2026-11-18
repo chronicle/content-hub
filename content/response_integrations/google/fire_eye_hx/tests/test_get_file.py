@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import requests
@@ -30,6 +31,9 @@ from ..core.FireEyeHXManager import (
 )
 from ..core.UtilsManager import TIMEOUT_MARKER_LOGGED_KEY
 from .common import get_summary_lines, make_entity
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class TestGetFile(unittest.TestCase):
@@ -203,7 +207,7 @@ class TestGetFile(unittest.TestCase):
         )
 
 
-ACQUIRED_FILE_MANIFEST = {
+ACQUIRED_FILE_MANIFEST: dict[str, list[dict[str, object]]] = {
     "audits": [
         {
             "generator": "w32rawfile-acquisition",
@@ -211,13 +215,32 @@ ACQUIRED_FILE_MANIFEST = {
         }
     ]
 }
-POLL_CONTEXT = {"acquisition_id": 99, "agent_id": "agent-1", "file_name": "a.exe", "file_path": "C:\\temp"}
+POLL_CONTEXT: dict[str, int | str] = {
+    "acquisition_id": 99,
+    "agent_id": "agent-1",
+    "file_name": "a.exe",
+    "file_path": "C:\\temp",
+}
+
+
+def complete(mock_manager: MagicMock) -> None:
+    """Make the acquisition complete.
+
+    Args:
+        mock_manager: The mocked manager.
+    """
+    mock_manager.get_file_acquisition_by_id.return_value = {"_id": 99, "state": "COMPLETE", "zip_file_size": 10}
 
 
 class TestGetFileSummary(unittest.TestCase):
     """Tests for the failure reason and the summary line of Get File."""
 
-    def run_action(self, is_first_run, manager_setup, **options):
+    def run_action(
+        self,
+        is_first_run: bool,
+        manager_setup: Callable[[MagicMock], None],
+        **options: object,
+    ) -> MagicMock:
         """Run the action with a mocked manager.
 
         Args:
@@ -246,7 +269,8 @@ class TestGetFileSummary(unittest.TestCase):
             mock_siemplify.async_total_duration_deadline = options.get("deadline", 0)
             mock_siemplify.async_polling_interval_in_sec = 30
             mock_extract_action.side_effect = lambda siemplify, param_name, **kwargs: params.get(
-                param_name, kwargs.get("default_value")
+                param_name,
+                kwargs.get("default_value"),
             )
             mock_manager = mock_manager_cls.return_value
             mock_manager.resolve_agent_id_from_entities.return_value = agent_id
@@ -256,18 +280,9 @@ class TestGetFileSummary(unittest.TestCase):
 
         return mock_siemplify
 
-    @staticmethod
-    def complete(mock_manager):
-        """Make the acquisition complete.
-
-        Args:
-            mock_manager: The mocked manager.
-        """
-        mock_manager.get_file_acquisition_by_id.return_value = {"_id": 99, "state": "COMPLETE", "zip_file_size": 10}
-
     def test_acquired_file(self) -> None:
         """Verifies file_acquired true and a SUCCESS summary line when the package has the file."""
-        mock_siemplify = self.run_action(False, self.complete, manifest=ACQUIRED_FILE_MANIFEST)
+        mock_siemplify = self.run_action(False, complete, manifest=ACQUIRED_FILE_MANIFEST)
 
         json_result = mock_siemplify.result.add_result_json.call_args[0][0]
         assert json_result["file_acquired"] is True
@@ -285,7 +300,7 @@ class TestGetFileSummary(unittest.TestCase):
     def test_missing_file_keeps_success(self) -> None:
         """Verifies file_acquired false and FILE_NOT_FOUND while the action still completes with true."""
         manifest = {"audits": [{"generator": "w32rawfile-acquisition", "results": []}]}
-        mock_siemplify = self.run_action(False, self.complete, manifest=manifest)
+        mock_siemplify = self.run_action(False, complete, manifest=manifest)
 
         json_result = mock_siemplify.result.add_result_json.call_args[0][0]
         assert json_result["file_acquired"] is False
@@ -328,7 +343,7 @@ class TestGetFileSummary(unittest.TestCase):
 
     def test_empty_manifest_keeps_success(self) -> None:
         """Verify an empty manifest omits file_acquired and error_type, completes with true, and logs VENDOR_ERROR."""
-        mock_siemplify = self.run_action(False, self.complete, manifest={})
+        mock_siemplify = self.run_action(False, complete, manifest={})
 
         json_result = mock_siemplify.result.add_result_json.call_args[0][0]
         assert "file_acquired" not in json_result
@@ -345,7 +360,7 @@ class TestGetFileSummary(unittest.TestCase):
 
     def test_malformed_manifest_keeps_success(self) -> None:
         """Verify a malformed manifest does not crash, completes with true, and logs VENDOR_ERROR."""
-        mock_siemplify = self.run_action(False, self.complete, manifest={"audits": None})
+        mock_siemplify = self.run_action(False, complete, manifest={"audits": None})
 
         json_result = mock_siemplify.result.add_result_json.call_args[0][0]
         assert "file_acquired" not in json_result
@@ -371,7 +386,7 @@ class TestGetFileSummary(unittest.TestCase):
         for error, expected in cases:
             with self.subTest(expected=expected):
 
-                def setup(mock_manager, error=error):
+                def setup(mock_manager: MagicMock, error: Exception = error) -> None:
                     mock_manager.create_file_acquisition.side_effect = error
 
                 mock_siemplify = self.run_action(True, setup)
@@ -385,7 +400,7 @@ class TestGetFileSummary(unittest.TestCase):
     def test_no_acquisition_id(self) -> None:
         """Verifies VENDOR_ERROR when the create response has no acquisition ID."""
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.create_file_acquisition.return_value = {}
 
         mock_siemplify = self.run_action(True, setup)
@@ -409,7 +424,7 @@ class TestGetFileSummary(unittest.TestCase):
         """Verifies that a failed host lookup request is reported instead of ENDPOINT_NOT_FOUND."""
         entity = MagicMock(identifier="host-1", entity_type="HOSTNAME")
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.lookup_errors = [requests.ConnectionError("refused")]
 
         mock_siemplify = self.run_action(True, setup, agent_id=None, entities=[entity])
@@ -431,7 +446,11 @@ class TestGetFileSummary(unittest.TestCase):
         for data, download_error, expected in cases:
             with self.subTest(expected=expected, state=data["state"]):
 
-                def setup(mock_manager, data=data, download_error=download_error):
+                def setup(
+                    mock_manager: MagicMock,
+                    data: dict[str, int | str] = data,
+                    download_error: Exception | None = download_error,
+                ) -> None:
                     mock_manager.get_file_acquisition_by_id.return_value = data
                     mock_manager.download_file_acquisition.side_effect = download_error
 
@@ -443,7 +462,7 @@ class TestGetFileSummary(unittest.TestCase):
     def test_status_fetch_error(self) -> None:
         """Verifies the error type when the acquisition status cannot be fetched."""
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.get_file_acquisition_by_id.side_effect = FireEyeHXManagerError("x", status_code=401)
 
         mock_siemplify = self.run_action(False, setup)
@@ -451,21 +470,36 @@ class TestGetFileSummary(unittest.TestCase):
         assert get_summary_lines(mock_siemplify)[0]["error_type"] == "AUTHENTICATION_FAILED"
 
     def test_in_progress_poll_has_no_line(self) -> None:
-        """Verifies that an in-progress poll far from the deadline logs no line and keeps the old state."""
+        """Verifies that an in-progress poll far from the deadline logs no line and adds only skipped_count."""
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.get_file_acquisition_by_id.return_value = {"_id": 99, "state": "RUNNING"}
 
         mock_siemplify = self.run_action(False, setup, deadline=unix_now() + 3_600_000)
 
         assert mock_siemplify.end.call_args[0][2] == 1
         assert get_summary_lines(mock_siemplify) == []
-        assert json.loads(mock_siemplify.end.call_args[0][1]) == POLL_CONTEXT
+        assert json.loads(mock_siemplify.end.call_args[0][1]) == {**POLL_CONTEXT, "skipped_count": 0}
+
+    def test_state_without_skipped_count_gets_it_on_first_poll(self) -> None:
+        """Verify a state saved without skipped_count loads, and the first poll saves the count for later polls."""
+        entities = [make_entity("host-1", "HOSTNAME"), make_entity("user", "USERUNIQNAME")]
+
+        def running_setup(mock_manager: MagicMock) -> None:
+            mock_manager.get_file_acquisition_by_id.return_value = {"_id": 99, "state": "RUNNING"}
+
+        poll = self.run_action(False, running_setup, agent_id=None, entities=entities, deadline=unix_now() + 3_600_000)
+        poll_state = json.loads(poll.end.call_args[0][1])
+        final = self.run_action(False, complete, agent_id=None, context=poll_state, manifest=ACQUIRED_FILE_MANIFEST)
+
+        assert poll_state == {**POLL_CONTEXT, "skipped_count": 1}
+        [summary] = get_summary_lines(final)
+        assert (summary["outcome"], summary["targets"], summary["skipped"]) == ("SUCCESS", "1", "1")
 
     def test_timeout_marker_once(self) -> None:
         """Verifies one IN_PROGRESS TIMEOUT marker near the deadline, with the flag saved in the state."""
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.get_file_acquisition_by_id.return_value = {"_id": 99, "state": "ERROR"}
 
         first = self.run_action(False, setup, deadline=unix_now() + 10_000)
@@ -501,7 +535,7 @@ class TestGetFileSummary(unittest.TestCase):
     def test_summary_failure_keeps_result(self) -> None:
         """Verifies that a failing summary logger does not change the result of the action."""
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.create_file_acquisition.return_value = {}
 
         with patch.object(utils_module, "build_action_result_summary", side_effect=RuntimeError("boom")):
@@ -530,11 +564,11 @@ class TestGetFileSummary(unittest.TestCase):
         """Verify skipped_count is persisted on first run and preserved across polling runs."""
         entities = [make_entity("host-1", "HOSTNAME"), make_entity("user", "USERUNIQNAME")]
 
-        def first_setup(mock_manager):
+        def first_setup(mock_manager: MagicMock) -> None:
             mock_manager.resolve_agent_id_from_entities.return_value = "agent-1"
             mock_manager.create_file_acquisition.return_value = {"_id": 99}
 
-        def running_setup(mock_manager):
+        def running_setup(mock_manager: MagicMock) -> None:
             mock_manager.get_file_acquisition_by_id.return_value = {"_id": 99, "state": "RUNNING"}
 
         first = self.run_action(True, first_setup, agent_id=None, entities=entities)
@@ -546,13 +580,7 @@ class TestGetFileSummary(unittest.TestCase):
         [marker] = get_summary_lines(poll)
         assert marker["skipped"] == "1"
 
-        final = self.run_action(
-            False,
-            self.complete,
-            agent_id=None,
-            context=poll_state,
-            manifest=ACQUIRED_FILE_MANIFEST,
-        )
+        final = self.run_action(False, complete, agent_id=None, context=poll_state, manifest=ACQUIRED_FILE_MANIFEST)
         [summary] = get_summary_lines(final)
         assert (summary["outcome"], summary["targets"], summary["failed"], summary["skipped"]) == (
             "SUCCESS",
@@ -565,7 +593,7 @@ class TestGetFileSummary(unittest.TestCase):
         """Verify Agent Id override persists skipped_count=0 even when entities exist on polls."""
         entities = [make_entity("user", "USERUNIQNAME")]
 
-        def first_setup(mock_manager):
+        def first_setup(mock_manager: MagicMock) -> None:
             mock_manager.create_file_acquisition.return_value = {"_id": 99}
 
         first = self.run_action(True, first_setup, agent_id="agent-1", entities=entities)
@@ -574,7 +602,7 @@ class TestGetFileSummary(unittest.TestCase):
 
         final = self.run_action(
             False,
-            self.complete,
+            complete,
             agent_id=None,
             entities=entities,
             context=first_state,

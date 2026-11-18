@@ -157,7 +157,7 @@ class TestCheckContainmentStatusSummary(unittest.TestCase):
         """Verifies the error type in the failure entry and the summary line."""
         error = FireEyeHXNotFoundError("Unable to get containment status for host a: x", 404, "ENDPOINT_NOT_FOUND")
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.resolve_agent_id_from_entities.return_value = "a"
             mock_manager.get_host_by_agent_id.side_effect = error
             mock_manager.get_containment_status.side_effect = error
@@ -178,7 +178,7 @@ class TestCheckContainmentStatusSummary(unittest.TestCase):
     def test_success_line(self) -> None:
         """Verifies a SUCCESS summary line for a status lookup."""
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.resolve_agent_id_from_entities.return_value = "a"
             mock_manager.get_host_by_agent_id.return_value = MagicMock(containment_state="contained", raw_data={})
 
@@ -191,7 +191,7 @@ class TestCheckContainmentStatusSummary(unittest.TestCase):
     def test_agent_not_found(self) -> None:
         """Verifies ENDPOINT_NOT_FOUND when no agent matches the entities."""
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.resolve_agent_id_from_entities.return_value = None
 
         mock_siemplify = run_action(check_status_module, {}, setup, [make_entity("10.0.0.1", "ADDRESS")])
@@ -208,7 +208,7 @@ class TestCheckContainmentStatusSummary(unittest.TestCase):
     def test_no_input(self) -> None:
         """Verifies a zero-target INVALID_INPUT line when there is no Agent Id and no entity."""
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.resolve_agent_id_from_entities.return_value = None
 
         mock_siemplify = run_action(check_status_module, {}, setup)
@@ -233,7 +233,7 @@ class TestCheckContainmentStatusSummary(unittest.TestCase):
     def test_only_unsupported_entity_reports_skipped(self) -> None:
         """Verify unsupported entities report skipped=1 when no Agent Id is provided."""
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.resolve_agent_id_from_entities.return_value = None
 
         mock_siemplify = run_action(check_status_module, {}, setup, [make_entity("user", "USERUNIQNAME")])
@@ -246,11 +246,11 @@ class TestCheckContainmentStatusSummary(unittest.TestCase):
         """Verify unsupported entities increment skipped unless Agent Id overrides target entities."""
         entities = [make_entity("10.0.0.1", "ADDRESS"), make_entity("user", "USERUNIQNAME")]
 
-        def resolved_setup(mock_manager):
+        def resolved_setup(mock_manager: MagicMock) -> None:
             mock_manager.resolve_agent_id_from_entities.return_value = "a"
             mock_manager.get_host_by_agent_id.return_value = MagicMock(containment_state="contained", raw_data={})
 
-        def missing_setup(mock_manager):
+        def missing_setup(mock_manager: MagicMock) -> None:
             mock_manager.resolve_agent_id_from_entities.return_value = None
 
         entity_ok = run_action(check_status_module, {"Agent Id": ""}, resolved_setup, entities)

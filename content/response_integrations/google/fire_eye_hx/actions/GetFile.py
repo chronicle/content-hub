@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import pathlib
@@ -21,6 +22,7 @@ import sys
 import uuid
 import zipfile
 from functools import partial
+from typing import TYPE_CHECKING, Any
 
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -41,32 +43,55 @@ from ..core.FireEyeHXManager import (
     FireEyeHXNotFoundError,
 )
 from ..core.UtilsManager import (
-    AGENT_LOOKUP_ENTITY_TYPES,
     ErrorType,
+    SummaryCounts,
+    SummaryRunContext,
     classify_exception,
-    count_skipped_entities,
     get_agent_lookup_failure_counts,
+    get_target_scope_counts,
     log_action_result_summary,
     log_timeout_marker_once,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
 
 INTEGRATION_NAME = "FireEyeHX"
 SCRIPT_NAME = "Get File"
 SUPPORTED_ENTITIES = [EntityTypes.HOSTNAME, EntityTypes.ADDRESS]
 MAX_FILE_SIZE_MB = 100
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
-ACQUISITION_MODULES = (
+ACQUISITION_MODULES: tuple[str, ...] = (
     "file-acquisition-api",
     "file-acquisition-raw",
     "w32apifile-acquisition",
     "w32rawfile-acquisition",
 )
-ACQUISITION_FAILED_STATE_ERROR_TYPES = {
+ACQUISITION_FAILED_STATE_ERROR_TYPES: Mapping[str, ErrorType] = {
     "FAILED": ErrorType.VENDOR_ERROR,
     "EXPIRED": ErrorType.TIMEOUT,
     "DELETED": ErrorType.CANCELLED,
     "CANCELLED": ErrorType.CANCELLED,
 }
+
+
+@dataclasses.dataclass(slots=True)
+class AcquisitionParams:
+    """Action parameters of the first run.
+
+    Attributes:
+        agent_id: Explicit Agent Id parameter, if provided.
+        file_path: Full file path on the endpoint to acquire.
+        use_api_mode: Whether to acquire the file using API mode.
+        external_id: Optional external correlation identifier.
+        skipped: The number of unsupported entities skipped.
+    """
+
+    agent_id: str | None
+    file_path: str
+    use_api_mode: bool
+    external_id: str | None
+    skipped: int = 0
 
 
 def extract_zip_metadata(temp_filename, zip_passphrase=None, siemplify=None):
@@ -101,7 +126,7 @@ def split_file_path(file_path):
     return file_name, file_dir
 
 
-def has_acquired_file(manifest):
+def has_acquired_file(manifest: object) -> bool | None:
     """Check if the manifest of an acquisition package lists an acquired file.
 
     Args:
@@ -122,7 +147,7 @@ def has_acquired_file(manifest):
     )
 
 
-def get_single_target_counts(failure=None, skipped: int = 0):
+def get_single_target_counts(failure: str | Exception | None = None, skipped: int = 0) -> SummaryCounts:
     """Count the one target of the action for the summary line.
 
     Args:
@@ -130,41 +155,34 @@ def get_single_target_counts(failure=None, skipped: int = 0):
         skipped: The number of unsupported entities skipped.
 
     Returns:
-        The target count, the success count, the failed target error types, and the skipped count.
+        The target counts of the run.
     """
     if failure is None:
-        return 1, 1, [], skipped
+        return SummaryCounts(targets=1, succeeded=1, skipped=skipped)
+    error_type = classify_exception(failure)[0] if isinstance(failure, Exception) else failure
 
-    return 1, 0, [classify_exception(failure)[0] if isinstance(failure, Exception) else failure], skipped
+    return SummaryCounts(targets=1, succeeded=0, error_types=[error_type], skipped=skipped)
 
 
 def start_file_acquisition(
-    siemplify,
-    hx_manager,
-    agent_id_param,
-    file_path_param,
-    use_api_mode_param,
-    external_id_param,
-    skipped: int = 0,
-):
+    siemplify: SiemplifyAction,
+    hx_manager: FireEyeHXManager,
+    params: AcquisitionParams,
+) -> tuple[str, str, int, Callable[[], SummaryCounts]]:
     """Start the file acquisition process.
 
     Args:
         siemplify: The action object.
         hx_manager: The FireEye HX manager.
-        agent_id_param: Explicit Agent Id parameter, if provided.
-        file_path_param: Full file path on the endpoint to acquire.
-        use_api_mode_param: Whether to acquire the file using API mode.
-        external_id_param: Optional external correlation identifier.
-        skipped: The number of unsupported entities skipped.
+        params: The action parameters of the first run.
 
     Returns:
         The output message, result value, execution state, and summary count callable.
     """
-    file_name, file_path = split_file_path(file_path_param)
+    file_name, file_path = split_file_path(params.file_path)
     agent_id = hx_manager.resolve_agent_id_from_entities(
         target_entities=siemplify.target_entities,
-        agent_id_param=agent_id_param,
+        agent_id_param=params.agent_id,
     )
     if not agent_id:
         output_message = "No valid agent_id was supplied or found across target entities."
@@ -173,18 +191,22 @@ def start_file_acquisition(
             output_message,
             "false",
             EXECUTION_STATE_FAILED,
-            lambda: (*get_agent_lookup_failure_counts(siemplify.target_entities, hx_manager.lookup_errors), skipped),
+            lambda: get_agent_lookup_failure_counts(
+                siemplify.target_entities,
+                hx_manager.lookup_errors,
+                params.skipped,
+            ),
         )
 
     siemplify.LOGGER.info(f"Target Agent ID: {agent_id}")
-    count_target = partial(get_single_target_counts, skipped=skipped)
+    count_target = partial(get_single_target_counts, skipped=params.skipped)
     try:
         data = hx_manager.create_file_acquisition(
             agent_id=agent_id,
             file_path=file_path,
             file_name=file_name,
-            external_id=external_id_param,
-            use_api_mode=use_api_mode_param,
+            external_id=params.external_id,
+            use_api_mode=params.use_api_mode,
             comment="Acquiring file through Chronicle SOAR",
         )
     except (FireEyeHXNotFoundError, FireEyeHXManagerError) as mgr_err:
@@ -205,21 +227,24 @@ def start_file_acquisition(
         "agent_id": agent_id,
         "file_name": file_name,
         "file_path": file_path,
-        "skipped_count": skipped,
+        "skipped_count": params.skipped,
     })
     output_message = f"File acquisition {acquisition_id} requested for file '{file_name}' on agent {agent_id}."
 
     return output_message, result_value, EXECUTION_STATE_INPROGRESS, count_target
 
 
-def poll_file_acquisition(siemplify, hx_manager, acq_context, skipped: int = 0):
+def poll_file_acquisition(
+    siemplify: SiemplifyAction,
+    hx_manager: FireEyeHXManager,
+    acq_context: dict[str, Any],
+) -> tuple[str, str, int, Callable[[], SummaryCounts]]:
     """Poll the file acquisition status until complete or failed.
 
     Args:
         siemplify: The action object.
         hx_manager: The FireEye HX manager.
         acq_context: Deserialized async polling state.
-        skipped: Fallback unsupported entity count when state lacks skipped_count.
 
     Returns:
         The output message, result value, execution state, and summary count callable.
@@ -227,7 +252,7 @@ def poll_file_acquisition(siemplify, hx_manager, acq_context, skipped: int = 0):
     acquisition_id = acq_context.get("acquisition_id")
     agent_id = acq_context.get("agent_id")
     file_name = acq_context.get("file_name")
-    count_target = partial(get_single_target_counts, skipped=acq_context.get("skipped_count", skipped))
+    count_target = partial(get_single_target_counts, skipped=acq_context.get("skipped_count", 0))
 
     siemplify.LOGGER.info(f"Polling status for acquisition ID: {acquisition_id}")
 
@@ -368,15 +393,11 @@ def main(is_first_run=True) -> None:
     status = EXECUTION_STATE_COMPLETED
     output_message = ""
     result_value = "false"
-    hx_manager = None
-    get_counts = None
-    has_agent_id = bool(isinstance(agent_id_param, str) and agent_id_param.strip())
-    has_supported_entity = any(
-        getattr(entity, "entity_type", "") in AGENT_LOOKUP_ENTITY_TYPES for entity in siemplify.target_entities
-    )
-    targets = int(not is_first_run or has_agent_id or has_supported_entity)
-    skipped = count_skipped_entities(siemplify.target_entities, AGENT_LOOKUP_ENTITY_TYPES, has_agent_id=has_agent_id)
-    error = None
+    hx_manager: FireEyeHXManager | None = None
+    get_counts: Callable[[], SummaryCounts] | None = None
+    _, supported_count, skipped = get_target_scope_counts(siemplify.target_entities, agent_id_param)
+    targets = int(not is_first_run or bool(supported_count))
+    error: Exception | None = None
 
     try:
         hx_manager = FireEyeHXManager(
@@ -390,11 +411,13 @@ def main(is_first_run=True) -> None:
             output_message, result_value, status, get_counts = start_file_acquisition(
                 siemplify,
                 hx_manager,
-                agent_id_param,
-                file_path_param,
-                use_api_mode_param,
-                external_id_param,
-                skipped=skipped,
+                AcquisitionParams(
+                    agent_id=agent_id_param,
+                    file_path=file_path_param,
+                    use_api_mode=use_api_mode_param,
+                    external_id=external_id_param,
+                    skipped=skipped,
+                ),
             )
         else:
             acq_context_raw = extract_action_param(
@@ -405,12 +428,8 @@ def main(is_first_run=True) -> None:
                 input_type=str,
             )
             acq_context = json.loads(acq_context_raw)
-            output_message, result_value, status, get_counts = poll_file_acquisition(
-                siemplify,
-                hx_manager,
-                acq_context,
-                skipped=skipped,
-            )
+            acq_context.setdefault("skipped_count", skipped)
+            output_message, result_value, status, get_counts = poll_file_acquisition(siemplify, hx_manager, acq_context)
 
     except Exception as e:
         error = e
@@ -433,9 +452,8 @@ def main(is_first_run=True) -> None:
     log_action_result_summary(
         siemplify,
         status,
-        get_counts or (lambda: (targets, 0, [], skipped)),
-        error=error,
-        fallback_error_type=ErrorType.INVALID_INPUT,
+        get_counts or (lambda: SummaryCounts(targets=targets, succeeded=0, skipped=skipped)),
+        SummaryRunContext(error=error, fallback_error_type=ErrorType.INVALID_INPUT),
     )
     siemplify.end(output_message, result_value, status)
 

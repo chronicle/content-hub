@@ -158,7 +158,7 @@ class TestContainHostSummary(unittest.TestCase):
         """Verifies ENDPOINT_NOT_FOUND in the failure entry and the summary line for an unknown agent ID."""
         error = FireEyeHXNotFoundError("Unable to contain host bad: Host not found", 404, "ENDPOINT_NOT_FOUND")
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.contain_host_by_id.side_effect = error
 
         mock_siemplify = run_action(contain_host_module, {"Agent Id": "bad"}, setup)
@@ -187,7 +187,7 @@ class TestContainHostSummary(unittest.TestCase):
             make_entity("user", "USERUNIQNAME"),
         ]
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.get_hosts.side_effect = [[host], []]
             mock_manager.get_hosts_by_ip.side_effect = requests.ConnectionError("refused")
 
@@ -263,11 +263,7 @@ class TestContainHostSummary(unittest.TestCase):
             contain_host_module.main()
 
         [override_summary] = get_summary_lines(mock_override_action.return_value)
-        assert (override_summary["targets"], override_summary["failed"], override_summary["skipped"]) == (
-            "1",
-            "1",
-            "0",
-        )
+        assert (override_summary["targets"], override_summary["failed"], override_summary["skipped"]) == ("1", "1", "0")
 
     def test_timeout_reports_pending_targets(self) -> None:
         """Verifies that entities not processed before the deadline count as TIMEOUT failures."""

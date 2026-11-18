@@ -25,13 +25,7 @@ from soar_sdk.SiemplifyUtils import convert_unixtime_to_datetime, output_handler
 from TIPCommon import extract_action_param, extract_configuration_param
 
 from ..core.FireEyeHXManager import FireEyeHXManager, FireEyeHXNotFoundError
-from ..core.UtilsManager import (
-    ErrorType,
-    classify_exception,
-    count_skipped_entities,
-    get_operation_summary_counts,
-    log_action_result_summary,
-)
+from ..core.UtilsManager import ErrorType, OperationSummaryScope, classify_exception, log_operation_result_summary
 
 INTEGRATION_NAME = "FireEyeHX"
 SCRIPT_NAME = "Cancel Host Contain"
@@ -248,15 +242,8 @@ def main() -> None:
     output_message = ""
     result_value = "false"
     json_result = {}
-    hx_manager = None
-    has_agent_id = bool(isinstance(agent_id_param, str) and agent_id_param.strip())
-    targets = (
-        1
-        if has_agent_id
-        else sum(getattr(entity, "entity_type", "") in SUPPORTED_ENTITIES for entity in siemplify.target_entities)
-    )
-    skipped = count_skipped_entities(siemplify.target_entities, SUPPORTED_ENTITIES, has_agent_id=has_agent_id)
-    error = None
+    hx_manager: FireEyeHXManager | None = None
+    error: Exception | None = None
 
     try:
         hx_manager = FireEyeHXManager(
@@ -266,7 +253,7 @@ def main() -> None:
             verify_ssl=verify_ssl,
         )
 
-        if has_agent_id:
+        if agent_id_param and agent_id_param.strip():
             output_message, result_value, status, json_result = _uncontain_by_agent_id(hx_manager, agent_id_param)
         else:
             output_message, result_value, status, json_result = _uncontain_by_entities(siemplify, hx_manager)
@@ -292,19 +279,14 @@ def main() -> None:
     siemplify.LOGGER.info(f"Status: {status}:")
     siemplify.LOGGER.info(f"Result Value: {result_value}")
     siemplify.LOGGER.info(f"Output Message: {output_message}")
-    log_action_result_summary(
+    log_operation_result_summary(
         siemplify,
         status,
-        lambda: (
-            *get_operation_summary_counts(
-                json_result.get("operation_results", {}),
-                targets,
-                ErrorType.TIMEOUT if status == EXECUTION_STATE_TIMEDOUT else None,
-            ),
-            skipped,
+        OperationSummaryScope(
+            json_result.get("operation_results", {}),
+            agent_id_param,
+            error,
         ),
-        error=error,
-        fallback_error_type=ErrorType.INVALID_INPUT,
     )
     siemplify.end(output_message, result_value, status)
 

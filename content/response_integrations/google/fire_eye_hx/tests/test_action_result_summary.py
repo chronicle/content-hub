@@ -16,15 +16,12 @@
 
 from __future__ import annotations
 
+import dataclasses
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from soar_sdk.ScriptResult import (
-    EXECUTION_STATE_COMPLETED,
-    EXECUTION_STATE_FAILED,
-    EXECUTION_STATE_INPROGRESS,
-)
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED, EXECUTION_STATE_INPROGRESS
 from soar_sdk.SiemplifyUtils import unix_now
 
 from ..core import UtilsManager as utils
@@ -56,6 +53,21 @@ def make_manager() -> FireEyeHXManager:
     """
     with patch.object(FireEyeHXManager, "get_token", return_value="token"):
         return FireEyeHXManager(api_root="https://hx.example.com", username="user", password="password")
+
+
+def make_action(deadline: int) -> MagicMock:
+    """Build an action object with an async deadline.
+
+    Args:
+        deadline: The async deadline in Unix milliseconds.
+
+    Returns:
+        The action object.
+    """
+    siemplify = MagicMock()
+    siemplify.async_total_duration_deadline = deadline
+    siemplify.async_polling_interval_in_sec = 30
+    return siemplify
 
 
 class TestClassifyException:
@@ -114,6 +126,13 @@ class TestClassifyException:
         except RuntimeError as error:
             assert utils.classify_exception(error) == ("CONNECTION_ERROR", "ConnectionError", None)
 
+    def test_implicitly_chained_error_is_unwrapped(self) -> None:
+        """Verifies that an implicitly chained wrapper without 'from' is classified by its context."""
+        error = RuntimeError("wrapper")
+        error.__context__ = requests.ConnectionError("refused")
+
+        assert utils.classify_exception(error) == ("CONNECTION_ERROR", "ConnectionError", None)
+
 
 class TestSummaryLine:
     """Tests for the precedence and the format of the summary line."""
@@ -125,9 +144,18 @@ class TestSummaryLine:
         )
         assert utils.dominant_error_type([]) == "NONE"
 
+    def test_dominant_error_type_handles_unknown_string(self) -> None:
+        """Verifies that an unknown error type ranks as and returns UNKNOWN_ERROR."""
+        assert utils.dominant_error_type(["CUSTOM_ERROR", "TIMEOUT"]) == "UNKNOWN_ERROR"
+        assert utils.dominant_error_type(["CUSTOM_ERROR", "AUTHENTICATION_FAILED"]) == "AUTHENTICATION_FAILED"
+        assert utils.dominant_error_type(["CUSTOM_ERROR"]) == "UNKNOWN_ERROR"
+
     def test_partial_success_line(self) -> None:
         """Verifies the exact format of a line with one success and one failure."""
-        line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 2, 1, ["ENDPOINT_NOT_FOUND"])
+        line = utils.build_action_result_summary(
+            EXECUTION_STATE_COMPLETED,
+            utils.SummaryCounts(2, 1, ["ENDPOINT_NOT_FOUND"]),
+        )
 
         assert line == (
             "ACTION_RESULT_SUMMARY v=1 outcome=PARTIAL_SUCCESS error_type=ENDPOINT_NOT_FOUND "
@@ -139,10 +167,8 @@ class TestSummaryLine:
         """Verifies that a run with no targets and no exception reports the fallback reason."""
         line = utils.build_action_result_summary(
             EXECUTION_STATE_COMPLETED,
-            0,
-            0,
-            [],
-            fallback_error_type="INVALID_INPUT",
+            utils.SummaryCounts(0, 0),
+            utils.SummaryRunContext(fallback_error_type="INVALID_INPUT"),
         )
 
         assert "outcome=FAILURE error_type=INVALID_INPUT" in line
@@ -150,8 +176,11 @@ class TestSummaryLine:
 
     def test_default_invalid_input_when_nothing_succeeded(self) -> None:
         """Verify default INVALID_INPUT when succeeded is 0 and no failure reason is present."""
-        zero_target_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 0, 0, [])
-        skipped_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, 0, 0, [], skipped=1)
+        zero_target_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, utils.SummaryCounts(0, 0))
+        skipped_line = utils.build_action_result_summary(
+            EXECUTION_STATE_COMPLETED,
+            utils.SummaryCounts(0, 0, skipped=1),
+        )
 
         assert SUMMARY_PATTERN.match(zero_target_line)
         assert "outcome=FAILURE error_type=INVALID_INPUT" in zero_target_line
@@ -161,19 +190,12 @@ class TestSummaryLine:
 
     def test_fallback_error_type_ignored_when_succeeded(self) -> None:
         """Verify fallback_error_type is ignored when at least one target succeeded."""
-        success_line = utils.build_action_result_summary(
-            EXECUTION_STATE_COMPLETED,
-            1,
-            1,
-            [],
-            fallback_error_type="INVALID_INPUT",
-        )
+        context = utils.SummaryRunContext(fallback_error_type="INVALID_INPUT")
+        success_line = utils.build_action_result_summary(EXECUTION_STATE_COMPLETED, utils.SummaryCounts(1, 1), context)
         partial_line = utils.build_action_result_summary(
             EXECUTION_STATE_COMPLETED,
-            2,
-            1,
-            ["ENDPOINT_NOT_FOUND"],
-            fallback_error_type="INVALID_INPUT",
+            utils.SummaryCounts(2, 1, ["ENDPOINT_NOT_FOUND"]),
+            context,
         )
 
         assert SUMMARY_PATTERN.match(success_line)
@@ -185,10 +207,8 @@ class TestSummaryLine:
         """Verifies that the exception that ended the run decides the error type and HTTP status."""
         line = utils.build_action_result_summary(
             EXECUTION_STATE_FAILED,
-            1,
-            0,
-            [],
-            error=FireEyeHXManagerError("x", status_code=401),
+            utils.SummaryCounts(1, 0),
+            utils.SummaryRunContext(error=FireEyeHXManagerError("x", status_code=401)),
         )
 
         assert line == (
@@ -200,11 +220,8 @@ class TestSummaryLine:
         """Verify unfinished targets become failed on run error while skipped entities remain skipped."""
         line = utils.build_action_result_summary(
             EXECUTION_STATE_FAILED,
-            2,
-            1,
-            [],
-            skipped=3,
-            error=FireEyeHXManagerError("x", status_code=401),
+            utils.SummaryCounts(2, 1, skipped=3),
+            utils.SummaryRunContext(error=FireEyeHXManagerError("x", status_code=401)),
         )
 
         assert line == (
@@ -212,12 +229,16 @@ class TestSummaryLine:
             "execution_state=FAILED targets=2 failed=1 skipped=3 exc_type=FireEyeHXManagerError http_status=401"
         )
 
-    def test_log_accepts_three_and_four_tuple_counts(self) -> None:
-        """Verify log_action_result_summary accepts both 3-tuple and 4-tuple count callbacks."""
+    def test_log_counts_with_and_without_skipped(self) -> None:
+        """Verify log_action_result_summary logs the skipped count of the counts, with 0 as the default."""
         siemplify = MagicMock()
 
-        utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: (1, 1, []))
-        utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: (1, 1, [], 2))
+        utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: utils.SummaryCounts(1, 1))
+        utils.log_action_result_summary(
+            siemplify,
+            EXECUTION_STATE_COMPLETED,
+            lambda: utils.SummaryCounts(1, 1, skipped=2),
+        )
 
         first_line = siemplify.LOGGER.info.call_args_list[0].args[0]
         second_line = siemplify.LOGGER.info.call_args_list[1].args[0]
@@ -228,44 +249,33 @@ class TestSummaryLine:
         """Verifies that no line is logged on an in-progress poll."""
         siemplify = MagicMock()
 
-        utils.log_action_result_summary(siemplify, EXECUTION_STATE_INPROGRESS, lambda: (1, 0, []))
+        utils.log_action_result_summary(siemplify, EXECUTION_STATE_INPROGRESS, lambda: utils.SummaryCounts(1, 0))
 
         siemplify.LOGGER.info.assert_not_called()
 
     def test_log_never_raises(self) -> None:
-        """Verifies that a failure while counting or logging does not raise."""
+        """Verifies that a failure while counting or logging warns safely and does not raise."""
         siemplify = MagicMock()
         siemplify.LOGGER.info.side_effect = RuntimeError("logger down")
 
-        utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: (1, 1, []))
+        utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: utils.SummaryCounts(1, 1))
+        utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: 1 / 0)
+        assert siemplify.LOGGER.warn.call_count == 2
+
+        siemplify.LOGGER.warn.side_effect = RuntimeError("warn down")
         utils.log_action_result_summary(siemplify, EXECUTION_STATE_COMPLETED, lambda: 1 / 0)
 
 
 class TestTimeoutMarker:
     """Tests for the one-shot timeout marker."""
 
-    @staticmethod
-    def make_action(deadline: int) -> MagicMock:
-        """Build an action object with an async deadline.
-
-        Args:
-            deadline: The async deadline in Unix milliseconds.
-
-        Returns:
-            The action object.
-        """
-        siemplify = MagicMock()
-        siemplify.async_total_duration_deadline = deadline
-        siemplify.async_polling_interval_in_sec = 30
-        return siemplify
-
     def test_marker_logged_once_near_deadline(self) -> None:
         """Verifies that the marker is logged once and the flag is saved in the state."""
-        siemplify = self.make_action(unix_now() + 10_000)
-        state = {}
+        siemplify = make_action(unix_now() + 10_000)
+        state: dict[str, bool] = {}
 
-        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"]))
-        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"]))
+        utils.log_timeout_marker_once(siemplify, state, lambda: utils.SummaryCounts(1, 0, ["TIMEOUT"]))
+        utils.log_timeout_marker_once(siemplify, state, lambda: utils.SummaryCounts(1, 0, ["TIMEOUT"]))
 
         siemplify.LOGGER.info.assert_called_once()
         line = siemplify.LOGGER.info.call_args[0][0]
@@ -275,29 +285,33 @@ class TestTimeoutMarker:
 
     def test_no_marker_far_from_deadline(self) -> None:
         """Verifies that no marker is logged when the deadline is far away or unknown."""
-        siemplify = self.make_action(unix_now() + 3_600_000)
-        state = {}
+        siemplify = make_action(unix_now() + 3_600_000)
+        state: dict[str, bool] = {}
 
-        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"]))
+        utils.log_timeout_marker_once(siemplify, state, lambda: utils.SummaryCounts(1, 0, ["TIMEOUT"]))
         siemplify.async_total_duration_deadline = 0
-        utils.log_timeout_marker_once(siemplify, state, lambda: (1, 0, ["TIMEOUT"]))
+        utils.log_timeout_marker_once(siemplify, state, lambda: utils.SummaryCounts(1, 0, ["TIMEOUT"]))
 
         siemplify.LOGGER.info.assert_not_called()
         assert state == {}
 
     def test_marker_never_raises(self) -> None:
-        """Verifies that a failure while building the marker does not raise."""
-        siemplify = self.make_action(unix_now() + 10_000)
+        """Verifies that a failure while building the marker warns safely and does not raise."""
+        siemplify = make_action(unix_now() + 10_000)
 
         utils.log_timeout_marker_once(siemplify, {}, lambda: 1 / 0)
 
         siemplify.LOGGER.info.assert_not_called()
+        siemplify.LOGGER.warn.assert_called_once()
 
-    def test_marker_accepts_four_tuple_counts(self) -> None:
-        """Verify log_timeout_marker_once preserves skipped count from a 4-tuple callback."""
-        siemplify = self.make_action(unix_now() + 10_000)
+        siemplify.LOGGER.warn.side_effect = RuntimeError("warn down")
+        utils.log_timeout_marker_once(siemplify, {}, lambda: 1 / 0)
 
-        utils.log_timeout_marker_once(siemplify, {}, lambda: (1, 0, ["TIMEOUT"], 2))
+    def test_marker_keeps_skipped_count(self) -> None:
+        """Verify log_timeout_marker_once logs the skipped count of the counts."""
+        siemplify = make_action(unix_now() + 10_000)
+
+        utils.log_timeout_marker_once(siemplify, {}, lambda: utils.SummaryCounts(1, 0, ["TIMEOUT"], 2))
 
         line = siemplify.LOGGER.info.call_args[0][0]
         assert SUMMARY_PATTERN.match(line)
@@ -315,24 +329,28 @@ class TestSummaryCounts:
             "c": {"result": "failure"},
         }
 
-        assert utils.get_operation_summary_counts(operation_results) == (
+        assert utils.get_operation_summary_counts(operation_results) == utils.SummaryCounts(
             3,
             1,
             ["ENDPOINT_NOT_FOUND", "UNKNOWN_ERROR"],
         )
-        assert utils.get_operation_summary_counts(operation_results, 4, "TIMEOUT") == (
+        assert utils.get_operation_summary_counts(operation_results, 4, "TIMEOUT") == utils.SummaryCounts(
             4,
             1,
             ["ENDPOINT_NOT_FOUND", "UNKNOWN_ERROR", "TIMEOUT"],
         )
+        assert dataclasses.replace(utils.get_operation_summary_counts(operation_results), skipped=2).skipped == 2
 
     def test_lookup_failure_without_entities(self) -> None:
         """Verifies that no target is in scope if no entity can be looked up."""
-        assert utils.get_agent_lookup_failure_counts([make_entity("u", "USERUNIQNAME")], []) == (0, 0, [])
+        entities = [make_entity("u", "USERUNIQNAME")]
+
+        assert utils.get_agent_lookup_failure_counts(entities, []) == utils.SummaryCounts(0, 0)
+        assert utils.get_agent_lookup_failure_counts(entities, [], 1) == utils.SummaryCounts(0, 0, skipped=1)
 
     def test_lookup_failure_not_found(self) -> None:
         """Verifies that an empty lookup reports ENDPOINT_NOT_FOUND."""
-        assert utils.get_agent_lookup_failure_counts([make_entity("h", "HOSTNAME")], []) == (
+        assert utils.get_agent_lookup_failure_counts([make_entity("h", "HOSTNAME")], []) == utils.SummaryCounts(
             1,
             0,
             ["ENDPOINT_NOT_FOUND"],
@@ -342,23 +360,66 @@ class TestSummaryCounts:
         """Verifies that a failed lookup request wins over ENDPOINT_NOT_FOUND."""
         errors = [requests.ConnectionError("refused")]
 
-        assert utils.get_agent_lookup_failure_counts([make_entity("h", "HOSTNAME")], errors) == (
+        assert utils.get_agent_lookup_failure_counts([make_entity("h", "HOSTNAME")], errors) == utils.SummaryCounts(
             1,
             0,
             ["CONNECTION_ERROR"],
         )
 
     def test_count_skipped_entities(self) -> None:
-        """Verify count_skipped_entities counts unsupported entities unless Agent Id overrides."""
-        entities = [
-            make_entity("h", "HOSTNAME"),
-            make_entity("u", "USERUNIQNAME"),
-            make_entity("f", "FILENAME"),
-        ]
+        """Verify count_skipped_entities counts the entities of unsupported types."""
+        entities = [make_entity("h", "HOSTNAME"), make_entity("u", "USERUNIQNAME"), make_entity("f", "FILENAME")]
 
         assert utils.count_skipped_entities(entities, utils.AGENT_LOOKUP_ENTITY_TYPES) == 2
-        assert utils.count_skipped_entities(entities, utils.AGENT_LOOKUP_ENTITY_TYPES, has_agent_id=True) == 0
         assert utils.count_skipped_entities([], utils.AGENT_LOOKUP_ENTITY_TYPES) == 0
+
+    def test_get_target_scope_counts(self) -> None:
+        """Verify get_target_scope_counts handles Agent Id override, None, generators, and mixed entities."""
+        entities = [make_entity("h", "HOSTNAME"), make_entity("u", "USERUNIQNAME")]
+
+        assert utils.get_target_scope_counts(None, "agent-1") == (True, 1, 0)
+        assert utils.get_target_scope_counts(None) == (False, 0, 0)
+        assert utils.get_target_scope_counts(entity for entity in entities) == (False, 1, 1)
+
+    def test_log_operation_result_summary_agent_id_skips_target_entities(self) -> None:
+        """Verify Agent Id skips reading target_entities and handles None or generator entities."""
+
+        class GuardedAction:
+            """Action stub whose target_entities raises if read."""
+
+            LOGGER = MagicMock()
+
+            @property
+            def target_entities(self) -> list[MagicMock]:
+                raise AssertionError("target_entities should not be read when Agent Id is set")
+
+        guarded = GuardedAction()
+        scope = utils.OperationSummaryScope({"agent-1": {"result": "success"}}, agent_id_param="agent-1")
+        utils.log_operation_result_summary(guarded, EXECUTION_STATE_COMPLETED, scope)
+        [line] = [call.args[0] for call in guarded.LOGGER.info.call_args_list]
+        assert line == (
+            "ACTION_RESULT_SUMMARY v=1 outcome=SUCCESS error_type=NONE "
+            "execution_state=COMPLETED targets=1 failed=0 skipped=0 exc_type=NONE http_status=NONE"
+        )
+
+        none_entities = MagicMock(target_entities=None)
+        utils.log_operation_result_summary(
+            none_entities,
+            EXECUTION_STATE_COMPLETED,
+            utils.OperationSummaryScope(agent_id_param="agent-1"),
+        )
+        [none_override_line] = [call.args[0] for call in none_entities.LOGGER.info.call_args_list]
+        assert "targets=1 failed=0 skipped=0" in none_override_line
+
+        mixed = [make_entity("h", "HOSTNAME"), make_entity("u", "USERUNIQNAME")]
+        gen_entities = MagicMock(target_entities=(entity for entity in mixed))
+        utils.log_operation_result_summary(
+            gen_entities,
+            EXECUTION_STATE_COMPLETED,
+            utils.OperationSummaryScope({"h": {"result": "success"}}),
+        )
+        [gen_line] = [call.args[0] for call in gen_entities.LOGGER.info.call_args_list]
+        assert "outcome=SUCCESS error_type=NONE execution_state=COMPLETED targets=1 failed=0 skipped=1" in gen_line
 
 
 class TestManagerErrors:
@@ -506,10 +567,42 @@ class TestManagerErrors:
         assert failing_manager.resolve_agent_id_from_entities(single_entity) is None
         assert failing_manager.lookup_errors == [not_found_error]
         assert utils.get_agent_lookup_failure_counts(single_entity, failing_manager.lookup_errors) == (
-            1,
-            0,
-            ["VENDOR_ERROR"],
+            utils.SummaryCounts(1, 0, ["VENDOR_ERROR"])
         )
+
+    def test_resolve_clears_earlier_lookup_errors(self) -> None:
+        """Verifies that a second lookup on the same manager does not keep the errors of the first lookup."""
+        manager = make_manager()
+        host = MagicMock(_id="agent-2")
+        manager.get_hosts = MagicMock(side_effect=[requests.ConnectionError("refused"), [host]])
+        entities = [make_entity("host-1", "HOSTNAME")]
+
+        assert manager.resolve_agent_id_from_entities(entities) is None
+        assert [type(error) for error in manager.lookup_errors] == [requests.ConnectionError]
+        assert manager.resolve_agent_id_from_entities(entities) == "agent-2"
+        assert manager.lookup_errors == []
+
+    @pytest.mark.parametrize(
+        ("status_code", "body", "expected"),
+        [
+            (409, b"{}", ("VENDOR_ERROR", "FireEyeHXManagerError", 409)),
+            (404, b'{"message": "Host not found"}', ("ENDPOINT_NOT_FOUND", "FireEyeHXNotFoundError", 404)),
+            (403, b'{"message": "Forbidden"}', ("PERMISSION_DENIED", "FireEyeHXManagerError", 403)),
+            (500, b"not json", ("VENDOR_ERROR", "FireEyeHXManagerError", 500)),
+        ],
+    )
+    def test_validate_response_chains_http_error(
+        self,
+        status_code: int,
+        body: bytes,
+        expected: tuple[str, str, int],
+    ) -> None:
+        """Verifies that each manager error has the HTTP error as its cause and keeps its classification."""
+        with pytest.raises(FireEyeHXManagerError) as raised:
+            FireEyeHXManager.validate_response(make_response(status_code, body), "Request failed")
+
+        assert isinstance(raised.value.__cause__, requests.HTTPError)
+        assert utils.classify_exception(raised.value) == expected
 
     def test_get_token_missing_header_raises_auth_failed(self) -> None:
         """Verify get_token raises AUTHENTICATION_FAILED when X-FeApi-Token is missing."""
@@ -523,8 +616,4 @@ class TestManagerErrors:
             manager.get_token()
 
         assert raised.value.error_type == utils.ErrorType.AUTHENTICATION_FAILED
-        assert utils.classify_exception(raised.value) == (
-            "AUTHENTICATION_FAILED",
-            "FireEyeHXManagerError",
-            None,
-        )
+        assert utils.classify_exception(raised.value) == ("AUTHENTICATION_FAILED", "FireEyeHXManagerError", None)

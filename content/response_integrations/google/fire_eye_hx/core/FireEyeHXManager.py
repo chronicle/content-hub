@@ -45,7 +45,7 @@ LIMIT = 1000
 
 SEARCH_LIMIT_HAS_BEEN_REACHED_STATUS_CODE = 409
 
-HOST_NOT_FOUND_MESSAGE = "host not found"
+HOST_NOT_FOUND_MESSAGE: str = "host not found"
 
 
 # ============================= CLASSES ===================================== #
@@ -81,7 +81,7 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         self.session.headers["X-FeApi-Token"] = self.get_token()
         self.parser = FireEyeHXParser()
         self.loaded_hosts = {}
-        self.lookup_errors = []
+        self.lookup_errors: list[Exception] = []
 
     def get_token(self):
         """Get a token (equals to login)."""
@@ -226,7 +226,11 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         payload = {"state": "contain"} if approve else None
 
         response = self.session.post(url, json=payload)
-        self.validate_response(response, f"Unable to contain host {agent_id}", host_scoped=True)
+        self.validate_response(
+            response,
+            f"Unable to contain host {agent_id}",
+            not_found_error_type=ErrorType.ENDPOINT_NOT_FOUND,
+        )
         return True
 
     def contain_host_by_name(self, host_name):
@@ -244,7 +248,11 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         """
         url = f"{self.api_root}/hosts/{agent_id}/containment"
         response = self.session.delete(url)
-        self.validate_response(response, f"Unable to cancel containment for host {agent_id}", host_scoped=True)
+        self.validate_response(
+            response,
+            f"Unable to cancel containment for host {agent_id}",
+            not_found_error_type=ErrorType.ENDPOINT_NOT_FOUND,
+        )
         return True
 
     def cancel_containment_by_name(self, host_name):
@@ -270,7 +278,11 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         """
         url = f"{self.api_root}/hosts/{agent_id}/containment"
         response = self.session.patch(url, json={"state": "contain"})
-        self.validate_response(response, f"Unable to approve containment for host {agent_id}", host_scoped=True)
+        self.validate_response(
+            response,
+            f"Unable to approve containment for host {agent_id}",
+            not_found_error_type=ErrorType.ENDPOINT_NOT_FOUND,
+        )
         return True
 
     def get_containment_status(self, agent_id):
@@ -280,7 +292,11 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         """
         url = f"{self.api_root}/hosts/{agent_id}/containment"
         response = self.session.get(url)
-        self.validate_response(response, f"Unable to get containment status for host {agent_id}", host_scoped=True)
+        self.validate_response(
+            response,
+            f"Unable to get containment status for host {agent_id}",
+            not_found_error_type=ErrorType.ENDPOINT_NOT_FOUND,
+        )
         return response.json().get("data", {})
 
     def resolve_agent_id_from_entities(self, target_entities, agent_id_param=None):
@@ -289,6 +305,7 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         :param agent_id_param: {str} Explicit Agent Id parameter if provided
         :return: {str|None} Resolved agent ID.
         """
+        self.lookup_errors.clear()
         if agent_id_param and str(agent_id_param).strip():
             return str(agent_id_param).strip()
 
@@ -923,11 +940,17 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         return [self.parser.build_siemplify_group_obj(group) for group in alert_groups]
 
     @staticmethod
-    def validate_response(response, error_msg="An error occurred", host_scoped: bool = False) -> None:
-        """Validate a response
-        :param response: {requests.Response} The response
-        :param error_msg: {unicode} The error message to display on failure.
-        :param host_scoped: {bool} Whether the request targets a specific host by ID.
+    def validate_response(
+        response: requests.Response,
+        error_msg: str = "An error occurred",
+        not_found_error_type: ErrorType | None = None,
+    ) -> None:
+        """Validate a response.
+
+        Args:
+            response: The response.
+            error_msg: The error message to display on failure.
+            not_found_error_type: The error type of an HTTP 404 that has no details, if the route implies one.
         """
         try:
             response.raise_for_status()
@@ -935,7 +958,7 @@ class FireEyeHXManager(BulkAcquisitionMixin):
         except requests.HTTPError as error:
             if response.status_code == SEARCH_LIMIT_HAS_BEEN_REACHED_STATUS_CODE:
                 msg = "Search limit have been reached"
-                raise FireEyeHXManagerError(msg, status_code=response.status_code)
+                raise FireEyeHXManagerError(msg, status_code=response.status_code) from error
 
             try:
                 details = response.json().get("details") or []
@@ -946,14 +969,13 @@ class FireEyeHXManager(BulkAcquisitionMixin):
 
                 if response.status_code == 404:
                     msg = f"{error_msg}: {error_messages}"
-                    host_not_found = HOST_NOT_FOUND_MESSAGE in str(error_messages).lower() or (
-                        host_scoped and not details
-                    )
-                    error_type = ErrorType.ENDPOINT_NOT_FOUND if host_not_found else None
-                    raise FireEyeHXNotFoundError(msg, status_code=404, error_type=error_type)
+                    error_type = None if details else not_found_error_type
+                    if HOST_NOT_FOUND_MESSAGE in str(error_messages).lower():
+                        error_type = ErrorType.ENDPOINT_NOT_FOUND
+                    raise FireEyeHXNotFoundError(msg, status_code=404, error_type=error_type) from error
 
                 msg = f"{error_msg}: {error_messages}"
-                raise FireEyeHXManagerError(msg, status_code=response.status_code)
+                raise FireEyeHXManagerError(msg, status_code=response.status_code) from error
 
             except (FireEyeHXManagerError, FireEyeHXNotFoundError):
                 raise
@@ -961,4 +983,4 @@ class FireEyeHXManager(BulkAcquisitionMixin):
             except Exception:
                 # Unable to parse JSON - return content of response
                 msg = f"{error_msg}: {error} {response.content}"
-                raise FireEyeHXManagerError(msg, status_code=response.status_code)
+                raise FireEyeHXManagerError(msg, status_code=response.status_code) from error

@@ -150,7 +150,7 @@ class TestCancelHostContainSummary(unittest.TestCase):
         """Verifies PERMISSION_DENIED in the failure entry and the summary line."""
         error = FireEyeHXManagerError("Unable to cancel containment for host a: Forbidden", 403)
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.cancel_containment_by_id.side_effect = error
 
         mock_siemplify = run_action(cancel_host_module, {"Agent Id": "a"}, setup)
@@ -169,7 +169,7 @@ class TestCancelHostContainSummary(unittest.TestCase):
     def test_entity_host_not_found(self) -> None:
         """Verifies ENDPOINT_NOT_FOUND for an entity without a matching host."""
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.get_hosts.return_value = []
 
         mock_siemplify = run_action(cancel_host_module, {"Agent Id": ""}, setup, [make_entity("h", "HOSTNAME")])
@@ -221,7 +221,7 @@ class TestCancelHostContainSummary(unittest.TestCase):
         host = MagicMock(_id="agent-1", last_poll_timestamp=1, raw_data={})
         entities = [make_entity("host-1", "HOSTNAME"), make_entity("user", "USERUNIQNAME")]
 
-        def setup(mock_manager):
+        def setup(mock_manager: MagicMock) -> None:
             mock_manager.get_hosts.return_value = [host]
 
         entity_run = run_action(cancel_host_module, {"Agent Id": ""}, setup, entities)

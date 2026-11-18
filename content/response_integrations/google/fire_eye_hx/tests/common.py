@@ -13,12 +13,17 @@
 # limitations under the License.
 
 from __future__ import annotations
-import pathlib
+
 import json
+import pathlib
 import re
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
+    from types import ModuleType
+
 INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / 'config.json'
 CONFIG: dict = json.loads(CONFIG_PATH.read_text()) if CONFIG_PATH.exists() else {}
@@ -32,7 +37,7 @@ SUMMARY_PATTERN: re.Pattern[str] = re.compile(
 )
 
 
-def get_summary_lines(mock_siemplify: Any) -> list[dict[str, str]]:
+def get_summary_lines(mock_siemplify: MagicMock) -> list[dict[str, str]]:
     """Get the ACTION_RESULT_SUMMARY lines that an action logged, parsed into fields.
 
     Args:
@@ -53,11 +58,11 @@ def get_summary_lines(mock_siemplify: Any) -> list[dict[str, str]]:
 
 
 def run_action(
-    module: Any,
-    params: dict[str, Any],
-    manager_setup: Callable[[Any], None],
-    entities: list[Any] | None = None,
-) -> Any:
+    module: ModuleType,
+    params: Mapping[str, object],
+    manager_setup: Callable[[MagicMock], None],
+    entities: list[MagicMock] | None = None,
+) -> MagicMock:
     """Run a synchronous FireEyeHX action with a mocked manager.
 
     Args:
@@ -79,7 +84,8 @@ def run_action(
         mock_siemplify.target_entities = entities or []
         mock_siemplify.execution_deadline_unix_time_ms = 9999999999999
         mock_extract_action.side_effect = lambda siemplify, param_name, **kwargs: params.get(
-            param_name, kwargs.get("default_value")
+            param_name,
+            kwargs.get("default_value"),
         )
         mock_manager_cls.return_value.lookup_errors = []
         manager_setup(mock_manager_cls.return_value)

@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
     EXECUTION_STATE_FAILED,
@@ -25,12 +27,12 @@ from TIPCommon import extract_action_param, extract_configuration_param
 
 from ..core.FireEyeHXManager import FireEyeHXManager, FireEyeHXNotFoundError
 from ..core.UtilsManager import (
-    AGENT_LOOKUP_ENTITY_TYPES,
     ErrorType,
+    SummaryRunContext,
     classify_exception,
-    count_skipped_entities,
     get_agent_lookup_failure_counts,
     get_operation_summary_counts,
+    get_target_scope_counts,
     log_action_result_summary,
 )
 
@@ -89,15 +91,11 @@ def main() -> None:
     result_value = "false"
     operation_results = {}
     host_info = None
-    hx_manager = None
+    hx_manager: FireEyeHXManager | None = None
     lookup_failed = False
-    has_agent_id = bool(isinstance(agent_id_param, str) and agent_id_param.strip())
-    has_supported_entity = any(
-        getattr(entity, "entity_type", "") in AGENT_LOOKUP_ENTITY_TYPES for entity in siemplify.target_entities
-    )
-    targets = int(has_agent_id or has_supported_entity)
-    skipped = count_skipped_entities(siemplify.target_entities, AGENT_LOOKUP_ENTITY_TYPES, has_agent_id=has_agent_id)
-    error = None
+    _, supported_count, skipped = get_target_scope_counts(siemplify.target_entities, agent_id_param)
+    targets = int(bool(supported_count))
+    error: Exception | None = None
 
     try:
         hx_manager = FireEyeHXManager(
@@ -184,15 +182,15 @@ def main() -> None:
         siemplify,
         status,
         lambda: (
-            *(
-                get_agent_lookup_failure_counts(siemplify.target_entities, hx_manager.lookup_errors)
-                if lookup_failed
-                else get_operation_summary_counts(operation_results, targets)
-            ),
-            skipped,
+            get_agent_lookup_failure_counts(
+                siemplify.target_entities,
+                hx_manager.lookup_errors if hx_manager is not None else (),
+                skipped,
+            )
+            if lookup_failed
+            else dataclasses.replace(get_operation_summary_counts(operation_results, targets), skipped=skipped)
         ),
-        error=error,
-        fallback_error_type=ErrorType.INVALID_INPUT,
+        SummaryRunContext(error=error, fallback_error_type=ErrorType.INVALID_INPUT),
     )
     siemplify.end(output_message, result_value, status)
 
