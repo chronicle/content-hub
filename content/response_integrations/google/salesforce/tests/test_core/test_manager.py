@@ -38,9 +38,7 @@ def expected_query(literal: str) -> str:
     Returns:
         The full query the manager is expected to send.
     """
-    return " ".join(
-        ["SELECT", ", ".join(CASE_PROPERTIES), "FROM Case WHERE CaseNumber =", literal]
-    )
+    return " ".join(["SELECT", ", ".join(CASE_PROPERTIES), "FROM Case WHERE CaseNumber =", literal])
 
 
 @pytest.fixture
@@ -145,9 +143,7 @@ def test_non_canonical_input_is_normalized_to_string_literal(
         pytest.param(False, id="false-is-falsy"),
     ],
 )
-def test_empty_input_rejected_before_any_query(
-    manager: SalesforceManager, value: object
-) -> None:
+def test_empty_input_rejected_before_any_query(manager: SalesforceManager, value: object) -> None:
     """Empty or falsy input fails fast and never reaches Salesforce."""
     with pytest.raises(SalesforceManagerError, match=r"^Case Number cannot be empty\.$"):
         manager.get_case_by_number(value)
@@ -161,3 +157,22 @@ def test_salesforce_client_error_propagates(manager: SalesforceManager) -> None:
 
     with pytest.raises(RuntimeError, match="MALFORMED_QUERY"):
         manager.get_case_by_number("00001001")
+
+
+def test_get_case_by_id_builds_quoted_query(manager: SalesforceManager) -> None:
+    """get_case_by_id quotes the Id the same way as the CaseNumber lookup."""
+    record: dict[str, Any] = {"Id": "500A", "CaseNumber": "00001001"}
+    manager.sf.query.return_value = {"records": [record], "done": True}
+
+    assert manager.get_case_by_id("500A") == record
+    assert sent_query(manager) == " ".join(["SELECT", ", ".join(CASE_PROPERTIES), "FROM Case WHERE Id =", "'500A'"])
+
+
+def test_create_case_fetches_new_case_by_id(manager: SalesforceManager) -> None:
+    """create_case looks up the new case using the Id returned by Salesforce."""
+    record: dict[str, Any] = {"Id": "500NEW", "CaseNumber": "00001002"}
+    manager.sf.Case.create.return_value = {"success": True, "id": "500NEW"}
+    manager.sf.query.return_value = {"records": [record], "done": True}
+
+    assert manager.create_case(subject="Test") == record
+    assert sent_query(manager).endswith("WHERE Id = '500NEW'")

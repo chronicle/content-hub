@@ -19,9 +19,9 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
+from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED
 
 from salesforce.actions import AddComment, CloseCase, GetCase, UpdateCase
-from salesforce.core.SalesforceManager import SalesforceManagerError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -70,7 +70,7 @@ def test_get_case_empty_number_ends_failed_without_query(sf_client: MagicMock) -
     siemplify = run_action(GetCase, {"Case Number": ""})
 
     siemplify.end.assert_called_once_with(
-        'Error executing action "Get Case". Reason: Case Number cannot be empty.', "false"
+        'Error executing action "Get Case". Reason: Case Number cannot be empty.', "false", EXECUTION_STATE_FAILED
     )
     siemplify.result.add_result_json.assert_not_called()
     siemplify.result.add_json.assert_not_called()
@@ -78,14 +78,12 @@ def test_get_case_empty_number_ends_failed_without_query(sf_client: MagicMock) -
 
 
 @pytest.mark.parametrize("payload", [TICKET_PAYLOAD, BYPASS_PAYLOAD])
-def test_get_case_injection_payload_returns_no_case(
-    sf_client: MagicMock, payload: str
-) -> None:
+def test_get_case_injection_payload_returns_no_case(sf_client: MagicMock, payload: str) -> None:
     """Ticket scenario: an injection payload finds nothing instead of the first case."""
     siemplify = run_action(GetCase, {"Case Number": payload})
 
     siemplify.end.assert_called_once_with(
-        f'Error executing action "Get Case". Reason: Case {payload} was not found.', "false"
+        f'Error executing action "Get Case". Reason: Case {payload} was not found.', "false", EXECUTION_STATE_FAILED
     )
     siemplify.result.add_result_json.assert_not_called()
     siemplify.result.add_json.assert_not_called()
@@ -105,27 +103,33 @@ def test_get_case_valid_number_returns_case(sf_client: MagicMock) -> None:
 
 
 @pytest.mark.parametrize(
-    ("module", "parameters"),
+    ("module", "action_name", "parameters"),
     [
-        pytest.param(CloseCase, {"Case Number": TICKET_PAYLOAD}, id="close-case"),
+        pytest.param(CloseCase, "Close Case", {"Case Number": TICKET_PAYLOAD}, id="close-case"),
         pytest.param(
             AddComment,
+            "Add Comment",
             {"Case Number": TICKET_PAYLOAD, "Title": "t", "Body": "b"},
             id="add-comment",
         ),
         pytest.param(
             UpdateCase,
+            "Update Case",
             {"Case Number": TICKET_PAYLOAD, "Subject": "pwned", "Status": "Closed"},
             id="update-case",
         ),
     ],
 )
 def test_write_actions_never_modify_a_case_on_injection(
-    sf_client: MagicMock, module: ModuleType, parameters: dict[str, str]
+    sf_client: MagicMock, module: ModuleType, action_name: str, parameters: dict[str, str]
 ) -> None:
-    """Write actions sharing get_case_by_number abort before any write call."""
-    with pytest.raises(SalesforceManagerError, match="was not found"):
-        run_action(module, parameters)
+    """Write actions sharing get_case_by_number fail cleanly before any write call."""
+    siemplify = run_action(module, parameters)
 
+    siemplify.end.assert_called_once_with(
+        f'Error executing action "{action_name}". Reason: Case {TICKET_PAYLOAD} was not found.',
+        "false",
+        EXECUTION_STATE_FAILED,
+    )
     called: set[str] = {name for name, _args, _kwargs in sf_client.mock_calls if name}
     assert called == {"query"}
