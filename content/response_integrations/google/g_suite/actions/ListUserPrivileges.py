@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 from typing import List
 
@@ -11,12 +25,12 @@ from TIPCommon.transformation import (
 )
 from TIPCommon.validation import ParameterValidator
 
-from g_suite.core.action_init import create_api_client
-from g_suite.core.consts import LIST_USER_PRIVILEGES_SCRIPT_NAME, CUSTOMER, PREFIX
-from g_suite.core.exceptions import GSuiteNotFoundException, GSuiteManagerError
-from g_suite.core.GSuiteManager import GSuiteManager
-from g_suite.core.datamodels import Role, RoleAssignment
-from g_suite.core.utils import prepare_roles, prepare_privileges, prepare_result, extract_privileges
+from ..core.action_init import create_api_client
+from ..core.consts import LIST_USER_PRIVILEGES_SCRIPT_NAME, CUSTOMER, PREFIX
+from ..core.exceptions import GSuiteNotFoundException, GSuiteManagerError
+from ..core.GSuiteManager import GSuiteManager
+from ..core.datamodels import Role, RoleAssignment
+from ..core.utils import prepare_roles, prepare_privileges, prepare_result, extract_privileges
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
 SUPPORTED_ENTITY_TYPES = [EntityTypes.USER]

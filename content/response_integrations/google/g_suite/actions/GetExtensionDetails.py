@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -6,11 +20,11 @@ from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.validation import ParameterValidator
-from g_suite.core import consts
-from g_suite.core import datamodels
-from g_suite.core.action_init import create_api_client
-from g_suite.core.GSuiteManager import GSuiteManager
-from g_suite.core.exceptions import GSuiteNotFoundException
+from ..core import consts
+from ..core import datamodels
+from ..core.action_init import create_api_client
+from ..core.GSuiteManager import GSuiteManager
+from ..core.exceptions import GSuiteNotFoundException
 
 if TYPE_CHECKING:
     from typing import Any
