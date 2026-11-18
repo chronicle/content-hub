@@ -22,6 +22,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import convert_dict_to_json_result_dict
+from TIPCommon.types import SingleJson
 
 from ..core.constants import ENRICH_USERS_SCRIPT_NAME, SUMMARY_FIELDS
 from ..core.exceptions import RansomLeakAuthError
@@ -36,7 +37,7 @@ from ..core.utils import (
 )
 
 
-def _insight_html(summary: dict[str, Any]) -> str:
+def _insight_html(summary: SingleJson) -> str:
     body = "".join(
         f"<tr><td style='opacity:.65;padding-right:12px'>{html.escape(label)}</td>"
         f"<td>{html.escape(str(summary[key]))}</td></tr>"
@@ -61,7 +62,7 @@ def main() -> None:
     )
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
-    json_results: dict[str, Any] = {}
+    json_results: SingleJson = {}
     enriched: list[Any] = []
     not_found: list[str] = []
     unsupported: list[str] = []
@@ -88,7 +89,6 @@ def main() -> None:
                 raise error
             if error is not None:
                 siemplify.LOGGER.error(f"Failed to enrich {identifier}: {error}")
-                siemplify.LOGGER.exception(error)
                 failed.append(identifier)
                 continue
             if summary is None:
@@ -117,8 +117,7 @@ def main() -> None:
         output_message += section("Action wasn't able to enrich the following users", failed)
         result_value = bool(enriched)
     except Exception as error:
-        siemplify.LOGGER.error(f'Error executing action "Enrich Users". Reason: {error}')
-        siemplify.LOGGER.exception(error)
+        siemplify.LOGGER.exception(f'Error executing action "Enrich Users". Reason: {error}')
         output_message = f'Error executing action "Enrich Users". Reason: {error}'
         result_value = False
         status = EXECUTION_STATE_FAILED

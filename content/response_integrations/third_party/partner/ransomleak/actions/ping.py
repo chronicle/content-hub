@@ -38,8 +38,7 @@ def main() -> None:
         result_value = True
         status = EXECUTION_STATE_COMPLETED
     except Exception as error:
-        siemplify.LOGGER.error(f"Ping failed: {error}")
-        siemplify.LOGGER.exception(error)
+        siemplify.LOGGER.exception(f"Ping failed: {error}")
         output_message = f"Failed to connect to the {INTEGRATION_DISPLAY_NAME} server! Error is {error}"
         result_value = False
         status = EXECUTION_STATE_FAILED

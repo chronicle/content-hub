@@ -14,12 +14,11 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param
+from TIPCommon.types import SingleJson
 
 from ..core.constants import ASSIGN_TRAINING_SCRIPT_NAME, MAX_ENROLLMENT_BATCH
 from ..core.exceptions import RansomLeakNotFoundError, RansomLeakValidationError
@@ -37,13 +36,13 @@ def _enroll_learning_path(
     learning_path_ref: str,
     emails: list[str],
     due_days: int | None,
-) -> dict[str, Any]:
+) -> SingleJson:
     learning_path = manager.find_learning_path(learning_path_ref)
     if learning_path is None:
         msg = f"Learning path '{learning_path_ref}' was not found. Use 'List Learning Paths' to find a valid ID."
         raise RansomLeakNotFoundError(msg)
 
-    by_email: dict[str, dict[str, Any]] = {
+    by_email: dict[str, SingleJson] = {
         email: {"email": email, "user_id": None, "enrollment_id": None, "status": "pending"} for email in emails
     }
     totals = {"assigned": 0, "already_enrolled": 0, "skipped_unlicensed": 0}
@@ -83,11 +82,11 @@ def _assign_exercise(
     manager: RansomLeakManager,
     exercise_slug: str,
     emails: list[str],
-) -> dict[str, Any]:
+) -> SingleJson:
     case_id = str(getattr(siemplify, "case_id", "") or "")
-    users: list[dict[str, Any]] = []
+    users: list[SingleJson] = []
     for email in emails:
-        entry: dict[str, Any] = {"email": email, "assignment_id": None, "status": "not_found"}
+        entry: SingleJson = {"email": email, "assignment_id": None, "status": "not_found"}
         users.append(entry)
         # Stable per case + exercise + user, so playbook re-runs return the same assignment.
         idempotency_key = f"secops:{case_id or 'manual'}:{exercise_slug}:{email.lower()}"
@@ -173,8 +172,7 @@ def main() -> None:
         output_message += section("The following values were skipped because they are not email addresses", skipped)
         result_value = bool(done)
     except Exception as error:
-        siemplify.LOGGER.error(f'Error executing action "{ACTION_NAME}". Reason: {error}')
-        siemplify.LOGGER.exception(error)
+        siemplify.LOGGER.exception(f'Error executing action "{ACTION_NAME}". Reason: {error}')
         output_message = f'Error executing action "{ACTION_NAME}". Reason: {error}'
         status = EXECUTION_STATE_FAILED
 

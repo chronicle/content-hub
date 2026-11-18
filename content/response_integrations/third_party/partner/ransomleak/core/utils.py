@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.transformation import string_to_multi_value
+from TIPCommon.types import SingleJson
 
 from .constants import (
     DEFAULT_API_ROOT,
@@ -141,10 +142,10 @@ def section(title: str, values: list[str]) -> str:
 
 
 def training_summary(
-    user: dict[str, Any],
-    analytics: dict[str, Any],
-    risk: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+    user: SingleJson,
+    analytics: SingleJson,
+    risk: SingleJson | None = None,
+) -> SingleJson:
     """Build the per-user training summary used by enrichment and status actions.
 
     Args:
@@ -156,6 +157,7 @@ def training_summary(
         A flat-ish summary dict.
 
     """
+    analytics = analytics or {}
     history = sorted(
         analytics.get("exerciseHistory") or [],
         key=lambda h: h.get("completedAt") or "",
@@ -183,7 +185,7 @@ def training_summary(
     }
 
 
-def risk_summary(risk: dict[str, Any] | None) -> dict[str, Any]:
+def risk_summary(risk: SingleJson | None) -> SingleJson:
     """Flatten a Human Risk Score record. Every value is None when no score is available.
 
     Args:
@@ -203,7 +205,7 @@ def risk_summary(risk: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
-def user_summary(manager: RansomLeakManager, user: dict[str, Any]) -> dict[str, Any]:
+def user_summary(manager: RansomLeakManager, user: SingleJson) -> SingleJson:
     """Fetch analytics and risk for a user and build their summary.
 
     Args:
@@ -217,7 +219,7 @@ def user_summary(manager: RansomLeakManager, user: dict[str, Any]) -> dict[str, 
     return training_summary(user, manager.get_user_analytics(user["id"]), manager.get_user_risk(user["id"]))
 
 
-def enrichment_properties(summary: dict[str, Any]) -> dict[str, Any]:
+def enrichment_properties(summary: SingleJson) -> SingleJson:
     """Map a training summary to `RansomLeak_`-prefixed entity properties.
 
     Args:
@@ -255,7 +257,7 @@ def map_concurrently(fn: Callable[[str], Any], items: list[str]) -> list[tuple[s
         return list(pool.map(run, items))
 
 
-def lookup_user_summary(manager: RansomLeakManager, email: str) -> dict[str, Any] | None:
+def lookup_user_summary(manager: RansomLeakManager, email: str) -> SingleJson | None:
     """Find a user by email and build their summary.
 
     Args:

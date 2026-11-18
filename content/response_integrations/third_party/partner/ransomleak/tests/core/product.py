@@ -17,27 +17,28 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any
+
+from TIPCommon.types import SingleJson
 
 VALID_API_KEY = "rl_acme.0000000000000000000000000000000000000000000000000000000000000000"
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class RansomLeak:
     """Mock RansomLeak tenant state used by the mock session."""
 
-    users: list[dict[str, Any]] = dataclasses.field(default_factory=list)
-    analytics: dict[str, dict[str, Any]] = dataclasses.field(default_factory=dict)
-    learning_paths: list[dict[str, Any]] = dataclasses.field(default_factory=list)
-    assignments: dict[str, dict[str, Any]] = dataclasses.field(default_factory=dict)
+    users: list[SingleJson] = dataclasses.field(default_factory=list)
+    analytics: dict[str, SingleJson] = dataclasses.field(default_factory=dict)
+    learning_paths: list[SingleJson] = dataclasses.field(default_factory=list)
+    assignments: dict[str, SingleJson] = dataclasses.field(default_factory=dict)
     exercises: set[str] = dataclasses.field(default_factory=set)
-    enrollments: list[dict[str, Any]] = dataclasses.field(default_factory=list)
-    risks: dict[str, dict[str, Any]] = dataclasses.field(default_factory=dict)
+    enrollments: list[SingleJson] = dataclasses.field(default_factory=list)
+    risks: dict[str, SingleJson] = dataclasses.field(default_factory=dict)
     risk_endpoint_available: bool = True
     health_endpoint_available: bool = True
     api_key: str = VALID_API_KEY
 
-    def add_user(self, user: dict[str, Any], analytics: dict[str, Any] | None = None) -> None:
+    def add_user(self, user: SingleJson, analytics: SingleJson | None = None) -> None:
         self.users.append(user)
         self.analytics[user["id"]] = analytics or {
             "exercisesCompleted": 0,
@@ -48,7 +49,7 @@ class RansomLeak:
             "exerciseHistory": [],
         }
 
-    def find_user(self, email: str) -> dict[str, Any] | None:
+    def find_user(self, email: str) -> SingleJson | None:
         return next((u for u in self.users if u["email"].lower() == email.lower()), None)
 
     def enroll(
@@ -57,12 +58,12 @@ class RansomLeak:
         external_ids: list[str],
         emails: list[str],
         due_days: int | None,
-    ) -> dict[str, Any]:
+    ) -> SingleJson:
         active = [u for u in self.users if not u.get("isDisabled")]
         by_external = {u["externalId"]: u for u in active if u.get("externalId")}
         by_email = {u["email"].lower(): u for u in active}
         enrolled = {e["userId"] for e in self.enrollments if e["learningPathId"] == learning_path_id}
-        results: list[dict[str, Any]] = []
+        results: list[SingleJson] = []
         not_found: list[str] = []
         counts = {"assigned": 0, "alreadyEnrolled": 0}
         requested = [("externalUserId", x, by_external.get(x)) for x in external_ids] + [

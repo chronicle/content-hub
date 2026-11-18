@@ -22,6 +22,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import requests
+from TIPCommon.types import SingleJson
 
 from .constants import (
     ASSIGNMENT_SOURCE,
@@ -167,7 +168,7 @@ class RansomLeakManager:
 
     # ------------------------------------------------------------------ users
 
-    def get_user_by_email(self, email: str) -> dict[str, Any] | None:
+    def get_user_by_email(self, email: str) -> SingleJson | None:
         """Look up a user by email (case-insensitive).
 
         Args:
@@ -186,7 +187,7 @@ class RansomLeakManager:
         users = self._request("GET", "users", params={"email": email.strip().lower(), "limit": 1}) or []
         return users[0] if users else None
 
-    def get_user_analytics(self, user_id: str) -> dict[str, Any]:
+    def get_user_analytics(self, user_id: str) -> SingleJson:
         """Get a user's training analytics.
 
         Args:
@@ -198,7 +199,7 @@ class RansomLeakManager:
         """
         return self._request("GET", "user_analytics", {"user_id": user_id})
 
-    def get_user_risk(self, user_id: str) -> dict[str, Any] | None:
+    def get_user_risk(self, user_id: str) -> SingleJson | None:
         """Get a user's current Human Risk Score.
 
         Args:
@@ -217,7 +218,7 @@ class RansomLeakManager:
 
     # --------------------------------------------------------- learning paths
 
-    def list_learning_paths(self) -> list[dict[str, Any]]:
+    def list_learning_paths(self) -> list[SingleJson]:
         """List published learning paths users can be enrolled in.
 
         Returns:
@@ -226,7 +227,7 @@ class RansomLeakManager:
         """
         return self._request("GET", "learning_paths") or []
 
-    def find_learning_path(self, id_or_name: str) -> dict[str, Any] | None:
+    def find_learning_path(self, id_or_name: str) -> SingleJson | None:
         """Resolve a learning path by ID or by exact (case-insensitive) name.
 
         Args:
@@ -252,7 +253,7 @@ class RansomLeakManager:
         learning_path_id: str,
         emails: list[str],
         due_days: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> SingleJson:
         """Enroll users, matched by email, in a learning path.
 
         Args:
@@ -273,7 +274,7 @@ class RansomLeakManager:
         if not emails:
             msg = "At least one user is required"
             raise RansomLeakValidationError(msg)
-        body: dict[str, Any] = {"emails": emails}
+        body: SingleJson = {"emails": emails}
         if due_days is not None:
             if not MIN_DUE_DAYS <= due_days <= MAX_DUE_DAYS:
                 msg = f"Due In Days must be between {MIN_DUE_DAYS} and {MAX_DUE_DAYS}"
@@ -294,7 +295,7 @@ class RansomLeakManager:
         email: str,
         idempotency_key: str,
         reference: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> SingleJson:
         """Assign one exercise to one existing user (matched by email).
 
         Args:
@@ -307,7 +308,7 @@ class RansomLeakManager:
             The assignment, including `assignmentId` and a signed `deepLink`.
 
         """
-        body: dict[str, Any] = {
+        body: SingleJson = {
             "exerciseSlug": exercise_slug,
             "user": {"email": email.strip().lower()},
             "idempotencyKey": idempotency_key,
@@ -317,7 +318,7 @@ class RansomLeakManager:
             body["reference"] = reference
         return self._request("POST", "assignments", json=body)
 
-    def get_assignment(self, assignment_id: str) -> dict[str, Any]:
+    def get_assignment(self, assignment_id: str) -> SingleJson:
         """Get an assignment's lifecycle status.
 
         Args:

@@ -15,13 +15,13 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import construct_csv
+from TIPCommon.types import SingleJson
 
 from ..core.constants import GET_TRAINING_STATUS_SCRIPT_NAME, SUMMARY_FIELDS
 from ..core.exceptions import RansomLeakNotFoundError, RansomLeakValidationError
@@ -60,7 +60,7 @@ def main() -> None:
         manager = build_manager(siemplify)
         # Fail fast on a bad key instead of fanning out N failing lookups.
         manager.test_connectivity()
-        users: list[dict[str, Any]] = []
+        users: list[SingleJson] = []
         not_found: list[str] = []
         for email, summary, error in map_concurrently(lambda e: lookup_user_summary(manager, e), emails):
             if error is not None:
@@ -70,7 +70,7 @@ def main() -> None:
             else:
                 users.append(summary)
 
-        assignments: list[dict[str, Any]] = []
+        assignments: list[SingleJson] = []
         valid_ids = [a for a in assignment_ids if UUID_PATTERN.match(a)]
         not_found += [a for a in assignment_ids if not UUID_PATTERN.match(a)]
         for assignment_id, assignment, error in map_concurrently(manager.get_assignment, valid_ids):
@@ -119,8 +119,7 @@ def main() -> None:
         output_message += section("The following values were skipped because they are not email addresses", skipped)
         result_value = bool(found)
     except Exception as error:
-        siemplify.LOGGER.error(f'Error executing action "{ACTION_NAME}". Reason: {error}')
-        siemplify.LOGGER.exception(error)
+        siemplify.LOGGER.exception(f'Error executing action "{ACTION_NAME}". Reason: {error}')
         output_message = f'Error executing action "{ACTION_NAME}". Reason: {error}'
         status = EXECUTION_STATE_FAILED
 

@@ -70,8 +70,7 @@ def main() -> None:
         else:
             output_message = "No learning paths were found in RansomLeak for the provided criteria."
     except Exception as error:
-        siemplify.LOGGER.error(f'Error executing action "{ACTION_NAME}". Reason: {error}')
-        siemplify.LOGGER.exception(error)
+        siemplify.LOGGER.exception(f'Error executing action "{ACTION_NAME}". Reason: {error}')
         output_message = f'Error executing action "{ACTION_NAME}". Reason: {error}'
         status = EXECUTION_STATE_FAILED
 
