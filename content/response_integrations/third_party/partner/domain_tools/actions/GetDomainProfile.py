@@ -39,9 +39,7 @@ class _ProfileOutcome:
     missing_domains: list[str] = field(default_factory=list)
 
 
-def _extract_params(
-    siemplify: SiemplifyAction,
-) -> tuple[str, str, str]:
+def _extract_params(siemplify: SiemplifyAction) -> tuple[str, str, str]:
     username: str = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
@@ -57,7 +55,10 @@ def _extract_params(
         print_value=True,
     )
     verify_ssl: str = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Verify SSL",
+        is_mandatory=True,
     )
     return username, api_key, verify_ssl
 
