@@ -15,7 +15,7 @@
 from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.SalesforceManager import SalesforceManager
+from ..core.SalesforceManager import SalesforceManager, SalesforceManagerError
 import json
 
 
@@ -35,7 +35,11 @@ def main():
 
     case_number = siemplify.parameters.get("Case Number")
 
-    case = salesforce_manager.get_case_by_number(case_number)
+    try:
+        case = salesforce_manager.get_case_by_number(case_number)
+    except SalesforceManagerError as err:
+        siemplify.end(f"Error executing action 'Get Case'. Reason: {err}", "false")
+        return
 
     siemplify.result.add_json(f"Case {case_number}", json.dumps(case))
 

@@ -28,6 +28,7 @@
 from __future__ import annotations
 import requests
 from simple_salesforce import Salesforce
+from simple_salesforce.format import format_soql
 from pypika import Query, Table, Field
 
 from .constants import DEFAULT_API_VERSION
@@ -117,18 +118,31 @@ class SalesforceManager:
         self.get_cases()
         return True
 
-    def get_case_by_number(self, case_number):
+    def get_case_by_number(self, case_number: str | None) -> dict:
+        """Get a case by CaseNumber.
+
+        The value is quoted with SOQL backslash escaping (format_soql), so
+        user input can never terminate the string literal.
+
+        Args:
+            case_number: The case's CaseNumber.
+
+        Returns:
+            The case info.
+
+        Raises:
+            SalesforceManagerError: If the case number is empty or not found.
+
         """
-        Get a case by CaseNumber
-        :param case_number: {str} The case's CaseNumber
-        :return: {dict} The case info
-        """
-        _table = Table("Case")
-        query = Query.from_(_table)
-        for case_property in CASE_PROPERTIES:
-            query = query.select(Field(case_property))
-        query = query.where(_table.CaseNumber == case_number)
-        case = self.run_query(query.get_sql(quote_char=""))
+        if not case_number or not str(case_number).strip():
+            raise SalesforceManagerError("Case Number cannot be empty.")
+        case_number = str(case_number).strip()
+        query: str = format_soql(
+            "SELECT {:literal} FROM Case WHERE CaseNumber = {}",
+            ", ".join(CASE_PROPERTIES),
+            case_number,
+        )
+        case = self.run_query(query)
 
         if not case:
             raise SalesforceManagerError(f"Case {case_number} was not found.")
