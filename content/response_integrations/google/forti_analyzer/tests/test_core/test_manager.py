@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -21,16 +35,15 @@ ALERT_ID = "202210131000040003"
 ADOM = "root"
 USERNAME = "api_user"
 
-MOCK_DATA = json.load(
-    open(
-        os.path.join(os.path.dirname(__file__), "mock_data.json")
-    )
-)
+TESTS_DIR = os.path.dirname(os.path.dirname(__file__))
+
+with open(os.path.join(TESTS_DIR, "mock_data.json"), encoding="utf-8") as mock_file:
+    MOCK_DATA = json.load(mock_file)
 
 
 class TestFortiAnalyzerManager(unittest.TestCase):
     def setUp(self) -> None:
-        with open("config.json", "r") as f:
+        with open(os.path.join(TESTS_DIR, "config.json"), "r", encoding="utf-8") as f:
             data = f.read()
 
         config = json.loads(data)
