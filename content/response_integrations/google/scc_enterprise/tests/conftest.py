@@ -18,6 +18,8 @@ import pkgutil
 import sys
 import types
 
+import google.auth
+import google.oauth2.credentials
 import soar_sdk  # noqa: F401
 
 pytest_plugins = ("integration_testing.conftest",)
@@ -76,6 +78,11 @@ def script_session(
             google_requests,
             "AuthorizedSession",
             lambda *args, **kwargs: session
+        )
+        monkeypatch.setattr(
+            google.auth,
+            "default",
+            lambda *args, **kwargs: (google.oauth2.credentials.Credentials(token=None), "test-project"),
         )
     yield session
 
