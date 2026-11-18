@@ -21,22 +21,32 @@ from soar_sdk.SiemplifyUtils import output_handler
 from ..core.WildfireManager import WildfireManager
 
 INTEGRATION_NAME = "Wildfire"
+INTEGRATION_DISPLAY_NAME = "Palo Alto Wildfire"
 ACTION_NAME = "Ping"
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {ACTION_NAME}"
 
     try:
         wildfire_manager = WildfireManager.from_siemplify(siemplify)
         connectivity = wildfire_manager.test_connectivity()
-        siemplify.end("Successfully connected to the Wildfire service.", connectivity, EXECUTION_STATE_COMPLETED)
+        siemplify.end(
+            f"Successfully connected to the {INTEGRATION_DISPLAY_NAME} server with the provided connection parameters!",
+            connectivity,
+            EXECUTION_STATE_COMPLETED,
+        )
 
     except Exception as e:
-        siemplify.LOGGER.exception("Failed to connect to Wildfire")
-        siemplify.end(f"Failed to connect to the Wildfire service. Reason: {e}", False, EXECUTION_STATE_FAILED)
+        siemplify.LOGGER.exception("Failed to connect to Palo Alto Wildfire")
+        siemplify.end(
+            f'Error executing action "{ACTION_NAME}". Reason: '
+            f"Failed to connect to the {INTEGRATION_DISPLAY_NAME} server: {e}",
+            False,
+            EXECUTION_STATE_FAILED,
+        )
 
 
 if __name__ == "__main__":

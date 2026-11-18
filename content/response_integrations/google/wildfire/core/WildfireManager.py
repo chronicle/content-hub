@@ -66,6 +66,22 @@ def _extract_error_message(response: requests.Response) -> str:
     return error.get("error-message", response.text) if isinstance(error, dict) else response.text
 
 
+def _extract_oauth_error_message(response: requests.Response) -> str:
+    """Extract error description from an OAuth JSON error response if available."""
+    try:
+        payload = response.json()
+    except ValueError:
+        return response.text
+    if isinstance(payload, dict):
+        error = payload.get("error")
+        description = payload.get("error_description")
+        if error and description:
+            return f"{error}: {description}"
+        if description or error:
+            return str(description or error)
+    return response.text
+
+
 def extract_filename_from_response(response: requests.Response, default_name: str) -> str:
     """Extract filename from Content-Disposition header if available.
 
@@ -117,7 +133,7 @@ class WildfireManager:
         if not self.is_scm and not self.api_key:
             msg = (
                 "Either 'Api Key' or ('Client ID', 'Client Secret', and 'TSG ID') "
-                "must be provided for WildFire authentication."
+                "must be provided for Palo Alto Wildfire authentication."
             )
             raise WildfireManagerError(msg)
 
@@ -195,20 +211,30 @@ class WildfireManager:
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=30,
             )
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             msg = f"Failed to connect to authentication server ({self.token_url}): {e}"
             raise WildfireManagerError(msg) from e
 
         if not response.ok:
-            msg = f"Authentication failed: HTTP {response.status_code} - {response.text}"
+            error_message = _extract_oauth_error_message(response)
+            msg = f"Authentication failed: HTTP {response.status_code} - {error_message}"
             raise WildfireManagerError(msg)
 
         try:
             token_json = response.json()
-            access_token = token_json["access_token"]
+        except ValueError as err:
+            msg = "Unexpected non-JSON token response from authentication server."
+            raise WildfireManagerError(msg) from err
+
+        if not isinstance(token_json, dict) or not token_json.get("access_token"):
+            msg = "Authentication server response did not include an access token."
+            raise WildfireManagerError(msg)
+
+        access_token = str(token_json["access_token"])
+        try:
             expires_in = int(token_json.get("expires_in", 3600))
-        except (KeyError, ValueError) as err:
-            msg = f"Unexpected token response from auth server: {response.text}"
+        except (TypeError, ValueError) as err:
+            msg = "Authentication server response contained an invalid 'expires_in' value."
             raise WildfireManagerError(msg) from err
 
         self._token = access_token
@@ -268,12 +294,12 @@ class WildfireManager:
             raise WildfireManagerError(msg) from e
 
         if response.status_code == HTTPStatus.NOT_FOUND:
-            msg = f"Requested resource not found on Wildfire ({endpoint})"
+            msg = f"Requested resource not found on Palo Alto Wildfire ({endpoint})"
             raise WildfireNotFoundError(msg)
 
         if not response.ok:
             error_message = _extract_error_message(response)
-            msg = f"Wildfire request failed with status code {response.status_code}: {error_message}"
+            msg = f"Palo Alto Wildfire request failed with status code {response.status_code}: {error_message}"
             raise WildfireManagerError(msg)
 
         return response
@@ -287,7 +313,7 @@ class WildfireManager:
             msg = f"Sample is not available for {hash_value}"
             raise WildfireNotFoundError(msg) from error
         except Exception as e:
-            msg = f"Unable to get sample of {hash_value}:\n{e}"
+            msg = f"Unable to get sample of {hash_value}: {e}"
             raise WildfireManagerError(msg) from e
 
         filename = extract_filename_from_response(response, f"{hash_value}.tar")
@@ -311,7 +337,7 @@ class WildfireManager:
             msg = f"Report is not available for {hash_value}"
             raise WildfireNotFoundError(msg) from error
         except Exception as e:
-            msg = f"Unable to get report for {hash_value}:\n{e}"
+            msg = f"Unable to get report for {hash_value}: {e}"
             raise WildfireManagerError(msg) from e
 
     def get_pdf_report(self, hash_value: str) -> dict[str, Any]:
@@ -327,7 +353,7 @@ class WildfireManager:
             msg = f"PDF report is not available for {hash_value}"
             raise WildfireNotFoundError(msg) from error
         except Exception as e:
-            msg = f"Unable to get report for {hash_value}:\n{e}"
+            msg = f"Unable to get PDF report for {hash_value}: {e}"
             raise WildfireManagerError(msg) from e
 
         filename = extract_filename_from_response(response, f"{hash_value}.pdf")
@@ -345,7 +371,7 @@ class WildfireManager:
             msg = f"PCAP is not available for {hash_value}"
             raise WildfireNotFoundError(msg) from error
         except Exception as e:
-            msg = f"Unable to get PCAP for {hash_value}:\n{e}"
+            msg = f"Unable to get PCAP for {hash_value}: {e}"
             raise WildfireManagerError(msg) from e
 
         filename = extract_filename_from_response(response, f"{hash_value}.pcap")
@@ -355,7 +381,7 @@ class WildfireManager:
         }
 
     def submit_file(self, file_path: str) -> dict[str, Any]:
-        """Submit a file sample to WildFire for analysis."""
+        """Submit a file sample to Palo Alto Wildfire for analysis."""
         path_obj = pathlib.Path(file_path)
         if not path_obj.exists():
             msg = f"File not found: {file_path}"
@@ -372,7 +398,7 @@ class WildfireManager:
             parsed = xmltodict.parse(response.content)
             return dict(parsed["wildfire"]["upload-file-info"])
         except Exception as e:
-            msg = f"Unable to submit file {file_path}:\n{e}"
+            msg = f"Unable to submit file {file_path}: {e}"
             raise WildfireManagerError(msg) from e
 
     def test_connectivity(self) -> bool:

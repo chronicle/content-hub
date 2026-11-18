@@ -23,9 +23,10 @@ from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param
 
-from ..core.WildfireManager import WildfireManager
+from ..core.WildfireManager import WildfireManager, WildfireNotFoundError
 
 INTEGRATION_NAME = "Wildfire"
+INTEGRATION_DISPLAY_NAME = "Palo Alto Wildfire"
 ACTION_NAME = "Get File"
 
 
@@ -36,9 +37,16 @@ def _process_file_hash(
 ) -> tuple[str, bool, int]:
     try:
         sample = wildfire_manager.get_sample(file_hash)
+    except WildfireNotFoundError:
+        siemplify.LOGGER.info(f"Sample not found for hash {file_hash}")
+        return (
+            f"No file sample was found for hash {file_hash} in {INTEGRATION_DISPLAY_NAME}.",
+            False,
+            EXECUTION_STATE_COMPLETED,
+        )
     except Exception as e:
         siemplify.LOGGER.exception(f"Failed to download sample for hash {file_hash}")
-        return f"Error executing action '{ACTION_NAME}'. Reason: {e}", False, EXECUTION_STATE_FAILED
+        return f'Error executing action "{ACTION_NAME}". Reason: {e}', False, EXECUTION_STATE_FAILED
 
     b64_content = base64.b64encode(sample["content"]).decode("utf-8")
     siemplify.result.add_attachment(f"WildFire sample {file_hash}", sample["filename"], b64_content)
@@ -55,14 +63,55 @@ def _process_file_hash(
         }
     ]
     siemplify.result.add_result_json(json_results)
-    return f"Successfully downloaded file sample for {file_hash} from Wildfire.", True, EXECUTION_STATE_COMPLETED
+    return (
+        f"Successfully downloaded file sample for {file_hash} using {INTEGRATION_DISPLAY_NAME}.",
+        True,
+        EXECUTION_STATE_COMPLETED,
+    )
+
+
+def _format_entity_results(
+    enriched_entities: list[Any],
+    not_found_entities: list[str],
+    failed_entities: list[str],
+    errors: list[str],
+) -> tuple[str, bool, int]:
+    if enriched_entities:
+        entities_str = ", ".join(entity.identifier for entity in enriched_entities)
+        msg = (
+            f"Successfully downloaded files for the following entities using "
+            f"{INTEGRATION_DISPLAY_NAME}: {entities_str}."
+        )
+        unsuccessful = not_found_entities + failed_entities
+        if unsuccessful:
+            msg += (
+                f"\nAction wasn't able to download files for the following entities using "
+                f"{INTEGRATION_DISPLAY_NAME}: {', '.join(unsuccessful)}."
+            )
+        if errors:
+            msg += "\nErrors:\n" + "\n".join(errors)
+        return msg, True, EXECUTION_STATE_COMPLETED
+
+    if errors:
+        reasons = "; ".join(errors)
+        return f'Error executing action "{ACTION_NAME}". Reason: {reasons}', False, EXECUTION_STATE_FAILED
+
+    msg = f"No files were downloaded using {INTEGRATION_DISPLAY_NAME}."
+    if not_found_entities:
+        msg += (
+            f"\nAction wasn't able to download files for the following entities using "
+            f"{INTEGRATION_DISPLAY_NAME}: {', '.join(not_found_entities)}."
+        )
+    return msg, False, EXECUTION_STATE_COMPLETED
 
 
 def _process_entities(
     siemplify: SiemplifyAction,
     wildfire_manager: WildfireManager,
 ) -> tuple[str, bool, int]:
-    enriched_entities = []
+    enriched_entities: list[Any] = []
+    not_found_entities: list[str] = []
+    failed_entities: list[str] = []
     errors: list[str] = []
     json_results: list[dict[str, Any]] = []
 
@@ -78,25 +127,18 @@ def _process_entities(
                     "filename": sample["filename"],
                     "downloaded": True,
                 })
+            except WildfireNotFoundError:
+                siemplify.LOGGER.info(f"Sample not found for entity {entity.identifier}")
+                not_found_entities.append(entity.identifier)
             except Exception as e:
                 siemplify.LOGGER.exception(f"Failed to download sample for entity {entity.identifier}")
+                failed_entities.append(entity.identifier)
                 errors.append(f"{entity.identifier}: {e}")
 
     if json_results:
         siemplify.result.add_result_json(json_results)
 
-    if enriched_entities:
-        entities_names = [entity.identifier for entity in enriched_entities]
-        msg = "Files were downloaded for the following entities:\n" + "\n".join(entities_names)
-        if errors:
-            msg += "\nErrors:\n" + "\n".join(errors)
-        return msg, True, EXECUTION_STATE_COMPLETED
-
-    msg = "No files were downloaded."
-    if errors:
-        msg += "\nErrors:\n" + "\n".join(errors)
-    status = EXECUTION_STATE_FAILED if errors else EXECUTION_STATE_COMPLETED
-    return msg, False, status
+    return _format_entity_results(enriched_entities, not_found_entities, failed_entities, errors)
 
 
 @output_handler
@@ -115,7 +157,7 @@ def main() -> None:
         wildfire_manager = WildfireManager.from_siemplify(siemplify)
     except Exception as e:
         siemplify.LOGGER.exception("Failed to initialize Wildfire manager")
-        siemplify.end(f"Error executing action '{ACTION_NAME}'. Reason: {e}", False, EXECUTION_STATE_FAILED)
+        siemplify.end(f'Error executing action "{ACTION_NAME}". Reason: {e}', False, EXECUTION_STATE_FAILED)
         return
 
     if file_hash:
