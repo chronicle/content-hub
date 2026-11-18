@@ -69,13 +69,6 @@ def main() -> None:
     csv_table_results: list[dict] = []
 
     try:
-        dt_manager = DomainToolsManager(
-            username=username,
-            api_key=api_key,
-            verify_ssl=verify_ssl,
-            siemplify_logger=siemplify.LOGGER,
-        )
-
         domain_param = extract_action_param(siemplify, param_name="Domain", print_value=True)
         if domain_param:
             now_ts = int(datetime.now().timestamp())
@@ -104,6 +97,14 @@ def main() -> None:
             output_message = "No entities were extracted to be enrich."
             result_value = False
             siemplify.end(output_message, result_value, status)
+            return
+
+        dt_manager = DomainToolsManager(
+            username=username,
+            api_key=api_key,
+            verify_ssl=verify_ssl,
+            siemplify_logger=siemplify.LOGGER,
+        )
 
         domains_to_enrich = convert_list_to_comma_string(list(extracted_domains.keys()))
 

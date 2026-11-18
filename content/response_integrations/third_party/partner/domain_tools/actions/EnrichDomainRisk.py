@@ -164,19 +164,19 @@ def main() -> None:
     result_value: bool = True
 
     try:
-        dt_manager = DomainToolsManager(
-            username=username,
-            api_key=api_key,
-            verify_ssl=verify_ssl,
-            siemplify_logger=siemplify.LOGGER,
-        )
-
         extracted_domains = _extract_unique_domains(siemplify)
         if not extracted_domains:
             output_message = "No domain entities found to enrich."
             result_value = False
             siemplify.end(output_message, result_value, status)
             return
+
+        dt_manager = DomainToolsManager(
+            username=username,
+            api_key=api_key,
+            verify_ssl=verify_ssl,
+            siemplify_logger=siemplify.LOGGER,
+        )
 
         outcome = _enrich_and_mark_entities(siemplify, dt_manager, extracted_domains, risk_threshold)
 

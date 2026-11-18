@@ -163,19 +163,19 @@ def main() -> None:
     result_value: bool = True
 
     try:
-        dt_manager = DomainToolsManager(
-            username=username,
-            api_key=api_key,
-            verify_ssl=verify_ssl,
-            siemplify_logger=siemplify.LOGGER,
-        )
-
         domains = _collect_domains(siemplify, domains_param, merge_with_entities)
         if not domains:
             output_message = "No domains provided or found in scope."
             result_value = False
             siemplify.end(output_message, result_value, status)
             return
+
+        dt_manager = DomainToolsManager(
+            username=username,
+            api_key=api_key,
+            verify_ssl=verify_ssl,
+            siemplify_logger=siemplify.LOGGER,
+        )
 
         max_domains = BULK_ENRICH_MAX_DOMAINS
         if len(domains) > max_domains:

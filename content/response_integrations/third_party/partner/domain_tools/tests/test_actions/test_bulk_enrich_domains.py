@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-from integration_testing.platform.script_output import MockActionOutput
+from typing import TYPE_CHECKING
+
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from domain_tools.actions import BulkEnrichDomains
 from domain_tools.core.datamodels import EnrichedDomainSummary
 from domain_tools.tests.common import CONFIG_PATH
-from domain_tools.tests.conftest import MockDomainToolsManager
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
+
+    from domain_tools.tests.conftest import MockDomainToolsManager
 
 DOMAIN_ENTITY = {"identifier": "evil.com", "entity_type": "DOMAIN", "additional_properties": {}}
 
