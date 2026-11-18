@@ -36,9 +36,7 @@ from ..core.UtilsManager import extract_domain_from_string
 SUPPORTED_ENTITY_TYPES: list[str] = [EntityTypes.URL, EntityTypes.HOSTNAME, EntityTypes.DOMAIN]
 
 
-def _extract_params(
-    siemplify: SiemplifyAction,
-) -> tuple[str, str, str, str | None, bool, bool]:
+def _extract_params(siemplify: SiemplifyAction) -> tuple[str, str, str, str | None, bool, bool]:
     """Extract integration configuration and action parameters from the SOAR context."""
     username: str = extract_configuration_param(
         siemplify,
@@ -55,14 +53,23 @@ def _extract_params(
         print_value=True,
     )
     verify_ssl: str = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Verify SSL",
+        is_mandatory=True,
     )
     manual_domains_str: str | None = extract_action_param(siemplify, "Domains", print_value=True)
     include_young: bool = extract_action_param(
-        siemplify, param_name="Include Young Domains", input_type=bool, default_value=True
+        siemplify,
+        param_name="Include Young Domains",
+        input_type=bool,
+        default_value=True,
     )
     merge_with_entities: bool = extract_action_param(
-        siemplify, param_name="Merge With Case Entities", input_type=bool, default_value=False
+        siemplify,
+        param_name="Merge With Case Entities",
+        input_type=bool,
+        default_value=False,
     )
     return username, api_key, verify_ssl, manual_domains_str, include_young, merge_with_entities
 

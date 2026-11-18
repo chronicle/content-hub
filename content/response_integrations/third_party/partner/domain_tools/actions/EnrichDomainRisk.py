@@ -43,9 +43,7 @@ class _RiskEnrichmentOutcome:
     json_results: list[SingleJson] = field(default_factory=list)
 
 
-def _extract_params(
-    siemplify: SiemplifyAction,
-) -> tuple[str, str, str, int]:
+def _extract_params(siemplify: SiemplifyAction) -> tuple[str, str, str, int]:
     username: str = extract_configuration_param(
         siemplify,
         provider_name=INTEGRATION_NAME,
@@ -61,7 +59,10 @@ def _extract_params(
         print_value=True,
     )
     verify_ssl: str = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="Verify SSL", is_mandatory=True
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Verify SSL",
+        is_mandatory=True,
     )
     risk_threshold: int = extract_action_param(
         siemplify,
