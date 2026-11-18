@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import copy
@@ -13,11 +27,11 @@ from TIPCommon.filters import filter_old_alerts, pass_whitelist_filter
 from TIPCommon.smp_io import read_ids, write_ids
 from TIPCommon.utils import is_test_run
 from TIPCommon.base.connector import Connector
-from mandiant_managed_defense.core import constants
-from mandiant_managed_defense.core.datamodels import Alert
-from mandiant_managed_defense.core import exceptions
-from mandiant_managed_defense.core import AuthenticationManager as auth_manager
-from mandiant_managed_defense.core.MandiantMDManager import ApiManager, ApiParameters
+from ..core import constants
+from ..core.datamodels import Alert
+from ..core import exceptions
+from ..core import AuthenticationManager as auth_manager
+from ..core.MandiantMDManager import ApiManager, ApiParameters
 
 
 class InvestigationsConnector(Connector):

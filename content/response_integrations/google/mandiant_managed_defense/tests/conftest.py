@@ -1,34 +1,31 @@
-from __future__ import annotations
-pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
-import importlib
-import soar_sdk
-sdk_dir = soar_sdk.__path__[0]
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-original_stdout = sys.stdout
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    try:
-        flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
-        setattr(soar_sdk, name, flat_mod)
-    except Exception:
-        pass
-sys.stdout = original_stdout
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Any
+from __future__ import annotations
+
 import json
+import pathlib
+from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
-from pytest_mock import MockFixture
+import soar_sdk  # noqa: F401
 from _pytest.monkeypatch import MonkeyPatch
-
+from pytest_mock import MockFixture
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
-from mandiant_managed_defense.core import AuthenticationManager
-from mandiant_managed_defense.core import MandiantMDManager
-from integration_testing.logger import Logger
+
+from mandiant_managed_defense.core import AuthenticationManager, MandiantMDManager
 
 
 @pytest.fixture(name="load_config")
@@ -39,7 +36,8 @@ def fixture_load_config() -> dict[str, Any]:
         dict[str, Any]: dictionary object for create auth and api params object
     """
     integration_config = {}
-    with open("config.json", "r", encoding="UTF-8") as f:
+    config_path = pathlib.Path(__file__).parent / "config.json"
+    with open(config_path, "r", encoding="UTF-8") as f:
         data = f.read()
 
     config = json.loads(data)
@@ -111,7 +109,7 @@ def api_manager(
     Returns:
         MandiantMDManager.ApiManager object
     """
-    logger = Logger()
+    logger = MagicMock()
     monkeypatch.setattr(
         SiemplifyConnectorExecution,
         "LOGGER",
@@ -122,7 +120,3 @@ def api_manager(
         api_params=api_params,
         chronicle_soar=SiemplifyConnectorExecution,
     )
-
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
-    return script_session
