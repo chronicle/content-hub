@@ -26,6 +26,9 @@
 # ============================= IMPORTS ===================================== #
 
 from __future__ import annotations
+
+from typing import Any
+
 import requests
 from simple_salesforce import Salesforce
 from simple_salesforce.format import format_soql
@@ -118,7 +121,7 @@ class SalesforceManager:
         self.get_cases()
         return True
 
-    def get_case_by_number(self, case_number: str | None) -> dict:
+    def get_case_by_number(self, case_number: str | None) -> dict[str, Any]:
         """Get a case by CaseNumber.
 
         The value is quoted with SOQL backslash escaping (format_soql), so

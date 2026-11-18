@@ -38,7 +38,7 @@ def main():
     try:
         case = salesforce_manager.get_case_by_number(case_number)
     except SalesforceManagerError as err:
-        siemplify.end(f"Error executing action 'Get Case'. Reason: {err}", "false")
+        siemplify.end(f'Error executing action "Get Case". Reason: {err}', "false")
         return
 
     siemplify.result.add_json(f"Case {case_number}", json.dumps(case))

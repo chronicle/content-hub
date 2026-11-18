@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import pytest
@@ -75,7 +75,7 @@ def test_valid_case_number_builds_exact_query(manager: SalesforceManager) -> Non
 
 def test_returns_first_record_when_multiple_match(manager: SalesforceManager) -> None:
     """Only the first returned record is handed back to the caller."""
-    first: dict = {"Id": "500A", "CaseNumber": "00001001"}
+    first: dict[str, Any] = {"Id": "500A", "CaseNumber": "00001001"}
     manager.sf.query.return_value = {"records": [first, {"Id": "500B"}], "done": True}
 
     assert manager.get_case_by_number("00001001") == first

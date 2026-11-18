@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -69,9 +70,10 @@ def test_get_case_empty_number_ends_failed_without_query(sf_client: MagicMock) -
     siemplify = run_action(GetCase, {"Case Number": ""})
 
     siemplify.end.assert_called_once_with(
-        "Error executing action 'Get Case'. Reason: Case Number cannot be empty.", "false"
+        'Error executing action "Get Case". Reason: Case Number cannot be empty.', "false"
     )
     siemplify.result.add_result_json.assert_not_called()
+    siemplify.result.add_json.assert_not_called()
     sf_client.query.assert_not_called()
 
 
@@ -83,9 +85,10 @@ def test_get_case_injection_payload_returns_no_case(
     siemplify = run_action(GetCase, {"Case Number": payload})
 
     siemplify.end.assert_called_once_with(
-        f"Error executing action 'Get Case'. Reason: Case {payload} was not found.", "false"
+        f'Error executing action "Get Case". Reason: Case {payload} was not found.', "false"
     )
     siemplify.result.add_result_json.assert_not_called()
+    siemplify.result.add_json.assert_not_called()
     sf_client.query.assert_called_once()
 
 
@@ -96,6 +99,7 @@ def test_get_case_valid_number_returns_case(sf_client: MagicMock) -> None:
 
     siemplify = run_action(GetCase, {"Case Number": "00001001"})
 
+    siemplify.result.add_json.assert_called_once_with("Case 00001001", json.dumps(record))
     siemplify.result.add_result_json.assert_called_once_with(record)
     siemplify.end.assert_called_once_with("Successfully fetched case 00001001.", "true")
 
