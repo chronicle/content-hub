@@ -14,7 +14,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import pathlib
+import sys
+import types
 from typing import TYPE_CHECKING
 
 import google.auth
@@ -25,6 +28,26 @@ import requests
 import soar_sdk  # noqa: F401
 from integration_testing.common import get_def_file_content, use_live_api
 from integration_testing.logger import Logger
+
+
+def _crypt_fallback(word: str, salt: object = None) -> str:
+    """Return a deterministic SHA-256 crypt-style hash when POSIX crypt is unavailable."""
+    digest = hashlib.sha256(f"{salt}:{word}".encode()).hexdigest()
+    return f"$5${digest[:43]}"
+
+
+def _ensure_crypt_module() -> None:
+    """Register a minimal crypt stub on platforms without POSIX _crypt (such as Windows)."""
+    try:
+        import crypt  # noqa: F401
+    except ImportError:
+        crypt_stub = types.ModuleType("crypt")
+        crypt_stub.__dict__["METHOD_SHA256"] = "SHA256"
+        crypt_stub.__dict__["crypt"] = _crypt_fallback
+        sys.modules["crypt"] = crypt_stub
+
+
+_ensure_crypt_module()
 
 import g_suite.core.GSuiteAuth
 from g_suite.core.datamodels import IntegrationParameters
