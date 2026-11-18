@@ -1,16 +1,30 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailBaseAction import GoogleGmailBaseAction
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailBaseAction import GoogleGmailBaseAction
+from ..core.GoogleGmailConsts import (
     INTEGRATION_IDENTIFIER,
     FORWARD_EMAIL_SCRIPT_NAME,
     DEFAULT_MAILBOX,
 )
-from gmail.core.GoogleGmailExceptions import GoogleGmailNotFoundError
-from gmail.core.GoogleGmailServices import MessagesService
+from ..core.GoogleGmailExceptions import GoogleGmailNotFoundError
+from ..core.GoogleGmailServices import MessagesService
 
 MESSAGE_NOT_FOUND = (
     "The message with the provided internet message ID {} was not found. "

@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import asyncio
@@ -12,19 +26,19 @@ from TIPCommon.smp_time import unix_now
 from TIPCommon.transformation import convert_dict_to_json_result_dict
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailBaseAction import GoogleGmailBaseAction
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailBaseAction import GoogleGmailBaseAction
+from ..core.GoogleGmailConsts import (
     DELETE_EMAIL_SCRIPT_NAME,
 )
-from gmail.core.GoogleGmailDatamodel import AsyncMailboxesActionContext, MailboxReadEnum
-from gmail.core.GoogleGmailExceptions import (
+from ..core.GoogleGmailDatamodel import AsyncMailboxesActionContext, MailboxReadEnum
+from ..core.GoogleGmailExceptions import (
     GoogleCloudAuthenticationError,
     GoogleGmailNotFoundError,
     GoogleGmailPermissionDeniedError,
     GoogleGmailValidationError,
 )
-from gmail.core.GoogleGmailServices import MessagesService
-from gmail.core.GoogleGmailUtils import TaskTimeoutGuard
+from ..core.GoogleGmailServices import MessagesService
+from ..core.GoogleGmailUtils import TaskTimeoutGuard
 
 
 SUCCESS_MESSAGE = (

@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import binascii
@@ -18,17 +32,17 @@ from TIPCommon.smp_time import unix_now
 from TIPCommon.utils import is_test_run
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailApiManager import GoogleGmailApiManager
-from gmail.core.GoogleGmailAuth import build_auth_manager
-from gmail.core import GoogleGmailConsts
-from gmail.core.GoogleGmailDatamodel import GmailMessage
-from gmail.core.GoogleGmailDatamodel import GmailMessagePart
-from gmail.core.GoogleGmailDatamodel import MailboxReadEnum
-from gmail.core.GoogleGmailServices import MessagesService, LabelsService
-from gmail.core.GoogleGmailUtils import build_regex_map
-from gmail.core.GoogleGmailUtils import extract_regex_from_content
-from gmail.core.GoogleGmailUtils import get_html_urls
-from gmail.core.GoogleGmailUtils import transform_dict_keys, transform_template_string
+from ..core.GoogleGmailApiManager import GoogleGmailApiManager
+from ..core.GoogleGmailAuth import build_auth_manager
+from ..core import GoogleGmailConsts
+from ..core.GoogleGmailDatamodel import GmailMessage
+from ..core.GoogleGmailDatamodel import GmailMessagePart
+from ..core.GoogleGmailDatamodel import MailboxReadEnum
+from ..core.GoogleGmailServices import MessagesService, LabelsService
+from ..core.GoogleGmailUtils import build_regex_map
+from ..core.GoogleGmailUtils import extract_regex_from_content
+from ..core.GoogleGmailUtils import get_html_urls
+from ..core.GoogleGmailUtils import transform_dict_keys, transform_template_string
 
 
 class GoogleGmailConnector(AsyncConnector):

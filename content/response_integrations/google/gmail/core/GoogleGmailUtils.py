@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import asyncio
@@ -29,8 +43,8 @@ from TIPCommon.rest.auth import get_auth_request
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 
-from gmail.core.GoogleGmailExceptions import GoogleCloudAuthenticationError
-from gmail.core.GoogleGmailExceptions import InvalidJSONFormatException
+from .GoogleGmailExceptions import GoogleCloudAuthenticationError
+from .GoogleGmailExceptions import InvalidJSONFormatException
 
 DEFAULT_DIVIDER = ";"
 URL_ENCLOSING_PREFIX = "["
@@ -139,7 +153,9 @@ def build_regex_map(logger: NewLineLogger, regex_list: list[str]) -> dict[str, s
 
 
 # TODO move to TIPCommon
-def get_html_urls_from_html_2_text_obj(html_content: str) -> tuple[str, str]:
+def get_html_urls_from_html_2_text_obj(
+    html_content: str,
+) -> tuple[list[str], list[str]]:
     """Create a HTML2Text object and get html urls.
 
     Args:
@@ -155,7 +171,22 @@ def get_html_urls_from_html_2_text_obj(html_content: str) -> tuple[str, str]:
     html_renderer.ignore_images = False
     html_renderer.ignore_links = False
     html_renderer.handle(html_content)
-    return html_renderer.html_links, html_renderer.html_links_original_src
+    if hasattr(html_renderer, "html_links"):
+        return html_renderer.html_links, html_renderer.html_links_original_src
+
+    soup = BeautifulSoup(html_content, "html.parser")
+    html_links: list[str] = []
+    html_links_original_src: list[str] = []
+    for anchor in soup.find_all("a", href=True):
+        href = anchor.get("href")
+        if href is None:
+            continue
+        text = anchor.get_text().replace("\xa0", "")
+        if text != href:
+            html_links.append(text)
+        if original_src := anchor.get("originalsrc"):
+            html_links_original_src.append(str(original_src))
+    return html_links, html_links_original_src
 
 
 # TODO move to TIPCommon

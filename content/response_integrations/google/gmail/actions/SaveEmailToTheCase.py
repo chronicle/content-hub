@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import requests
@@ -8,16 +22,16 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.rest.soar_api import save_attachment_to_case_wall
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailApiManager import GoogleGmailApiManager
-from gmail.core.GoogleGmailBaseAction import GoogleGmailBaseAction
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailApiManager import GoogleGmailApiManager
+from ..core.GoogleGmailBaseAction import GoogleGmailBaseAction
+from ..core.GoogleGmailConsts import (
     INTEGRATION_IDENTIFIER,
     SAVE_EMAIL_TO_THE_CASE,
     DEFAULT_MAILBOX,
 )
-from gmail.core.GoogleGmailDatamodel import GmailMessage
-from gmail.core.GoogleGmailExceptions import GoogleGmailNotFoundError
-from gmail.core.GoogleGmailServices import MessagesService
+from ..core.GoogleGmailDatamodel import GmailMessage
+from ..core.GoogleGmailExceptions import GoogleGmailNotFoundError
+from ..core.GoogleGmailServices import MessagesService
 
 
 MESSAGE_NOT_FOUND = (
