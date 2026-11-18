@@ -392,6 +392,7 @@ class TestAuthenticationManager:
             "TIPCommon.rest.auth.build_credentials_from_sa",
             mock_sa,
         )
+        mocker.patch("TIPCommon.rest.gcp.get_workload_sa_email", return_value="Unknown Principal")
 
         # Act
         with pytest.raises(Exception) as error:
