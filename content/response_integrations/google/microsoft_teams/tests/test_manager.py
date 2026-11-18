@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+import json
 from urllib.parse import quote, urljoin
 from unittest.mock import Mock
 
@@ -22,7 +23,11 @@ from TIPCommon.types import SingleJson
 
 from microsoft_teams.core.MicrosoftManager import \
     MicrosoftTeamsManager
-from microsoft_teams.core.MicrosoftExceptions import MicrosoftTeamsManagerError
+from microsoft_teams.core.MicrosoftExceptions import (
+    MicrosoftTeamsCardError,
+    MicrosoftTeamsChannelNotFoundError,
+    MicrosoftTeamsManagerError,
+)
 
 from microsoft_teams.tests.conftest import CONFIG
 from microsoft_teams.tests.core.session import MicrosoftTeamsSession
@@ -624,3 +629,142 @@ def test_filter_users_by_name_multiple_chunks(
 
     assert "displayName in ('User3') or mail in ('User3')" in second_call_url
     assert "&$select=id,displayName" in second_call_url
+
+
+CARD: dict = {
+    "type": "AdaptiveCard",
+    "version": "1.5",
+    "body": [{"type": "TextBlock", "text": "Hello"}],
+}
+
+
+def _assert_card_payload(payload: dict, attachment_id: str | None = None) -> None:
+    """Asserts the request body that carries an Adaptive Card."""
+    attachment = payload["attachments"][0]
+    assert payload["body"]["contentType"] == "html"
+    assert payload["body"]["content"] == f'<attachment id="{attachment["id"]}"></attachment>'
+    assert attachment["contentType"] == "application/vnd.microsoft.card.adaptive"
+    assert isinstance(attachment["content"], str)
+    assert json.loads(attachment["content"]) == CARD
+    if attachment_id is not None:
+        assert attachment["id"] == attachment_id
+
+
+def test_send_card_to_channel_builds_correct_request(
+    microsoft_teams_manager: MicrosoftTeamsManager,
+    script_session: MicrosoftTeamsSession,
+    mocker: pytest.MockFixture,
+) -> None:
+    """Tests URL and payload for send_card_to_channel."""
+    mocker.patch.object(microsoft_teams_manager, "get_team_id", return_value="t1")
+    mocker.patch.object(microsoft_teams_manager, "get_channel_id", return_value="c1")
+    spy_post: Mock = mocker.spy(script_session, "post")
+
+    message = microsoft_teams_manager.send_card_to_channel(
+        team_name="team", channel_name="channel", card=CARD
+    )
+
+    spy_post.assert_called_once()
+    expected_url = urljoin(CUSTOM_API_ROOT, "v1.0/teams/t1/channels/c1/messages")
+    assert spy_post.call_args.args[0] == expected_url
+    _assert_card_payload(spy_post.call_args.kwargs["json"])
+    assert message.message_id == "card_msg_1"
+
+
+def test_send_card_to_chat_builds_correct_request(
+    microsoft_teams_manager: MicrosoftTeamsManager,
+    script_session: MicrosoftTeamsSession,
+    mocker: pytest.MockFixture,
+) -> None:
+    """Tests URL and payload for send_card_to_chat."""
+    spy_post: Mock = mocker.spy(script_session, "post")
+
+    message = microsoft_teams_manager.send_card_to_chat(chat_id="chat1", card=CARD)
+
+    spy_post.assert_called_once()
+    expected_url = urljoin(CUSTOM_API_ROOT, "v1.0/chats/chat1/messages")
+    assert spy_post.call_args.args[0] == expected_url
+    _assert_card_payload(spy_post.call_args.kwargs["json"])
+    assert message.sender == "me-id-123"
+
+
+def test_update_card_in_channel_reuses_attachment_id(
+    microsoft_teams_manager: MicrosoftTeamsManager,
+    script_session: MicrosoftTeamsSession,
+    mocker: pytest.MockFixture,
+) -> None:
+    """Tests that updating a channel card reuses the existing attachment ID."""
+    mocker.patch.object(microsoft_teams_manager, "get_team_id", return_value="t1")
+    mocker.patch.object(microsoft_teams_manager, "get_channel_id", return_value="c1")
+    spy_patch: Mock = mocker.spy(script_session, "patch")
+
+    microsoft_teams_manager.update_card_in_channel(
+        team_name="team", channel_name="channel", message_id="m1", card=CARD
+    )
+
+    spy_patch.assert_called_once()
+    expected_url = urljoin(CUSTOM_API_ROOT, "v1.0/teams/t1/channels/c1/messages/m1")
+    assert spy_patch.call_args.args[0] == expected_url
+    _assert_card_payload(spy_patch.call_args.kwargs["json"], attachment_id="att1")
+
+
+def test_update_card_in_chat_reuses_attachment_id(
+    microsoft_teams_manager: MicrosoftTeamsManager,
+    script_session: MicrosoftTeamsSession,
+    mocker: pytest.MockFixture,
+) -> None:
+    """Tests URL and payload for update_card_in_chat."""
+    spy_patch: Mock = mocker.spy(script_session, "patch")
+
+    microsoft_teams_manager.update_card_in_chat(
+        chat_id="chat1", message_id="m1", card=CARD
+    )
+
+    spy_patch.assert_called_once()
+    expected_url = urljoin(CUSTOM_API_ROOT, "v1.0/chats/chat1/messages/m1")
+    assert spy_patch.call_args.args[0] == expected_url
+    _assert_card_payload(spy_patch.call_args.kwargs["json"], attachment_id="att1")
+
+
+def test_update_card_generates_attachment_id_when_message_is_not_readable(
+    microsoft_teams_manager: MicrosoftTeamsManager,
+    script_session: MicrosoftTeamsSession,
+    mocker: pytest.MockFixture,
+) -> None:
+    """Tests the fallback to a new attachment ID when reading gets a 403."""
+    spy_patch: Mock = mocker.spy(script_session, "patch")
+
+    microsoft_teams_manager.update_card_in_chat(
+        chat_id="chat1", message_id="m403", card=CARD
+    )
+
+    spy_patch.assert_called_once()
+    payload = spy_patch.call_args.kwargs["json"]
+    _assert_card_payload(payload)
+    assert payload["attachments"][0]["id"] != "att1"
+
+
+def test_update_card_fails_when_message_has_no_card(
+    microsoft_teams_manager: MicrosoftTeamsManager,
+    script_session: MicrosoftTeamsSession,
+    mocker: pytest.MockFixture,
+) -> None:
+    """Tests that a message without a card is not patched."""
+    spy_patch: Mock = mocker.spy(script_session, "patch")
+
+    with pytest.raises(MicrosoftTeamsCardError, match="does not contain"):
+        microsoft_teams_manager.update_card_in_chat(
+            chat_id="chat1", message_id="m2", card=CARD
+        )
+
+    spy_patch.assert_not_called()
+
+
+def test_update_card_raises_not_found_for_missing_message(
+    microsoft_teams_manager: MicrosoftTeamsManager,
+) -> None:
+    """Tests that a 404 while reading the message surfaces to the action."""
+    with pytest.raises(MicrosoftTeamsChannelNotFoundError):
+        microsoft_teams_manager.update_card_in_chat(
+            chat_id="chat1", message_id="m404", card=CARD
+        )
