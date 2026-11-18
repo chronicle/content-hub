@@ -395,7 +395,7 @@ class MicrosoftDefenderATP(abc.ABC):
 
         return pending or (machine_id, task_type) in self._active_request_conflicts
 
-    def set_containment_tasks_error(self, enabled: bool = True) -> None:
+    def set_containment_tasks_error(self, *, enabled: bool = True) -> None:
         """Make the Isolate/Unisolate machineactions query return HTTP 500."""
         self._containment_tasks_error = enabled
 

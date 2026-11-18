@@ -20,6 +20,7 @@ import functools
 import hashlib
 import json
 import pathlib
+import re
 import sys
 import tempfile
 import unittest.mock
@@ -928,10 +929,7 @@ def test_acquire_file_timeout_marker_broken_logger_keeps_state(
 ) -> None:
     """If both the timeout marker check and logger.warn raise, the run still stays IN_PROGRESS."""
     monkeypatch.setattr(AcquireFile, "unix_now", common.raise_error(RuntimeError("clock error")))
-    monkeypatch.setattr(
-        "TIPCommon.base.utils.NewLineLogger.warn",
-        common.raise_error(RuntimeError("logger error")),
-    )
+    monkeypatch.setattr("TIPCommon.base.utils.NewLineLogger.warn", common.raise_error(RuntimeError("logger error")))
 
     AcquireFile.main()
 
@@ -1070,14 +1068,7 @@ def test_acquire_file_raised_poll_error_with_changed_scope_logs_first_run_counts
     assert action_output.results.execution_state == ExecutionState.FAILED
     assert _entity_results(action_output) == {HOSTNAME: _failure("Unexpected polling error", "UNKNOWN_ERROR")}
     assert common.get_summary_lines(caplog) == [
-        common.expected_summary(
-            "FAILURE",
-            "UNKNOWN_ERROR",
-            "FAILED",
-            targets=1,
-            failed=1,
-            exc_type="RuntimeError",
-        ),
+        common.expected_summary("FAILURE", "UNKNOWN_ERROR", "FAILED", targets=1, failed=1, exc_type="RuntimeError"),
     ]
 
 
@@ -1180,10 +1171,7 @@ def test_acquire_file_missing_download_url_fails_as_vendor_error(
     assert action_output.results.execution_state == ExecutionState.COMPLETED
     assert action_output.results.result_value is False
     assert _entity_results(action_output) == {
-        MACHINE_ID: _failure(
-            "Failed to retrieve the acquired file: Missing download link URL.",
-            "VENDOR_ERROR",
-        ),
+        MACHINE_ID: _failure("Failed to retrieve the acquired file: Missing download link URL.", "VENDOR_ERROR"),
     }
 
 
@@ -1207,3 +1195,161 @@ def test_acquire_file_null_error_types_in_state(
     assert action_output.results.execution_state == ExecutionState.COMPLETED
     assert action_output.results.result_value is False
     assert _entity_results(action_output)[MACHINE_ID]["error_type"] == "FILE_NOT_FOUND"
+
+
+class _FailingWriteStream:
+    """Context-managed binary stream that touches the file on disk and fails on write."""
+
+    def __init__(self, path: pathlib.Path) -> None:
+        """Store the file path to create on entry."""
+        self._path = path
+
+    def __enter__(self) -> _FailingWriteStream:
+        """Create an empty file on disk and return the stream."""
+        self._path.write_bytes(b"")
+
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        """Exit the context manager without suppressing exceptions."""
+
+    def write(self, _: bytes) -> int:
+        """Simulate a mid-write disk error."""
+        raise OSError("disk full")
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters={"File Path": WIN_INI, "Machine ID": MACHINE_ID},
+    input_context=_context(),
+)
+def test_acquire_file_save_file_unlinks_partial_file_on_write_error_and_falls_back(
+    microsoft_defender_atp: MicrosoftDefenderATP,
+    action_output: MockActionOutput,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> None:
+    """A mid-write OSError in run_folder unlinks the partial file before falling back to tempdir."""
+    run_dir = tmp_path / "run_dir"
+    fallback = tmp_path / "fallback"
+    run_dir.mkdir()
+    fallback.mkdir()
+    monkeypatch.setattr(SiemplifyBase, "run_folder", str(run_dir))
+    monkeypatch.setattr(tempfile, "tempdir", str(fallback))
+
+    real_open = open
+
+    def _open_with_write_error(file: object, mode: str = "r", *args: object, **kwargs: object) -> object:
+        if "w" in mode and str(file).startswith(str(run_dir)):
+            return _FailingWriteStream(pathlib.Path(str(file)))
+        return real_open(file, mode, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.open", _open_with_write_error)
+
+    AcquireFile.main()
+    microsoft_defender_atp.set_live_response_final_status("Succeeded")
+    _poll(action_output, monkeypatch)
+
+    assert action_output.results.result_value is True
+    assert list(run_dir.iterdir()) == []
+    download_path = pathlib.Path(_entity_results(action_output)[MACHINE_ID]["download_path"])
+    assert download_path.parent == fallback
+    assert download_path.is_file()
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters={"File Path": WIN_INI, "Machine ID": MACHINE_ID},
+    input_context=_context(),
+)
+def test_acquire_file_save_file_unlinks_partial_file_when_both_dirs_fail(
+    microsoft_defender_atp: MicrosoftDefenderATP,
+    action_output: MockActionOutput,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> None:
+    """A mid-write OSError in both run_folder and tempdir leaves zero partial files behind."""
+    run_dir = tmp_path / "run_dir"
+    fallback = tmp_path / "fallback"
+    run_dir.mkdir()
+    fallback.mkdir()
+    monkeypatch.setattr(SiemplifyBase, "run_folder", str(run_dir))
+    monkeypatch.setattr(tempfile, "tempdir", str(fallback))
+
+    real_open = open
+
+    def _open_always_fails_write(file: object, mode: str = "r", *args: object, **kwargs: object) -> object:
+        path_str = str(file)
+        if "w" in mode and (path_str.startswith(str(run_dir)) or path_str.startswith(str(fallback))):
+            return _FailingWriteStream(pathlib.Path(path_str))
+        return real_open(file, mode, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.open", _open_always_fails_write)
+
+    AcquireFile.main()
+    microsoft_defender_atp.set_live_response_final_status("Succeeded")
+    _poll(action_output, monkeypatch)
+
+    assert action_output.results.execution_state == ExecutionState.COMPLETED
+    assert action_output.results.result_value is False
+    assert _entity_results(action_output)[MACHINE_ID]["status"] == "failure"
+    assert "disk full" in _entity_results(action_output)[MACHINE_ID]["error"]
+    assert list(run_dir.iterdir()) == []
+    assert list(fallback.iterdir()) == []
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters={"File Path": WIN_INI, "Machine ID": MACHINE_ID},
+    input_context=_context(),
+)
+@pytest.mark.parametrize("stage", ["dispatch", "poll", "collect"])
+def test_acquire_file_single_error_log_per_failure(
+    microsoft_defender_atp: MicrosoftDefenderATP,
+    action_output: MockActionOutput,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    stage: str,
+) -> None:
+    """Each dispatch, poll, or collect exception emits exactly one ERROR log entry."""
+    manager_cls = "microsoft_defender_atp.core.MicrosoftDefenderATPManager.MicrosoftDefenderATPManager"
+    if stage == "dispatch":
+        monkeypatch.setattr(
+            f"{manager_cls}.run_live_response_command",
+            common.raise_error(RuntimeError("dispatch boom")),
+        )
+        AcquireFile.main()
+    else:
+        AcquireFile.main()
+        if stage == "poll":
+            monkeypatch.setattr(
+                f"{manager_cls}.get_live_response_status",
+                common.raise_error(RuntimeError("poll boom")),
+            )
+        else:
+            microsoft_defender_atp.set_live_response_final_status("Succeeded")
+            monkeypatch.setattr(
+                f"{manager_cls}.get_live_response_result",
+                common.raise_error(RuntimeError("collect boom")),
+            )
+        _poll(action_output, monkeypatch)
+
+    error_records = [record for record in caplog.records if record.levelname == "ERROR"]
+    assert len(error_records) == 1
+    assert f"{stage} boom" in error_records[0].getMessage()
+
+
+def test_acquire_file_widget_allowlists_error_fields_and_styles_failure() -> None:
+    """AcquireFile.html allowlists error and error_type and styles failure status with the error badge."""
+    widget_path = common.INTEGRATION_PATH / "widgets" / "AcquireFile.html"
+    html = widget_path.read_text(encoding="utf-8")
+
+    match = re.search(r"const allowlistedFields\s*=\s*(\[[^\]]+\]);", html, re.DOTALL)
+    assert match is not None
+    allowlisted = json.loads(match.group(1))
+    assert "error" in allowlisted
+    assert "error_type" in allowlisted
+
+    assert 'lowerCaseValue === "error" || lowerCaseValue === "failure"' in html
+    assert 'const label = lowerCaseValue === "failure" ? "Failure" : "Error";' in html
+    assert 'spanElement.classList.add("list-item-error-value", "list-item-specific-value");' in html

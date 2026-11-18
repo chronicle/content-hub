@@ -32,12 +32,7 @@ from ..core.constants import (
 )
 from ..core.exceptions import DefenderException, DefenderNotFoundException
 from ..core.MicrosoftDefenderATPManager import MicrosoftDefenderATPError, MicrosoftDefenderATPManager
-from ..core.UtilsManager import (
-    ActionResultSummaryInput,
-    classify_exception,
-    get_summary_scope,
-    log_action_result_summary,
-)
+from ..core.UtilsManager import ScopedSummaryLogger, classify_exception
 
 if TYPE_CHECKING:
     from soar_sdk.SiemplifyLogger import SiemplifyLogger
@@ -64,27 +59,23 @@ def _enrich_machine_isolation_status(
         logger.warn(f"Failed to get the isolation status of machine {machine.id}: {error}")
 
 
-def _record_enriched_machine(
-    siemplify: SiemplifyAction,
-    manager: MicrosoftDefenderATPManager,
-    machine: Machine,
-    machine_id: str,
-) -> SingleJson:
-    """Enrich a machine with its isolation status and attach it to the action result.
+def _record_enriched_machine(siemplify: SiemplifyAction, machine: Machine, entity_identifier: str) -> SingleJson:
+    """Attach an enriched machine JSON and table to the action result.
 
     Args:
         siemplify: SiemplifyAction instance for action results.
-        manager: Defender manager instance.
-        machine: Machine found for the Machine ID.
-        machine_id: Machine ID that keys the entity result.
+        machine: Enriched machine to record.
+        entity_identifier: Target identifier that keys the entity result.
 
     Returns:
-        The JSON data of the enriched machine.
+        The JSON data of the recorded machine.
     """
-    _enrich_machine_isolation_status(manager, machine, siemplify.LOGGER)
     json_data = machine.to_json()
-    siemplify.result.add_entity_json(entity_identifier=machine_id, json_data=json_data)
-    siemplify.result.add_entity_table(entity_identifier=machine_id, data_table=construct_csv([machine.to_table()]))
+    siemplify.result.add_entity_json(entity_identifier=entity_identifier, json_data=json_data)
+    siemplify.result.add_entity_table(
+        entity_identifier=entity_identifier,
+        data_table=construct_csv([machine.to_table()]),
+    )
 
     return json_data
 
@@ -128,7 +119,8 @@ def _enrich_by_machine_id(
         ]
         return {}, messages, "false", classify_exception(error)[0]
 
-    json_result = {machine_id: _record_enriched_machine(siemplify, manager, found_machine, machine_id)}
+    _enrich_machine_isolation_status(manager, found_machine, siemplify.LOGGER)
+    json_result = {machine_id: _record_enriched_machine(siemplify, found_machine, machine_id)}
     messages = [
         "1 entities enriched",
         "0 entities missed",
@@ -193,7 +185,7 @@ def main():
     failed_entities = []
     missing_entities = []
     enriched_entities = []
-    target_results: dict[str, str | None] = {}
+    summary = ScopedSummaryLogger(siemplify, ENRICH_ENTITY_TYPES, machine_id)
     error: Exception | None = None
 
     try:
@@ -227,7 +219,7 @@ def main():
                     entity.is_enriched = True
 
                     enriched_entities.append(entity)
-                    target_results[entity.identifier] = None
+                    summary.target_results[entity.identifier] = None
 
                     json_result[entity.identifier] = found_machine.to_json()
                     siemplify.result.add_entity_json(
@@ -241,7 +233,7 @@ def main():
                     )
                 else:
                     missing_entities.append(entity)
-                    target_results[entity.identifier] = ErrorType.ENDPOINT_NOT_FOUND
+                    summary.target_results[entity.identifier] = ErrorType.ENDPOINT_NOT_FOUND
                     siemplify.LOGGER.info(
                         f"Entity {entity.identifier} was not enriched because nothing was found"
                     )
@@ -256,7 +248,7 @@ def main():
                     entity.is_enriched = True
 
                     enriched_entities.append(entity)
-                    target_results[entity.identifier] = None
+                    summary.target_results[entity.identifier] = None
 
                     json_result[entity.identifier] = file_data.to_json()
                     siemplify.result.add_entity_json(
@@ -272,7 +264,7 @@ def main():
                     siemplify.LOGGER.error(e)
                     siemplify.LOGGER.exception(e)
                     failed_entities.append(entity)
-                    target_results[entity.identifier] = classify_exception(e)[0]
+                    summary.target_results[entity.identifier] = classify_exception(e)[0]
 
             else:
                 siemplify.LOGGER.info(
@@ -315,7 +307,7 @@ def main():
                 microsoft_defender_atp,
                 machine_id,
             )
-            target_results = {machine_id: error_type}
+            summary.target_results = {machine_id: error_type}
 
         status = EXECUTION_STATE_COMPLETED
         output_message = "\n".join(output_messages)
@@ -329,16 +321,7 @@ def main():
         siemplify.LOGGER.exception(e)
     except Exception as e:
         error = e
-        log_action_result_summary(
-            siemplify.LOGGER,
-            lambda: ActionResultSummaryInput(
-                execution_state=EXECUTION_STATE_FAILED,
-                target_results=target_results,
-                skipped=(s := get_summary_scope(siemplify.target_entities, ENRICH_ENTITY_TYPES, machine_id))[1],
-                unfinished=max(s[0] - len(target_results), 0),
-                error=error,
-            ),
-        )
+        summary.log(EXECUTION_STATE_FAILED, error)
         raise
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
@@ -346,16 +329,7 @@ def main():
     siemplify.LOGGER.info(f"Result: {result}")
     siemplify.LOGGER.info(f"Output Message: {output_message}")
     siemplify.result.add_result_json(convert_dict_to_json_result_dict(json_result))
-    log_action_result_summary(
-        siemplify.LOGGER,
-        lambda: ActionResultSummaryInput(
-            execution_state=status,
-            target_results=target_results,
-            skipped=(s := get_summary_scope(siemplify.target_entities, ENRICH_ENTITY_TYPES, machine_id))[1],
-            unfinished=max(s[0] - len(target_results), 0) if error else 0,
-            error=error,
-        ),
-    )
+    summary.log(status, error)
     siemplify.end(output_message, result, status)
 
 

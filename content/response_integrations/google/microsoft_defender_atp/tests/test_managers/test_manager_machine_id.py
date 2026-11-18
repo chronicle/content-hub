@@ -24,6 +24,7 @@ from integration_testing.logger import Logger
 from integration_testing.requests.response import MockResponse
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
+from microsoft_defender_atp.core.constants import ISOLATE_ACTION_TYPE, ErrorType
 from microsoft_defender_atp.core.datamodels import Machine
 from microsoft_defender_atp.core.exceptions import (
     DefenderActiveRequestExistsException,
@@ -31,7 +32,13 @@ from microsoft_defender_atp.core.exceptions import (
     DefenderNotFoundException,
 )
 from microsoft_defender_atp.core.MicrosoftDefenderATPManager import MicrosoftDefenderATPManager, normalize_machine_id
-from microsoft_defender_atp.core.UtilsManager import hash_acquired_file, normalize_mde_file_path
+from microsoft_defender_atp.core.UtilsManager import (
+    ContainmentTaskSpec,
+    create_containment_task_by_machine_id,
+    hash_acquired_file,
+    normalize_mde_file_path,
+    start_or_reuse_containment_task,
+)
 from microsoft_defender_atp.tests import common
 from microsoft_defender_atp.tests.core.product import DEFAULT_ACQUIRED_CONTENT
 
@@ -39,6 +46,7 @@ if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
     from microsoft_defender_atp.tests.core.product import MicrosoftDefenderATP
+    from microsoft_defender_atp.tests.core.session import MicrosoftDefenderATPSession
 
 MACHINE: SingleJson = common.MOCK_DATA["machine_data"]
 MACHINE_ID: str = MACHINE["id"]
@@ -72,11 +80,6 @@ def api_fixture(product: MicrosoftDefenderATP, logger: Logger) -> MicrosoftDefen
         login_api_root=common.CONFIG["Login API Root"],
         siemplify=SimpleNamespace(LOGGER=logger),
     )
-
-
-# --------------------------------------------------------------------------- #
-# UtilsManager
-# --------------------------------------------------------------------------- #
 
 
 @pytest.mark.parametrize(
@@ -116,7 +119,7 @@ def test_normalize_mde_file_path(raw: str, expected: str) -> None:
 @pytest.mark.parametrize("raw", ["relative\\path.txt", "", "\\\\", "C:/Windows/win.ini", "//etc/hostname"])
 def test_normalize_mde_file_path_rejects_non_absolute(raw: str) -> None:
     """Non-absolute paths raise ValueError."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="must be an absolute path"):
         normalize_mde_file_path(raw)
 
 
@@ -149,11 +152,6 @@ def test_hash_acquired_file_fails_closed_on_corrupt_gzip(raw: bytes) -> None:
         hash_acquired_file(raw)
 
 
-# --------------------------------------------------------------------------- #
-# Machine datamodel
-# --------------------------------------------------------------------------- #
-
-
 def test_machine_output_unchanged_without_isolation_status() -> None:
     """Isolation keys are absent unless isolation_status is set."""
     machine = Machine(raw_data=MACHINE, **MACHINE)
@@ -172,11 +170,6 @@ def test_machine_output_with_isolation_status() -> None:
     assert machine.to_enrichment_data()["is_isolated"] is True
     assert machine.to_table()["Isolation Status"] == "contained"
     assert machine.to_table()["Is Isolated"] is True
-
-
-# --------------------------------------------------------------------------- #
-# Manager: machine lookup
-# --------------------------------------------------------------------------- #
 
 
 def test_get_machine_by_id_strips_prefix(api: MicrosoftDefenderATPManager) -> None:
@@ -216,11 +209,6 @@ def test_find_machine_for_entity_not_found(api: MicrosoftDefenderATPManager, ide
         api.find_machine_for_entity(identifier, entity_type)
 
 
-# --------------------------------------------------------------------------- #
-# Manager: containment
-# --------------------------------------------------------------------------- #
-
-
 def test_isolate_and_unisolate_active_request_exists(
     api: MicrosoftDefenderATPManager,
     product: MicrosoftDefenderATP,
@@ -250,7 +238,7 @@ def test_isolate_and_unisolate_active_request_exists(
         ({"code": "BadRequest", "message": "Invalid isolation type"}, False),
     ],
 )
-def test_raise_if_active_request_exists_matches_code_or_live_message(error: dict[str, str], raises: bool) -> None:
+def test_raise_if_active_request_exists_matches_code_or_live_message(error: dict[str, str], *, raises: bool) -> None:
     """Both the documented code and MDE's live "is still active" message count."""
     response = MockResponse(content={"error": error}, status_code=400)
 
@@ -323,11 +311,6 @@ def test_get_machine_isolation_status_fails_soft(
     assert any("isolation status" in row for row in logger.log_rows)
 
 
-# --------------------------------------------------------------------------- #
-# Test infrastructure: live response outcome and result download
-# --------------------------------------------------------------------------- #
-
-
 def test_live_response_pending_by_default_then_downloadable(
     api: MicrosoftDefenderATPManager,
     product: MicrosoftDefenderATP,
@@ -358,3 +341,74 @@ def test_live_response_failed_reports_command_errors(
 
     assert status["status"] == "Failed"
     assert status["commands"][0]["errors"] == ["File not found"]
+
+
+def test_find_machine_for_entity_hostname_none_raises_not_found(
+    api: MicrosoftDefenderATPManager,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When get_machines_by_name returns None, find_machine_for_entity raises DefenderNotFoundException."""
+    monkeypatch.setattr(api, "get_machines_by_name", lambda **_: None)
+
+    with pytest.raises(DefenderNotFoundException):
+        api.find_machine_for_entity("missing.example.com", EntityTypes.HOSTNAME)
+
+
+def test_get_machine_containment_tasks_escapes_single_quotes(
+    api: MicrosoftDefenderATPManager,
+    script_session: MicrosoftDefenderATPSession,
+) -> None:
+    """Single quotes in machine_id are doubled inside the OData $filter literal."""
+    api.get_machine_containment_tasks("abc'def")
+
+    machine_action_requests = [
+        record
+        for record in script_session.request_history
+        if record.request.url.path.endswith("/api/machineactions")
+    ]
+    assert machine_action_requests
+    filter_param = machine_action_requests[-1].request.kwargs["params"]["$filter"]
+    assert filter_param.startswith("machineId eq 'abc''def' and ")
+
+
+def test_start_or_reuse_containment_task_creates_and_reuses(
+    api: MicrosoftDefenderATPManager,
+    product: MicrosoftDefenderATP,
+    logger: Logger,
+) -> None:
+    """start_or_reuse_containment_task creates a task and falls back to the active task on conflict."""
+    spec = ContainmentTaskSpec(
+        action_type=ISOLATE_ACTION_TYPE,
+        start_task=lambda mid: api.isolate_machine(machine_id=mid, isolation_type="Full", comment="test"),
+        logger=logger,
+    )
+
+    created, created_outcome = start_or_reuse_containment_task(api, MACHINE_ID, spec)
+    assert created_outcome == "was created successfully"
+
+    product.set_active_request_exists(MACHINE_ID, ISOLATE_ACTION_TYPE)
+    reused, reused_outcome = start_or_reuse_containment_task(api, MACHINE_ID, spec)
+    assert reused_outcome == "already exists"
+    assert reused.id == created.id
+
+
+def test_create_containment_task_by_machine_id_returns_result_dataclass(
+    api: MicrosoftDefenderATPManager,
+    logger: Logger,
+) -> None:
+    """create_containment_task_by_machine_id returns ContainmentByMachineIdResult on success and not-found."""
+    spec = ContainmentTaskSpec(
+        action_type=ISOLATE_ACTION_TYPE,
+        start_task=lambda mid: api.isolate_machine(machine_id=mid, isolation_type="Full", comment="test"),
+        logger=logger,
+    )
+
+    ok_result = create_containment_task_by_machine_id(api, MACHINE_ID, spec)
+    assert ok_result.result_value == "true"
+    assert ok_result.error_type is None
+    assert len(ok_result.tasks) == 1
+
+    missing_result = create_containment_task_by_machine_id(api, "0" * 40, spec)
+    assert missing_result.result_value == "false"
+    assert missing_result.error_type == ErrorType.ENDPOINT_NOT_FOUND
+    assert missing_result.tasks == []

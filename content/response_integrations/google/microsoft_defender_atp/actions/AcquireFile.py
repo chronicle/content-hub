@@ -150,7 +150,7 @@ class AcquireFileAction(BaseAction):
             except DefenderNotFoundException:
                 self.state["not_found"].append(identifier)
                 continue
-            except Exception as error:  # pylint: disable=broad-except
+            except Exception as error:
                 self.logger.exception(error)
                 self.state["failed"][identifier] = str(error)
                 self.state[constants.ERROR_TYPES_STATE_KEY][identifier] = classify_exception(error)[0]
@@ -183,9 +183,8 @@ class AcquireFileAction(BaseAction):
                     commands=[self._get_file_command()],
                     comment=self.state["comment"],
                 )
-        except Exception as error:  # pylint: disable=broad-except
-            self.logger.exception(error)
-            self._fail_target(target, str(error), classify_exception(error)[0])
+        except Exception as error:
+            self._fail_target_from_exception(target, error)
             return
 
         self.logger.info(f"Tracking GetFile action {action['id']} on machine {machine_id}.")
@@ -229,9 +228,8 @@ class AcquireFileAction(BaseAction):
         """
         try:
             action = self.api_client.get_live_response_status(target["action_id"])
-        except Exception as error:  # pylint: disable=broad-except
-            self.logger.exception(error)
-            self._fail_target(target, str(error), classify_exception(error)[0])
+        except Exception as error:
+            self._fail_target_from_exception(target, error)
             return
 
         target["status"] = action.get("status")
@@ -257,15 +255,14 @@ class AcquireFileAction(BaseAction):
                 raise DefenderException("Missing download link URL.")
             raw = self.api_client.get_live_response_result(download_url)
             hashes = hash_acquired_file(raw)
-            download_path = self._save_file(raw, hashes["is_gzip"])
-        except Exception as error:  # pylint: disable=broad-except
-            self.logger.exception(error)
-            self._fail_target(target, f"Failed to retrieve the acquired file: {error}", classify_exception(error)[0])
+            download_path = self._save_file(raw)
+        except Exception as error:
+            self._fail_target_from_exception(target, error, f"Failed to retrieve the acquired file: {error}")
             return
 
         try:
             self.soar_action.add_attachment(download_path)
-        except Exception as error:  # pylint: disable=broad-except
+        except Exception as error:
             # The SDK raises a bare Exception; the file is still saved locally.
             self.logger.warn(f"Failed to attach {download_path} to the case: {error}")
 
@@ -284,30 +281,58 @@ class AcquireFileAction(BaseAction):
             "completed_at": action.get("lastUpdateDateTimeUtc"),
         }
 
-    def _save_file(self, raw: bytes, is_gzip: bool) -> str:
+    @staticmethod
+    def _write_file(download_path: str, raw: bytes) -> str:
+        """Write raw bytes to disk, unlinking any partial file on failure.
+
+        Args:
+            download_path: Destination file path.
+            raw: Bytes to write.
+
+        Returns:
+            The written file path.
+        """
+        try:
+            with open(download_path, "wb") as file:
+                file.write(raw)
+
+            return download_path
+        except OSError:
+            with contextlib.suppress(OSError):
+                os.remove(download_path)
+            raise
+
+    def _save_file(self, raw: bytes) -> str:
         """Write the vendor artifact as-is under a random name.
 
         Args:
             raw: Downloaded file bytes.
-            is_gzip: Whether the bytes are gzip-compressed.
 
         Returns:
             The local path of the saved file.
         """
-        filename = f"{uuid.uuid4()}.{'gz' if is_gzip else 'bin'}"
+        suffix = "gz" if raw.startswith(constants.GZIP_MAGIC_BYTES) else "bin"
+        filename = f"{uuid.uuid4()}.{suffix}"
         try:
-            download_path = os.path.join(self.soar_action.run_folder, filename)
-            with open(download_path, "wb") as file:
-                file.write(raw)
-        except (AttributeError, PermissionError, OSError):
-            download_path = os.path.join(tempfile.gettempdir(), filename)
-            with open(download_path, "wb") as file:
-                file.write(raw)
+            return self._write_file(os.path.join(self.soar_action.run_folder, filename), raw)
+        except (AttributeError, OSError):
+            return self._write_file(os.path.join(tempfile.gettempdir(), filename), raw)
 
-        return download_path
+    @staticmethod
+    def _record_target_failure(target: SingleJson, reason: str, error_type: str) -> None:
+        """Store failure details on the mutable per-machine target state.
+
+        Args:
+            target: Mutable per-machine state.
+            reason: Failure reason reported in the output message.
+            error_type: Failure error type reported in the JSON result.
+        """
+        target["status"] = "Failed"
+        target["error"] = reason
+        target["error_type"] = error_type
 
     def _fail_target(self, target: SingleJson, reason: str, error_type: str) -> None:
-        """Mark a machine as failed.
+        """Mark a machine as failed and log the failure reason.
 
         Args:
             target: Mutable per-machine state.
@@ -315,9 +340,19 @@ class AcquireFileAction(BaseAction):
             error_type: Failure error type reported in the JSON result.
         """
         self.logger.error(f"Failed to acquire file on {', '.join(target['entities'])}: {reason}")
-        target["status"] = "Failed"
-        target["error"] = reason
-        target["error_type"] = error_type
+        self._record_target_failure(target, reason, error_type)
+
+    def _fail_target_from_exception(self, target: SingleJson, error: Exception, reason: str | None = None) -> None:
+        """Mark a machine as failed and log the exception once with traceback.
+
+        Args:
+            target: Mutable per-machine state.
+            error: Exception raised while handling the machine.
+            reason: Optional failure reason; defaults to str(error).
+        """
+        message = reason or str(error)
+        self.logger.exception(f"Failed to acquire file on {', '.join(target['entities'])}: {message}")
+        self._record_target_failure(target, message, classify_exception(error)[0])
 
     def _fail_pending_targets(self, reason: str, error_type: str) -> None:
         """Mark every machine whose acquisition has not finished as failed.
@@ -460,9 +495,8 @@ class AcquireFileAction(BaseAction):
             if self.state:
                 self._fail_pending_targets(str(error), error_type)
                 entries = self._collect_outcomes()[2]
-        except Exception as state_error:  # pylint: disable=broad-except
+        except Exception as state_error:
             self.logger.exception(f"Failed to build the JSON result from the saved state: {state_error}")
-            entries = {}
         entries = entries or self._build_failure_entries(str(error), error_type)
         self._set_target_results(entries)
         self.soar_action.result.add_result_json(convert_dict_to_json_result_dict(entries))
@@ -470,23 +504,22 @@ class AcquireFileAction(BaseAction):
     def _finalize(self) -> None:
         """Log the result summary line once per finished run, or the one-time timeout marker."""
         state = ExecutionState.FAILED if self.run_error else self.execution_state
-        is_marker = state == ExecutionState.IN_PROGRESS
-        if self.summary_logged or (is_marker and not self.timeout_marker_due):
+        if self.summary_logged or (state == ExecutionState.IN_PROGRESS and not self.timeout_marker_due):
             return
 
         self.summary_logged = True
-        log_action_result_summary(self.logger, lambda: self._build_summary_input(state, is_marker))
+        log_action_result_summary(self.logger, lambda: self._build_summary_input(state))
 
-    def _build_summary_input(self, state: ExecutionState | int, is_marker: bool) -> ActionResultSummaryInput:
+    def _build_summary_input(self, state: ExecutionState | int) -> ActionResultSummaryInput:
         """Build the summary inputs from the first-run scope or current target entities.
 
         Args:
             state: Final execution state, or IN_PROGRESS for the timeout marker.
-            is_marker: Whether this summary is the one-time IN_PROGRESS timeout marker.
 
         Returns:
             Summary inputs for the result summary line.
         """
+        is_marker = state == ExecutionState.IN_PROGRESS
         machine_id: str | None = getattr(self.params, "machine_id", None)
         scope = get_summary_scope(self.soar_action.target_entities, constants.ACQUIRE_FILE_ENTITY_TYPES, machine_id)
         targets, skipped = self.state.get("target_count", scope[0]), self.state.get("unsupported_count", scope[1])
@@ -523,7 +556,7 @@ class AcquireFileAction(BaseAction):
         """Run the action and fail it with a JSON result on errors raised before the base run loop."""
         try:
             super().run()
-        except Exception as error:  # pylint: disable=broad-except
+        except Exception as error:
             self._set_failed(str(error), classify_exception(error)[0])
             self.soar_action.result.add_result_json(self.json_results)
             self.run_error = error
@@ -550,8 +583,10 @@ class AcquireFileAction(BaseAction):
         lines = [f'None of the provided endpoints returned file "{file_path}".']
         if results:
             lines = [
-                f'Successfully acquired file "{file_path}" from the following endpoints '
-                f"using {product}: {', '.join(results)}.",
+                (
+                    f'Successfully acquired file "{file_path}" from the following endpoints '
+                    f"using {product}: {', '.join(results)}."
+                ),
             ]
         if failed:
             lines.append(

@@ -257,6 +257,7 @@ def test_enrich_entities_isolation_status(
     action_output: MockActionOutput,
     tasks: list[tuple[str, str, str]],
     expected_status: str,
+    *,
     expected_is_isolated: bool,
 ) -> None:
     """Test that the isolation status is derived from the machine's containment tasks."""
@@ -279,7 +280,7 @@ def test_enrich_entities_isolation_status_error_is_unknown(
 ) -> None:
     """Test that a machineactions error yields "unknown" and the entity is still enriched."""
     _add_machine(microsoft_defender_atp)
-    microsoft_defender_atp.set_containment_tasks_error(True)
+    microsoft_defender_atp.set_containment_tasks_error(enabled=True)
 
     EnrichEntities.main()
 

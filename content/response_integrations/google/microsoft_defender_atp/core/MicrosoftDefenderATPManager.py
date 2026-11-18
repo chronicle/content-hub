@@ -618,7 +618,7 @@ class MicrosoftDefenderATPManager:
         """
         machines: list[Machine] = []
         if entity_type == EntityTypes.HOSTNAME:
-            machines = self.get_machines_by_name(starts_with_name=identifier)
+            machines = self.get_machines_by_name(starts_with_name=identifier) or []
         elif entity_type == EntityTypes.ADDRESS:
             machines = self.get_machines(ip=identifier)
 
@@ -800,8 +800,9 @@ class MicrosoftDefenderATPManager:
             The containment tasks sorted by creation time, newest first.
         """
         url = self.get_full_url("get_machine_task_status")
-        type_filter = self._get_multiple_value_filter("type", CONTAINMENT_ACTION_TYPES)
-        params = {"$filter": f"machineId eq '{machine_id}' and {type_filter}"}
+        type_filter: str = self._get_multiple_value_filter("type", CONTAINMENT_ACTION_TYPES)
+        safe_machine_id = machine_id.replace("'", "''")
+        params = {"$filter": f"machineId eq '{safe_machine_id}' and {type_filter}"}
         response = self.session.get(url, params=params)
         self._validate_response(response, f"Failed to get containment tasks of machine with ID: {machine_id}")
         raw_tasks: SingleJson = response.json()
@@ -1538,7 +1539,7 @@ class MicrosoftDefenderATPManager:
                 ) from error
 
             try:
-                payload = response.json()
+                payload: object = response.json()
                 error_info = payload.get("error", {}) if isinstance(payload, dict) else {}
                 error_message = error_info.get("message", "") if isinstance(error_info, dict) else error_info
                 raise MicrosoftDefenderATPError(

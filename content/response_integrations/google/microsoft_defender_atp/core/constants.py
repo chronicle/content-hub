@@ -71,10 +71,6 @@ GET_MACHINE_RECOMMENDATIONS_SCRIPT_NAME: str = (
 ACQUIRE_FILE_SCRIPT_NAME: str = f"{PROVIDER_NAME} - Acquire File"
 ACQUIRE_FILE_DEFAULT_COMMENT: str = "Acquire File via Google SecOps"
 
-ENRICHMENT_PREFIX: str = "Defender ATP"
-ISOLATE_TASKS_TABLE_TITLE: str = "Created Defender ATP isolate machine tasks:"
-UNISOLATE_TASKS_TABLE_TITLE: str = "Created Defender ATP unisolate machine tasks:"
-
 ACTIVE_REQUEST_EXISTS_ERROR_CODE: str = "ActiveRequestAlreadyExists"
 ACTIVE_REQUEST_EXISTS_MESSAGE_MARKER: str = "is still active"
 MACHINE_ID_PREFIXES: tuple[str, ...] = ("MICROSOFT_GRAPH_ALERT: ", "DeviceId:", "DeviceID:", "Device ID:")

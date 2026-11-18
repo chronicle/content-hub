@@ -14,13 +14,18 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 import requests
+from integration_testing.common import create_entity
+from integration_testing.logger import Logger
 from integration_testing.requests.response import MockResponse
+from TIPCommon.base.action import EntityTypesEnum
 from TIPCommon.base.action.data_models import ExecutionState
 from TIPCommon.exceptions import ActionSetupError, ParameterExtractionError
 
-from microsoft_defender_atp.core.constants import ErrorType
+from microsoft_defender_atp.core.constants import MACHINE_ENTITY_TYPES, ErrorType
 from microsoft_defender_atp.core.exceptions import DefenderException, DefenderNotFoundException
 from microsoft_defender_atp.core.MicrosoftDefenderATPManager import (
     MicrosoftDefenderATPError,
@@ -30,6 +35,7 @@ from microsoft_defender_atp.core.MicrosoftDefenderATPManager import (
 )
 from microsoft_defender_atp.core.UtilsManager import (
     ActionResultSummaryInput,
+    ScopedSummaryLogger,
     build_action_result_summary,
     classify_exception,
     classify_live_response_failure,
@@ -241,3 +247,30 @@ def test_validate_response_keeps_status_code(response: MockResponse, message: st
 
     assert error.value.status_code == response.status_code
     assert str(error.value).startswith(message)
+
+
+def test_scoped_summary_logger_logs_completed_and_error_states() -> None:
+    """ScopedSummaryLogger computes targets, skipped, and unfinished counts for normal and error runs."""
+    logger = Logger()
+    entities = [
+        create_entity("host1", type_=EntityTypesEnum.HOST_NAME),
+        create_entity("host2", type_=EntityTypesEnum.HOST_NAME),
+        create_entity("a" * 64, type_=EntityTypesEnum.FILE_HASH),
+    ]
+    siemplify = SimpleNamespace(target_entities=entities, LOGGER=logger)
+    summary = ScopedSummaryLogger(siemplify, MACHINE_ENTITY_TYPES, None)
+    summary.target_results["host1"] = None
+
+    summary.log(ExecutionState.COMPLETED)
+    summary.log(ExecutionState.FAILED, RuntimeError("boom"))
+
+    assert logger.log_rows == [
+        (
+            "ACTION_RESULT_SUMMARY v=1 outcome=SUCCESS error_type=NONE execution_state=COMPLETED "
+            "targets=1 failed=0 skipped=1 exc_type=NONE http_status=NONE"
+        ),
+        (
+            "ACTION_RESULT_SUMMARY v=1 outcome=PARTIAL_SUCCESS error_type=UNKNOWN_ERROR execution_state=FAILED "
+            "targets=2 failed=1 skipped=1 exc_type=RuntimeError http_status=NONE"
+        ),
+    ]

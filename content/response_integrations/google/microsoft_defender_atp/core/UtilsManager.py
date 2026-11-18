@@ -38,7 +38,7 @@ from .constants import (
     TOKEN_ERROR_MARKER,
     ErrorType,
 )
-from .exceptions import DefenderException, DefenderNotFoundException
+from .exceptions import DefenderActiveRequestExistsException, DefenderException, DefenderNotFoundException
 from .MicrosoftDefenderATPManager import (
     MicrosoftDefenderATPError,
     MicrosoftDefenderATPForbiddenError,
@@ -50,6 +50,7 @@ from .MicrosoftDefenderATPManager import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
 
+    from soar_sdk.SiemplifyAction import SiemplifyAction
     from soar_sdk.SiemplifyDataModel import DomainEntityInfo
     from soar_sdk.SiemplifyLogger import SiemplifyLogger
     from TIPCommon.types import ChronicleSOAR, SingleJson
@@ -121,7 +122,7 @@ def normalize_mde_file_path(path: str) -> str:
     Raises:
         ValueError: If the normalized path is not a drive-letter, UNC or POSIX path.
     """
-    expanded = re.sub("%systemroot%", lambda _: SYSTEM_ROOT_PATH, path.strip(), flags=re.IGNORECASE)
+    expanded = re.sub(r"%systemroot%", lambda _: SYSTEM_ROOT_PATH, path.strip(), flags=re.IGNORECASE)
     collapsed = re.sub(r"\\{2,}", r"\\", expanded)
     normalized = f"\\{collapsed}" if expanded.startswith("\\\\") else collapsed
     if not re.match(ABSOLUTE_PATH_PATTERN, normalized):
@@ -161,43 +162,104 @@ def hash_acquired_file(raw: bytes) -> SingleJson:
     }
 
 
+@dataclasses.dataclass(slots=True)
+class ContainmentTaskSpec:
+    """Inputs for starting or reusing a machine containment task.
+
+    Attributes:
+        action_type: Containment action type (Isolate or Unisolate).
+        start_task: Callable that starts the task for a resolved machine ID.
+        logger: Siemplify logger.
+    """
+
+    action_type: str
+    start_task: Callable[[str], MachineTask]
+    logger: SiemplifyLogger
+
+
+@dataclasses.dataclass(slots=True)
+class ContainmentByMachineIdResult:
+    """Result of creating or reusing a containment task by Machine ID.
+
+    Attributes:
+        tasks: Created or reused containment tasks.
+        output_messages: Output messages for the action result.
+        result_value: Action result value ("true" or "false").
+        error_type: Error type if failed, else None.
+    """
+
+    tasks: list[MachineTask]
+    output_messages: list[str]
+    result_value: str
+    error_type: str | None = None
+
+
+def start_or_reuse_containment_task(
+    manager: MicrosoftDefenderATPManager,
+    machine_id: str,
+    spec: ContainmentTaskSpec,
+) -> tuple[MachineTask, str]:
+    """Start a containment task, reusing an active task of the same type if one exists.
+
+    Args:
+        manager: Defender manager instance.
+        machine_id: Target machine ID.
+        spec: Containment task specification.
+
+    Returns:
+        A tuple of (task, outcome), where outcome describes whether the task
+        was created or reused.
+    """
+    try:
+        return spec.start_task(machine_id), "was created successfully"
+    except DefenderActiveRequestExistsException:
+        return manager.get_active_containment_task(machine_id, spec.action_type), "already exists"
+
+
 def create_containment_task_by_machine_id(
     manager: MicrosoftDefenderATPManager,
     machine_id: str,
-    start_task: Callable[[str], tuple[MachineTask, str]],
-    action_label: str,
-    logger: SiemplifyLogger,
-) -> tuple[list[MachineTask], list[str], str, str | None]:
+    spec: ContainmentTaskSpec,
+) -> ContainmentByMachineIdResult:
     """Look up a machine by Machine ID and start an isolate or unisolate task on it.
 
     Args:
         manager: Defender manager instance.
         machine_id: Target machine ID.
-        start_task: Callable that starts the task on the found machine's ID and
-            returns (task, outcome).
-        action_label: Task type for the output message (Isolate or Unisolate).
-        logger: Siemplify logger.
+        spec: Containment task specification.
 
     Returns:
-        A tuple of (tasks, output_messages, result, error_type). error_type is
-        None if the task was started.
+        The containment result containing tasks, output messages, result value,
+        and error type.
     """
     try:
         try:
             machine = manager.get_machine_by_id(machine_id)
         except DefenderNotFoundException:
             msg = f"Failed to find machine ATP by Machine ID: {machine_id}"
-            logger.warn(msg)
-            return [], [msg, "1 entities were not found in ATP"], "false", ErrorType.ENDPOINT_NOT_FOUND
-        task, outcome = start_task(machine.id)
+            spec.logger.warn(msg)
+
+            return ContainmentByMachineIdResult(
+                tasks=[],
+                output_messages=[msg, "1 entities were not found in ATP"],
+                result_value="false",
+                error_type=ErrorType.ENDPOINT_NOT_FOUND,
+            )
+        task, outcome = start_or_reuse_containment_task(manager, machine.id, spec)
     except (MicrosoftDefenderATPError, DefenderException) as error:
-        logger.exception(f"Failed to process Machine ID {machine_id}: {error}")
-        return [], [f"Failed to process Machine ID {machine_id}. {error}"], "false", classify_exception(error)[0]
+        spec.logger.exception(f"Failed to process Machine ID {machine_id}: {error}")
 
-    msg = f"{action_label} machine task {task.id} {outcome} on Defender ATP Server for {machine_id}"
-    logger.info(msg)
+        return ContainmentByMachineIdResult(
+            tasks=[],
+            output_messages=[f"Failed to process Machine ID {machine_id}. {error}"],
+            result_value="false",
+            error_type=classify_exception(error)[0],
+        )
 
-    return [task], [msg], "true", None
+    msg = f"{spec.action_type} machine task {task.id} {outcome} on Defender ATP Server for {machine_id}"
+    spec.logger.info(msg)
+
+    return ContainmentByMachineIdResult(tasks=[task], output_messages=[msg], result_value="true")
 
 
 @dataclasses.dataclass(slots=True)
@@ -438,10 +500,7 @@ def get_summary_scope(
     return supported, len(entities) - supported
 
 
-def log_action_result_summary(
-    logger: SiemplifyLogger,
-    get_summary: Callable[[], ActionResultSummaryInput],
-) -> None:
+def log_action_result_summary(logger: SiemplifyLogger, get_summary: Callable[[], ActionResultSummaryInput]) -> None:
     """Log the ACTION_RESULT_SUMMARY line. Never raise.
 
     Args:
@@ -453,3 +512,41 @@ def log_action_result_summary(
     except Exception as err:
         with contextlib.suppress(Exception):
             logger.warn(f"Failed to log action result summary: {err}")
+
+
+@dataclasses.dataclass(slots=True)
+class ScopedSummaryLogger:
+    """Log an ACTION_RESULT_SUMMARY line for a sync action's target scope.
+
+    Attributes:
+        siemplify: SiemplifyAction instance providing entities and logger.
+        supported_types: Entity types handled by the action.
+        machine_id: Optional Machine ID override.
+        target_results: Target key to error type, or None for succeeded targets.
+    """
+
+    siemplify: SiemplifyAction
+    supported_types: tuple[str, ...]
+    machine_id: str | None
+    target_results: dict[str, str | None] = dataclasses.field(default_factory=dict)
+
+    def log(self, execution_state: ExecutionState | int, error: BaseException | None = None) -> None:
+        """Build and log the ACTION_RESULT_SUMMARY line.
+
+        Args:
+            execution_state: Final execution state of the run.
+            error: Exception that ended the run, if any.
+        """
+        def _build() -> ActionResultSummaryInput:
+            targets, skipped = get_summary_scope(self.siemplify.target_entities, self.supported_types, self.machine_id)
+            unfinished = max(targets - len(self.target_results), 0) if error else 0
+
+            return ActionResultSummaryInput(
+                execution_state=execution_state,
+                target_results=self.target_results,
+                skipped=skipped,
+                unfinished=unfinished,
+                error=error,
+            )
+
+        log_action_result_summary(self.siemplify.LOGGER, _build)
