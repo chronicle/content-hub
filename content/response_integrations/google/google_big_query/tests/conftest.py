@@ -1,10 +1,27 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
-pytest_plugins = ("integration_testing.conftest",)
-import sys
-import os
-import pkgutil
+
 import importlib
+import pkgutil
+import sys
+from unittest.mock import MagicMock, Mock
+
+import pytest
 import soar_sdk
+
 sdk_dir = soar_sdk.__path__[0]
 if sdk_dir not in sys.path:
     sys.path.insert(0, sdk_dir)
@@ -12,41 +29,42 @@ original_stdout = sys.stdout
 for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
     try:
         flat_mod = importlib.import_module(name)
-        sys.modules[f'soar_sdk.{name}'] = flat_mod
+        sys.modules[f"soar_sdk.{name}"] = flat_mod
         setattr(soar_sdk, name, flat_mod)
     except Exception:
         pass
 sys.stdout = original_stdout
 
-from unittest.mock import Mock
+from TIPCommon.types import SingleJson  # noqa: E402
 
-import pytest
-from TIPCommon.types import SingleJson
-
-import data_models
-from google_big_query.core.GoogleBigQueryManager import (
+from google_big_query.core import data_models  # noqa: E402
+from google_big_query.core.GoogleBigQueryManager import (  # noqa: E402
     GoogleBigQueryApiManager,
 )
-from google_big_query.core.GoogleBigQueryUtils import (
+from google_big_query.core.GoogleBigQueryUtils import (  # noqa: E402
     ExtractConfigurationParameters,
 )
-from integration_testing.logger import Logger
+
 
 class BigQueryApiClientMock:
+    """Mock BigQuery client for unit tests."""
+
     @staticmethod
-    def list_datasets(*_, **__) -> list[Mock]:
+    def list_datasets(*_: object, **__: object) -> list[Mock]:
         return [Mock(), Mock()]
 
     @staticmethod
-    def query(*_, **__) -> list[SingleJson]:
+    def query(*_: object, **__: object) -> list[SingleJson]:
         return [{"test": "asd"}, {"test": "sdf"}]
 
 
 class Mockplify:
-    LOGGER = Logger()  # pylint: disable=invalid-name
+    """Mock SOAR SDK handle for unit tests."""
+
+    LOGGER = MagicMock()
 
     @staticmethod
-    def get_configuration(_) -> SingleJson:
+    def get_configuration(_: object) -> SingleJson:
         return {
             "Account Type": "account_type",
             "Project ID": "project_id",
@@ -67,16 +85,19 @@ class Mockplify:
 
 @pytest.fixture
 def mockplify() -> Mockplify:
+    """Return mock SOAR SDK object."""
     return Mockplify()
 
 
 @pytest.fixture
 def conf_param_extractor() -> ExtractConfigurationParameters:
+    """Return configuration parameter extractor fixture."""
     return ExtractConfigurationParameters(Mockplify())
 
 
 @pytest.fixture
 def google_sa() -> data_models.GoogleServiceAccount:
+    """Return populated GoogleServiceAccount fixture."""
     return data_models.GoogleServiceAccount(
         account_type="account_type",
         project_id="project_id",
@@ -93,6 +114,7 @@ def google_sa() -> data_models.GoogleServiceAccount:
 
 @pytest.fixture
 def empty_google_sa() -> data_models.GoogleServiceAccount:
+    """Return empty GoogleServiceAccount fixture."""
     return data_models.GoogleServiceAccount(
         account_type=None,
         project_id=None,
@@ -109,8 +131,5 @@ def empty_google_sa() -> data_models.GoogleServiceAccount:
 
 @pytest.fixture
 def manager() -> GoogleBigQueryApiManager:
+    """Return GoogleBigQueryApiManager backed by mock client."""
     return GoogleBigQueryApiManager("project_id", BigQueryApiClientMock())
-
-@pytest.fixture(name='sdk_session', autouse=True)
-def sdk_session_fixture(script_session):
-    return script_session
