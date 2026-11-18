@@ -64,6 +64,7 @@ class VectraProduct:
     open_detections_response: Optional[dict] = None
     query_investigation_response: Optional[dict] = None
     investigation_results_response: Optional[list] = None
+    investigation_results_meta: Optional[dict] = None
     group_members_response: Optional[dict] = None
     group_update_response: Optional[dict] = None
     assign_entity_response: Optional[dict] = None

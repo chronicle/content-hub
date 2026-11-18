@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import requests
 
@@ -45,7 +46,13 @@ class MockResponse(requests.Response):
     actual network I/O involved.
     """
 
-    def __init__(self, json_data=None, status_code=200, content=None, headers=None):
+    def __init__(
+        self,
+        json_data: dict[str, Any] | None = None,
+        status_code: int = 200,
+        content: bytes | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         super().__init__()
         self.status_code = status_code
         self.headers.update(headers or {"Content-Type": "application/json"})
@@ -55,7 +62,7 @@ class MockResponse(requests.Response):
             self._content = requests.compat.json.dumps(json_data or {}).encode("utf-8")
         self._content_consumed = True
 
-    def json(self, **kwargs):
+    def json(self, **kwargs: Any) -> Any:
         return requests.compat.json.loads(self._content.decode("utf-8"))
 
 
@@ -68,12 +75,21 @@ class MockVectraSession(requests.Session):
     real API surface without depending on any external mocking library.
     """
 
-    def __init__(self, product: VectraProduct):
+    def __init__(self, product: VectraProduct) -> None:
         super().__init__()
         self._product = product
         self.request_history = []
 
-    def request(self, method, url, params=None, data=None, json=None, timeout=None, **kwargs):
+    def request(
+        self,
+        method: str,
+        url: str,
+        params: dict[str, Any] | None = None,
+        data: Any = None,
+        json: Any = None,
+        timeout: float | None = None,
+        **kwargs: Any,
+    ) -> requests.Response:
         self.request_history.append(
             {"method": method, "url": url, "params": params, "data": data, "json": json},
         )
@@ -91,14 +107,30 @@ class MockVectraSession(requests.Session):
         return MockResponse(json_data={"detail": "route not mocked"}, status_code=404)
 
     # -- individual endpoint handlers ---------------------------------
-    def _handle_ping(self, method, path, params, data, json_body, match):
+    def _handle_ping(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.token_status_code
         if status != 200:
             return MockResponse(json_data=p.body_for("PING", {"error": "invalid_client"}), status_code=status)
         return MockResponse(json_data=p.token_response or mock("ping_token"), status_code=200)
 
-    def _handle_list_entities(self, method, path, params, data, json_body, match):
+    def _handle_list_entities(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         # DESCRIBE_ENTITY and LIST_ENTITIES both hit `/entities`; DESCRIBE_ENTITY
         # additionally sends an `id` query param, LIST_ENTITIES never does.
         if params.get("id") is not None:
@@ -111,7 +143,15 @@ class MockVectraSession(requests.Session):
         results = p.list_entities_response if p.list_entities_response is not None else mock("list_entities")
         return MockResponse(json_data={"results": results, "next": None, "count": len(results)}, status_code=200)
 
-    def _handle_describe_entity(self, method, path, params, data, json_body, match):
+    def _handle_describe_entity(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("DESCRIBE_ENTITY")
         if status != 200:
@@ -119,7 +159,15 @@ class MockVectraSession(requests.Session):
         results = p.describe_entity_response if p.describe_entity_response is not None else [mock("describe_entity")]
         return MockResponse(json_data={"results": results, "next": None, "count": len(results)}, status_code=200)
 
-    def _handle_describe_detection(self, method, path, params, data, json_body, match):
+    def _handle_describe_detection(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("DESCRIBE_DETECTION")
         if status != 200:
@@ -127,7 +175,15 @@ class MockVectraSession(requests.Session):
         results = p.describe_detection_response if p.describe_detection_response is not None else [mock("describe_detection")]
         return MockResponse(json_data={"results": results, "next": None, "count": len(results)}, status_code=200)
 
-    def _handle_list_detections(self, method, path, params, data, json_body, match):
+    def _handle_list_detections(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         if method == "PATCH":
             if json_body and "external_reference_id" in json_body:
@@ -147,7 +203,15 @@ class MockVectraSession(requests.Session):
         results = p.list_detections_response if p.list_detections_response is not None else mock("list_detections")
         return MockResponse(json_data={"results": results, "next": None, "count": len(results)}, status_code=200)
 
-    def _handle_list_entity_detections_impl(self, method, path, params, data, json_body, match):
+    def _handle_list_entity_detections_impl(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("LIST_ENTITY_DETECTIONS")
         if status != 200:
@@ -155,35 +219,75 @@ class MockVectraSession(requests.Session):
         results = p.list_detections_response if p.list_detections_response is not None else mock("list_detections")
         return MockResponse(json_data={"results": results, "next": None, "count": len(results)}, status_code=200)
 
-    def _handle_set_detection_status(self, method, path, params, data, json_body, match):
+    def _handle_set_detection_status(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("SET_DETECTION_STATUS")
         if status != 200:
             return MockResponse(json_data=p.body_for("SET_DETECTION_STATUS", mock("error_bad_request")), status_code=status)
         return MockResponse(json_data=p.set_detection_status_response or mock("set_detection_status"), status_code=200)
 
-    def _handle_set_detection_ticket(self, method, path, params, data, json_body, match):
+    def _handle_set_detection_ticket(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("SET_DETECTION_TICKET")
         if status != 200:
             return MockResponse(json_data=p.body_for("SET_DETECTION_TICKET", mock("error_bad_request")), status_code=status)
         return MockResponse(json_data=p.set_detection_ticket_response or mock("set_detection_ticket"), status_code=200)
 
-    def _handle_close_detections(self, method, path, params, data, json_body, match):
+    def _handle_close_detections(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("CLOSE_DETECTIONS")
         if status != 200:
             return MockResponse(json_data=p.body_for("CLOSE_DETECTIONS", mock("error_bad_request")), status_code=status)
         return MockResponse(json_data=p.close_detections_response or mock("close_detections"), status_code=200)
 
-    def _handle_open_detections(self, method, path, params, data, json_body, match):
+    def _handle_open_detections(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("OPEN_DETECTIONS")
         if status != 200:
             return MockResponse(json_data=p.body_for("OPEN_DETECTIONS", mock("error_bad_request")), status_code=status)
         return MockResponse(json_data=p.open_detections_response or mock("open_detections"), status_code=200)
 
-    def _handle_set_entity_unresolved_priority(self, method, path, params, data, json_body, match):
+    def _handle_set_entity_unresolved_priority(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         # SET_ENTITY_UNRESOLVED_PRIORITY and SET_ENTITY_TICKET both PATCH
         # `/entities/{id}`; disambiguate by JSON body key.
         if json_body and "external_reference_id" in json_body:
@@ -195,14 +299,30 @@ class MockVectraSession(requests.Session):
             return MockResponse(json_data=p.body_for("SET_ENTITY_UNRESOLVED_PRIORITY", mock("error_not_found")), status_code=status)
         return MockResponse(json_data=p.set_entity_unresolved_priority_response or mock("set_entity_unresolved_priority"), status_code=200)
 
-    def _handle_set_entity_ticket(self, method, path, params, data, json_body, match):
+    def _handle_set_entity_ticket(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("SET_ENTITY_TICKET")
         if status != 200:
             return MockResponse(json_data=p.body_for("SET_ENTITY_TICKET", mock("error_not_found")), status_code=status)
         return MockResponse(json_data=p.set_entity_ticket_response or mock("set_entity_ticket"), status_code=200)
 
-    def _handle_tagging(self, method, path, params, data, json_body, match):
+    def _handle_tagging(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         api_name = "LIST_TAGS" if method == "GET" else "TAGGING"
         status = p.status_for(api_name)
@@ -212,17 +332,41 @@ class MockVectraSession(requests.Session):
             return MockResponse(json_data=p.list_tags_response or mock("list_tags"), status_code=200)
         return MockResponse(json_data=p.update_tags_response or mock("update_tags"), status_code=200)
 
-    def _handle_list_tags(self, method, path, params, data, json_body, match):
+    def _handle_list_tags(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         return self._handle_tagging(method, path, params, data, json_body, match)
 
-    def _handle_list_entity(self, method, path, params, data, json_body, match):
+    def _handle_list_entity(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("LIST_ENTITY")
         if status != 200:
             return MockResponse(json_data=p.body_for("LIST_ENTITY", mock("error_not_found")), status_code=status)
         return MockResponse(json_data=p.specific_entity_info_response or mock("specific_entity_info"), status_code=200)
 
-    def _handle_list_users(self, method, path, params, data, json_body, match):
+    def _handle_list_users(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("LIST_USERS")
         if status != 200:
@@ -230,7 +374,15 @@ class MockVectraSession(requests.Session):
         results = p.list_users_response if p.list_users_response is not None else mock("list_users")
         return MockResponse(json_data={"results": results, "next": None, "count": len(results)}, status_code=200)
 
-    def _handle_list_groups(self, method, path, params, data, json_body, match):
+    def _handle_list_groups(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("LIST_GROUPS")
         if status != 200:
@@ -238,7 +390,15 @@ class MockVectraSession(requests.Session):
         results = p.list_groups_response if p.list_groups_response is not None else mock("list_groups")
         return MockResponse(json_data={"results": results, "next": None, "count": len(results)}, status_code=200)
 
-    def _handle_update_group_members(self, method, path, params, data, json_body, match):
+    def _handle_update_group_members(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         if method == "GET":
             status = p.status_for("UPDATE_GROUP_MEMBERS_GET")
@@ -253,7 +413,15 @@ class MockVectraSession(requests.Session):
         default = mock("group_assign_result") if membership_action == "append" else mock("group_remove_result")
         return MockResponse(json_data=p.group_update_response or default, status_code=200)
 
-    def _handle_add_note(self, method, path, params, data, json_body, match):
+    def _handle_add_note(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         if method == "GET":
             return self._handle_list_entity_notes(method, path, params, data, json_body, match)
@@ -262,7 +430,15 @@ class MockVectraSession(requests.Session):
             return MockResponse(json_data=p.body_for("ADD_NOTE", mock("error_not_found")), status_code=status)
         return MockResponse(json_data=p.add_note_response or mock("add_note"), status_code=200)
 
-    def _handle_list_entity_notes(self, method, path, params, data, json_body, match):
+    def _handle_list_entity_notes(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("LIST_ENTITY_NOTES")
         if status != 200:
@@ -270,7 +446,15 @@ class MockVectraSession(requests.Session):
         results = p.list_entity_notes_response if p.list_entity_notes_response is not None else mock("list_entity_notes")
         return MockResponse(json_data=results, status_code=200)
 
-    def _handle_remove_note(self, method, path, params, data, json_body, match):
+    def _handle_remove_note(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         if method == "PATCH":
             return self._handle_update_entity_note(method, path, params, data, json_body, match)
@@ -283,14 +467,30 @@ class MockVectraSession(requests.Session):
             )
         return MockResponse(content=b"", status_code=200, headers={"Content-Type": "application/json"})
 
-    def _handle_update_entity_note(self, method, path, params, data, json_body, match):
+    def _handle_update_entity_note(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("UPDATE_ENTITY_NOTE")
         if status != 200:
             return MockResponse(json_data=p.body_for("UPDATE_ENTITY_NOTE", mock("error_not_found")), status_code=status)
         return MockResponse(json_data=p.update_note_response or mock("update_note"), status_code=200)
 
-    def _handle_download_pcap(self, method, path, params, data, json_body, match):
+    def _handle_download_pcap(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.download_pcap_status_code
         if status != 200:
@@ -304,7 +504,15 @@ class MockVectraSession(requests.Session):
             },
         )
 
-    def _handle_list_assignments(self, method, path, params, data, json_body, match):
+    def _handle_list_assignments(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         if method == "POST":
             return self._handle_assign_entity(method, path, params, data, json_body, match)
         p = self._product
@@ -314,14 +522,30 @@ class MockVectraSession(requests.Session):
         results = p.list_assignments_response if p.list_assignments_response is not None else mock("list_assignments")
         return MockResponse(json_data={"results": results, "next": None, "count": len(results)}, status_code=200)
 
-    def _handle_assign_entity(self, method, path, params, data, json_body, match):
+    def _handle_assign_entity(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("ASSIGN_ENTITY")
         if status != 200:
             return MockResponse(json_data=p.body_for("ASSIGN_ENTITY", mock("error_bad_request")), status_code=status)
         return MockResponse(json_data=p.assign_entity_response or mock("assign_entity_result"), status_code=200)
 
-    def _handle_assignment(self, method, path, params, data, json_body, match):
+    def _handle_assignment(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
 
         if method == "DELETE":
@@ -338,28 +562,71 @@ class MockVectraSession(requests.Session):
             return MockResponse(json_data=p.update_assignment_response or mock("assignment_wrapped"), status_code=200)
         return MockResponse(json_data=p.assignment_response or mock("assignment_wrapped"), status_code=200)
 
-    def _handle_update_assignment(self, method, path, params, data, json_body, match):
+    def _handle_update_assignment(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         return self._handle_assignment(method, path, params, data, json_body, match)
 
-    def _handle_query_investigation(self, method, path, params, data, json_body, match):
+    def _handle_query_investigation(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("QUERY_INVESTIGATION")
         if status != 200:
             return MockResponse(json_data=p.body_for("QUERY_INVESTIGATION", mock("error_bad_request")), status_code=status)
         return MockResponse(json_data=p.query_investigation_response or mock("query_investigation"), status_code=200)
 
-    def _handle_get_investigation_results(self, method, path, params, data, json_body, match):
+    def _handle_get_investigation_results(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("GET_INVESTIGATION_RESULTS")
         if status != 200:
             return MockResponse(json_data=p.body_for("GET_INVESTIGATION_RESULTS", mock("error_not_found")), status_code=status)
         results = p.investigation_results_response if p.investigation_results_response is not None else mock("investigation_results")
-        return MockResponse(json_data={"data": results, "next": None, "count": len(results)}, status_code=200)
+        body = {"data": results, "next": None, "count": len(results)}
+        if p.investigation_results_meta is not None:
+            body["meta"] = p.investigation_results_meta
+        return MockResponse(json_data=body, status_code=200)
 
-    def _handle_list_entity_detections(self, method, path, params, data, json_body, match):
+    def _handle_list_entity_detections(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         return self._handle_list_detections(method, path, params, data, json_body, match)
 
-    def _handle_list_detection_events(self, method, path, params, data, json_body, match):
+    def _handle_list_detection_events(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any],
+        data: Any,
+        json_body: Any,
+        match: re.Match[str],
+    ) -> MockResponse:
         p = self._product
         status = p.status_for("LIST_DETECTION_EVENTS")
         if status != 200:

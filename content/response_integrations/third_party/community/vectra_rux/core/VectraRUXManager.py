@@ -4,6 +4,7 @@ import copy
 import time
 import urllib.parse
 from datetime import datetime
+from typing import Any
 
 import requests
 from TIPCommon.oauth import CredStorage
@@ -53,7 +54,23 @@ from .constants import (
     UPDATE_GROUP_MEMBERS_API_NAME,
     WAIT_TIME_FOR_RETRY,
 )
-from .UtilsManager import HandleExceptions, generate_encryption_key, get_alert_id, get_detection_alert_id
+from .datamodels import (
+    Assignment,
+    Detection,
+    DetectionEvent,
+    Entity,
+    Group,
+    InvestigationResult,
+    Note,
+    User,
+)
+from .UtilsManager import (
+    HandleExceptions,
+    generate_encryption_key,
+    get_alert_id,
+    get_detection_alert_id,
+    rows_to_dicts,
+)
 from .vectra_oauth_adapter import JobCredStorage, VectraOAuthAdapter, VectraOAuthManager
 from .VectraRUXExceptions import (
     FileNotFoundException,
@@ -65,7 +82,7 @@ from .VectraRUXParser import VectraRUXParser
 
 
 class VectraRUXManager:
-    def __init__(self, api_root, client_id, client_secret, siemplify=None):
+    def __init__(self, api_root: str, client_id: str, client_secret: str, siemplify: Any = None) -> None:
         """Initializes an object of the VectraRUXManager class.
 
         Args:
@@ -114,7 +131,7 @@ class VectraRUXManager:
             self.access_token = self.oauth_manager._token.access_token
             self.session.headers.update({"Authorization": f"Bearer {self.access_token}"})
 
-    def _get_full_url(self, url_id, **kwargs):
+    def _get_full_url(self, url_id: str, **kwargs: Any) -> str:
         """Get full URL from URL identifier.
 
         Args:
@@ -129,15 +146,15 @@ class VectraRUXManager:
 
     def _paginator(
         self,
-        api_name,
-        method,
-        url,
-        result_key="results",
-        params=None,
-        body=None,
-        limit=DEFAULT_RESULTS_LIMIT,
-        is_connector_request=False,
-    ):
+        api_name: str,
+        method: str,
+        url: str,
+        result_key: str = "results",
+        params: dict[str, Any] | None = None,
+        body: dict[str, Any] | None = None,
+        limit: int = DEFAULT_RESULTS_LIMIT,
+        is_connector_request: bool = False,
+    ) -> list[dict[str, Any]]:
         """Paginate the results.
 
         Args:
@@ -157,7 +174,7 @@ class VectraRUXManager:
         params["page"] = params.get("page", 1)
         params["page_size"] = min(DEFAULT_PAGE_SIZE, limit)
         response = self._make_rest_call(api_name, method, url, params=params, body=body)
-        results = response.get(result_key, [])
+        results = rows_to_dicts(response, result_key)
 
         while True:
             if not response.get(NEXT_PAGE_URL_KEY) or len(results) >= limit:
@@ -185,21 +202,21 @@ class VectraRUXManager:
                     params=params,
                     body=body,
                 )
-            results.extend(response.get(result_key, []))
+            results.extend(rows_to_dicts(response, result_key))
 
         return results
 
     def _make_rest_call(
         self,
-        api_name,
-        method,
-        url,
-        params=None,
-        body=None,
-        retry_count=RETRY_COUNT,
-        retry_count_token=RETRY_COUNT_TOKEN,
-        **kwargs,
-    ):
+        api_name: str,
+        method: str,
+        url: str,
+        params: dict[str, Any] | None = None,
+        body: dict[str, Any] | None = None,
+        retry_count: int = RETRY_COUNT,
+        retry_count_token: int = RETRY_COUNT_TOKEN,
+        **kwargs: Any,
+    ) -> Any:
         """Make a reset call to the VectraRUX.
 
         Args:
@@ -270,7 +287,7 @@ class VectraRUXManager:
             )
             return {}
 
-    def generate_token(self):
+    def generate_token(self) -> None:
         """Generate and save a new access token for the VectraRUX.
 
         Uses the stored refresh token when available, otherwise falls back
@@ -291,7 +308,7 @@ class VectraRUXManager:
 
         self.siemplify.LOGGER.info("Token generated and saved successfully")
 
-    def test_connectivity(self):
+    def test_connectivity(self) -> bool:
         """Verify the provided VectraRUX credentials by generating a fresh token.
 
         Returns:
@@ -302,7 +319,11 @@ class VectraRUXManager:
         return True
 
     @staticmethod
-    def validate_response(api_name, response, error_msg="An error occurred"):
+    def validate_response(
+        api_name: str,
+        response: requests.Response,
+        error_msg: str = "An error occurred",
+    ) -> bool:
         """Validate the response from the API.
 
         Args:
@@ -327,7 +348,11 @@ class VectraRUXManager:
 
         return True
 
-    def get_assignment_list(self, query_params, max_assignment_to_return):
+    def get_assignment_list(
+        self,
+        query_params: dict[str, Any],
+        max_assignment_to_return: int,
+    ) -> tuple[list[Assignment], list[dict[str, Any]]]:
         """Retrieves a list of assignments based on the provided query parameters.
 
         Args:
@@ -357,11 +382,13 @@ class VectraRUXManager:
 
         return proceeded_data, response
 
-    def describe_detection(self, detection_id):
+    def describe_detection(self, detection_id: str | int, detection_size: str = "detailed") -> Detection:
         """Retrieves a detection object based on the provided detection ID.
 
         Args:
             detection_id (int): The ID of the detection to retrieve.
+            detection_size (str, optional): The response size requested from the API
+                (sent as the `size` query parameter). Defaults to "detailed".
 
         Returns:
             Detection: The detection object.
@@ -371,13 +398,17 @@ class VectraRUXManager:
             information.
 
         """
-        params = {"id": detection_id}
+        params = {
+            "id": detection_id,
+            "size": detection_size,
+        }
         request_url = self._get_full_url(DESCRIBE_DETECTION_API_NAME)
         response = self._paginator(
             DESCRIBE_DETECTION_API_NAME, 
             "GET", 
             request_url, 
-            params=params
+            params=params,
+            limit=1,
         )
         
         if not response:
@@ -387,12 +418,14 @@ class VectraRUXManager:
         detection = response[0]     # Get the detection details
         return self.parser.build_detection_object(detection)
 
-    def describe_entity(self, entity_id, entity_type):
+    def describe_entity(self, entity_id: str | int, entity_type: str, entity_size: str = "detailed") -> Entity:
         """Retrieves an entity object based on the provided entity ID and type.
 
         Args:
             entity_id (int): The ID of the entity to retrieve.
             entity_type (str): The type of the entity to retrieve.
+            entity_size (str, optional): The response size requested from the API
+                (sent as the `size` query parameter). Defaults to "detailed".
 
         Returns:
             Entity: The entity object.
@@ -404,7 +437,8 @@ class VectraRUXManager:
         """
         params = {
             "type": entity_type,
-            "id": entity_id
+            "id": entity_id,
+            "size": entity_size,
         }
         request_url = self._get_full_url(DESCRIBE_ENTITY_API_NAME)
         response = self._paginator(
@@ -412,6 +446,7 @@ class VectraRUXManager:
             "GET", 
             request_url, 
             params=params,
+            limit=1,
         )
         
         if not response:
@@ -422,13 +457,15 @@ class VectraRUXManager:
         entity = response[0]
         return self.parser.build_entity_object(entity)
 
-    def list_entity_detections(self, detection_ids, limit, state):
+    def list_entity_detections(self, detection_ids: list[str], limit: int, state: str, detection_size: str = "detailed") -> list[Detection]:
         """Retrieves a list of detection objects based on the provided detection IDs and state.
 
         Args:
             detection_ids (list): The IDs of the detections to retrieve.
             limit (int): The maximum number of detections to return.
             state (str): The state of the detections to retrieve.
+            detection_size (str, optional): The response size requested from the API
+                (sent as the `size` query parameter). Defaults to "detailed".
 
         Returns:
             list: A list of detection objects.
@@ -442,6 +479,7 @@ class VectraRUXManager:
 
         params = {
             "id": ",".join(detection_ids),
+            "size": detection_size,
         }
         if state != "None":
             params["state"] = state
@@ -457,7 +495,7 @@ class VectraRUXManager:
 
         return response_list
 
-    def get_entity_tags(self, entity_id, entity_type):
+    def get_entity_tags(self, entity_id: str | int, entity_type: str) -> list[str] | None:
         """Retrieves a list of tags for a given entity.
 
         Args:
@@ -479,7 +517,7 @@ class VectraRUXManager:
         )
         return response.get("tags", None)
 
-    def update_tags(self, entity_type, entity_id, entity_tags):
+    def update_tags(self, entity_type: str, entity_id: str | int, entity_tags: list[str]) -> dict[str, Any]:
         """Updates the tags for a given entity.
 
         Args:
@@ -515,7 +553,7 @@ class VectraRUXManager:
 
         return response
 
-    def list_entities(self, entity_type, limit, **kwargs):
+    def list_entities(self, entity_type: str, limit: int, **kwargs: Any) -> list[Entity]:
         """Retrieves a list of entities of a given type.
 
         Args:
@@ -546,7 +584,7 @@ class VectraRUXManager:
 
         return response
 
-    def get_user_list(self, limit, **kwargs):
+    def get_user_list(self, limit: int, **kwargs: Any) -> tuple[list[User], list[dict[str, Any]]]:
         """Retrieves a list of users from the VectraRUX.
 
         Args:
@@ -581,7 +619,7 @@ class VectraRUXManager:
 
         return user_objects, response
 
-    def describe_assignment(self, assignment_id):
+    def describe_assignment(self, assignment_id: str | int) -> tuple[dict[str, Any], Assignment]:
         """Describes a assignment.
 
         Args:
@@ -601,7 +639,12 @@ class VectraRUXManager:
         proceeded_data = self.parser.build_assignment_object(data)
         return response, proceeded_data
 
-    def get_group_list(self, limit, group_type, **kwargs):
+    def get_group_list(
+        self,
+        limit: int,
+        group_type: str,
+        **kwargs: Any,
+    ) -> tuple[list[Group], list[dict[str, Any]]]:
         """Get a list of groups from VectraRUX.
 
         Args:
@@ -636,7 +679,7 @@ class VectraRUXManager:
             group_objects.append(self.parser.build_group_object(group))
         return group_objects, response
 
-    def get_specific_entity_info(self, entity_type, entity_id):
+    def get_specific_entity_info(self, entity_type: str, entity_id: str | int) -> dict[str, Any]:
         """Get assignment information.
 
         Args:
@@ -655,7 +698,7 @@ class VectraRUXManager:
         response = self._make_rest_call(LIST_ENTITY_API_NAME, "GET", request_url)
         return response
 
-    def remove_assignment(self, assignment_id):
+    def remove_assignment(self, assignment_id: str | int) -> bool:
         """Remove assignment from entity
 
         Returns:
@@ -671,7 +714,7 @@ class VectraRUXManager:
             return True
         return False
 
-    def add_note(self, entity_type, entity_id, note):
+    def add_note(self, entity_type: str, entity_id: str | int, note: str) -> Note:
         """Adds a note to an entity.
 
         Args:
@@ -703,7 +746,7 @@ class VectraRUXManager:
 
         return self.parser.build_note_object(response)
 
-    def remove_note(self, entity_type, entity_id, note_id):
+    def remove_note(self, entity_type: str, entity_id: str | int, note_id: str | int) -> dict[str, Any]:
         """Removes a note from an entity.
 
         Args:
@@ -735,7 +778,7 @@ class VectraRUXManager:
 
         return response
 
-    def list_entity_notes(self, entity_type, entity_id):
+    def list_entity_notes(self, entity_type: str, entity_id: str | int) -> list[Note]:
         """Retrieves the list of notes for a given entity.
 
         Args:
@@ -757,7 +800,13 @@ class VectraRUXManager:
 
         return [self.parser.build_note_object(note) for note in response]
 
-    def update_entity_note(self, entity_type, entity_id, note_id, note):
+    def update_entity_note(
+        self,
+        entity_type: str,
+        entity_id: str | int,
+        note_id: str | int,
+        note: str,
+    ) -> Note:
         """Updates an existing note on an entity.
 
         Args:
@@ -794,7 +843,7 @@ class VectraRUXManager:
 
         return self.parser.build_note_object(response)
 
-    def list_tags(self, entity_id, entity_type):
+    def list_tags(self, entity_id: str | int, entity_type: str) -> dict[str, Any]:
         """Retrieves the list of tags for a given entity.
 
         Args:
@@ -817,7 +866,12 @@ class VectraRUXManager:
 
         return response
 
-    def set_entity_unresolved_priority(self, entity_type, entity_id, unresolved_priority):
+    def set_entity_unresolved_priority(
+        self,
+        entity_type: str,
+        entity_id: str | int,
+        unresolved_priority: bool,
+    ) -> dict[str, Any]:
         """Sets the unresolved priority flag on a given entity.
 
         Args:
@@ -852,7 +906,7 @@ class VectraRUXManager:
 
         return response
 
-    def set_detection_status(self, detection_ids, investigation_status):
+    def set_detection_status(self, detection_ids: list[str], investigation_status: str) -> dict[str, Any]:
         """Sets the investigation status for the given detection IDs.
 
         Args:
@@ -884,7 +938,7 @@ class VectraRUXManager:
 
         return response
 
-    def close_detections(self, detection_ids, reason):
+    def close_detections(self, detection_ids: list[str], reason: str) -> dict[str, Any]:
         """Closes the given detection IDs with the provided reason.
 
         Args:
@@ -913,7 +967,7 @@ class VectraRUXManager:
 
         return response
 
-    def open_detections(self, detection_ids):
+    def open_detections(self, detection_ids: list[str]) -> dict[str, Any]:
         """Re-opens the given detection IDs.
 
         Args:
@@ -941,7 +995,7 @@ class VectraRUXManager:
 
         return response
 
-    def set_detection_ticket(self, detection_ids, external_reference_id):
+    def set_detection_ticket(self, detection_ids: list[str], external_reference_id: str) -> dict[str, Any]:
         """Sets the external reference ID for the given detection IDs.
 
         Args:
@@ -973,7 +1027,12 @@ class VectraRUXManager:
 
         return response
 
-    def set_entity_ticket(self, entity_type, entity_id, external_reference_id):
+    def set_entity_ticket(
+        self,
+        entity_type: str,
+        entity_id: str | int,
+        external_reference_id: str,
+    ) -> dict[str, Any]:
         """Sets the external reference ID for the given entity.
 
         Args:
@@ -1005,7 +1064,7 @@ class VectraRUXManager:
 
         return response
 
-    def query_investigation(self, query, version=None):
+    def query_investigation(self, query: str, version: str | None = None) -> dict[str, Any]:
         """Starts a query investigation.
 
         Args:
@@ -1036,7 +1095,7 @@ class VectraRUXManager:
 
         return response
 
-    def get_investigation_results(self, request_id, limit):
+    def get_investigation_results(self, request_id: str, limit: int) -> list[InvestigationResult]:
         """Retrieves the results of a query investigation.
 
         Args:
@@ -1065,7 +1124,11 @@ class VectraRUXManager:
             for result in response
         ]
 
-    def update_assignment(self, user_id, assignment_id):
+    def update_assignment(
+        self,
+        user_id: str | int,
+        assignment_id: str | int,
+    ) -> tuple[dict[str, Any], Assignment]:
         """Update assignment with user ID.
 
         Args:
@@ -1093,11 +1156,13 @@ class VectraRUXManager:
         proceeded_data = self.parser.build_assignment_object(data)
         return response, proceeded_data
 
-    def list_detections(self, limit, **kwargs):
+    def list_detections(self, limit: int, detection_size: str = "detailed", **kwargs: Any) -> list[Detection]:
         """Retrieves a list of Detections of a given type.
 
         Args:
             limit (int): The maximum number of entities to return.
+            detection_size (str, optional): The response size requested from the API
+                (sent as the `size` query parameter). Defaults to "detailed".
 
         Keyword Args:
             **kwargs (dict): Action parameters to filter the detections by.
@@ -1112,6 +1177,8 @@ class VectraRUXManager:
             for action_parameter, action_parameter_value in kwargs.items()
             if action_parameter_value and action_parameter_value != "None"
         }
+
+        params["size"] = detection_size
         response = self._paginator(
             LIST_DETECTIONS_API_NAME,
             "GET",
@@ -1122,7 +1189,7 @@ class VectraRUXManager:
 
         return response
 
-    def assign_entity(self, entity_id, entity_type, user_id):
+    def assign_entity(self, entity_id: str | int, entity_type: str, user_id: str | int) -> Assignment:
         """Assigns an entity and user to an assignment.
 
         Args:
@@ -1152,7 +1219,7 @@ class VectraRUXManager:
 
         return self.parser.build_assignment_object(response.get("assignment"))
 
-    def download_pcap(self, detection_id):
+    def download_pcap(self, detection_id: str | int) -> tuple[bytes, str | None]:
         """Download PCAP file associated with a detection
 
         Args:
@@ -1187,7 +1254,12 @@ class VectraRUXManager:
         # Return the content of the response and file name
         return response.content, filename
 
-    def update_group_members(self, group_id, members, membership_action="append"):
+    def update_group_members(
+        self,
+        group_id: str | int,
+        members: list[str | int],
+        membership_action: str = "append",
+    ) -> dict[str, Any]:
         """Assigns members to a group.
 
         Args:
@@ -1221,7 +1293,7 @@ class VectraRUXManager:
         )
         return response
 
-    def get_group_members(self, group_id):
+    def get_group_members(self, group_id: str | int) -> dict[str, Any]:
         """Retrieves the details of a group.
 
         Args:
@@ -1257,13 +1329,13 @@ class VectraRUXManager:
 
     def list_entities_by_filters(
         self,
-        existing_ids,
-        entity_type,
-        start_time,
-        limit,
-        is_prioritized,
-        specific_tag,
-    ):
+        existing_ids: set[str],
+        entity_type: str,
+        start_time: int,
+        limit: int,
+        is_prioritized: bool,
+        specific_tag: str | None,
+    ) -> list[Entity]:
         """Retrieves a list of entities of a given type."""
         request_url = self._get_full_url(LIST_ENTITIES_API_NAME)
         params = {
@@ -1336,7 +1408,7 @@ class VectraRUXManager:
 
             return new_entities
         
-    def get_detection_events_checkpoint(self):
+    def get_detection_events_checkpoint(self) -> str | None:
         """Reads the connector_state checkpoint persisted from the previous iteration.
 
         Returns:
@@ -1348,7 +1420,7 @@ class VectraRUXManager:
             DETECTION_EVENTS_CHECKPOINT_PROPERTY_KEY,
         )
 
-    def save_detection_events_checkpoint(self, checkpoint):
+    def save_detection_events_checkpoint(self, checkpoint: str | None) -> None:
         """Persists the checkpoint (connector_state) so the next iteration resumes from it.
 
         Args:
@@ -1365,14 +1437,14 @@ class VectraRUXManager:
 
     def list_detection_events_by_filters(
         self,
-        existing_ids,
-        entity_type,
-        start_time,
-        limit,
-        unresolved_priority,
-        include_triaged,
-        checkpoint=None,
-    ):
+        existing_ids: set[str],
+        entity_type: str,
+        start_time: int,
+        limit: int,
+        unresolved_priority: bool,
+        include_triaged: bool,
+        checkpoint: str | None = None,
+    ) -> tuple[list[DetectionEvent], str | None]:
         """Retrieves a list of detection events using the API's checkpoint-based pagination.
 
         On the first run (no stored `checkpoint`), the request is scoped with
@@ -1444,7 +1516,7 @@ class VectraRUXManager:
 
 
     @staticmethod
-    def _is_duplicate(_id, existing_ids, duplicates):
+    def _is_duplicate(_id: str, existing_ids: set[str], duplicates: list[str]) -> bool:
         if _id in existing_ids:
             duplicates.append(_id)
             return True
@@ -1452,7 +1524,7 @@ class VectraRUXManager:
         return False
 
     @staticmethod
-    def _are_all_the_records_duplicates(duplicates, results):
+    def _are_all_the_records_duplicates(duplicates: list[str], results: list[Any]) -> bool:
         if len(duplicates) == len(results):
             return True
         return False

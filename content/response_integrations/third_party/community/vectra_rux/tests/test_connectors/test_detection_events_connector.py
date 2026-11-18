@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import types
+from typing import Any
 
 import pytest
 
 from constants import DEFAULT_DEVICE_PRODUCT, RULE_GENERATOR, SEVERITY_MAP
 from datamodels import DetectionEvent
 from tests.common import load_connector
-from tests.core.product import detection_event
+from tests.core.product import VectraProduct, detection_event
+from tests.core.session import MockVectraSession
 from tests.test_connectors.conftest import run_connector
 from TIPCommon.smp_io import write_ids
 from UtilsManager import get_detection_alert_id
@@ -34,7 +36,7 @@ DEFAULT_PARAMETERS = {
 PARSER = VectraRUXParser()
 
 
-def build_event(**overrides) -> DetectionEvent:
+def build_event(**overrides: Any) -> DetectionEvent:
     """Build a DetectionEvent the same way the connector does: raw JSON
     (from the canned mock, with overrides) through the real parser.
     """
@@ -44,24 +46,29 @@ def build_event(**overrides) -> DetectionEvent:
 class TestValidateInputParams:
     """`validate_input_params` is a pure function - no Siemplify/API mocking needed."""
 
-    def test_rejects_invalid_entity_type(self):
+    def test_rejects_invalid_entity_type(self) -> None:
         connector_module = load_connector(CONNECTOR_NAME)
         with pytest.raises(VectraRUXException, match="Entity type"):
             connector_module.validate_input_params("Server", "0", "")
 
-    def test_rejects_hours_backwards_over_max(self):
+    def test_rejects_hours_backwards_over_max(self) -> None:
         connector_module = load_connector(CONNECTOR_NAME)
         with pytest.raises(VectraRUXException, match="must not exceed 120 hours"):
             connector_module.validate_input_params("Host", "121", "")
 
-    def test_rejects_zero_limit(self):
+    def test_rejects_zero_limit(self) -> None:
         connector_module = load_connector(CONNECTOR_NAME)
         with pytest.raises(InvalidIntegerException):
             connector_module.validate_input_params("Host", "0", "0")
 
 
 class TestFirstRun:
-    def test_creates_alert_from_mocked_event(self, connector, mock_session, product):
+    def test_creates_alert_from_mocked_event(
+        self,
+        connector: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         connector_module = load_connector(CONNECTOR_NAME)
 
         alerts = run_connector(connector_module, connector, DEFAULT_PARAMETERS, is_test_run=True)
@@ -72,8 +79,11 @@ class TestFirstRun:
 
 class TestTriagedFiltering:
     def test_triaged_event_is_dropped_when_include_triaged_is_false(
-        self, connector, mock_session, product,
-    ):
+        self,
+        connector: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         triaged_event = detection_event(id=1000, detection_id=100, triaged=True)
         untriaged_event = detection_event(id=1001, detection_id=101, triaged=False)
         product.set_detection_events([triaged_event, untriaged_event], remaining_count=0)
@@ -86,8 +96,11 @@ class TestTriagedFiltering:
         assert alerts[0].ticket_id == get_detection_alert_id(101, 1001)
 
     def test_triaged_event_is_kept_when_include_triaged_is_true(
-        self, connector, mock_session, product,
-    ):
+        self,
+        connector: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         # is_test_run=False: with is_test_run=True the connector loop stops
         # after the first successfully processed event, which would hide a
         # second (previously-filtered) event surviving the manager-level
@@ -108,8 +121,11 @@ class TestTriagedFiltering:
 
 class TestDuplicateFiltering:
     def test_duplicate_event_already_in_existing_ids_is_skipped(
-        self, connector, mock_session, product,
-    ):
+        self,
+        connector: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         event = detection_event(id=7362603, detection_id=39902, triaged=False)
         product.set_detection_events([event], remaining_count=0)
         write_ids(connector, [get_detection_alert_id(39902, 7362603)])
@@ -119,7 +135,12 @@ class TestDuplicateFiltering:
 
         assert alerts == []
 
-    def test_non_duplicate_event_is_kept(self, connector, mock_session, product):
+    def test_non_duplicate_event_is_kept(
+        self,
+        connector: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         event = detection_event(id=7362603, detection_id=39902, triaged=False)
         product.set_detection_events([event], remaining_count=0)
         write_ids(connector, [get_detection_alert_id(11111, 22222)])
@@ -136,7 +157,12 @@ class TestUnresolvedPriorityFiltering:
     as-is to the events/detections API, which does the actual filtering.
     """
 
-    def test_unresolved_priority_true_is_forwarded_to_the_api(self, connector, mock_session, product):
+    def test_unresolved_priority_true_is_forwarded_to_the_api(
+        self,
+        connector: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         parameters = {**DEFAULT_PARAMETERS, "Unresolved Priority": "true"}
         connector_module = load_connector(CONNECTOR_NAME)
 
@@ -147,7 +173,12 @@ class TestUnresolvedPriorityFiltering:
         )
         assert events_request["params"]["unresolved_priority"] is True
 
-    def test_unresolved_priority_false_is_forwarded_to_the_api(self, connector, mock_session, product):
+    def test_unresolved_priority_false_is_forwarded_to_the_api(
+        self,
+        connector: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         parameters = {**DEFAULT_PARAMETERS, "Unresolved Priority": "false"}
         connector_module = load_connector(CONNECTOR_NAME)
 
@@ -169,8 +200,12 @@ class TestAllDetectionStatusesAreCreated:
         ["open", "acknowledged", "escalated", "paused", "closed", "expired"],
     )
     def test_alert_is_created_for_every_detection_status(
-        self, connector, mock_session, product, investigation_status,
-    ):
+        self,
+        connector: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+        investigation_status: str,
+    ) -> None:
         event = detection_event(
             id=1000, detection_id=100, investigation_status=investigation_status,
         )
@@ -193,8 +228,12 @@ class TestAllChangeTypesAreCreated:
         ["new", "append", "adjust", "triage", "investigation_status", "state"],
     )
     def test_alert_is_created_for_every_change_type(
-        self, connector, mock_session, product, change_type,
-    ):
+        self,
+        connector: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+        change_type: str,
+    ) -> None:
         event = detection_event(id=1000, detection_id=100, change_type=change_type)
         product.set_detection_events([event], remaining_count=0)
         connector_module = load_connector(CONNECTOR_NAME)
@@ -210,15 +249,15 @@ class TestGetSiemplifySeverity:
     buckets the score into a Siemplify severity via if/else thresholds.
     """
 
-    def test_uses_src_host_urgency_score_for_host_type(self):
+    def test_uses_src_host_urgency_score_for_host_type(self) -> None:
         event = build_event(type="host", src_host={"urgency_score": 90})
         assert event.get_siemplify_severity() == SEVERITY_MAP["critical"]
 
-    def test_uses_src_account_urgency_score_for_non_host_type(self):
+    def test_uses_src_account_urgency_score_for_non_host_type(self) -> None:
         event = build_event(type="account", src_account={"urgency_score": 90})
         assert event.get_siemplify_severity() == SEVERITY_MAP["critical"]
 
-    def test_missing_urgency_score_returns_minus_one(self):
+    def test_missing_urgency_score_returns_minus_one(self) -> None:
         event = build_event(type="host", src_host={})
         assert event.get_siemplify_severity() == -1
 
@@ -234,7 +273,11 @@ class TestGetSiemplifySeverity:
             (0, SEVERITY_MAP["low"]),
         ],
     )
-    def test_urgency_score_threshold_boundaries(self, urgency_score, expected_severity):
+    def test_urgency_score_threshold_boundaries(
+        self,
+        urgency_score: int,
+        expected_severity: int,
+    ) -> None:
         event = build_event(type="host", src_host={"urgency_score": urgency_score})
         assert event.get_siemplify_severity() == expected_severity
 
@@ -249,27 +292,27 @@ class TestCreateEvent:
         "type": "host",
     }
 
-    def test_name_uses_detection_type_when_present(self):
+    def test_name_uses_detection_type_when_present(self) -> None:
         event = {**self.BASE_EVENT, "detection_type": "Hidden HTTPS Tunnel", "category": "command_and_control"}
         result = DetectionEvent.create_event(event)
         assert result["name"] == "Hidden HTTPS Tunnel"
 
-    def test_name_falls_back_to_detection_id_when_detection_type_missing(self):
+    def test_name_falls_back_to_detection_id_when_detection_type_missing(self) -> None:
         event = {**self.BASE_EVENT, "detection_type": "", "category": "command_and_control"}
         result = DetectionEvent.create_event(event)
         assert result["name"] == "Detection 39902"
 
-    def test_category_outcome_uses_category_when_present(self):
+    def test_category_outcome_uses_category_when_present(self) -> None:
         event = {**self.BASE_EVENT, "detection_type": "x", "category": "command_and_control"}
         result = DetectionEvent.create_event(event)
         assert result["CategoryOutcome"] == "command_and_control"
 
-    def test_category_outcome_falls_back_to_na_when_category_missing(self):
+    def test_category_outcome_falls_back_to_na_when_category_missing(self) -> None:
         event = {**self.BASE_EVENT, "detection_type": "x", "category": ""}
         result = DetectionEvent.create_event(event)
         assert result["CategoryOutcome"] == "N/A"
 
-    def test_fixed_and_copied_fields(self):
+    def test_fixed_and_copied_fields(self) -> None:
         event = {**self.BASE_EVENT, "detection_type": "x", "category": "command_and_control"}
         result = DetectionEvent.create_event(event)
         assert result["DeviceProduct"] == DEFAULT_DEVICE_PRODUCT
@@ -284,15 +327,15 @@ class TestGetAlertInfo:
     """
 
     class FakeEnvironmentCommon:
-        def __init__(self, environment="Default Environment"):
+        def __init__(self, environment: str = "Default Environment") -> None:
             self.environment = environment
             self.received_raw_data = None
 
-        def get_environment(self, raw_data):
+        def get_environment(self, raw_data: dict[str, Any]) -> str:
             self.received_raw_data = raw_data
             return self.environment
 
-    def test_device_product_uses_configured_field_when_present(self):
+    def test_device_product_uses_configured_field_when_present(self) -> None:
         event = build_event(d_type_vname="Custom Product")
         alert_info = types.SimpleNamespace()
 
@@ -300,7 +343,7 @@ class TestGetAlertInfo:
 
         assert alert_info.device_product == "Custom Product"
 
-    def test_device_product_falls_back_to_default_when_field_missing(self):
+    def test_device_product_falls_back_to_default_when_field_missing(self) -> None:
         event = build_event()
         alert_info = types.SimpleNamespace()
 
@@ -308,7 +351,7 @@ class TestGetAlertInfo:
 
         assert alert_info.device_product == DEFAULT_DEVICE_PRODUCT
 
-    def test_device_product_falls_back_to_default_when_field_is_empty(self):
+    def test_device_product_falls_back_to_default_when_field_is_empty(self) -> None:
         event = build_event(d_type_vname="")
         alert_info = types.SimpleNamespace()
 
@@ -316,7 +359,7 @@ class TestGetAlertInfo:
 
         assert alert_info.device_product == DEFAULT_DEVICE_PRODUCT
 
-    def test_ticket_id_and_display_id_match_detection_alert_id(self):
+    def test_ticket_id_and_display_id_match_detection_alert_id(self) -> None:
         event = build_event(detection_id=39902, id=7362603)
         alert_info = types.SimpleNamespace()
 
@@ -326,7 +369,7 @@ class TestGetAlertInfo:
         assert alert_info.ticket_id == expected
         assert alert_info.display_id == expected
 
-    def test_rule_generator_and_source_grouping_identifier(self):
+    def test_rule_generator_and_source_grouping_identifier(self) -> None:
         event = build_event(entity_uid="test-host-1", detection_id=39902)
         alert_info = types.SimpleNamespace()
 
@@ -335,7 +378,7 @@ class TestGetAlertInfo:
         assert alert_info.rule_generator == f"{RULE_GENERATOR}: test-host-1"
         assert alert_info.source_grouping_identifier == "detection#39902"
 
-    def test_environment_delegates_to_environment_common_with_raw_data(self):
+    def test_environment_delegates_to_environment_common_with_raw_data(self) -> None:
         event = build_event()
         alert_info = types.SimpleNamespace()
         environment_common = self.FakeEnvironmentCommon(environment="EU")
@@ -345,7 +388,7 @@ class TestGetAlertInfo:
         assert alert_info.environment == "EU"
         assert environment_common.received_raw_data == event.raw_data
 
-    def test_priority_delegates_to_get_siemplify_severity(self):
+    def test_priority_delegates_to_get_siemplify_severity(self) -> None:
         event = build_event(type="host", src_host={"urgency_score": 90})
         alert_info = types.SimpleNamespace()
 

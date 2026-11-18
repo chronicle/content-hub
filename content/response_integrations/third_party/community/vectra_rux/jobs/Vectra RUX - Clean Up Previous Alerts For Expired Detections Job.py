@@ -19,7 +19,7 @@ from ..core.UtilsManager import (
 from ..core.VectraRUXExceptions import InvalidIntegerException, VectraRUXException
 
 
-def main():
+def main() -> None:
     siemplify = SiemplifyJob()
     siemplify.script_name = CLEAN_UP_PREVIOUS_ALERTS_JOB_SCRIPT_NAME
 

@@ -10,7 +10,7 @@ from ..core.VectraRUXManager import VectraRUXManager
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = PING_SCRIPT_NAME
     siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
@@ -28,14 +28,17 @@ def main():
             siemplify=siemplify,
         )
         vectra_manager.test_connectivity()
-        output_message = "Successfully connected to the VectraRUX server"
+        output_message = (
+            "Successfully connected to the Vectra RUX server with the provided "
+            "connection parameters!"
+        )
         connectivity_result = True
         siemplify.LOGGER.info(
             f"Connection to API established, performing action {PING_SCRIPT_NAME}",
         )
 
     except Exception as e:
-        output_message = f"Failed to connect to the Vectra server. Error - {e}"
+        output_message = f"Failed to connect to the Vectra RUX server! Error is {e}"
         connectivity_result = False
         siemplify.LOGGER.error(
             f"Connection to API failed, performing action {PING_SCRIPT_NAME}",

@@ -18,7 +18,7 @@ from ..core.VectraRUXManager import VectraRUXManager
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = DESCRIBE_ENTITY_SCRIPT_NAME
 

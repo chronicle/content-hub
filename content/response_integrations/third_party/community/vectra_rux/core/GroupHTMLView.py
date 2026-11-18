@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 from .constants import GROUP_TYPE_FIELD_MAPPING
 
 
-def render_group_object_as_html(group_obj, group_type):
+def render_group_object_as_html(group_obj: dict[str, Any], group_type: str) -> str:
     """Renders a given group object as an HTML string.
 
     Args:
@@ -51,7 +53,11 @@ def render_group_object_as_html(group_obj, group_type):
     return html_content
 
 
-def render_group_property(property_key, property_value, group_type):
+def render_group_property(
+    property_key: str,
+    property_value: Any,
+    group_type: str,
+) -> str:
     """Renders a group property as an HTML string.
 
     Args:
@@ -87,7 +93,7 @@ def render_group_property(property_key, property_value, group_type):
         </tr>"""
 
 
-def _get_member_value(member, group_type):
+def _get_member_value(member: Any, group_type: str) -> Any:
     """Helper function to get the member value based on the group type.
 
     Args:
@@ -105,7 +111,7 @@ def _get_member_value(member, group_type):
     )
 
 
-def _get_html_header():
+def _get_html_header() -> str:
     """Helper function to get the initial HTML header content.
 
     Returns:

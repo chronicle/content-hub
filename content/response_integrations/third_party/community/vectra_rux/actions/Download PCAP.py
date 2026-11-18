@@ -25,7 +25,7 @@ from ..core.VectraRUXManager import VectraRUXManager
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = DOWNLOAD_PCAP_SCRIPT_NAME
 

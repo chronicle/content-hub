@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import pytest
 
@@ -21,42 +22,42 @@ DEFAULT_PARAMETERS = {
 
 
 class TestValidation:
-    def test_rejects_non_integer_hours_backwards(self, job):
+    def test_rejects_non_integer_hours_backwards(self, job: Any) -> None:
         job_module = load_job(JOB_NAME)
         parameters = {**DEFAULT_PARAMETERS, "Max Hours Backwards": "abc"}
 
         with pytest.raises(InvalidIntegerException):
             run_job(job_module, job, parameters)
 
-    def test_rejects_zero_hours_backwards(self, job):
+    def test_rejects_zero_hours_backwards(self, job: Any) -> None:
         job_module = load_job(JOB_NAME)
         parameters = {**DEFAULT_PARAMETERS, "Max Hours Backwards": "0"}
 
         with pytest.raises(VectraRUXException, match="must be greater than 0"):
             run_job(job_module, job, parameters)
 
-    def test_rejects_negative_hours_backwards(self, job):
+    def test_rejects_negative_hours_backwards(self, job: Any) -> None:
         job_module = load_job(JOB_NAME)
         parameters = {**DEFAULT_PARAMETERS, "Max Hours Backwards": "-5"}
 
         with pytest.raises(InvalidIntegerException):
             run_job(job_module, job, parameters)
 
-    def test_rejects_max_cases_to_process_over_ceiling(self, job):
+    def test_rejects_max_cases_to_process_over_ceiling(self, job: Any) -> None:
         job_module = load_job(JOB_NAME)
         parameters = {**DEFAULT_PARAMETERS, "Max Cases To Process": "10001"}
 
         with pytest.raises(VectraRUXException, match="must not exceed 10000"):
             run_job(job_module, job, parameters)
 
-    def test_rejects_blank_environments(self, job):
+    def test_rejects_blank_environments(self, job: Any) -> None:
         job_module = load_job(JOB_NAME)
         parameters = {**DEFAULT_PARAMETERS, "Environments": " , "}
 
         with pytest.raises(VectraRUXException, match="cannot be empty"):
             run_job(job_module, job, parameters)
 
-    def test_rejects_blank_products(self, job):
+    def test_rejects_blank_products(self, job: Any) -> None:
         job_module = load_job(JOB_NAME)
         parameters = {**DEFAULT_PARAMETERS, "Products": " , "}
 
@@ -70,7 +71,7 @@ class TestAlertClosing:
     UtilsManager.close_previous_alerts_for_expired_detections.
     """
 
-    def test_closes_previous_alert_when_latest_is_closed(self, job):
+    def test_closes_previous_alert_when_latest_is_closed(self, job: Any) -> None:
         job._cases = {
             "1": soar_case(
                 cyber_alerts=[cyber_alert("alert-old", detection_ids=[1001], creation_time=1000)],
@@ -93,7 +94,7 @@ class TestAlertClosing:
         assert job._closed_alerts[0]["case_id"] == "1"
         assert json.loads(job._scoped_job_context[PREVIOUS_ALERTS_TIMESTAMP_DB_KEY]) == 5001
 
-    def test_closes_previous_alert_when_latest_is_expired(self, job):
+    def test_closes_previous_alert_when_latest_is_expired(self, job: Any) -> None:
         job._cases = {
             "1": soar_case(
                 cyber_alerts=[cyber_alert("alert-old", detection_ids=[1001], creation_time=1000)],
@@ -113,7 +114,7 @@ class TestAlertClosing:
 
         assert [c["alert_id"] for c in job._closed_alerts] == ["alert-old"]
 
-    def test_does_not_close_when_latest_is_open(self, job):
+    def test_does_not_close_when_latest_is_open(self, job: Any) -> None:
         job._cases = {
             "1": soar_case(
                 cyber_alerts=[cyber_alert("alert-old", detection_ids=[1001], creation_time=1000)],
@@ -133,7 +134,7 @@ class TestAlertClosing:
 
         assert job._closed_alerts == []
 
-    def test_single_alert_for_detection_is_never_closed(self, job):
+    def test_single_alert_for_detection_is_never_closed(self, job: Any) -> None:
         job._cases = {
             "1": soar_case(
                 cyber_alerts=[
@@ -147,7 +148,7 @@ class TestAlertClosing:
 
         assert job._closed_alerts == []
 
-    def test_ignores_alerts_from_case_with_unmatched_product(self, job):
+    def test_ignores_alerts_from_case_with_unmatched_product(self, job: Any) -> None:
         job._cases = {
             "1": soar_case(
                 cyber_alerts=[
@@ -174,7 +175,7 @@ class TestAlertClosing:
         # detection 1001 - too few to have a "previous" alert to close.
         assert job._closed_alerts == []
 
-    def test_closes_across_multiple_cases(self, job):
+    def test_closes_across_multiple_cases(self, job: Any) -> None:
         job._cases = {
             "1": soar_case(
                 cyber_alerts=[cyber_alert("alert-1", detection_ids=[1001], creation_time=1000)],
@@ -206,7 +207,10 @@ class TestHistoricalCases:
     UtilsManager._expand_terminal_detections_to_related_cases.
     """
 
-    def test_closes_older_alert_found_in_historical_case_outside_window(self, job):
+    def test_closes_older_alert_found_in_historical_case_outside_window(
+        self,
+        job: Any,
+    ) -> None:
         job._cases = {
             "2": soar_case(
                 cyber_alerts=[
@@ -234,7 +238,7 @@ class TestHistoricalCases:
         assert [c["alert_id"] for c in job._closed_alerts] == ["alert-old"]
         assert job._closed_alerts[0]["case_id"] == "1"
 
-    def test_skips_historical_case_that_has_since_closed(self, job):
+    def test_skips_historical_case_that_has_since_closed(self, job: Any) -> None:
         job._cases = {
             "2": soar_case(
                 cyber_alerts=[
@@ -262,7 +266,10 @@ class TestHistoricalCases:
 
         assert job._closed_alerts == []
 
-    def test_does_not_search_historical_cases_when_detection_is_not_terminal(self, job):
+    def test_does_not_search_historical_cases_when_detection_is_not_terminal(
+        self,
+        job: Any,
+    ) -> None:
         job._cases = {
             "1": soar_case(
                 cyber_alerts=[

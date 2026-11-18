@@ -3,13 +3,14 @@ from __future__ import annotations
 import importlib.util
 import pathlib
 import sys
+import types
 
 ACTIONS_DIR = pathlib.Path(__file__).parent.parent / "ActionsScripts"
 CONNECTORS_DIR = pathlib.Path(__file__).parent.parent / "ConnectorsScripts"
 JOBS_DIR = pathlib.Path(__file__).parent.parent / "JobsScrips"
 
 
-def _load_module_from_path(path: pathlib.Path, module_name: str):
+def _load_module_from_path(path: pathlib.Path, module_name: str) -> types.ModuleType:
     spec = importlib.util.spec_from_file_location(module_name, path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
@@ -17,7 +18,7 @@ def _load_module_from_path(path: pathlib.Path, module_name: str):
     return module
 
 
-def load_action(action_name: str):
+def load_action(action_name: str) -> types.ModuleType:
     """Load an ActionsScripts/<action_name>.py module fresh for each call.
 
     Action filenames contain spaces (e.g. "List Entities.py"), so they
@@ -32,7 +33,7 @@ def load_action(action_name: str):
     return _load_module_from_path(path, module_name)
 
 
-def load_connector(connector_name: str):
+def load_connector(connector_name: str) -> types.ModuleType:
     """Load a ConnectorsScripts/<connector_name>.py module fresh for each call.
 
     Same rationale as `load_action`: connector filenames contain spaces, and
@@ -46,7 +47,7 @@ def load_connector(connector_name: str):
     return _load_module_from_path(path, module_name)
 
 
-def load_job(job_name: str):
+def load_job(job_name: str) -> types.ModuleType:
     """Load a JobsScrips/<job_name>.py module fresh for each call.
 
     Same rationale as `load_action`/`load_connector`: job filenames contain

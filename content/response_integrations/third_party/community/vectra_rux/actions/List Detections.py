@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -25,7 +26,7 @@ from ..core.VectraRUXExceptions import InvalidIntegerException, VectraRUXExcepti
 from ..core.VectraRUXManager import VectraRUXManager
 
 
-def remove_api_version_from_url(detection):
+def remove_api_version_from_url(detection: dict[str, Any]) -> dict[str, Any]:
     """Updates all URLs in the given detection by removing the API version substring.
 
     Args:
@@ -42,20 +43,20 @@ def remove_api_version_from_url(detection):
             URL_API_VERSION,
             "",
         )
-    if detection["src_account"]:
-        detection["src_account"]["url"] = detection["src_account"]["url"].replace(
+    if detection.get("src_account"):
+        detection["src_account"]["url"] = detection["src_account"].get("url", "").replace(
             URL_API_VERSION,
             "",
         )
-    elif detection["src_host"]:
-        detection["src_host"]["url"] = detection["src_host"]["url"].replace(
+    elif detection.get("src_host"):
+        detection["src_host"]["url"] = detection["src_host"].get("url", "").replace(
             URL_API_VERSION,
             "",
         )
     return detection
 
 
-def get_src_fields(response):
+def get_src_fields(response: dict[str, Any]) -> dict[str, Any]:
     result = {}
     if response.get("src_account"):
         result["src_account_name"] = response.get("src_account").get("name")
@@ -68,7 +69,7 @@ def get_src_fields(response):
 
 
 @output_handler
-def main():
+def main() -> None:
     """List entities based on the query parameters.
 
     :param api_root: The base URL of the Vectra API

@@ -1,14 +1,23 @@
 from __future__ import annotations
 
+from typing import Any
+
 import json
 
 from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from tests.common import load_action
 from tests.conftest import run_action
+from tests.core.product import VectraProduct
+from tests.core.session import MockVectraSession
 
 
 class TestListGroups:
-    def test_list_groups_success(self, siemplify, mock_session, product):
+    def test_list_groups_success(
+        self,
+        siemplify: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         action = load_action("List Groups")
         output = run_action(action, siemplify, {})
 
@@ -18,7 +27,12 @@ class TestListGroups:
         returned = json.loads(siemplify.result.json_output)
         assert returned[0]["id"] == 73
 
-    def test_list_groups_no_results(self, siemplify, mock_session, product):
+    def test_list_groups_no_results(
+        self,
+        siemplify: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         product.list_groups_response = []
         action = load_action("List Groups")
         output = run_action(action, siemplify, {})
@@ -26,14 +40,24 @@ class TestListGroups:
         assert output.result_value is True
         assert output.output_message == "No groups were found with the provided parameters."
 
-    def test_list_groups_invalid_limit(self, siemplify, mock_session, product):
+    def test_list_groups_invalid_limit(
+        self,
+        siemplify: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         action = load_action("List Groups")
         output = run_action(action, siemplify, {"Limit": "0"})
 
         assert output.result_value is False
         assert output.execution_state == EXECUTION_STATE_FAILED
 
-    def test_list_groups_uri_too_long(self, siemplify, mock_session, product):
+    def test_list_groups_uri_too_long(
+        self,
+        siemplify: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         product.fail("LIST_GROUPS", 414)
         action = load_action("List Groups")
         output = run_action(action, siemplify, {"Host Names": "a" * 5000})

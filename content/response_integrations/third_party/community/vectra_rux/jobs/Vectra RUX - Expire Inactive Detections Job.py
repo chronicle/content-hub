@@ -22,7 +22,7 @@ from ..core.VectraRUXExceptions import InvalidIntegerException, VectraRUXExcepti
 from ..core.VectraRUXManager import VectraRUXManager
 
 
-def main():
+def main() -> None:
     siemplify = SiemplifyJob()
     siemplify.script_name = EXPIRE_INACTIVE_DETECTIONS_JOB_SCRIPT_NAME
 

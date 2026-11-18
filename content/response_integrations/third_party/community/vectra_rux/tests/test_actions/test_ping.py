@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+from typing import Any
+
 from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from tests.common import load_action
+from tests.core.product import VectraProduct
+from tests.core.session import MockVectraSession
 
 
 class TestPing:
-    def test_ping_success(self, siemplify, mock_session, product):
+    def test_ping_success(
+        self,
+        siemplify: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         from tests.conftest import run_action
 
         action = load_action("Ping")
@@ -17,7 +26,12 @@ class TestPing:
         assert len(mock_session.request_history) >= 1
         assert mock_session.request_history[0]["url"].endswith("oauth2/token")
 
-    def test_ping_failure_invalid_credentials(self, siemplify, mock_session, product):
+    def test_ping_failure_invalid_credentials(
+        self,
+        siemplify: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         from tests.conftest import run_action
 
         product.token_status_code = 401

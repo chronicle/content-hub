@@ -3,6 +3,7 @@ from __future__ import annotations
 import pathlib
 import sys
 import types
+from typing import Any
 
 import pytest
 import requests
@@ -57,7 +58,11 @@ def siemplify() -> SiemplifyAction:
     return action
 
 
-def run_action(action_module, siemplify_action, parameters):
+def run_action(
+    action_module: types.ModuleType,
+    siemplify_action: Any,
+    parameters: dict[str, Any],
+) -> Any:
     """Runs an action module's `main()` with the given parameters against the
     provided (already-configured) SiemplifyAction test double, and returns
     the recorded ActionOutput.

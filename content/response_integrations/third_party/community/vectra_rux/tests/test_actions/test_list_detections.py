@@ -1,16 +1,25 @@
 from __future__ import annotations
 
+from typing import Any
+
 import json
 
 from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from tests.common import load_action
 from tests.conftest import run_action
+from tests.core.product import VectraProduct
+from tests.core.session import MockVectraSession
 
 DEFAULT_PARAMETERS = {}
 
 
 class TestListDetections:
-    def test_list_detections_success(self, siemplify, mock_session, product):
+    def test_list_detections_success(
+        self,
+        siemplify: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         action = load_action("List Detections")
         output = run_action(action, siemplify, DEFAULT_PARAMETERS)
 
@@ -20,7 +29,12 @@ class TestListDetections:
         returned = json.loads(siemplify.result.json_output)
         assert returned[0]["id"] == 34338
 
-    def test_list_detections_no_results(self, siemplify, mock_session, product):
+    def test_list_detections_no_results(
+        self,
+        siemplify: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         product.list_detections_response = []
         action = load_action("List Detections")
         output = run_action(action, siemplify, DEFAULT_PARAMETERS)
@@ -28,7 +42,12 @@ class TestListDetections:
         assert output.result_value is True
         assert output.output_message == "No detections were found for the provided parameters"
 
-    def test_list_detections_invalid_threat_gte(self, siemplify, mock_session, product):
+    def test_list_detections_invalid_threat_gte(
+        self,
+        siemplify: Any,
+        mock_session: MockVectraSession,
+        product: VectraProduct,
+    ) -> None:
         action = load_action("List Detections")
         output = run_action(action, siemplify, {"Threat GTE": "not-a-number"})
 

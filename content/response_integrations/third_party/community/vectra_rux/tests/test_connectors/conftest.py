@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import types
+from typing import Any
 
 import pytest
 
@@ -76,7 +77,12 @@ def connector() -> SiemplifyConnectorExecution:
     return conn
 
 
-def run_connector(connector_module, connector_execution, parameters, is_test_run=True):
+def run_connector(
+    connector_module: types.ModuleType,
+    connector_execution: Any,
+    parameters: dict[str, Any],
+    is_test_run: bool = True,
+) -> list[Any]:
     """Runs a connector module's `main(is_test_run)` with the given
     parameters against the provided (already-configured) test double, and
     returns the list of AlertInfo objects passed to `return_package`.

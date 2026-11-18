@@ -5,6 +5,8 @@ import hashlib
 import json
 import os
 import re
+from collections.abc import Callable
+from typing import Any
 
 from soar_sdk.SiemplifyUtils import (
     convert_datetime_to_unix_time,
@@ -18,7 +20,7 @@ from .constants import *
 from .VectraRUXExceptions import *
 
 
-def get_integration_params(siemplify):
+def get_integration_params(siemplify: Any) -> tuple[str, str, str]:
     """Extracts the common integration configuration parameters.
 
     Args:
@@ -49,7 +51,7 @@ def get_integration_params(siemplify):
     return api_root, client_id, client_secret
 
 
-def compute_expiry(response):
+def compute_expiry(response: dict[str, Any]) -> int:
     """Calculate token expiration time from OAuth response.
 
     Args:
@@ -69,7 +71,7 @@ def compute_expiry(response):
     return now_ms + (DEFAULT_EXPIRY_SECONDS * 1000)
 
 
-def generate_encryption_key(client_id, api_root):
+def generate_encryption_key(client_id: str, api_root: str) -> str:
     """Generate an encryption key for token storage from existing settings.
 
     Args:
@@ -87,7 +89,13 @@ def generate_encryption_key(client_id, api_root):
 class HandleExceptions:
     """A class to handle exceptions based on different actions."""
 
-    def __init__(self, api_name, error, response, error_msg="An error occurred"):
+    def __init__(
+        self,
+        api_name: str,
+        error: Exception,
+        response: Any,
+        error_msg: str = "An error occurred",
+    ) -> None:
         """Initializes the HandleExceptions class.
 
         Args:
@@ -101,7 +109,7 @@ class HandleExceptions:
         self.response = response
         self.error_msg = error_msg
 
-    def do_process(self):
+    def do_process(self) -> None:
         """Processes the error by calling the appropriate handler."""
         if self.response.status_code >= 500:
             raise InternalSeverError(
@@ -116,7 +124,7 @@ class HandleExceptions:
 
         raise _exception(_error_msg)
 
-    def get_handler(self):
+    def get_handler(self) -> Callable[[], tuple[type[Exception], str]]:
         """Retrieves the appropriate handler function based on the api_name.
 
         Returns:
@@ -149,10 +157,10 @@ class HandleExceptions:
             SET_DETECTION_TICKET_API_NAME: self.get_entity,
             SET_ENTITY_TICKET_API_NAME: self.get_entity,
             QUERY_INVESTIGATION_API_NAME: self.get_query_investigation_error,
-            GET_INVESTIGATION_RESULTS_API_NAME: self.get_entity,
+            GET_INVESTIGATION_RESULTS_API_NAME: self.get_investigation_error,
         }.get(self.api_name, self.common_exception)
 
-    def common_exception(self):
+    def common_exception(self) -> tuple[type[Exception], str]:
         """Handles common exceptions that don't have a specific handler.
 
         If the response status code is 400, it calls the appropriate handler for bad request errors.
@@ -165,7 +173,7 @@ class HandleExceptions:
 
         return self._handle_general_error()
 
-    def _handle_general_error(self):
+    def _handle_general_error(self) -> tuple[type[Exception], str]:
         """Handles general errors by formatting the error message and returning the appropriate
         exception.
 
@@ -177,7 +185,7 @@ class HandleExceptions:
 
         return VectraRUXException, error_msg
 
-    def _handle_bad_request_error(self):
+    def _handle_bad_request_error(self) -> tuple[type[Exception], str]:
         error_response = self.response.json()
 
         if isinstance(error_response, list) and len(error_response) > 0:
@@ -195,7 +203,7 @@ class HandleExceptions:
         # If no error message is found, return the general error message
         return self._handle_general_error()
 
-    def _handle_not_found_error(self):
+    def _handle_not_found_error(self) -> tuple[type[Exception], str]:
         """The default handler for 404 error.
 
         Raises:
@@ -209,7 +217,7 @@ class HandleExceptions:
             return ItemNotFoundException, f"{error_msg}"
         return self.common_exception()
 
-    def get_tags(self):
+    def get_tags(self) -> tuple[type[Exception], str]:
         """Handler for adding tags.
 
         Raises:
@@ -225,7 +233,7 @@ class HandleExceptions:
             return ItemNotFoundException, f"{status}: {error_msg}"
         return self.common_exception()
 
-    def get_assignment(self):
+    def get_assignment(self) -> tuple[type[Exception], str]:
         """The default handler for assignment.
 
         Raises:
@@ -240,12 +248,21 @@ class HandleExceptions:
             for error in res["errors"]:
                 error_msg += error.get("title")
             return UserNotPermittedException, error_msg
-        if status_code == 404 or status_code == 409:
+        if status_code == 409:
+            errors = res.get("errors") if isinstance(res, dict) else None
+            error_msg = None
+            if isinstance(errors, list):
+                error_msg = " ".join(
+                    str(e.get("message")) for e in errors if isinstance(e, dict) and e.get("message")
+                )
+            error_msg = error_msg or res.get("detail") or "Conflict while processing the assignment."
+            return ItemNotFoundException, f"{error_msg}"
+        if status_code == 404:
             error_msg = res.get("detail")
             return ItemNotFoundException, f"{error_msg}"
         return self.common_exception()
 
-    def _handle_uri_error_request(self):
+    def _handle_uri_error_request(self) -> tuple[type[Exception], str]:
         """Handles the request URI too long error.
 
         If the response status code is 414, it returns a LongURIException with a specific error
@@ -266,7 +283,7 @@ class HandleExceptions:
 
         return self.common_exception()
 
-    def handler_note_action(self):
+    def handler_note_action(self) -> tuple[type[Exception], str]:
         """Handler for note related action.
 
         Raises:
@@ -303,7 +320,7 @@ class HandleExceptions:
 
         return self.common_exception()
 
-    def update_group_members(self):
+    def update_group_members(self) -> tuple[type[Exception], str]:
         """Handles the assign group request error.
         If the response status code is 422, it extracts the error message from the response and
         returns a BadRequestException with the error message.
@@ -345,7 +362,7 @@ class HandleExceptions:
 
         return self.common_exception()
 
-    def get_file(self):
+    def get_file(self) -> tuple[type[Exception], str]:
         """Handler for downloading file.
 
         Raises:
@@ -359,7 +376,7 @@ class HandleExceptions:
             return ItemNotFoundException, f"{status_code}: {error_msg}"
         return self.common_exception()
 
-    def get_entity(self):
+    def get_entity(self) -> tuple[type[Exception], str]:
         """The default handler for getting entity.
 
         Raises:
@@ -369,11 +386,11 @@ class HandleExceptions:
         status_code = self.response.status_code
         res = self.response.json()
         if status_code == 404:
-            error_msg = res.get("detail")
+            error_msg = res.get("detail", "Entity not found for the given entity ID.")
             return ItemNotFoundException, f"{error_msg}"
         return self.common_exception()
 
-    def get_user_list(self):
+    def get_user_list(self) -> tuple[type[Exception], str]:
         """Handles exceptions for getting user list.
 
         Raises:
@@ -388,7 +405,21 @@ class HandleExceptions:
 
         return self.common_exception()
 
-    def get_query_investigation_error(self):
+    def get_investigation_error(self) -> tuple[type[Exception], str]:
+        """Handles exceptions for getting investigation results.
+
+        Raises:
+            BadRequestException: An exception with a specific error message.
+
+        """
+        status_code = self.response.status_code
+        if status_code == 404:
+            error_msg = "Invalid request id provided. Please provide an existing investigation request id."
+            return BadRequestException, error_msg
+
+        return self.common_exception()
+
+    def get_query_investigation_error(self) -> tuple[type[Exception], str]:
         """Handler for the query investigation action.
 
         Handles the 400 response returned when the query syntax is invalid or an
@@ -413,7 +444,12 @@ class HandleExceptions:
         return self.common_exception()
 
 
-def validate_integer(value, zero_allowed=False, allow_negative=False, field_name=None):
+def validate_integer(
+    value: int | str,
+    zero_allowed: bool = False,
+    allow_negative: bool = False,
+    field_name: str | None = None,
+) -> int:
     """Validates if the given value is an integer.
 
     Args:
@@ -446,7 +482,10 @@ def validate_integer(value, zero_allowed=False, allow_negative=False, field_name
         )
 
 
-def extract_fields(response, mandatory_fields):
+def extract_fields(
+    response: dict[str, Any],
+    mandatory_fields: list[str],
+) -> dict[str, Any]:
     """Extracts the mandatory fields and any additional fields that are present in the response
     up to the total number of required fields. If the total number of fields in the response
     is less than or equal to the total number of required fields, the entire response is returned.
@@ -486,7 +525,7 @@ def extract_fields(response, mandatory_fields):
     return result
 
 
-def process_action_parameter(action_parameter):
+def process_action_parameter(action_parameter: str | None) -> list[str] | None:
     """Processes the given action parameter by splitting it by comma, stripping each
     of the resulting strings and returning them as a list of strings.
 
@@ -510,13 +549,17 @@ def process_action_parameter(action_parameter):
     )
 
 
-def validator(value, zero_allowed=False, name=None):
+def validator(
+    value: int | str | None,
+    zero_allowed: bool = False,
+    name: str | None = None,
+) -> int | None:
     if value:
         return validate_integer(value, zero_allowed=zero_allowed, field_name=name)
     return None
 
 
-def save_attachment(path, name, content):
+def save_attachment(path: str, name: str, content: bytes) -> str:
     """Save attachment
 
     Args:
@@ -539,7 +582,7 @@ def save_attachment(path, name, content):
     return local_path
 
 
-def validate_limit_param(limit, param_name="Limit"):
+def validate_limit_param(limit: str | None, param_name: str = "Limit") -> str | int:
     limit = limit.strip() if limit is not None else limit
     if limit == "0":
         raise InvalidIntegerException(f"{param_name} must be greater than 0.")
@@ -547,22 +590,26 @@ def validate_limit_param(limit, param_name="Limit"):
     return limit or 0
 
 
-def get_alert_id(entity_id, last_modified_timestamp, entity_type):
+def get_alert_id(
+    entity_id: str | int,
+    last_modified_timestamp: str | int,
+    entity_type: str,
+) -> str:
     return f"{entity_type}#{entity_id}-{last_modified_timestamp}"
 
-def get_detection_alert_id(detection_id, event_id):
+def get_detection_alert_id(detection_id: str, event_id: str) -> str:
     return f"{DETECTION_ALERT_ID_PREFIX}{detection_id}-{event_id}"
 
 
 # Job functions
 def get_last_success_time_for_job(
-    siemplify,
-    offset_with_metric,
-    time_format=DATETIME_FORMAT,
-    print_value=True,
-    microtime=False,
-    timestamp_key=CASES_TIMESTAMP_DB_KEY,
-):
+    siemplify: Any,
+    offset_with_metric: dict[str, int],
+    time_format: str = DATETIME_FORMAT,
+    print_value: bool = True,
+    microtime: bool = False,
+    timestamp_key: str = CASES_TIMESTAMP_DB_KEY,
+) -> int | datetime.datetime:
     # Fetch the last run timestamp
     last_run_timestamp = fetch_timestamp_for_job(
         siemplify,
@@ -594,10 +641,10 @@ def get_last_success_time_for_job(
 
 
 def save_timestamp_for_job(
-    siemplify,
-    new_timestamp=unix_now(),
-    timestamp_key=CASES_TIMESTAMP_DB_KEY,
-):
+    siemplify: Any,
+    new_timestamp: int | datetime.datetime = unix_now(),
+    timestamp_key: str = CASES_TIMESTAMP_DB_KEY,
+) -> None:
     if isinstance(new_timestamp, datetime.datetime):
         new_timestamp = convert_datetime_to_unix_time(new_timestamp)
 
@@ -611,10 +658,10 @@ def save_timestamp_for_job(
 
 
 def fetch_timestamp_for_job(
-    siemplify,
-    timestamp_key=CASES_TIMESTAMP_DB_KEY,
-    datetime_format=False,
-):
+    siemplify: Any,
+    timestamp_key: str = CASES_TIMESTAMP_DB_KEY,
+    datetime_format: bool = False,
+) -> int | datetime.datetime:
     try:
         last_run_time = siemplify.get_scoped_job_context_property(
             property_key=timestamp_key,
@@ -640,14 +687,14 @@ def fetch_timestamp_for_job(
 
 
 def expire_inactive_detections(
-    siemplify,
-    inactive_detection_ids,
-    cases_last_success_timestamp,
-    all_cases,
-    environments=CASE_DEFAULT_ENVIRONMENT,
-    product_names=CASE_DEFAULT_PRODUCTNAME,
-    max_cases=MAX_OPEN_CASES,
-):
+    siemplify: Any,
+    inactive_detection_ids: set[str],
+    cases_last_success_timestamp: int,
+    all_cases: bool,
+    environments: list[str] = CASE_DEFAULT_ENVIRONMENT,
+    product_names: list[str] = CASE_DEFAULT_PRODUCTNAME,
+    max_cases: int = MAX_OPEN_CASES,
+) -> int | None:
     """Job to close the alert(s) whose associated Vectra detection has gone inactive.
 
     Fetches at the fixed MAX_OPEN_CASES ceiling, then trims to `max_cases`
@@ -733,7 +780,13 @@ def expire_inactive_detections(
     return last_case_timestamp
 
 
-def get_case_alerts_by_detection_id(siemplify, entities, o_case, environments, product_names):
+def get_case_alerts_by_detection_id(
+    siemplify: Any,
+    entities: dict[str, Any],
+    o_case: str | int,
+    environments: list[str],
+    product_names: list[str],
+) -> dict[str, list[dict[str, Any]]]:
     """Maps each Vectra detection ID referenced by a case to the alert(s) the Detection
     Events Connector created for it.
 
@@ -786,7 +839,13 @@ def get_case_alerts_by_detection_id(siemplify, entities, o_case, environments, p
     return detection_alerts
 
 
-def get_case_detection_alerts(siemplify, entities, o_case, environments, product_names):
+def get_case_detection_alerts(
+    siemplify: Any,
+    entities: dict[str, Any],
+    o_case: str | int,
+    environments: list[str],
+    product_names: list[str],
+) -> dict[str, list[dict[str, Any]]]:
     """Maps each Vectra detection_id referenced by a case to the alert(s) tied
     to it, carrying enough info to compare alerts for the same detection_id
     across different cases.
@@ -862,7 +921,7 @@ def get_case_detection_alerts(siemplify, entities, o_case, environments, product
     return detection_alerts
 
 
-def _is_already_closed_alert_error(exception):
+def _is_already_closed_alert_error(exception: Exception) -> bool:
     """Whether `exception` is the platform's "You can not perform this action
     on a closed alert" rejection (errorCode 2000) from `close_alert`, as
     opposed to a genuine failure (permissions, network, etc.).
@@ -875,7 +934,12 @@ def _is_already_closed_alert_error(exception):
     return "errorcode\":2000" in message or "on a closed alert" in message
 
 
-def get_open_cases_by_case_name(siemplify, case_name, environments, exclude_case_ids):
+def get_open_cases_by_case_name(
+    siemplify: Any,
+    case_name: str,
+    environments: list[str],
+    exclude_case_ids: set[str],
+) -> list[dict[str, Any]]:
     """Fetch every OPEN case sharing `case_name` - regardless of when it was
     created - so a detection_id's alert history sitting outside this job's
     configured time window is not missed when deciding whether its previous
@@ -959,15 +1023,15 @@ def get_open_cases_by_case_name(siemplify, case_name, environments, exclude_case
 
 
 def _pull_in_historical_alerts(
-    siemplify,
-    case_name,
-    environments,
-    product_names,
-    processed_case_ids,
-    historical_cases_cache,
-    detection_alerts_map,
-    related_cases_budget,
-):
+    siemplify: Any,
+    case_name: str,
+    environments: list[str],
+    product_names: list[str],
+    processed_case_ids: set[str],
+    historical_cases_cache: dict[str, list[dict[str, Any]]],
+    detection_alerts_map: dict[str, list[dict[str, Any]]],
+    related_cases_budget: dict[str, Any],
+) -> None:
     """Fetches every OPEN case sharing `case_name` and folds ALL of its
     detection_id(s) -> alerts into `detection_alerts_map` - not just the
     detection_id that triggered this lookup - so an earlier alert sitting
@@ -1009,7 +1073,7 @@ def _pull_in_historical_alerts(
             bool}, shared and mutated across the whole run.
 
     """
-    def _mark_budget_exhausted():
+    def _mark_budget_exhausted() -> None:
         if not related_cases_budget["exhausted_logged"]:
             siemplify.LOGGER.info(
                 f"Reached the limit of {MAX_RELATED_CASES_TO_INSPECT} older case(s) "
@@ -1058,13 +1122,13 @@ def _pull_in_historical_alerts(
 
 
 def _process_case(
-    siemplify,
-    case_id,
-    environments,
-    product_names,
-    processed_case_ids,
-    detection_alerts_map,
-):
+    siemplify: Any,
+    case_id: str | int,
+    environments: list[str],
+    product_names: list[str],
+    processed_case_ids: set[str],
+    detection_alerts_map: dict[str, list[dict[str, Any]]],
+) -> int | None:
     """Fetch one case and fold its own detection_id -> alerts into
     detection_alerts_map.
 
@@ -1099,14 +1163,14 @@ def _process_case(
 
 
 def _expand_terminal_detections_to_related_cases(
-    siemplify,
-    detection_alerts_map,
-    environments,
-    product_names,
-    processed_case_ids,
-    historical_cases_cache,
-    related_cases_budget,
-):
+    siemplify: Any,
+    detection_alerts_map: dict[str, list[dict[str, Any]]],
+    environments: list[str],
+    product_names: list[str],
+    processed_case_ids: set[str],
+    historical_cases_cache: dict[str, list[dict[str, Any]]],
+    related_cases_budget: dict[str, Any],
+) -> None:
     """For every detection_id whose most-recently-created known alert already
     looks closed/expired, look past the fetch window for that detection's
     other OPEN cases by name, so an earlier alert sitting outside the window
@@ -1166,13 +1230,13 @@ def _expand_terminal_detections_to_related_cases(
 
 
 def close_previous_alerts_for_expired_detections(
-    siemplify,
-    cases_last_success_timestamp,
-    all_cases,
-    environments=CASE_DEFAULT_ENVIRONMENT,
-    product_names=CASE_DEFAULT_PRODUCTNAME,
-    max_cases=MAX_OPEN_CASES,
-):
+    siemplify: Any,
+    cases_last_success_timestamp: int,
+    all_cases: bool,
+    environments: list[str] = CASE_DEFAULT_ENVIRONMENT,
+    product_names: list[str] = CASE_DEFAULT_PRODUCTNAME,
+    max_cases: int = MAX_OPEN_CASES,
+) -> tuple[int | None, int]:
     """Job to close every previous alert for a Vectra detection_id - across
     whichever cases they landed in - once the most recently created alert for
     that detection_id has an investigation_status of "closed" or "expired".
@@ -1361,12 +1425,12 @@ def close_previous_alerts_for_expired_detections(
     return last_case_timestamp, failed_alerts_count
 
 def clear_empty_cases(
-    siemplify,
-    cases_last_success_timestamp,
-    all_cases,
-    environments=CASE_DEFAULT_ENVIRONMENT,
-    product_names=CASE_DEFAULT_PRODUCTNAME,
-):
+    siemplify: Any,
+    cases_last_success_timestamp: int,
+    all_cases: bool,
+    environments: list[str] = CASE_DEFAULT_ENVIRONMENT,
+    product_names: list[str] = CASE_DEFAULT_PRODUCTNAME,
+) -> None:
     """Job to clear empty cases from Siemplify SOAR."""
     # Step 1: Fetch all open cases
     open_cases = get_all_open_cases(siemplify, cases_last_success_timestamp, all_cases)
@@ -1396,7 +1460,12 @@ def clear_empty_cases(
 
 
 # Supporting functions
-def get_all_open_cases(siemplify, cases_last_success_timestamp, all_cases, max_cases=MAX_OPEN_CASES):
+def get_all_open_cases(
+    siemplify: Any,
+    cases_last_success_timestamp: int,
+    all_cases: bool,
+    max_cases: int = MAX_OPEN_CASES,
+) -> list[Any]:
     """Fetch all open cases from Siemplify.
 
     Filters on start_time OR update_time, not start_time alone: a case can
@@ -1444,7 +1513,7 @@ def get_all_open_cases(siemplify, cases_last_success_timestamp, all_cases, max_c
     return open_cases
 
 
-def get_case_entities(siemplify, case_id):
+def get_case_entities(siemplify: Any, case_id: str | int) -> dict[str, Any]:
     """Fetch all entities associated with a given case.
 
     Args:
@@ -1457,7 +1526,13 @@ def get_case_entities(siemplify, case_id):
     return siemplify._get_case_by_id(case_id)
 
 
-def get_case_detections(siemplify, entities, o_case, environments, product_names):
+def get_case_detections(
+    siemplify: Any,
+    entities: dict[str, Any],
+    o_case: str | int,
+    environments: list[str],
+    product_names: list[str],
+) -> dict[str, list[str]]:
     """Fetch all detections associated with a given case.
 
     Args:
@@ -1510,7 +1585,7 @@ def get_case_detections(siemplify, entities, o_case, environments, product_names
     return detections
 
 
-def find_identical_alerts(siemplify, cases):
+def find_identical_alerts(siemplify: Any, cases: dict[str, dict[str, list[str]]]) -> None:
     """Finds identical alerts and determines which cases/alerts to remove based on the provided logic,
     while ignoring previously closed cases and alerts.
 
@@ -1532,7 +1607,7 @@ def find_identical_alerts(siemplify, cases):
     closed_cases_count = 0
     closed_alerts_count = 0
 
-    def close_case_as_not_malicious(case_id, comment, alert_name):
+    def close_case_as_not_malicious(case_id: str, comment: str, alert_name: str) -> int:
         """Closes the specified case as not malicious.
 
         Args:
@@ -1563,7 +1638,7 @@ def find_identical_alerts(siemplify, cases):
             )
         return closed_case_count
 
-    def remove_alert_from_case(case_id, alert_name, comment):
+    def remove_alert_from_case(case_id: str, alert_name: str, comment: str) -> int:
         """Removes a specific alert from a case without closing the case.
 
         Args:
@@ -1685,7 +1760,7 @@ def find_identical_alerts(siemplify, cases):
     siemplify.LOGGER.info(f"Total {closed_alerts_count} alerts closed")
 
 
-def process_action_parameter_integer(action_parameter, field_name):
+def process_action_parameter_integer(action_parameter: str | None, field_name: str) -> list[str]:
     """Processes the given action parameter by splitting it by comma, stripping each
     of the resulting strings and returning them as a list of string.
 
@@ -1704,3 +1779,71 @@ def process_action_parameter_integer(action_parameter, field_name):
             if parameter.strip()
         ]
     return []
+
+
+def _map_value_to_spec(value: Any, spec: Any) -> Any:
+    """Recursively convert a positional value into dict form using its type spec.
+
+    Spec shapes (from ``meta.columns``):
+        - scalar: ``{"type": "string"}``            -> value returned as is
+        - array:  ``[<item spec>]``                 -> each item converted
+        - struct: ``{"field": <spec>, ...}``        -> positional list or keyed dict
+                                                       converted to a keyed dict
+    Values that do not match the spec shape are returned unchanged.
+    """
+    if isinstance(spec, list) and spec:
+        if isinstance(value, (list, tuple)):
+            return [_map_value_to_spec(item, spec[0]) for item in value]
+        return value
+
+    if isinstance(spec, dict) and "type" not in spec:
+        if isinstance(value, (list, tuple)):
+            return {
+                field: _map_value_to_spec(item, sub_spec)
+                for (field, sub_spec), item in zip(spec.items(), value)
+            }
+        if isinstance(value, dict):
+            return {
+                field: _map_value_to_spec(value.get(field), sub_spec)
+                for field, sub_spec in spec.items()
+            }
+
+    return value
+
+
+def rows_to_dicts(response: dict[str, Any], result_key: str) -> list[Any]:
+    """Return the rows under ``result_key`` as dicts.
+
+    Some APIs return each row as a positional list of values, with the column
+    names and types described in ``response["meta"]["columns"]``
+    (``[[name, [type_spec]], ...]``). Such rows (and any nested structs/arrays)
+    are mapped to dicts. Rows that already are dicts, or responses without
+    ``meta.columns``, are returned unchanged.
+
+    Args:
+        response (dict): The API response.
+        result_key (str): The key holding the rows.
+
+    Returns:
+        list: The rows as dicts where a column mapping is available.
+
+    """
+    rows = response.get(result_key) or []
+    meta = response.get("meta")
+    columns = meta.get("columns") if isinstance(meta, dict) else None
+    if not columns or not isinstance(rows, list):
+        return rows
+
+    parsed_columns = [
+        (column[0], column[1][0] if len(column) > 1 and column[1] else None)
+        for column in columns
+    ]
+    return [
+        {
+            name: _map_value_to_spec(value, spec)
+            for (name, spec), value in zip(parsed_columns, row)
+        }
+        if isinstance(row, (list, tuple))
+        else row
+        for row in rows
+    ]

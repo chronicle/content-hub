@@ -31,7 +31,11 @@ from ..core.VectraRUXManager import VectraRUXManager
 connector_starting_time = unix_now()
 
 
-def validate_input_params(entity_type, hours_backwards, limit):
+def validate_input_params(
+    entity_type: str,
+    hours_backwards: str,
+    limit: str,
+) -> tuple[str, int, int]:
     entity_types = [single_type.strip().lower() for single_type in entity_type.split(",") if single_type.strip()]
     if not entity_types or any(single_type not in {"account", "host"} for single_type in entity_types):
         raise VectraRUXException("Entity type should be one of the ['Account', 'Host']")
@@ -57,7 +61,7 @@ def validate_input_params(entity_type, hours_backwards, limit):
 
 
 @output_handler
-def main(is_test_run):
+def main(is_test_run: bool) -> None:
     processed_alerts = []
     siemplify = SiemplifyConnectorExecution()
     siemplify.script_name = DETECTIONS_CONNECTOR_NAME

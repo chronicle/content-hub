@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from typing import Any
 
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from TIPCommon.transformation import add_prefix_to_dict, dict_to_flat, flat_dict_to_csv
@@ -16,19 +17,20 @@ from .constants import (
 )
 from .UtilsManager import get_alert_id, get_detection_alert_id
 
+
 class BaseModel:
     """Base model for inheritance"""
 
-    def __init__(self, raw_data):
+    def __init__(self, raw_data: dict[str, Any]) -> None:
         self.raw_data = raw_data
 
-    def to_json(self):
+    def to_json(self) -> dict[str, Any]:
         return self.raw_data
 
-    def to_csv(self):
+    def to_csv(self) -> dict[str, Any] | list[str]:
         return dict_to_flat(self.to_json())
 
-    def to_enrichment_data(self, prefix=None):
+    def to_enrichment_data(self, prefix: str | None = None) -> dict[str, Any]:
         data = dict_to_flat(self.raw_data)
         return add_prefix_to_dict(data, prefix) if prefix else data
 
@@ -36,16 +38,16 @@ class BaseModel:
 class Assignment(BaseModel):
     def __init__(
         self,
-        raw_data,
-        assignment_id,
-        assigned_by,
-        assigned_to,
-        resolved_by,
-        outcome,
-        account_id,
-        host_id,
-        note_title,
-    ):
+        raw_data: dict[str, Any],
+        assignment_id: str | int | None,
+        assigned_by: dict[str, Any] | None,
+        assigned_to: dict[str, Any] | None,
+        resolved_by: dict[str, Any] | None,
+        outcome: dict[str, Any] | None,
+        account_id: str | int | None,
+        host_id: str | int | None,
+        note_title: str | None,
+    ) -> None:
         super(Assignment, self).__init__(raw_data)
         self.assignment_id = assignment_id
         self.assigned_by = {} if not assigned_by else assigned_by
@@ -56,7 +58,7 @@ class Assignment(BaseModel):
         self.host_id = host_id
         self.note_title = None if note_title == "" else note_title
 
-    def list_assignment_csv(self):
+    def list_assignment_csv(self) -> dict[str, Any]:
         result = {
             "Assignment ID": self.assignment_id,
             "Assigned User ID": self.assigned_to.get("id"),
@@ -77,7 +79,7 @@ class Assignment(BaseModel):
 
         return result
 
-    def update_assignment_csv(self, entity_type):
+    def update_assignment_csv(self, entity_type: str) -> list[str]:
         entity = "Host ID" if self.host_id else "Account ID"
 
         return flat_dict_to_csv(
@@ -90,7 +92,7 @@ class Assignment(BaseModel):
             }
         )
 
-    def create_assignment_csv(self):
+    def create_assignment_csv(self) -> list[str]:
         entity = "Host ID" if self.host_id else "Account ID"
 
         return flat_dict_to_csv(
@@ -105,15 +107,15 @@ class Assignment(BaseModel):
 class Detection(BaseModel):
     def __init__(
         self,
-        raw_data,
-        detection_id,
-        state,
-        category,
-        detection_type,
-        threat,
-        last_detection_timestamp,
-        detection_url,
-    ):
+        raw_data: dict[str, Any],
+        detection_id: str | int,
+        state: str,
+        category: str,
+        detection_type: str,
+        threat: str | int,
+        last_detection_timestamp: str,
+        detection_url: str,
+    ) -> None:
         """Constructor for Detection class
 
         Args:
@@ -143,21 +145,24 @@ class Detection(BaseModel):
         self.entity_name = None
         self.detection_url = detection_url.replace(URL_API_VERSION, "")
 
-        if raw_data["src_account"]:
-            self.entity_id = raw_data["src_account"]["id"]
-            self.entity_name = raw_data["src_account"]["name"]
-            self.raw_data["src_account"]["url"] = raw_data["src_account"][
-                "url"
-            ].replace(URL_API_VERSION, "")
-        elif raw_data["src_host"]:
-            self.entity_id = raw_data["src_host"]["id"]
-            self.entity_name = raw_data["src_host"]["name"]
-            self.raw_data["src_host"]["url"] = raw_data["src_host"]["url"].replace(
+        src_account = raw_data.get("src_account")
+        src_host = raw_data.get("src_host")
+        if src_account:
+            self.entity_id = src_account.get("id")
+            self.entity_name = src_account.get("name")
+            src_account["url"] = (src_account.get("url") or "").replace(
+                URL_API_VERSION,
+                "",
+            )
+        elif src_host:
+            self.entity_id = src_host.get("id")
+            self.entity_name = src_host.get("name")
+            src_host["url"] = (src_host.get("url") or "").replace(
                 URL_API_VERSION,
                 "",
             )
 
-    def to_csv(self):
+    def to_csv(self) -> list[str]:
         return flat_dict_to_csv(
             {
                 "ID": self.detection_id,
@@ -169,7 +174,7 @@ class Detection(BaseModel):
             },
         )
 
-    def get_subset(self):
+    def get_subset(self) -> dict[str, Any]:
         return {
             "ID": self.detection_id,
             "Detection URL": self.detection_url,
@@ -182,21 +187,21 @@ class Detection(BaseModel):
 class Entity(BaseModel):
     def __init__(
         self,
-        raw_data,
-        entity_id,
-        name,
-        entity_type,
-        state,
-        severity,
-        last_detection_timestamp,
-        last_modified_timestamp,
-        urgency_score,
-        attack_rating,
-        ip,
-        importance,
-        tags,
-        detection_ids,
-    ):
+        raw_data: dict[str, Any],
+        entity_id: str | int,
+        name: str,
+        entity_type: str,
+        state: str,
+        severity: str,
+        last_detection_timestamp: str,
+        last_modified_timestamp: str,
+        urgency_score: int,
+        attack_rating: int,
+        ip: str | None,
+        importance: str,
+        tags: list[str],
+        detection_ids: list[str],
+    ) -> None:
         """Constructor for Entity class
 
         Args:
@@ -238,7 +243,7 @@ class Entity(BaseModel):
         self.detection_ids = [url.split("/")[-1] for url in detection_ids]
         self.uuid = str(uuid.uuid4())
 
-    def to_csv(self):
+    def to_csv(self) -> list[str]:
         """Creates a CSV representation of the entity for table view.
         :return: a string representing the entity in CSV format
         """
@@ -259,12 +264,12 @@ class Entity(BaseModel):
 
     def get_alert_info(
         self,
-        alert_info,
-        detections,
-        entity_type,
-        environment_common,
-        device_product_field,
-    ):
+        alert_info: Any,
+        detections: list[Detection],
+        entity_type: str,
+        environment_common: Any,
+        device_product_field: str,
+    ) -> Any:
         self.raw_data["entity_type"] = entity_type
         alert_info.environment = environment_common.get_environment(self.raw_data)
         alert_info.ticket_id = get_alert_id(
@@ -297,11 +302,11 @@ class Entity(BaseModel):
 
         return alert_info
 
-    def get_siemplify_severity(self):
+    def get_siemplify_severity(self) -> int:
         return SEVERITY_MAP.get(self.severity.lower(), -1)
 
     @staticmethod
-    def create_event(detection):
+    def create_event(detection: dict[str, Any]) -> dict[str, Any]:
         detection["name"] = detection["detection"]
         detection["StartTime"] = convert_string_to_unix_time(
             detection["first_timestamp"],
@@ -315,7 +320,15 @@ class Entity(BaseModel):
 class User(BaseModel):
     """User model for store user details"""
 
-    def __init__(self, raw_data, user_id, email, name, role, last_login_timestamp):
+    def __init__(
+        self,
+        raw_data: dict[str, Any],
+        user_id: str | int,
+        email: str,
+        name: str,
+        role: str,
+        last_login_timestamp: str | None,
+    ) -> None:
         """Constructor for User class
 
         Args:
@@ -334,7 +347,7 @@ class User(BaseModel):
         self.role = role
         self.last_login_timestamp = last_login_timestamp
 
-    def fetch_user_details(self):
+    def fetch_user_details(self) -> dict[str, Any]:
         """Fetches the user details.
 
         Returns:
@@ -355,13 +368,13 @@ class Group(BaseModel):
 
     def __init__(
         self,
-        raw_data,
-        group_id,
-        group_name,
-        group_type,
-        description,
-        importance,
-    ):
+        raw_data: dict[str, Any],
+        group_id: str | int,
+        group_name: str,
+        group_type: str,
+        description: str | None,
+        importance: str,
+    ) -> None:
         """Constructor for Group class
 
         Args:
@@ -380,7 +393,7 @@ class Group(BaseModel):
         self.description = description
         self.importance = importance
 
-    def fetch_group_details(self):
+    def fetch_group_details(self) -> dict[str, Any]:
         """Fetches the details of a group
 
         Returns:
@@ -413,14 +426,14 @@ class Note(BaseModel):
 
     def __init__(
         self,
-        raw_data,
-        note_id,
-        date_created,
-        created_by,
-        note,
-        date_modified=None,
-        modified_by=None,
-    ):
+        raw_data: dict[str, Any],
+        note_id: str | int,
+        date_created: str,
+        created_by: str,
+        note: str,
+        date_modified: str | None = None,
+        modified_by: str | None = None,
+    ) -> None:
         self.raw_data = raw_data
         self.note_id = note_id
         self.date_created = date_created
@@ -429,7 +442,7 @@ class Note(BaseModel):
         self.date_modified = date_modified
         self.modified_by = modified_by
 
-    def to_csv(self):
+    def to_csv(self) -> list[str]:
         return flat_dict_to_csv(
             {
                 "ID": self.note_id,
@@ -439,7 +452,7 @@ class Note(BaseModel):
             },
         )
 
-    def list_entity_notes_csv(self):
+    def list_entity_notes_csv(self) -> dict[str, Any]:
         return {
             "Note ID": self.note_id,
             "Note": self.note,
@@ -450,7 +463,7 @@ class Note(BaseModel):
         }
     
     
-    def update_entity_notes_csv(self):
+    def update_entity_notes_csv(self) -> list[str]:
         return flat_dict_to_csv(
             {
                 "Note ID": self.note_id,
@@ -468,15 +481,15 @@ class InvestigationResult(BaseModel):
 
     def __init__(
         self,
-        raw_data,
-        timestamp,
-        identity_principal,
-        operation,
-        object_id,
-        client_ip,
-        extended_properties,
-        device_properties
-    ):
+        raw_data: dict[str, Any],
+        timestamp: str,
+        identity_principal: str,
+        operation: str,
+        object_id: str,
+        client_ip: str,
+        extended_properties: Any,
+        device_properties: Any,
+    ) -> None:
         """Constructor for InvestigationResult class
 
         Args:
@@ -497,7 +510,7 @@ class InvestigationResult(BaseModel):
         self.device_properties = device_properties
         self.extended_properties = extended_properties
 
-    def to_csv(self):
+    def to_csv(self) -> dict[str, Any]:
         return {
             "Operation": self.operation,
             "Identity Principal": self.identity_principal,
@@ -511,19 +524,19 @@ class DetectionEvent(BaseModel):
 
     def __init__(
         self,
-        raw_data,
-        event_id,
-        detection_id,
-        entity_id,
-        entity_name,
-        entity_uid,
-        detection_type,
-        category,
-        threat,
-        certainty,
-        event_timestamp,
-        change_type,
-    ):
+        raw_data: dict[str, Any],
+        event_id: int,
+        detection_id: int,
+        entity_id: int,
+        entity_name: str,
+        entity_uid: str,
+        detection_type: str,
+        category: str,
+        threat: int,
+        certainty: int,
+        event_timestamp: str,
+        change_type: str,
+    ) -> None:
         """Constructor for DetectionEvent class
 
         Args:
@@ -555,7 +568,7 @@ class DetectionEvent(BaseModel):
         self.event_timestamp = event_timestamp
         self.change_type = change_type
 
-    def get_siemplify_severity(self):
+    def get_siemplify_severity(self) -> int:
         """Derives the Siemplify alert severity for this detection event from its
         urgency_score.
 
@@ -582,7 +595,12 @@ class DetectionEvent(BaseModel):
             return SEVERITY_MAP["medium"]
         return SEVERITY_MAP["low"]
 
-    def get_alert_info(self, alert_info, environment_common, device_product_field):
+    def get_alert_info(
+        self,
+        alert_info: Any,
+        environment_common: Any,
+        device_product_field: str,
+    ) -> Any:
         alert_info.environment = environment_common.get_environment(self.raw_data)
         alert_info.ticket_id = get_detection_alert_id(self.detection_id, self.event_id)
         alert_info.display_id = get_detection_alert_id(self.detection_id, self.event_id)
@@ -607,17 +625,17 @@ class DetectionEvent(BaseModel):
         return alert_info
 
     @staticmethod
-    def _get_start_timestamp(flat_event):
+    def _get_start_timestamp(flat_event: dict[str, Any]) -> str | None:
         timestamp = flat_event.get("detail_first_timestamp") or flat_event.get("event_timestamp")
         return DetectionEvent._ensure_utc_timezone(timestamp)
 
     @staticmethod
-    def _get_end_timestamp(flat_event):
+    def _get_end_timestamp(flat_event: dict[str, Any]) -> str | None:
         timestamp = flat_event.get("detail_last_timestamp") or flat_event.get("event_timestamp")
         return DetectionEvent._ensure_utc_timezone(timestamp)
 
     @staticmethod
-    def _ensure_utc_timezone(timestamp):
+    def _ensure_utc_timezone(timestamp: str | None) -> str | None:
         """Vectra's events/detections API returns timestamps inconsistently: some
         with a trailing UTC marker (e.g. "2026-04-07T13:12:47Z"), others with
         none at all (e.g. "2026-04-07T14:05:51"). convert_string_to_unix_time
@@ -629,7 +647,7 @@ class DetectionEvent(BaseModel):
         return timestamp
 
     @staticmethod
-    def create_event(event):
+    def create_event(event: dict[str, Any]) -> dict[str, Any]:
         flat_event = dict_to_flat(event)
         event["name"] = event.get("detection_type") or f"Detection {event.get('detection_id')}"
         event["StartTime"] = convert_string_to_unix_time(

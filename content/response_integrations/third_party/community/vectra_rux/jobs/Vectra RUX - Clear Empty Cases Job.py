@@ -17,7 +17,7 @@ from ..core.UtilsManager import (
 from ..core.VectraRUXExceptions import InvalidIntegerException, VectraRUXException
 
 
-def main():
+def main() -> None:
     siemplify = SiemplifyJob()
     siemplify.script_name = JOB_SCRIPT_NAME  # In order to use the SiemplifyLogger
 

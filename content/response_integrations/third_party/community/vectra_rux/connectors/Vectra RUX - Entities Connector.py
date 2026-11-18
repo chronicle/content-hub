@@ -10,13 +10,12 @@ from soar_sdk.SiemplifyUtils import output_handler, unix_now
 from TIPCommon.consts import UNIX_FORMAT
 from TIPCommon.extraction import extract_connector_param
 from TIPCommon.smp_io import read_ids, write_ids
-from TIPCommon.utils import is_overflowed
-
-from TIPCommon import (
+from TIPCommon.smp_time import (
     get_last_success_time,
     is_approaching_timeout,
     save_timestamp,
 )
+from TIPCommon.utils import is_overflowed
 
 from ..core.constants import (
     CONNECTOR_NAME,
@@ -38,7 +37,11 @@ from ..core.VectraRUXManager import VectraRUXManager
 connector_starting_time = unix_now()
 
 
-def validate_input_params(entity_type, hours_backwards, limit):
+def validate_input_params(
+    entity_type: str,
+    hours_backwards: str,
+    limit: str,
+) -> tuple[str, int, int]:
     entity_type = entity_type.lower()
     if entity_type not in {"account", "host"}:
         raise VectraRUXException("Entity type should be one of the ['Account', 'Host']")
@@ -59,7 +62,7 @@ def validate_input_params(entity_type, hours_backwards, limit):
 
 
 @output_handler
-def main(is_test_run):
+def main(is_test_run: bool) -> None:
     processed_alerts = []
     siemplify = SiemplifyConnectorExecution()
     siemplify.script_name = CONNECTOR_NAME

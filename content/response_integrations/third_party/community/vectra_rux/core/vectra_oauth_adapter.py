@@ -6,9 +6,18 @@ with automatic refresh and encrypted storage.
 from __future__ import annotations
 
 import urllib.parse
+from typing import Any
 
 import requests
-from TIPCommon.oauth import CredStorage, DB_TOKEN_KEY, OAuthAdapter, OauthManager, OauthToken, Response
+from TIPCommon.oauth import (
+    AuthorizedOauthClient,
+    CredStorage,
+    DB_TOKEN_KEY,
+    OAuthAdapter,
+    OauthManager,
+    OauthToken,
+    Response,
+)
 from TIPCommon.smp_time import unix_now
 
 from .constants import DEFAULT_REQUEST_TIMEOUT, ENDPOINTS, PING
@@ -28,7 +37,7 @@ class JobCredStorage(CredStorage):
     there, reusing the same encrypt/decrypt logic as the base class.
     """
 
-    def get_token(self):
+    def get_token(self) -> OauthToken | None:
         encrypted_data = self.chronicle_soar.get_scoped_job_context_property(
             property_key=DB_TOKEN_KEY,
         )
@@ -38,7 +47,7 @@ class JobCredStorage(CredStorage):
         token_data = self._decrypt(encrypted_data.encode())
         return OauthToken.from_cache(token_data)
 
-    def set_token(self, token):
+    def set_token(self, token: OauthToken) -> None:
         encrypted_data = self._encrypt(token.to_cache())
         self.chronicle_soar.set_scoped_job_context_property(
             property_key=DB_TOKEN_KEY,
@@ -55,7 +64,7 @@ class VectraOAuthManager(OauthManager):
     - Triggers token refresh when needed
     """
 
-    def _token_is_expired(self):
+    def _token_is_expired(self) -> bool:
         """Check if the current token is expired.
 
         Returns:
@@ -79,7 +88,13 @@ class VectraOAuthAdapter(OAuthAdapter):
     available.
     """
 
-    def __init__(self, api_root, client_id, client_secret, verify_ssl=False):
+    def __init__(
+        self,
+        api_root: str,
+        client_id: str,
+        client_secret: str,
+        verify_ssl: bool = False,
+    ) -> None:
         """Initialize the VectraRUX OAuth adapter.
 
         Args:
@@ -95,7 +110,7 @@ class VectraOAuthAdapter(OAuthAdapter):
         self.verify_ssl = verify_ssl
         self.token_url = urllib.parse.urljoin(api_root, ENDPOINTS[PING])
 
-    def check_signer(self, token):
+    def check_signer(self, token: OauthToken) -> bool:
         """Verify the token signer matches the client id.
 
         Args:
@@ -107,7 +122,7 @@ class VectraOAuthAdapter(OAuthAdapter):
         """
         return bool(getattr(token, "signer", None) == self.client_id)
 
-    def refresh_token(self, refresh_token=None):
+    def refresh_token(self, refresh_token: str | None = None) -> OauthToken:
         """Generate a new access token from the VectraRUX API.
 
         Uses the refresh token grant when a refresh token is available,
@@ -143,7 +158,11 @@ class VectraOAuthAdapter(OAuthAdapter):
         )
         return self._build_token(response_data)
 
-    def _request_token(self, body, auth=None):
+    def _request_token(
+        self,
+        body: dict[str, str] | str,
+        auth: tuple[str, str] | None = None,
+    ) -> dict[str, Any]:
         """Send the token request and return the parsed JSON response.
 
         Args:
@@ -184,7 +203,7 @@ class VectraOAuthAdapter(OAuthAdapter):
 
         return response.json()
 
-    def _build_token(self, response_data):
+    def _build_token(self, response_data: dict[str, Any]) -> OauthToken:
         """Build an OauthToken from a token endpoint response.
 
         Args:
@@ -212,6 +231,10 @@ class VectraOAuthAdapter(OAuthAdapter):
         """
         return True
 
-    def prepare_authorized_client(self, token, auth_client):
+    def prepare_authorized_client(
+        self,
+        token: OauthToken,
+        auth_client: AuthorizedOauthClient,
+    ) -> AuthorizedOauthClient:
         """No-op; VectraRUXManager applies the Authorization header itself."""
-        pass
+        return auth_client

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -19,7 +20,7 @@ from ..core.VectraRUXExceptions import InvalidIntegerException, VectraRUXExcepti
 from ..core.VectraRUXManager import VectraRUXManager
 
 
-def remove_api_version_from_url(entity):
+def remove_api_version_from_url(entity: dict[str, Any]) -> dict[str, Any]:
     """Updates all URLs in the given entity by removing the API version substring.
 
     Args:
@@ -39,7 +40,7 @@ def remove_api_version_from_url(entity):
 
 
 @output_handler
-def main():
+def main() -> None:
     """List entities based on the query parameters.
 
     :param api_root: The base URL of the Vectra API

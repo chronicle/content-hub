@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import types
+from typing import Any
+
 import pytest
 
 from _logger import StubLogger
@@ -50,8 +53,12 @@ def job() -> SiemplifyJob:
     )
 
     def extract_job_param(
-        param_name, default_value=None, input_type=str, is_mandatory=False, print_value=True,
-    ):
+        param_name: str,
+        default_value: Any = None,
+        input_type: type = str,
+        is_mandatory: bool = False,
+        print_value: bool = True,
+    ) -> Any:
         value = j.parameters.get(param_name)
         if value is None:
             value = default_value
@@ -83,7 +90,12 @@ def job() -> SiemplifyJob:
     j._historical_cases_by_name = {}
     j._cases_by_filter_calls = []
 
-    def get_cases_by_filter(case_names=None, statuses=None, environments=None, **kwargs):
+    def get_cases_by_filter(
+        case_names: list[str] | None = None,
+        statuses: list[str] | None = None,
+        environments: list[str] | None = None,
+        **kwargs: Any,
+    ) -> list[dict[str, Any]]:
         j._cases_by_filter_calls.append(case_names)
         return [
             case
@@ -99,7 +111,11 @@ def job() -> SiemplifyJob:
     return j
 
 
-def run_job(job_module, job_execution, parameters):
+def run_job(
+    job_module: types.ModuleType,
+    job_execution: Any,
+    parameters: dict[str, Any],
+) -> None:
     """Runs a job module's `main()` with the given parameters against the
     provided (already-configured) test double.
     """

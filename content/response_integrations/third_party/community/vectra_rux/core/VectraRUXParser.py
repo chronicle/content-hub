@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from .datamodels import (
     Assignment,
     Detection,
@@ -13,10 +15,10 @@ from .datamodels import (
 
 
 class VectraRUXParser:
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializes the object."""
 
-    def build_assignment_object(self, assignment_json, note_title=""):
+    def build_assignment_object(self, assignment_json: dict[str, Any], note_title: str = "") -> Assignment:
         """Builds an Assignment object from a JSON object
         representing a assignment.
 
@@ -40,7 +42,7 @@ class VectraRUXParser:
             note_title=note_title,
         )
 
-    def build_detection_object(self, detection_json):
+    def build_detection_object(self, detection_json: dict[str, Any]) -> Detection:
         """Builds a Detection object from a JSON object
         representing a detection.
 
@@ -55,14 +57,14 @@ class VectraRUXParser:
             raw_data=detection_json,
             detection_id=detection_json.get("id"),
             state=detection_json.get("state"),
-            category=detection_json.get("detection_category"),
+            category=detection_json.get("category"),
             detection_type=detection_json.get("detection_type"),
             threat=detection_json.get("threat"),
             last_detection_timestamp=detection_json.get("last_timestamp"),
             detection_url=detection_json.get("detection_url", ""),
         )
 
-    def build_entity_object(self, entity_json):
+    def build_entity_object(self, entity_json: dict[str, Any]) -> Entity:
         """Builds an entity object based on the given json and type.
 
         Args:
@@ -89,7 +91,7 @@ class VectraRUXParser:
             detection_ids=entity_json.get("detection_set"),
         )
 
-    def build_user_object(self, user_obj):
+    def build_user_object(self, user_obj: dict[str, Any]) -> User:
         """Builds a User object from a dictionary of user data.
 
         Args:
@@ -108,7 +110,7 @@ class VectraRUXParser:
             last_login_timestamp=user_obj.get("last_login_timestamp"),
         )
 
-    def build_group_object(self, group_obj):
+    def build_group_object(self, group_obj: dict[str, Any]) -> Group:
         """Builds a Group object from a dictionary of group data.
 
         Args:
@@ -127,7 +129,7 @@ class VectraRUXParser:
             importance=group_obj.get("importance"),
         )
 
-    def build_detection_event_object(self, event_json):
+    def build_detection_event_object(self, event_json: dict[str, Any]) -> DetectionEvent:
         """Builds a DetectionEvent object from a JSON object
         representing a record from the events/detections endpoint.
 
@@ -153,7 +155,7 @@ class VectraRUXParser:
             change_type=event_json.get("change_type"),
         )
 
-    def build_note_object(self, entity_json):
+    def build_note_object(self, entity_json: dict[str, Any]) -> Note:
         """Builds a note object based on the given json and type.
 
         Args:
@@ -173,7 +175,7 @@ class VectraRUXParser:
             modified_by=entity_json.get("modified_by"),
         )
 
-    def build_investigation_result_object(self, investigation_result_json):
+    def build_investigation_result_object(self, investigation_result_json: dict[str, Any]) -> InvestigationResult:
         """Builds an InvestigationResult object from a JSON object
         representing an investigation result record.
 

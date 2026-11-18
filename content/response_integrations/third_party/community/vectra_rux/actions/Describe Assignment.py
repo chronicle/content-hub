@@ -20,7 +20,7 @@ from ..core.VectraRUXManager import VectraRUXManager
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = DESCRIBE_ASSIGNMENT_SCRIPT_NAME
 

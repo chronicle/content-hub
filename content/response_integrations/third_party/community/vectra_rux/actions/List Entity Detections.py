@@ -19,7 +19,7 @@ from ..core.VectraRUXManager import VectraRUXManager
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = LIST_ENTITY_DETECTIONS_SCRIPT_NAME
 
