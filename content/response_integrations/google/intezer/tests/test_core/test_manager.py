@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Unit tests for Intezer Integration."""
 from collections import namedtuple
 import json
@@ -64,6 +78,26 @@ class CustomReponse:
 class TestIntezer:
     """Intezer test cases"""
 
+    @staticmethod
+    def _build_response(mocker: MockerFixture, payload: JSON, status_code: int = 200):
+        resp = mocker.Mock()
+        resp.status_code = status_code
+        resp.json.return_value = payload
+        resp.raise_for_status.return_value = None
+        return resp
+
+    def _mock_session(
+        self,
+        mocker: MockerFixture,
+        intezer_manager: IntezerManager,
+        payload: JSON,
+        status_code: int = 200,
+    ) -> None:
+        resp = self._build_response(mocker, payload, status_code=status_code)
+        intezer_manager.session.get.return_value = resp
+        intezer_manager.session.post.return_value = resp
+        intezer_manager.session.delete.return_value = resp
+
     def test_connectivity_success(
         self,
         mocker: MockerFixture,
@@ -84,11 +118,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT,
-            content=custom_response.data,
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=200)
 
         assert intezer_manager.test_connectivity() is None
 
@@ -115,11 +145,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=const.STATUS_CODE)
         result = intezer_manager.get_detonate_file(
             file_path=const.FILE_NAME,
             related_alert_ids=const.DEFAULT_VALUE
@@ -151,11 +177,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=200)
         existing_results = intezer_manager.is_analysis_completed(const.RESULT_URL)
         if existing_results:
             report = intezer_manager.get_results(const.RESULT_URL)
@@ -187,11 +209,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=200)
         existing_results = intezer_manager.get_existing_analysis(const.DETONATE_HASH)
         if existing_results:
             assert (
@@ -225,11 +243,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=const.STATUS_CODE)
         result = intezer_manager.submit_alert(
             alert_source=const.ALERT_SOURCE,
             alert_json=self.mock_get_response("raw_alert.json"),
@@ -261,11 +275,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=const.STATUS_CODE)
         result = intezer_manager.get_detonate_hash(
             detonate_hash=const.DETONATE_HASH
         )
@@ -296,11 +306,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=const.STATUS_CODE)
         result = intezer_manager.unset_index_file(
             sha256=const.SHA256
         )
@@ -330,11 +336,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=const.STATUS_CODE)
         result = intezer_manager.get_detonate_url(
             detonate_url=const.DETONATE_URL
         )
@@ -365,11 +367,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=200)
         result = intezer_manager.get_alert(
             alert_id=const.ALERT_ID
         )
@@ -399,11 +397,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=200)
         result = intezer_manager.get_url_report(
             analysis_id=const.URL_ANALYSIS_ID
         )
@@ -437,11 +431,14 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        intezer_manager.session.get.side_effect = [
+            self._build_response(mocker, custom_response.data["analysis"]),
+            self._build_response(mocker, custom_response.data["iocs"]),
+            self._build_response(mocker, custom_response.data["dynamic-ttps"]),
+            self._build_response(mocker, custom_response.data["sub-analyses"]),
+            self._build_response(mocker, custom_response.data["metadata"]),
+            self._build_response(mocker, {}),
+        ]
         result = intezer_manager.get_file_report(
             analysis_id=const.ANALYSIS_ID,
             file_hash=const.DETONATE_HASH
@@ -481,11 +478,7 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
-        )
+        self._mock_session(mocker, intezer_manager, custom_response.data, status_code=const.STATUS_CODE)
         result = intezer_manager.submit_suspicious_email(
             const.EMAIL_FILEPATH
         )
@@ -516,10 +509,11 @@ class TestIntezer:
         )
         custom_response = CustomReponse()
         custom_response.data = response_json
-        intezer_manager.http_client = mocker.Mock()
-        intezer_manager.http_client.request.return_value = IntezerAPIResponse(
-            response_info=const.DUMMY_CONTENT_CREATED,
-            content=json.dumps(custom_response.data),
+        intezer_manager.session.post.return_value = self._build_response(
+            mocker, custom_response.data, status_code=const.STATUS_CODE
+        )
+        intezer_manager.session.get.return_value = self._build_response(
+            mocker, {"status": const.STATUS_IN_PROGRESS, "result": {}}, status_code=200
         )
         index_as = IndexType.from_str(const.TRUSTED)
         result = intezer_manager.get_index_id_from_file_hash(
@@ -825,7 +819,7 @@ class TestIntezer:
         json.JSONDecoderError: If the file content is not valid JSON.
         """
 
-        dir_path = os.path.dirname(os.path.realpath(__file__))
+        dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         with open(os.path.join(dir_path, file_name), "r", encoding="utf-8") as f:
             response = json.load(f)
         return response
