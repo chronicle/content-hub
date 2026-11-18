@@ -13,24 +13,65 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-
-from TIPCommon.extraction import extract_configuration_param, extract_action_param
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from TIPCommon.transformation import construct_csv
 
 from ..core.constants import (
-    LOGIN_API_ROOT_DEFAULT,
-    PROVIDER_NAME,
     CREATE_ISOLATE_MACHINE_TASK_SCRIPT_NAME,
+    LOGIN_API_ROOT_DEFAULT,
+    MACHINE_ENTITY_TYPES,
+    PROVIDER_NAME,
+    ErrorType,
 )
+from ..core.exceptions import DefenderActiveRequestExistsException, DefenderException
 from ..core.MicrosoftDefenderATPManager import (
-    MicrosoftDefenderATPManager,
     MicrosoftDefenderATPError,
+    MicrosoftDefenderATPManager,
     MicrosoftDefenderATPValidationError,
 )
+from ..core.UtilsManager import (
+    ActionResultSummaryInput,
+    classify_exception,
+    create_containment_task_by_machine_id,
+    get_summary_scope,
+    log_action_result_summary,
+)
+
+if TYPE_CHECKING:
+    from ..core.datamodels import MachineTask
+
+
+def _isolate_target_machine(
+    manager: MicrosoftDefenderATPManager,
+    machine_id: str,
+    isolation_type: str,
+    comment: str,
+) -> tuple[MachineTask, str]:
+    """Isolate a machine, reusing its active isolation task if one exists.
+
+    Args:
+        manager: Defender manager instance.
+        machine_id: Target machine ID.
+        isolation_type: Isolation type (Full or Selective).
+        comment: Justification comment.
+
+    Returns:
+        A tuple of (task, outcome), where outcome describes whether the task
+        was created or reused.
+    """
+    try:
+        task = manager.isolate_machine(machine_id=machine_id, isolation_type=isolation_type, comment=comment)
+        return task, "was created successfully"
+    except DefenderActiveRequestExistsException:
+        task = manager.get_active_containment_task(machine_id, "Isolate")
+        return task, "already exists"
 
 
 @output_handler
@@ -95,8 +136,11 @@ def main():
     comment = extract_action_param(
         siemplify, param_name="Comment", input_type=str, is_mandatory=True
     )
+    machine_id: str | None = extract_action_param(siemplify, param_name="Machine ID", print_value=True)
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
+    target_results: dict[str, str | None] = {}
+    error: Exception | None = None
 
     # Validation block
     validation_errors = []
@@ -107,6 +151,16 @@ def main():
         validation_errors.append(e)
 
     if validation_errors:
+        log_action_result_summary(
+            siemplify.LOGGER,
+            lambda: ActionResultSummaryInput(
+                execution_state=EXECUTION_STATE_FAILED,
+                target_results=target_results,
+                skipped=(s := get_summary_scope(siemplify.target_entities, MACHINE_ENTITY_TYPES, machine_id))[1],
+                unfinished=max(s[0] - len(target_results), 0),
+                error=validation_errors[0],
+            ),
+        )
         siemplify.end(
             MicrosoftDefenderATPManager.join_validation_errors(validation_errors),
             "false",
@@ -129,7 +183,7 @@ def main():
         failed_entities = set()
         output_messages = []
 
-        for entity in siemplify.target_entities:
+        for entity in [] if machine_id else siemplify.target_entities:
             siemplify.LOGGER.info(f"Start processing entity {entity.identifier}")
 
             try:
@@ -148,6 +202,7 @@ def main():
                 siemplify.LOGGER.error(f"Error occurred: {e}")
                 siemplify.LOGGER.exception(e)
                 failed_entities.add(entity)
+                target_results[entity.identifier] = classify_exception(e)[0]
                 continue
 
             if not machines:
@@ -155,6 +210,7 @@ def main():
                 output_messages.append(msg)
                 siemplify.LOGGER.warn(msg)
                 missing_entities.add(entity)
+                target_results[entity.identifier] = ErrorType.ENDPOINT_NOT_FOUND
                 continue
 
             siemplify.LOGGER.info(
@@ -166,24 +222,28 @@ def main():
                 siemplify.LOGGER.info(
                     f"Initiating machine {found_machine.id} isolation"
                 )
-                task = microsoft_defender_atp.isolate_machine(
-                    machine_id=found_machine.id,
-                    isolation_type=isolation_type,
-                    comment=comment,
+                task, outcome = _isolate_target_machine(
+                    microsoft_defender_atp,
+                    found_machine.id,
+                    isolation_type,
+                    comment,
                 )
-                tasks.append(task)
-                msg = f"Isolate machine task {task.id} was created successfully on Defender ATP Server for {entity.identifier}"
+                if task.id not in {existing.id for existing in tasks}:
+                    tasks.append(task)
+                msg = f"Isolate machine task {task.id} {outcome} on Defender ATP Server for {entity.identifier}"
                 output_messages.append(msg)
                 siemplify.LOGGER.info(msg)
                 succeeded_entities.add(entity)
+                target_results[entity.identifier] = None
 
-            except MicrosoftDefenderATPError as e:
+            except (MicrosoftDefenderATPError, DefenderException) as e:
                 output_messages.append(
                     f"Failed to process entity {entity.identifier}. {e}"
                 )
                 siemplify.LOGGER.error(e)
                 siemplify.LOGGER.exception(e)
                 failed_entities.add(entity)
+                target_results[entity.identifier] = classify_exception(e)[0]
 
         # To remove all failed entities from succeeded entities
         succeeded_entities = succeeded_entities & failed_entities ^ succeeded_entities
@@ -205,9 +265,21 @@ def main():
             )
 
             result = "false"
-        else:
+        elif tasks:
             output_messages.append("Action completed successfully")
             result = "true"
+        else:
+            result = "false"
+
+        if machine_id:
+            tasks, output_messages, result, error_type = create_containment_task_by_machine_id(
+                microsoft_defender_atp,
+                machine_id,
+                lambda found_id: _isolate_target_machine(microsoft_defender_atp, found_id, isolation_type, comment),
+                "Isolate",
+                siemplify.LOGGER,
+            )
+            target_results = {machine_id: error_type}
 
         if tasks:
             siemplify.result.add_result_json([task.to_json() for task in tasks])
@@ -221,16 +293,40 @@ def main():
         status = EXECUTION_STATE_COMPLETED
 
     except MicrosoftDefenderATPError as e:
+        error = e
         output_message = f"Action didn't completed due to error: {e}"
         result = "false"
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
+    except Exception as e:
+        error = e
+        log_action_result_summary(
+            siemplify.LOGGER,
+            lambda: ActionResultSummaryInput(
+                execution_state=EXECUTION_STATE_FAILED,
+                target_results=target_results,
+                skipped=(s := get_summary_scope(siemplify.target_entities, MACHINE_ENTITY_TYPES, machine_id))[1],
+                unfinished=max(s[0] - len(target_results), 0),
+                error=error,
+            ),
+        )
+        raise
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}")
     siemplify.LOGGER.info(f"Result: {result}")
     siemplify.LOGGER.info(f"Output Message: {output_message}")
+    log_action_result_summary(
+        siemplify.LOGGER,
+        lambda: ActionResultSummaryInput(
+            execution_state=status,
+            target_results=target_results,
+            skipped=(s := get_summary_scope(siemplify.target_entities, MACHINE_ENTITY_TYPES, machine_id))[1],
+            unfinished=max(s[0] - len(target_results), 0) if error else 0,
+            error=error,
+        ),
+    )
 
     siemplify.end(output_message, result, status)
 

@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_configuration_param
+
 from . import constants
 from .UtilsManager import DefenderATPManagerConfig, init_defender_atp_manager
 
@@ -34,11 +35,18 @@ class BaseAction(Action, ABC):
     Base action class for Microsoft Defender for Endpoint integration.
     """
 
+    # MicrosoftDefenderATPManagerV2 authenticates its session with a Graph token,
+    # which Defender (non-Graph) endpoints reject. Such actions set this to False.
+    use_graph_api: bool = True
+
     def _init_api_clients(
         self,
     ) -> MicrosoftDefenderATPManager | MicrosoftDefenderATPManagerV2:
-        """
-        Initialize the API client for Microsoft Defender for Endpoint.
+        """Initialize the API client for Microsoft Defender for Endpoint.
+
+        Returns:
+            The V2 (Graph) manager if Graph API Root is set and the action uses
+            the Graph API, otherwise the V1 manager.
         """
         login_api_root = extract_configuration_param(
             self.soar_action,
@@ -92,7 +100,7 @@ class BaseAction(Action, ABC):
             login_api_root=login_api_root,
             verify_ssl=verify_ssl,
             chronicle_soar=self.soar_action,
-            microsoft_graph_url=graph_api_root,
+            microsoft_graph_url=graph_api_root if self.use_graph_api else None,
         )
 
         return init_defender_atp_manager(config=config)

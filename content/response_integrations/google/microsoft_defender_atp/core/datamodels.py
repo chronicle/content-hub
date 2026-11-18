@@ -414,6 +414,10 @@ class Alert(AbstractData):
 
 
 class Machine(AbstractData):
+    # Set after lookup (e.g. by Enrich Entities); emitted only when not None.
+    isolation_status: str | None = None
+    is_isolated: bool | None = None
+
     def __init__(
         self,
         raw_data,
@@ -460,8 +464,25 @@ class Machine(AbstractData):
         self.aad_device_id = aadDeviceId
         self.machine_tags = machineTags
 
+    def _add_isolation(self, data: SingleJson, status_key: str, isolated_key: str) -> SingleJson:
+        """Add the isolation fields to an output dict when the status is known.
+
+        Args:
+            data: Output dict to extend in place.
+            status_key: Key for the isolation status value.
+            isolated_key: Key for the is-isolated flag.
+
+        Returns:
+            The same dict; unchanged when isolation_status is None.
+        """
+        if self.isolation_status is not None:
+            data[status_key] = self.isolation_status
+            data[isolated_key] = self.is_isolated
+
+        return data
+
     def to_json(self):
-        return {
+        json_data = {
             "id": self.id,
             "computer_dns_name": self.computer_dns_name,
             "first_seen": self.first_seen,
@@ -482,6 +503,8 @@ class Machine(AbstractData):
             "aad_device_id": self.aad_device_id,
             "machine_tags": ",".join(self.machine_tags),
         }
+
+        return self._add_isolation(json_data, "isolation_status", "is_isolated")
 
     def to_enrichment_data(self):
         enrichment_data = {
@@ -527,10 +550,10 @@ class Machine(AbstractData):
         if self.aad_device_id:
             enrichment_data["aad_device_id"] = self.aad_device_id
 
-        return enrichment_data
+        return self._add_isolation(enrichment_data, "isolation_status", "is_isolated")
 
     def to_table(self):
-        return {
+        table = {
             "Machine ID": self.id,
             "Machine DNS Name": self.computer_dns_name,
             "Risk Score": self.risk_score,
@@ -545,6 +568,8 @@ class Machine(AbstractData):
             "OS Build": self.os_build,
             "DATP Agent Version": self.agent_version,
         }
+
+        return self._add_isolation(table, "Isolation Status", "Is Isolated")
 
 
 class User(AbstractData):
